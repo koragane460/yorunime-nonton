@@ -48,16 +48,16 @@ export default function Landing() {
       {/* Nav */}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
-          <span className="rounded-lg bg-yellow-500 px-2 py-1 text-lg font-black text-black">
+          <span className="rounded-lg bg-amber-300 px-2 py-1 text-lg font-black text-black">
             L
           </span>
           <span className="text-lg font-black tracking-tight">
-            L<span className="text-yellow-400">Stream</span>
+            L<span className="text-amber-300">Stream</span>
           </span>
         </div>
         <Button
           onClick={() => navigate("/auth?returnTo=/dashboard")}
-          className="rounded-full bg-yellow-500 font-bold text-black hover:bg-yellow-400"
+          className="rounded-full bg-amber-300 font-bold text-black hover:bg-amber-200"
         >
           Masuk
         </Button>
@@ -68,7 +68,7 @@ export default function Landing() {
         <motion.p
           initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="mx-auto mb-3 w-fit rounded-full border border-yellow-500/40 px-3 py-1 text-xs text-yellow-300"
+          className="mx-auto mb-3 w-fit rounded-full border border-amber-300/40 px-3 py-1 text-xs text-amber-200"
         >
           🎬 Nonton anime sub Indonesia + sosial game XP
         </motion.p>
@@ -78,7 +78,7 @@ export default function Landing() {
           transition={{ delay: 0.05 }}
           className="mx-auto max-w-2xl text-4xl font-black leading-tight tracking-tight sm:text-5xl"
         >
-          Nonton anime, kumpulin XP, <span className="text-yellow-400">jodombo</span> bareng
+          Nonton anime, kumpulin XP, <span className="text-amber-300">jodombo</span> bareng
           clanmu
         </motion.h1>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
@@ -89,7 +89,7 @@ export default function Landing() {
           <Button
             size="lg"
             onClick={() => navigate("/auth?returnTo=/dashboard")}
-            className="rounded-full bg-yellow-500 px-8 font-bold text-black hover:bg-yellow-400"
+            className="rounded-full bg-amber-300 px-8 font-bold text-black hover:bg-amber-200"
           >
             Mulai Nonton — Gratis
           </Button>
@@ -108,7 +108,7 @@ export default function Landing() {
           initial={{ y: 24, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.15 }}
-          className="mx-auto mt-12 max-w-3xl rounded-2xl border border-yellow-500/30 bg-card p-4 shadow-2xl"
+          className="mx-auto mt-12 max-w-3xl rounded-2xl border border-amber-300/30 bg-card p-4 shadow-2xl"
         >
           <div className="grid gap-3 sm:grid-cols-3">
             {[
@@ -118,12 +118,12 @@ export default function Landing() {
             ].map((p) => (
               <div
                 key={p.rank}
-                className="flex flex-col items-center rounded-xl border border-yellow-500/25 bg-secondary/40 p-3"
+                className="flex flex-col items-center rounded-xl border border-amber-300/25 bg-secondary/40 p-3"
               >
-                <span className="text-2xl font-black text-yellow-400">#{p.rank}</span>
+                <span className="text-2xl font-black text-amber-300">#{p.rank}</span>
                 <p className="mt-1 text-sm font-bold">{p.name}</p>
-                <p className="text-xs text-yellow-300/80">{p.xp}</p>
-                <div className={`mt-2 w-full rounded-t-lg bg-yellow-500/25 ${p.h}`} />
+                <p className="text-xs text-amber-200/80">{p.xp}</p>
+                <div className={`mt-2 w-full rounded-t-lg bg-amber-300/25 ${p.h}`} />
               </div>
             ))}
           </div>
@@ -144,9 +144,9 @@ export default function Landing() {
               whileInView={{ y: 0, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="rounded-2xl border border-border bg-card p-5 transition hover:border-yellow-400/50"
+              className="rounded-2xl border border-border bg-card p-5 transition hover:border-amber-300/50"
             >
-              <f.icon className="size-6 text-yellow-400" />
+              <f.icon className="size-6 text-amber-300" />
               <h3 className="mt-3 font-bold">{f.title}</h3>
               <p className="mt-1 text-sm leading-5 text-muted-foreground">{f.desc}</p>
             </motion.div>
@@ -156,7 +156,7 @@ export default function Landing() {
 
       {/* CTA */}
       <section className="mx-auto max-w-5xl px-4 pb-24">
-        <div className="rounded-3xl border border-yellow-500/40 bg-gradient-to-br from-yellow-500/20 to-transparent p-10 text-center">
+        <div className="rounded-3xl border border-amber-300/40 bg-gradient-to-br from-amber-300/20 to-transparent p-10 text-center">
           <h2 className="text-2xl font-black">Siap jadi top 1?</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Daftar gratis, dapat 45.000 diamond untuk new user, dan langsung tancap gas.
@@ -164,7 +164,7 @@ export default function Landing() {
           <Button
             size="lg"
             onClick={() => navigate("/auth?returnTo=/dashboard")}
-            className="mt-5 rounded-full bg-yellow-500 px-10 font-bold text-black hover:bg-yellow-400"
+            className="mt-5 rounded-full bg-amber-300 px-10 font-bold text-black hover:bg-amber-200"
           >
             Gabung Sekarang
           </Button>

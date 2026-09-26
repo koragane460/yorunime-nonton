@@ -100,9 +100,9 @@ function GivePremiumDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm border-yellow-500/30">
+      <DialogContent className="max-w-sm border-amber-300/30">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-yellow-400">
+          <DialogTitle className="flex items-center gap-2 text-amber-300">
             <Crown className="size-5" /> Give Premium
           </DialogTitle>
         </DialogHeader>
@@ -116,8 +116,8 @@ function GivePremiumDialog({
                   onClick={() => setDays(d)}
                   className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                     days === d
-                      ? "border-yellow-400 bg-yellow-400/15 text-yellow-300"
-                      : "border-border text-muted-foreground hover:border-yellow-400/50"
+                      ? "border-amber-300 bg-amber-300/15 text-amber-200"
+                      : "border-border text-muted-foreground hover:border-amber-300/50"
                   }`}
                 >
                   {d} hari
@@ -134,8 +134,8 @@ function GivePremiumDialog({
                   onClick={() => setReceivers(r)}
                   className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                     receivers === r
-                      ? "border-yellow-400 bg-yellow-400/15 text-yellow-300"
-                      : "border-border text-muted-foreground hover:border-yellow-400/50"
+                      ? "border-amber-300 bg-amber-300/15 text-amber-200"
+                      : "border-border text-muted-foreground hover:border-amber-300/50"
                   }`}
                 >
                   {r} orang
@@ -171,7 +171,7 @@ function GivePremiumDialog({
             rows={3}
             className="w-full rounded-lg border border-input bg-background/60 p-3 text-sm"
           />
-          <div className="rounded-lg bg-yellow-400/10 p-3 text-sm">
+          <div className="rounded-lg bg-amber-300/10 p-3 text-sm">
             <p>
               Biaya: <b>{cost} hari</b> premium kamu
             </p>
@@ -179,14 +179,14 @@ function GivePremiumDialog({
               ({GIVE_COST[days]} hari + {receiverCost(receivers)} hari untuk {receivers}{" "}
               penerima)
             </p>
-            <p className="mt-1 text-xs text-yellow-300">XP yang kamu dapat: +{xp} XP</p>
+            <p className="mt-1 text-xs text-amber-200">XP yang kamu dapat: +{xp} XP</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
             <Button
-              className="flex-1 bg-yellow-500 text-black hover:bg-yellow-400"
+              className="flex-1 bg-amber-300 text-black hover:bg-amber-200"
               onClick={submit}
             >
               Kirim
@@ -253,7 +253,7 @@ function NsfwScanDialog({
 
   return (
     <Dialog open onOpenChange={() => {}}>
-      <DialogContent className="max-w-xs border-yellow-500/30">
+      <DialogContent className="max-w-xs border-amber-300/30">
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-2 text-center">
             <span className="flex size-10 items-center justify-center rounded-full bg-green-500/20 text-green-400">
@@ -358,29 +358,29 @@ export function ChatPanel({
               <img
                 src={m.image ?? avatarFallback(m.username)}
                 alt=""
-                className="size-9 shrink-0 rounded-full border border-yellow-500/30 object-cover"
+                className="size-9 shrink-0 rounded-full border border-amber-300/30 object-cover"
               />
               <div className={`flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`}>
                 <div
                   className={`rounded-2xl border px-3 py-2 ${
                     give
-                      ? "border-yellow-400/60 bg-yellow-400/20"
+                      ? "border-amber-300/60 bg-amber-300/20"
                       : mine
-                        ? "border-yellow-500/30 bg-yellow-500/10"
+                        ? "border-amber-300/30 bg-amber-300/10"
                         : "border-border bg-secondary/60"
                   } ${blinkId === m._id ? "reply-blink" : ""}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-yellow-300">{m.username}</span>
+                    <span className="text-xs font-semibold text-amber-200">{m.username}</span>
                     {m.clanTag && (
-                      <span className="rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-yellow-200">
+                      <span className="rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-amber-200">
                         {m.clanTagIcon} [{m.clanTag}]
                       </span>
                     )}
                   </div>
                   {m.replyTo && (
-                    <div className="mt-1 rounded-lg border-l-2 border-yellow-400/70 bg-black/25 px-2 py-1 text-xs">
-                      <p className="font-medium text-yellow-200">{m.replyTo.username}</p>
+                    <div className="mt-1 rounded-lg border-l-2 border-amber-300/70 bg-black/25 px-2 py-1 text-xs">
+                      <p className="font-medium text-amber-200">{m.replyTo.username}</p>
                       <p className="truncate text-muted-foreground">
                         {m.replyTo.text ?? (m.replyTo.premiumGiveId ? "Give premium" : "[foto]")}
                       </p>
@@ -388,7 +388,7 @@ export function ChatPanel({
                   )}
                   {give ? (
                     <div className="mt-1 min-w-48 text-center">
-                      <Crown className="mx-auto size-6 text-yellow-400" />
+                      <Crown className="mx-auto size-6 text-amber-300" />
                       <p className="mt-1 text-sm font-bold">
                         {give.days} Hari premium
                       </p>
@@ -436,7 +436,7 @@ export function ChatPanel({
                   )}
                   <DeleteButton messageId={m._id} />
                   <button
-                    className="underline hover:text-yellow-300"
+                    className="underline hover:text-amber-200"
                     onClick={() => setReplyTo(m)}
                   >
                     reply
@@ -452,9 +452,9 @@ export function ChatPanel({
       {/* reply preview + input */}
       <div className="border-t border-border/60 p-2">
         {replyTo && (
-          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-yellow-400 bg-yellow-400/10 px-3 py-1.5 text-xs">
+          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-amber-300 bg-amber-300/10 px-3 py-1.5 text-xs">
             <div className="min-w-0">
-              <p className="font-medium text-yellow-300">{replyTo.username}</p>
+              <p className="font-medium text-amber-200">{replyTo.username}</p>
               <p className="truncate text-muted-foreground">
                 {replyTo.text ?? (replyTo.premiumGive ? "Give premium" : "[foto]")}
               </p>
@@ -483,7 +483,7 @@ export function ChatPanel({
                   <ImagePlus className="size-4" /> Kirim foto
                 </button>
                 <button
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-yellow-300 hover:bg-accent"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-amber-200 hover:bg-accent"
                   onClick={() => {
                     setPlusOpen(false);
                     setGiveOpen(true);
@@ -503,7 +503,7 @@ export function ChatPanel({
           />
           <Button
             size="icon"
-            className="rounded-full bg-yellow-500 text-black hover:bg-yellow-400"
+            className="rounded-full bg-amber-300 text-black hover:bg-amber-200"
             onClick={submit}
           >
             <Send className="size-4" />
@@ -574,7 +574,7 @@ function ClaimButton({
     <Button
       size="sm"
       disabled={claimed || full}
-      className={`mt-2 w-full ${full && !claimed ? "bg-zinc-500 text-white" : "bg-yellow-500 text-black hover:bg-yellow-400"}`}
+      className={`mt-2 w-full ${full && !claimed ? "bg-zinc-500 text-white" : "bg-amber-300 text-black hover:bg-amber-200"}`}
       onClick={async () => {
         try {
           await claim({ giveId: give._id });

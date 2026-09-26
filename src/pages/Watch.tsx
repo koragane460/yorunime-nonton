@@ -18,7 +18,6 @@ import {
   X,
   Download,
   PictureInPicture2,
-  Crown,
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,6 +61,7 @@ function WatchContent() {
   const [duration, setDuration] = useState(0);
   const [recorded, setRecorded] = useState(false);
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
+  const [sourceType, setSourceType] = useState<"mp4" | "embed">("mp4");
 
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
@@ -88,6 +88,15 @@ function WatchContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, epParam]);
+
+  // Sinkronkan sumber video dari data episode (mp4 langsung / embed iframe)
+  useEffect(() => {
+    const list = (epData?.sources ?? []) as { label: string; url: string; type: string }[];
+    if (list.length > 0) {
+      setSources(list);
+      setSourceType(list[0]?.type === "embed" ? "embed" : "mp4");
+    }
+  }, [epData]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -153,17 +162,27 @@ function WatchContent() {
       {/* Player / Mini */}
       {!mini ? (
         <div className="relative bg-black">
-          <video
-            ref={videoRef}
-            src={streamUrl}
-            poster={D.image}
-            className="aspect-video w-full"
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-            controls={false}
-          />
+          {sourceType === "embed" ? (
+            <iframe
+              src={streamUrl}
+              title={D.title}
+              className="aspect-video w-full"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              src={streamUrl}
+              poster={D.image}
+              className="aspect-video w-full"
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+              controls={false}
+            />
+          )}
           {/* Overlay controls */}
           <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
             <div className="flex items-center gap-2 p-3">
@@ -188,7 +207,7 @@ function WatchContent() {
               <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-2">
                 <RotateCcw className="size-6 text-white" />
               </button>
-              <button onClick={togglePlay} className="rounded-full bg-yellow-500/90 p-4">
+              <button onClick={togglePlay} className="rounded-full bg-amber-300 p-4">
                 {playing ? <Pause className="size-7 text-black" /> : <Play className="size-7 text-black" />}
               </button>
               <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
@@ -216,7 +235,7 @@ function WatchContent() {
                   const v = videoRef.current;
                   if (v) v.currentTime = Number(e.target.value);
                 }}
-                className="w-full accent-yellow-400"
+                className="w-full accent-amber-300"
               />
               <div className="flex items-center justify-between text-[11px] text-white">
                 <span>
@@ -255,7 +274,7 @@ function WatchContent() {
                       }}
                       className={cn(
                         "rounded px-2.5 py-1 text-xs",
-                        speed === s ? "bg-yellow-500 text-black" : "bg-white/10 text-white",
+                        speed === s ? "bg-amber-300 text-black" : "bg-white/10 text-white",
                       )}
                     >
                       {s}x
@@ -270,7 +289,7 @@ function WatchContent() {
         /* MINI PLAYER */
         <div className="min-h-screen p-3">
           <div
-            className="fixed z-50 overflow-hidden rounded-xl border border-yellow-500/50 shadow-2xl"
+            className="fixed z-50 overflow-hidden rounded-xl border border-amber-300/40 shadow-2xl"
             style={{ left: miniPos.x, top: miniPos.y, width: miniSize.w, height: miniSize.h }}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
@@ -278,14 +297,24 @@ function WatchContent() {
             onMouseLeave={onMouseUp}
           >
             <div className="relative h-full w-full cursor-move bg-black" onDoubleClick={() => setMini(false)}>
-              <video
-                ref={videoRef}
-                src={streamUrl}
-                className="size-full object-contain"
-                onClick={togglePlay}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-              />
+              {sourceType === "embed" ? (
+                <iframe
+                  src={streamUrl}
+                  title="mini"
+                  className="size-full"
+                  allow="autoplay; encrypted-media; fullscreen"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={streamUrl}
+                  className="size-full object-contain"
+                  onClick={togglePlay}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                />
+              )}
               <div className="absolute right-1 top-1 flex gap-1">
                 <button
                   className="rounded bg-black/60 p-1"
@@ -321,7 +350,7 @@ function WatchContent() {
             <p className={cn("mt-1 text-xs leading-5 text-zinc-400", "line-clamp-2")}>
               {D.synopsis}
             </p>
-            <button className="text-[11px] text-yellow-300 underline">Baca selengkapnya</button>
+            <button className="text-[11px] text-amber-200 underline">Baca selengkapnya</button>
           </div>
         </div>
 
@@ -365,7 +394,7 @@ function WatchContent() {
               className={cn(
                 "size-9 rounded-lg border text-xs font-semibold",
                 e.id === epParam
-                  ? "border-yellow-400 bg-yellow-400/20 text-yellow-300"
+                  ? "border-amber-300 bg-amber-300/20 text-amber-200"
                   : "border-border text-muted-foreground",
               )}
             >
@@ -397,7 +426,7 @@ function WatchContent() {
           />
         </div>
         <div className="mt-2 space-y-2">
-          {(episodeComments ?? []).map((c) => (
+          {(episodeComments ?? []).map((c: any) => (
             <div key={c._id} className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-secondary/30 p-2.5">
               <Avatar src={c.image} seed={c.username} className="size-8" />
               <div className="min-w-0 flex-1">
@@ -427,7 +456,7 @@ function WatchContent() {
                 }}
                 className={cn(
                   "rounded-lg border px-4 py-2 text-sm",
-                  quality === q ? "border-yellow-400 bg-yellow-400/15 text-yellow-300" : "border-border",
+                  quality === q ? "border-amber-300 bg-amber-300/15 text-amber-200" : "border-border",
                 )}
               >
                 {q}
@@ -446,7 +475,7 @@ function WatchContent() {
                   toast.success(`Download dimulai (${q})`);
                   setDownloadOpen(false);
                 }}
-                className="rounded-lg border border-border px-4 py-2 text-sm hover:border-yellow-400"
+                className="rounded-lg border border-border px-4 py-2 text-sm hover:border-amber-300"
               >
                 {q}
               </button>
@@ -481,7 +510,7 @@ function Popup({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-xs rounded-2xl border border-yellow-500/30 bg-card p-4"
+        className="w-full max-w-xs rounded-2xl border border-white/10 bg-card p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="mb-3 font-semibold">{title}</p>
@@ -496,8 +525,8 @@ function ReplyBox({ msg, onClose, onSend }: { msg: ChatMsg; onClose: () => void;
   const [text, setText] = useState("");
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card p-3">
-      <div className="mb-2 rounded-lg border-l-2 border-yellow-400 bg-yellow-400/10 px-3 py-1.5 text-xs">
-        <p className="font-medium text-yellow-300">{msg.username}</p>
+      <div className="mb-2 rounded-lg border-l-2 border-amber-300 bg-amber-300/10 px-3 py-1.5 text-xs">
+        <p className="font-medium text-amber-200">{msg.username}</p>
         <p className="truncate text-muted-foreground">{msg.text}</p>
         <button onClick={onClose} className="absolute right-3 top-2">
           <X className="size-3" />
@@ -515,7 +544,7 @@ function ReplyBox({ msg, onClose, onSend }: { msg: ChatMsg; onClose: () => void;
             if (text.trim()) onSend(text);
             onClose();
           }}
-          className="rounded-full bg-yellow-500 p-2 text-black"
+          className="rounded-full bg-amber-300 p-2 text-black"
         >
           <Send className="size-4" />
         </button>
@@ -523,5 +552,3 @@ function ReplyBox({ msg, onClose, onSend }: { msg: ChatMsg; onClose: () => void;
     </div>
   );
 }
-
-void Crown;

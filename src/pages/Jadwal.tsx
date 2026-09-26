@@ -41,7 +41,7 @@ function JadwalContent() {
             className={cn(
               "shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition",
               day === i
-                ? "border-yellow-400 bg-yellow-400/15 text-yellow-300"
+                ? "border-amber-300 bg-amber-300/15 text-amber-200"
                 : "border-border text-muted-foreground",
             )}
           >

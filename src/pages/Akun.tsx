@@ -54,7 +54,7 @@ function AkunContent() {
   return (
     <div className="py-3">
       {/* Panel akun besar */}
-      <div className="relative overflow-hidden rounded-2xl border border-yellow-500/30">
+      <div className="relative overflow-hidden rounded-2xl border border-amber-300/30">
         <div
           className="h-24 bg-cover bg-center"
           style={
@@ -83,7 +83,7 @@ function AkunContent() {
               </div>
               <UserBadges level={user.level ?? 1} staffRole={user.staffRole} />
               {user.clanTag && (
-                <p className="mt-1 text-xs font-bold text-yellow-200">
+                <p className="mt-1 text-xs font-bold text-amber-200">
                   {user.clanTagIcon} [{user.clanTag}]
                 </p>
               )}
@@ -102,7 +102,7 @@ function AkunContent() {
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-yellow-500 to-amber-300"
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-300"
                 style={{
                   width: `${Math.min(100, (xpInLevel / Math.max(1, nextLevelCost(user.level ?? 1))) * 100)}%`,
                 }}
@@ -135,7 +135,7 @@ function AkunContent() {
             className={cn(
               "relative flex-1 rounded-xl border py-2 text-xs font-medium",
               tab === k
-                ? "border-yellow-400 bg-yellow-400/10 text-yellow-300"
+                ? "border-amber-300 bg-amber-300/10 text-amber-200"
                 : "border-border text-muted-foreground",
             )}
           >
@@ -146,7 +146,7 @@ function AkunContent() {
 
       <div className="mt-2 space-y-2">
         {tab === "history" &&
-          (history ?? []).map((h) => (
+          (history ?? []).map((h: any) => (
             <button
               key={h._id}
               onClick={() => navigate(`/nonton?anime=${h.animeId}&ep=`)}
@@ -167,7 +167,7 @@ function AkunContent() {
         )}
 
         {tab === "favorite" &&
-          (favorites ?? []).map((f) => (
+          (favorites ?? []).map((f: any) => (
             <div
               key={f._id}
               className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5"
@@ -193,7 +193,7 @@ function AkunContent() {
           onClick={() => setNotifOpen(true)}
           className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
         >
-          <Bell className="size-5 text-yellow-400" /> Notifikasi
+          <Bell className="size-5 text-amber-300" /> Notifikasi
         </button>
         <button
           onClick={() => setGameOpen(true)}
@@ -208,7 +208,7 @@ function AkunContent() {
           <SettingsIcon className="size-5 text-muted-foreground" /> Pengaturan
         </button>
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm">
-          <Mail className="size-5 text-yellow-400" /> Lstreamsupport@gmail.com
+          <Mail className="size-5 text-amber-300" /> Lstreamsupport@gmail.com
         </div>
         <AbsenPanel />
         <button
@@ -256,7 +256,7 @@ function AbsenPanel() {
               i < streak
                 ? "border-green-500/50 bg-green-500/10 text-green-400"
                 : i === streak
-                  ? "border-yellow-400 bg-yellow-400/10 text-yellow-300"
+                  ? "border-amber-300 bg-amber-300/10 text-amber-200"
                   : "border-border text-muted-foreground",
             )}
           >
@@ -277,7 +277,7 @@ function AbsenPanel() {
             toast.error(e instanceof Error ? e.message : "Gagal absen");
           }
         }}
-        className="mt-3 w-full rounded-xl bg-yellow-500 py-2.5 text-sm font-bold text-black disabled:opacity-40"
+        className="mt-3 w-full rounded-xl bg-amber-300 py-2.5 text-sm font-bold text-black disabled:opacity-40"
       >
         {status?.claimedToday ? "Sudah absen hari ini (reset 00:00)" : "Absen Sekarang"}
       </button>
@@ -288,7 +288,7 @@ function AbsenPanel() {
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-border/60 bg-secondary/30 py-2">
-      <p className="text-lg font-bold text-yellow-300">{value}</p>
+      <p className="text-lg font-bold text-amber-200">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
     </div>
   );
@@ -374,7 +374,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 toast.error(err instanceof Error ? err.message : "Gagal");
               }
             }}
-            className="rounded-lg bg-yellow-500 px-4 text-sm font-bold text-black"
+            className="rounded-lg bg-amber-300 px-4 text-sm font-bold text-black"
           >
             OK
           </button>
@@ -406,7 +406,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 }}
                 className={cn(
                   "flex-1 rounded-lg border py-2 text-xs capitalize",
-                  theme === t ? "border-yellow-400 text-yellow-300" : "border-border",
+                  theme === t ? "border-amber-300 text-amber-200" : "border-border",
                 )}
               >
                 {t === "dark" ? "Gelap" : t === "light" ? "Terang" : "Custom"}
@@ -429,7 +429,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                   await update({ customColor });
                   toast.success("Warna tersimpan");
                 }}
-                className="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-bold text-black"
+                className="rounded-lg bg-amber-300 px-4 py-2 text-xs font-bold text-black"
               >
                 Simpan warna
               </button>
@@ -477,7 +477,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 await updateProfile({ bannerUrl: banner });
                 toast.success("Background diubah");
               }}
-              className="rounded-lg bg-yellow-500 px-4 text-sm font-bold text-black"
+              className="rounded-lg bg-amber-300 px-4 text-sm font-bold text-black"
             >
               OK
             </button>
@@ -512,7 +512,7 @@ function ToggleRow({
         onClick={() => onToggle(!value)}
         className={cn(
           "relative h-6 w-11 rounded-full transition",
-          value ? "bg-yellow-500" : "bg-zinc-600",
+          value ? "bg-amber-300" : "bg-zinc-600",
         )}
       >
         <span
@@ -541,7 +541,7 @@ function QualityRow({
     <div className="rounded-2xl border border-border bg-card p-3.5">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-yellow-300">{value}</span>
+        <span className="text-xs text-amber-200">{value}</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -554,7 +554,7 @@ function QualityRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === q ? "border-yellow-400 text-yellow-300" : "border-border",
+                value === q ? "border-amber-300 text-amber-200" : "border-border",
               )}
             >
               {q}
@@ -581,7 +581,7 @@ function SpeedRow({
     <div className="rounded-2xl border border-border bg-card p-3.5">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-yellow-300">{value}x</span>
+        <span className="text-xs text-amber-200">{value}x</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -594,7 +594,7 @@ function SpeedRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === s ? "border-yellow-400 text-yellow-300" : "border-border",
+                value === s ? "border-amber-300 text-amber-200" : "border-border",
               )}
             >
               {s}x
@@ -622,7 +622,7 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
   return (
     <FullScreen title="Notifikasi" onClose={onClose}>
       <div className="space-y-2">
-        {(notifs ?? []).map((n) => (
+        {(notifs ?? []).map((n: any) => (
           <div key={n._id} className="flex items-start gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3">
             <span className="text-xl">
               {n.type === "friend_chat" && n.refImage ? (
@@ -679,11 +679,11 @@ function GameScreen({ onClose }: { onClose: () => void }) {
         <div className="py-10 text-center">
           <button
             onClick={() => void clickTap({})}
-            className="mx-auto flex size-40 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 text-4xl font-black text-black shadow-[0_0_40px_-8px] shadow-yellow-500/60 transition active:scale-95"
+            className="mx-auto flex size-40 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-4xl font-black text-black shadow-[0_0_40px_-8px] shadow-amber-300/60 transition active:scale-95"
           >
             CLICK
           </button>
-          <p className="mt-4 text-2xl font-black text-yellow-300">
+          <p className="mt-4 text-2xl font-black text-amber-200">
             {clickStatus?.clicks ?? 0}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -697,7 +697,7 @@ function GameScreen({ onClose }: { onClose: () => void }) {
           <p className="mb-1 text-center text-sm">
             Diamond kamu: <b className="text-cyan-300">💎 {user?.diamonds ?? 0}</b>
           </p>
-          {(items ?? []).map((it) => (
+          {(items ?? []).map((it: any) => (
             <div key={it.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
               <Gem className="size-6 text-cyan-300" />
               <div className="flex-1">
@@ -713,7 +713,7 @@ function GameScreen({ onClose }: { onClose: () => void }) {
                     toast.error(e instanceof Error ? e.message : "Gagal");
                   }
                 }}
-                className="rounded-full bg-yellow-500 px-4 py-1.5 text-xs font-bold text-black"
+                className="rounded-full bg-amber-300 px-4 py-1.5 text-xs font-bold text-black"
               >
                 Beli
               </button>
@@ -768,13 +768,13 @@ function DevModPanel() {
               onClick={() => setPicked(u)}
               className={cn(
                 "flex w-full items-center gap-2 rounded-lg border p-2 text-left text-sm",
-                picked?._id === u._id ? "border-yellow-400" : "border-border/70",
+                picked?._id === u._id ? "border-amber-300" : "border-border/70",
               )}
             >
               <span className="flex-1 truncate">{u.username}</span>
               {u.staffRole && <ShineBadge label={u.staffRole} gradient={STAFF_BADGE[u.staffRole]?.cls ?? ""} />}
               {(u.bannedUntil ?? 0) > Date.now() && <span className="text-[10px] text-red-400">BANNED</span>}
-              {(u.mutedUntil ?? 0) > Date.now() && <span className="text-[10px] text-yellow-400">MUTED</span>}
+              {(u.mutedUntil ?? 0) > Date.now() && <span className="text-[10px] text-amber-300">MUTED</span>}
             </button>
           ))}
         </div>
@@ -871,7 +871,7 @@ function DevModPanel() {
 
       {isDev && (
         <div className="mt-3 rounded-xl border border-border p-3">
-          <p className="text-xs font-semibold text-yellow-300">
+          <p className="text-xs font-semibold text-amber-200">
             Give premium ke semua member clan
           </p>
           <div className="mt-2 flex gap-2">
@@ -897,7 +897,7 @@ function DevModPanel() {
                   toast.error(e instanceof Error ? e.message : "Gagal");
                 }
               }}
-              className="rounded-lg bg-yellow-500 px-3 text-xs font-bold text-black disabled:opacity-40"
+              className="rounded-lg bg-amber-300 px-3 text-xs font-bold text-black disabled:opacity-40"
             >
               Give Premium
             </button>

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
-import { AnimeGrid, SectionTitle, Avatar, ShineBadge } from "@/components/lstream-ui";
+import { AnimeGrid, SectionTitle, Avatar } from "@/components/lstream-ui";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import {
   Crown,
@@ -15,11 +15,21 @@ import {
   Send,
   Trophy,
   X,
+  Gem,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DAYS_ID, avatarFallback, timeAgo } from "@/lib/lstream";
+import { DAYS_ID, timeAgo } from "@/lib/lstream";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
+
+type AnimeCardT = {
+  id: string;
+  title: string;
+  image: string;
+  score?: number;
+  status?: string;
+  synopsis?: string;
+};
 
 export default function Home() {
   return (
@@ -28,6 +38,39 @@ export default function Home() {
     </AppLayout>
   );
 }
+
+// ------------------------------------------------------------- skeletons ----
+
+function HeroSkeleton() {
+  return (
+    <div className="skeleton mt-3 h-44 w-full rounded-2xl border border-white/5" />
+  );
+}
+
+function GridSkeleton({ count = 10 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i}>
+          <div className="skeleton aspect-[2/3] w-full rounded-xl" />
+          <div className="skeleton mt-1.5 h-3 w-full rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChipsSkeleton() {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="skeleton h-7 w-20 rounded-full" />
+      ))}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ home body ----
 
 function HomeContent() {
   const navigate = useNavigate();
@@ -41,17 +84,20 @@ function HomeContent() {
   const genres = useAction(api.anime.animeGenres);
   const schedule = useAction(api.anime.animeSchedule);
 
-  const [heroList, setHeroList] = useState<any[]>([]);
-  const [topList, setTopList] = useState<any[]>([]);
-  const [todayList, setTodayList] = useState<any[]>([]);
-  const [foryouList, setForyouList] = useState<any[]>([]);
+  const [heroList, setHeroList] = useState<AnimeCardT[]>([]);
+  const [topList, setTopList] = useState<AnimeCardT[]>([]);
+  const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
+  const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
-  const [sched, setSched] = useState<Record<string, any[]>>({});
+  const [sched, setSched] = useState<Record<string, AnimeCardT[]>>({});
+  const [loading, setLoading] = useState(true);
   const [genresOpen, setGenresOpen] = useState(false);
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
-  const [genreAnimes, setGenreAnimes] = useState<any[]>([]);
+  const [genreAnimes, setGenreAnimes] = useState<AnimeCardT[]>([]);
+  const [genreLoading, setGenreLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchResults, setSearchResults] = useState<AnimeCardT[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [heroIdx, setHeroIdx] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -59,16 +105,31 @@ function HomeContent() {
   const loadGenre = useAction(api.anime.animeByGenre);
   const searchAnime = useAction(api.anime.animeSearch);
 
-  // Muat data katalog
+  // Muat data katalog (backend punya fallback statis, jadi selalu ada hasil)
   useEffect(() => {
-    hero({ page: 1 }).then((r: any) => setHeroList((r as any) ?? [])).catch(() => {});
-    top({}).then((r: any) => setTopList((r as any) ?? [])).catch(() => {});
-    today({}).then((r: any) => setTodayList((r as any) ?? [])).catch(() => {});
-    forYou({ seed: (user?.name?.length ?? 0) + 3 }).then((r: any) => setForyouList((r as any) ?? [])).catch(() => {});
-    genres({}).then((r: any) => setGenreList((r as any) ?? [])).catch(() => {});
-    schedule({})
-      .then((r: any) => setSched((r as any) ?? {}))
-      .catch(() => {});
+    let alive = true;
+    Promise.allSettled([
+      hero({ page: 1 }),
+      top({}),
+      today({}),
+      forYou({ seed: (user?.name?.length ?? 0) + 3 }),
+      genres({}),
+      schedule({}),
+    ]).then(([rHero, rTop, rToday, rForYou, rGenres, rSched]) => {
+      if (!alive) return;
+      if (rHero.status === "fulfilled") setHeroList((rHero.value as AnimeCardT[]) ?? []);
+      if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
+      if (rToday.status === "fulfilled") setTodayList((rToday.value as AnimeCardT[]) ?? []);
+      if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
+      if (rGenres.status === "fulfilled")
+        setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
+      if (rSched.status === "fulfilled")
+        setSched((rSched.value as Record<string, AnimeCardT[]>) ?? {});
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -77,12 +138,14 @@ function HomeContent() {
       setSearchResults(null);
       return;
     }
+    setSearching(true);
     try {
-      const r = (await searchAnime({ q: query })) as any;
+      const r = (await searchAnime({ q: query })) as AnimeCardT[];
       setSearchResults(r ?? []);
     } catch {
       setSearchResults([]);
     }
+    setSearching(false);
   };
 
   const pickGenre = async (g: { id: string; name: string }) => {
@@ -91,168 +154,223 @@ function HomeContent() {
       return;
     }
     setActiveGenre(g.id);
+    setGenreLoading(true);
     try {
-      const r = (await loadGenre({ genreId: g.id })) as any;
+      const r = (await loadGenre({ genreId: g.id })) as AnimeCardT[];
       setGenreAnimes(r ?? []);
     } catch {
       setGenreAnimes([]);
     }
+    setGenreLoading(false);
   };
 
   const heroItems = heroList.slice(0, 2);
   const updateNews = heroList.slice(0, 8);
-  const todayDay = DAYS_ID[(new Date().getDay() + 6) % 7];
   const favQuery = useQuery(api.activities.myFavorites, user ? {} : "skip");
+
+  // Auto-rotate hero
+  useEffect(() => {
+    if (heroItems.length < 2) return;
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroItems.length), 6000);
+    return () => clearInterval(t);
+  }, [heroItems.length]);
 
   const openAnime = (id: string) => setPickId(id);
 
   return (
     <div>
-      {/* Search */}
+      {/* 1) BELI PREMIUM — di bawah panel akun */}
       <button
-        onClick={() => document.getElementById("ls-search-input")?.focus()}
-        className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
+        onClick={() => navigate("/premium")}
+        className="pop-enter mt-3 flex w-full items-center gap-3 rounded-2xl border border-amber-300/40 bg-gradient-to-r from-amber-300/15 via-amber-300/5 to-transparent p-3.5 text-left transition hover:border-amber-300/70"
       >
-        <Search className="size-4" />
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-300/15">
+          <Crown className="size-6 text-amber-300" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">Beli Premium</span>
+          <span className="block text-xs text-zinc-400">
+            Mulai 7 ribuan aja — DANA / QRIS / GoPay / VA
+          </span>
+        </span>
+        <span className="rounded-full bg-amber-300 px-3.5 py-1.5 text-xs font-bold text-black">
+          Beli
+        </span>
+      </button>
+
+      {/* 2) HERO BANNER + LEADERBOARD + TOP GIVE PREMIUM */}
+      {loading ? (
+        <HeroSkeleton />
+      ) : heroItems.length > 0 ? (
+        <div className="fade-enter relative mt-3 overflow-hidden rounded-2xl border border-white/10">
+          {heroItems.map((a, i) => (
+            <div
+              key={a.id}
+              className={cn(
+                "transition-opacity duration-500",
+                i === heroIdx ? "block opacity-100" : "hidden opacity-0",
+              )}
+            >
+              <div
+                className="relative min-h-48 bg-cover bg-center"
+                style={{
+                  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88) 20%, rgba(0,0,0,.15)), url(${a.image})`,
+                }}
+              >
+                <div className="max-w-[70%] p-4">
+                  <span className="rounded-md bg-amber-300/90 px-1.5 py-0.5 text-[10px] font-black text-black">
+                    {a.status ?? "Ongoing"}
+                  </span>
+                  <h3 className="mt-1.5 line-clamp-1 text-lg font-black">{a.title}</h3>
+                  <p className="mt-1 line-clamp-2 text-xs text-zinc-300">
+                    {a.synopsis ?? "Sinopsis belum tersedia."}
+                  </p>
+                  <div className="mt-2.5 flex gap-2">
+                    <button
+                      onClick={() => openAnime(a.id)}
+                      className="rounded-full bg-amber-300 px-4 py-1.5 text-xs font-bold text-black transition hover:bg-amber-200"
+                    >
+                      Lihat detail
+                    </button>
+                    <button
+                      onClick={() => navigate(`/nonton?anime=${a.id}`)}
+                      className="rounded-full border border-white/25 bg-black/40 px-4 py-1.5 text-xs font-semibold text-white transition hover:border-white/50"
+                    >
+                      ▶ Tonton
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="absolute bottom-2.5 right-2.5 flex gap-1">
+            <button
+              className="rounded-full bg-black/60 p-1.5 text-white transition hover:bg-black/80"
+              onClick={() => setHeroIdx((i) => (i + heroItems.length - 1) % heroItems.length)}
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              className="rounded-full bg-black/60 p-1.5 text-white transition hover:bg-black/80"
+              onClick={() => setHeroIdx((i) => (i + 1) % heroItems.length)}
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+          <div className="absolute bottom-3 left-4 flex gap-1">
+            {heroItems.map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1 rounded-full transition-all",
+                  i === heroIdx ? "w-5 bg-amber-300" : "w-2 bg-white/30",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Leaderboard XP */}
+      <button
+        onClick={() => setShowLeaderboard(true)}
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-amber-300/40"
+      >
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-2 font-bold">
+            <Trophy className="size-4 text-amber-300" /> Leaderboard XP
+          </p>
+          <span className="text-xs text-muted-foreground">lihat semua ›</span>
+        </div>
+        <HomeLeaderboardPreview />
+      </button>
+
+      {/* Top Give Premium */}
+      <TopGiveCard />
+
+      {/* 3) CHAT BARENG */}
+      <button
+        onClick={() => setShowChat(true)}
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-amber-300/40"
+      >
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-2 font-bold">
+            💬 Chat bareng
+          </p>
+          <span className="text-xs text-muted-foreground">buka ›</span>
+        </div>
+        <GlobalChatPreview />
+      </button>
+
+      {/* 4) CARI ANIME */}
+      <SectionTitle>Cari Anime</SectionTitle>
+      <div className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+        <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
           id="ls-search-input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && doSearch()}
-          placeholder="Cari anime: contoh naruto"
-          className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
+          onKeyDown={(e) => e.key === "Enter" && void doSearch()}
+          placeholder="Contoh: naruto, frieren…"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
         {query && (
-          <button onClick={() => { setQuery(""); setSearchResults(null); }}>
-            <X className="size-4" />
+          <button
+            onClick={() => {
+              setQuery("");
+              setSearchResults(null);
+            }}
+          >
+            <X className="size-4 text-muted-foreground" />
           </button>
         )}
-      </button>
-
-      {searchResults !== null && (
+        <button
+          onClick={() => void doSearch()}
+          className="rounded-full bg-amber-300 px-3 py-1 text-xs font-bold text-black"
+        >
+          Cari
+        </button>
+      </div>
+      {searching && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">Mencari…</p>
+      )}
+      {searchResults !== null && !searching && (
         <div className="mt-3">
           {searchResults.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               Anime tidak ditemukan
             </p>
           ) : (
-            <AnimeGrid
-              items={searchResults}
-              onPick={openAnime}
-              newIds={new Set()}
-            />
+            <AnimeGrid items={searchResults} onPick={openAnime} newIds={new Set()} />
           )}
         </div>
       )}
 
-      {searchResults === null && (
+      {/* 5) GENRE */}
+      <SectionTitle>Genre</SectionTitle>
+      {loading ? (
+        <ChipsSkeleton />
+      ) : (
         <>
-          {/* Hero banner slide */}
-          {heroItems.length > 0 && (
-            <div className="relative mt-3 overflow-hidden rounded-2xl border border-yellow-500/30">
-              {heroItems.map((a: any, i: number) => (
-                <div
-                  key={a.id}
-                  className={cn(
-                    "transition-opacity duration-500",
-                    i === heroIdx ? "block opacity-100" : "hidden opacity-0",
-                  )}
-                >
-                  <div
-                    className="relative min-h-44 bg-cover bg-center"
-                    style={{
-                      backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.85), rgba(0,0,0,.25)), url(${a.image})`,
-                    }}
-                  >
-                    <div className="max-w-[70%] p-4">
-                      <h3 className="line-clamp-1 text-lg font-bold text-yellow-300">
-                        {a.title}
-                      </h3>
-                      <p className="mt-1 line-clamp-2 text-xs text-zinc-300">
-                        {a.synopsis ?? "Sinopsis belum tersedia."}
-                      </p>
-                      <button
-                        onClick={() => openAnime(a.id)}
-                        className="mt-2 rounded-full bg-yellow-500 px-4 py-1.5 text-xs font-bold text-black hover:bg-yellow-400"
-                      >
-                        Lihat detail
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div className="absolute bottom-2 right-2 flex gap-1">
-                <button
-                  className="rounded-full bg-black/60 p-1.5"
-                  onClick={() => setHeroIdx((i) => (i + heroItems.length - 1) % heroItems.length)}
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                <button
-                  className="rounded-full bg-black/60 p-1.5"
-                  onClick={() => setHeroIdx((i) => (i + 1) % heroItems.length)}
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Leaderboard XP box */}
-          <button
-            onClick={() => setShowLeaderboard(true)}
-            className="mt-3 w-full rounded-2xl border border-yellow-500/30 bg-card p-3 text-left"
-          >
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-2 font-bold">
-                <Trophy className="size-4 text-yellow-400" /> Leaderboard XP
-              </p>
-              <span className="text-xs text-muted-foreground">lihat semua ›</span>
-            </div>
-            <HomeLeaderboardPreview />
-          </button>
-
-          {/* Chat bareng box */}
-          <button
-            onClick={() => setShowChat(true)}
-            className="mt-3 w-full rounded-2xl border border-yellow-500/30 bg-card p-3 text-left"
-          >
-            <p className="mb-2 font-bold">Chat bareng</p>
-            <GlobalChatPreview />
-          </button>
-
-          {/* Beli premium */}
-          <button
-            onClick={() => navigate("/premium")}
-            className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-yellow-500/40 bg-gradient-to-r from-yellow-500/15 to-transparent p-3 text-left"
-          >
-            <Crown className="size-7 shrink-0 text-yellow-400" />
-            <span className="text-sm font-semibold">
-              Beli premium disini mulai dari 7 ribuan aja!!
-            </span>
-          </button>
-
-          {/* Genre */}
-          <SectionTitle>Genre</SectionTitle>
           <div className="flex flex-wrap gap-1.5">
-            {(genresOpen ? genreList : genreList.slice(0, 5)).map((g) => (
+            {(genresOpen ? genreList : genreList.slice(0, 6)).map((g) => (
               <button
                 key={g.id}
-                onClick={() => pickGenre(g)}
+                onClick={() => void pickGenre(g)}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs transition",
                   activeGenre === g.id
-                    ? "border-yellow-400 bg-yellow-400/15 text-yellow-300"
-                    : "border-border text-muted-foreground hover:border-yellow-400/50",
+                    ? "border-amber-300 bg-amber-300/15 text-amber-200"
+                    : "border-border text-muted-foreground hover:border-amber-300/50",
                 )}
               >
                 {g.name}
               </button>
             ))}
-            {genreList.length > 5 && (
+            {genreList.length > 6 && (
               <button
                 onClick={() => setGenresOpen((v) => !v)}
-                className="rounded-full border border-yellow-500/50 px-3 py-1 text-xs font-medium text-yellow-300"
+                className="rounded-full border border-amber-300/50 px-3 py-1 text-xs font-medium text-amber-200"
               >
                 {genresOpen ? "Tutup" : `${genreList.length} genre / semua genre`}
               </button>
@@ -260,87 +378,100 @@ function HomeContent() {
           </div>
           {activeGenre && (
             <div className="mt-3">
-              <AnimeGrid items={genreAnimes} onPick={openAnime} newIds={new Set()} />
+              {genreLoading ? (
+                <GridSkeleton count={6} />
+              ) : (
+                <AnimeGrid items={genreAnimes} onPick={openAnime} newIds={new Set()} />
+              )}
             </div>
           )}
+        </>
+      )}
 
-          {searchResults === null && !activeGenre && (
-            <>
-              {/* Top anime */}
-              <SectionTitle>Top Anime</SectionTitle>
-              <AnimeGrid items={topList.slice(0, 10)} onPick={openAnime} ranked newIds={new Set()} />
+      {/* 6) ANIME-ANIME */}
+      {searchResults === null && !activeGenre && (
+        <>
+          <SectionTitle>Top Anime</SectionTitle>
+          {loading ? <GridSkeleton /> : <AnimeGrid items={topList.slice(0, 10)} onPick={openAnime} ranked newIds={new Set()} />}
 
-              {/* Top anime hari ini */}
-              <SectionTitle>Top Anime Hari Ini</SectionTitle>
-              <AnimeGrid items={todayList.slice(0, 10)} onPick={openAnime} ranked newIds={new Set()} />
+          <SectionTitle>Top Anime Hari Ini</SectionTitle>
+          {loading ? <GridSkeleton /> : <AnimeGrid items={todayList.slice(0, 10)} onPick={openAnime} ranked newIds={new Set()} />}
 
-              {/* Untuk Kamu */}
-              <SectionTitle>Untuk Kamu</SectionTitle>
-              <AnimeGrid items={foryouList.slice(0, 12)} onPick={openAnime} newIds={new Set()} />
-            </>
-          )}
+          <SectionTitle>Untuk Kamu</SectionTitle>
+          {loading ? <GridSkeleton count={12} /> : <AnimeGrid items={foryouList.slice(0, 12)} onPick={openAnime} newIds={new Set()} />}
+        </>
+      )}
 
-          {/* Anime Update News */}
-          <SectionTitle>Anime Update News</SectionTitle>
-          <p className="mb-2 text-xs text-muted-foreground">
-            Episode baru rilis hari ini
-          </p>
+      <SectionTitle>Anime Update News</SectionTitle>
+      <p className="mb-2 text-xs text-muted-foreground">Episode baru rilis hari ini</p>
+      {loading ? (
+        <div className="flex gap-2.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+          {updateNews.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => openAnime(a.id)}
+              className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60 text-left transition hover:border-amber-300/50"
+            >
+              <img src={a.image} alt="" className="aspect-[2/3] w-full object-cover" />
+              <span className="absolute left-1 top-1 rounded bg-emerald-500 px-1 text-[10px] font-bold text-black">
+                New
+              </span>
+              <p className="line-clamp-2 bg-black/60 p-1.5 text-[10px] leading-3">{a.title}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <SectionTitle>Jadwal Update Anime</SectionTitle>
+      <div className="rounded-2xl border border-border bg-card p-3">
+        <div className="flex justify-end">
+          <button
+            onClick={() => navigate("/akun?tab=favorite")}
+            className="flex items-center gap-1 rounded-full border border-amber-300/40 px-3 py-1 text-xs text-amber-200"
+          >
+            <Heart className="size-3.5" /> Favorite
+          </button>
+        </div>
+        <div className="mt-2 space-y-2">
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton h-10 w-full rounded-xl" />
+              ))
+            : DAYS_ID.map((d) => (
+                <ScheduleRow
+                  key={d}
+                  day={d}
+                  animes={sched[d.toLowerCase()] ?? []}
+                  onPick={openAnime}
+                />
+              ))}
+        </div>
+      </div>
+
+      {favQuery && favQuery.length > 0 && (
+        <>
+          <SectionTitle>Favorite Kamu</SectionTitle>
           <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
-            {updateNews.map((a: any) => (
+            {favQuery.map((f: any) => (
               <button
-                key={a.id}
-                onClick={() => openAnime(a.id)}
+                key={f._id}
+                onClick={() => openAnime(f.animeId)}
                 className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
               >
-                <img src={a.image} alt="" className="aspect-[2/3] w-full object-cover" />
-                <span className="absolute left-1 top-1 rounded bg-green-500 px-1 text-[10px] font-bold text-black">
-                  New
-                </span>
+                <img src={f.animeImage ?? ""} alt="" className="aspect-[2/3] w-full object-cover" />
+                <Heart className="absolute right-1 top-1 size-4 fill-red-500 text-red-500" />
                 <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
-                  {a.title}
+                  {f.animeTitle}
                 </p>
               </button>
             ))}
           </div>
-
-          {/* Jadwal update + favorite */}
-          <SectionTitle>Jadwal Update Anime</SectionTitle>
-          <div className="rounded-2xl border border-border bg-card p-3">
-            <div className="flex justify-end">
-              <button
-                onClick={() => navigate("/akun?tab=favorite")}
-                className="flex items-center gap-1 rounded-full border border-yellow-500/40 px-3 py-1 text-xs text-yellow-300"
-              >
-                <Heart className="size-3.5" /> Favorite
-              </button>
-            </div>
-            <div className="mt-2 space-y-2">
-              {DAYS_ID.map((d) => (
-                <ScheduleRow key={d} day={d} animes={sched[d.toLowerCase()] ?? []} onPick={openAnime} />
-              ))}
-            </div>
-          </div>
-
-          {favQuery && favQuery.length > 0 && (
-            <>
-              <SectionTitle>Favorite Kamu</SectionTitle>
-              <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
-                {favQuery.map((f) => (
-                  <button
-                    key={f._id}
-                    onClick={() => openAnime(f.animeId)}
-                    className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
-                  >
-                    <img src={f.animeImage ?? ""} alt="" className="aspect-[2/3] w-full object-cover" />
-                    <Heart className="absolute right-1 top-1 size-4 fill-red-500 text-red-500" />
-                    <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
-                      {f.animeTitle}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
         </>
       )}
 
@@ -350,6 +481,60 @@ function HomeContent() {
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
       {pickId && <AnimeDetailScreen animeId={pickId} onClose={() => setPickId(null)} />}
+    </div>
+  );
+}
+
+// ------------------------------------------------------ top give premium ----
+
+function TopGiveCard() {
+  const data = useQuery(api.account.topGive, { limit: 3 });
+  return (
+    <div className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left">
+
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 font-bold">
+          <Gem className="size-4 text-amber-300" /> Top Give Premium
+        </p>
+        <span className="text-xs text-muted-foreground">pembagi terbaik ›</span>
+      </div>
+      {!data ? (
+        <div className="mt-2 space-y-1.5">
+          <div className="skeleton h-10 w-full rounded-xl" />
+          <div className="skeleton h-10 w-full rounded-xl" />
+        </div>
+      ) : data.length === 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Belum ada yang bagi premium — jadilah yang pertama lewat chat! 🎁
+        </p>
+      ) : (
+        <div className="mt-2 space-y-1.5">
+          {data.map((g: any, i: number) => (
+            <div
+              key={g.userId}
+              className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2"
+            >
+              <span
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-md text-xs font-black",
+                  i === 0
+                    ? "bg-amber-300 text-black"
+                    : i === 1
+                      ? "bg-zinc-300 text-black"
+                      : "bg-amber-700 text-white",
+                )}
+              >
+                {i + 1}
+              </span>
+              <Avatar src={g.image} seed={g.username} className="size-8" />
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold">{g.username}</p>
+              <span className="flex items-center gap-1 text-xs text-amber-300">
+                <Crown className="size-3.5" /> {g.days} hari dibagi
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -369,7 +554,7 @@ function LeaderEntryRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5">
-      <span className="w-6 text-center text-sm font-bold text-yellow-400">{rank}</span>
+      <span className="w-6 text-center text-sm font-bold text-amber-300">{rank}</span>
       <Avatar src={image} seed={username} className="size-10" />
       <div>
         <p className="text-sm font-semibold">{username ?? "user"}</p>
@@ -396,10 +581,10 @@ function PodiumCard({
     <div className="flex flex-col items-center">
       <Avatar src={image} seed={username} className="size-12" />
       <p className="mt-1 line-clamp-1 max-w-full text-xs font-semibold">{username ?? "user"}</p>
-      <p className="text-[10px] text-yellow-400">{xp.toLocaleString("id-ID")} XP</p>
+      <p className="text-[10px] text-amber-300">{xp.toLocaleString("id-ID")} XP</p>
       <div
         className={cn(
-          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-yellow-500/40 bg-gradient-to-t from-yellow-500/10 to-yellow-400/25 pt-1 text-lg font-black text-yellow-300",
+          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-amber-300/40 bg-gradient-to-t from-amber-300/10 to-amber-300/25 pt-1 text-lg font-black text-amber-200",
           height,
         )}
       >
@@ -410,17 +595,18 @@ function PodiumCard({
 }
 
 export function LeaderboardList({ period }: { period: string }) {
-  const harian = useQuery(api.xp.leaderboard, { period, limit: 50 });
-  if (!harian) return <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>;
-  const [t1, t2, t3, ...rest] = harian;
+  const data = useQuery(api.xp.leaderboard, { period, limit: 50 });
+  if (!data)
+    return <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>;
+  const [t1, t2, t3, ...rest] = data;
   return (
     <div className="space-y-2">
-      {harian.length === 0 && (
+      {data.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
           Belum ada data XP periode ini
         </p>
       )}
-      {harian.length > 0 && (
+      {data.length > 0 && (
         <div className="grid grid-cols-3 items-end gap-2">
           {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-20" />}
           {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-28" />}
@@ -445,12 +631,12 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
             onClick={() => setPeriod(p)}
             className={cn(
               "relative flex-1 rounded-lg py-2 text-sm font-medium capitalize",
-              period === p ? "text-yellow-300" : "text-muted-foreground",
+              period === p ? "text-amber-200" : "text-muted-foreground",
             )}
           >
             {p}
             {period === p && (
-              <span className="absolute inset-x-3 bottom-0 h-0.5 rounded bg-yellow-400" />
+              <span className="absolute inset-x-3 bottom-0 h-0.5 rounded bg-amber-300" />
             )}
           </button>
         ))}
@@ -462,7 +648,13 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
 
 function HomeLeaderboardPreview() {
   const data = useQuery(api.account.totalLeaderboard, { limit: 5 });
-  if (!data) return null;
+  if (!data)
+    return (
+      <div className="mt-2 space-y-1.5">
+        <div className="skeleton h-16 w-full rounded-xl" />
+        <div className="skeleton h-10 w-full rounded-xl" />
+      </div>
+    );
   const [t1, t2, t3, ...rest] = data;
   return (
     <div className="mt-2">
@@ -483,9 +675,14 @@ function HomeLeaderboardPreview() {
 // ------------------------------------------------------ chat bareng ----
 
 function GlobalChatPreview() {
-  const { user } = useAuth();
   const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 6 });
-  if (!msgs) return null;
+  if (!msgs)
+    return (
+      <div className="mt-2 space-y-1.5">
+        <div className="skeleton h-6 w-3/4 rounded" />
+        <div className="skeleton h-6 w-1/2 rounded" />
+      </div>
+    );
   const visible = msgs.slice(-6);
   return (
     <div className="space-y-1.5">
@@ -498,7 +695,7 @@ function GlobalChatPreview() {
         <div key={m._id} className="flex items-center gap-2 text-xs">
           <Avatar src={m.image} seed={m.username} className="size-6" />
           <p className="truncate">
-            <span className="font-semibold text-yellow-300">{m.username}</span>
+            <span className="font-semibold text-amber-200">{m.username}</span>
             <span className="text-muted-foreground"> : </span>
             <span className="text-zinc-300">
               {m.premiumGive ? "🎁 give premium" : m.text ?? "[foto]"}
@@ -506,13 +703,13 @@ function GlobalChatPreview() {
           </p>
         </div>
       ))}
-      {user && null}
     </div>
   );
 }
 
 function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
   const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 100 });
   const send = useMutation(api.chat.sendMessage);
@@ -531,6 +728,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
     dmPeer ? { kind: "dm", peerId: dmPeer.id, limit: 100 } : "skip",
   );
   const meId = user?._id as string;
+  void clanMsgs;
 
   return (
     <ScreenWrapper title="Chat" onClose={onClose}>
@@ -546,7 +744,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           >
             {t === "chat" ? "Chat" : t}
             {tab === t && (
-              <span className="absolute inset-x-4 bottom-0 h-0.5 rounded bg-white" />
+              <span className="absolute inset-x-4 bottom-0 h-0.5 rounded bg-amber-300" />
             )}
           </button>
         ))}
@@ -573,13 +771,16 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         (myClan ? (
           <div className="space-y-2">
             <button
-              onClick={() => onClose()}
-              className="w-full rounded-xl border border-yellow-500/40 p-3 text-left text-sm"
+              onClick={() => {
+                onClose();
+                navigate("/clan");
+              }}
+              className="w-full rounded-xl border border-amber-300/40 p-3 text-left text-sm transition hover:border-amber-300/70"
             >
               {myClan.clan.tagIcon} [{myClan.clan.tag}] {myClan.clan.name} — buka chat clan ›
             </button>
             <p className="text-xs text-muted-foreground">
-              Chat clan tersedia di tab clan setelah masuk halaman clan.
+              Chat clan lengkap tersedia di halaman clan.
             </p>
           </div>
         ) : (
@@ -589,8 +790,11 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
               Join clan untuk mendapatkan Sacret dan buat clan mu nomor 1
             </p>
             <button
-              onClick={() => onClose()}
-              className="mt-4 rounded-full bg-yellow-500 px-5 py-2 text-sm font-bold text-black"
+              onClick={() => {
+                onClose();
+                navigate("/clan");
+              }}
+              className="mt-4 rounded-full bg-amber-300 px-5 py-2 text-sm font-bold text-black transition hover:bg-amber-200"
             >
               Lihat clan
             </button>
@@ -602,7 +806,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           <div>
             <p className="mb-1.5 text-sm font-semibold">Teman</p>
             {friends && friends.length > 0 ? (
-              friends.map((f) => (
+              friends.map((f: any) => (
                 <div
                   key={f.userId}
                   className="mb-1.5 flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
@@ -611,7 +815,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{f.username}</p>
                     <button
-                      className="text-xs text-yellow-300 underline"
+                      className="text-xs text-amber-200 underline"
                       onClick={() => setDmPeer({ id: f.userId as Id<"users">, name: f.username })}
                     >
                       Chat sekarang!
@@ -626,7 +830,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           <div>
             <p className="mb-1.5 text-sm font-semibold">Request</p>
             {requests && requests.length > 0 ? (
-              requests.map((r) => (
+              requests.map((r: any) => (
                 <div
                   key={r.requestId}
                   className="mb-1.5 flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
@@ -695,7 +899,7 @@ function DMScreen({
   onAddFriend: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="screen-enter fixed inset-0 z-50 flex flex-col bg-background">
       <div className="flex items-center gap-3 border-b border-border p-3">
         <button onClick={onBack} className="rounded-full border border-border p-1.5">
           <ChevronLeft className="size-4" />
@@ -704,7 +908,7 @@ function DMScreen({
         <p className="font-semibold">{peer.name}</p>
         <button
           onClick={onAddFriend}
-          className="ml-auto rounded-full border border-yellow-500/50 px-3 py-1 text-xs text-yellow-300"
+          className="ml-auto rounded-full border border-amber-300/50 px-3 py-1 text-xs text-amber-200"
         >
           + Teman
         </button>
@@ -720,7 +924,7 @@ function ButtonSmall({ label, onClick }: { label: string; onClick: () => void })
   return (
     <button
       onClick={onClick}
-      className="rounded-full bg-yellow-500 px-3 py-1 text-xs font-bold text-black hover:bg-yellow-400"
+      className="rounded-full bg-amber-300 px-3 py-1 text-xs font-bold text-black transition hover:bg-amber-200"
     >
       {label}
     </button>
@@ -735,7 +939,7 @@ function ScheduleRow({
   onPick,
 }: {
   day: string;
-  animes: any[];
+  animes: AnimeCardT[];
   onPick: (id: string) => void;
 }) {
   return (
@@ -753,9 +957,12 @@ function ScheduleRow({
   );
 }
 
-function AnimeGridItem({ a, onPick }: { a: any; onPick: (id: string) => void }) {
+function AnimeGridItem({ a, onPick }: { a: AnimeCardT; onPick: (id: string) => void }) {
   return (
-    <button onClick={() => onPick(a.id)} className="overflow-hidden rounded-lg border border-border/60">
+    <button
+      onClick={() => onPick(a.id)}
+      className="overflow-hidden rounded-lg border border-border/60 transition hover:border-amber-300/50"
+    >
       <img src={a.image} alt="" className="aspect-[2/3] w-full object-cover" />
       <p className="line-clamp-2 bg-black/50 p-1 text-left text-[10px] leading-3">{a.title}</p>
     </button>
@@ -774,12 +981,12 @@ export function ScreenWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+    <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="mx-auto max-w-2xl p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button
             onClick={onClose}
-            className="rounded-full border border-border p-2 hover:border-yellow-400"
+            className="rounded-full border border-border p-2 transition hover:border-amber-300"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -818,7 +1025,9 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
   if (!detail)
     return (
       <ScreenWrapper title="Detail" onClose={onClose}>
-        <p className="py-16 text-center text-sm text-muted-foreground">Memuat…</p>
+        <div className="skeleton h-40 w-full rounded-2xl" />
+        <div className="skeleton mt-3 h-8 w-full rounded" />
+        <div className="skeleton mt-2 h-4 w-2/3 rounded" />
       </ScreenWrapper>
     );
   if (detail.error)
@@ -828,7 +1037,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
       </ScreenWrapper>
     );
 
-  const eps = [...(detail.episodeList ?? [])];
+  const eps: any[] = [...(detail.episodeList ?? [])];
   if (episodeOrder === "last") eps.reverse();
   const shownEps = allEpisodes ? eps : eps.slice(0, 10);
 
@@ -859,13 +1068,16 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
           <img
             src={detail.image}
             alt=""
-            className="-mt-12 aspect-[2/3] w-24 rounded-xl border border-yellow-500/40 object-cover"
+            className="-mt-12 aspect-[2/3] w-24 rounded-xl border border-amber-300/40 object-cover"
           />
           <div className="min-w-0 flex-1">
             <h2 className="line-clamp-2 font-bold">{detail.title}</h2>
             <div className="mt-1 flex flex-wrap gap-1">
               {(detail.genres ?? []).slice(0, 4).map((g: string) => (
-                <span key={g} className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                <span
+                  key={g}
+                  className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground"
+                >
                   {g}
                 </span>
               ))}
@@ -873,7 +1085,16 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
             <p className="mt-1 text-xs text-muted-foreground">
               {detail.rating ?? "Rating 13+"} • {detail.studio ?? "Studio tidak diketahui"}
             </p>
-            <span className="mt-1 inline-block rounded bg-yellow-500/20 px-2 py-0.5 text-[10px] font-bold text-yellow-300">
+            <span
+              className={cn(
+                "mt-1 inline-block rounded px-2 py-0.5 text-[10px] font-bold",
+                detail.status === "Completed"
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : detail.status === "OVA" || detail.status === "Movie"
+                    ? "bg-purple-500/20 text-purple-300"
+                    : "bg-amber-300/20 text-amber-200",
+              )}
+            >
               {detail.status ?? "Ongoing"}
             </span>
           </div>
@@ -882,7 +1103,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
 
       <button
         onClick={() => navigate(`/nonton?anime=${animeId}`)}
-        className="mt-3 w-full rounded-xl bg-yellow-500 py-3 font-bold text-black hover:bg-yellow-400"
+        className="mt-3 w-full rounded-xl bg-amber-300 py-3 font-bold text-black transition hover:bg-amber-200"
       >
         ▶ Menonton
       </button>
@@ -893,7 +1114,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
       </p>
       <button
         onClick={() => setSynopsisOpen((v) => !v)}
-        className="mt-1 text-xs font-medium text-yellow-300 underline"
+        className="mt-1 text-xs font-medium text-amber-200 underline"
       >
         {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
       </button>
@@ -907,26 +1128,32 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
           {episodeOrder === "first" ? "Terlama dulu ↓" : "Terbaru dulu ↑"}
         </button>
       </div>
-      <div className="space-y-1.5">
-        {shownEps.map((e: any) => (
-          <button
-            key={e.id}
-            onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
-            className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-secondary/30 p-2.5 text-left hover:border-yellow-400/50"
-          >
-            <span className="flex size-9 items-center justify-center rounded-lg bg-yellow-500/15 text-sm font-bold text-yellow-300">
-              {e.number}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-1 text-sm font-medium">{e.title}</p>
-              <p className="text-xs text-muted-foreground">{e.duration ?? "24 menit"}</p>
-            </div>
-            <span className="text-[10px] text-muted-foreground">
-              {e.aired ? new Date(e.aired).toLocaleDateString("id-ID") : ""}
-            </span>
-          </button>
-        ))}
-      </div>
+      {eps.length === 0 ? (
+        <p className="py-4 text-center text-xs text-muted-foreground">
+          Daftar episode belum tersedia
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {shownEps.map((e: any) => (
+            <button
+              key={e.id}
+              onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
+              className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-secondary/30 p-2.5 text-left transition hover:border-amber-300/50"
+            >
+              <span className="flex size-9 items-center justify-center rounded-lg bg-amber-300/15 text-sm font-bold text-amber-200">
+                {e.number}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-1 text-sm font-medium">{e.title}</p>
+                <p className="text-xs text-muted-foreground">{e.duration ?? "24 menit"}</p>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                {e.aired ? new Date(e.aired).toLocaleDateString("id-ID") : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       {eps.length > 10 && (
         <button
           onClick={() => setAllEpisodes((v) => !v)}
@@ -955,15 +1182,18 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
                 toast.error(e instanceof Error ? e.message : "Gagal");
               }
             }}
-            className="rounded-full bg-yellow-500 p-2 text-black"
+            className="rounded-full bg-amber-300 p-2 text-black"
           >
             <Send className="size-4" />
           </button>
         </div>
       )}
       <div className="space-y-2">
-        {(comments ?? []).map((c) => (
-          <div key={c._id} className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-secondary/30 p-2.5">
+        {(comments ?? []).map((c: any) => (
+          <div
+            key={c._id}
+            className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-secondary/30 p-2.5"
+          >
             <Avatar src={c.image} seed={c.username} className="size-8" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">

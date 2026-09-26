@@ -30,7 +30,7 @@ export function AnimeCard({
   return (
     <button
       onClick={onClick}
-      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-yellow-400/60 hover:shadow-[0_0_18px_-4px] hover:shadow-yellow-500/40"
+      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-amber-300/60 hover:shadow-[0_0_18px_-4px] hover:shadow-amber-300/40"
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden">
         {image ? (
@@ -46,7 +46,7 @@ export function AnimeCard({
           </div>
         )}
         {rank !== undefined && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-yellow-300">
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-amber-200">
             #{rank}
           </span>
         )}
@@ -64,8 +64,8 @@ export function AnimeCard({
       <div className="p-2">
         <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4">{title}</p>
         {score !== undefined && score > 0 && (
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-yellow-400">
-            <Star className="size-3 fill-yellow-400" /> {score.toFixed(2)}
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300">
+            <Star className="size-3 fill-amber-300" /> {score.toFixed(2)}
           </p>
         )}
       </div>
@@ -171,7 +171,7 @@ export function Avatar({
       <img
         src={src ?? avatarFallback(seed)}
         alt=""
-        className="size-full rounded-full border border-yellow-500/40 object-cover"
+        className="size-full rounded-full border border-amber-300/40 object-cover"
       />
       {online !== undefined && (
         <span
@@ -208,7 +208,7 @@ export function ClanLevelBar({
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-yellow-500 to-amber-300 transition-all"
+          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -230,8 +230,8 @@ export function ClanTag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg rounded-tl-none rounded-br-none border border-yellow-500/40 bg-black/40 px-2 py-0.5 text-xs font-bold",
-        clanNameCls(color) || "text-yellow-200",
+        "inline-flex items-center gap-1 rounded-lg rounded-tl-none rounded-br-none border border-amber-300/40 bg-black/40 px-2 py-0.5 text-xs font-bold",
+        clanNameCls(color) || "text-amber-200",
         className,
       )}
     >

@@ -62,8 +62,8 @@ function NoClan() {
   const [mode, setMode] = useState<"none" | "buat" | "gabung">("none");
   return (
     <div className="py-6">
-      <div className="rounded-2xl border border-yellow-500/30 bg-card p-6 text-center">
-        <Crown className="mx-auto size-10 text-yellow-400" />
+      <div className="rounded-2xl border border-amber-300/30 bg-card p-6 text-center">
+        <Crown className="mx-auto size-10 text-amber-300" />
         <h1 className="mt-3 text-lg font-bold">Kamu belum join clan</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Join clan untuk mendapatkan Sacret dan buat clan mu nomor 1
@@ -71,7 +71,7 @@ function NoClan() {
         <div className="mt-5 space-y-2">
           <button
             onClick={() => setMode("gabung")}
-            className="w-full rounded-xl bg-yellow-500 py-3 font-bold text-black hover:bg-yellow-400"
+            className="w-full rounded-xl bg-amber-300 py-3 font-bold text-black hover:bg-amber-200"
           >
             Gabung Clan
           </button>
@@ -109,7 +109,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           <h1 className="text-lg font-bold">Buat Clan</h1>
         </div>
 
-        <div className="rounded-2xl border border-yellow-500/30 bg-card p-4">
+        <div className="rounded-2xl border border-amber-300/30 bg-card p-4">
           <div className="flex items-center gap-3">
             <Avatar src={avatar || undefined} seed={name || "clan"} className="size-16" />
             <div>
@@ -117,7 +117,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               <ClanTag icon={icon} tag={tag || "TAG"} className="mt-1" />
             </div>
           </div>
-          <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground hover:border-yellow-400">
+          <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground hover:border-amber-300">
             Custom photo profile
             <input
               type="file"
@@ -144,8 +144,8 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                 className={cn(
                   "flex aspect-square items-center justify-center rounded-xl border text-2xl [image-rendering:pixelated] transition",
                   icon === ic
-                    ? "border-yellow-400 bg-yellow-400/15"
-                    : "border-border hover:border-yellow-400/50",
+                    ? "border-amber-300 bg-amber-300/15"
+                    : "border-border hover:border-amber-300/50",
                 )}
               >
                 {ic}
@@ -170,7 +170,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         </div>
 
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          Membuat clan butuh <b className="text-yellow-400">1000 berlian</b>
+          Membuat clan butuh <b className="text-amber-300">1000 berlian</b>
         </p>
 
         <div className="mt-3 flex gap-2">
@@ -191,7 +191,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                 toast.error(e instanceof Error ? e.message : "Gagal");
               }
             }}
-            className="flex-1 rounded-xl bg-yellow-500 py-3 font-bold text-black disabled:opacity-40"
+            className="flex-1 rounded-xl bg-amber-300 py-3 font-bold text-black disabled:opacity-40"
           >
             Buat
           </button>
@@ -240,12 +240,12 @@ function JoinClan({ onBack }: { onBack: () => void }) {
               onClick={() => setTab(t)}
               className={cn(
                 "relative flex-1 rounded-lg py-2 text-sm font-medium capitalize",
-                tab === t ? "text-yellow-300" : "text-muted-foreground",
+                tab === t ? "text-amber-200" : "text-muted-foreground",
               )}
             >
               {t === "semua" ? "Semua" : "Best Clan"}
               {tab === t && (
-                <span className="absolute inset-x-6 bottom-0 h-0.5 rounded bg-yellow-400" />
+                <span className="absolute inset-x-6 bottom-0 h-0.5 rounded bg-amber-300" />
               )}
             </button>
           ))}
@@ -269,10 +269,10 @@ function JoinClan({ onBack }: { onBack: () => void }) {
               Belum ada clan. Jadilah yang pertama!
             </p>
           )}
-          {sorted.map((c) => (
+          {sorted.map((c: any) => (
             <div
               key={c._id}
-              className="cursor-pointer rounded-2xl border border-border bg-card p-3 hover:border-yellow-400/50"
+              className="cursor-pointer rounded-2xl border border-border bg-card p-3 hover:border-amber-300/50"
               onClick={() => setDetailId(c._id as Id<"clans">)}
             >
               <div className="flex items-center gap-3">
@@ -306,7 +306,7 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                     "rounded-full px-3 py-1.5 text-xs font-bold",
                     c.isRequested
                       ? "bg-green-500/20 text-green-400"
-                      : "bg-yellow-500 text-black",
+                      : "bg-amber-300 text-black",
                   )}
                 >
                   {c.isRequested ? "Request terkirim" : "Request"}
@@ -356,7 +356,7 @@ function ClanChat({
     <div>
       <button
         onClick={onOpenDetail}
-        className="flex w-full items-center gap-3 rounded-2xl border border-yellow-500/30 bg-card p-3 text-left"
+        className="flex w-full items-center gap-3 rounded-2xl border border-amber-300/30 bg-card p-3 text-left"
       >
         <ClanTag icon={c?.tagIcon ?? "⚔️"} tag={c?.tag ?? "—"} color={c?.color} />
         <span className="truncate font-bold">{c?.name}</span>
@@ -420,10 +420,10 @@ function ClanDetail({
   const canPanel = isLeader || isOfficer;
   const today = new Date().toISOString().slice(0, 10);
   const claimedToday = detail.myLastClaimDay === today;
-  const members = detail.members.filter((m) =>
+  const members = detail.members.filter((m: any) =>
     m.username.toLowerCase().includes(search.toLowerCase()),
   );
-  const topDonate = detail.topDonateToday.filter((m) =>
+  const topDonate = detail.topDonateToday.filter((m: any) =>
     m.username.toLowerCase().includes(search.toLowerCase()),
   );
   const [t1, t2, t3, ...restTop] = topDonate;
@@ -457,7 +457,7 @@ function ClanDetail({
 
         {/* Kotak utama */}
         <div
-          className="relative overflow-hidden rounded-2xl border border-yellow-500/30"
+          className="relative overflow-hidden rounded-2xl border border-amber-300/30"
           style={
             c.backgroundUrl
               ? {
@@ -508,7 +508,7 @@ function ClanDetail({
                     toast.error(e instanceof Error ? e.message : "Gagal");
                   }
                 }}
-                className="mt-3 w-full rounded-xl bg-yellow-500 py-2.5 text-sm font-bold text-black"
+                className="mt-3 w-full rounded-xl bg-amber-300 py-2.5 text-sm font-bold text-black"
               >
                 Request
               </button>
@@ -520,11 +520,11 @@ function ClanDetail({
         <div className="mt-3 rounded-2xl border border-border bg-card p-4">
           <div className="flex justify-between text-center text-sm">
             <div className="flex-1">
-              <p className="font-bold text-yellow-300">{c.memberCount}</p>
+              <p className="font-bold text-amber-200">{c.memberCount}</p>
               <p className="text-xs text-muted-foreground">Jumlah Member</p>
             </div>
             <div className="flex-1">
-              <p className="font-bold text-yellow-300">{c.ageDays} hari</p>
+              <p className="font-bold text-amber-200">{c.ageDays} hari</p>
               <p className="text-xs text-muted-foreground">Umur Clan</p>
             </div>
           </div>
@@ -536,7 +536,7 @@ function ClanDetail({
         {/* Berlian + level */}
         <div className="mt-3 rounded-2xl border border-border bg-card p-4 text-center">
           <Gem className="mx-auto size-8 text-cyan-300" />
-          <p className="mt-1 text-2xl font-black text-yellow-300">{c.diamonds}</p>
+          <p className="mt-1 text-2xl font-black text-amber-200">{c.diamonds}</p>
           <ClanLevelBar level={c.level} progress={c.levelProgress} cost={c.levelCost} />
           <div className="mt-3 space-y-2">
             <button
@@ -556,7 +556,7 @@ function ClanDetail({
             <button
               disabled={!isMember}
               onClick={() => setDonateOpen(true)}
-              className="w-full rounded-xl border border-yellow-500/50 py-2.5 text-sm font-bold text-yellow-300 disabled:opacity-40"
+              className="w-full rounded-xl border border-amber-300/50 py-2.5 text-sm font-bold text-amber-200 disabled:opacity-40"
             >
               Donate
             </button>
@@ -576,7 +576,7 @@ function ClanDetail({
                   className="w-full bg-transparent py-2.5 text-sm outline-none"
                 />
               </div>
-              <button className="rounded-xl bg-yellow-500 px-4 text-sm font-bold text-black">
+              <button className="rounded-xl bg-amber-300 px-4 text-sm font-bold text-black">
                 Cari
               </button>
             </div>
@@ -588,12 +588,12 @@ function ClanDetail({
                   onClick={() => setTab(t)}
                   className={cn(
                     "relative flex-1 rounded-lg py-2 text-sm font-medium",
-                    tab === t ? "text-yellow-300" : "text-muted-foreground",
+                    tab === t ? "text-amber-200" : "text-muted-foreground",
                   )}
                 >
                   {t === "member" ? "Member" : "Top Donate"}
                   {tab === t && (
-                    <span className="absolute inset-x-8 bottom-0 h-0.5 rounded bg-yellow-400" />
+                    <span className="absolute inset-x-8 bottom-0 h-0.5 rounded bg-amber-300" />
                   )}
                 </button>
               ))}
@@ -609,7 +609,7 @@ function ClanDetail({
 
             {tab === "member" && (
               <div className="mt-2 space-y-2">
-                {members.map((m) => {
+                {members.map((m: any) => {
                   const badge = CLAN_ROLE_BADGE[m.role] ?? CLAN_ROLE_BADGE.member;
                   return (
                     <div
@@ -651,7 +651,7 @@ function ClanDetail({
                 <p className="mb-2 rounded-xl bg-secondary/50 p-2.5 text-center text-xs">
                   Total donate hari ini terkumpul{" "}
                   <b className="text-cyan-300">{detail.todayDonationsTotal}</b> berlian dengan
-                  total <b className="text-yellow-300">{detail.todayDonators}</b> member donate
+                  total <b className="text-amber-200">{detail.todayDonators}</b> member donate
                 </p>
                 {topDonate.length >= 3 && (
                   <div className="mb-3 grid grid-cols-3 items-end gap-2">
@@ -660,7 +660,7 @@ function ClanDetail({
                     <TopPodium rank={3} m={t3} />
                   </div>
                 )}
-                {restTop.map((m) => (
+                {restTop.map((m: any) => (
                   <MemberDonateRow key={m.userId} m={m} />
                 ))}
                 {topDonate.length === 0 && (
@@ -730,7 +730,7 @@ function ClanDetail({
             await setBackground({ url });
             toast.success("Background clan diubah");
           }}
-          requests={detail.requests.map((r) => ({
+          requests={detail.requests.map((r: any) => ({
             requestId: r.requestId,
             username: r.username,
             image: r.image,
@@ -760,8 +760,8 @@ function TopPodium({
 }) {
   if (!m) return <div />;
   return (
-    <div className="flex flex-col items-center rounded-t-xl border border-b-0 border-yellow-500/40 bg-yellow-500/10 pt-2">
-      <span className="text-lg font-black text-yellow-300">{rank}</span>
+    <div className="flex flex-col items-center rounded-t-xl border border-b-0 border-amber-300/40 bg-amber-300/10 pt-2">
+      <span className="text-lg font-black text-amber-200">{rank}</span>
       <Avatar src={m.image} seed={m.username} className={cn("mt-1", big ? "size-14" : "size-11")} />
       <p className="line-clamp-1 max-w-full px-1 text-xs font-semibold">{m.username}</p>
       <p className="text-[10px] text-muted-foreground">Donate Hari Ini :</p>
@@ -810,7 +810,7 @@ function DonateDialog({
     <Popup onClose={onClose} title="Donate Berlian">
       <div className="text-center">
         <Gem className="mx-auto size-10 text-cyan-300" />
-        <p className="mt-1 text-xl font-black text-yellow-300">{amount}</p>
+        <p className="mt-1 text-xl font-black text-amber-200">{amount}</p>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {DONATE_PRESETS.map((p) => (
@@ -819,7 +819,7 @@ function DonateDialog({
             onClick={() => setAmount(p)}
             className={cn(
               "rounded-lg border py-2 text-sm font-semibold",
-              amount === p ? "border-yellow-400 bg-yellow-400/15 text-yellow-300" : "border-border",
+              amount === p ? "border-amber-300 bg-amber-300/15 text-amber-200" : "border-border",
             )}
           >
             {p}
@@ -836,7 +836,7 @@ function DonateDialog({
       <button
         disabled={amount < 50}
         onClick={() => onDonate(amount)}
-        className="mt-3 w-full rounded-xl bg-yellow-500 py-2.5 text-sm font-bold text-black disabled:opacity-40"
+        className="mt-3 w-full rounded-xl bg-amber-300 py-2.5 text-sm font-bold text-black disabled:opacity-40"
       >
         Donate
       </button>
@@ -856,7 +856,7 @@ function Popup({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
-        className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-yellow-500/30 bg-card p-4"
+        className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-amber-300/30 bg-card p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -914,7 +914,7 @@ function LeaderPanel({
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/80 p-3" onClick={onClose}>
       <div
-        className="mx-auto max-w-md rounded-2xl border border-yellow-500/30 bg-card p-4"
+        className="mx-auto max-w-md rounded-2xl border border-amber-300/30 bg-card p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -942,7 +942,7 @@ function LeaderPanel({
               onClick={() => setSub(k as typeof sub)}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs",
-                sub === k ? "border-yellow-400 bg-yellow-400/15 text-yellow-300" : "border-border",
+                sub === k ? "border-amber-300 bg-amber-300/15 text-amber-200" : "border-border",
               )}
             >
               {label}
@@ -992,7 +992,7 @@ function LeaderPanel({
                 await onBg(bgUrl);
                 onClose();
               }}
-              className="rounded-lg bg-yellow-500 px-4 text-sm font-bold text-black"
+              className="rounded-lg bg-amber-300 px-4 text-sm font-bold text-black"
             >
               OK
             </button>
@@ -1009,7 +1009,7 @@ function LeaderPanel({
                     onClick={() => setRole(r)}
                     className={cn(
                       "rounded-full border px-3 py-1 text-xs capitalize",
-                      role === r ? "border-yellow-400 text-yellow-300" : "border-border",
+                      role === r ? "border-amber-300 text-amber-200" : "border-border",
                     )}
                   >
                     +{r}
@@ -1025,7 +1025,7 @@ function LeaderPanel({
                     onClick={() => setRole(r)}
                     className={cn(
                       "rounded-full border px-3 py-1 text-xs capitalize",
-                      role === r ? "border-yellow-400 text-yellow-300" : "border-border",
+                      role === r ? "border-amber-300 text-amber-200" : "border-border",
                     )}
                   >
                     Un{r}
@@ -1035,13 +1035,13 @@ function LeaderPanel({
             )}
             <div className="max-h-64 space-y-1.5 overflow-y-auto">
               {members
-                .filter((m) => m.role !== "leader")
-                .map((m) => (
+                .filter((m: any) => m.role !== "leader")
+                .map((m: any) => (
                   <div
                     key={m.userId}
                     className={cn(
                       "flex cursor-pointer items-center gap-2 rounded-xl border p-2",
-                      picked === m.userId ? "border-yellow-400" : "border-border/70",
+                      picked === m.userId ? "border-amber-300" : "border-border/70",
                     )}
                     onClick={() => setPicked(m.userId)}
                   >
@@ -1055,7 +1055,7 @@ function LeaderPanel({
               <button
                 onClick={async () => {
                   if (sub === "roles" || sub === "unroles") {
-                    const target = members.find((m) => m.userId === picked);
+                    const target = members.find((m: any) => m.userId === picked);
                     if (target) {
                       const finalRole =
                         sub === "unroles"
@@ -1071,7 +1071,7 @@ function LeaderPanel({
                   setPicked(null);
                   onClose();
                 }}
-                className="mt-3 w-full rounded-xl bg-yellow-500 py-2.5 text-sm font-bold text-black"
+                className="mt-3 w-full rounded-xl bg-amber-300 py-2.5 text-sm font-bold text-black"
               >
                 {sub === "kick"
                   ? "Kick Sekarang"
