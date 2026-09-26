@@ -13,6 +13,12 @@ import "./index.css";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Home = lazy(() => import("./pages/Home.tsx"));
+const Watch = lazy(() => import("./pages/Watch.tsx"));
+const Clan = lazy(() => import("./pages/Clan.tsx"));
+const Jadwal = lazy(() => import("./pages/Jadwal.tsx"));
+const Akun = lazy(() => import("./pages/Akun.tsx"));
+const Premium = lazy(() => import("./pages/Premium.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -76,13 +82,11 @@ class RootErrorBoundary extends React.Component<
         </div>
       );
     }
-    return this.props.children;
+    return this.state.hasError ? null : this.props.children;
   }
 }
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
-
-
 
 function RouteSyncer() {
   const location = useLocation();
@@ -107,7 +111,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -129,6 +132,54 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/home"
+                element={
+                  <RequireAuth>
+                    <Home />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/nonton"
+                element={
+                  <RequireAuth>
+                    <Watch />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/clan"
+                element={
+                  <RequireAuth>
+                    <Clan />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/jadwal"
+                element={
+                  <RequireAuth>
+                    <Jadwal />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/akun"
+                element={
+                  <RequireAuth>
+                    <Akun />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/premium"
+                element={
+                  <RequireAuth>
+                    <Premium />
                   </RequireAuth>
                 }
               />

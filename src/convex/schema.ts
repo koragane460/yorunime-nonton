@@ -57,6 +57,9 @@ const schema = defineSchema(
           v.literal("creator"),
         ),
       ),
+      clanTag: v.optional(v.string()),
+      clanTagIcon: v.optional(v.string()),
+      clanNameColor: v.optional(v.string()),
     })
       .index("email", ["email"])
       .index("username", ["username"])
@@ -115,7 +118,8 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("leaderId", ["leaderId"])
-      .index("diamonds", ["diamonds"]),
+      .index("diamonds", ["diamonds"])
+      .index("tag", ["tag"]),
 
     clanMembers: defineTable({
       clanId: v.id("clans"),
@@ -206,7 +210,9 @@ const schema = defineSchema(
       animeTitle: v.string(),
       animeImage: v.optional(v.string()),
       createdAt: v.number(),
-    }).index("userId_created", ["userId", "createdAt"]),
+    })
+      .index("userId_created", ["userId", "createdAt"])
+      .index("userId_anime", ["userId", "animeId"]),
 
     premiumPurchases: defineTable({
       userId: v.id("users"),
@@ -219,7 +225,9 @@ const schema = defineSchema(
       paymentRef: v.optional(v.string()),
       paymentUrl: v.optional(v.string()),
       createdAt: v.number(),
-    }).index("userId_created", ["userId", "createdAt"]),
+    })
+      .index("userId_created", ["userId", "createdAt"])
+      .index("orderId", ["orderId"]),
 
     clickGame: defineTable({
       userId: v.id("users"),
@@ -227,6 +235,13 @@ const schema = defineSchema(
       clicks: v.number(),
       diamondsEarned: v.number(),
     }).index("userId_day", ["userId", "day"]),
+
+    absenLogs: defineTable({
+      userId: v.id("users"),
+      day: v.number(),
+      day2: v.string(),
+      createdAt: v.number(),
+    }).index("userId_day", ["userId", "day2"]),
 
     appSettings: defineTable({
       key: v.string(),
