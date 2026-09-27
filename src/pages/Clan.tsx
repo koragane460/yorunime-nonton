@@ -374,9 +374,9 @@ function ClanChat({
         <span className="truncate font-bold">{c?.name ?? "Clan"}</span>
         <span className="ml-auto text-muted-foreground">›</span>
       </div>
-      <div className="flex min-h-0 w-full flex-1 flex-col px-4 pb-2">
+      <div className="flex min-h-0 w-full flex-1 flex-col pb-2">
         {msgs && user ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
             <ChatPanel
               kind="clan"
               clanId={clanId}

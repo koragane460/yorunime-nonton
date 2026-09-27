@@ -849,10 +849,10 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Isi di atas input; input stay di bawah (di atas area navbar yang tertutup) */}
-        <div className="flex min-h-0 w-full flex-1 flex-col px-3 pb-2 pt-3">
+        {/* Isi di atas input; chat rata full tanpa rounding */}
+        <div className="flex min-h-0 w-full flex-1 flex-col pb-2 pt-3">
           {tab === "chat" && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
               {msgs && user ? (
                 <ChatPanel
                   kind="global"
@@ -871,7 +871,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
           {tab === "clan" &&
             (myClan ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
                 {clanMsgs && user ? (
                   <ChatPanel
                     kind="clan"
