@@ -1,5 +1,6 @@
 // LStream — clan: buat/join/roles/donate/level/claim/panel.
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { ConvexError } from "convex/values";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { addXpInternal } from "./xp";
@@ -267,28 +268,28 @@ export const createClan = mutation({
   },
   handler: async (ctx, { name, tag, tagIcon, avatarUrl, description }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not signed in");
+    if (userId === null) throw new ConvexError("Not signed in");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("User not found");
+    if (!me) throw new ConvexError("User not found");
     if ((me.diamonds ?? 0) < CREATE_COST)
-      throw new Error(
+      throw new ConvexError(
         `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} 💎 — butuh ${CREATE_COST} 💎 buat bikin clan (donasi ke clan lain / beli premium untuk nambah)`,
       );
     const cleanTag = tag.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (cleanTag.length < 3 || cleanTag.length > 4)
-      throw new Error("Tag clan 3-4 huruf");
-    if (name.trim().length < 3) throw new Error("Nama clan minimal 3 karakter");
+      throw new ConvexError("Tag clan 3-4 huruf");
+    if (name.trim().length < 3) throw new ConvexError("Nama clan minimal 3 karakter");
     const dup = await ctx.db
       .query("clans")
       .withIndex("tag", (q) => q.eq("tag", cleanTag))
       .first()
       .catch(() => null);
-    if (dup) throw new Error("Tag clan sudah dipakai");
+    if (dup) throw new ConvexError("Tag clan sudah dipakai");
     const existing = await ctx.db
       .query("clanMembers")
       .withIndex("userId", (q) => q.eq("userId", userId))
       .first();
-    if (existing) throw new Error("Kamu sudah punya clan");
+    if (existing) throw new ConvexError("Kamu sudah punya clan");
     await ctx.db.patch(userId, { diamonds: (me.diamonds ?? 0) - CREATE_COST });
     const clanId = await ctx.db.insert("clans", {
       name: name.trim(),

@@ -184,7 +184,7 @@ function HomeContent() {
               )}
             >
               <div
-                className="relative min-h-48 bg-cover bg-center"
+                className="relative min-h-60 bg-cover bg-center"
                 style={
                   a.image
                     ? {
@@ -200,11 +200,11 @@ function HomeContent() {
                     </p>
                   </div>
                 )}
-                <div className="relative max-w-[70%] p-4">
+                <div className="relative w-full p-4">
                   <span className="rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-black text-white">
                     {a.status ?? "Ongoing"}
                   </span>
-                  <h3 className="mt-1.5 line-clamp-1 text-lg font-black">{a.title}</h3>
+                  <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
                   <p className="mt-1 line-clamp-2 text-xs text-zinc-300">
                     {a.synopsis ?? "Sinopsis belum tersedia."}
                   </p>
@@ -810,6 +810,10 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 100 });
   const send = useMutation(api.chat.sendMessage);
   const myClan = useQuery(api.clans.myMembership, user ? {} : "skip");
+  const clanMsgs = useQuery(
+    api.chat.listMessages,
+    myClan?.clanId ? { kind: "clan", clanId: myClan.clanId, limit: 100 } : "skip",
+  );
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip");
   const requests = useQuery(api.friends.listRequests, user ? {} : "skip");
   const respond = useMutation(api.friends.respondRequest);
@@ -823,13 +827,13 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      {/* Full screen beneran: nutupin navbar + footer, tanpa rounding */}
+      {/* Full screen beneran: nutupin navbar + panel akun sampai ke bawah */}
       <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
         <div className="flex w-full items-center gap-3 px-4 py-3">
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="text-lg font-bold">Chat</h1>
+          <h1 className="truncate text-lg font-bold">Chat</h1>
         </div>
         <div className="w-full px-4">
           <div className="tab-pill-track">
@@ -846,9 +850,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Isi di atas input; input stay di bawah (di atas area navbar yang tertutup) */}
-        <div className="flex min-h-0 w-full flex-1 flex-col px-4 pb-2 pt-3">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-3 pb-2 pt-3">
           {tab === "chat" && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card">
               {msgs && user ? (
                 <ChatPanel
                   kind="global"
@@ -867,19 +871,20 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
           {tab === "clan" &&
             (myClan ? (
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    onClose();
-                    navigate("/clan");
-                  }}
-                  className="w-full rounded-xl border border-violet-500/40 p-3 text-left text-sm transition hover:border-violet-500/70"
-                >
-                  {myClan.clan.tagIcon} [{myClan.clan.tag}] {myClan.clan.name} — buka chat clan ›
-                </button>
-                <p className="text-xs text-muted-foreground">
-                  Chat clan lengkap tersedia di halaman clan.
-                </p>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card">
+                {clanMsgs && user ? (
+                  <ChatPanel
+                    kind="clan"
+                    clanId={myClan.clanId}
+                    messages={clanMsgs as unknown as ChatMsg[]}
+                    meId={meId}
+                    onSend={async (p) => {
+                      await send({ kind: "clan", clanId: myClan.clanId, ...(p as any) });
+                    }}
+                  />
+                ) : (
+                  <p className="py-10 text-center text-sm text-muted-foreground">Memuat…</p>
+                )}
               </div>
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
