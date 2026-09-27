@@ -8,7 +8,7 @@ export const CLAN_LEVELS_MAX = 200;
 const BASE_LEVEL_COST = 700;
 const COST_STEP = 10;
 const BASE_CLAIM = 100;
-const CLAIM_PER_LEVEL = 5;
+const CLAIM_PER_LEVEL = 2;
 const CREATE_COST = 1000;
 
 export function levelCost(level: number) {
