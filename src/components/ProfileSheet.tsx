@@ -3,6 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
 import { ChevronLeft, Gem, Crown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Id } from "@/convex/_generated/dataModel";
 
 function StatCell({ label, value }: { label: string; value: number | string }) {
   return (
@@ -22,7 +23,7 @@ export function ProfileSheet({
   userId,
   onClose,
 }: {
-  userId: string;
+  userId: Id<"users">;
   onClose: () => void;
 }) {
   const profile = useQuery(api.account.getPublicProfile, { userId });

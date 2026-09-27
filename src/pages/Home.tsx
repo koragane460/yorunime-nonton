@@ -1,5 +1,5 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -89,7 +89,8 @@ function GridSkeleton({ count = 10 }: { count?: number }) {
 function HomeContent() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [pickId, setPickId] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);

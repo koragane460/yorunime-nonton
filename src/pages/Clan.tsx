@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { api } from "@/convex/_generated/api";
@@ -63,41 +64,44 @@ export default function ClanPage() {
 
 function ClanContent() {
   const { user } = useAuth();
+  const [params] = useSearchParams();
   const my = useQuery(api.clans.myMembership, user ? {} : "skip");
 
   if (my === undefined)
     return <p className="py-20 text-center text-sm text-muted-foreground">Memuat…</p>;
 
-  if (my === null) return <NoClan />;
+  if (my === null) return <NoClan initialCreate={params.get("buat") === "1"} />;
   return <ClanHub clanId={my.clanId as Id<"clans">} />;
 }
 
 // --------------------------------------------------------- belum join ----
 
-function NoClan() {
-  const [mode, setMode] = useState<"none" | "buat" | "gabung">("none");
+function NoClan({ initialCreate }: { initialCreate?: boolean }) {
+  const [mode, setMode] = useState<"none" | "buat" | "gabung">(
+    initialCreate ? "buat" : "none",
+  );
   return (
     <div className="py-6">
-      <div className="clan-hero-gradient rounded-3xl border border-white/10 p-6 text-center">
+      <div className="clan-hero-gradient flex flex-col items-center justify-center rounded-3xl border border-white/10 p-6 text-center">
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-black/30 text-2xl">
           ⚔️
         </div>
         <h1 className="mt-3 text-lg font-bold">Kamu belum join clan</h1>
-        <p className="mt-1 text-sm text-indigo-200/70">
+        <p className="mt-1 text-sm text-white/60">
           Join clan untuk mendapatkan Sacret dan buat clan mu nomor 1
         </p>
-        <div className="mt-5 space-y-2">
-          <button
-            onClick={() => setMode("gabung")}
-            className="w-full rounded-full bg-[oklch(0.86_0.16_90)] py-3 font-bold text-[oklch(0.18_0.04_70)] transition hover:brightness-105"
-          >
-            Gabung Clan
-          </button>
+        <div className="mx-auto mt-5 flex w-64 flex-col gap-2">
           <button
             onClick={() => setMode("buat")}
-            className="w-full rounded-full border border-white/15 bg-white/5 py-3 font-semibold hover:bg-white/10"
+            className="w-full rounded-full bg-red-600 py-3 font-bold text-white transition hover:bg-red-500"
           >
             Buat Clan
+          </button>
+          <button
+            onClick={() => setMode("gabung")}
+            className="w-full rounded-full border border-white/20 bg-white/5 py-3 font-semibold text-white transition hover:bg-white/10"
+          >
+            Lihat Clan
           </button>
         </div>
       </div>

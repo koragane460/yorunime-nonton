@@ -4,21 +4,27 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
-import { Avatar, SectionTitle, ShineBadge, UserBadges } from "@/components/lstream-ui";
-import { CLAN_ROLE_BADGE, STAFF_BADGE, badgeForLevel, timeAgo } from "@/lib/lstream";
 import {
-  Bell,
+  Avatar,
+  BlueCheck,
+  ClanTag,
+  LevelBadge,
+  SectionTitle,
+  ShineBadge,
+} from "@/components/lstream-ui";
+import { STAFF_BADGE, timeAgo, displayId } from "@/lib/lstream";
+import { xpForLevel } from "@/lib/level";
+import {
   ChevronLeft,
-  Gamepad2,
+  Crown,
   Gem,
   Heart,
+  History as HistoryIcon,
   LogOut,
   Mail,
   MessageSquare,
   Settings as SettingsIcon,
-  X,
-  Crown,
-  History as HistoryIcon,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -35,95 +41,129 @@ export default function Akun() {
 function AkunContent() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const [tab, setTab] = useState<"history" | "komen" | "favorite">(
-    (params.get("tab") as any) ?? "history",
+  const [params, setParams] = useSearchParams();
+  const tabParam = params.get("tab");
+  const [tab, setTab] = useState<"teman" | "history" | "komen" | "favorite">(
+    tabParam === "favorite"
+      ? "favorite"
+      : tabParam === "history"
+        ? "history"
+        : tabParam === "komen"
+          ? "komen"
+          : "teman",
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [gameOpen, setGameOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
 
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const friendComments = useQuery(api.activities.myFriendsComments, user ? {} : "skip");
 
   if (!user) return null;
   const xpInLevel = user.xp ?? 0;
-  const badge = badgeForLevel(user.level ?? 1);
+  const cost = xpForLevel(user.level ?? 1);
+  const pct = Math.min(100, (xpInLevel / Math.max(1, cost)) * 100);
+  const premium = (user.premiumUntil ?? 0) > Date.now();
+  const premiumDays = Math.max(
+    0,
+    Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
+  );
+
+  const setTabAndUrl = (t: typeof tab) => {
+    setTab(t);
+    setParams({});
+  };
 
   return (
-    <div className="py-3">
-      {/* Panel akun besar */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-300/30">
+    <div className="relative py-3">
+      {/* Tombol Pengaturan — kanan atas pojok */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Pengaturan"
+        className="absolute right-0 top-3 flex size-10 items-center justify-center rounded-full border border-white/15 bg-black/60 transition hover:border-red-500/60"
+      >
+        <SettingsIcon className="size-4.5" />
+      </button>
+
+      {/* Kotak akun paling atas */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10">
         <div
-          className="h-24 bg-cover bg-center"
+          className="h-20 bg-cover bg-center"
           style={
             user.bannerUrl
               ? { backgroundImage: `url(${user.bannerUrl})` }
-              : { background: "linear-gradient(120deg,#3a2f0a,#17130a)" }
+              : undefined
           }
-        />
-        <div className="bg-card p-4">
+        >
+          {!user.bannerUrl && <div className="bg-hero-gradient h-full w-full" />}
+        </div>
+        <div className="bg-black/40 p-4 pt-2">
           <div className="flex items-end gap-3">
             <Avatar
               src={user.image}
               seed={user.username}
-              className="-mt-12 size-20"
+              className="-mt-10 size-20 border-4 border-background"
               online={!user.hideOnline}
             />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1 pb-1">
+              <div className="flex items-center gap-1.5">
                 <p className="truncate text-lg font-black">{user.username}</p>
-                {(user.premiumUntil ?? 0) > Date.now() && (
-                  <span className="rounded bg-sky-500 px-1.5 text-[10px] font-bold text-white">✓</span>
-                )}
-                <span className="ml-auto text-xs text-muted-foreground">
-                  ID: {user._id.slice(-6).toUpperCase()}
-                </span>
+                {premium && <BlueCheck className="size-5" />}
               </div>
-              <UserBadges level={user.level ?? 1} staffRole={user.staffRole} />
-              {user.clanTag && (
-                <p className="mt-1 text-xs font-bold text-amber-200">
-                  {user.clanTagIcon} [{user.clanTag}]
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                ID: {displayId(user.seqId, user._id)}
+              </p>
             </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <LevelBadge level={user.level ?? 1} />
+            {user.clanTag && (
+              <ClanTag
+                icon={user.clanTagIcon ?? "⚔️"}
+                tag={user.clanTag}
+                color={user.clanNameColor}
+              />
+            )}
           </div>
 
           {/* Bar level */}
           <div className="mt-3">
-            <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-              <span>
-                Level <b className="text-foreground">{user.level}</b>
-              </span>
-              <span>
-                {xpInLevel} / {nextLevelCost(user.level ?? 1)} XP · 1/{badge.name}
+            <div className="mb-1 flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-foreground">Level {user.level}</span>
+              <span className="text-zinc-400">
+                {xpInLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
               </span>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <div className="h-2.5 overflow-hidden rounded-full bg-black/50">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-300"
-                style={{
-                  width: `${Math.min(100, (xpInLevel / Math.max(1, nextLevelCost(user.level ?? 1))) * 100)}%`,
-                }}
+                className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400"
+                style={{ width: `${pct}%` }}
               />
             </div>
           </div>
 
-          {/* Statistik */}
-          <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-            <Stat label="History" value={stats?.watchCount ?? 0} />
-            <Stat label="Komen" value={stats?.commentCount ?? 0} />
-            <Stat label="Bergabung" value={`${stats?.joinedDays ?? 0}h`} />
-            <Stat label="Menit" value={stats?.minutesWatched ?? 0} />
+          <div className="my-2.5 h-px bg-white/20" />
+
+          <div className="flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
+              <Gem className="size-3.5" /> {(user.diamonds ?? 0).toLocaleString("id-ID")}
+            </span>
+            {premium && (
+              <span className="flex items-center gap-1.5 font-semibold text-gold">
+                <Crown className="size-3.5" /> {premiumDays} hari
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mt-3 flex gap-2">
+      {/* Tabs tanpa background blok */}
+      <div className="mt-4 flex gap-1 border-b border-white/10">
         {(
           [
+            ["teman", "Teman", <Users key="u" className="size-3.5" />],
             ["history", "History", <HistoryIcon key="h" className="size-3.5" />],
             ["komen", "Komen", <MessageSquare key="k" className="size-3.5" />],
             ["favorite", "Favorite", <Heart key="f" className="size-3.5" />],
@@ -131,20 +171,72 @@ function AkunContent() {
         ).map(([k, label, icon]) => (
           <button
             key={k}
-            onClick={() => setTab(k as typeof tab)}
+            onClick={() => setTabAndUrl(k as typeof tab)}
             className={cn(
-              "relative flex-1 rounded-xl border py-2 text-xs font-medium",
-              tab === k
-                ? "border-amber-300 bg-amber-300/10 text-amber-200"
-                : "border-border text-muted-foreground",
+              "relative flex-1 pb-2 pt-1 text-xs font-medium",
+              tab === k ? "text-foreground" : "text-muted-foreground",
             )}
           >
-            {icon} {label}
+            <span className="flex items-center justify-center gap-1">
+              {icon} {label}
+            </span>
+            {tab === k && (
+              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-red-500" />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="mt-2 space-y-2">
+      <div className="mt-3 space-y-2">
+        {tab === "teman" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              Komentar teman, clan, & developer di semua anime — terbaru dulu
+            </p>
+            {(friendComments ?? []).map((c: any) => (
+              <button
+                key={c._id}
+                onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
+                className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-red-500/50"
+              >
+                {c.bannerUrl && (
+                  <div
+                    className="h-7 w-full bg-cover bg-center opacity-70"
+                    style={{ backgroundImage: `url(${c.bannerUrl})` }}
+                  />
+                )}
+                <div className="flex gap-2.5 p-2.5">
+                  <Avatar src={c.image} seed={c.username} className="size-8" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+                      <p className="truncate text-xs font-bold">{c.username}</p>
+                      {c.premium && <BlueCheck className="size-3.5" />}
+                      {c.staffRole && STAFF_BADGE[c.staffRole] && (
+                        <ShineBadge
+                          label={STAFF_BADGE[c.staffRole].name}
+                          gradient={STAFF_BADGE[c.staffRole].cls}
+                        />
+                      )}
+                      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                        {timeAgo(c.createdAt)}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 text-sm text-zinc-300">{c.text}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                      ❤️ {c.likeCount ?? 0}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+            {friendComments && friendComments.length === 0 && (
+              <p className="py-8 text-center text-xs text-muted-foreground">
+                Belum ada komentar teman — tambahkan teman lewat chat!
+              </p>
+            )}
+          </>
+        )}
+
         {tab === "history" &&
           (history ?? []).map((h: any) => (
             <button
@@ -157,9 +249,7 @@ function AkunContent() {
                 <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
                 <p className="text-xs text-muted-foreground">Episode {h.episode}</p>
               </div>
-              <span className="text-[10px] text-muted-foreground">
-                {timeAgo(h.updatedAt)}
-              </span>
+              <span className="text-[10px] text-muted-foreground">{timeAgo(h.updatedAt)}</span>
             </button>
           ))}
         {tab === "history" && (history ?? []).length === 0 && (
@@ -168,13 +258,15 @@ function AkunContent() {
 
         {tab === "favorite" &&
           (favorites ?? []).map((f: any) => (
-            <div
+            <button
               key={f._id}
-              className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5"
+              onClick={() => navigate(`/nonton?anime=${f.animeId}`)}
+              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
             >
+              <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />
               <Heart className="size-4 fill-red-500 text-red-500" />
-              <p className="flex-1 truncate text-sm font-semibold">{f.animeTitle}</p>
-            </div>
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold">{f.animeTitle}</p>
+            </button>
           ))}
         {tab === "favorite" && (favorites ?? []).length === 0 && (
           <p className="py-8 text-center text-xs text-muted-foreground">Belum ada favorite</p>
@@ -182,35 +274,26 @@ function AkunContent() {
 
         {tab === "komen" && (
           <p className="py-8 text-center text-xs text-muted-foreground">
-            Komentarmu di anime muncul di sini
+            Lihat tab Teman untuk komentar terbaru, atau buka detail anime untuk berkomentar.
           </p>
         )}
       </div>
 
-      {/* Tombol bawah */}
+      {/* Statistik + tombol bawah */}
+      <div className="mt-5 grid grid-cols-4 gap-2 text-center">
+        <Stat label="History" value={stats?.watchCount ?? 0} />
+        <Stat label="Komen" value={stats?.commentCount ?? 0} />
+        <Stat label="Bergabung" value={`${stats?.joinedDays ?? 0}h`} />
+        <Stat label="Menit" value={stats?.minutesWatched ?? 0} />
+      </div>
+
       <div className="mt-4 space-y-2">
         <button
           onClick={() => setNotifOpen(true)}
           className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
         >
-          <Bell className="size-5 text-amber-300" /> Notifikasi
+          <Mail className="size-5 text-red-400" /> Lstreamsupport@gmail.com
         </button>
-        <button
-          onClick={() => setGameOpen(true)}
-          className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
-        >
-          <Gamepad2 className="size-5 text-green-400" /> Game & Shop Diamond
-        </button>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
-        >
-          <SettingsIcon className="size-5 text-muted-foreground" /> Pengaturan
-        </button>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm">
-          <Mail className="size-5 text-amber-300" /> Lstreamsupport@gmail.com
-        </div>
-        <AbsenPanel />
         <button
           onClick={async () => {
             await signOut();
@@ -224,63 +307,6 @@ function AkunContent() {
 
       {settingsOpen && <SettingsScreen onClose={() => setSettingsOpen(false)} />}
       {notifOpen && <NotifScreen onClose={() => setNotifOpen(false)} />}
-      {gameOpen && <GameScreen onClose={() => setGameOpen(false)} />}
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------ absen ----
-
-function AbsenPanel() {
-  const status = useQuery(api.activities.absenStatus, {});
-  const doAbsen = useMutation(api.activities.absen);
-  const rewards = [
-    { day: 1, label: "5💎 + 1hr prem" },
-    { day: 2, label: "100 XP" },
-    { day: 3, label: "180 XP" },
-    { day: 4, label: "30💎 + 1hr prem" },
-    { day: 5, label: "200 XP" },
-    { day: 6, label: "30💎 + 300 XP" },
-    { day: 7, label: "7hr prem + 400 XP" },
-  ];
-  const streak = status?.streak ?? 0;
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <p className="mb-2 text-sm font-bold">Absen Harian</p>
-      <div className="grid grid-cols-7 gap-1.5">
-        {rewards.map((r, i) => (
-          <div
-            key={r.day}
-            className={cn(
-              "rounded-lg border p-1.5 text-center text-[9px] leading-tight",
-              i < streak
-                ? "border-green-500/50 bg-green-500/10 text-green-400"
-                : i === streak
-                  ? "border-amber-300 bg-amber-300/10 text-amber-200"
-                  : "border-border text-muted-foreground",
-            )}
-          >
-            <p className="font-black">D{r.day}</p>
-            <p>{r.label}</p>
-          </div>
-        ))}
-      </div>
-      <button
-        disabled={status?.claimedToday}
-        onClick={async () => {
-          try {
-            const r = await doAbsen({});
-            toast.success(
-              `Absen day ${r.day}! +${r.diamonds}💎 +${r.xp} XP${r.premiumDays ? ` +${r.premiumDays} hari premium` : ""}`,
-            );
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Gagal absen");
-          }
-        }}
-        className="mt-3 w-full rounded-xl bg-amber-300 py-2.5 text-sm font-bold text-black disabled:opacity-40"
-      >
-        {status?.claimedToday ? "Sudah absen hari ini (reset 00:00)" : "Absen Sekarang"}
-      </button>
     </div>
   );
 }
@@ -288,23 +314,10 @@ function AbsenPanel() {
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-border/60 bg-secondary/30 py-2">
-      <p className="text-lg font-bold text-amber-200">{value}</p>
+      <p className="text-lg font-bold text-red-300">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
     </div>
   );
-}
-
-function nextLevelCost(level: number) {
-  const tiers = [
-    [1, 49, 12000],
-    [50, 99, 27000],
-    [100, 499, 45000],
-    [500, 1000, 70000],
-    [1001, 4999, 120000],
-    [5000, 10000, 165000],
-  ] as const;
-  for (const [a, b, cost] of tiers) if (level >= a && level <= b) return cost;
-  return 165000;
 }
 
 // ------------------------------------------------------------- settings ----
@@ -316,7 +329,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState(user?.username ?? "");
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [theme, setTheme] = useState(user?.theme ?? "dark");
-  const [customColor, setCustomColor] = useState(user?.customColor ?? "#f5c518");
+  const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
 
   if (!user) return null;
 
@@ -327,17 +340,21 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
-      {/* Akun */}
       <SectionTitle>Akun</SectionTitle>
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-3">
           <Avatar src={user.image} seed={user.username} className="size-16" />
           <div>
-            <p className="font-bold">{user.username}</p>
-            <p className="text-xs text-muted-foreground">
-              ID: {user._id.slice(-6).toUpperCase()} · Level {user.level}
+            <p className="flex items-center gap-1.5 font-bold">
+              {user.username}
+              {(user.premiumUntil ?? 0) > Date.now() && <BlueCheck />}
             </p>
-            <UserBadges level={user.level ?? 1} staffRole={user.staffRole} />
+            <p className="text-xs text-muted-foreground">
+              ID: {displayId(user.seqId, user._id)} · Level {user.level}
+            </p>
+            <div className="mt-1">
+              <LevelBadge level={user.level ?? 1} />
+            </div>
           </div>
         </div>
         <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground">
@@ -374,14 +391,13 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 toast.error(err instanceof Error ? err.message : "Gagal");
               }
             }}
-            className="rounded-lg bg-amber-300 px-4 text-sm font-bold text-black"
+            className="rounded-lg bg-red-600 px-4 text-sm font-bold text-white"
           >
             OK
           </button>
         </div>
       </div>
 
-      {/* Pengaturan */}
       <SectionTitle>Pengaturan</SectionTitle>
       <div className="space-y-2">
         <ToggleRow
@@ -406,7 +422,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 }}
                 className={cn(
                   "flex-1 rounded-lg border py-2 text-xs capitalize",
-                  theme === t ? "border-amber-300 text-amber-200" : "border-border",
+                  theme === t ? "border-red-500 text-red-300" : "border-border",
                 )}
               >
                 {t === "dark" ? "Gelap" : t === "light" ? "Terang" : "Custom"}
@@ -429,7 +445,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                   await update({ customColor });
                   toast.success("Warna tersimpan");
                 }}
-                className="rounded-lg bg-amber-300 px-4 py-2 text-xs font-bold text-black"
+                className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white"
               >
                 Simpan warna
               </button>
@@ -477,14 +493,13 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 await updateProfile({ bannerUrl: banner });
                 toast.success("Background diubah");
               }}
-              className="rounded-lg bg-amber-300 px-4 text-sm font-bold text-black"
+              className="rounded-lg bg-red-600 px-4 text-sm font-bold text-white"
             >
               OK
             </button>
           </div>
         </div>
 
-        {/* Dev/mod panel */}
         <DevModPanel />
       </div>
     </FullScreen>
@@ -512,7 +527,7 @@ function ToggleRow({
         onClick={() => onToggle(!value)}
         className={cn(
           "relative h-6 w-11 rounded-full transition",
-          value ? "bg-amber-300" : "bg-zinc-600",
+          value ? "bg-red-600" : "bg-zinc-600",
         )}
       >
         <span
@@ -541,7 +556,7 @@ function QualityRow({
     <div className="rounded-2xl border border-border bg-card p-3.5">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-amber-200">{value}</span>
+        <span className="text-xs text-red-300">{value}</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -554,7 +569,7 @@ function QualityRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === q ? "border-amber-300 text-amber-200" : "border-border",
+                value === q ? "border-red-500 text-red-300" : "border-border",
               )}
             >
               {q}
@@ -581,7 +596,7 @@ function SpeedRow({
     <div className="rounded-2xl border border-border bg-card p-3.5">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-amber-200">{value}x</span>
+        <span className="text-xs text-red-300">{value}x</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -594,7 +609,7 @@ function SpeedRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === s ? "border-amber-300 text-amber-200" : "border-border",
+                value === s ? "border-red-500 text-red-300" : "border-border",
               )}
             >
               {s}x
@@ -613,17 +628,22 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
   const icons: Record<string, string> = {
     update: "🔔",
     reply: "↗",
+    like: "❤️",
     friend_chat: "💬",
     friend_request: "👤",
     request_rejected: "❗",
     clan: "🛡",
     moderation: "⚠",
+    report: "🚩",
   };
   return (
     <FullScreen title="Notifikasi" onClose={onClose}>
       <div className="space-y-2">
         {(notifs ?? []).map((n: any) => (
-          <div key={n._id} className="flex items-start gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3">
+          <div
+            key={n._id}
+            className="flex items-start gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3"
+          >
             <span className="text-xl">
               {n.type === "friend_chat" && n.refImage ? (
                 <Avatar src={n.refImage} className="size-8" />
@@ -646,85 +666,6 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ----------------------------------------------------------------- game ----
-
-function GameScreen({ onClose }: { onClose: () => void }) {
-  const [screen, setScreen] = useState<"menu" | "click" | "shop">("menu");
-  const clickStatus = useQuery(api.shop.clickStatus, {});
-  const clickTap = useMutation(api.shop.clickTap);
-  const items = useQuery(api.shop.shopItems, {});
-  const buy = useMutation(api.shop.buyWithDiamonds);
-  const { user } = useAuth();
-
-  return (
-    <FullScreen title="Game" onClose={onClose}>
-      {screen === "menu" && (
-        <div className="space-y-2">
-          <button
-            onClick={() => setScreen("click")}
-            className="w-full rounded-2xl border border-border bg-card p-4 text-left text-sm font-semibold"
-          >
-            🖱️ Game Click — 5 Click = 1 Diamond
-          </button>
-          <button
-            onClick={() => setScreen("shop")}
-            className="w-full rounded-2xl border border-border bg-card p-4 text-left text-sm font-semibold"
-          >
-            🛒 Shop Premium (Diamond)
-          </button>
-        </div>
-      )}
-
-      {screen === "click" && (
-        <div className="py-10 text-center">
-          <button
-            onClick={() => void clickTap({})}
-            className="mx-auto flex size-40 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-4xl font-black text-black shadow-[0_0_40px_-8px] shadow-amber-300/60 transition active:scale-95"
-          >
-            CLICK
-          </button>
-          <p className="mt-4 text-2xl font-black text-amber-200">
-            {clickStatus?.clicks ?? 0}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {clickStatus?.diamonds ?? 0} diamond didapat · 5 Click = 1 Diamond
-          </p>
-        </div>
-      )}
-
-      {screen === "shop" && (
-        <div className="space-y-2">
-          <p className="mb-1 text-center text-sm">
-            Diamond kamu: <b className="text-cyan-300">💎 {user?.diamonds ?? 0}</b>
-          </p>
-          {(items ?? []).map((it: any) => (
-            <div key={it.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
-              <Gem className="size-6 text-cyan-300" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold">{it.label}</p>
-                <p className="text-xs text-muted-foreground">💎 {it.cost}</p>
-              </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await buy({ itemId: it.id });
-                    toast.success("Berhasil dibeli!");
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Gagal");
-                  }
-                }}
-                className="rounded-full bg-amber-300 px-4 py-1.5 text-xs font-bold text-black"
-              >
-                Beli
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </FullScreen>
-  );
-}
-
 // ---------------------------------------------------------- dev/mod panel ----
 
 function DevModPanel() {
@@ -733,7 +674,6 @@ function DevModPanel() {
     user?.role === "admin" || user?.staffRole === "dev" || user?.staffRole === "creator";
   const isMod = isDev || user?.staffRole === "mod";
   const [q, setQ] = useState("");
-  const [searchUsers, setSearchUsers] = useState<any[]>([]);
   const search = useQuery(api.moderation.searchUsersPanel, q.length > 1 ? { q } : "skip");
   const moderate = useMutation(api.moderation.moderate);
   const setStaffRole = useMutation(api.moderation.setStaffRole);
@@ -768,13 +708,19 @@ function DevModPanel() {
               onClick={() => setPicked(u)}
               className={cn(
                 "flex w-full items-center gap-2 rounded-lg border p-2 text-left text-sm",
-                picked?._id === u._id ? "border-amber-300" : "border-border/70",
+                picked?._id === u._id ? "border-red-500" : "border-border/70",
               )}
             >
               <span className="flex-1 truncate">{u.username}</span>
-              {u.staffRole && <ShineBadge label={u.staffRole} gradient={STAFF_BADGE[u.staffRole]?.cls ?? ""} />}
-              {(u.bannedUntil ?? 0) > Date.now() && <span className="text-[10px] text-red-400">BANNED</span>}
-              {(u.mutedUntil ?? 0) > Date.now() && <span className="text-[10px] text-amber-300">MUTED</span>}
+              {u.staffRole && (
+                <ShineBadge label={u.staffRole} gradient={STAFF_BADGE[u.staffRole]?.cls ?? ""} />
+              )}
+              {(u.bannedUntil ?? 0) > Date.now() && (
+                <span className="text-[10px] text-red-400">BANNED</span>
+              )}
+              {(u.mutedUntil ?? 0) > Date.now() && (
+                <span className="text-[10px] text-red-300">MUTED</span>
+              )}
             </button>
           ))}
         </div>
@@ -834,14 +780,24 @@ function DevModPanel() {
             <PanelBtn
               label="Unmute"
               onClick={async () => {
-                await moderate({ targetId: picked._id, action: "unmute", permanent: false, reason: reason || "-" });
+                await moderate({
+                  targetId: picked._id,
+                  action: "unmute",
+                  permanent: false,
+                  reason: reason || "-",
+                });
                 toast.success("Unmute");
               }}
             />
             <PanelBtn
               label="Unbanned"
               onClick={async () => {
-                await moderate({ targetId: picked._id, action: "unban", permanent: false, reason: reason || "-" });
+                await moderate({
+                  targetId: picked._id,
+                  action: "unban",
+                  permanent: false,
+                  reason: reason || "-",
+                });
                 toast.success("Unbanned");
               }}
             />
@@ -871,7 +827,7 @@ function DevModPanel() {
 
       {isDev && (
         <div className="mt-3 rounded-xl border border-border p-3">
-          <p className="text-xs font-semibold text-amber-200">
+          <p className="text-xs font-semibold text-red-300">
             Give premium ke semua member clan
           </p>
           <div className="mt-2 flex gap-2">
@@ -897,7 +853,7 @@ function DevModPanel() {
                   toast.error(e instanceof Error ? e.message : "Gagal");
                 }
               }}
-              className="rounded-lg bg-amber-300 px-3 text-xs font-bold text-black disabled:opacity-40"
+              className="rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-40"
             >
               Give Premium
             </button>
@@ -944,6 +900,3 @@ function FullScreen({
     </div>
   );
 }
-
-void Crown;
-void X;

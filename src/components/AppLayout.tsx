@@ -12,10 +12,15 @@ import {
   ChevronRight,
   Crown,
   Gem,
+  Maximize2,
+  Pause,
+  Play,
+  X,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
-import { displayId, xpForLevel } from "@/lib/level";
+import { displayId } from "@/lib/lstream";
+import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
 export function AppLayout({
