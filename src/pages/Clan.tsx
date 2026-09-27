@@ -122,7 +122,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background p-3">
-      <div className="mx-auto max-w-2xl">
+      <div className="w-full">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button onClick={onDone} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
@@ -245,7 +245,7 @@ function JoinClan({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background p-3">
-      <div className="mx-auto max-w-2xl">
+      <div className="w-full">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button onClick={onBack} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
@@ -446,7 +446,7 @@ function ClanDetail({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
-      <div className="mx-auto max-w-2xl p-3 pb-24">
+      <div className="w-full p-3 pb-24">
         <div className="mb-3 mt-1 flex items-center gap-3">
           <button onClick={onBack} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
