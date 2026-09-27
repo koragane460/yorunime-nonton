@@ -24,6 +24,7 @@ import {
   Mail,
   MessageSquare,
   Settings as SettingsIcon,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -42,12 +43,14 @@ function AkunContent() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tabParam = params.get("tab");
-  const [tab, setTab] = useState<"history" | "komen" | "favorite">(
+  const [tab, setTab] = useState<"teman" | "history" | "komen" | "favorite">(
     tabParam === "favorite"
       ? "favorite"
       : tabParam === "history"
         ? "history"
-        : "komen",
+        : tabParam === "komen"
+          ? "komen"
+          : "teman",
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
@@ -55,6 +58,7 @@ function AkunContent() {
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const friendComments = useQuery(api.activities.myFriendsComments, user ? {} : "skip");
 
   if (!user) return null;
   const xpInLevel = user.xp ?? 0;
@@ -72,8 +76,8 @@ function AkunContent() {
   };
 
   return (
-    <div className="relative -mx-4">
-      {/* Banner paling atas full-bleed sampai pinggir layar + tombol Pengaturan */}
+    <div className="relative">
+      {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
       <div className="relative">
         <div
           className="h-28 w-full bg-cover bg-center"
@@ -95,7 +99,7 @@ function AkunContent() {
       </div>
 
       {/* Avatar overlap setengah banner + identitas */}
-      <div className="w-full px-4">
+      <div className="w-full px-3">
         <div className="relative -mt-12 flex items-end gap-3">
           <Avatar
             src={user.image}
@@ -164,10 +168,11 @@ function AkunContent() {
         </div>
       </div>
 
-      {/* Tabs tanpa background blok — Info pindah ke halaman sendiri */}
+      {/* Tabs tanpa background blok */}
       <div className="mt-4 flex gap-1 border-b border-white/10">
         {(
           [
+            ["teman", "Teman", <Users key="u" className="size-3.5" />],
             ["history", "History", <HistoryIcon key="h" className="size-3.5" />],
             ["komen", "Komen", <MessageSquare key="k" className="size-3.5" />],
             ["favorite", "Favorite", <Heart key="f" className="size-3.5" />],
@@ -177,21 +182,70 @@ function AkunContent() {
             key={k}
             onClick={() => setTabAndUrl(k as typeof tab)}
             className={cn(
-              "relative flex-1 pb-2 pt-1 text-xs font-medium",              tab === k ? "text-foreground" : "text-muted-foreground",
+              "relative flex-1 pb-2 pt-1 text-xs font-medium",
+              tab === k ? "text-foreground" : "text-muted-foreground",
             )}
           >
             <span className="flex items-center justify-center gap-1">
               {icon} {label}
             </span>
             {tab === k && (
-              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-violet-500" />
+              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-red-500" />
             )}
           </button>
-
         ))}
       </div>
 
       <div className="mt-3 space-y-2">
+        {tab === "teman" && (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              Komentar teman, clan, & developer di semua anime — terbaru dulu
+            </p>
+            {(friendComments ?? []).map((c: any) => (
+              <button
+                key={c._id}
+                onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
+                className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-violet-500/50"
+              >
+                {c.bannerUrl && (
+                  <div
+                    className="h-7 w-full bg-cover bg-center opacity-70"
+                    style={{ backgroundImage: `url(${c.bannerUrl})` }}
+                  />
+                )}
+                <div className="flex gap-2.5 p-2.5">
+                  <Avatar src={c.image} seed={c.username} className="size-8" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+                      <p className="truncate text-xs font-bold">{c.username}</p>
+                      {c.premium && <BlueCheck className="size-3.5" />}
+                      {c.staffRole && STAFF_BADGE[c.staffRole] && (
+                        <ShineBadge
+                          label={STAFF_BADGE[c.staffRole].name}
+                          gradient={STAFF_BADGE[c.staffRole].cls}
+                        />
+                      )}
+                      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                        {timeAgo(c.createdAt)}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 text-sm text-zinc-300">{c.text}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                      ❤️ {c.likeCount ?? 0}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+            {friendComments && friendComments.length === 0 && (
+              <p className="py-8 text-center text-xs text-muted-foreground">
+                Belum ada komentar teman — tambahkan teman lewat chat!
+              </p>
+            )}
+          </>
+        )}
+
         {tab === "history" &&
           (history ?? []).map((h: any) => (
             <button

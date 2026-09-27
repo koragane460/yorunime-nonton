@@ -18,7 +18,6 @@ const Watch = lazy(() => import("./pages/Watch.tsx"));
 const Clan = lazy(() => import("./pages/Clan.tsx"));
 const Jadwal = lazy(() => import("./pages/Jadwal.tsx"));
 const Akun = lazy(() => import("./pages/Akun.tsx"));
-const Info = lazy(() => import("./pages/Info.tsx"));
 const Premium = lazy(() => import("./pages/Premium.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -173,14 +172,6 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Akun />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/info"
-                element={
-                  <RequireAuth>
-                    <Info />
                   </RequireAuth>
                 }
               />

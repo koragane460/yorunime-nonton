@@ -361,32 +361,26 @@ function ClanChat({
   const detail = useQuery(api.clans.clanDetail, { clanId });
   const c = detail?.clan;
   return (
-    // Full screen beneran: nutupin navbar + footer, sama seperti chat global
-    <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
-      <div className="flex w-full items-center gap-3 px-4 py-3">
-        <button
-          onClick={onOpenDetail}
-          className="rounded-full border border-border p-2"
-        >
-          <ChevronLeft className="size-4" />
-        </button>
+    <div>
+      <button
+        onClick={onOpenDetail}
+        className="clan-hero-gradient flex w-full items-center gap-3 rounded-3xl border border-white/10 p-3 text-left"
+      >
         <ClanTag icon={c?.tagIcon ?? "⚔️"} tag={c?.tag ?? "—"} color={c?.color} />
-        <span className="truncate font-bold">{c?.name ?? "Clan"}</span>
+        <span className="truncate font-bold">{c?.name}</span>
         <span className="ml-auto text-muted-foreground">›</span>
-      </div>
-      <div className="flex min-h-0 w-full flex-1 flex-col px-4 pb-2">
+      </button>
+      <div className="mt-2 h-[70vh] overflow-hidden rounded-3xl border border-white/10 bg-card">
         {msgs && user ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
-            <ChatPanel
-              kind="clan"
-              clanId={clanId}
-              messages={msgs as never}
-              meId={user._id}
-              onSend={async (p) => {
-                await send({ kind: "clan", clanId, ...(p as any) });
-              }}
-            />
-          </div>
+          <ChatPanel
+            kind="clan"
+            clanId={clanId}
+            messages={msgs as never}
+            meId={user._id}
+            onSend={async (p) => {
+              await send({ kind: "clan", clanId, ...(p as any) });
+            }}
+          />
         ) : (
           <p className="py-10 text-center text-sm text-muted-foreground">Memuat…</p>
         )}
@@ -601,11 +595,9 @@ function ClanDetail({
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold text-indigo-50">{m.username}</p>
                         <div className="mt-1 flex items-center gap-1.5">
-                          <ClanTag
-                            icon={c.tagIcon ?? "⚔️"}
-                            tag={c.tag}
-                            color={c.color}
-                          />
+                          <span className="rounded-full bg-gradient-to-r from-fuchsia-500 via-violet-500 to-sky-400 px-2 py-0.5 text-[10px] font-bold text-white">
+                            ✦ {c.tag} ✦
+                          </span>
                           <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 text-[10px] font-bold text-black">
                             Lv.{m.level ?? 1}
                           </span>
