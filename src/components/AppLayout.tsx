@@ -125,12 +125,12 @@ function AccountPanel({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="pop-enter relative mt-3 w-full">
-      {/* Tombol notifikasi bulat kanan atas */}
+    <div className="pop-enter relative mt-4 w-full">
+      {/* Tombol notifikasi bulat kanan atas — sejajar kartu */}
       <button
         aria-label="Notifikasi"
         onClick={() => goto("/akun?tab=notif")}
-        className="absolute -top-1 right-0 z-10 flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/80 text-white shadow-lg"
+        className="absolute right-0 top-0 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/85 text-white shadow-lg"
       >
         <Bell className="size-[18px] text-white" />
       </button>
@@ -359,7 +359,7 @@ function BottomNav() {
   const items: { path: string; label: string; icon: ComponentType<{ className?: string }> }[] = [
     { path: "/home", label: "Home", icon: Home },
     { path: "/jadwal", label: "Jadwal", icon: CalendarDays },
-    { path: "/akun?tab=teman", label: "Info", icon: Info },
+    { path: "/info", label: "Info", icon: Info },
     { path: "/akun", label: "Akun", icon: UserRound },
   ];
   return (
