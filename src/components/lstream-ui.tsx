@@ -193,7 +193,7 @@ export function Avatar({
       <img
         src={src ?? avatarFallback(seed)}
         alt=""
-        className="size-full rounded-full border border-white/15 object-cover"
+        className="size-full rounded-full object-cover"
       />
       {online !== undefined && (
         <span

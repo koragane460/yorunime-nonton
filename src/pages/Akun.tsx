@@ -24,7 +24,6 @@ import {
   Mail,
   MessageSquare,
   Settings as SettingsIcon,
-  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -43,14 +42,12 @@ function AkunContent() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tabParam = params.get("tab");
-  const [tab, setTab] = useState<"teman" | "history" | "komen" | "favorite">(
+  const [tab, setTab] = useState<"history" | "komen" | "favorite">(
     tabParam === "favorite"
       ? "favorite"
       : tabParam === "history"
         ? "history"
-        : tabParam === "komen"
-          ? "komen"
-          : "teman",
+        : "komen",
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
@@ -58,7 +55,6 @@ function AkunContent() {
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
-  const friendComments = useQuery(api.activities.myFriendsComments, user ? {} : "skip");
 
   if (!user) return null;
   const xpInLevel = user.xp ?? 0;
@@ -76,7 +72,7 @@ function AkunContent() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative -mx-4">
       {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
       <div className="relative">
         <div
@@ -172,7 +168,6 @@ function AkunContent() {
       <div className="mt-4 flex gap-1 border-b border-white/10">
         {(
           [
-            ["teman", "Teman", <Users key="u" className="size-3.5" />],
             ["history", "History", <HistoryIcon key="h" className="size-3.5" />],
             ["komen", "Komen", <MessageSquare key="k" className="size-3.5" />],
             ["favorite", "Favorite", <Heart key="f" className="size-3.5" />],
@@ -197,55 +192,6 @@ function AkunContent() {
       </div>
 
       <div className="mt-3 space-y-2">
-        {tab === "teman" && (
-          <>
-            <p className="text-[11px] text-muted-foreground">
-              Komentar teman, clan, & developer di semua anime — terbaru dulu
-            </p>
-            {(friendComments ?? []).map((c: any) => (
-              <button
-                key={c._id}
-                onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
-                className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-violet-500/50"
-              >
-                {c.bannerUrl && (
-                  <div
-                    className="h-7 w-full bg-cover bg-center opacity-70"
-                    style={{ backgroundImage: `url(${c.bannerUrl})` }}
-                  />
-                )}
-                <div className="flex gap-2.5 p-2.5">
-                  <Avatar src={c.image} seed={c.username} className="size-8" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      <p className="truncate text-xs font-bold">{c.username}</p>
-                      {c.premium && <BlueCheck className="size-3.5" />}
-                      {c.staffRole && STAFF_BADGE[c.staffRole] && (
-                        <ShineBadge
-                          label={STAFF_BADGE[c.staffRole].name}
-                          gradient={STAFF_BADGE[c.staffRole].cls}
-                        />
-                      )}
-                      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                        {timeAgo(c.createdAt)}
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 text-sm text-zinc-300">{c.text}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      ❤️ {c.likeCount ?? 0}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-            {friendComments && friendComments.length === 0 && (
-              <p className="py-8 text-center text-xs text-muted-foreground">
-                Belum ada komentar teman — tambahkan teman lewat chat!
-              </p>
-            )}
-          </>
-        )}
-
         {tab === "history" &&
           (history ?? []).map((h: any) => (
             <button
@@ -282,7 +228,7 @@ function AkunContent() {
 
         {tab === "komen" && (
           <p className="py-8 text-center text-xs text-muted-foreground">
-            Lihat tab Teman untuk komentar terbaru, atau buka detail anime untuk berkomentar.
+            Komentarmu akan muncul di sini — buka detail anime untuk berkomentar.
           </p>
         )}
       </div>

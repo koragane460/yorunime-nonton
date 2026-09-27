@@ -4,7 +4,6 @@ import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui"
 import {
   ChevronLeft,
   Gem,
-  Crown,
   X,
   MessageSquare,
   History as HistoryIcon,
@@ -114,16 +113,11 @@ export function ProfileSheet({
               </div>
             </div>
 
-            {/* Diamond + premium */}
+            {/* Diamond saja — jumlah hari premium tidak ditampilkan di detail akun */}
             <div className="mt-3 flex items-center justify-center gap-4 text-xs">
               <span className="flex items-center gap-1 font-semibold text-cyan-300">
                 <Gem className="size-3.5" /> {profile.diamonds.toLocaleString("id-ID")}
               </span>
-              {profile.premium && (
-                <span className="flex items-center gap-1 font-semibold text-gold">
-                  <Crown className="size-3.5" /> {profile.premiumDays} hari
-                </span>
-              )}
             </div>
 
             {/* Stats horizontal tanpa background */}

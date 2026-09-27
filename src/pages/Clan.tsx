@@ -361,26 +361,32 @@ function ClanChat({
   const detail = useQuery(api.clans.clanDetail, { clanId });
   const c = detail?.clan;
   return (
-    <div>
-      <button
-        onClick={onOpenDetail}
-        className="clan-hero-gradient flex w-full items-center gap-3 rounded-3xl border border-white/10 p-3 text-left"
-      >
+    // Full screen beneran: nutupin navbar + footer, sama seperti chat global
+    <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
+      <div className="flex w-full items-center gap-3 px-4 py-3">
+        <button
+          onClick={onOpenDetail}
+          className="rounded-full border border-border p-2"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
         <ClanTag icon={c?.tagIcon ?? "⚔️"} tag={c?.tag ?? "—"} color={c?.color} />
-        <span className="truncate font-bold">{c?.name}</span>
+        <span className="truncate font-bold">{c?.name ?? "Clan"}</span>
         <span className="ml-auto text-muted-foreground">›</span>
-      </button>
-      <div className="mt-2 h-[70vh] overflow-hidden rounded-3xl border border-white/10 bg-card">
+      </div>
+      <div className="flex min-h-0 w-full flex-1 flex-col px-4 pb-2">
         {msgs && user ? (
-          <ChatPanel
-            kind="clan"
-            clanId={clanId}
-            messages={msgs as never}
-            meId={user._id}
-            onSend={async (p) => {
-              await send({ kind: "clan", clanId, ...(p as any) });
-            }}
-          />
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+            <ChatPanel
+              kind="clan"
+              clanId={clanId}
+              messages={msgs as never}
+              meId={user._id}
+              onSend={async (p) => {
+                await send({ kind: "clan", clanId, ...(p as any) });
+              }}
+            />
+          </div>
         ) : (
           <p className="py-10 text-center text-sm text-muted-foreground">Memuat…</p>
         )}
@@ -540,6 +546,44 @@ function ClanDetail({
 
         {isMember && (
           <>
+            {/* Aksi: Claim + Donate + Panel dev/mod — DI ATAS tab Members/Donasi */}
+            <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4 text-center">
+              <Gem className="mx-auto size-7 text-violet-400" />
+              <p className="mt-1 text-xl font-black text-white">{formatK(c.diamonds)}</p>
+              <div className="mt-2 space-y-2">
+                <button
+                  disabled={claimedToday}
+                  onClick={async () => {
+                    try {
+                      const r = await claim();
+                      toast.success(`Berhasil claim ${r.amount} berlian!`);
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Gagal");
+                    }
+                  }}
+                  className="w-full rounded-full bg-[oklch(0.86_0.16_90)] py-3 text-sm font-bold text-[oklch(0.18_0.04_70)] disabled:opacity-40"
+                >
+                  {claimedToday ? "Sudah claim hari ini" : `Claim Berlian (${c.claimAmount})`}
+                </button>
+                <button
+                  onClick={() => setDonateOpen(true)}
+                  className="w-full rounded-full border border-white/15 bg-white/5 py-3 text-sm font-bold text-white hover:bg-white/10"
+                >
+                  Donate
+                </button>
+              </div>
+            </div>
+
+            {canPanel && (
+              <button
+                onClick={() => setPanelOpen(true)}
+                className="mt-3 w-full rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
+              >
+                <Settings className="mr-1.5 inline size-4" /> Panel {isLeader ? "Leader" : "Officer"}{" "}
+                ({detail.requests.length} request)
+              </button>
+            )}
+
             {/* Tab pill: Members / Donasi Hari Ini */}
             <div className="tab-pill-track mt-3">
               <button
@@ -595,9 +639,11 @@ function ClanDetail({
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold text-indigo-50">{m.username}</p>
                         <div className="mt-1 flex items-center gap-1.5">
-                          <span className="rounded-full bg-gradient-to-r from-fuchsia-500 via-violet-500 to-sky-400 px-2 py-0.5 text-[10px] font-bold text-white">
-                            ✦ {c.tag} ✦
-                          </span>
+                          <ClanTag
+                            icon={c.tagIcon ?? "⚔️"}
+                            tag={c.tag}
+                            color={c.color}
+                          />
                           <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 text-[10px] font-bold text-black">
                             Lv.{m.level ?? 1}
                           </span>
@@ -644,43 +690,6 @@ function ClanDetail({
               </div>
             )}
 
-            {/* Berlian + level + aksi */}
-            <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4 text-center">
-              <Gem className="mx-auto size-7 text-violet-400" />
-              <p className="mt-1 text-xl font-black text-white">{formatK(c.diamonds)}</p>
-              <div className="mt-2 space-y-2">
-                <button
-                  disabled={claimedToday}
-                  onClick={async () => {
-                    try {
-                      const r = await claim();
-                      toast.success(`Berhasil claim ${r.amount} berlian!`);
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Gagal");
-                    }
-                  }}
-                  className="w-full rounded-full bg-[oklch(0.86_0.16_90)] py-3 text-sm font-bold text-[oklch(0.18_0.04_70)] disabled:opacity-40"
-                >
-                  {claimedToday ? "Sudah claim hari ini" : `Claim Berlian (${c.claimAmount})`}
-                </button>
-                <button
-                  onClick={() => setDonateOpen(true)}
-                  className="w-full rounded-full border border-white/15 bg-white/5 py-3 text-sm font-bold text-white hover:bg-white/10"
-                >
-                  Donate
-                </button>
-              </div>
-            </div>
-
-            {canPanel && (
-              <button
-                onClick={() => setPanelOpen(true)}
-                className="mt-3 w-full rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
-              >
-                <Settings className="mr-1.5 inline size-4" /> Panel {isLeader ? "Leader" : "Officer"}{" "}
-                ({detail.requests.length} request)
-              </button>
-            )}
           </>
         )}
 
