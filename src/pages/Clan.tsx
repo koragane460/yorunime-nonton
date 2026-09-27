@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
+import { useHideNavOnMount } from "@/components/AppLayout";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
@@ -356,23 +357,35 @@ function ClanChat({
   onOpenDetail: () => void;
 }) {
   const { user } = useAuth();
+  useHideNavOnMount();
   const msgs = useQuery(api.chat.listMessages, { kind: "clan", clanId, limit: 100 });
   const send = useMutation(api.chat.sendMessage);
   const detail = useQuery(api.clans.clanDetail, { clanId });
   const c = detail?.clan;
+  const isLeader = detail?.myRole === "leader";
+  const isOfficer = detail?.myRole === "officer";
   return (
-    // Full screen beneran: nutupin navbar + footer, sama seperti chat global
+    // Full screen beneran: navbar hilang total, header clan tetap di atas
     <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
-      <div className="flex w-full items-center gap-3 px-4 py-3">
+      <div className="flex w-full shrink-0 items-center gap-3 border-b border-border/60 px-3 py-2.5">
         <button
           onClick={onOpenDetail}
-          className="rounded-full border border-border p-2"
+          aria-label="Detail clan"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card p-2 text-left"
         >
-          <ChevronLeft className="size-4" />
+          <ClanTag icon={c?.tagIcon ?? "⚔️"} tag={c?.tag ?? "—"} color={c?.color} />
+          <span className="min-w-0 flex-1 truncate font-bold">{c?.name ?? "Clan"}</span>
+          <span className="text-muted-foreground">›</span>
         </button>
-        <ClanTag icon={c?.tagIcon ?? "⚔️"} tag={c?.tag ?? "—"} color={c?.color} />
-        <span className="truncate font-bold">{c?.name ?? "Clan"}</span>
-        <span className="ml-auto text-muted-foreground">›</span>
+        {(isLeader || isOfficer) && (
+          <button
+            onClick={onOpenDetail}
+            aria-label="Panel leader"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white"
+          >
+            <Settings className="size-[18px]" />
+          </button>
+        )}
       </div>
       <div className="flex min-h-0 w-full flex-1 flex-col pb-2">
         {msgs && user ? (
@@ -416,7 +429,7 @@ function ClanDetail({
   const transfer = useMutation(api.clans.transferLeader);
   const setBackground = useMutation(api.clans.setBackground);
   const respond = useMutation(api.clans.respondRequest);
-  const [tab, setTab] = useState<"member" | "top">("member");
+  const [tab, setTab] = useState<"member" | "top" | "request">("member");
   const [search, setSearch] = useState("");
   const [donateOpen, setDonateOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -584,7 +597,7 @@ function ClanDetail({
               </button>
             )}
 
-            {/* Tab pill: Members / Donasi Hari Ini */}
+            {/* Tab pill: Members / Donasi Hari Ini / Request */}
             <div className="tab-pill-track mt-3">
               <button
                 onClick={() => setTab("member")}
@@ -598,6 +611,14 @@ function ClanDetail({
               >
                 Donasi Hari Ini ({detail.todayDonators})
               </button>
+              {(isLeader || isOfficer) && (
+                <button
+                  onClick={() => setTab("request")}
+                  className={cn("tab-pill", tab === "request" && "tab-pill-active")}
+                >
+                  Request ({detail.requests.length})
+                </button>
+              )}
             </div>
 
             {/* Search rounded-full */}

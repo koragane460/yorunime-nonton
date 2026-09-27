@@ -241,13 +241,7 @@ export const myFriendsComments = query({
     if (userId === null) return [];
     const me = await ctx.db.get(userId);
     if (!me) return [];
-    const myClanTag = me.clanTag;
-    const fr = await ctx.db.query("friendships").collect();
-    const friendIds = new Set<string>([userId]); // komentar sendiri + developer juga tampil
-    for (const f of fr) {
-      if (f.userA === userId) friendIds.add(f.userB);
-      else if (f.userB === userId) friendIds.add(f.userA);
-    }
+    // Info page: hanya komentar dari developer/staff
     const rows = await ctx.db
       .query("animeComments")
       .order("desc")
@@ -257,9 +251,11 @@ export const myFriendsComments = query({
       if (r.deleted) continue;
       const u = await ctx.db.get(r.userId);
       const isDev =
-        u?.role === "admin" || u?.staffRole === "dev" || u?.staffRole === "creator";
-      const sameClan = !!(myClanTag && u?.clanTag === myClanTag);
-      if (!friendIds.has(r.userId) && !sameClan && !isDev) continue;
+        u?.role === "admin" ||
+        u?.staffRole === "dev" ||
+        u?.staffRole === "creator" ||
+        u?.staffRole === "mod";
+      if (!isDev) continue;
       out.push({
         _id: r._id,
         animeId: r.animeId,

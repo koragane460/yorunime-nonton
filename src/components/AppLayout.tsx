@@ -202,6 +202,41 @@ function AccountPanel({
   );
 }
 
+// ------------------------------------------------- overlay visibility ----
+
+/**
+ * State global: overlay screen (Chat, Leaderboard, Detail, Clan chat, dll)
+ * sedang terbuka → navbar & mini player disembunyikan TOTAL, bukan cuma
+ * ditumpuk z-index. Sehingga tidak ada lagi elemen "nyempil" di bawah screen.
+ */
+let overlayListeners: ((v: boolean) => void)[] = [];
+let overlayOpen = false;
+export function setAppOverlayOpen(v: boolean) {
+  if (overlayOpen === v) return;
+  overlayOpen = v;
+  overlayListeners.forEach((l) => l(v));
+}
+function useAppOverlayOpen() {
+  return useSyncExternalStore(
+    (cb) => {
+      overlayListeners.push(cb);
+      return () => {
+        overlayListeners = overlayListeners.filter((l) => l !== cb);
+      };
+    },
+    () => overlayOpen,
+    () => overlayOpen,
+  );
+}
+
+/** Hook untuk layar fullscreen: sembunyikan navbar saat mounted. */
+export function useHideNavOnMount() {
+  useEffect(() => {
+    setAppOverlayOpen(true);
+    return () => setAppOverlayOpen(false);
+  }, []);
+}
+
 // ------------------------------------------------------ mini player ----
 
 type MiniState = {
@@ -241,7 +276,8 @@ export function MiniPlayerHost() {
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  if (!state) return null;
+  const overlay = useAppOverlayOpen();
+  if (!state || overlay) return null;
 
   const toggle = () => {
     const v = videoRef.current;
@@ -356,6 +392,8 @@ export function MiniPlayerHost() {
 function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const overlay = useAppOverlayOpen();
+  if (overlay) return null;
   const items: { path: string; label: string; icon: ComponentType<{ className?: string }> }[] = [
     { path: "/home", label: "Home", icon: Home },
     { path: "/jadwal", label: "Jadwal", icon: CalendarDays },

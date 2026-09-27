@@ -3,9 +3,8 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck } from "@/components/lstream-ui";
-import { CommentsSection, type CommentT } from "@/components/Comments";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import {
@@ -527,13 +526,11 @@ function TopGiveList() {
 }
 
 function LeaderboardScreen({ onClose }: { onClose: () => void }) {
+  useHideNavOnMount();
   const [mode, setMode] = useState<"xp" | "give">("xp");
   const [period, setPeriod] = useState("harian");
   return (
-    <div
-      className="screen-enter fixed inset-x-0 top-0 bottom-[104px] z-50 overflow-y-auto bg-background"
-      style={{ borderRadius: "0 0 1.25rem 1.25rem" }}
-    >
+    <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button
@@ -626,6 +623,7 @@ function SearchScreen({
   onPick: (id: string) => void;
   initialGenre?: string | null;
 }) {
+  useHideNavOnMount();
   const searchAnime = useAction(api.anime.animeSearch);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadAll = useAction(api.anime.animeTop);
@@ -802,6 +800,7 @@ function SearchScreen({
 // ------------------------------------------------------ chat screens ----
 
 function GlobalChatScreen({ onClose }: { onClose: () => void }) {
+  useHideNavOnMount();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
@@ -1045,6 +1044,7 @@ function DMScreen({
   onAddFriend: () => void;
   onOpenProfile: (id: Id<"users">) => void;
 }) {
+  useHideNavOnMount();
   return (
     <div className="screen-enter fixed inset-0 z-[60] flex flex-col bg-background">
       <div className="flex items-center gap-3 border-b border-border p-3">
@@ -1088,13 +1088,12 @@ function ButtonSmall({ label, onClick }: { label: string; onClick: () => void })
 // ------------------------------------------------------- detail screen ----
 
 function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () => void }) {
+  useHideNavOnMount();
   const navigate = useNavigate();
   const { user } = useAuth();
   const getDetail = useAction(api.anime.animeDetail);
   const isFav = useQuery(api.activities.isFavorite, user ? { animeId } : "skip");
   const toggleFav = useMutation(api.activities.toggleFavorite);
-  const comments = useQuery(api.activities.listComments, { animeId, sort: "terbaru" });
-  const postComment = useMutation(api.activities.postComment);
   const [detail, setDetail] = useState<any>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [episodeOrder, setEpisodeOrder] = useState<"first" | "last">("first");
@@ -1272,16 +1271,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
             </button>
           )}
 
-          {/* Komentar */}
-          <SectionTitle>Komentar</SectionTitle>
-          <CommentsSection
-            animeId={animeId}
-            comments={comments as unknown as CommentT[]}
-            meId={user?._id}
-            onSend={async (text, replyToId) => {
-              await postComment({ animeId, text, replyToId: replyToId as never });
-            }}
-          />
+          {/* Komentar hanya ada di halaman Nonton */}
         </div>
       </div>
     </div>

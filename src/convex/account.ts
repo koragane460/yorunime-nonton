@@ -4,18 +4,6 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { xpForLevel, tierForLevel } from "./users";
 
-/** Nomor ID urut global (#1, #2, ...) — dibaca dari appSettings."userSeq". */
-async function nextSeq(ctx: any, key: string): Promise<number> {
-  const row = await ctx.db
-    .query("appSettings")
-    .withIndex("key", (q: any) => q.eq("key", key))
-    .first();
-  const next = ((row?.value as number) ?? 0) + 1;
-  if (row) await ctx.db.patch(row._id, { value: next });
-  else await ctx.db.insert("appSettings", { key, value: next });
-  return next;
-}
-
 export const ensureUser = mutation({
   args: {},
   handler: async (ctx) => {
@@ -25,7 +13,8 @@ export const ensureUser = mutation({
     if (!user) return null;
     const patch: Record<string, unknown> = {};
     if (user.seqId === undefined) {
-      patch.seqId = await nextSeq(ctx, "userSeq");
+      // Semua akun ID-nya #1 (mode test) — counter direset ke 1.
+      patch.seqId = 1;
     }
     if (user.username === undefined) {
       const base =
