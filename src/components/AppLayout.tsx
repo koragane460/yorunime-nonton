@@ -7,7 +7,7 @@ import {
   Home,
   CalendarDays,
   UserRound,
-  Heart,
+  Info,
   Bell,
   ChevronRight,
   Crown,
@@ -176,7 +176,7 @@ function AccountPanel({
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400"
+                className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -252,7 +252,7 @@ export function MiniPlayerHost() {
 
   return (
     <div
-      className="fixed z-[60] overflow-hidden rounded-xl border border-red-500/50 shadow-2xl"
+      className="fixed z-[60] overflow-hidden rounded-xl border border-violet-500/50 shadow-2xl"
       style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
       onMouseDown={(e) => setDrag({ dx: e.clientX - pos.x, dy: e.clientY - pos.y })}
       onMouseMove={(e) => {
@@ -355,17 +355,13 @@ function BottomNav() {
   const items: { path: string; label: string; icon: ComponentType<{ className?: string }> }[] = [
     { path: "/home", label: "Home", icon: Home },
     { path: "/jadwal", label: "Jadwal", icon: CalendarDays },
-    { path: "/akun?tab=favorite", label: "Favorite", icon: Heart },
+    { path: "/akun?tab=teman", label: "Info", icon: Info },
     { path: "/akun", label: "Akun", icon: UserRound },
   ];
   return (
     <>
-      {/* Footer hitam pipih di paling bawah */}
-      <footer className="fixed inset-x-0 bottom-0 z-30 bg-black py-1.5 text-center text-[10px] text-zinc-500">
-        LStream © {new Date().getFullYear()} — Nonton anime sub Indonesia
-      </footer>
-      {/* Navbar lurus full-width, solid */}
-      <nav className="nav-bar fixed inset-x-0 bottom-6 z-40">
+      {/* Navbar lurus full-width, solid — tanpa footer teks */}
+      <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
         <div className="grid w-full grid-cols-4">
           {items.map((it) => {
             const base = it.path.split("?")[0];

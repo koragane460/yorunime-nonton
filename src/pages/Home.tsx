@@ -154,9 +154,9 @@ function HomeContent() {
       {/* 1) BELI PREMIUM */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-red-500/40 bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent p-3.5 text-left transition hover:border-red-500/70"
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent p-3.5 text-left transition hover:border-violet-500/70"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-red-500/15">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
           <Crown className="size-6 text-red-400" />
         </span>
         <span className="min-w-0 flex-1">
@@ -165,7 +165,7 @@ function HomeContent() {
             Mulai 7 ribuan aja — DANA / QRIS / GoPay / VA
           </span>
         </span>
-        <span className="rounded-full bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white">
+        <span className="rounded-full bg-violet-600 px-3.5 py-1.5 text-xs font-bold text-white">
           Beli
         </span>
       </button>
@@ -201,7 +201,7 @@ function HomeContent() {
                   </div>
                 )}
                 <div className="relative max-w-[70%] p-4">
-                  <span className="rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white">
+                  <span className="rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-black text-white">
                     {a.status ?? "Ongoing"}
                   </span>
                   <h3 className="mt-1.5 line-clamp-1 text-lg font-black">{a.title}</h3>
@@ -211,7 +211,7 @@ function HomeContent() {
                   <div className="mt-2.5 flex gap-2">
                     <button
                       onClick={() => openAnime(a.id)}
-                      className="rounded-full bg-red-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-red-500"
+                      className="rounded-full bg-violet-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-violet-500"
                     >
                       Lihat detail
                     </button>
@@ -257,7 +257,7 @@ function HomeContent() {
       {/* 4) LEADERBOARD (gabung XP + Top Give Premium) */}
       <button
         onClick={() => setShowLeaderboard(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-red-500/40"
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-violet-500/40"
       >
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 font-bold">
@@ -271,7 +271,7 @@ function HomeContent() {
       {/* 5) CHAT BARENG */}
       <button
         onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-red-500/40"
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-violet-500/40"
       >
         <div className="flex items-center justify-between pb-2.5">
           <p className="flex items-center gap-2 font-bold">💬 Chat bareng</p>
@@ -295,7 +295,7 @@ function HomeContent() {
       >
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <span className="flex-1 text-sm text-muted-foreground">Contoh: naruto, frieren…</span>
-        <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">
+        <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
           Cari
         </span>
       </button>
@@ -318,7 +318,7 @@ function HomeContent() {
               {updateNews.map((a) => (
                 <div key={a.id} className="relative w-28 shrink-0">
                   <AnimeCard title={a.title} image={a.image} onClick={() => openAnime(a.id)} />
-                  <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1 text-[9px] font-bold text-white">
+                  <span className="absolute left-1.5 top-1.5 rounded bg-violet-600 px-1 text-[9px] font-bold text-white">
                     New
                   </span>
                 </div>
@@ -349,7 +349,7 @@ function HomeContent() {
                 className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
               >
                 <img src={f.animeImage ?? ""} alt="" className="aspect-[2/3] w-full object-cover" />
-                <Heart className="absolute right-1 top-1 size-4 fill-red-500 text-red-500" />
+                <Heart className="absolute right-1 top-1 size-4 fill-red-500 text-violet-400" />
                 <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
                   {f.animeTitle}
                 </p>
@@ -403,7 +403,7 @@ function GlobalChatPreview() {
       <div className="flex items-center gap-2 text-xs">
         <Avatar src={m.image} seed={m.username} className="size-7" />
         <p className="truncate">
-          <span className="font-semibold text-red-300">{m.username}</span>
+          <span className="font-semibold text-violet-300">{m.username}</span>
           {m.premium && <BlueCheck className="ml-1 inline size-3.5" />}
           <span className="text-muted-foreground"> : </span>
           <span className="text-zinc-300">
@@ -461,10 +461,10 @@ function PodiumCard({
     <div className="flex flex-col items-center">
       <Avatar src={image} seed={username} className="size-12" />
       <p className="mt-1 line-clamp-1 max-w-full text-xs font-semibold">{username ?? "user"}</p>
-      <p className="text-[10px] text-red-300">{xp.toLocaleString("id-ID")} XP</p>
+      <p className="text-[10px] text-violet-300">{xp.toLocaleString("id-ID")} XP</p>
       <div
         className={cn(
-          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-red-500/40 bg-gradient-to-t from-red-500/10 to-red-500/25 pt-1 text-lg font-black text-red-200",
+          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-violet-500/40 bg-gradient-to-t from-red-500/10 to-red-500/25 pt-1 text-lg font-black text-red-200",
           height,
         )}
       >
@@ -538,7 +538,7 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button
             onClick={onClose}
-            className="rounded-full border border-border p-2 transition hover:border-red-500"
+            className="rounded-full border border-border p-2 transition hover:border-violet-500"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -570,7 +570,7 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
                   onClick={() => setPeriod(p)}
                   className={cn(
                     "relative flex-1 rounded-lg py-2 text-sm font-medium capitalize",
-                    period === p ? "text-red-300" : "text-muted-foreground",
+                    period === p ? "text-violet-300" : "text-muted-foreground",
                   )}
                 >
                   {p}
@@ -728,7 +728,7 @@ function SearchScreen({
           )}
           <button
             onClick={() => void doSearch()}
-            className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white"
+            className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white"
           >
             Cari
           </button>
@@ -750,7 +750,7 @@ function SearchScreen({
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs",
                   activeGenre === "all"
-                    ? "border-red-500 bg-red-500/15 text-red-300"
+                    ? "border-violet-500 bg-violet-500/15 text-violet-300"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -763,8 +763,8 @@ function SearchScreen({
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs",
                     activeGenre === g.id
-                      ? "border-red-500 bg-red-500/15 text-red-300"
-                      : "border-border text-muted-foreground hover:border-red-500/50",
+                      ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                      : "border-border text-muted-foreground hover:border-violet-500/50",
                   )}
                 >
                   {g.name}
@@ -825,13 +825,13 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
     <>
       {/* Full screen beneran: nutupin navbar + footer, tanpa rounding */}
       <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
-        <div className="flex w-full items-center gap-3 p-3">
+        <div className="flex w-full items-center gap-3 px-4 py-3">
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
           </button>
           <h1 className="text-lg font-bold">Chat</h1>
         </div>
-        <div className="w-full px-3">
+        <div className="w-full px-4">
           <div className="tab-pill-track">
             {(["chat", "clan", "teman"] as const).map((t) => (
               <button
@@ -845,7 +845,8 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <div className="flex min-h-0 w-full flex-1 flex-col px-3 pb-3 pt-3">
+        {/* Isi di atas input; input stay di bawah (di atas area navbar yang tertutup) */}
+        <div className="flex min-h-0 w-full flex-1 flex-col px-4 pb-2 pt-3">
           {tab === "chat" && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
               {msgs && user ? (
@@ -872,7 +873,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                     onClose();
                     navigate("/clan");
                   }}
-                  className="w-full rounded-xl border border-red-500/40 p-3 text-left text-sm transition hover:border-red-500/70"
+                  className="w-full rounded-xl border border-violet-500/40 p-3 text-left text-sm transition hover:border-violet-500/70"
                 >
                   {myClan.clan.tagIcon} [{myClan.clan.tag}] {myClan.clan.name} — buka chat clan ›
                 </button>
@@ -892,7 +893,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                       onClose();
                       navigate("/clan?buat=1");
                     }}
-                    className="rounded-full bg-red-600 py-2.5 text-sm font-bold text-white transition hover:bg-red-500"
+                    className="rounded-full bg-violet-600 py-2.5 text-sm font-bold text-white transition hover:bg-violet-500"
                   >
                     Buat Clan
                   </button>
@@ -901,7 +902,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                       onClose();
                       navigate("/clan");
                     }}
-                    className="rounded-full border border-border py-2.5 text-sm font-semibold transition hover:border-red-500"
+                    className="rounded-full border border-border py-2.5 text-sm font-semibold transition hover:border-violet-500"
                   >
                     Lihat Clan
                   </button>
@@ -939,7 +940,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{f.username}</p>
                           <button
-                            className="text-xs text-red-300 underline"
+                            className="text-xs text-violet-300 underline"
                             onClick={() =>
                               setDmPeer({ id: f.userId as Id<"users">, name: f.username })
                             }
@@ -1049,7 +1050,7 @@ function DMScreen({
         <p className="font-semibold">{peer.name}</p>
         <button
           onClick={onAddFriend}
-          className="ml-auto rounded-full border border-red-500/50 px-3 py-1 text-xs text-red-300"
+          className="ml-auto rounded-full border border-violet-500/50 px-3 py-1 text-xs text-violet-300"
         >
           + Teman
         </button>
@@ -1072,7 +1073,7 @@ function ButtonSmall({ label, onClick }: { label: string; onClick: () => void })
   return (
     <button
       onClick={onClick}
-      className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-red-500"
+      className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-violet-500"
     >
       {label}
     </button>
@@ -1160,7 +1161,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
                   toast.success(r.favorited ? "Ditambahkan ke favorite ❤️" : "Dihapus dari favorite");
                 }}
               >
-                <Heart className={cn("size-5", isFav ? "fill-red-500 text-red-500" : "text-white")} />
+                <Heart className={cn("size-5", isFav ? "fill-red-500 text-violet-400" : "text-white")} />
               </button>
             } />
           </div>
@@ -1200,7 +1201,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
                     ? "bg-emerald-500/80 text-white"
                     : detail.status === "OVA" || detail.status === "Movie"
                       ? "bg-purple-500/80 text-white"
-                      : "bg-red-600 text-white",
+                      : "bg-violet-600 text-white",
                 )}
               >
                 {detail.status ?? "Ongoing"}
@@ -1217,14 +1218,14 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
           </p>
           <button
             onClick={() => setSynopsisOpen((v) => !v)}
-            className="mt-1 text-xs font-medium text-red-300 underline"
+            className="mt-1 text-xs font-medium text-violet-300 underline"
           >
             {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
           </button>
 
           <button
             onClick={() => navigate(`/nonton?anime=${animeId}`)}
-            className="mt-4 w-full rounded-full bg-red-600 py-3 font-bold text-white transition hover:bg-red-500"
+            className="mt-4 w-full rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
           >
             ▶ Nonton
           </button>
@@ -1236,7 +1237,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
           </div>
           <button
             onClick={() => setEpisodeOrder(episodeOrder === "first" ? "last" : "first")}
-            className="mb-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-red-500/60"
+            className="mb-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-violet-500/60"
           >
             {episodeOrder === "first" ? "Urutkan: Terlama ↓" : "Urutkan: Terbaru ↑"}
           </button>
@@ -1250,7 +1251,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
                 <button
                   key={e.id}
                   onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
-                  className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-foreground transition hover:border-red-500/60"
+                  className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-foreground transition hover:border-violet-500/60"
                 >
                   {e.number}
                 </button>
@@ -1296,7 +1297,7 @@ function DetailHeader({
       <div className="flex items-center gap-3">
         <button
           onClick={onClose}
-          className="rounded-full bg-black/50 p-2 backdrop-blur transition hover:border-red-500"
+          className="rounded-full bg-black/50 p-2 backdrop-blur transition hover:border-violet-500"
         >
           <ChevronLeft className="size-4" />
         </button>

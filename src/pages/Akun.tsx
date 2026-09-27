@@ -92,7 +92,7 @@ function AkunContent() {
         <button
           onClick={() => setSettingsOpen(true)}
           aria-label="Pengaturan"
-          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-full border border-white/30 bg-black/70 text-white shadow-lg transition hover:border-red-500"
+          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-full border border-white/30 bg-black/70 text-white shadow-lg transition hover:border-violet-500"
         >
           <SettingsIcon className="size-[18px] text-white" />
         </button>
@@ -139,7 +139,7 @@ function AkunContent() {
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400"
+              className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -206,7 +206,7 @@ function AkunContent() {
               <button
                 key={c._id}
                 onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
-                className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-red-500/50"
+                className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-violet-500/50"
               >
                 {c.bannerUrl && (
                   <div
@@ -273,7 +273,7 @@ function AkunContent() {
               className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
             >
               <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />
-              <Heart className="size-4 fill-red-500 text-red-500" />
+              <Heart className="size-4 fill-red-500 text-violet-400" />
               <p className="min-w-0 flex-1 truncate text-sm font-semibold">{f.animeTitle}</p>
             </button>
           ))}
@@ -301,7 +301,7 @@ function AkunContent() {
               await signOut();
               navigate("/home");
             }}
-            className="flex w-full items-center gap-3 rounded-2xl border border-red-500/40 bg-card p-3.5 text-sm text-red-400"
+            className="flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-card p-3.5 text-sm text-red-400"
           >
             <LogOut className="size-5" /> Log out dari akun
           </button>
@@ -394,7 +394,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 toast.error(err instanceof Error ? err.message : "Gagal");
               }
             }}
-            className="rounded-lg bg-red-600 px-4 text-sm font-bold text-white"
+            className="rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
           >
             OK
           </button>
@@ -425,7 +425,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 }}
                 className={cn(
                   "flex-1 rounded-lg border py-2 text-xs capitalize",
-                  theme === t ? "border-red-500 text-red-300" : "border-border",
+                  theme === t ? "border-violet-500 text-violet-300" : "border-border",
                 )}
               >
                 {t === "dark" ? "Gelap" : t === "light" ? "Terang" : "Custom"}
@@ -448,7 +448,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                   await update({ customColor });
                   toast.success("Warna tersimpan");
                 }}
-                className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white"
+                className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white"
               >
                 Simpan warna
               </button>
@@ -496,7 +496,7 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 await updateProfile({ bannerUrl: banner });
                 toast.success("Background diubah");
               }}
-              className="rounded-lg bg-red-600 px-4 text-sm font-bold text-white"
+              className="rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
             >
               OK
             </button>
@@ -530,7 +530,7 @@ function ToggleRow({
         onClick={() => onToggle(!value)}
         className={cn(
           "relative h-6 w-11 rounded-full transition",
-          value ? "bg-red-600" : "bg-zinc-600",
+          value ? "bg-violet-600" : "bg-zinc-600",
         )}
       >
         <span
@@ -559,7 +559,7 @@ function QualityRow({
     <div className="rounded-2xl border border-border bg-card p-3.5">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-red-300">{value}</span>
+        <span className="text-xs text-violet-300">{value}</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -572,7 +572,7 @@ function QualityRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === q ? "border-red-500 text-red-300" : "border-border",
+                value === q ? "border-violet-500 text-violet-300" : "border-border",
               )}
             >
               {q}
@@ -599,7 +599,7 @@ function SpeedRow({
     <div className="rounded-2xl border border-border bg-card p-3.5">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-red-300">{value}x</span>
+        <span className="text-xs text-violet-300">{value}x</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -612,7 +612,7 @@ function SpeedRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === s ? "border-red-500 text-red-300" : "border-border",
+                value === s ? "border-violet-500 text-violet-300" : "border-border",
               )}
             >
               {s}x
@@ -691,7 +691,7 @@ function DevModPanel() {
   if (!isDev && !isMod) return null;
 
   return (
-    <div className="rounded-2xl border border-red-500/40 bg-card p-3.5">
+    <div className="rounded-2xl border border-violet-500/40 bg-card p-3.5">
       <p className="text-sm font-bold text-red-400">
         {isDev ? "Dev Panel" : "Moderator Panel"}
       </p>
@@ -711,7 +711,7 @@ function DevModPanel() {
               onClick={() => setPicked(u)}
               className={cn(
                 "flex w-full items-center gap-2 rounded-lg border p-2 text-left text-sm",
-                picked?._id === u._id ? "border-red-500" : "border-border/70",
+                picked?._id === u._id ? "border-violet-500" : "border-border/70",
               )}
             >
               <span className="flex-1 truncate">{u.username}</span>
@@ -722,7 +722,7 @@ function DevModPanel() {
                 <span className="text-[10px] text-red-400">BANNED</span>
               )}
               {(u.mutedUntil ?? 0) > Date.now() && (
-                <span className="text-[10px] text-red-300">MUTED</span>
+                <span className="text-[10px] text-violet-300">MUTED</span>
               )}
             </button>
           ))}
@@ -830,7 +830,7 @@ function DevModPanel() {
 
       {isDev && (
         <div className="mt-3 rounded-xl border border-border p-3">
-          <p className="text-xs font-semibold text-red-300">
+          <p className="text-xs font-semibold text-violet-300">
             Give premium ke semua member clan
           </p>
           <div className="mt-2 flex gap-2">
@@ -856,7 +856,7 @@ function DevModPanel() {
                   toast.error(e instanceof Error ? e.message : "Gagal");
                 }
               }}
-              className="rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-violet-600 px-3 text-xs font-bold text-white disabled:opacity-40"
             >
               Give Premium
             </button>
@@ -871,7 +871,7 @@ function PanelBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-full border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+      className="rounded-full border border-violet-500/40 px-3 py-1.5 text-xs font-semibold text-violet-300 hover:bg-violet-500/10"
     >
       {label}
     </button>

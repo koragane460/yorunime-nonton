@@ -67,9 +67,9 @@ export function CommentsSection({
     <div>
       {/* Kolom + tombol kirim di atas */}
       {replyTo && (
-        <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-red-500 bg-black/40 px-3 py-1.5 text-xs">
+        <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-violet-500 bg-black/40 px-3 py-1.5 text-xs">
           <div className="min-w-0">
-            <p className="font-medium text-red-300">{replyTo.username}</p>
+            <p className="font-medium text-violet-300">{replyTo.username}</p>
             <p className="truncate text-muted-foreground">{replyTo.text}</p>
           </div>
           <button onClick={() => setReplyTo(null)} aria-label="Batal reply">
@@ -87,7 +87,7 @@ export function CommentsSection({
         />
         <button
           onClick={() => void send()}
-          className="flex items-center justify-center rounded-lg bg-red-600 px-4 text-white transition hover:bg-red-500"
+          className="flex items-center justify-center rounded-lg bg-violet-600 px-4 text-white transition hover:bg-violet-500"
           aria-label="Kirim komentar"
         >
           <Send className="size-4" />
@@ -103,7 +103,7 @@ export function CommentsSection({
             className={cn(
               "rounded-full border px-3.5 py-1 text-xs font-semibold capitalize",
               sort === s
-                ? "border-red-500 bg-red-500/15 text-red-300"
+                ? "border-violet-500 bg-violet-500/15 text-violet-300"
                 : "border-border text-muted-foreground",
             )}
           >

@@ -48,7 +48,7 @@ export function ProfileSheet({
             </div>
             <button
               onClick={onClose}
-              className="absolute left-3 top-3 rounded-full bg-black/55 p-2 backdrop-blur transition hover:border-red-500"
+              className="absolute left-3 top-3 rounded-full bg-black/55 p-2 backdrop-blur transition hover:border-violet-500"
               aria-label="Tutup"
             >
               <ChevronLeft className="size-4" />

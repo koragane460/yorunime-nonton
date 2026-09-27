@@ -46,44 +46,44 @@
   --color-gold-foreground: var(--gold-foreground);
 }
 
-/* ====== LStream: merah tua gradasi hitam, aksen emas ====== */
+/* ====== LStream: hitam dominan + tombol ungu, aksen biru/kuning ====== */
 :root {
   --radius: 1rem;
-  --brand: oklch(0.55 0.19 27);          /* merah utama */
-  --brand-foreground: oklch(0.98 0.01 30);
-  --gold: oklch(0.8 0.14 85);            /* emas */
+  --brand: oklch(0.55 0.25 295);         /* ungu tombol */
+  --brand-foreground: oklch(0.98 0.01 300);
+  --gold: oklch(0.85 0.15 95);           /* kuning aksen */
   --gold-foreground: oklch(0.18 0.04 70);
-  --background: oklch(0.115 0.008 25);
-  --foreground: oklch(0.96 0.005 30);
-  --card: oklch(0.16 0.012 25);
-  --card-foreground: oklch(0.96 0.005 30);
-  --popover: oklch(0.155 0.012 25);
-  --popover-foreground: oklch(0.96 0.005 30);
-  --primary: oklch(0.55 0.19 27);        /* tombol utama = merah */
-  --primary-foreground: oklch(0.98 0.01 30);
-  --secondary: oklch(0.21 0.015 25);
-  --secondary-foreground: oklch(0.93 0.01 28);
-  --muted: oklch(0.2 0.01 25);
-  --muted-foreground: oklch(0.68 0.01 25);
-  --accent: oklch(0.26 0.03 25);
-  --accent-foreground: oklch(0.96 0.005 30);
+  --background: oklch(0.13 0.02 280);    /* hitam kebiruan */
+  --foreground: oklch(0.96 0.005 280);
+  --card: oklch(0.165 0.025 280);
+  --card-foreground: oklch(0.96 0.005 280);
+  --popover: oklch(0.16 0.025 280);
+  --popover-foreground: oklch(0.96 0.005 280);
+  --primary: oklch(0.55 0.25 295);       /* tombol utama = ungu */
+  --primary-foreground: oklch(0.98 0.01 300);
+  --secondary: oklch(0.21 0.03 280);
+  --secondary-foreground: oklch(0.93 0.01 280);
+  --muted: oklch(0.2 0.025 280);
+  --muted-foreground: oklch(0.68 0.015 280);
+  --accent: oklch(0.26 0.04 280);
+  --accent-foreground: oklch(0.96 0.005 280);
   --destructive: oklch(0.55 0.19 27);
-  --border: oklch(0.3 0.02 25 / 55%);
-  --input: oklch(0.26 0.02 25 / 60%);
-  --ring: oklch(0.55 0.19 27 / 55%);
-  --chart-1: oklch(0.8 0.14 85);
-  --chart-2: oklch(0.55 0.19 27);
-  --chart-3: oklch(0.65 0.15 30);
+  --border: oklch(0.3 0.03 280 / 55%);
+  --input: oklch(0.26 0.03 280 / 60%);
+  --ring: oklch(0.55 0.25 295 / 55%);
+  --chart-1: oklch(0.55 0.25 295);
+  --chart-2: oklch(0.75 0.12 250);
+  --chart-3: oklch(0.85 0.15 95);
   --chart-4: oklch(0.70 0.13 230);
   --chart-5: oklch(0.70 0.14 150);
-  --sidebar: oklch(0.16 0.012 25);
-  --sidebar-foreground: oklch(0.96 0.005 30);
-  --sidebar-primary: oklch(0.55 0.19 27);
-  --sidebar-primary-foreground: oklch(0.98 0.01 30);
-  --sidebar-accent: oklch(0.21 0.015 25);
-  --sidebar-accent-foreground: oklch(0.93 0.01 28);
-  --sidebar-border: oklch(0.3 0.02 25 / 55%);
-  --sidebar-ring: oklch(0.55 0.19 27 / 55%);
+  --sidebar: oklch(0.165 0.025 280);
+  --sidebar-foreground: oklch(0.96 0.005 280);
+  --sidebar-primary: oklch(0.55 0.25 295);
+  --sidebar-primary-foreground: oklch(0.98 0.01 300);
+  --sidebar-accent: oklch(0.21 0.03 280);
+  --sidebar-accent-foreground: oklch(0.93 0.01 280);
+  --sidebar-border: oklch(0.3 0.03 280 / 55%);
+  --sidebar-ring: oklch(0.55 0.25 295 / 55%);
 }
 
 /* Tema terang opsional dari pengaturan */
@@ -108,24 +108,24 @@
 }
 
 .dark {
-  --background: oklch(0.115 0.008 25);
-  --foreground: oklch(0.96 0.005 30);
-  --card: oklch(0.16 0.012 25);
-  --card-foreground: oklch(0.96 0.005 30);
-  --popover: oklch(0.155 0.012 25);
-  --popover-foreground: oklch(0.96 0.005 30);
-  --primary: oklch(0.55 0.19 27);
-  --primary-foreground: oklch(0.98 0.01 30);
-  --secondary: oklch(0.21 0.015 25);
-  --secondary-foreground: oklch(0.93 0.01 28);
-  --muted: oklch(0.2 0.01 25);
-  --muted-foreground: oklch(0.68 0.01 25);
-  --accent: oklch(0.26 0.03 25);
-  --accent-foreground: oklch(0.96 0.005 30);
+  --background: oklch(0.13 0.02 280);
+  --foreground: oklch(0.96 0.005 280);
+  --card: oklch(0.165 0.025 280);
+  --card-foreground: oklch(0.96 0.005 280);
+  --popover: oklch(0.16 0.025 280);
+  --popover-foreground: oklch(0.96 0.005 280);
+  --primary: oklch(0.55 0.25 295);
+  --primary-foreground: oklch(0.98 0.01 300);
+  --secondary: oklch(0.21 0.03 280);
+  --secondary-foreground: oklch(0.93 0.01 280);
+  --muted: oklch(0.2 0.025 280);
+  --muted-foreground: oklch(0.68 0.015 280);
+  --accent: oklch(0.26 0.04 280);
+  --accent-foreground: oklch(0.96 0.005 280);
   --destructive: oklch(0.55 0.19 27);
-  --border: oklch(0.3 0.02 25 / 55%);
-  --input: oklch(0.26 0.02 25 / 60%);
-  --ring: oklch(0.55 0.19 27 / 55%);
+  --border: oklch(0.3 0.03 280 / 55%);
+  --input: oklch(0.26 0.03 280 / 60%);
+  --ring: oklch(0.55 0.25 295 / 55%);
 }
 
 @layer base {
@@ -143,20 +143,20 @@
 
 /* ---------- LStream utils ---------- */
 
-/* Latar gradasi merah tua ke hitam untuk section utama */
+/* Latar gradasi ungu gelap ke hitam */
 .bg-hero-gradient {
   background:
-    radial-gradient(1000px 460px at 50% -160px, oklch(0.4 0.13 27 / 0.5), transparent),
-    linear-gradient(180deg, oklch(0.17 0.03 25) 0%, oklch(0.115 0.008 25) 45%);
+    radial-gradient(1000px 460px at 50% -160px, oklch(0.38 0.16 295 / 0.45), transparent),
+    linear-gradient(180deg, oklch(0.17 0.04 285) 0%, oklch(0.13 0.02 280) 45%);
 }
 
-/* Hero clan: kartu merah tua seperti tema utama */
+/* Hero clan: kartu ungu gelap */
 .clan-hero-gradient {
   background: linear-gradient(
     165deg,
-    oklch(0.30 0.10 27) 0%,
-    oklch(0.20 0.06 25) 55%,
-    oklch(0.14 0.03 25) 100%
+    oklch(0.32 0.13 295) 0%,
+    oklch(0.21 0.07 290) 55%,
+    oklch(0.15 0.03 285) 100%
   );
 }
 
@@ -209,10 +209,10 @@
 @keyframes reply-blink {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(225 29 72 / 0%);
+    box-shadow: 0 0 0 0 oklch(0.55 0.25 295 / 0%);
   }
   50% {
-    box-shadow: 0 0 0 3px rgb(225 29 72 / 55%);
+    box-shadow: 0 0 0 3px oklch(0.55 0.25 295 / 55%);
   }
 }
 .reply-blink {
@@ -257,7 +257,7 @@
   height: 6px;
 }
 .thin-scroll::-webkit-scrollbar-thumb {
-  background: rgb(225 29 72 / 30%);
+  background: oklch(0.55 0.25 295 / 35%);
   border-radius: 999px;
 }
 .thin-scroll::-webkit-scrollbar-track {
@@ -337,7 +337,7 @@ button:not([disabled]):active,
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: oklch(0.19 0.012 25);
+  background: oklch(0.19 0.025 280);
 }
 .skeleton::after {
   content: "";
@@ -360,13 +360,13 @@ button:not([disabled]):active,
   }
 }
 
-/* Tab pill: track gelap + pil aktif merah */
+/* Tab pill: track gelap + pil aktif ungu */
 .tab-pill-track {
   display: flex;
   gap: 0.25rem;
   border-radius: 999px;
-  background: oklch(0.14 0.01 25 / 80%);
-  border: 1px solid oklch(0.3 0.02 25 / 40%);
+  background: oklch(0.14 0.02 280 / 80%);
+  border: 1px solid oklch(0.3 0.03 280 / 40%);
   padding: 0.3rem;
 }
 .tab-pill {
@@ -375,15 +375,15 @@ button:not([disabled]):active,
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: oklch(0.7 0.01 25);
+  color: oklch(0.7 0.015 280);
   transition:
     background-color 0.18s ease,
     color 0.18s ease;
 }
 .tab-pill-active {
-  background: linear-gradient(180deg, oklch(0.58 0.2 27), oklch(0.5 0.19 26));
-  color: oklch(0.98 0.01 30);
-  box-shadow: 0 4px 14px rgb(225 29 72 / 35%);
+  background: linear-gradient(180deg, oklch(0.56 0.24 295), oklch(0.48 0.22 295));
+  color: oklch(0.98 0.01 300);
+  box-shadow: 0 4px 14px oklch(0.55 0.25 295 / 40%);
 }
 
 /* Search rounded-full */
@@ -456,20 +456,20 @@ button:not([disabled]):active,
   color: oklch(0.85 0.01 25);
 }
 
-/* Bubble pesan sendiri: hitam */
+/* Bubble pesan sendiri: hitam pekat */
 .bubble-mine {
-  background: #0b0b0d;
-  border: 1px solid oklch(0.3 0.02 25 / 60%);
+  background: #08080c;
+  border: 1px solid oklch(0.32 0.05 295 / 55%);
 }
 /* Bubble pesan orang lain */
 .bubble-other {
-  background: oklch(0.185 0.012 25);
-  border: 1px solid oklch(0.28 0.02 25 / 55%);
+  background: oklch(0.19 0.025 280);
+  border: 1px solid oklch(0.3 0.03 280 / 55%);
 }
 
-/* Navbar solid (bukan glass, bukan rounded) */
+/* Navbar solid */
 .nav-bar {
-  background: #0c0c0e;
+  background: #07070b;
   border-top: 1px solid rgb(255 255 255 / 0.09);
 }
 .nav-item {

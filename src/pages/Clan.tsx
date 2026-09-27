@@ -93,7 +93,7 @@ function NoClan({ initialCreate }: { initialCreate?: boolean }) {
         <div className="mx-auto mt-5 flex w-64 flex-col gap-2">
           <button
             onClick={() => setMode("buat")}
-            className="w-full rounded-full bg-red-600 py-3 font-bold text-white transition hover:bg-red-500"
+            className="w-full rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
           >
             Buat Clan
           </button>
@@ -265,10 +265,10 @@ function JoinClan({ onBack }: { onBack: () => void }) {
         </div>
 
         {warn && (
-          <div className="mb-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-xs">
+          <div className="mb-3 rounded-2xl border border-violet-500/40 bg-violet-500/10 p-3 text-xs">
             <p>{warn}</p>
             <button
-              className="mt-1 font-semibold text-red-300 underline"
+              className="mt-1 font-semibold text-violet-300 underline"
               onClick={() => setWarn(null)}
             >
               tutup
@@ -457,7 +457,7 @@ function ClanDetail({
                   toast.error(e instanceof Error ? e.message : "Gagal");
                 }
               }}
-              className="ml-auto flex items-center gap-1 rounded-full border border-red-500/50 px-3 py-1.5 text-xs text-red-400"
+              className="ml-auto flex items-center gap-1 rounded-full border border-violet-500/50 px-3 py-1.5 text-xs text-red-400"
             >
               <LogOut className="size-3.5" /> Keluar Clan
             </button>
@@ -607,7 +607,7 @@ function ClanDetail({
                         </p>
                       </div>
                       <div className="diamond-chip">
-                        <Gem className="size-4 text-red-500" />
+                        <Gem className="size-4 text-violet-400" />
                         <span className="text-sm font-bold text-white">
                           {formatK(m.donatedTotal)}
                         </span>
@@ -646,7 +646,7 @@ function ClanDetail({
 
             {/* Berlian + level + aksi */}
             <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4 text-center">
-              <Gem className="mx-auto size-7 text-red-500" />
+              <Gem className="mx-auto size-7 text-violet-400" />
               <p className="mt-1 text-xl font-black text-white">{formatK(c.diamonds)}</p>
               <div className="mt-2 space-y-2">
                 <button
@@ -791,7 +791,7 @@ function MemberDonateRow({
           <p className="truncate font-bold text-indigo-50">{m.username}</p>
         </div>
         <div className="diamond-chip">
-          <Gem className="size-4 text-red-500" />
+          <Gem className="size-4 text-violet-400" />
           <span className="text-sm font-bold text-white">{formatK(m.donatedToday)}</span>
         </div>
       </div>
@@ -810,7 +810,7 @@ function DonateDialog({
   return (
     <Popup onClose={onClose} title="Donate Berlian">
       <div className="text-center">
-        <Gem className="mx-auto size-9 text-red-500" />
+        <Gem className="mx-auto size-9 text-violet-400" />
         <p className="mt-1 text-xl font-black text-white">{amount}</p>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -970,7 +970,7 @@ function LeaderPanel({
                 </button>
                 <button
                   onClick={() => void onRespond(r.requestId, false)}
-                  className="rounded-full bg-red-500/20 p-1.5 text-red-400"
+                  className="rounded-full bg-violet-500/20 p-1.5 text-red-400"
                 >
                   <X className="size-4" />
                 </button>

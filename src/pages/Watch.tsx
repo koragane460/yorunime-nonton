@@ -183,7 +183,7 @@ function WatchContent() {
             <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-2">
               <RotateCcw className="size-6 text-white" />
             </button>
-            <button onClick={togglePlay} className="rounded-full bg-red-600 p-4">
+            <button onClick={togglePlay} className="rounded-full bg-violet-600 p-4">
               {playing ? <Pause className="size-7 text-white" /> : <Play className="size-7 text-white" />}
             </button>
             <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
@@ -266,7 +266,7 @@ function WatchContent() {
                     }}
                     className={cn(
                       "rounded px-2.5 py-1 text-xs",
-                      speed === s ? "bg-red-600 text-white" : "bg-white/10 text-white",
+                      speed === s ? "bg-violet-600 text-white" : "bg-white/10 text-white",
                     )}
                   >
                     {s}x
@@ -289,7 +289,7 @@ function WatchContent() {
             </p>
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
-              className="text-[11px] text-red-300 underline"
+              className="text-[11px] text-violet-300 underline"
             >
               {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
             </button>
@@ -309,8 +309,8 @@ function WatchContent() {
               className={cn(
                 "rounded-md border py-2 text-xs font-semibold",
                 e.id === epParam
-                  ? "border-red-500 bg-red-500/20 text-red-200"
-                  : "border-border bg-secondary/40 text-foreground hover:border-red-500/60",
+                  ? "border-violet-500 bg-violet-500/20 text-red-200"
+                  : "border-border bg-secondary/40 text-foreground hover:border-violet-500/60",
               )}
             >
               {e.number}
@@ -392,8 +392,8 @@ function WatchContent() {
                 className={cn(
                   "rounded-lg border px-4 py-2 text-sm transition",
                   quality === q
-                    ? "border-red-500 bg-red-500/15 text-red-300"
-                    : "border-border hover:border-red-500/50",
+                    ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                    : "border-border hover:border-violet-500/50",
                 )}
               >
                 {q}
@@ -415,8 +415,8 @@ function WatchContent() {
                 className={cn(
                   "rounded-lg border px-4 py-2 text-sm transition",
                   speed === s
-                    ? "border-red-500 bg-red-500/15 text-red-300"
-                    : "border-border hover:border-red-500/50",
+                    ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                    : "border-border hover:border-violet-500/50",
                 )}
               >
                 {s}x
@@ -435,7 +435,7 @@ function WatchContent() {
                   toast.success(`Download dimulai (${q})`);
                   setDownloadOpen(false);
                 }}
-                className="rounded-lg border border-border px-4 py-2 text-sm transition hover:border-red-500"
+                className="rounded-lg border border-border px-4 py-2 text-sm transition hover:border-violet-500"
               >
                 {q}
               </button>
@@ -459,7 +459,7 @@ function ToolButton({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card py-2.5 text-[11px] font-medium transition hover:border-red-500/60"
+      className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card py-2.5 text-[11px] font-medium transition hover:border-violet-500/60"
     >
       {icon}
       {label}
