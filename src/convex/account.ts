@@ -105,6 +105,18 @@ export const updateSettings = mutation({
   },
 });
 
+// Akun dummy untuk mengisi leaderboard (tidak bisa diklik/dimoderasi).
+const DUMMY_LEADERS = [
+  { username: "Haruuu", xp: 486200, level: 75 },
+  { username: "Soraa", xp: 391400, level: 60 },
+  { username: "Xenovia", xp: 302800, level: 52 },
+  { username: "Kaisel", xp: 244100, level: 47 },
+  { username: "Igris", xp: 198700, level: 41 },
+  { username: "Beru", xp: 152300, level: 35 },
+  { username: "Tusk", xp: 110500, level: 30 },
+  { username: "Iron", xp: 81200, level: 26 },
+];
+
 export const totalLeaderboard = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 50 }) => {
@@ -120,7 +132,21 @@ export const totalLeaderboard = query({
       .sort((a, b) => b.xp - a.xp)
       .slice(0, Math.min(limit, 50))
       .map((e, i) => ({ rank: i + 1, ...e }));
-    return sorted;
+    // Dummy: digabung & diurut bareng user asli
+    const combined = [
+      ...sorted,
+      ...DUMMY_LEADERS.map((d, i) => ({
+        rank: 0,
+        userId: `dummy-leader-${i}` as any,
+        username: d.username,
+        image: undefined,
+        level: d.level,
+        xp: d.xp,
+        dummy: true,
+      } as any)),
+    ].sort((a, b) => b.xp - a.xp);
+    combined.forEach((e, i) => (e.rank = i + 1));
+    return combined.slice(0, Math.min(limit, 50));
   },
 });
 
@@ -137,7 +163,7 @@ export const topGive = query({
     }
     const users = await ctx.db.query("users").collect();
     const byId = new Map(users.map((u) => [u._id, u]));
-    return [...totals.entries()]
+    const real = [...totals.entries()]
       .map(([userId, days]) => ({
         userId,
         username: byId.get(userId as any)?.username ?? "user",
@@ -145,6 +171,15 @@ export const topGive = query({
         days,
       }))
       .sort((a, b) => b.days - a.days)
+      .slice(0, limit);
+    // Dummy pemberi premium
+    const dummies = [
+      { userId: "dummy-give-0", username: "Haruuu", days: 312, image: undefined },
+      { userId: "dummy-give-1", username: "DivineXDesity", days: 208, image: undefined },
+      { userId: "dummy-give-2", username: "Soraa", days: 154, image: undefined },
+    ];
+    return [...real, ...(real.length === 0 ? dummies : dummies.slice(0, 1))]
+      .sort((a: any, b: any) => b.days - a.days)
       .slice(0, limit);
   },
 });

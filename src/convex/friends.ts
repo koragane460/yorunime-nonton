@@ -56,6 +56,27 @@ export const listRequests = query({
         level: u?.level,
       });
     }
+    // Dummy request supaya UI tidak kosong (dummy tidak bisa diterima/ditolak)
+    if (out.length === 0) {
+      out.push(
+        {
+          requestId: "dummy-req-1" as any,
+          fromUserId: "dummy-user-1" as any,
+          username: "Haruuu",
+          image: undefined,
+          level: 75,
+          dummy: true,
+        } as any,
+        {
+          requestId: "dummy-req-2" as any,
+          fromUserId: "dummy-user-2" as any,
+          username: "Soraa",
+          image: undefined,
+          level: 60,
+          dummy: true,
+        } as any,
+      );
+    }
     return out;
   },
 });

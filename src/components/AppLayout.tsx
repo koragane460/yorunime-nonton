@@ -52,7 +52,7 @@ export function AppLayout({
   return (
     <div className="flex min-h-dvh w-full flex-col">
       {showPanel && user && (
-        <div className="w-full bg-background px-3">
+        <div className="w-full bg-background px-4">
           <AccountPanel
             onOpen={() => navigate("/akun")}
             name={user.username ?? "user"}
@@ -76,7 +76,7 @@ export function AppLayout({
         </div>
       )}
       {/* Animasi halus setiap kali layar berpindah */}
-      <div key={location.pathname} className="screen-enter flex w-full flex-1 flex-col">
+      <div key={location.pathname} className="screen-enter flex w-full flex-1 flex-col px-4">
         {children}
       </div>
       <BottomNav />
@@ -315,26 +315,30 @@ export function MiniPlayerHost() {
           >
             {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </button>
-          {/* Grip resize kiri bawah */}
+          {/* Grip resize kiri bawah — pointer events (mouse + touch) */}
           <div className="flex items-end justify-between p-1">
             <div
-              className="grip-lines size-5 cursor-nwse-resize rounded"
-              onDoubleClick={() => setSize({ w: 250, h: 175 })}
-              onMouseDown={(e) => {
+              className="grip-lines size-6 touch-none rounded"
+              style={{ cursor: "nwse-resize" }}
+              onPointerDown={(e) => {
                 e.stopPropagation();
+                e.currentTarget.setPointerCapture(e.pointerId);
                 const start = { x: e.clientX, y: e.clientY, w: size.w, h: size.h };
-                const move = (ev: MouseEvent) => {
+                const el = e.currentTarget;
+                const move = (ev: PointerEvent) => {
                   setSize({
-                    w: Math.max(180, Math.min(460, start.w + (ev.clientX - start.x))),
-                    h: Math.max(130, Math.min(340, start.h + (ev.clientY - start.y))),
+                    w: Math.max(170, Math.min(480, start.w + (ev.clientX - start.x))),
+                    h: Math.max(120, Math.min(360, start.h + (ev.clientY - start.y))),
                   });
                 };
                 const up = () => {
-                  window.removeEventListener("mousemove", move);
-                  window.removeEventListener("mouseup", up);
+                  el.removeEventListener("pointermove", move);
+                  el.removeEventListener("pointerup", up);
+                  el.removeEventListener("pointercancel", up);
                 };
-                window.addEventListener("mousemove", move);
-                window.addEventListener("mouseup", up);
+                el.addEventListener("pointermove", move);
+                el.addEventListener("pointerup", up);
+                el.addEventListener("pointercancel", up);
               }}
             />
             <span className="pointer-events-none max-w-[70%] truncate text-[9px] text-white/70">
@@ -377,7 +381,7 @@ function BottomNav() {
                 className="nav-item relative flex flex-col items-center gap-0.5 py-2"
               >
                 <Icon
-                  className={cn("size-[22px]", active ? "text-red-400" : "text-zinc-500")}
+                  className={cn("size-[22px]", active ? "text-violet-400" : "text-zinc-500")}
                 />
                 <span
                   className={cn(
@@ -388,7 +392,7 @@ function BottomNav() {
                   {it.label}
                 </span>
                 {active && (
-                  <span className="absolute inset-x-7 top-0 h-0.5 rounded-full bg-red-500" />
+                  <span className="absolute inset-x-7 top-0 h-0.5 rounded-full bg-violet-500" />
                 )}
               </button>
             );

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
-import { Heart, Send, Trash2, X } from "lucide-react";
+import { Heart, Reply, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/lstream";
@@ -170,7 +170,8 @@ function CommentRow({ c, meId, onReply }: { c: CommentT; meId?: string; onReply:
       <p className="break-words px-3 pb-1.5 pt-1.5 text-sm leading-5">{c.text}</p>
       <div className="flex items-center gap-4 px-2.5 pb-2 text-[11px] text-muted-foreground">
         <button
-          className={cn("flex items-center gap-1", liked && "text-red-400")}
+          title="Suka"
+          className={cn("flex items-center gap-1", liked && "text-violet-400")}
           onClick={async () => {
             try {
               await like({ commentId: c._id as never });
@@ -179,15 +180,17 @@ function CommentRow({ c, meId, onReply }: { c: CommentT; meId?: string; onReply:
             }
           }}
         >
-          <Heart className={cn("size-3.5", liked && "fill-red-400")} />
+          <Heart className={cn("size-3.5", liked && "fill-violet-400")} />
           {c.likeCount ?? 0}
         </button>
-        <button className="underline hover:text-foreground" onClick={onReply}>
-          reply
+        <button aria-label="Reply" title="Reply" className="hover:text-violet-300" onClick={onReply}>
+          <Reply className="size-3.5" />
         </button>
         {mine && (
           <button
-            className="flex items-center gap-1 underline hover:text-red-400"
+            aria-label="Hapus komentar"
+            title="Hapus"
+            className="hover:text-red-400"
             onClick={async () => {
               try {
                 await del({ commentId: c._id as never });
@@ -197,7 +200,7 @@ function CommentRow({ c, meId, onReply }: { c: CommentT; meId?: string; onReply:
               }
             }}
           >
-            <Trash2 className="size-3" /> hapus
+            <Trash2 className="size-3.5" />
           </button>
         )}
       </div>

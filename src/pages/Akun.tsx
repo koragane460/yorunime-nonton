@@ -272,8 +272,7 @@ function AkunContent() {
               onClick={() => navigate(`/nonton?anime=${f.animeId}`)}
               className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
             >
-              <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />
-              <Heart className="size-4 fill-red-500 text-violet-400" />
+              <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />                <Heart className="size-4 fill-violet-400 text-violet-400" />
               <p className="min-w-0 flex-1 truncate text-sm font-semibold">{f.animeTitle}</p>
             </button>
           ))}
@@ -288,27 +287,9 @@ function AkunContent() {
         )}
       </div>
 
-      <div className="px-3">
-        <div className="mt-4 space-y-2">
-          <button
-            onClick={() => setNotifOpen(true)}
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
-          >
-            <Mail className="size-5 text-red-400" /> Lstreamsupport@gmail.com
-          </button>
-          <button
-            onClick={async () => {
-              await signOut();
-              navigate("/home");
-            }}
-            className="flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-card p-3.5 text-sm text-red-400"
-          >
-            <LogOut className="size-5" /> Log out dari akun
-          </button>
-        </div>
-      </div>
-
-      {settingsOpen && <SettingsScreen onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsScreen onClose={() => setSettingsOpen(false)} onSignOut={signOut} />
+      )}
       {notifOpen && <NotifScreen onClose={() => setNotifOpen(false)} />}
     </div>
   );
@@ -325,8 +306,15 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 
 // ------------------------------------------------------------- settings ----
 
-function SettingsScreen({ onClose }: { onClose: () => void }) {
+function SettingsScreen({
+  onClose,
+  onSignOut,
+}: {
+  onClose: () => void;
+  onSignOut: () => Promise<void>;
+}) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
   const [name, setName] = useState(user?.username ?? "");
@@ -335,6 +323,13 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
 
   if (!user) return null;
+
+  // Simpan tanpa nunggu server (fire & forget) → UI terasa instan
+  const quickSave = (args: Record<string, unknown>) => {
+    void update(args).catch((e) =>
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan"),
+    );
+  };
 
   const applyTheme = (t: string, color?: string) => {
     document.documentElement.classList.toggle("theme-light", t === "light");
@@ -407,9 +402,8 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
           label="Auto tolak request pertemanan"
           desc="Pilih auto tolak atau auto terima"
           value={user.autoRejectFriend ?? false}
-          onToggle={async (v) => {
-            await update({ autoRejectFriend: v, autoRejectFriendAction: "reject" });
-            toast.success("Tersimpan");
+          onToggle={(v) => {
+            quickSave({ autoRejectFriend: v, autoRejectFriendAction: "reject" });
           }}
         />
         <div className="rounded-2xl border border-border bg-card p-3.5">
@@ -418,10 +412,10 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
             {["dark", "light", "custom"].map((t) => (
               <button
                 key={t}
-                onClick={async () => {
+                onClick={() => {
                   setTheme(t);
                   applyTheme(t, t === "custom" ? customColor : undefined);
-                  await update({ theme: t });
+                  quickSave({ theme: t });
                 }}
                 className={cn(
                   "flex-1 rounded-lg border py-2 text-xs capitalize",
@@ -444,8 +438,8 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
                 className="h-9 w-14 rounded border border-border bg-transparent"
               />
               <button
-                onClick={async () => {
-                  await update({ customColor });
+                onClick={() => {
+                  quickSave({ customColor });
                   toast.success("Warna tersimpan");
                 }}
                 className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white"
@@ -459,17 +453,15 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
         <QualityRow
           label="Kualitas default"
           value={user.defaultQuality ?? "720p"}
-          onPick={async (q) => {
-            await update({ defaultQuality: q });
-            toast.success(`Kualitas default: ${q}`);
+          onPick={(q) => {
+            quickSave({ defaultQuality: q });
           }}
         />
         <SpeedRow
           label="Kecepatan default"
           value={user.defaultSpeed ?? 1}
-          onPick={async (s) => {
-            await update({ defaultSpeed: s });
-            toast.success(`Kecepatan default: ${s}x`);
+          onPick={(s) => {
+            quickSave({ defaultSpeed: s });
           }}
         />
 
@@ -477,8 +469,8 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
           label="Matikan online status"
           desc="Status kamu akan offline selamanya"
           value={user.hideOnline ?? false}
-          onToggle={async (v) => {
-            await update({ hideOnline: v });
+          onToggle={(v) => {
+            quickSave({ hideOnline: v });
           }}
         />
 
@@ -504,6 +496,23 @@ function SettingsScreen({ onClose }: { onClose: () => void }) {
         </div>
 
         <DevModPanel />
+      </div>
+
+      {/* Email support + Log out — sekarang di Pengaturan */}
+      <SectionTitle>Lainnya</SectionTitle>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm">
+          <Mail className="size-5 text-violet-400" /> Lstreamsupport@gmail.com
+        </div>
+        <button
+          onClick={async () => {
+            await onSignOut();
+            navigate("/home");
+          }}
+          className="flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-card p-3.5 text-sm text-violet-400"
+        >
+          <LogOut className="size-5" /> Log out dari akun
+        </button>
       </div>
     </FullScreen>
   );

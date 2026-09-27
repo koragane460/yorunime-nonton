@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Crown, ImagePlus, MoreVertical, Plus, Send, X } from "lucide-react";
+import { Crown, ImagePlus, MoreVertical, Plus, Reply, Send, Trash2, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -515,17 +515,23 @@ export function ChatPanel({
                   )}
                 >
                   <span>{new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <button className="underline hover:text-violet-300" onClick={() => setReplyTo(m)}>
-                    reply
+                  <button
+                    aria-label="Reply"
+                    title="Reply"
+                    onClick={() => setReplyTo(m)}
+                    className="hover:text-violet-300"
+                  >
+                    <Reply className="size-3.5" />
                   </button>
                   {mine ? (
                     <DeleteButton messageId={m._id} />
                   ) : (
                     /* Tombol ":" di pojok pesan → popup lapor */
                     <button
-                      aria-label="Menu pesan"
+                      aria-label="Laporkan pesan"
+                      title="Laporkan"
                       onClick={() => setReportMsg(m)}
-                      className="font-bold hover:text-foreground"
+                      className="hover:text-foreground"
                     >
                       <MoreVertical className="size-3.5" />
                     </button>
@@ -683,7 +689,9 @@ function DeleteButton({ messageId }: { messageId: Id<"chatMessages"> }) {
   const del = useMutation(api.chat.deleteMessage);
   return (
     <button
-      className="underline hover:text-red-400"
+      aria-label="Hapus pesan"
+      title="Hapus"
+      className="hover:text-red-400"
       onClick={async () => {
         try {
           await del({ messageId });
@@ -692,7 +700,7 @@ function DeleteButton({ messageId }: { messageId: Id<"chatMessages"> }) {
         }
       }}
     >
-      hapus
+      <Trash2 className="size-3.5" />
     </button>
   );
 }

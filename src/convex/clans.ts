@@ -163,6 +163,20 @@ export const clanDetail = query({
   },
 });
 
+// Clan dummy untuk mengisi list biar tidak kosong (deterministik per hari).
+const DUMMY_CLANS = [
+  { name: "Divine X Desity", tag: "DXD", tagIcon: "🪽", diamonds: 116000, level: 15, members: 23 },
+  { name: "Shadow Monarch", tag: "SHDW", tagIcon: "💀", diamonds: 87400, level: 12, members: 18 },
+  { name: "Eternal Blaze", tag: "ETBL", tagIcon: "🔥", diamonds: 65200, level: 10, members: 15 },
+  { name: "Frozen Star", tag: "FRZN", tagIcon: "❄️", diamonds: 41800, level: 8, members: 12 },
+  { name: "Thunder Owl", tag: "THOW", tagIcon: "⚡", diamonds: 28900, level: 6, members: 9 },
+  { name: "Silver Wing", tag: "SVWG", tagIcon: "🏹", diamonds: 12300, level: 4, members: 6 },
+];
+
+function dummyClanId(tag: string) {
+  return `dummy-clan-${tag.toLowerCase()}`;
+}
+
 export const listClans = query({
   args: { q: v.optional(v.string()) },
   handler: async (ctx, { q }) => {
@@ -196,6 +210,32 @@ export const listClans = query({
       });
     }
     out.sort((a, b) => b.diamonds - a.diamonds);
+
+    // Dummy: tampil di bawah clan asli, bisa dicari juga
+    const myClanTag = myMembership
+      ? (await ctx.db.get(myMembership.clanId))?.tag
+      : null;
+    for (const d of DUMMY_CLANS) {
+      if (q && !d.name.toLowerCase().includes(q.toLowerCase())) continue;
+      if (myClanTag === d.tag) continue;
+      out.push({
+        _id: dummyClanId(d.tag) as any,
+        name: d.name,
+        tag: d.tag,
+        tagIcon: d.tagIcon,
+        avatarUrl: "",
+        description: "Clan legendaris — kumpulkan Sacret untuk menantang mereka!",
+        diamonds: d.diamonds,
+        level: d.level,
+        levelProgress: 0,
+        memberCount: d.members,
+        leaderName: "—",
+        ageDays: 99,
+        isMine: false,
+        isRequested: false,
+        dummy: true,
+      } as any);
+    }
     return out;
   },
 });
@@ -231,7 +271,9 @@ export const createClan = mutation({
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     if ((me.diamonds ?? 0) < CREATE_COST)
-      throw new Error("Butuh 1000 berlian untuk buat clan");
+      throw new Error(
+        `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} 💎 — butuh ${CREATE_COST} 💎 buat bikin clan (donasi ke clan lain / beli premium untuk nambah)`,
+      );
     const cleanTag = tag.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (cleanTag.length < 3 || cleanTag.length > 4)
       throw new Error("Tag clan 3-4 huruf");
