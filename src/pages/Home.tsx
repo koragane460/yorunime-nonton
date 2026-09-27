@@ -95,6 +95,7 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
+  const [updateFirst, setUpdateFirst] = useState(true);
 
   const hero = useAction(api.anime.animeOngoing);
   const top = useAction(api.anime.animeTop);
@@ -150,31 +151,7 @@ function HomeContent() {
 
   return (
     <div>
-      {/* 1) ANIME UPDATE NEWS — paling atas */}
-      <SectionTitle>Anime Update News</SectionTitle>
-      <p className="-mt-1.5 mb-2 text-xs text-muted-foreground">
-        Episode baru rilis hari ini
-      </p>
-      {loading ? (
-        <div className="flex gap-2.5">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
-          ))}
-        </div>
-      ) : (
-        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
-          {updateNews.map((a) => (
-            <div key={a.id} className="relative w-28 shrink-0">
-              <AnimeCard title={a.title} image={a.image} onClick={() => openAnime(a.id)} />
-              <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1 text-[9px] font-bold text-white">
-                New
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 2) BELI PREMIUM */}
+      {/* 1) BELI PREMIUM */}
       <button
         onClick={() => navigate("/premium")}
         className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-red-500/40 bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent p-3.5 text-left transition hover:border-red-500/70"
@@ -322,6 +299,34 @@ function HomeContent() {
           Cari
         </span>
       </button>
+
+      {/* 6b) ANIME UPDATE NEWS — di bawah tombol search */}
+      {updateFirst && (
+        <>
+          <div className="mt-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight">Anime Update News</h2>
+            <span className="text-[11px] text-muted-foreground">rilis hari ini</span>
+          </div>
+          {loading ? (
+            <div className="mt-2 flex gap-2.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
+              {updateNews.map((a) => (
+                <div key={a.id} className="relative w-28 shrink-0">
+                  <AnimeCard title={a.title} image={a.image} onClick={() => openAnime(a.id)} />
+                  <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1 text-[9px] font-bold text-white">
+                    New
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* 7) ANIME-ANIME */}
       <SectionTitle>Top Anime</SectionTitle>
@@ -529,7 +534,7 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
       className="screen-enter fixed inset-x-0 top-0 bottom-[104px] z-50 overflow-y-auto bg-background"
       style={{ borderRadius: "0 0 1.25rem 1.25rem" }}
     >
-      <div className="mx-auto max-w-2xl p-3">
+      <div className="w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button
             onClick={onClose}
@@ -692,7 +697,7 @@ function SearchScreen({
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
-      <div className="mx-auto max-w-2xl p-3">
+      <div className="w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
@@ -818,14 +823,15 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <div className="screen-enter fixed inset-0 z-50 flex flex-col bg-background">
-        <div className="mx-auto flex w-full max-w-2xl items-center gap-3 p-3">
+      {/* Full screen beneran: nutupin navbar + footer, tanpa rounding */}
+      <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
+        <div className="flex w-full items-center gap-3 p-3">
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
           </button>
           <h1 className="text-lg font-bold">Chat</h1>
         </div>
-        <div className="mx-auto w-full max-w-2xl px-3">
+        <div className="w-full px-3">
           <div className="tab-pill-track">
             {(["chat", "clan", "teman"] as const).map((t) => (
               <button
@@ -839,7 +845,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-3 pb-24 pt-3">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-3 pb-3 pt-3">
           {tab === "chat" && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
               {msgs && user ? (
@@ -1098,16 +1104,16 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
   if (!detail)
     return (
       <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
-        <div className="mx-auto max-w-2xl p-3">
+        <div className="w-full p-3">
           <DetailHeader title="Detail Anime" onClose={onClose} />
-          <div className="skeleton h-44 w-full rounded-2xl" />
+          <div className="skeleton h-64 w-full" />
         </div>
       </div>
     );
   if (detail.error)
     return (
       <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
-        <div className="mx-auto max-w-2xl p-3">
+        <div className="w-full p-3">
           <DetailHeader title="Detail Anime" onClose={onClose} />
           <p className="py-16 text-center text-sm text-muted-foreground">
             Anime tidak ditemukan
@@ -1122,72 +1128,79 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
-      <div className="mx-auto max-w-2xl pb-24">
-        {/* Header overlay di atas banner */}
-        <DetailHeader title="Detail Anime" onClose={onClose} fav={
-          <button
-            className="rounded-full bg-black/50 p-2"
-            onClick={async () => {
-              if (!user) return;
-              const r = await toggleFav({
-                animeId,
-                animeTitle: detail.title,
-                animeImage: detail.image,
-              });
-              toast.success(r.favorited ? "Ditambahkan ke favorite ❤️" : "Dihapus dari favorite");
-            }}
-          >
-            <Heart className={cn("size-5", isFav ? "fill-red-500 text-red-500" : "text-white")} />
-          </button>
-        } />
-
-        {/* Banner penuh + poster kiri + info kanan (tanpa kotak) */}
-        <div className="relative -mt-14">
+      <div className="w-full pb-24">
+        {/* Header transparan di atas banner full-bleed */}
+        <div className="relative">
+          {/* Banner: background anime full lebar sampai pinggir (kesamping panjang) */}
           <div
-            className="h-44 w-full bg-cover bg-center"
+            className="h-64 w-full bg-cover bg-center"
             style={
               detail.image
                 ? {
-                    backgroundImage: `linear-gradient(0deg, var(--background) 2%, rgba(0,0,0,.25) 55%, rgba(0,0,0,.35)), url(${detail.image})`,
+                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, var(--background) 96%), linear-gradient(90deg, rgba(0,0,0,.5), transparent 55%), url(${detail.image})`,
                   }
                 : undefined
             }
           >
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
           </div>
-          <div className="relative -mt-16 flex gap-3 px-3">
+
+          {/* Header + fav mengambang */}
+          <div className="absolute inset-x-0 top-0 z-10">
+            <DetailHeader title="Detail Anime" onClose={onClose} fav={
+              <button
+                className="rounded-full bg-black/50 p-2"
+                onClick={async () => {
+                  if (!user) return;
+                  const r = await toggleFav({
+                    animeId,
+                    animeTitle: detail.title,
+                    animeImage: detail.image,
+                  });
+                  toast.success(r.favorited ? "Ditambahkan ke favorite ❤️" : "Dihapus dari favorite");
+                }}
+              >
+                <Heart className={cn("size-5", isFav ? "fill-red-500 text-red-500" : "text-white")} />
+              </button>
+            } />
+          </div>
+
+          {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
+          <div className="absolute inset-x-0 bottom-0 flex gap-3 px-3 pb-3">
             {detail.image ? (
               <img
                 src={detail.image}
                 alt=""
-                className="aspect-[2/3] w-28 shrink-0 rounded-xl border border-white/15 object-cover shadow-xl"
+                className="aspect-[2/3] w-24 shrink-0 rounded-lg object-cover shadow-xl"
               />
             ) : (
-              <div className="aspect-[2/3] w-28 shrink-0 rounded-xl border border-white/15 bg-hero-gradient" />
+              <div className="aspect-[2/3] w-24 shrink-0 rounded-lg bg-black/40" />
             )}
-            <div className="min-w-0 flex-1 pt-1">
-              <h2 className="line-clamp-2 text-lg font-black leading-tight">{detail.title}</h2>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {(detail.genres ?? []).slice(0, 4).map((g: string) => (
+            <div className="min-w-0 flex-1">
+              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white drop-shadow">
+                {detail.title}
+              </h2>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {(detail.genres ?? []).slice(0, 3).map((g: string) => (
                   <span
                     key={g}
-                    className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground"
+                    className="rounded-full border border-white/25 bg-black/45 px-2 py-0.5 text-[10px] text-white/85"
                   >
                     {g}
                   </span>
                 ))}
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">
+              <p className="mt-1 line-clamp-1 text-[11px] text-white/70">
                 {detail.rating ?? "Rating 13+"} • {detail.studio ?? "Studio tidak diketahui"}
               </p>
               <span
                 className={cn(
-                  "mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold",
+                  "mt-1 inline-block rounded px-2 py-0.5 text-[10px] font-bold",
                   detail.status === "Completed"
-                    ? "bg-emerald-500/20 text-emerald-300"
+                    ? "bg-emerald-500/80 text-white"
                     : detail.status === "OVA" || detail.status === "Movie"
-                      ? "bg-purple-500/20 text-purple-300"
-                      : "bg-red-500/20 text-red-300",
+                      ? "bg-purple-500/80 text-white"
+                      : "bg-red-600 text-white",
                 )}
               >
                 {detail.status ?? "Ongoing"}
@@ -1197,14 +1210,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
         </div>
 
         <div className="px-3">
-          <button
-            onClick={() => navigate(`/nonton?anime=${animeId}`)}
-            className="mt-4 w-full rounded-full bg-red-600 py-3 font-bold text-white transition hover:bg-red-500"
-          >
-            ▶ Nonton
-          </button>
-
-          {/* Sinopsis */}
+          {/* Sinopsis dulu (baca selengkapnya), BARU tombol Nonton */}
           <SectionTitle>Sinopsis</SectionTitle>
           <p className={cn("text-sm leading-6 text-zinc-300", !synopsisOpen && "line-clamp-3")}>
             {detail.synopsis ?? "Sinopsis belum tersedia."}
@@ -1214,6 +1220,13 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
             className="mt-1 text-xs font-medium text-red-300 underline"
           >
             {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
+          </button>
+
+          <button
+            onClick={() => navigate(`/nonton?anime=${animeId}`)}
+            className="mt-4 w-full rounded-full bg-red-600 py-3 font-bold text-white transition hover:bg-red-500"
+          >
+            ▶ Nonton
           </button>
 
           {/* Episode grid + jumlah di kanan atas */}

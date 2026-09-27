@@ -76,20 +76,11 @@ function AkunContent() {
   };
 
   return (
-    <div className="relative py-3">
-      {/* Tombol Pengaturan — kanan atas pojok */}
-      <button
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Pengaturan"
-        className="absolute right-0 top-3 flex size-10 items-center justify-center rounded-full border border-white/15 bg-black/60 transition hover:border-red-500/60"
-      >
-        <SettingsIcon className="size-4.5" />
-      </button>
-
-      {/* Kotak akun paling atas */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/10">
+    <div className="relative">
+      {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
+      <div className="relative">
         <div
-          className="h-20 bg-cover bg-center"
+          className="h-28 w-full bg-cover bg-center"
           style={
             user.bannerUrl
               ? { backgroundImage: `url(${user.bannerUrl})` }
@@ -98,64 +89,82 @@ function AkunContent() {
         >
           {!user.bannerUrl && <div className="bg-hero-gradient h-full w-full" />}
         </div>
-        <div className="bg-black/40 p-4 pt-2">
-          <div className="flex items-end gap-3">
-            <Avatar
-              src={user.image}
-              seed={user.username}
-              className="-mt-10 size-20 border-4 border-background"
-              online={!user.hideOnline}
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Pengaturan"
+          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-full border border-white/30 bg-black/70 text-white shadow-lg transition hover:border-red-500"
+        >
+          <SettingsIcon className="size-[18px] text-white" />
+        </button>
+      </div>
+
+      {/* Avatar overlap setengah banner + identitas */}
+      <div className="w-full px-3">
+        <div className="relative -mt-12 flex items-end gap-3">
+          <Avatar
+            src={user.image}
+            seed={user.username}
+            className="size-24 border-4 border-background"
+            online={!user.hideOnline}
+          />
+          <div className="min-w-0 flex-1 pb-1">
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-lg font-black">{user.username}</p>
+              {premium && <BlueCheck className="size-5" />}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              ID: {displayId(user.seqId, user._id)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <LevelBadge level={user.level ?? 1} />
+          {user.clanTag && (
+            <ClanTag
+              icon={user.clanTagIcon ?? "⚔️"}
+              tag={user.clanTag}
+              color={user.clanNameColor}
             />
-            <div className="min-w-0 flex-1 pb-1">
-              <div className="flex items-center gap-1.5">
-                <p className="truncate text-lg font-black">{user.username}</p>
-                {premium && <BlueCheck className="size-5" />}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                ID: {displayId(user.seqId, user._id)}
-              </p>
-            </div>
-          </div>
+          )}
+        </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <LevelBadge level={user.level ?? 1} />
-            {user.clanTag && (
-              <ClanTag
-                icon={user.clanTagIcon ?? "⚔️"}
-                tag={user.clanTag}
-                color={user.clanNameColor}
-              />
-            )}
-          </div>
-
-          {/* Bar level */}
-          <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-foreground">Level {user.level}</span>
-              <span className="text-zinc-400">
-                {xpInLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
-              </span>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-black/50">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="my-2.5 h-px bg-white/20" />
-
-          <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
-              <Gem className="size-3.5" /> {(user.diamonds ?? 0).toLocaleString("id-ID")}
+        {/* Bar level */}
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between text-[11px]">
+            <span className="font-semibold text-foreground">Level {user.level}</span>
+            <span className="text-zinc-400">
+              {xpInLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
             </span>
-            {premium && (
-              <span className="flex items-center gap-1.5 font-semibold text-gold">
-                <Crown className="size-3.5" /> {premiumDays} hari
-              </span>
-            )}
           </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="my-3 h-px bg-white/25" />
+
+        {/* 💎 + hari premium */}
+        <div className="flex items-center gap-4 text-xs">
+          <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
+            <Gem className="size-3.5" /> {(user.diamonds ?? 0).toLocaleString("id-ID")}
+          </span>
+          {premium && (
+            <span className="flex items-center gap-1.5 font-semibold text-gold">
+              <Crown className="size-3.5" /> {premiumDays} hari
+            </span>
+          )}
+        </div>
+
+        {/* Stats horizontal tanpa background: History · Komen · Bergabung · Menit */}
+        <div className="mt-3 grid grid-cols-4 divide-x divide-white/15 text-center">
+          <Stat label="History" value={stats?.watchCount ?? 0} />
+          <Stat label="Komen" value={stats?.commentCount ?? 0} />
+          <Stat label="Bergabung" value={`${stats?.joinedDays ?? 0}h`} />
+          <Stat label="Menit" value={stats?.minutesWatched ?? 0} />
         </div>
       </div>
 
@@ -279,30 +288,24 @@ function AkunContent() {
         )}
       </div>
 
-      {/* Statistik + tombol bawah */}
-      <div className="mt-5 grid grid-cols-4 gap-2 text-center">
-        <Stat label="History" value={stats?.watchCount ?? 0} />
-        <Stat label="Komen" value={stats?.commentCount ?? 0} />
-        <Stat label="Bergabung" value={`${stats?.joinedDays ?? 0}h`} />
-        <Stat label="Menit" value={stats?.minutesWatched ?? 0} />
-      </div>
-
-      <div className="mt-4 space-y-2">
-        <button
-          onClick={() => setNotifOpen(true)}
-          className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
-        >
-          <Mail className="size-5 text-red-400" /> Lstreamsupport@gmail.com
-        </button>
-        <button
-          onClick={async () => {
-            await signOut();
-            navigate("/");
-          }}
-          className="flex w-full items-center gap-3 rounded-2xl border border-red-500/40 bg-card p-3.5 text-sm text-red-400"
-        >
-          <LogOut className="size-5" /> Log out dari akun
-        </button>
+      <div className="px-3">
+        <div className="mt-4 space-y-2">
+          <button
+            onClick={() => setNotifOpen(true)}
+            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm"
+          >
+            <Mail className="size-5 text-red-400" /> Lstreamsupport@gmail.com
+          </button>
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate("/home");
+            }}
+            className="flex w-full items-center gap-3 rounded-2xl border border-red-500/40 bg-card p-3.5 text-sm text-red-400"
+          >
+            <LogOut className="size-5" /> Log out dari akun
+          </button>
+        </div>
       </div>
 
       {settingsOpen && <SettingsScreen onClose={() => setSettingsOpen(false)} />}
@@ -313,8 +316,8 @@ function AkunContent() {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-secondary/30 py-2">
-      <p className="text-lg font-bold text-red-300">{value}</p>
+    <div className="py-1">
+      <p className="text-base font-bold text-foreground">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
     </div>
   );
@@ -888,7 +891,7 @@ function FullScreen({
 }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
-      <div className="mx-auto max-w-2xl p-3">
+      <div className="w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />

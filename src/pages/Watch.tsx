@@ -56,6 +56,7 @@ function WatchContent() {
   const [recorded, setRecorded] = useState(false);
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed">("mp4");
+  const [synopsisOpen, setSynopsisOpen] = useState(false);
 
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
@@ -235,7 +236,7 @@ function WatchContent() {
                       isEmbed: sourceType === "embed",
                     });
                     toast.success("Mini player aktif — kembali ke Home");
-                    navigate("/");
+                    navigate("/home");
                   }}
                   className="rounded bg-white/15 p-1.5"
                   aria-label="Mini player"
@@ -277,40 +278,36 @@ function WatchContent() {
         </div>
       </div>
 
-      {/* Info */}
-      <div className="mx-auto max-w-2xl p-3">
+      {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
+      <div className="w-full p-3">
         <div className="flex gap-3">
-          <img src={D.image} alt="" className="aspect-[2/3] w-20 rounded-lg object-cover" />
+          <img src={D.image} alt="" className="aspect-[2/3] w-16 rounded-lg object-cover" />
           <div className="min-w-0 flex-1">
-            <h1 className="line-clamp-2 font-bold">{D.title}</h1>
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{D.synopsis}</p>
+            <h1 className="line-clamp-2 text-base font-bold">{D.title}</h1>
+            <p className={cn("mt-1 text-xs leading-5 text-zinc-400", !synopsisOpen && "line-clamp-3")}>
+              {D.synopsis}
+            </p>
             <button
-              onClick={() => navigate(`/?pilih=${animeId}`)}
+              onClick={() => setSynopsisOpen((v) => !v)}
               className="text-[11px] text-red-300 underline"
             >
-              Lihat detail
+              {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
             </button>
           </div>
         </div>
 
-        {/* Toolbar: kualitas, kecepatan, download, mini player — DI BAWAH episode */}
-        <SectionTitle>Episode</SectionTitle>
-        <div className="mb-2 flex items-center justify-between">
+        {/* Episode: grid + jumlah di kanan atas */}
+        <div className="mb-2 mt-4 flex items-center justify-between">
+          <h2 className="text-base font-bold">Episode</h2>
           <span className="text-xs text-muted-foreground">{epList.length} episode</span>
-          <button
-            onClick={() => setQualityOpen(true)}
-            className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs transition hover:border-red-500/60"
-          >
-            <Settings2 className="size-3.5" /> {quality}
-          </button>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {(epList ?? []).slice(0, 18).map((e: any) => (
+        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+          {(epList ?? []).map((e: any) => (
             <button
               key={e.id}
               onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
               className={cn(
-                "size-10 rounded-lg border text-xs font-semibold",
+                "rounded-md border py-2 text-xs font-semibold",
                 e.id === epParam
                   ? "border-red-500 bg-red-500/20 text-red-200"
                   : "border-border bg-secondary/40 text-foreground hover:border-red-500/60",
@@ -320,14 +317,12 @@ function WatchContent() {
             </button>
           ))}
         </div>
-        {epList.length > 18 && (
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            +{epList.length - 18} episode lainnya — pilih dari halaman detail anime
-          </p>
-        )}
 
-        {/* Toolbar pilihan di bawah episode list */}
-        <div className="mt-3 grid grid-cols-4 gap-2">
+        {/* Garis pembatas di atas toolbar */}
+        <div className="my-3 h-px bg-white/15" />
+
+        {/* Toolbar: kecepatan, download, mini, kualitas — di bawah episode, dipisah garis */}
+        <div className="grid grid-cols-4 gap-2">
           <ToolButton
             icon={<Gauge className="size-4" />}
             label={`${speed}x`}
@@ -341,7 +336,7 @@ function WatchContent() {
           <ToolButton
             icon={<PictureInPicture2 className="size-4" />}
             label="Mini"
-            onClick={async () => {
+            onClick={() => {
               setMiniPlayer({
                 animeId,
                 animeTitle: D.title,
@@ -350,7 +345,7 @@ function WatchContent() {
                 streamUrl,
                 isEmbed: sourceType === "embed",
               });
-              navigate("/");
+              navigate("/home");
             }}
           />
           <ToolButton
@@ -360,11 +355,8 @@ function WatchContent() {
           />
         </div>
 
-        {/* Sinopsis diperbagus */}
-        <SectionTitle>Sinopsis</SectionTitle>
-        <p className="rounded-xl border border-border/60 bg-secondary/30 p-3 text-sm leading-6 text-zinc-300">
-          {D.synopsis ?? "Sinopsis belum tersedia."}
-        </p>
+        {/* Garis pembatas sebelum diskusi */}
+        <div className="my-3 h-px bg-white/15" />
 
         {/* Komentar episode — gaya baru */}
         <SectionTitle>Diskusi Episode</SectionTitle>

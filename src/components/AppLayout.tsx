@@ -42,35 +42,41 @@ export function AppLayout({
   const isAuth = location.pathname.startsWith("/auth");
   if (isAuth) return <>{children}</>;
 
-  // Panel akun hanya muncul di Home — screen lain bebas dari panel.
-  const showPanel = !hideAccountPanel && location.pathname === "/";
+  // Panel akun hanya muncul di Home (route app = /home; "/" hanya landing publik).
+  const isHome =
+    location.pathname === "/home" ||
+    location.pathname === "/" ||
+    location.pathname.startsWith("/dashboard");
+  const showPanel = !hideAccountPanel && isHome && location.pathname === "/home";
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-3 pb-32">
+    <div className="flex min-h-dvh w-full flex-col">
       {showPanel && user && (
-        <AccountPanel
-          onOpen={() => navigate("/akun")}
-          name={user.username ?? "user"}
-          seqId={user.seqId}
-          id={user._id}
-          image={user.image}
-          level={user.level ?? 1}
-          xp={user.xp ?? 0}
-          staffRole={user.staffRole}
-          bannerUrl={user.bannerUrl}
-          clanTag={user.clanTag}
-          clanTagIcon={user.clanTagIcon}
-          clanColor={user.clanNameColor}
-          premium={(user.premiumUntil ?? 0) > Date.now()}
-          premiumDays={Math.max(
-            0,
-            Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
-          )}
-          diamonds={user.diamonds ?? 0}
-        />
+        <div className="w-full bg-background px-3">
+          <AccountPanel
+            onOpen={() => navigate("/akun")}
+            name={user.username ?? "user"}
+            seqId={user.seqId}
+            id={user._id}
+            image={user.image}
+            level={user.level ?? 1}
+            xp={user.xp ?? 0}
+            staffRole={user.staffRole}
+            bannerUrl={user.bannerUrl}
+            clanTag={user.clanTag}
+            clanTagIcon={user.clanTagIcon}
+            clanColor={user.clanNameColor}
+            premium={(user.premiumUntil ?? 0) > Date.now()}
+            premiumDays={Math.max(
+              0,
+              Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
+            )}
+            diamonds={user.diamonds ?? 0}
+          />
+        </div>
       )}
       {/* Animasi halus setiap kali layar berpindah */}
-      <div key={location.pathname} className="screen-enter flex-1">
+      <div key={location.pathname} className="screen-enter flex w-full flex-1 flex-col">
         {children}
       </div>
       <BottomNav />
@@ -117,13 +123,20 @@ function AccountPanel({
   const cost = xpForLevel(level);
   const inLevel = Math.max(0, Math.min(xp, cost));
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
+  const goto = useNavigate();
   return (
     <div className="pop-enter relative mt-3 w-full">
       {/* Tombol notifikasi bulat kanan atas */}
-      <NotifButton />
+      <button
+        aria-label="Notifikasi"
+        onClick={() => goto("/akun?tab=notif")}
+        className="absolute -top-1 right-0 z-10 flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/80 text-white shadow-lg"
+      >
+        <Bell className="size-[18px] text-white" />
+      </button>
       <button
         onClick={onOpen}
-        className="block w-full overflow-hidden rounded-2xl border border-white/10 text-left"
+        className="block w-full overflow-hidden rounded-2xl border border-white/15 text-left"
         style={
           bannerUrl
             ? {
@@ -140,38 +153,28 @@ function AccountPanel({
             <Avatar src={image} seed={name} className="size-14" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="truncate font-bold">{name}</p>
+                <p className="truncate font-bold text-white">{name}</p>
                 {premium && <BlueCheck />}
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                 <LevelBadge level={level} />
-                {staffRole && (
-                  <span className="rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-gold">
-                    {staffRole}
-                  </span>
-                )}
                 <span className="text-[11px] text-zinc-400">
                   ID: {displayId(seqId, id)}
                 </span>
               </div>
-              {clanTag && (
-                <span className="mt-1 inline-block">
-                  <ClanTag icon={clanTagIcon ?? "⚔️"} tag={clanTag} color={clanColor} />
-                </span>
-              )}
             </div>
-            <ChevronRight className="size-5 shrink-0 text-zinc-500" />
+            <ChevronRight className="size-5 shrink-0 text-zinc-400" />
           </div>
 
           {/* Bar level: kiri "Level n", kanan "1/12.000" */}
           <div className="mt-2.5">
             <div className="mb-1 flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-foreground">Level {level}</span>
+              <span className="font-semibold text-white">Level {level}</span>
               <span className="text-zinc-400">
                 {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
               </span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-black/50">
+            <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400"
                 style={{ width: `${pct}%` }}
@@ -199,19 +202,6 @@ function AccountPanel({
   );
 }
 
-function NotifButton() {
-  const navigate = useNavigate();
-  return (
-    <button
-      aria-label="Notifikasi"
-      onClick={() => navigate("/akun?tab=notif")}
-      className="absolute -top-1 right-0 z-10 flex size-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-foreground shadow-lg transition hover:border-red-500/60"
-    >
-      <Bell className="size-4.5" />
-    </button>
-  );
-}
-
 // ------------------------------------------------------ mini player ----
 
 type MiniState = {
@@ -228,9 +218,6 @@ let miniCurrent: MiniState | null = null;
 export function setMiniPlayer(s: MiniState | null) {
   miniCurrent = s;
   miniListeners.forEach((l) => l(s));
-}
-export function getMiniPlayer() {
-  return miniCurrent;
 }
 function useMiniPlayer() {
   return useSyncExternalStore(
@@ -250,7 +237,7 @@ export function MiniPlayerHost() {
   const navigate = useNavigate();
   const [playing, setPlaying] = useState(true);
   const [size, setSize] = useState({ w: 250, h: 175 });
-  const [pos, setPos] = useState({ x: 14, y: 90 });
+  const [pos, setPos] = useState({ x: 14, y: 100 });
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -293,7 +280,6 @@ export function MiniPlayerHost() {
             src={state.streamUrl}
             className="pointer-events-none size-full object-contain"
             autoPlay
-            muted={false}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
           />
@@ -306,7 +292,9 @@ export function MiniPlayerHost() {
               aria-label="Perbesar"
               onClick={() => {
                 setMiniPlayer(null);
-                navigate(`/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`);
+                navigate(
+                  `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
+                );
               }}
             >
               <Maximize2 className="size-3.5 text-white" />
@@ -331,7 +319,7 @@ export function MiniPlayerHost() {
           <div className="flex items-end justify-between p-1">
             <div
               className="grip-lines size-5 cursor-nwse-resize rounded"
-              onDoubleClick={() => setSize((s) => ({ w: 250, h: 175 }))}
+              onDoubleClick={() => setSize({ w: 250, h: 175 })}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 const start = { x: e.clientX, y: e.clientY, w: size.w, h: size.h };
@@ -365,7 +353,7 @@ function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const items: { path: string; label: string; icon: ComponentType<{ className?: string }> }[] = [
-    { path: "/", label: "Home", icon: Home },
+    { path: "/home", label: "Home", icon: Home },
     { path: "/jadwal", label: "Jadwal", icon: CalendarDays },
     { path: "/akun?tab=favorite", label: "Favorite", icon: Heart },
     { path: "/akun", label: "Akun", icon: UserRound },
@@ -378,12 +366,12 @@ function BottomNav() {
       </footer>
       {/* Navbar lurus full-width, solid */}
       <nav className="nav-bar fixed inset-x-0 bottom-6 z-40">
-        <div className="mx-auto grid w-full max-w-2xl grid-cols-4">
+        <div className="grid w-full grid-cols-4">
           {items.map((it) => {
             const base = it.path.split("?")[0];
             const active =
-              base === "/"
-                ? location.pathname === "/" || location.pathname.startsWith("/dashboard")
+              base === "/home"
+                ? location.pathname === "/home" || location.pathname === "/"
                 : location.pathname.startsWith(base);
             const Icon = it.icon;
             return (
@@ -393,10 +381,7 @@ function BottomNav() {
                 className="nav-item relative flex flex-col items-center gap-0.5 py-2"
               >
                 <Icon
-                  className={cn(
-                    "size-[22px]",
-                    active ? "text-red-400" : "text-zinc-500",
-                  )}
+                  className={cn("size-[22px]", active ? "text-red-400" : "text-zinc-500")}
                 />
                 <span
                   className={cn(
