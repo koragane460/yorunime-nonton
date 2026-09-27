@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -30,6 +30,27 @@ type AnimeCardT = {
   status?: string;
   synopsis?: string;
 };
+
+/** Cegah error satu useQuery (mis. Server Error) membunuh seluruh halaman. */
+class QueryBoundary extends Component<
+  { children: ReactNode; label?: string },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <p className="py-3 text-center text-xs text-muted-foreground">
+          {this.props.label ?? "Gagal memuat"} — coba refresh.
+        </p>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function Home() {
   return (
@@ -286,7 +307,9 @@ function HomeContent() {
       </button>
 
       {/* Top Give Premium */}
-      <TopGiveCard />
+      <QueryBoundary label="Gagal memuat Top Give">
+        <TopGiveCard />
+      </QueryBoundary>
 
       {/* 3) CHAT BARENG */}
       <button
@@ -299,7 +322,9 @@ function HomeContent() {
           </p>
           <span className="text-xs text-muted-foreground">buka ›</span>
         </div>
-        <GlobalChatPreview />
+        <QueryBoundary label="Gagal memuat chat">
+          <GlobalChatPreview />
+        </QueryBoundary>
       </button>
 
       {/* 4) CARI ANIME */}

@@ -1,7 +1,12 @@
 // LStream — moderation helpers + dev/mod panel backend.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 
 /** Dipakai mutasi lain untuk menolak user yang dimute/banned. */
 export async function requireActive(me: {
@@ -15,7 +20,7 @@ export async function requireActive(me: {
     throw new Error("Kamu sedang dimute");
 }
 
-export const isBlockedInternal = internalMutation({
+export const isBlockedInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);

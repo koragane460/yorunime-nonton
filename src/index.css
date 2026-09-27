@@ -46,86 +46,86 @@
   --color-gold-foreground: var(--gold-foreground);
 }
 
-/* ====== LStream: merah tua gradasi hitam ====== */
+/* ====== LStream: indigo gelap ke ungu, aksen pill kuning + crimson ====== */
 :root {
-  --radius: 0.75rem;
-  --brand: oklch(0.52 0.17 27);         /* merah tua */
+  --radius: 1rem;
+  --brand: oklch(0.60 0.21 18);          /* crimson (tab aktif / aksen merah) */
   --brand-foreground: oklch(0.98 0.01 30);
-  --gold: oklch(0.8 0.14 85);           /* aksen emas utama */
-  --gold-foreground: oklch(0.16 0.02 60);
-  --background: oklch(0.11 0.008 25);
-  --foreground: oklch(0.95 0.008 60);
-  --card: oklch(0.145 0.012 25);
-  --card-foreground: oklch(0.95 0.008 60);
-  --popover: oklch(0.14 0.012 25);
-  --popover-foreground: oklch(0.95 0.008 60);
-  --primary: oklch(0.8 0.14 85);        /* tombol utama = emas, bukan merah */
-  --primary-foreground: oklch(0.15 0.02 60);
-  --secondary: oklch(0.19 0.015 25);
-  --secondary-foreground: oklch(0.93 0.01 60);
-  --muted: oklch(0.19 0.012 25);
-  --muted-foreground: oklch(0.66 0.015 55);
-  --accent: oklch(0.22 0.03 25);
-  --accent-foreground: oklch(0.95 0.01 60);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.26 0.015 25 / 70%);
-  --input: oklch(0.24 0.015 25 / 60%);
-  --ring: oklch(0.8 0.14 85 / 55%);
-  --chart-1: oklch(0.8 0.14 85);
-  --chart-2: oklch(0.52 0.17 27);
-  --chart-3: oklch(0.7 0.12 60);
-  --chart-4: oklch(0.6 0.15 300);
-  --chart-5: oklch(0.7 0.14 150);
-  --sidebar: oklch(0.145 0.012 25);
-  --sidebar-foreground: oklch(0.95 0.008 60);
-  --sidebar-primary: oklch(0.8 0.14 85);
-  --sidebar-primary-foreground: oklch(0.15 0.02 60);
-  --sidebar-accent: oklch(0.19 0.015 25);
-  --sidebar-accent-foreground: oklch(0.95 0.01 60);
-  --sidebar-border: oklch(0.26 0.015 25 / 70%);
-  --sidebar-ring: oklch(0.8 0.14 85 / 55%);
+  --gold: oklch(0.86 0.16 90);           /* kuning pill utama */
+  --gold-foreground: oklch(0.18 0.04 70);
+  --background: oklch(0.15 0.02 285);
+  --foreground: oklch(0.95 0.01 290);
+  --card: oklch(0.19 0.03 287);
+  --card-foreground: oklch(0.95 0.01 290);
+  --popover: oklch(0.18 0.03 287);
+  --popover-foreground: oklch(0.95 0.01 290);
+  --primary: oklch(0.86 0.16 90);        /* tombol utama = kuning pill */
+  --primary-foreground: oklch(0.18 0.04 70);
+  --secondary: oklch(0.23 0.04 288);
+  --secondary-foreground: oklch(0.93 0.01 290);
+  --muted: oklch(0.23 0.03 288);
+  --muted-foreground: oklch(0.68 0.02 288);
+  --accent: oklch(0.28 0.06 290);
+  --accent-foreground: oklch(0.95 0.01 290);
+  --destructive: oklch(0.60 0.21 18);
+  --border: oklch(0.31 0.04 288 / 55%);
+  --input: oklch(0.27 0.04 288 / 60%);
+  --ring: oklch(0.86 0.16 90 / 55%);
+  --chart-1: oklch(0.86 0.16 90);
+  --chart-2: oklch(0.60 0.21 18);
+  --chart-3: oklch(0.65 0.15 295);
+  --chart-4: oklch(0.70 0.13 230);
+  --chart-5: oklch(0.70 0.14 150);
+  --sidebar: oklch(0.19 0.03 287);
+  --sidebar-foreground: oklch(0.95 0.01 290);
+  --sidebar-primary: oklch(0.86 0.16 90);
+  --sidebar-primary-foreground: oklch(0.18 0.04 70);
+  --sidebar-accent: oklch(0.23 0.04 288);
+  --sidebar-accent-foreground: oklch(0.95 0.01 290);
+  --sidebar-border: oklch(0.31 0.04 288 / 55%);
+  --sidebar-ring: oklch(0.86 0.16 90 / 55%);
 }
 
 /* Tema terang opsional dari pengaturan */
 .theme-light {
-  --background: oklch(0.97 0.005 60);
-  --foreground: oklch(0.18 0.01 25);
+  --background: oklch(0.97 0.005 290);
+  --foreground: oklch(0.18 0.01 285);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.01 25);
+  --card-foreground: oklch(0.18 0.01 285);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.01 25);
+  --popover-foreground: oklch(0.18 0.01 285);
   --primary: oklch(0.55 0.16 27);
   --primary-foreground: oklch(0.98 0.01 30);
-  --secondary: oklch(0.94 0.008 60);
-  --secondary-foreground: oklch(0.22 0.01 25);
-  --muted: oklch(0.93 0.008 60);
-  --muted-foreground: oklch(0.45 0.015 30);
-  --accent: oklch(0.93 0.02 40);
-  --accent-foreground: oklch(0.22 0.01 25);
-  --border: oklch(0.87 0.008 50);
-  --input: oklch(0.87 0.008 50);
+  --secondary: oklch(0.94 0.008 290);
+  --secondary-foreground: oklch(0.22 0.01 285);
+  --muted: oklch(0.93 0.008 290);
+  --muted-foreground: oklch(0.45 0.015 285);
+  --accent: oklch(0.93 0.02 290);
+  --accent-foreground: oklch(0.22 0.01 285);
+  --border: oklch(0.87 0.008 285);
+  --input: oklch(0.87 0.008 285);
   --ring: oklch(0.55 0.16 27 / 55%);
 }
 
 .dark {
-  --background: oklch(0.11 0.008 25);
-  --foreground: oklch(0.95 0.008 60);
-  --card: oklch(0.145 0.012 25);
-  --card-foreground: oklch(0.95 0.008 60);
-  --popover: oklch(0.14 0.012 25);
-  --popover-foreground: oklch(0.95 0.008 60);
-  --primary: oklch(0.8 0.14 85);
-  --primary-foreground: oklch(0.15 0.02 60);
-  --secondary: oklch(0.19 0.015 25);
-  --secondary-foreground: oklch(0.93 0.01 60);
-  --muted: oklch(0.19 0.012 25);
-  --muted-foreground: oklch(0.66 0.015 55);
-  --accent: oklch(0.22 0.03 25);
-  --accent-foreground: oklch(0.95 0.01 60);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.26 0.015 25 / 70%);
-  --input: oklch(0.24 0.015 25 / 60%);
-  --ring: oklch(0.8 0.14 85 / 55%);
+  --background: oklch(0.15 0.02 285);
+  --foreground: oklch(0.95 0.01 290);
+  --card: oklch(0.19 0.03 287);
+  --card-foreground: oklch(0.95 0.01 290);
+  --popover: oklch(0.18 0.03 287);
+  --popover-foreground: oklch(0.95 0.01 290);
+  --primary: oklch(0.86 0.16 90);
+  --primary-foreground: oklch(0.18 0.04 70);
+  --secondary: oklch(0.23 0.04 288);
+  --secondary-foreground: oklch(0.93 0.01 290);
+  --muted: oklch(0.23 0.03 288);
+  --muted-foreground: oklch(0.68 0.02 288);
+  --accent: oklch(0.28 0.06 290);
+  --accent-foreground: oklch(0.95 0.01 290);
+  --destructive: oklch(0.60 0.21 18);
+  --border: oklch(0.31 0.04 288 / 55%);
+  --input: oklch(0.27 0.04 288 / 60%);
+  --ring: oklch(0.86 0.16 90 / 55%);
 }
 
 @layer base {
@@ -143,11 +143,21 @@
 
 /* ---------- LStream utils ---------- */
 
-/* Latar gradasi merah tua ke hitam untuk section utama */
+/* Latar gradasi ungu-indigo untuk section utama */
 .bg-hero-gradient {
   background:
-    radial-gradient(1000px 420px at 50% -140px, oklch(0.4 0.12 27 / 0.35), transparent),
-    linear-gradient(180deg, oklch(0.16 0.03 27) 0%, oklch(0.11 0.008 25) 40%);
+    radial-gradient(1000px 460px at 50% -160px, oklch(0.42 0.14 292 / 0.5), transparent),
+    linear-gradient(180deg, oklch(0.20 0.05 288) 0%, oklch(0.15 0.02 285) 45%);
+}
+
+/* Hero clan: kartu ungu-indigo seperti screenshot */
+.clan-hero-gradient {
+  background: linear-gradient(
+    165deg,
+    oklch(0.36 0.11 288) 0%,
+    oklch(0.26 0.09 291) 55%,
+    oklch(0.20 0.07 294) 100%
+  );
 }
 
 /* Badge kilau (dev/mod/tester/roles clan) */
@@ -184,10 +194,10 @@
 @keyframes reply-blink {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(240 180 41 / 0%);
+    box-shadow: 0 0 0 0 rgb(250 204 21 / 0%);
   }
   50% {
-    box-shadow: 0 0 0 3px rgb(240 180 41 / 55%);
+    box-shadow: 0 0 0 3px rgb(250 204 21 / 55%);
   }
 }
 .reply-blink {
@@ -223,7 +233,7 @@
   height: 6px;
 }
 .thin-scroll::-webkit-scrollbar-thumb {
-  background: rgb(240 180 41 / 22%);
+  background: rgb(250 204 21 / 22%);
   border-radius: 999px;
 }
 .thin-scroll::-webkit-scrollbar-track {
@@ -303,7 +313,7 @@ button:not([disabled]):active,
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: oklch(0.19 0.012 25);
+  background: oklch(0.21 0.03 288);
 }
 .skeleton::after {
   content: "";
@@ -326,9 +336,105 @@ button:not([disabled]):active,
   }
 }
 
+/* Tab pill: track gelap + pil aktif merah (crimson) */
+.tab-pill-track {
+  display: flex;
+  gap: 0.25rem;
+  border-radius: 999px;
+  background: oklch(0.17 0.03 288 / 80%);
+  border: 1px solid oklch(0.31 0.04 288 / 40%);
+  padding: 0.3rem;
+}
+.tab-pill {
+  flex: 1;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: oklch(0.72 0.02 288);
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+.tab-pill-active {
+  background: linear-gradient(180deg, oklch(0.63 0.21 18), oklch(0.55 0.2 17));
+  color: oklch(0.98 0.01 30);
+  box-shadow: 0 4px 14px rgb(225 29 72 / 35%);
+}
+
+/* Search rounded-full seperti screenshot clan */
+.pill-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid oklch(0.35 0.04 288 / 70%);
+  background: oklch(0.17 0.03 288 / 60%);
+  padding: 0.6rem 1rem;
+}
+.pill-search input {
+  width: 100%;
+  background: transparent;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+/* Chip berlian hitam (kanan baris member) */
+.diamond-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  border-radius: 1rem;
+  background: oklch(0.12 0.02 288);
+  border: 1px solid oklch(0.3 0.04 288 / 60%);
+  padding: 0.5rem 0.75rem;
+  line-height: 1.15;
+}
+
+/* Baris member clan */
+.member-row {
+  border-radius: 1.25rem;
+  background: oklch(0.185 0.03 287);
+  border: 1px solid oklch(0.3 0.04 288 / 45%);
+}
+
+/* Badge role kecil uppercase (LEADER kuning / MEMBER abu) */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.role-badge-leader {
+  background: oklch(0.86 0.16 90);
+  color: oklch(0.18 0.04 70);
+}
+.role-badge-officer {
+  background: oklch(0.72 0.15 150);
+  color: oklch(0.18 0.05 150);
+}
+.role-badge-victro {
+  background: oklch(0.6 0.18 305);
+  color: white;
+}
+.role-badge-hydler {
+  background: oklch(0.7 0.13 230);
+  color: oklch(0.16 0.04 230);
+}
+.role-badge-member {
+  background: oklch(0.32 0.01 288);
+  color: oklch(0.85 0.01 288);
+}
+
 /* Navbar solid (bukan glass, bukan rounded) */
 .nav-bar {
-  background: #0c0c0e;
+  background: #0d0b16;
   border-top: 1px solid rgb(255 255 255 / 0.09);
 }
 .nav-item {
