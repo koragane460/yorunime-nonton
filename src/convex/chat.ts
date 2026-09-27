@@ -91,6 +91,7 @@ export const listMessages = query({
         username: u?.username ?? "user",
         image: u?.image,
         level: u?.level ?? 1,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,

@@ -34,14 +34,25 @@ export const DAYS_EN = [
   "sunday",
 ];
 
-/** Badge level user (Bronze..Grandmaster) */
+/** Badge level user (Bronze..Grandmaster) — nama tier + ikonnya. */
 export function badgeForLevel(level: number) {
-  if (level >= 5000) return { name: "Grandmaster", cls: "from-red-600 via-blue-500 to-white" };
-  if (level >= 1001) return { name: "Master", cls: "from-red-600 to-red-400" };
-  if (level >= 500) return { name: "Emerald", cls: "from-emerald-500 to-emerald-700" };
-  if (level >= 100) return { name: "Diamond", cls: "from-cyan-300 to-sky-500" };
-  if (level >= 50) return { name: "Silver", cls: "from-slate-300 to-slate-500" };
-  return { name: "Bronze", cls: "from-amber-700 to-amber-900" };
+  if (level >= 5000)
+    return { name: "Grandmaster", icon: "👑", cls: "bg-gradient-to-r from-red-600 via-fuchsia-600 to-slate-200" };
+  if (level >= 1001)
+    return { name: "Master", icon: "🔮", cls: "bg-gradient-to-r from-red-700 to-red-400" };
+  if (level >= 500)
+    return { name: "Emerald", icon: "💎", cls: "bg-gradient-to-r from-emerald-500 to-emerald-700" };
+  if (level >= 100)
+    return { name: "Diamond", icon: "🔷", cls: "bg-gradient-to-r from-cyan-300 to-sky-500" };
+  if (level >= 50)
+    return { name: "Silver", icon: "🪙", cls: "bg-gradient-to-r from-slate-300 to-slate-500" };
+  return { name: "Bronze", icon: "🪵", cls: "bg-gradient-to-r from-amber-700 to-amber-900" };
+}
+
+/** ID tampil: #nomor urut kalau ada, fallback 6 karakter akhir id. */
+export function displayId(seqId?: number, rawId?: string) {
+  if (seqId !== undefined && seqId !== null) return `#${seqId}`;
+  return `#${(rawId ?? "").slice(-6).toUpperCase()}`;
 }
 
 export const STAFF_BADGE: Record<string, { name: string; cls: string }> = {

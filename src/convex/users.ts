@@ -44,6 +44,18 @@ export const getUserByUsername = query({
   },
 });
 
+/** Cari user by nomor urut (mis. "1" → user #1) untuk halaman detail akun. */
+export const getUserBySeq = query({
+  args: { seqId: v.number() },
+  handler: async (ctx, { seqId }) => {
+    const rows = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("seqId"), seqId))
+      .take(2);
+    return rows[0] ?? null;
+  },
+});
+
 export const getUserPublic = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
@@ -214,21 +226,6 @@ export const updateSettings = mutation({
     }
     await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
-  },
-});
-
-export const claimFreePremium = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not signed in");
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
-    if ((user.premiumUntil ?? 0) > Date.now())
-      throw new Error("Kamu masih punya premium aktif");
-    const until = Date.now() + 3 * 24 * 3600 * 1000;
-    await ctx.db.patch(userId, { premiumUntil: until });
-    return { premiumUntil: until };
   },
 });
 

@@ -4,6 +4,18 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { xpForLevel, tierForLevel } from "./users";
 
+/** Nomor ID urut global (#1, #2, ...) — dibaca dari appSettings."userSeq". */
+async function nextSeq(ctx: any, key: string): Promise<number> {
+  const row = await ctx.db
+    .query("appSettings")
+    .withIndex("key", (q: any) => q.eq("key", key))
+    .first();
+  const next = ((row?.value as number) ?? 0) + 1;
+  if (row) await ctx.db.patch(row._id, { value: next });
+  else await ctx.db.insert("appSettings", { key, value: next });
+  return next;
+}
+
 export const ensureUser = mutation({
   args: {},
   handler: async (ctx) => {
@@ -12,6 +24,9 @@ export const ensureUser = mutation({
     const user = await ctx.db.get(userId);
     if (!user) return null;
     const patch: Record<string, unknown> = {};
+    if (user.seqId === undefined) {
+      patch.seqId = await nextSeq(ctx, "userSeq");
+    }
     if (user.username === undefined) {
       const base =
         (user.name ?? user.email?.split("@")[0] ?? "user")
@@ -158,6 +173,56 @@ export const profileStats = query({
         0,
         Math.floor((Date.now() - (me.createdAt ?? Date.now())) / 86400000),
       ),
+    };
+  },
+});
+
+/** Profil publik siapa pun (untuk detail akun saat avatar di-chat diklik). */
+export const getPublicProfile = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const u = await ctx.db.get(userId);
+    if (!u) return null;
+    const member = await ctx.db
+      .query("clanMembers")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .first();
+    const clan = member ? await ctx.db.get(member.clanId) : null;
+    const now = Date.now();
+    const history = await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_updated", (q) => q.eq("userId", userId))
+      .collect();
+    const comments = await ctx.db
+      .query("animeComments")
+      .filter((q: any) => q.eq(q.field("userId"), userId))
+      .collect();
+    const tier = tierForLevel(u.level ?? 1);
+    const cost = xpForLevel(u.level ?? 1);
+    const xpIn = Math.max(0, Math.min(u.xp ?? 0, cost));
+    return {
+      _id: u._id,
+      seqId: u.seqId,
+      username: u.username,
+      image: u.image,
+      bannerUrl: u.bannerUrl,
+      level: u.level ?? 1,
+      xp: u.xp ?? 0,
+      xpInLevel: xpIn,
+      xpCost: cost,
+      tier: tier.badge,
+      diamonds: u.diamonds ?? 0,
+      premium: (u.premiumUntil ?? 0) > now,
+      premiumDays: Math.max(0, Math.floor(((u.premiumUntil ?? 0) - now) / 86400000)),
+      staffRole: u.staffRole,
+      hideOnline: u.hideOnline,
+      clanTag: clan?.tag,
+      clanTagIcon: clan?.tagIcon,
+      clanNameColor: u.clanNameColor,
+      watchCount: history.length,
+      commentCount: comments.length,
+      minutesWatched: history.reduce((s, h) => s + (h.minutesWatched ?? 0), 0),
+      joinedAt: u.createdAt ?? now,
     };
   },
 });

@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { BadgeCheck, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { badgeForLevel, STAFF_BADGE, avatarFallback, clanNameCls } from "@/lib/lstream";
 
@@ -30,9 +30,9 @@ export function AnimeCard({
   return (
     <button
       onClick={onClick}
-      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-amber-300/60 hover:shadow-[0_0_18px_-4px] hover:shadow-amber-300/40"
+      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-red-500/60 hover:shadow-[0_0_18px_-4px] hover:shadow-red-500/40"
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
         {image ? (
           <img
             src={image}
@@ -41,17 +41,18 @@ export function AnimeCard({
             className="size-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex size-full items-center justify-center bg-muted text-xs text-muted-foreground">
-            no image
+          <div className="flex size-full flex-col items-center justify-center gap-1 bg-gradient-to-b from-secondary to-muted text-[10px] text-muted-foreground">
+            <Star className="size-5 opacity-40" />
+            {title.split(" ").slice(0, 2).join(" ")}
           </div>
         )}
         {rank !== undefined && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-amber-200">
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-red-300">
             #{rank}
           </span>
         )}
         {isNew && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-black">
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
             New
           </span>
         )}
@@ -64,8 +65,8 @@ export function AnimeCard({
       <div className="p-2">
         <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4">{title}</p>
         {score !== undefined && score > 0 && (
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300">
-            <Star className="size-3 fill-amber-300" /> {score.toFixed(2)}
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-gold">
+            <Star className="size-3 fill-gold" /> {score.toFixed(2)}
           </p>
         )}
       </div>
@@ -133,6 +134,32 @@ export function ShineBadge({
   );
 }
 
+/** Centang biru ala TikTok untuk user premium. */
+export function BlueCheck({ className }: { className?: string }) {
+  return (
+    <BadgeCheck
+      className={cn("size-4 shrink-0 fill-sky-500 text-white", className)}
+      aria-label="Premium"
+    />
+  );
+}
+
+/** Badge level: ikon tier + angka level (tanpa tulisan tier). */
+export function LevelBadge({ level, className }: { level: number; className?: string }) {
+  const b = badgeForLevel(level);
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white/95",
+        b.cls,
+        className,
+      )}
+    >
+      <span aria-hidden>{b.icon}</span> Lv.{level}
+    </span>
+  );
+}
+
 export function UserBadges({
   level,
   staffRole,
@@ -140,14 +167,9 @@ export function UserBadges({
   level: number;
   staffRole?: string;
 }) {
-  const badge = badgeForLevel(level);
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <ShineBadge
-        label={badge.name}
-        gradient={badge.cls}
-        className={badge.name === "Grandmaster" ? "text-white mix-blend-normal" : ""}
-      />
+      <LevelBadge level={level} />
       {staffRole && STAFF_BADGE[staffRole] && (
         <ShineBadge label={STAFF_BADGE[staffRole].name} gradient={STAFF_BADGE[staffRole].cls} />
       )}
@@ -171,7 +193,7 @@ export function Avatar({
       <img
         src={src ?? avatarFallback(seed)}
         alt=""
-        className="size-full rounded-full border border-amber-300/40 object-cover"
+        className="size-full rounded-full border border-white/15 object-cover"
       />
       {online !== undefined && (
         <span
@@ -208,7 +230,7 @@ export function ClanLevelBar({
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all"
+          className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400 transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -216,6 +238,7 @@ export function ClanLevelBar({
   );
 }
 
+/** Tag clan: background galaxy silau sesuai warna clan. */
 export function ClanTag({
   icon,
   tag,
@@ -227,11 +250,14 @@ export function ClanTag({
   color?: string;
   className?: string;
 }) {
+  const galaxy = color === "galaxy" || color === "golden";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg rounded-tl-none rounded-br-none border border-amber-300/40 bg-black/40 px-2 py-0.5 text-xs font-bold",
-        clanNameCls(color) || "text-amber-200",
+        "inline-flex items-center gap-1 rounded-lg rounded-tl-none rounded-br-none border border-white/20 px-2 py-0.5 text-xs font-bold",
+        galaxy
+          ? "clan-tag-galaxy"
+          : cn("bg-black/40", clanNameCls(color) || "text-gold"),
         className,
       )}
     >

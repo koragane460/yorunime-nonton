@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { avatarFallback } from "@/lib/lstream";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, BlueCheck } from "@/components/lstream-ui";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Crown, ImagePlus, Plus, Send, X } from "lucide-react";
-import { toast } from "sonner";
-import { timeAgo, avatarFallback } from "@/lib/lstream";
+import { Crown, ImagePlus, MoreVertical, Plus, Send, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -22,6 +23,7 @@ export type ChatMsg = {
   username: string;
   image?: string;
   level?: number;
+  premium?: boolean;
   clanTag?: string;
   clanTagIcon?: string;
   clanNameColor?: string;
@@ -100,9 +102,9 @@ function GivePremiumDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm border-amber-300/30">
+      <DialogContent className="max-w-sm border-red-500/30">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-300">
+          <DialogTitle className="flex items-center gap-2 text-red-400">
             <Crown className="size-5" /> Give Premium
           </DialogTitle>
         </DialogHeader>
@@ -114,11 +116,12 @@ function GivePremiumDialog({
                 <button
                   key={d}
                   onClick={() => setDays(d)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                  className={cn(
+                    "rounded-lg border px-3 py-1.5 text-sm transition",
                     days === d
-                      ? "border-amber-300 bg-amber-300/15 text-amber-200"
-                      : "border-border text-muted-foreground hover:border-amber-300/50"
-                  }`}
+                      ? "border-red-500 bg-red-500/15 text-red-300"
+                      : "border-border text-muted-foreground hover:border-red-500/50",
+                  )}
                 >
                   {d} hari
                 </button>
@@ -132,11 +135,12 @@ function GivePremiumDialog({
                 <button
                   key={r}
                   onClick={() => setReceivers(r)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                  className={cn(
+                    "rounded-lg border px-3 py-1.5 text-sm transition",
                     receivers === r
-                      ? "border-amber-300 bg-amber-300/15 text-amber-200"
-                      : "border-border text-muted-foreground hover:border-amber-300/50"
-                  }`}
+                      ? "border-red-500 bg-red-500/15 text-red-300"
+                      : "border-border text-muted-foreground hover:border-red-500/50",
+                  )}
                 >
                   {r} orang
                 </button>
@@ -171,7 +175,7 @@ function GivePremiumDialog({
             rows={3}
             className="w-full rounded-lg border border-input bg-background/60 p-3 text-sm"
           />
-          <div className="rounded-lg bg-amber-300/10 p-3 text-sm">
+          <div className="rounded-lg bg-red-500/10 p-3 text-sm">
             <p>
               Biaya: <b>{cost} hari</b> premium kamu
             </p>
@@ -179,16 +183,13 @@ function GivePremiumDialog({
               ({GIVE_COST[days]} hari + {receiverCost(receivers)} hari untuk {receivers}{" "}
               penerima)
             </p>
-            <p className="mt-1 text-xs text-amber-200">XP yang kamu dapat: +{xp} XP</p>
+            <p className="mt-1 text-xs text-red-300">XP yang kamu dapat: +{xp} XP</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button
-              className="flex-1 bg-amber-300 text-black hover:bg-amber-200"
-              onClick={submit}
-            >
+            <Button className="flex-1 bg-red-600 text-white hover:bg-red-500" onClick={submit}>
               Kirim
             </Button>
           </div>
@@ -198,7 +199,7 @@ function GivePremiumDialog({
   );
 }
 
-// ------------------------------------------------------- NSFW checker ----
+// ----------------------------------------------------- NSFW checker ----
 
 const NSFW_STEPS = [
   "Check NSFW",
@@ -209,7 +210,6 @@ const NSFW_STEPS = [
 ];
 
 function analyzeImageLocal(file: File): { ok: boolean; reason?: string } {
-  // Analisis lokal ringan: ukuran & nama file mengandung kata terlarang.
   const name = file.name.toLowerCase();
   const bad = ["nsfw", "hentai", "18+", "porn", "xxx", "gore"];
   if (bad.some((w) => name.includes(w)))
@@ -253,7 +253,7 @@ function NsfwScanDialog({
 
   return (
     <Dialog open onOpenChange={() => {}}>
-      <DialogContent className="max-w-xs border-amber-300/30">
+      <DialogContent className="max-w-xs border-red-500/30">
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-2 text-center">
             <span className="flex size-10 items-center justify-center rounded-full bg-green-500/20 text-green-400">
@@ -275,6 +275,90 @@ function NsfwScanDialog({
   );
 }
 
+// ------------------------------------------------------- lapor chat ----
+
+const REPORT_REASONS = [
+  "Konten 18+ / NSFW",
+  "Rasis / ujaran kebencian",
+  "Spam / promosi",
+  "Penipuan / scam",
+  "Pelemahan / bullying",
+  "Lainnya",
+];
+
+function ReportDialog({
+  msg,
+  onClose,
+}: {
+  msg: ChatMsg;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [detail, setDetail] = useState("");
+  const report = useMutation(api.activities.reportChatMessage);
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-xs border-red-500/30">
+        <DialogHeader>
+          <DialogTitle className="text-sm">Laporkan pesan</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <p className="truncate rounded bg-black/30 px-2 py-1 text-xs text-muted-foreground">
+            "{msg.text ?? "[foto]"}"
+          </p>
+          {REPORT_REASONS.map((r) => (
+            <button
+              key={r}
+              onClick={() => setReason(r)}
+              className={cn(
+                "w-full rounded-lg border px-3 py-2 text-left text-sm transition",
+                reason === r
+                  ? "border-red-500 bg-red-500/15 text-red-300"
+                  : "border-border hover:border-red-500/50",
+              )}
+            >
+              {r}
+            </button>
+          ))}
+          {reason === "Lainnya" && (
+            <input
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder="Jelaskan singkat…"
+              className="w-full rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
+            />
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1" onClick={onClose}>
+              Batal
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 text-white hover:bg-red-500"
+              disabled={!reason}
+              onClick={async () => {
+                try {
+                  await report({
+                    messageId: msg._id,
+                    reason,
+                    detail: detail.trim() || undefined,
+                  });
+                  toast.success("Laporan terkirim ke developer");
+                  onClose();
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Gagal");
+                }
+              }}
+            >
+              Kirim
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ------------------------------------------------------------ chat UI ----
 
 export function ChatPanel({
@@ -285,6 +369,7 @@ export function ChatPanel({
   onSend,
   meId,
   compact,
+  onOpenProfile,
 }: {
   kind: string;
   clanId?: Id<"clans">;
@@ -293,6 +378,7 @@ export function ChatPanel({
   onSend: (payload: { text?: string; imageUrl?: string; replyToId?: Id<"chatMessages"> }) => Promise<void>;
   meId: string;
   compact?: boolean;
+  onOpenProfile?: (id: Id<"users">) => void;
 }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
@@ -301,9 +387,9 @@ export function ChatPanel({
   const [plusOpen, setPlusOpen] = useState(false);
   const [giveOpen, setGiveOpen] = useState(false);
   const [scanFile, setScanFile] = useState<File | null>(null);
+  const [reportMsg, setReportMsg] = useState<ChatMsg | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [strikeInfo, setStrikeInfo] = useState(0);
   const nsfwReport = useMutation(api.chat.nsfwReport);
 
   useEffect(() => {
@@ -334,12 +420,10 @@ export function ChatPanel({
     }
   };
 
-  const handleFile = (f: File) => setScanFile(f);
-
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {/* daftar pesan */}
-      <div className={`thin-scroll flex-1 space-y-3 overflow-y-auto px-1 ${compact ? "py-2" : "py-3"}`}>
+      <div className={`thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-1 ${compact ? "py-2" : "py-3"}`}>
         {messages.length === 0 && (
           <p className="py-10 text-center text-sm text-muted-foreground">
             Belum ada pesan — mulai percakapan!
@@ -348,39 +432,36 @@ export function ChatPanel({
         {messages.map((m) => {
           const mine = m.userId === meId;
           const give = m.premiumGive;
-          const full = user?.clanTag ?? "";
-          void full;
           return (
-            <div
-              key={m._id}
-              className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}
-            >
-              <img
-                src={m.image ?? avatarFallback(m.username)}
-                alt=""
-                className="size-9 shrink-0 rounded-full border border-amber-300/30 object-cover"
-              />
-              <div className={`flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`}>
+            <div key={m._id} className={cn("flex gap-2", mine && "flex-row-reverse")}>
+              {/* Klik avatar → detail akun */}
+              <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
+                <img
+                  src={m.image ?? avatarFallback(m.username)}
+                  alt=""
+                  className="size-9 shrink-0 rounded-full border border-white/15 object-cover"
+                />
+              </button>
+              <div className={cn("flex max-w-[78%] flex-col", mine ? "items-end" : "items-start")}>
                 <div
-                  className={`rounded-2xl border px-3 py-2 ${
+                  className={cn(
+                    "border px-3 py-2",
+                    "rounded-md",
                     give
-                      ? "border-amber-300/60 bg-amber-300/20"
+                      ? "border-red-500/60 bg-red-500/15"
                       : mine
-                        ? "border-amber-300/30 bg-amber-300/10"
-                        : "border-border bg-secondary/60"
-                  } ${blinkId === m._id ? "reply-blink" : ""}`}
+                        ? "bubble-mine"
+                        : "bubble-other",
+                    blinkId === m._id && "reply-blink",
+                  )}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-amber-200">{m.username}</span>
-                    {m.clanTag && (
-                      <span className="rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-amber-200">
-                        {m.clanTagIcon} [{m.clanTag}]
-                      </span>
-                    )}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-red-300">{m.username}</span>
+                    {m.premium && <BlueCheck className="size-3.5" />}
                   </div>
                   {m.replyTo && (
-                    <div className="mt-1 rounded-lg border-l-2 border-amber-300/70 bg-black/25 px-2 py-1 text-xs">
-                      <p className="font-medium text-amber-200">{m.replyTo.username}</p>
+                    <div className="mt-1 rounded-lg border-l-2 border-red-500/70 bg-black/25 px-2 py-1 text-xs">
+                      <p className="font-medium text-red-300">{m.replyTo.username}</p>
                       <p className="truncate text-muted-foreground">
                         {m.replyTo.text ?? (m.replyTo.premiumGiveId ? "Give premium" : "[foto]")}
                       </p>
@@ -388,10 +469,8 @@ export function ChatPanel({
                   )}
                   {give ? (
                     <div className="mt-1 min-w-48 text-center">
-                      <Crown className="mx-auto size-6 text-amber-300" />
-                      <p className="mt-1 text-sm font-bold">
-                        {give.days} Hari premium
-                      </p>
+                      <Crown className="mx-auto size-6 text-red-400" />
+                      <p className="mt-1 text-sm font-bold">{give.days} Hari premium</p>
                       <p className="text-xs text-muted-foreground">
                         {give.days} hari premium untuk {give.slots} orang
                       </p>
@@ -415,32 +494,41 @@ export function ChatPanel({
                     </>
                   )}
                 </div>
-                <div className={`mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground ${mine ? "flex-row-reverse" : ""}`}>
-                  <span>{timeAgo(m.createdAt)}</span>
-                  {mine && (
-                    <button
-                      className="underline hover:text-red-400"
-                      onClick={async () => {
-                        try {
-                          await api.chat.deleteMessage;
-                          // deleteMessage dipanggil via callback parent
-                        } catch {
-                          /* noop */
-                        }
-                      }}
-                      data-del={m._id}
-                      style={{ display: "none" }}
-                    >
-                      hapus
-                    </button>
-                  )}
-                  <DeleteButton messageId={m._id} />
-                  <button
-                    className="underline hover:text-amber-200"
-                    onClick={() => setReplyTo(m)}
+                {/* Tag clan di bawah bubble */}
+                {m.clanTag && (
+                  <span
+                    className={cn(
+                      "mt-0.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold",
+                      m.clanNameColor === "galaxy" || m.clanNameColor === "golden"
+                        ? "clan-tag-galaxy"
+                        : "bg-black/40 text-gold",
+                    )}
                   >
+                    {m.clanTagIcon} [{m.clanTag}]
+                  </span>
+                )}
+                <div
+                  className={cn(
+                    "mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground",
+                    mine && "flex-row-reverse",
+                  )}
+                >
+                  <span>{new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <button className="underline hover:text-red-300" onClick={() => setReplyTo(m)}>
                     reply
                   </button>
+                  {mine ? (
+                    <DeleteButton messageId={m._id} />
+                  ) : (
+                    /* Tombol ":" di pojok pesan → popup lapor */
+                    <button
+                      aria-label="Menu pesan"
+                      onClick={() => setReportMsg(m)}
+                      className="font-bold hover:text-foreground"
+                    >
+                      <MoreVertical className="size-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -452,9 +540,9 @@ export function ChatPanel({
       {/* reply preview + input */}
       <div className="border-t border-border/60 p-2">
         {replyTo && (
-          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-amber-300 bg-amber-300/10 px-3 py-1.5 text-xs">
+          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-red-500 bg-red-500/10 px-3 py-1.5 text-xs">
             <div className="min-w-0">
-              <p className="font-medium text-amber-200">{replyTo.username}</p>
+              <p className="font-medium text-red-300">{replyTo.username}</p>
               <p className="truncate text-muted-foreground">
                 {replyTo.text ?? (replyTo.premiumGive ? "Give premium" : "[foto]")}
               </p>
@@ -475,7 +563,7 @@ export function ChatPanel({
               <Plus className="size-4" />
             </Button>
             {plusOpen && (
-              <div className="absolute bottom-12 left-0 z-10 flex flex-col gap-2 rounded-2xl border border-border bg-popover p-2 shadow-xl">
+              <div className="pop-enter absolute bottom-12 left-0 z-10 flex flex-col gap-2 rounded-2xl border border-border bg-popover p-2 shadow-xl">
                 <button
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent"
                   onClick={() => fileRef.current?.click()}
@@ -483,7 +571,7 @@ export function ChatPanel({
                   <ImagePlus className="size-4" /> Kirim foto
                 </button>
                 <button
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-amber-200 hover:bg-accent"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-300 hover:bg-accent"
                   onClick={() => {
                     setPlusOpen(false);
                     setGiveOpen(true);
@@ -503,7 +591,7 @@ export function ChatPanel({
           />
           <Button
             size="icon"
-            className="rounded-full bg-amber-300 text-black hover:bg-amber-200"
+            className="rounded-full bg-red-600 text-white hover:bg-red-500"
             onClick={submit}
           >
             <Send className="size-4" />
@@ -516,7 +604,7 @@ export function ChatPanel({
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) handleFile(f);
+            if (f) setScanFile(f);
             e.target.value = "";
           }}
         />
@@ -535,7 +623,6 @@ export function ChatPanel({
               try {
                 const res = await nsfwReport({ passed: false });
                 const strikes = (res as any)?.strikes ?? 0;
-                setStrikeInfo(strikes);
                 if (strikes >= 3) toast.error("3x pelanggaran — akun dibanned permanen!");
                 else
                   toast.error(
@@ -555,7 +642,7 @@ export function ChatPanel({
         clanId={clanId}
         peerId={peerId}
       />
-      {strikeInfo >= 3 && null}
+      {reportMsg && <ReportDialog msg={reportMsg} onClose={() => setReportMsg(null)} />}
     </div>
   );
 }
@@ -574,7 +661,10 @@ function ClaimButton({
     <Button
       size="sm"
       disabled={claimed || full}
-      className={`mt-2 w-full ${full && !claimed ? "bg-zinc-500 text-white" : "bg-amber-300 text-black hover:bg-amber-200"}`}
+      className={cn(
+        "mt-2 w-full",
+        full && !claimed ? "bg-zinc-500 text-white" : "bg-red-600 text-white hover:bg-red-500",
+      )}
       onClick={async () => {
         try {
           await claim({ giveId: give._id });
@@ -605,3 +695,5 @@ function DeleteButton({ messageId }: { messageId: Id<"chatMessages"> }) {
     </button>
   );
 }
+
+export { REPORT_REASONS };

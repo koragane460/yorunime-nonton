@@ -1,6 +1,7 @@
-// LStream — absen harian, history, komentar anime, favorite, notifikasi.
+// LStream — history, komentar anime (like/reply/populer), favorite, notifikasi.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { addXpInternal } from "./xp";
 import { requireActive } from "./moderation";
@@ -9,76 +10,7 @@ function dayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// -------------------------------------------------------------- absen ----
-
-export const ABSEN_REWARDS = [
-  { day: 1, label: "5 💎 + 1 hari premium" },
-  { day: 2, label: "100 XP" },
-  { day: 3, label: "180 XP" },
-  { day: 4, label: "30 💎 + 1 hari premium" },
-  { day: 5, label: "200 XP" },
-  { day: 6, label: "30 💎 + 300 XP" },
-  { day: 7, label: "7 hari premium + 400 XP" },
-];
-
-export const absenStatus = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return { streak: 0, lastDay: null, claimedToday: false };
-    const rows = await ctx.db
-      .query("absenLogs")
-      .withIndex("userId_day", (q) => q.eq("userId", userId))
-      .collect();
-    rows.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
-    const today = dayString();
-    const claimedToday = rows.some((r: any) => r.day === today);
-    return { streak: rows.length % 7, lastDay: rows[rows.length - 1]?.day ?? null, claimedToday };
-  },
-});
-
-export const absen = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not signed in");
-    const me = await ctx.db.get(userId);
-    if (!me) throw new Error("User not found");
-    const today = dayString();
-    const already = await ctx.db
-      .query("absenLogs")
-      .withIndex("userId_day", (q) => q.eq("userId", userId).eq("day2", today))
-      .first();
-    if (already) throw new Error("Sudah absen hari ini");
-    const rows = await ctx.db
-      .query("absenLogs")
-      .withIndex("userId_day", (q) => q.eq("userId", userId))
-      .collect();
-    const streak = rows.length % 7; // index reward hari ini (0-based)
-    const day = streak + 1;
-    await ctx.db.insert("absenLogs", { userId, day, day2: today, createdAt: Date.now() });
-    let diamonds = 0;
-    let premiumDays = 0;
-    let xp = 0;
-    if (day === 1) { diamonds = 5; premiumDays = 1; }
-    else if (day === 2) xp = 100;
-    else if (day === 3) xp = 180;
-    else if (day === 4) { diamonds = 30; premiumDays = 1; }
-    else if (day === 5) xp = 200;
-    else if (day === 6) { diamonds = 30; xp = 300; }
-    else if (day === 7) { premiumDays = 7; xp = 400; }
-    const patch: Record<string, unknown> = {};
-    if (diamonds) patch.diamonds = (me.diamonds ?? 0) + diamonds;
-    if (premiumDays)
-      patch.premiumUntil =
-        Math.max(Date.now(), me.premiumUntil ?? 0) + premiumDays * 86400000;
-    if (Object.keys(patch).length) await ctx.db.patch(userId, patch);
-    if (xp) await addXpInternal(ctx, userId, xp, "absen");
-    return { day, diamonds, premiumDays, xp };
-  },
-});
-
-// ------------------------------------------------- history & favorite ----
+// ------------------------------------------------------------ komentar ----
 
 export const recordWatch = mutation({
   args: {
@@ -194,46 +126,197 @@ export const isFavorite = query({
 // ------------------------------------------------------------ komentar ----
 
 export const listComments = query({
-  args: { animeId: v.string() },
-  handler: async (ctx, { animeId }) => {
+  args: {
+    animeId: v.string(),
+    sort: v.optional(v.union(v.literal("terbaru"), v.literal("populer"))),
+  },
+  handler: async (ctx, { animeId, sort = "terbaru" }) => {
     const rows = await ctx.db
       .query("animeComments")
       .withIndex("animeId_created", (q) => q.eq("animeId", animeId))
       .order("desc")
-      .take(50);
+      .take(120);
+    const alive = rows.filter((r) => !r.deleted);
+    const users = new Map<string, any>();
     const out = [];
-    for (const r of rows) {
-      if (r.deleted) continue;
-      const u = await ctx.db.get(r.userId);
+    for (const r of alive) {
+      let u = users.get(r.userId);
+      if (!u) {
+        u = await ctx.db.get(r.userId);
+        users.set(r.userId, u);
+      }
       out.push({
         _id: r._id,
         userId: r.userId,
         username: u?.username ?? "user",
         image: u?.image,
+        bannerUrl: u?.bannerUrl,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
+        clanTag: u?.clanTag,
+        clanTagIcon: u?.clanTagIcon,
+        clanNameColor: u?.clanNameColor,
         text: r.text,
+        likes: r.likes ?? [],
+        likeCount: (r.likes ?? []).length,
+        replyToId: r.replyToId,
         createdAt: r.createdAt,
       });
     }
+    if (sort === "populer") out.sort((a, b) => b.likeCount - a.likeCount);
     return out;
   },
 });
 
 export const postComment = mutation({
-  args: { animeId: v.string(), text: v.string() },
-  handler: async (ctx, { animeId, text }) => {
+  args: { animeId: v.string(), text: v.string(), replyToId: v.optional(v.id("animeComments")) },
+  handler: async (ctx, { animeId, text, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     await requireActive(me);
     if (text.trim().length === 0) throw new Error("Komentar kosong");
-    await ctx.db.insert("animeComments", {
+    const commentId = await ctx.db.insert("animeComments", {
       animeId,
       userId,
       text: text.trim(),
+      replyToId,
+      likes: [],
       createdAt: Date.now(),
     });
+    // Balasan → notif ke pemilik komentar induk
+    if (replyToId) {
+      const parent = await ctx.db.get(replyToId);
+      if (parent && parent.userId !== userId) {
+        await ctx.db.insert("notifications", {
+          userId: parent.userId,
+          type: "reply",
+          title: `${me.username ?? "Seseorang"} membalas komentarmu`,
+          body: text.trim().slice(0, 100),
+          refUserId: userId,
+          createdAt: Date.now(),
+        });
+      }
+    }
     await addXpInternal(ctx, userId, 15, "comment");
+    return { commentId };
+  },
+});
+
+/** Like / unlike komentar anime → notif ke pemilik komentar. */
+export const toggleCommentLike = mutation({
+  args: { commentId: v.id("animeComments") },
+  handler: async (ctx, { commentId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const c = await ctx.db.get(commentId);
+    if (!c || c.deleted) throw new Error("Komentar tidak ada");
+    const likes = (c.likes ?? []).filter((l) => l !== userId);
+    let liked = false;
+    if (!likes.some((l) => l === userId) && !(c.likes ?? []).includes(userId)) {
+      likes.push(userId);
+      liked = true;
+    }
+    await ctx.db.patch(commentId, { likes });
+    if (liked && c.userId !== userId) {
+      const me = await ctx.db.get(userId);
+      await ctx.db.insert("notifications", {
+        userId: c.userId,
+        type: "like",
+        title: `${me?.username ?? "Seseorang"} menyukai komentarmu`,
+        body: c.text.slice(0, 100),
+        refUserId: userId,
+        createdAt: Date.now(),
+      });
+    }
+    return { liked, likeCount: likes.length };
+  },
+});
+
+/** Komentar teman-teman di semua anime (untuk panel akun, terbaru dulu). */
+export const myFriendsComments = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 30 }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const me = await ctx.db.get(userId);
+    if (!me) return [];
+    const myClanTag = me.clanTag;
+    const fr = await ctx.db.query("friendships").collect();
+    const friendIds = new Set<string>([userId]); // komentar sendiri + developer juga tampil
+    for (const f of fr) {
+      if (f.userA === userId) friendIds.add(f.userB);
+      else if (f.userB === userId) friendIds.add(f.userA);
+    }
+    const rows = await ctx.db
+      .query("animeComments")
+      .order("desc")
+      .take(400);
+    const out = [];
+    for (const r of rows) {
+      if (r.deleted) continue;
+      const u = await ctx.db.get(r.userId);
+      const isDev =
+        u?.role === "admin" || u?.staffRole === "dev" || u?.staffRole === "creator";
+      const sameClan = !!(myClanTag && u?.clanTag === myClanTag);
+      if (!friendIds.has(r.userId) && !sameClan && !isDev) continue;
+      out.push({
+        _id: r._id,
+        animeId: r.animeId,
+        userId: r.userId,
+        username: u?.username ?? "user",
+        image: u?.image,
+        bannerUrl: u?.bannerUrl,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
+        staffRole: u?.staffRole,
+        text: r.text,
+        likeCount: (r.likes ?? []).length,
+        createdAt: r.createdAt,
+      });
+      if (out.length >= (limit ?? 30)) break;
+    }
+    return out;
+  },
+});
+
+/** Lapor pesan chat → masuk notifikasi developer. */
+export const reportChatMessage = mutation({
+  args: {
+    messageId: v.id("chatMessages"),
+    reason: v.string(),
+    detail: v.optional(v.string()),
+  },
+  handler: async (ctx, { messageId, reason, detail }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const msg = await ctx.db.get(messageId);
+    if (!msg) throw new Error("Pesan tidak ada");
+    const reporter = await ctx.db.get(userId);
+    await ctx.db.insert("contentReports", {
+      reporterId: userId,
+      messageId,
+      reason,
+      detail,
+      text: msg.text ?? undefined,
+      createdAt: Date.now(),
+    });
+    // Notifikasi ke semua developer/mod
+    const staff = await ctx.db.query("users").collect();
+    for (const s of staff) {
+      const isDev =
+        s.role === "admin" || s.staffRole === "dev" || s.staffRole === "creator";
+      const isMod = isDev || s.staffRole === "mod";
+      if (!isDev && !isMod) continue;
+      await ctx.db.insert("notifications", {
+        userId: s._id,
+        type: "report",
+        title: `Laporan chat: ${reason}`,
+        body: `${reporter?.username ?? "Seseorang"} melaporkan: "${(msg.text ?? "[foto]").slice(0, 80)}"`,
+        refMessageId: messageId,
+        refUserId: msg.userId,
+        createdAt: Date.now(),
+      });
+    }
     return { ok: true };
   },
 });

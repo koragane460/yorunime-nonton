@@ -3,27 +3,27 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, SectionTitle } from "@/components/lstream-ui";
-import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
+import { CommentsSection, type CommentT } from "@/components/Comments";
+import { SectionTitle } from "@/components/lstream-ui";
+import { setMiniPlayer } from "@/components/AppLayout";
 import {
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Gauge,
   Maximize,
-  Minimize,
   Pause,
+  PictureInPicture2,
   Play,
   RotateCcw,
   RotateCw,
+  Settings2,
   SkipBack,
   SkipForward,
-  X,
-  Download,
-  PictureInPicture2,
-  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { timeAgo } from "@/lib/lstream";
-import type { Id } from "@/convex/_generated/dataModel";
 
 const QUALITIES = ["144p", "240p", "360p", "480p", "720p", "1080p"];
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -51,12 +51,6 @@ function WatchContent() {
   const [qualityOpen, setQualityOpen] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
-  const [mini, setMini] = useState(false);
-  const [miniSize, setMiniSize] = useState({ w: 260, h: 190 });
-  const [miniPos, setMiniPos] = useState({ x: 16, y: 16 });
-  const [epsOpen, setEpsOpen] = useState(false);
-  const [replyMsg, setReplyMsg] = useState<ChatMsg | null>(null);
-  const [chatText, setChatText] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [recorded, setRecorded] = useState(false);
@@ -66,7 +60,6 @@ function WatchContent() {
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
 
-  const D2 = detailData; void D2;
   const epList = detailData?.episodeList ?? [];
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
   const currentEp = epList[epIndex] ?? epList[0];
@@ -128,23 +121,9 @@ function WatchContent() {
     if (v) v.currentTime = Math.max(0, v.currentTime + s);
   };
 
-  // Mini player drag
-  const dragRef = useRef<{ dx: number; dy: number } | null>(null);
-  const onMouseDown = (e: React.MouseEvent) => {
-    dragRef.current = { dx: e.clientX - miniPos.x, dy: e.clientY - miniPos.y };
-  };
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!dragRef.current) return;
-    setMiniPos({
-      x: Math.max(0, Math.min(window.innerWidth - miniSize.w - 8, e.clientX - dragRef.current.dx)),
-      y: Math.max(0, Math.min(window.innerHeight - miniSize.h - 8, e.clientY - dragRef.current.dy)),
-    });
-  };
-  const onMouseUp = () => (dragRef.current = null);
-
   const episodeComments = useQuery(
     api.activities.listComments,
-    epParam ? { animeId: `${animeId}__ep${epParam}` } : "skip",
+    epParam ? { animeId: `${animeId}__ep${epParam}`, sort: "terbaru" } : "skip",
   );
   const postComment = useMutation(api.activities.postComment);
 
@@ -159,187 +138,144 @@ function WatchContent() {
 
   return (
     <div className="min-h-screen pb-24">
-      {/* Player / Mini */}
-      {!mini ? (
-        <div className="relative bg-black">
-          {sourceType === "embed" ? (
-            <iframe
-              src={streamUrl}
-              title={D.title}
-              className="aspect-video w-full"
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
+      {/* Player */}
+      <div className="relative bg-black">
+        {sourceType === "embed" ? (
+          <iframe
+            src={streamUrl}
+            title={D.title}
+            className="aspect-video w-full"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            src={streamUrl}
+            poster={D.image}
+            className="aspect-video w-full"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+            controls={false}
+          />
+        )}
+        {/* Overlay controls */}
+        <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
+          <div className="flex items-center gap-2 p-3">
+            <button onClick={() => navigate("/")} className="rounded-full bg-black/50 p-2">
+              <ChevronLeft className="size-4 text-white" />
+            </button>
+            <p className="line-clamp-1 text-sm text-white">
+              {D.title} {currentEp ? `— Ep ${currentEp.number}` : ""}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-6 pb-2">
+            <button
+              disabled={epIndex <= 0}
+              onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`)}
+              className={cn("rounded-full bg-black/50 p-2", epIndex <= 0 && "opacity-30")}
+            >
+              <SkipBack className="size-5 text-white" />
+            </button>
+            <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-2">
+              <RotateCcw className="size-6 text-white" />
+            </button>
+            <button onClick={togglePlay} className="rounded-full bg-red-600 p-4">
+              {playing ? <Pause className="size-7 text-white" /> : <Play className="size-7 text-white" />}
+            </button>
+            <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
+              <RotateCw className="size-6 text-white" />
+            </button>
+            <button
+              disabled={epIndex >= epList.length - 1}
+              onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex + 1].id}`)}
+              className={cn(
+                "rounded-full bg-black/50 p-2",
+                epIndex >= epList.length - 1 && "opacity-30",
+              )}
+            >
+              <SkipForward className="size-5 text-white" />
+            </button>
+          </div>
+          <div className="space-y-1.5 px-3 pb-3">
+            <input
+              type="range"
+              min={0}
+              max={duration || 0}
+              step={0.1}
+              value={currentTime}
+              onChange={(e) => {
+                const v = videoRef.current;
+                if (v) v.currentTime = Number(e.target.value);
+              }}
+              className="w-full accent-red-500"
             />
-          ) : (
-            <video
-              ref={videoRef}
-              src={streamUrl}
-              poster={D.image}
-              className="aspect-video w-full"
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-              controls={false}
-            />
-          )}
-          {/* Overlay controls */}
-          <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
-            <div className="flex items-center gap-2 p-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="rounded-full bg-black/50 p-2"
-              >
-                <ChevronLeft className="size-4 text-white" />
-              </button>
-              <p className="line-clamp-1 text-sm text-white">
-                {D.title} {currentEp ? `— Ep ${currentEp.number}` : ""}
-              </p>
+            <div className="flex items-center justify-between text-[11px] text-white">
+              <span>
+                {fmt(currentTime)} / {fmt(duration)}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSpeedOpen((v) => !v)}
+                  className="rounded bg-white/15 px-2 py-1"
+                >
+                  {speed}x
+                </button>
+                <button
+                  onClick={async () => {
+                    // Kirim ke mini player global (AppLayout) lalu balik ke Home
+                    setMiniPlayer({
+                      animeId,
+                      animeTitle: D.title,
+                      animeImage: D.image,
+                      episodeNumber: currentEp?.number,
+                      streamUrl: sourceType === "embed" ? streamUrl : streamUrl,
+                      isEmbed: sourceType === "embed",
+                    });
+                    toast.success("Mini player aktif — kembali ke Home");
+                    navigate("/");
+                  }}
+                  className="rounded bg-white/15 p-1.5"
+                  aria-label="Mini player"
+                >
+                  <PictureInPicture2 className="size-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    const el = document.documentElement;
+                    if (document.fullscreenElement) void document.exitFullscreen();
+                    else void el.requestFullscreen();
+                  }}
+                  className="rounded bg-white/15 p-1.5"
+                >
+                  <Maximize className="size-4" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-6 pb-2">
-              <button
-                disabled={epIndex <= 0}
-                onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`)}
-                className={cn("rounded-full bg-black/50 p-2", epIndex <= 0 && "opacity-30")}
-              >
-                <SkipBack className="size-5 text-white" />
-              </button>
-              <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-2">
-                <RotateCcw className="size-6 text-white" />
-              </button>
-              <button onClick={togglePlay} className="rounded-full bg-amber-300 p-4">
-                {playing ? <Pause className="size-7 text-black" /> : <Play className="size-7 text-black" />}
-              </button>
-              <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
-                <RotateCw className="size-6 text-white" />
-              </button>
-              <button
-                disabled={epIndex >= epList.length - 1}
-                onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex + 1].id}`)}
-                className={cn(
-                  "rounded-full bg-black/50 p-2",
-                  epIndex >= epList.length - 1 && "opacity-30",
-                )}
-              >
-                <SkipForward className="size-5 text-white" />
-              </button>
-            </div>
-            <div className="space-y-1.5 px-3 pb-3">
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={0.1}
-                value={currentTime}
-                onChange={(e) => {
-                  const v = videoRef.current;
-                  if (v) v.currentTime = Number(e.target.value);
-                }}
-                className="w-full accent-amber-300"
-              />
-              <div className="flex items-center justify-between text-[11px] text-white">
-                <span>
-                  {fmt(currentTime)} / {fmt(duration)}
-                </span>
-                <div className="flex items-center gap-2">
+            {speedOpen && (
+              <div className="flex flex-wrap gap-1.5 rounded-lg bg-black/80 p-2">
+                {SPEEDS.map((s) => (
                   <button
-                    onClick={() => setSpeedOpen((v) => !v)}
-                    className="rounded bg-white/15 px-2 py-1"
-                  >
-                    {speed}x
-                  </button>
-                  <button onClick={() => setMini(true)} className="rounded bg-white/15 p-1.5">
-                    <PictureInPicture2 className="size-4" />
-                  </button>
-                  <button
+                    key={s}
                     onClick={() => {
-                      const el = document.documentElement;
-                      if (document.fullscreenElement) void document.exitFullscreen();
-                      else void el.requestFullscreen();
+                      setSpeed(s);
+                      setSpeedOpen(false);
                     }}
-                    className="rounded bg-white/15 p-1.5"
+                    className={cn(
+                      "rounded px-2.5 py-1 text-xs",
+                      speed === s ? "bg-red-600 text-white" : "bg-white/10 text-white",
+                    )}
                   >
-                    <Maximize className="size-4" />
+                    {s}x
                   </button>
-                </div>
+                ))}
               </div>
-              {speedOpen && (
-                <div className="flex flex-wrap gap-1.5 rounded-lg bg-black/80 p-2">
-                  {SPEEDS.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => {
-                        setSpeed(s);
-                        setSpeedOpen(false);
-                      }}
-                      className={cn(
-                        "rounded px-2.5 py-1 text-xs",
-                        speed === s ? "bg-amber-300 text-black" : "bg-white/10 text-white",
-                      )}
-                    >
-                      {s}x
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
-      ) : (
-        /* MINI PLAYER */
-        <div className="min-h-screen p-3">
-          <div
-            className="fixed z-50 overflow-hidden rounded-xl border border-amber-300/40 shadow-2xl"
-            style={{ left: miniPos.x, top: miniPos.y, width: miniSize.w, height: miniSize.h }}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseUp}
-          >
-            <div className="relative h-full w-full cursor-move bg-black" onDoubleClick={() => setMini(false)}>
-              {sourceType === "embed" ? (
-                <iframe
-                  src={streamUrl}
-                  title="mini"
-                  className="size-full"
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                />
-              ) : (
-                <video
-                  ref={videoRef}
-                  src={streamUrl}
-                  className="size-full object-contain"
-                  onClick={togglePlay}
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                />
-              )}
-              <div className="absolute right-1 top-1 flex gap-1">
-                <button
-                  className="rounded bg-black/60 p-1"
-                  onClick={() => setMiniSize((s) => ({ w: Math.min(480, s.w + 60), h: Math.min(360, s.h + 45) }))}
-                >
-                  <Maximize className="size-3 text-white" />
-                </button>
-                <button
-                  className="rounded bg-black/60 p-1"
-                  onClick={() => setMiniSize((s) => ({ w: Math.max(200, s.w - 60), h: Math.max(150, s.h - 45) }))}
-                >
-                  <Minimize className="size-3 text-white" />
-                </button>
-                <button className="rounded bg-black/60 p-1" onClick={() => setMini(false)}>
-                  <X className="size-3 text-white" />
-                </button>
-              </div>
-            </div>
-          </div>
-          <p className="mt-2 text-sm font-semibold">{D.title}</p>
-          <p className="text-xs text-muted-foreground">
-            Mini player — drag untuk pindah, klik 2x untuk kembali
-          </p>
-        </div>
-      )}
+      </div>
 
       {/* Info */}
       <div className="mx-auto max-w-2xl p-3">
@@ -347,103 +283,110 @@ function WatchContent() {
           <img src={D.image} alt="" className="aspect-[2/3] w-20 rounded-lg object-cover" />
           <div className="min-w-0 flex-1">
             <h1 className="line-clamp-2 font-bold">{D.title}</h1>
-            <p className={cn("mt-1 text-xs leading-5 text-zinc-400", "line-clamp-2")}>
-              {D.synopsis}
-            </p>
-            <button className="text-[11px] text-amber-200 underline">Baca selengkapnya</button>
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{D.synopsis}</p>
+            <button
+              onClick={() => navigate(`/?pilih=${animeId}`)}
+              className="text-[11px] text-red-300 underline"
+            >
+              Lihat detail
+            </button>
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        {/* Toolbar: kualitas, kecepatan, download, mini player — DI BAWAH episode */}
+        <SectionTitle>Episode</SectionTitle>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">{epList.length} episode</span>
           <button
             onClick={() => setQualityOpen(true)}
-            className="rounded-full border border-border px-3 py-1.5 text-xs"
+            className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs transition hover:border-red-500/60"
           >
-            ⚙ {quality}
-          </button>
-          <button
-            onClick={() => setSpeedOpen((v) => !v)}
-            className="rounded-full border border-border px-3 py-1.5 text-xs"
-          >
-            ⏩ {speed}x
-          </button>
-          <button
-            onClick={() => setDownloadOpen(true)}
-            className="rounded-full border border-border px-3 py-1.5 text-xs"
-          >
-            <Download className="mr-1 inline size-3.5" /> Download
-          </button>
-          <button
-            onClick={() => setMini(true)}
-            className="rounded-full border border-border px-3 py-1.5 text-xs"
-          >
-            <PictureInPicture2 className="mr-1 inline size-3.5" /> Mini player
+            <Settings2 className="size-3.5" /> {quality}
           </button>
         </div>
-
-        {/* Episodes */}
-        <SectionTitle>
-          {allEpisodesShown(epsOpen, epList) ? "Semua" : "10"} Episode ({epList.length})
-        </SectionTitle>
         <div className="flex flex-wrap gap-1.5">
-          {(epsOpen ? epList : epList.slice(0, 12)).map((e: any) => (
+          {(epList ?? []).slice(0, 18).map((e: any) => (
             <button
               key={e.id}
               onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
               className={cn(
-                "size-9 rounded-lg border text-xs font-semibold",
+                "size-10 rounded-lg border text-xs font-semibold",
                 e.id === epParam
-                  ? "border-amber-300 bg-amber-300/20 text-amber-200"
-                  : "border-border text-muted-foreground",
+                  ? "border-red-500 bg-red-500/20 text-red-200"
+                  : "border-border bg-secondary/40 text-foreground hover:border-red-500/60",
               )}
             >
               {e.number}
             </button>
           ))}
         </div>
-        {epList.length > 12 && (
-          <button
-            onClick={() => setEpsOpen((v) => !v)}
-            className="mt-2 rounded-full border border-border px-3 py-1 text-xs"
-          >
-            {epsOpen ? "Tutup" : "Buka semua episode"}
-          </button>
+        {epList.length > 18 && (
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            +{epList.length - 18} episode lainnya — pilih dari halaman detail anime
+          </p>
         )}
 
-        {/* Chat episode */}
-        <SectionTitle>Diskusi Episode</SectionTitle>
-        <div className="h-[420px] overflow-hidden rounded-2xl border border-border bg-card">
-          <ChatPanel
-            kind="global"
-            compact
-            messages={[] as ChatMsg[]}
-            meId={user?._id as string}
-            onSend={async (p) => {
-              if (!epParam || !user) return;
-              await postComment({ animeId: `${animeId}__ep${epParam}`, text: p.text ?? "" });
+        {/* Toolbar pilihan di bawah episode list */}
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          <ToolButton
+            icon={<Gauge className="size-4" />}
+            label={`${speed}x`}
+            onClick={() => setSpeedOpen(true)}
+          />
+          <ToolButton
+            icon={<Download className="size-4" />}
+            label="Download"
+            onClick={() => setDownloadOpen(true)}
+          />
+          <ToolButton
+            icon={<PictureInPicture2 className="size-4" />}
+            label="Mini"
+            onClick={async () => {
+              setMiniPlayer({
+                animeId,
+                animeTitle: D.title,
+                animeImage: D.image,
+                episodeNumber: currentEp?.number,
+                streamUrl,
+                isEmbed: sourceType === "embed",
+              });
+              navigate("/");
             }}
           />
+          <ToolButton
+            icon={<Settings2 className="size-4" />}
+            label={quality}
+            onClick={() => setQualityOpen(true)}
+          />
         </div>
-        <div className="mt-2 space-y-2">
-          {(episodeComments ?? []).map((c: any) => (
-            <div key={c._id} className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-secondary/30 p-2.5">
-              <Avatar src={c.image} seed={c.username} className="size-8" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">
-                  {c.username}{" "}
-                  <span className="text-[10px] font-normal text-muted-foreground">
-                    {timeAgo(c.createdAt)}
-                  </span>
-                </p>
-                <p className="text-sm text-zinc-300">{c.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+
+        {/* Sinopsis diperbagus */}
+        <SectionTitle>Sinopsis</SectionTitle>
+        <p className="rounded-xl border border-border/60 bg-secondary/30 p-3 text-sm leading-6 text-zinc-300">
+          {D.synopsis ?? "Sinopsis belum tersedia."}
+        </p>
+
+        {/* Komentar episode — gaya baru */}
+        <SectionTitle>Diskusi Episode</SectionTitle>
+        <CommentsSection
+          animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
+          comments={episodeComments as unknown as CommentT[]}
+          meId={user?._id}
+          onSend={async (text, replyToId) => {
+            if (!epParam || !user) {
+              toast.error("Pilih episode dulu");
+              return;
+            }
+            await postComment({
+              animeId: `${animeId}__ep${epParam}`,
+              text,
+              replyToId: replyToId as never,
+            });
+          }}
+        />
       </div>
 
-      {/* Popups */}
+      {/* Popups diperbagus */}
       {qualityOpen && (
         <Popup onClose={() => setQualityOpen(false)} title="Pilih kualitas">
           <div className="flex flex-wrap gap-2">
@@ -455,11 +398,36 @@ function WatchContent() {
                   setQualityOpen(false);
                 }}
                 className={cn(
-                  "rounded-lg border px-4 py-2 text-sm",
-                  quality === q ? "border-amber-300 bg-amber-300/15 text-amber-200" : "border-border",
+                  "rounded-lg border px-4 py-2 text-sm transition",
+                  quality === q
+                    ? "border-red-500 bg-red-500/15 text-red-300"
+                    : "border-border hover:border-red-500/50",
                 )}
               >
                 {q}
+              </button>
+            ))}
+          </div>
+        </Popup>
+      )}
+      {speedOpen && (
+        <Popup onClose={() => setSpeedOpen(false)} title="Kecepatan putar">
+          <div className="flex flex-wrap gap-2">
+            {SPEEDS.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  setSpeed(s);
+                  setSpeedOpen(false);
+                }}
+                className={cn(
+                  "rounded-lg border px-4 py-2 text-sm transition",
+                  speed === s
+                    ? "border-red-500 bg-red-500/15 text-red-300"
+                    : "border-border hover:border-red-500/50",
+                )}
+              >
+                {s}x
               </button>
             ))}
           </div>
@@ -475,7 +443,7 @@ function WatchContent() {
                   toast.success(`Download dimulai (${q})`);
                   setDownloadOpen(false);
                 }}
-                className="rounded-lg border border-border px-4 py-2 text-sm hover:border-amber-300"
+                className="rounded-lg border border-border px-4 py-2 text-sm transition hover:border-red-500"
               >
                 {q}
               </button>
@@ -487,8 +455,24 @@ function WatchContent() {
   );
 }
 
-function allEpisodesShown(open: boolean, list: unknown[]) {
-  return open && list.length > 0;
+function ToolButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card py-2.5 text-[11px] font-medium transition hover:border-red-500/60"
+    >
+      {icon}
+      {label}
+    </button>
+  );
 }
 
 function fmt(s: number) {
@@ -508,9 +492,12 @@ function Popup({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-xs rounded-2xl border border-white/10 bg-card p-4"
+        className="pop-enter w-full max-w-xs rounded-2xl border border-white/10 bg-popover p-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="mb-3 font-semibold">{title}</p>
@@ -520,35 +507,5 @@ function Popup({
   );
 }
 
-// Di bawah ini dipakai reply screen chat episode (dibiarkan sederhana)
-function ReplyBox({ msg, onClose, onSend }: { msg: ChatMsg; onClose: () => void; onSend: (t: string) => void }) {
-  const [text, setText] = useState("");
-  return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card p-3">
-      <div className="mb-2 rounded-lg border-l-2 border-amber-300 bg-amber-300/10 px-3 py-1.5 text-xs">
-        <p className="font-medium text-amber-200">{msg.username}</p>
-        <p className="truncate text-muted-foreground">{msg.text}</p>
-        <button onClick={onClose} className="absolute right-3 top-2">
-          <X className="size-3" />
-        </button>
-      </div>
-      <div className="flex gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="flex-1 rounded-full border border-input px-4 py-2 text-sm"
-          placeholder={`Balas ${msg.username}…`}
-        />
-        <button
-          onClick={() => {
-            if (text.trim()) onSend(text);
-            onClose();
-          }}
-          className="rounded-full bg-amber-300 p-2 text-black"
-        >
-          <Send className="size-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
+void ChevronDown;
+void ChevronUp;

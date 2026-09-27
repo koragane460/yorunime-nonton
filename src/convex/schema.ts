@@ -46,6 +46,7 @@ const schema = defineSchema(
       bannedUntil: v.optional(v.number()),
       bannedReason: v.optional(v.string()),
       nsfwStrikes: v.optional(v.number()),
+      seqId: v.optional(v.number()),
       deviceKey: v.optional(v.string()),
       lastSeenUpdate: v.optional(v.number()),
       staffRole: v.optional(
@@ -200,6 +201,7 @@ const schema = defineSchema(
       userId: v.id("users"),
       text: v.string(),
       replyToId: v.optional(v.id("animeComments")),
+      likes: v.array(v.id("users")),
       createdAt: v.number(),
       deleted: v.optional(v.boolean()),
     }).index("animeId_created", ["animeId", "createdAt"]),
@@ -247,6 +249,15 @@ const schema = defineSchema(
       key: v.string(),
       value: v.any(),
     }).index("key", ["key"]),
+
+    contentReports: defineTable({
+      reporterId: v.id("users"),
+      messageId: v.id("chatMessages"),
+      reason: v.string(),
+      detail: v.optional(v.string()),
+      text: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("createdAt", ["createdAt"]),
   },
   {
     schemaValidation: false,

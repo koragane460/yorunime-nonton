@@ -14,7 +14,7 @@ export async function addXpInternal(
   if (!user) return;
   let xp = (user.xp ?? 0) + amount;
   let level = user.level ?? 1;
-  while (level < 10000 && xp >= xpForLevel(level)) {
+  while (level < 10000 && amount > 0 && xp >= xpForLevel(level)) {
     xp -= xpForLevel(level);
     level += 1;
   }
