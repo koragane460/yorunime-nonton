@@ -170,6 +170,7 @@ function NoClan({
 
       {mode === "buat" && (
         <CreateClan
+          onCancel={() => setMode("none")}
           onCreated={(id) => {
             setMode("none");
             onCreated?.(id); // → ClanContent langsung render chat clan
@@ -182,7 +183,13 @@ function NoClan({
 
 // ------------------------------------------------------------ buat clan ----
 
-function CreateClan({ onCreated }: { onCreated: (clanId: Id<"clans">) => void }) {
+function CreateClan({
+  onCreated,
+  onCancel,
+}: {
+  onCreated: (clanId: Id<"clans">) => void;
+  onCancel: () => void;
+}) {
   const create = useMutation(api.clans.createClan);
   const [icon, setIcon] = useState(TAG_ICONS[0]);
   const [name, setName] = useState("");
@@ -195,7 +202,7 @@ function CreateClan({ onCreated }: { onCreated: (clanId: Id<"clans">) => void })
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background p-3">
       <div className="w-full">
         <div className="mb-3 mt-3 flex items-center gap-3">
-          <button onClick={onCreated} className="rounded-full border border-border p-2">
+          <button onClick={onCancel} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
           </button>
           <h1 className="text-lg font-bold">Buat Clan</h1>
@@ -267,7 +274,7 @@ function CreateClan({ onCreated }: { onCreated: (clanId: Id<"clans">) => void })
 
         <div className="mt-3 flex gap-2">
           <button
-            onClick={onCreated}
+            onClick={onCancel}
             className="flex-1 rounded-full border border-border py-3 font-semibold"
           >
             Cancel

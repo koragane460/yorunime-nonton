@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import {
   Avatar,
   BlueCheck,
@@ -290,6 +290,7 @@ function BadgesPopup({
   currentLevel: number;
   onClose: () => void;
 }) {
+  useHideNavOnMount(); // popup fullscreen: navbar hilang total
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -369,6 +370,7 @@ function SettingsScreen({
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
+  useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
 
   if (!user) return null;
 
@@ -686,6 +688,7 @@ function SpeedRow({
 function NotifScreen({ onClose }: { onClose: () => void }) {
   const notifs = useQuery(api.activities.listNotifications, {});
   const accept = useMutation(api.friends.respondRequest);
+  useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
   const icons: Record<string, string> = {
     update: "🔔",
     reply: "↗",
