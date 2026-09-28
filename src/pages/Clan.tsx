@@ -33,6 +33,14 @@ const ROLE_INFO = `Info Roles
 3. Victro : Memberi peringatan keras kepada member yang melanggar peraturan clan yang sudah ditetapkan
 4. Hydler : Memantau kondisi chat clan apabila terjadi kerusuhan`;
 
+const ROLE_BADGE_CLS: Record<string, string> = {
+  leader: "from-yellow-300 to-amber-500 text-black",
+  officer: "from-green-400 to-emerald-600 text-white",
+  victro: "from-purple-400 to-purple-600 text-white",
+  hydler: "from-sky-300 to-sky-500 text-black",
+  member: "from-zinc-400 to-zinc-600 text-white",
+};
+
 const ROLE_LABEL: Record<string, string> = {
   leader: "LEADER",
   officer: "OFFICER",
@@ -81,6 +89,13 @@ function NoClan({ initialCreate }: { initialCreate?: boolean }) {
   const [mode, setMode] = useState<"none" | "buat" | "gabung">(
     initialCreate ? "buat" : "none",
   );
+  const clans = useQuery(api.clans.listClans, {});
+  const requestJoin = useMutation(api.clans.requestJoin);
+  const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
+
+  if (detailId)
+    return <ClanDetail clanId={detailId} onBack={() => setDetailId(null)} viewerNotMember />;
+
   return (
     <div className="py-6">
       <div className="clan-hero-gradient flex flex-col items-center justify-center rounded-3xl border border-white/10 p-6 text-center">
@@ -106,26 +121,75 @@ function NoClan({ initialCreate }: { initialCreate?: boolean }) {
           </button>
         </div>
       </div>
-      {mode === "buat" && <CreateClan onDone={() => setMode("none")} />}
-      {mode === "gabung" && <JoinClan onBack={() => setMode("none")} />}
+
+      {/* List clan langsung tampil di bawah hero — bisa dilihat & join tanpa buka layar lain */}
+      {mode !== "buat" && (
+        <div className="mt-5 space-y-2">
+          <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Daftar Clan ({(clans ?? []).length})
+          </p>
+          {(clans ?? []).length === 0 && (
+            <p className="py-6 text-center text-xs text-muted-foreground">
+              Belum ada clan. Jadilah yang pertama!
+            </p>
+          )}
+          {(clans ?? []).map((c: any) => (
+            <div
+              key={c._id}
+              className="member-row cursor-pointer p-3 transition hover:border-[oklch(0.86_0.16_90)]/40"
+              onClick={() => setDetailId(c._id as Id<"clans">)}
+            >
+              <div className="flex items-center gap-3">
+                <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold">{c.name}</p>
+                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />
+                  <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
+                    <span>👥 {c.memberCount} member</span>
+                    <span className="text-violet-300">💎 {c.diamonds} Sacret</span>
+                    <span>🕰 {c.ageDays} hari</span>
+                  </div>
+                </div>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const r = await requestJoin({ clanId: c._id as Id<"clans"> });
+                      toast.success(r.requested ? "Request terkirim" : "Request dibatalkan");
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Gagal request");
+                    }
+                  }}
+                  className="shrink-0 rounded-full bg-violet-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-violet-500"
+                >
+                  Join
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {mode === "buat" && <CreateClan onCreated={() => setMode("none")} />}
     </div>
   );
 }
 
 // ------------------------------------------------------------ buat clan ----
 
-function CreateClan({ onDone }: { onDone: () => void }) {
+function CreateClan({ onCreated }: { onCreated: () => void }) {
   const create = useMutation(api.clans.createClan);
   const [icon, setIcon] = useState(TAG_ICONS[0]);
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [busy, setBusy] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background p-3">
       <div className="w-full">
         <div className="mb-3 mt-3 flex items-center gap-3">
-          <button onClick={onDone} className="rounded-full border border-border p-2">
+          <button onClick={onCreated} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
           </button>
           <h1 className="text-lg font-bold">Buat Clan</h1>
@@ -192,25 +256,27 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         </div>
 
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          Membuat clan butuh <b className="text-[oklch(0.86_0.16_90)]">1000 berlian</b>
+          Membuat clan butuh <b className="text-[oklch(0.86_0.16_90)]">1000 Sacret</b>
         </p>
 
         <div className="mt-3 flex gap-2">
           <button
-            onClick={onDone}
+            onClick={onCreated}
             className="flex-1 rounded-full border border-border py-3 font-semibold"
           >
             Cancel
           </button>
           <button
-            disabled={!name.trim() || tag.length < 3 || !avatar}
+            disabled={busy || !name.trim() || tag.length < 3 || !avatar}
             onClick={async () => {
+              setBusy(true);
               try {
                 await create({ name, tag, tagIcon: icon, avatarUrl: avatar });
-                toast.success("Clan dibuat!");
-                onDone();
+                toast.success("Clan dibuat! Mengarahkan ke chat clan…");
+                onCreated(); // App auto-switch ke ClanHub → chat clan
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Gagal");
+                setBusy(false);
               }
             }}
             className="flex-1 rounded-full bg-[oklch(0.86_0.16_90)] py-3 font-bold text-[oklch(0.18_0.04_70)] disabled:opacity-40"
@@ -293,12 +359,11 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{c.name}</p>
-                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />
-                  <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
-                    <span>Total Member: {c.memberCount}</span>
-                    <span>Total Berlian: {c.diamonds}</span>
-                    <span>Umur Clan: {c.ageDays} hari</span>
-                  </div>
+                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />                    <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
+                      <span>👥 {c.memberCount} member</span>
+                      <span className="text-violet-300">💎 {c.diamonds} Sacret</span>
+                      <span>🕰 {c.ageDays} hari</span>
+                    </div>
                 </div>
                 <button
                   onClick={async (e) => {
@@ -309,10 +374,11 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                         r.requested ? "Request terkirim" : "Request dibatalkan",
                       );
                     } catch (err) {
+                      setDetailId(c._id as Id<"clans">);
                       setWarn(
                         err instanceof Error
                           ? err.message
-                          : "Gagal request",
+                          : "Buka detail clan untuk request join",
                       );
                     }
                   }}
@@ -429,7 +495,7 @@ function ClanDetail({
   const transfer = useMutation(api.clans.transferLeader);
   const setBackground = useMutation(api.clans.setBackground);
   const respond = useMutation(api.clans.respondRequest);
-  const [tab, setTab] = useState<"member" | "top" | "request">("member");
+  const [tab, setTab] = useState<"member" | "top">("member");
   const [search, setSearch] = useState("");
   const [donateOpen, setDonateOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -559,24 +625,27 @@ function ClanDetail({
 
         {isMember && (
           <>
-            {/* Aksi: Claim + Donate + Panel dev/mod — DI ATAS tab Members/Donasi */}
+            {/* Aksi: Claim + Donate — angka = Sacret yang bisa diambil, subteks = donate hari ini */}
             <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4 text-center">
               <Gem className="mx-auto size-7 text-violet-400" />
-              <p className="mt-1 text-xl font-black text-white">{formatK(c.diamonds)}</p>
+              <p className="mt-1 text-xl font-black text-white">{formatK(c.claimAmount)}</p>
+              <p className="text-[11px] text-muted-foreground">
+                Sacret yang bisa diambil · {detail.todayDonationsTotal} Sacret didonate hari ini
+              </p>
               <div className="mt-2 space-y-2">
                 <button
                   disabled={claimedToday}
                   onClick={async () => {
                     try {
                       const r = await claim();
-                      toast.success(`Berhasil claim ${r.amount} berlian!`);
+                      toast.success(`Berhasil claim ${r.amount} Sacret!`);
                     } catch (e) {
                       toast.error(e instanceof Error ? e.message : "Gagal");
                     }
                   }}
                   className="w-full rounded-full bg-[oklch(0.86_0.16_90)] py-3 text-sm font-bold text-[oklch(0.18_0.04_70)] disabled:opacity-40"
                 >
-                  {claimedToday ? "Sudah claim hari ini" : `Claim Berlian (${c.claimAmount})`}
+                  {claimedToday ? "Sudah claim hari ini" : `Claim Sacret (${c.claimAmount})`}
                 </button>
                 <button
                   onClick={() => setDonateOpen(true)}
@@ -597,7 +666,7 @@ function ClanDetail({
               </button>
             )}
 
-            {/* Tab pill: Members / Donasi Hari Ini / Request */}
+            {/* Tab pill: Members / Donasi Hari Ini (Request dipindah ke Panel Leader) */}
             <div className="tab-pill-track mt-3">
               <button
                 onClick={() => setTab("member")}
@@ -611,14 +680,6 @@ function ClanDetail({
               >
                 Donasi Hari Ini ({detail.todayDonators})
               </button>
-              {(isLeader || isOfficer) && (
-                <button
-                  onClick={() => setTab("request")}
-                  className={cn("tab-pill", tab === "request" && "tab-pill-active")}
-                >
-                  Request ({detail.requests.length})
-                </button>
-              )}
             </div>
 
             {/* Search rounded-full */}
@@ -690,7 +751,7 @@ function ClanDetail({
                 <p className="mb-3 rounded-2xl border border-white/10 bg-card p-3 text-center text-xs">
                   Total donate hari ini terkumpul{" "}
                   <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonationsTotal}</b>{" "}
-                  berlian dari{" "}
+                  Sacret dari{" "}
                   <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonators}</b> member
                 </p>
                 {topDonate.length >= 3 && (
@@ -736,8 +797,30 @@ function ClanDetail({
         />
       )}
       {infoOpen && (
-        <Popup onClose={() => setInfoOpen(false)} title="Kegunaan Clan">
-          <pre className="whitespace-pre-wrap text-xs leading-5 text-indigo-100/80">{ROLE_INFO}</pre>
+        <Popup onClose={() => setInfoOpen(false)} title="Info Roles">
+          <div className="space-y-2">
+            {[
+              ["leader", "Leader", "mempunyai akses penuh dalam mengatur peraturan clan apapun itu"],
+              ["officer", "Officer", "membantu leader seperti kick member, accept request, dan lainnya"],
+              ["victro", "Victro", "memberi peringatan keras kepada member yang melanggar peraturan clan"],
+              ["hydler", "Hydler", "memantau kondisi chat clan apabila terjadi kerusuhan"],
+            ].map(([role, name, desc]) => (
+              <div
+                key={role}
+                className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-black/30 p-2.5"
+              >
+                <span
+                  className={cn(
+                    "shrink-0 rounded-md bg-gradient-to-r px-2 py-0.5 text-[10px] font-bold",
+                    ROLE_BADGE_CLS[role],
+                  )}
+                >
+                  {name.toUpperCase()}
+                </span>
+                <p className="text-xs leading-relaxed text-indigo-100/80">{desc}</p>
+              </div>
+            ))}
+          </div>
         </Popup>
       )}
       {panelOpen && (
@@ -838,7 +921,7 @@ function DonateDialog({
 }) {
   const [amount, setAmount] = useState(0);
   return (
-    <Popup onClose={onClose} title="Donate Berlian">
+    <Popup onClose={onClose} title="Donate Sacret">
       <div className="text-center">
         <Gem className="mx-auto size-9 text-violet-400" />
         <p className="mt-1 text-xl font-black text-white">{amount}</p>
@@ -863,7 +946,7 @@ function DonateDialog({
         type="number"
         value={amount || ""}
         onChange={(e) => setAmount(Number(e.target.value))}
-        placeholder="Minimal 50 berlian"
+        placeholder="Minimal 50 Sacret"
         className="mt-3 w-full rounded-full border border-input bg-background/60 px-3 py-2 text-sm"
       />
       <button
@@ -937,6 +1020,7 @@ function LeaderPanel({
   const [sub, setSub] = useState<"bg" | "roles" | "kick" | "transfer" | "unroles" | "request">(
     "request",
   );
+  void sub; void setSub;
   const [bgUrl, setBgUrl] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [role, setRole] = useState<"officer" | "victro" | "hydler">("officer");
@@ -957,30 +1041,11 @@ function LeaderPanel({
           </button>
         </div>
 
-        <div className="tab-pill-track mb-3 flex-wrap">
-          {(
-            [
-              ["request", "Request"],
-              ["bg", "Background"],
-              ["roles", "Add roles"],
-              ["kick", "Kick"],
-              ["transfer", "Transfer Leader"],
-              ...(isLeader
-                ? ([["unroles", "UnRoles"]] as const)
-                : ([] as const)),
-            ] as const
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setSub(k as typeof sub)}
-              className={cn("rounded-full px-3 py-1.5 text-xs", sub === k && "tab-pill-active")}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {sub === "request" && (
+        {/* Request join langsung tampil di atas — tidak perlu tab */}
+        <div className="mb-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">
+            Request Join ({requests.length})
+          </p>
           <div className="space-y-2">
             {requests.length === 0 && (
               <p className="py-4 text-center text-xs text-muted-foreground">Tidak ada request</p>

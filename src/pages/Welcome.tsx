@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
+import { APP_VERSION, UPDATE_BODY, UPDATE_VERSION } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -10,7 +12,6 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { APP_VERSION } from "@/lib/version";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -67,15 +68,46 @@ function WelcomeFlow() {
   const [testerError, setTesterError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
 
+  // Sistem update: tombol muncul hanya saat ada update (UPDATE_VERSION diisi).
+  const [dlState, setDlState] = useState<"idle" | "downloading" | "done">("idle");
+  const [dlPct, setDlPct] = useState(0);
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const dlTimer = useRef<number | null>(null);
+  const updateAvailable = UPDATE_VERSION !== "";
+  const updatePending = updateAvailable && dlState !== "done";
+
+  const startDownload = () => {
+    setDlState("downloading");
+    dlTimer.current = window.setInterval(() => {
+      setDlPct((p) => {
+        if (p >= 100) {
+          if (dlTimer.current) clearInterval(dlTimer.current);
+          setDlState("done");
+          return 100;
+        }
+        return p + 4;
+      });
+    }, 60);
+  };
+
+  useEffect(
+    () => () => {
+      if (dlTimer.current) clearInterval(dlTimer.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!authLoading && isAuthenticated) navigate("/home", { replace: true });
   }, [authLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
     if (stage !== "intro") return;
+    // Kalau ada update yang belum di-download, tahan di intro dulu.
+    if (updatePending) return;
     const t = setTimeout(() => setStage("notice"), 1800);
     return () => clearTimeout(t);
-  }, [stage]);
+  }, [stage, updatePending]);
 
   const noticeRef = useRef<HTMLDivElement>(null);
   const rulesRef = useRef<HTMLDivElement>(null);
@@ -117,7 +149,7 @@ function WelcomeFlow() {
 
   if (stage === "intro") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#07060c]">
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]">
         <Starfield />
         <motion.h1
           className="bg-gradient-to-r from-violet-300 via-white to-violet-400 bg-clip-text px-6 text-center text-4xl font-black tracking-[0.2em] text-transparent"
@@ -128,7 +160,7 @@ function WelcomeFlow() {
           YoruNime
         </motion.h1>
         <motion.p
-          className="absolute bottom-14 text-xs text-muted-foreground"
+          className="mt-2 text-xs text-muted-foreground"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7, duration: 0.6 }}
@@ -136,13 +168,69 @@ function WelcomeFlow() {
           Nonton anime, temukan komunitasmu
         </motion.p>
         <motion.p
-          className="absolute bottom-7 text-[10px] tracking-widest text-zinc-500"
+          className="mt-1 text-[10px] tracking-widest text-zinc-500"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.1, duration: 0.5 }}
         >
           {APP_VERSION}
         </motion.p>
+
+        {/* Update tersedia → tombol download + changelog dalam kotak scrollable */}
+        {updateAvailable && (
+          <motion.div
+            className="absolute inset-x-6 bottom-10"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9 }}
+          >
+            {dlState !== "done" ? (
+              <div className="rounded-2xl border border-violet-500/40 bg-card/90 p-4">
+                <p className="text-center text-xs font-semibold text-violet-300">
+                  Update {UPDATE_VERSION} tersedia
+                </p>
+                {dlState === "downloading" && (
+                  <Progress value={dlPct} className="mt-2 h-1.5" />
+                )}
+                <button
+                  onClick={startDownload}
+                  disabled={dlState === "downloading"}
+                  className="mt-3 w-full rounded-full bg-violet-600 py-2.5 text-sm font-bold text-white transition hover:bg-violet-500 disabled:opacity-60"
+                >
+                  {dlState === "downloading"
+                    ? `Mengunduh… ${dlPct}%`
+                    : "Mulai download update"}
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-border bg-card/90 p-4">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-green-400">
+                  <Sparkles className="size-3.5" /> Update selesai — versi terbaru
+                </p>
+                <button
+                  onClick={() => setChangelogOpen((v) => !v)}
+                  className="mt-2 flex w-full items-center justify-between text-xs font-semibold text-zinc-300"
+                >
+                  Apa yang diperbarui?
+                  {changelogOpen ? (
+                    <ChevronUp className="size-3.5" />
+                  ) : (
+                    <ChevronDown className="size-3.5" />
+                  )}
+                </button>
+                {changelogOpen && (
+                  <div className="thin-scroll mt-2 max-h-40 overflow-y-auto rounded-lg border border-border/60 bg-black/30 p-2.5">
+                    <ul className="list-inside list-disc space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+                      {UPDATE_BODY.map((line, i) => (
+                        <li key={i}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     );
   }
@@ -250,12 +338,12 @@ function WelcomeFlow() {
                       transition={{ delay: i * 0.05 }}
                     >
                       <p className="flex items-center gap-2 text-[13px] font-semibold">
-                        <span className="flex size-4.5 items-center justify-center rounded bg-violet-600/20 text-[9px] font-bold text-violet-400">
+                        <span className="flex size-4 items-center justify-center rounded bg-violet-600/20 text-[9px] font-bold text-violet-400">
                           {i + 1}
                         </span>
                         {title}
                       </p>
-                      <p className="mt-0.5 pl-6.5 text-[11px] leading-snug text-muted-foreground">
+                      <p className="mt-0.5 pl-6 text-[11px] leading-snug text-muted-foreground">
                         {desc}
                       </p>
                     </motion.div>
