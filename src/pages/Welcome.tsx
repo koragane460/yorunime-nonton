@@ -250,9 +250,9 @@ function WelcomeFlow() {
             <div
               ref={noticeRef}
               onScroll={() => onScrollProgress(noticeRef, () => setStage("rules"))}
-              className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
+              className="h-full overflow-y-auto overscroll-contain"
             >
-              <div className="flex min-h-full snap-start flex-col px-5 py-10">
+              <div className="flex min-h-full flex-col px-5 py-10">
                 <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-violet-400">
                   YoruNime
                 </p>
@@ -311,9 +311,9 @@ function WelcomeFlow() {
             <div
               ref={rulesRef}
               onScroll={() => onScrollProgress(rulesRef, () => setStage("login"))}
-              className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
+              className="h-full overflow-y-auto overscroll-contain"
             >
-              <div className="flex min-h-full snap-start flex-col px-5 py-10">
+              <div className="flex min-h-full flex-col px-5 py-10">
                 <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-violet-400">
                   Wajib dibaca
                 </p>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
@@ -75,17 +75,32 @@ function ClanContent() {
   const { user } = useAuth();
   const [params] = useSearchParams();
   const my = useQuery(api.clans.myMembership, user ? {} : "skip");
+  // Setelah buat clan: langsung tampilkan chat clan pakai ID dari hasil create
+  // sampai data membership baru keluar dari server (anti balik ke list clan).
+  const [freshClanId, setFreshClanId] = useState<Id<"clans"> | null>(null);
 
-  if (my === undefined)
+  if (my === undefined && !freshClanId)
     return <p className="py-20 text-center text-sm text-muted-foreground">Memuat…</p>;
 
-  if (my === null) return <NoClan initialCreate={params.get("buat") === "1"} />;
-  return <ClanHub clanId={my.clanId as Id<"clans">} />;
+  if (my) return <ClanHub clanId={my.clanId as Id<"clans">} />;
+  if (freshClanId) return <ClanHub clanId={freshClanId} />;
+  return (
+    <NoClan
+      initialCreate={params.get("buat") === "1"}
+      onCreated={(id) => setFreshClanId(id)}
+    />
+  );
 }
 
 // --------------------------------------------------------- belum join ----
 
-function NoClan({ initialCreate }: { initialCreate?: boolean }) {
+function NoClan({
+  initialCreate,
+  onCreated,
+}: {
+  initialCreate?: boolean;
+  onCreated?: (clanId: Id<"clans">) => void;
+}) {
   const [mode, setMode] = useState<"none" | "buat" | "gabung">(
     initialCreate ? "buat" : "none",
   );
@@ -98,36 +113,20 @@ function NoClan({ initialCreate }: { initialCreate?: boolean }) {
 
   return (
     <div className="py-6">
-      <div className="clan-hero-gradient flex flex-col items-center justify-center rounded-3xl border border-white/10 p-6 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-black/30 text-2xl">
-          ⚔️
-        </div>
-        <h1 className="mt-3 text-lg font-bold">Kamu belum join clan</h1>
-        <p className="mt-1 text-sm text-white/60">
-          Join clan untuk mendapatkan Sacret dan buat clan mu nomor 1
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Daftar Clan ({(clans ?? []).length})
         </p>
-        <div className="mx-auto mt-5 flex w-64 flex-col gap-2">
-          <button
-            onClick={() => setMode("buat")}
-            className="w-full rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
-          >
-            Buat Clan
-          </button>
-          <button
-            onClick={() => setMode("gabung")}
-            className="w-full rounded-full border border-white/20 bg-white/5 py-3 font-semibold text-white transition hover:bg-white/10"
-          >
-            Lihat Clan
-          </button>
-        </div>
+        <button
+          onClick={() => setMode("buat")}
+          className="shrink-0 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500"
+        >
+          + Buat Clan
+        </button>
       </div>
 
-      {/* List clan langsung tampil di bawah hero — bisa dilihat & join tanpa buka layar lain */}
-      {mode !== "buat" && (
-        <div className="mt-5 space-y-2">
-          <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Daftar Clan ({(clans ?? []).length})
-          </p>
+      {/* List clan langsung tampil di atas — bisa dilihat & join tanpa buka layar lain */}
+      <div className="mt-3 space-y-2">
           {(clans ?? []).length === 0 && (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Belum ada clan. Jadilah yang pertama!
@@ -167,23 +166,30 @@ function NoClan({ initialCreate }: { initialCreate?: boolean }) {
               </div>
             </div>
           ))}
-        </div>
-      )}
+      </div>
 
-      {mode === "buat" && <CreateClan onCreated={() => setMode("none")} />}
+      {mode === "buat" && (
+        <CreateClan
+          onCreated={(id) => {
+            setMode("none");
+            onCreated?.(id); // → ClanContent langsung render chat clan
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ------------------------------------------------------------ buat clan ----
 
-function CreateClan({ onCreated }: { onCreated: () => void }) {
+function CreateClan({ onCreated }: { onCreated: (clanId: Id<"clans">) => void }) {
   const create = useMutation(api.clans.createClan);
   const [icon, setIcon] = useState(TAG_ICONS[0]);
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [avatar, setAvatar] = useState("");
   const [busy, setBusy] = useState(false);
+  useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background p-3">
@@ -271,9 +277,9 @@ function CreateClan({ onCreated }: { onCreated: () => void }) {
             onClick={async () => {
               setBusy(true);
               try {
-                await create({ name, tag, tagIcon: icon, avatarUrl: avatar });
-                toast.success("Clan dibuat! Mengarahkan ke chat clan…");
-                onCreated(); // App auto-switch ke ClanHub → chat clan
+                const r = await create({ name, tag, tagIcon: icon, avatarUrl: avatar });
+                toast.success("Clan dibuat! Membuka chat clan…");
+                onCreated(r.clanId); // App auto-switch ke chat clan
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Gagal");
                 setBusy(false);
@@ -500,6 +506,7 @@ function ClanDetail({
   const [donateOpen, setDonateOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
 
   if (!detail) return null;
   const c = detail.clan;
