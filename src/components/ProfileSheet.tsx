@@ -4,7 +4,6 @@ import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui"
 import {
   ChevronLeft,
   Gem,
-  X,
   MessageSquare,
   History as HistoryIcon,
   Heart,
@@ -56,14 +55,6 @@ export function ProfileSheet({
             >
               <ChevronLeft className="size-4" />
             </button>
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-3 rounded-full bg-black/60 p-2 text-white"
-              aria-label="Tutup profil"
-            >
-              <X className="size-4" />
-            </button>
-
             {/* Foto profile setengah menutupi banner, di tengah */}
             <div className="relative -mt-10 flex justify-center">
               <Avatar
@@ -113,7 +104,7 @@ export function ProfileSheet({
               </div>
             </div>
 
-            {/* Diamond saja — jumlah hari premium tidak ditampilkan di detail akun */}
+            {/* Sacret saja — jumlah hari premium tidak ditampilkan di detail akun */}
             <div className="mt-3 flex items-center justify-center gap-4 text-xs">
               <span className="flex items-center gap-1 font-semibold text-cyan-300">
                 <Gem className="size-3.5" /> {profile.diamonds.toLocaleString("id-ID")}

@@ -121,9 +121,9 @@ function PremiumContent() {
     <div className="py-3" key={paidTick}>
       <div className="bg-hero-gradient pop-enter rounded-2xl border border-white/10 p-5 text-center">
         <Crown className="mx-auto size-12 text-amber-300" />
-        <h1 className="mt-2 text-xl font-black">LStream Premium</h1>
+        <h1 className="mt-2 text-xl font-black">YoruNime Premium</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Buka semua fitur terbaik, dukung LStream terus berkembang
+          Buka semua fitur terbaik, dukung YoruNime terus berkembang
         </p>
       </div>
 

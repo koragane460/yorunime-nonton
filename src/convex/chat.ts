@@ -1,4 +1,4 @@
-// LStream — chat global / DM / clan + give premium + notifikasi sosial.
+// YoruNime — chat global / DM / clan + give premium + notifikasi sosial.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";

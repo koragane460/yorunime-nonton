@@ -1,4 +1,4 @@
-// LStream — akun: bootstrap profil, pengaturan, banner, leaderboard total.
+// YoruNime — akun: bootstrap profil, pengaturan, banner, leaderboard total.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";

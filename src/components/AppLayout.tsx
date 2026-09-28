@@ -50,9 +50,9 @@ export function AppLayout({
   const showPanel = !hideAccountPanel && isHome && location.pathname === "/home";
 
   return (
-    <div className="flex min-h-dvh w-full flex-col">
+    <div className="flex min-h-dvh w-full flex-col items-center">
       {showPanel && user && (
-        <div className="w-full bg-background px-4">
+        <div className="w-full max-w-md bg-background px-4 md:max-w-2xl lg:max-w-4xl">
           <AccountPanel
             onOpen={() => navigate("/akun")}
             name={user.username ?? "user"}
@@ -75,8 +75,11 @@ export function AppLayout({
           />
         </div>
       )}
-      {/* Animasi halus setiap kali layar berpindah */}
-      <div key={location.pathname} className="screen-enter flex w-full flex-1 flex-col px-4">
+      {/* Animasi halus setiap kali layar berpindah — konten terpusat di PC */}
+      <div
+        key={location.pathname}
+        className="screen-enter flex w-full max-w-md flex-1 flex-col px-4 md:max-w-2xl lg:max-w-4xl"
+      >
         {children}
       </div>
       <BottomNav />
@@ -404,7 +407,7 @@ function BottomNav() {
     <>
       {/* Navbar lurus full-width, solid — tanpa footer teks */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
-        <div className="grid w-full grid-cols-4">
+        <div className="mx-auto grid w-full max-w-md grid-cols-4 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
             const base = it.path.split("?")[0];
             const active =

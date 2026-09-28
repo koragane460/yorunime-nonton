@@ -17,7 +17,7 @@ const FEATURES = [
   {
     icon: MessagesSquare,
     title: "Chat bareng & Clan",
-    desc: "Ngobrol sambil nonton, bikin clan, donate berlian, dan level up clan sampai 200.",
+    desc: "Ngobrol sambil nonton, bikin clan, donate Sacret, dan level up clan sampai 200.",
   },
   {
     icon: Crown,
@@ -31,8 +31,8 @@ const FEATURES = [
   },
   {
     icon: Gem,
-    title: "Diamond & Absen",
-    desc: "Absen 7 hari, main game klik, tukar diamond dengan premium.",
+    title: "Sacret & Absen",
+    desc: "Absen 7 hari, main game klik, tukar Sacret dengan premium.",
   },
 ];
 
@@ -49,10 +49,10 @@ export default function Landing() {
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <span className="rounded-lg bg-amber-300 px-2 py-1 text-lg font-black text-black">
-            L
+            Y
           </span>
           <span className="text-lg font-black tracking-tight">
-            L<span className="text-amber-300">Stream</span>
+            Y<span className="text-amber-300">oruNime</span>
           </span>
         </div>
         <Button
@@ -82,8 +82,8 @@ export default function Landing() {
           clanmu
         </motion.h1>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
-          LStream menggabungkan streaming anime, chat global, clan, leaderboard XP, give
-          premium, dan diamond game dalam satu tempat.
+          YoruNime menggabungkan streaming anime, chat global, clan, leaderboard XP, give
+          premium, dan Sacret game dalam satu tempat.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button
@@ -159,7 +159,7 @@ export default function Landing() {
         <div className="rounded-3xl border border-amber-300/40 bg-gradient-to-br from-amber-300/20 to-transparent p-10 text-center">
           <h2 className="text-2xl font-black">Siap jadi top 1?</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Daftar gratis, dapat 45.000 diamond untuk new user, dan langsung tancap gas.
+            Daftar gratis, dapat 45.000 Sacret untuk new user, dan langsung tancap gas.
           </p>
           <Button
             size="lg"
@@ -172,7 +172,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-border/60 bg-black py-6 text-center text-xs text-zinc-500">
-        LStream © {new Date().getFullYear()} — Nonton anime sub Indonesia
+        YoruNime © {new Date().getFullYear()} — Nonton anime sub Indonesia
       </footer>
     </motion.div>
   );

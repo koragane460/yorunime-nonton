@@ -1,4 +1,4 @@
-// LStream — history, komentar anime (like/reply/populer), favorite, notifikasi.
+// YoruNime — history, komentar anime (like/reply/populer), favorite, notifikasi.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";

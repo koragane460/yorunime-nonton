@@ -1,4 +1,4 @@
-// LStream — pembelian premium via Midtrans Snap (DANA / QRIS / GoPay / VA).
+// YoruNime — pembelian premium via Midtrans Snap (DANA / QRIS / GoPay / VA).
 // Isi MIDTRANS_SERVER_KEY di tab Keys untuk mengaktifkan pembayaran nyata.
 // Tanpa key: pembelian dicatat sebagai "menunggu pembayaran" + trial 1 hari.
 
@@ -87,7 +87,7 @@ export const createSnapTransaction = action({
     if (userId === null) throw new Error("Not signed in");
     const plan = PLANS[planId];
     if (!plan) throw new Error("Paket tidak ada");
-    const orderId = `LSTREAM-${userId.slice(0, 8)}-${Date.now()}`;
+    const orderId = `YORUNIME-${userId.slice(0, 8)}-${Date.now()}`;
     await ctx.runMutation(internal.payments.insertPurchase, {
       userId,
       planId,
@@ -126,7 +126,7 @@ export const createSnapTransaction = action({
             id: planId,
             price: plan.price,
             quantity: 1,
-            name: `LStream Premium ${plan.label}`,
+            name: `YoruNime Premium ${plan.label}`,
           },
         ],
         customer_details: { user_id: userId },

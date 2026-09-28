@@ -1,4 +1,4 @@
-// LStream — shop premium (beli pakai berlian) & klik game.
+// YoruNime — shop premium (beli pakai Sacret) & klik game.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";

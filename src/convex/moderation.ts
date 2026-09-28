@@ -1,4 +1,4 @@
-// LStream — moderation helpers + dev/mod panel backend.
+// YoruNime — moderation helpers + dev/mod panel backend.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import {

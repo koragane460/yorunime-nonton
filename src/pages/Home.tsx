@@ -8,7 +8,6 @@ import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck } from "@/compone
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import {
-  Crown,
   Search,
   ChevronLeft,
   ChevronRight,

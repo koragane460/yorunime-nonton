@@ -1,4 +1,4 @@
-// LStream — penyedia data anime (Otakudesu via ANIME_API_BASE + Jikan rate-limit guard + fallback statis)
+// YoruNime — penyedia data anime (Otakudesu via ANIME_API_BASE + Jikan rate-limit guard + fallback statis)
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -78,7 +78,7 @@ function jikanEnqueue<T>(fn: () => Promise<T>): Promise<T> {
 
 async function fetchJson(url: string, timeoutMs = 12_000): Promise<any> {
   const res = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "LStream/1.0" },
+    headers: { Accept: "application/json", "User-Agent": "YoruNime/1.0" },
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`Upstream ${res.status}: ${url}`);
@@ -660,7 +660,7 @@ export const animeEpisode = action({
         episodeId,
         animeId,
         title: `Episode ${num}`,
-        sources: [{ label: "LStream Demo", url: demos[num % demos.length], type: "mp4" }],
+        sources: [{ label: "YoruNime Demo", url: demos[num % demos.length], type: "mp4" }],
         demo: true,
       };
     }),

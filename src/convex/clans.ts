@@ -1,4 +1,4 @@
-// LStream — clan: buat/join/roles/donate/level/claim/panel.
+// YoruNime — clan: buat/join/roles/donate/level/claim/panel.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
 import { v } from "convex/values";
@@ -429,8 +429,8 @@ export const donate = mutation({
     if (!me) throw new Error("User not found");
     const res = await myClan(ctx, userId);
     if (!res) throw new Error("Kamu belum join clan");
-    if (amount < 50) throw new Error("Minimal 50 berlian");
-    if ((me.diamonds ?? 0) < amount) throw new Error("Berlian tidak cukup");
+    if (amount < 50) throw new Error("Minimal 50 Sacret");
+    if ((me.diamonds ?? 0) < amount) throw new Error("Sacret tidak cukup");
     const today = dayString();
     const member = res.member;
     const donatedToday = member.lastDonateDay === today ? member.donatedToday : 0;
