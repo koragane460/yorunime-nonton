@@ -127,10 +127,15 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
-  // Login tester (mode test): ID 1 / rikoganteng
+  // Login tester (mode test): ID #1 / ytta
   const handleTesterLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (testerPass !== "rikoganteng") {
+    const id = testerId.trim().replace(/^#/, "");
+    if (id !== "1") {
+      setError("ID tester salah. Gunakan #1.");
+      return;
+    }
+    if (testerPass !== "ytta") {
       setError("Password tester salah.");
       return;
     }
@@ -157,7 +162,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </div>
                   <CardTitle className="text-xl">Selamat datang</CardTitle>
                   <CardDescription>
-                    Masuk ke LStream untuk melanjutkan
+                    Masuk ke YoruNime untuk melanjutkan
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3 pb-6">
@@ -318,7 +323,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     <Input
                       value={testerId}
                       onChange={(e) => setTesterId(e.target.value)}
-                      placeholder="ID akun (1)"
+                      placeholder="ID akun (#1)"
                       disabled={isLoading}
                       required
                     />
@@ -362,7 +367,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             )}
 
             <div className="rounded-b-lg border-t bg-muted px-6 py-4 text-center text-xs text-muted-foreground">
-              LStream — mode test
+              YoruNime — mode test
             </div>
           </Card>
         </div>
