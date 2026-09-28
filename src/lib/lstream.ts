@@ -49,6 +49,34 @@ export function badgeForLevel(level: number) {
   return { name: "Bronze", icon: "🪵", cls: "bg-gradient-to-r from-amber-700 to-amber-900" };
 }
 
+/** Daftar tier badge + level minimum dapatnya (untuk popup daftar badge). */
+export const LEVEL_BADGE_TIERS = [
+  { name: "Bronze", icon: "🪵", minLevel: 1, cls: "from-amber-700 to-amber-900", fx: "badge-shine" },
+  { name: "Silver", icon: "🪙", minLevel: 50, cls: "from-slate-300 to-slate-500", fx: "badge-shine animate-pulse" },
+  { name: "Diamond", icon: "🔷", minLevel: 100, cls: "from-cyan-300 to-sky-500", fx: "badge-shine shadow-[0_0_14px_2px] shadow-cyan-400/50" },
+  { name: "Emerald", icon: "💎", minLevel: 500, cls: "from-emerald-500 to-emerald-700", fx: "badge-shine animate-pulse shadow-[0_0_16px_3px] shadow-emerald-400/50" },
+  { name: "Master", icon: "🔮", minLevel: 1001, cls: "from-red-700 to-red-400", fx: "badge-shine shadow-[0_0_18px_4px] shadow-red-500/50" },
+  { name: "Grandmaster", icon: "👑", minLevel: 5000, cls: "from-red-600 via-fuchsia-600 to-slate-200", fx: "badge-shine animate-pulse shadow-[0_0_22px_5px] shadow-fuchsia-500/60" },
+] as const;
+
+/** Warna username random yang stabil per username (palet vivid, tetap kebaca di dark). */
+export function usernameColor(username?: string) {
+  const palette = [
+    "text-rose-300",
+    "text-amber-300",
+    "text-emerald-300",
+    "text-cyan-300",
+    "text-sky-300",
+    "text-violet-300",
+    "text-fuchsia-300",
+    "text-lime-300",
+    "text-orange-300",
+    "text-teal-300",
+  ];
+  const n = username ? [...username].reduce((s, c) => s + c.charCodeAt(0), 0) : 0;
+  return palette[n % palette.length];
+}
+
 /** ID tampil: #nomor urut kalau ada, fallback 6 karakter akhir id. */
 export function displayId(seqId?: number, rawId?: string) {
   if (seqId !== undefined && seqId !== null) return `#${seqId}`;

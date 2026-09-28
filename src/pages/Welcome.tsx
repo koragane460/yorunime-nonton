@@ -2,28 +2,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Loader2, ShieldCheck } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
-/** Scroll-hint pakai framer-motion: siluet panah + "Gulir ke atas/bawah". */
+/** Scroll-hint: siluet panah beranimasi + teks perintah scroll. */
 function ScrollHint({ dir }: { dir: "up" | "down" }) {
   const Icon = dir === "up" ? ChevronUp : ChevronDown;
   const label = dir === "up" ? "Gulir ke atas" : "Gulir ke bawah";
   return (
-    <div className="flex flex-col items-center gap-1.5 py-4 text-muted-foreground">
+    <div className="flex flex-col items-center gap-1 pb-3 pt-4 text-muted-foreground">
       <motion.div
-        animate={{ y: dir === "up" ? [-4, 4, -4] : [4, -4, 4] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ y: dir === "up" ? [-5, 5, -5] : [5, -5, 5] }}
+        transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
       >
-        <Icon className="size-6" />
+        <Icon className="size-5" />
       </motion.div>
-      <span className="text-xs tracking-wide">{label}</span>
+      <span className="text-[11px] tracking-wide">{label}</span>
     </div>
   );
 }
 
-/** Backdrop bintang sederhana — div acak berkelip. */
+/** Backdrop bintang. */
 function Starfield() {
   const stars = useRef(
     Array.from({ length: 40 }, (_, i) => ({
@@ -31,7 +39,7 @@ function Starfield() {
       left: (i * 37 + 13) % 100,
       top: (i * 53 + 29) % 100,
       delay: (i % 10) * 0.4,
-      dur: 2.4 + (i % 5) * 0.5,
+      dur: 2.2 + (i % 5) * 0.5,
     })),
   );
   return (
@@ -53,24 +61,22 @@ function WelcomeFlow() {
   const navigate = useNavigate();
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const [stage, setStage] = useState<"intro" | "notice" | "rules" | "login">("intro");
+  const [testerOpen, setTesterOpen] = useState(false);
   const [testerId, setTesterId] = useState("#1");
   const [testerPass, setTesterPass] = useState("");
   const [testerError, setTesterError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
 
-  // Sudah login → langsung ke home.
   useEffect(() => {
     if (!authLoading && isAuthenticated) navigate("/home", { replace: true });
   }, [authLoading, isAuthenticated, navigate]);
 
-  // Intro animasi "YoruNime" 2.6 detik → screen 1.
   useEffect(() => {
     if (stage !== "intro") return;
-    const t = setTimeout(() => setStage("notice"), 2600);
+    const t = setTimeout(() => setStage("notice"), 1800);
     return () => clearTimeout(t);
   }, [stage]);
 
-  // Screen 1 & 2: progress saat user scroll sampai bawah (atau tekan tombol lompat).
   const noticeRef = useRef<HTMLDivElement>(null);
   const rulesRef = useRef<HTMLDivElement>(null);
 
@@ -80,7 +86,7 @@ function WelcomeFlow() {
   ) => {
     const el = ref.current;
     if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 12) done();
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 16) done();
   };
 
   const doLogin = async () => {
@@ -115,19 +121,27 @@ function WelcomeFlow() {
         <Starfield />
         <motion.h1
           className="bg-gradient-to-r from-violet-300 via-white to-violet-400 bg-clip-text px-6 text-center text-4xl font-black tracking-[0.2em] text-transparent"
-          initial={{ opacity: 0, scale: 0.8, filter: "blur(8px)" }}
+          initial={{ opacity: 0, scale: 0.82, filter: "blur(10px)" }}
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          transition={{ duration: 1.1, ease: "easeOut" }}
+          transition={{ duration: 0.85, ease: "easeOut" }}
         >
           YoruNime
         </motion.h1>
         <motion.p
-          className="absolute bottom-16 text-xs text-muted-foreground"
+          className="absolute bottom-14 text-xs text-muted-foreground"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
+          transition={{ delay: 0.7, duration: 0.6 }}
         >
           Nonton anime, temukan komunitasmu
+        </motion.p>
+        <motion.p
+          className="absolute bottom-7 text-[10px] tracking-widest text-zinc-500"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.1, duration: 0.5 }}
+        >
+          {APP_VERSION}
         </motion.p>
       </div>
     );
@@ -140,45 +154,43 @@ function WelcomeFlow() {
           <motion.section
             key="notice"
             className="absolute inset-0 flex flex-col"
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -40 }}
-            transition={{ duration: 0.35 }}
+            exit={{ opacity: 0, y: -32 }}
+            transition={{ duration: 0.28 }}
           >
             <div
               ref={noticeRef}
-              onScroll={() =>
-                onScrollProgress(noticeRef, () => setStage("rules"))
-              }
+              onScroll={() => onScrollProgress(noticeRef, () => setStage("rules"))}
               className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
             >
-              <div className="flex min-h-full snap-start flex-col px-6 py-14">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-400">
+              <div className="flex min-h-full snap-start flex-col px-5 py-10">
+                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-violet-400">
                   YoruNime
                 </p>
-                <h2 className="mt-3 text-3xl font-extrabold leading-tight">
+                <h2 className="mt-2 text-2xl font-extrabold leading-tight">
                   Mohon perhatiannya
                 </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Hal-hal penting tentang YoruNime sebelum kamu mulai:
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Hal penting sebelum kamu mulai:
                 </p>
-                <ol className="mt-6 space-y-3">
+                <ol className="mt-5 space-y-2.5">
                   {[
                     "YoruNime adalah platform streaming anime untuk komunitas.",
-                    "Semua progres nonton, XP, dan level tersimpan otomatis di akunmu.",
-                    "Kumpulkan diamond & naikkan level lewat aktivitas harian.",
-                    "Buat clan atau join clan untuk chat bareng dan donasi berlian.",
+                    "Progres nonton, XP, dan level tersimpan otomatis di akunmu.",
+                    "Kumpulkan Sacret & naikkan level lewat aktivitas harian.",
+                    "Buat clan atau join clan untuk chat bareng & donasi Sacret.",
                     "Bawakan dirimu dengan sopan — toxic = banned.",
                   ].map((t, i) => (
                     <motion.li
                       key={i}
-                      className="flex gap-3 rounded-xl border border-border/70 bg-card/60 p-3.5 text-sm leading-relaxed"
-                      initial={{ opacity: 0, x: -16 }}
+                      className="flex items-start gap-2.5 rounded-xl border border-border/70 bg-card/60 p-3 text-[13px] leading-snug"
+                      initial={{ opacity: 0, x: -14 }}
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
-                      transition={{ delay: i * 0.06 }}
+                      transition={{ delay: i * 0.05 }}
                     >
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
                         {i + 1}
                       </span>
                       <span>{t}</span>
@@ -203,49 +215,47 @@ function WelcomeFlow() {
           <motion.section
             key="rules"
             className="absolute inset-0 flex flex-col"
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -40 }}
-            transition={{ duration: 0.35 }}
+            exit={{ opacity: 0, y: -32 }}
+            transition={{ duration: 0.28 }}
           >
             <div
               ref={rulesRef}
-              onScroll={() =>
-                onScrollProgress(rulesRef, () => setStage("login"))
-              }
+              onScroll={() => onScrollProgress(rulesRef, () => setStage("login"))}
               className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
             >
-              <div className="flex min-h-full snap-start flex-col px-6 py-14">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-400">
+              <div className="flex min-h-full snap-start flex-col px-5 py-10">
+                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-violet-400">
                   Wajib dibaca
                 </p>
-                <h2 className="mt-3 text-3xl font-extrabold leading-tight">
+                <h2 className="mt-2 text-2xl font-extrabold leading-tight">
                   Peraturan YoruNime
                 </h2>
-                <div className="mt-6 space-y-3">
+                <div className="mt-5 space-y-2.5">
                   {[
-                    ["Dilarang toxic", "Hujat, rasisme, dan ujaran kebencian langsung di-banned permanen."],
-                    ["Dilarang spam", "Jangan flood chat global, komentar, atau DM ke user lain."],
-                    ["Dilarang share link ilegal", "Link phishing, jualan akun, atau konten 18+ dilarang keras."],
-                    ["Hormati sesama", "Beda pendapat boleh, berantam tidak. Clan yang toxic akan dibubarkan."],
-                    ["Satu akun per orang", "Akun alt untuk keuntungan event akan dibekukan."],
-                    ["Laporkan pelanggaran", "Gunakan tombol lapor pada pesan — moderator siaga 24/7."],
+                    ["Dilarang toxic", "Rasisme & ujaran kebencian = banned permanen."],
+                    ["Dilarang spam", "Jangan flood chat global, komentar, atau DM."],
+                    ["Dilarang link ilegal", "Phishing, jualan akun, konten 18+ dilarang keras."],
+                    ["Hormati sesama", "Clan yang toxic akan dibubarkan."],
+                    ["Satu akun per orang", "Akun alt untuk keuntungan event dibekukan."],
+                    ["Laporkan pelanggaran", "Tombol lapor tersedia di setiap pesan."],
                   ].map(([title, desc], i) => (
                     <motion.div
                       key={i}
-                      className="rounded-xl border border-border/70 bg-card/60 p-4"
-                      initial={{ opacity: 0, x: -16 }}
+                      className="rounded-xl border border-border/70 bg-card/60 p-3"
+                      initial={{ opacity: 0, x: -14 }}
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
-                      transition={{ delay: i * 0.06 }}
+                      transition={{ delay: i * 0.05 }}
                     >
-                      <p className="flex items-center gap-2 text-sm font-semibold">
-                        <span className="flex size-5 items-center justify-center rounded bg-violet-600/20 text-[10px] font-bold text-violet-400">
+                      <p className="flex items-center gap-2 text-[13px] font-semibold">
+                        <span className="flex size-4.5 items-center justify-center rounded bg-violet-600/20 text-[9px] font-bold text-violet-400">
                           {i + 1}
                         </span>
                         {title}
                       </p>
-                      <p className="mt-1 pl-7 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-0.5 pl-6.5 text-[11px] leading-snug text-muted-foreground">
                         {desc}
                       </p>
                     </motion.div>
@@ -269,18 +279,28 @@ function WelcomeFlow() {
           <motion.section
             key="login"
             className="absolute inset-0 flex flex-col items-center justify-center px-8"
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: 0.3 }}
           >
-            <p className="text-center text-sm font-bold uppercase tracking-wider text-foreground">
-              YORUNIME MENGHARUSKAN MU UNTUK LOGIN DENGAN GOOGLE AGAR TER-SAVE
-              DATA MU
+            <motion.div
+              className="flex size-16 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-[0_0_40px_-6px] shadow-violet-500/60"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            >
+              <Sparkles className="size-7 text-white" />
+            </motion.div>
+            <h2 className="mt-5 text-xl font-black tracking-wide">YoruNime</h2>
+            <p className="mt-2 max-w-xs text-center text-[11px] font-bold uppercase leading-relaxed tracking-wider text-zinc-300">
+              Yorunime mengharuskan mu untuk login dengan google agar ter-save
+              data mu
             </p>
+
             <Button
               onClick={doLogin}
               disabled={loggingIn}
-              className="mt-8 flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-xl bg-white text-sm font-semibold text-black hover:bg-white/90"
+              className="mt-7 flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-2xl bg-white text-sm font-bold text-black shadow-lg transition hover:bg-white/90 active:scale-[0.98]"
             >
               {loggingIn ? (
                 <Loader2 className="size-5 animate-spin" />
@@ -290,7 +310,7 @@ function WelcomeFlow() {
               Login dengan Google
             </Button>
 
-            <div className="my-8 flex w-full max-w-xs items-center gap-3">
+            <div className="my-7 flex w-full max-w-xs items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 atau
@@ -298,43 +318,54 @@ function WelcomeFlow() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            <form
-              onSubmit={doTesterLogin}
-              className="w-full max-w-xs space-y-3"
+            {/* Tombol tester → klik baru muncul kolom (animasi turun) */}
+            <button
+              onClick={() => setTesterOpen((v) => !v)}
+              className="flex items-center gap-2 text-xs font-semibold text-zinc-400 transition hover:text-violet-300"
             >
-              <p className="text-center text-xs font-medium text-muted-foreground">
-                Login tester
-              </p>
-              <Input
-                value={testerId}
-                onChange={(e) => setTesterId(e.target.value)}
-                placeholder="ID akun (#1)"
-                className="h-10 rounded-lg border-border bg-card text-center"
-              />
-              <Input
-                value={testerPass}
-                onChange={(e) => setTesterPass(e.target.value)}
-                placeholder="Password"
-                type="password"
-                className="h-10 rounded-lg border-border bg-card text-center"
-              />
-              {testerError && (
-                <p className="text-center text-xs text-red-400">{testerError}</p>
+              <Lock className="size-3.5" /> Tester login only
+            </button>
+            <AnimatePresence>
+              {testerOpen && (
+                <motion.form
+                  onSubmit={doTesterLogin}
+                  className="mt-3 w-full max-w-xs space-y-2.5 overflow-hidden"
+                  initial={{ opacity: 0, height: 0, y: -8 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -8 }}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
+                >
+                  <Input
+                    value={testerId}
+                    onChange={(e) => setTesterId(e.target.value)}
+                    placeholder="ID akun (#1)"
+                    className="h-10 rounded-xl border-border bg-card text-center text-sm"
+                  />
+                  <Input
+                    value={testerPass}
+                    onChange={(e) => setTesterPass(e.target.value)}
+                    placeholder="Password"
+                    type="password"
+                    className="h-10 rounded-xl border-border bg-card text-center text-sm"
+                  />
+                  {testerError && (
+                    <p className="text-center text-xs text-red-400">{testerError}</p>
+                  )}
+                  <Button
+                    type="submit"
+                    disabled={loggingIn}
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                  >
+                    {loggingIn ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="size-4" />
+                    )}
+                    Masuk sebagai tester
+                  </Button>
+                </motion.form>
               )}
-              <Button
-                type="submit"
-                disabled={loggingIn}
-                variant="outline"
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm"
-              >
-                {loggingIn ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <ShieldCheck className="size-4" />
-                )}
-                Masuk sebagai tester
-              </Button>
-            </form>
+            </AnimatePresence>
           </motion.section>
         )}
       </AnimatePresence>

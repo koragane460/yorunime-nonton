@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { avatarFallback } from "@/lib/lstream";
+import { avatarFallback, usernameColor } from "@/lib/lstream";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ const GIVE_XP: Record<number, number> = {
   1: 250, 3: 550, 5: 700, 7: 1000, 15: 2100, 25: 5500, 30: 6900,
 };
 function receiverCost(r: number) {
-  if (r === 5) return 1;
+  if (r === 5) return 0;
   if (r === 15) return 1;
   if (r === 20) return 3;
   if (r === 30) return 4;
@@ -229,6 +229,8 @@ function NsfwScanDialog({
 }) {
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(6);
+  const previewUrl = useRef<string>("");
+  if (!previewUrl.current) previewUrl.current = URL.createObjectURL(file);
 
   useEffect(() => {
     let s = 0;
@@ -265,7 +267,7 @@ function NsfwScanDialog({
         </DialogHeader>
         <div className="space-y-3">
           <img
-            src={URL.createObjectURL(file)}
+            src={previewUrl.current}
             alt="preview"
             className="max-h-40 w-full rounded-lg object-cover"
           />
@@ -457,7 +459,7 @@ export function ChatPanel({
                   )}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-violet-300">{m.username}</span>
+                    <span className={cn("text-xs font-semibold", usernameColor(m.username))}>{m.username}</span>
                     {m.premium && <BlueCheck className="size-3.5" />}
                   </div>
                   {m.replyTo && (

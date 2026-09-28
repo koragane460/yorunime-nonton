@@ -54,6 +54,8 @@ export const updateProfile = mutation({
   handler: async (ctx, { username, image, bannerUrl }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
     const patch: Record<string, unknown> = {};
     if (username !== undefined) {
       const clean = username.trim().replace(/[^a-zA-Z0-9_]/g, "");
@@ -67,6 +69,8 @@ export const updateProfile = mutation({
     }
     if (image !== undefined) patch.image = image;
     if (bannerUrl !== undefined) patch.bannerUrl = bannerUrl;
+    // Mode test: semua akun ID-nya #1
+    if (me.seqId !== 1) patch.seqId = 1;
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
   },
@@ -161,15 +165,8 @@ export const topGive = query({
       }))
       .sort((a, b) => b.days - a.days)
       .slice(0, limit);
-    // Dummy pemberi premium
-    const dummies = [
-      { userId: "dummy-give-0", username: "Haruuu", days: 312, image: undefined },
-      { userId: "dummy-give-1", username: "DivineXDesity", days: 208, image: undefined },
-      { userId: "dummy-give-2", username: "Soraa", days: 154, image: undefined },
-    ];
-    return [...real, ...(real.length === 0 ? dummies : dummies.slice(0, 1))]
-      .sort((a: any, b: any) => b.days - a.days)
-      .slice(0, limit);
+    // Hanya user asli (orang) — tanpa dummy
+    return real;
   },
 });
 
@@ -247,6 +244,16 @@ export const getPublicProfile = query({
       commentCount: comments.length,
       minutesWatched: history.reduce((s, h) => s + (h.minutesWatched ?? 0), 0),
       joinedAt: u.createdAt ?? now,
+      myComments: comments
+        .sort((a: any, b: any) => b.createdAt - a.createdAt)
+        .slice(0, 30)
+        .map((cm: any) => ({
+          _id: cm._id,
+          animeId: cm.animeId,
+          text: cm.text,
+          createdAt: cm.createdAt,
+          likeCount: cm.likes?.length ?? 0,
+        })),
     };
   },
 });

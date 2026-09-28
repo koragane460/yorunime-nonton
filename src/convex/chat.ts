@@ -212,7 +212,7 @@ export const nsfwReport = mutation({
 const DAY_COST: Record<number, number> = {
   1: 2, 3: 4, 5: 6, 7: 9, 15: 17, 20: 23, 25: 30, 30: 32,
 };
-const RECEIVER_COST: Record<number, number> = { 5: 1, 15: 1, 20: 3, 30: 4 };
+const RECEIVER_COST: Record<number, number> = { 5: 0, 15: 1, 20: 3, 30: 4 };
 const DAY_XP: Record<number, number> = {
   1: 250, 3: 550, 5: 700, 7: 1000, 15: 2100, 20: 4000, 25: 5500, 30: 6900,
 };
