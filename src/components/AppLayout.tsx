@@ -126,13 +126,13 @@ function AccountPanel({
   const goto = useNavigate();
   return (
     <div className="pop-enter relative mt-3 w-full">
-      {/* Tombol notifikasi bulat — nempel rapi di pojok kanan atas panel */}
+      {/* Tombol notifikasi — kecil, di samping kanan panel, sejajar */}
       <button
         aria-label="Notifikasi"
         onClick={() => goto("/akun?tab=notif")}
-        className="absolute -right-1 -top-2 z-10 flex size-11 items-center justify-center rounded-full border border-white/25 bg-black/85 text-white shadow-lg"
+        className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow transition hover:border-violet-400"
       >
-        <Bell className="size-[18px] text-white" />
+        <Bell className="size-3.5 text-white" />
       </button>
       <button
         onClick={onOpen}
@@ -185,10 +185,10 @@ function AccountPanel({
           {/* Garis pembatas putih transparan */}
           <div className="my-2.5 h-px bg-white/25" />
 
-          {/* Total diamond + sisa hari premium */}
+          {/* Total Sacret + sisa hari premium */}
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
-              <Gem className="size-3.5" /> {diamonds.toLocaleString("id-ID")}
+              <Gem className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
             </span>
             {premium && (
               <span className="flex items-center gap-1.5 font-semibold text-gold">

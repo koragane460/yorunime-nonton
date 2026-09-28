@@ -12,6 +12,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Check,
   Heart,
   Trophy,
   X,
@@ -204,7 +205,7 @@ function HomeContent() {
                     {a.status ?? "Ongoing"}
                   </span>
                   <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-zinc-300">
+                  <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-zinc-300">
                     {a.synopsis ?? "Sinopsis belum tersedia."}
                   </p>
                   <div className="mt-2.5 flex gap-2">
@@ -835,14 +836,21 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           <h1 className="truncate text-lg font-bold">Chat</h1>
         </div>
         <div className="w-full px-4">
-          <div className="tab-pill-track">
+          {/* Tab tanpa kotak — garis bawah saat aktif */}
+          <div className="flex border-b border-border/60">
             {(["chat", "clan", "teman"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={cn("tab-pill capitalize", tab === t && "tab-pill-active")}
+                className={cn(
+                  "relative flex-1 pb-2.5 pt-1 text-sm font-semibold capitalize transition",
+                  tab === t ? "text-foreground" : "text-muted-foreground",
+                )}
               >
                 {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
+                {tab === t && (
+                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500" />
+                )}
               </button>
             ))}
           </div>
@@ -916,20 +924,23 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
           {tab === "teman" && (
             <div className="flex min-h-0 flex-1 flex-col">
-              {/* Tombol Teman & Request sejajar */}
-              <div className="tab-pill-track mb-3">
-                <button
-                  onClick={() => setFriendTab("teman")}
-                  className={cn("tab-pill", friendTab === "teman" && "tab-pill-active")}
-                >
-                  Teman
-                </button>
-                <button
-                  onClick={() => setFriendTab("request")}
-                  className={cn("tab-pill", friendTab === "request" && "tab-pill-active")}
-                >
-                  Request
-                </button>
+              {/* Tombol Teman & Request sejajar — garis bawah saat aktif */}
+              <div className="mb-3 flex border-b border-border/60">
+                {(["teman", "request"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setFriendTab(t)}
+                    className={cn(
+                      "relative flex-1 pb-2 pt-1 text-sm font-semibold capitalize transition",
+                      friendTab === t ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {t === "teman" ? "Teman" : "Request"}
+                    {friendTab === t && (
+                      <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500" />
+                    )}
+                  </button>
+                ))}
               </div>
 
               {friendTab === "teman" && (
@@ -975,18 +986,33 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                           <p className="truncate text-sm font-semibold">{r.username}</p>
                           <p className="text-xs text-muted-foreground">Meminta request</p>
                         </div>
-                        <ButtonSmall
-                          label="Terima"
+                        <button
                           onClick={async () => {
-                            await respond({ requestId: r.requestId, accept: true });
+                            try {
+                              await respond({ requestId: r.requestId, accept: true });
+                              toast.success(`${r.username} sekarang temanmu!`);
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Gagal terima");
+                            }
                           }}
-                        />
-                        <ButtonSmall
-                          label="Tolak"
+                          aria-label="Terima"
+                          className="flex size-9 items-center justify-center rounded-full border border-green-500/40 bg-green-500/15 text-green-400 transition hover:bg-green-500/30"
+                        >
+                          <Check className="size-4" />
+                        </button>
+                        <button
                           onClick={async () => {
-                            await respond({ requestId: r.requestId, accept: false });
+                            try {
+                              await respond({ requestId: r.requestId, accept: false });
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Gagal tolak");
+                            }
                           }}
-                        />
+                          aria-label="Tolak"
+                          className="flex size-9 items-center justify-center rounded-full border border-red-500/40 bg-red-500/15 text-red-400 transition hover:bg-red-500/30"
+                        >
+                          <X className="size-4" />
+                        </button>
                       </div>
                     ))
                   ) : (
@@ -1074,16 +1100,6 @@ function DMScreen({
   );
 }
 
-function ButtonSmall({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-violet-500"
-    >
-      {label}
-    </button>
-  );
-}
 
 // ------------------------------------------------------- detail screen ----
 

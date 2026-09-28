@@ -1017,10 +1017,7 @@ function LeaderPanel({
   onRespond: (requestId: Id<"clanRequests">, accept: boolean) => Promise<void>;
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId });
-  const [sub, setSub] = useState<"bg" | "roles" | "kick" | "transfer" | "unroles" | "request">(
-    "request",
-  );
-  void sub; void setSub;
+  const [sub, setSub] = useState<"bg" | "roles" | "kick" | "transfer" | "unroles">("bg");
   const [bgUrl, setBgUrl] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [role, setRole] = useState<"officer" | "victro" | "hydler">("officer");
@@ -1065,14 +1062,36 @@ function LeaderPanel({
                 </button>
                 <button
                   onClick={() => void onRespond(r.requestId, false)}
-                  className="rounded-full bg-violet-500/20 p-1.5 text-red-400"
+                  className="rounded-full bg-red-500/20 p-1.5 text-red-400"
+                  aria-label="Tolak request"
                 >
                   <X className="size-4" />
                 </button>
               </div>
             ))}
           </div>
-        )}
+        </div>
+
+        {/* Tab pill panel: Background / Roles / Kick / Transfer */}
+        <div className="tab-pill-track mb-3 flex-wrap">
+          {(
+            [
+              ["bg", "Background"],
+              ["roles", "Add roles"],
+              ["kick", "Kick"],
+              ["transfer", "Transfer Leader"],
+              ...(isLeader ? (["unroles", "UnRoles"] as const) : ([] as const)),
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setSub(k as typeof sub)}
+              className={cn("rounded-full px-3 py-1.5 text-xs", sub === k && "tab-pill-active")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {sub === "bg" && (
           <div className="flex gap-2">

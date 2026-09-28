@@ -387,6 +387,7 @@ export function ChatPanel({
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMsg | null>(null);
   const [blinkId, setBlinkId] = useState<string | null>(null);
+  const [zoomImg, setZoomImg] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
   const [giveOpen, setGiveOpen] = useState(false);
   const [scanFile, setScanFile] = useState<File | null>(null);
@@ -491,7 +492,8 @@ export function ChatPanel({
                         <img
                           src={m.imageUrl}
                           alt="lampiran"
-                          className="mt-1 max-h-48 rounded-lg object-cover"
+                          onClick={() => setZoomImg(m.imageUrl ?? null)}
+                          className="mt-1 max-h-48 cursor-zoom-in rounded-lg object-cover transition hover:opacity-90"
                         />
                       )}
                     </>
@@ -652,6 +654,25 @@ export function ChatPanel({
         peerId={peerId}
       />
       {reportMsg && <ReportDialog msg={reportMsg} onClose={() => setReportMsg(null)} />}
+      {zoomImg && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setZoomImg(null)}
+        >
+          <img
+            src={zoomImg}
+            alt="Foto"
+            className="max-h-[85vh] max-w-full rounded-lg object-contain"
+          />
+          <button
+            onClick={() => setZoomImg(null)}
+            className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white"
+            aria-label="Tutup"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

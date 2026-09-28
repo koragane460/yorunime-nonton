@@ -12,7 +12,7 @@ import {
   SectionTitle,
   ShineBadge,
 } from "@/components/lstream-ui";
-import { STAFF_BADGE, timeAgo, displayId } from "@/lib/lstream";
+import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
 import {
   ChevronLeft,
@@ -24,6 +24,8 @@ import {
   Mail,
   MessageSquare,
   Settings as SettingsIcon,
+  X,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -51,6 +53,7 @@ function AkunContent() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
+  const [badgesOpen, setBadgesOpen] = useState(false);
 
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
@@ -76,7 +79,7 @@ function AkunContent() {
       {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
       <div className="relative">
         <div
-          className="h-28 w-full bg-cover bg-center"
+          className="h-36 w-full bg-cover bg-center"
           style={
             user.bannerUrl
               ? { backgroundImage: `url(${user.bannerUrl})` }
@@ -94,28 +97,34 @@ function AkunContent() {
         </button>
       </div>
 
-      {/* Avatar overlap setengah banner + identitas */}
+      {/* Avatar bulat + background, overlap setengah banner */}
       <div className="w-full px-3">
         <div className="relative -mt-12 flex items-end gap-3">
-          <Avatar
-            src={user.image}
-            seed={user.username}
-            className="size-24 border-4 border-background"
-            online={!user.hideOnline}
-          />
-          <div className="min-w-0 flex-1 pb-1">
+          <div className="rounded-full bg-secondary p-1 ring-2 ring-background">
+            <Avatar
+              src={user.image}
+              seed={user.username}
+              className="size-22"
+              online={!user.hideOnline}
+            />
+          </div>
+          <div className="min-w-0 flex-1 pb-2">
             <div className="flex items-center gap-1.5">
-              <p className="truncate text-lg font-black">{user.username}</p>
+              <p className={cn("truncate text-lg font-black", usernameColor(user.username))}>
+                {user.username}
+              </p>
               {premium && <BlueCheck className="size-5" />}
+              <span className="ml-1 text-xs text-muted-foreground">
+                {displayId(user.seqId, user._id)}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              ID: {displayId(user.seqId, user._id)}
-            </p>
           </div>
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <LevelBadge level={user.level ?? 1} />
+          <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
+            <LevelBadge level={user.level ?? 1} />
+          </button>
           {user.clanTag && (
             <ClanTag
               icon={user.clanTagIcon ?? "⚔️"}
