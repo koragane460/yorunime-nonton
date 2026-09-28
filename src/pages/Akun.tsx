@@ -14,6 +14,7 @@ import {
 } from "@/components/lstream-ui";
 import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
+import { Lock } from "lucide-react";
 import {
   ChevronLeft,
   Crown,
@@ -58,6 +59,7 @@ function AkunContent() {
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const profile = useQuery(api.account.getPublicProfile, user ? { userId: user._id } : "skip");
 
   if (!user) return null;
   const xpInLevel = user.xp ?? 0;
@@ -194,7 +196,7 @@ function AkunContent() {
               {icon} {label}
             </span>
             {tab === k && (
-              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-red-500" />
+              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-violet-500" />
             )}
           </button>
         ))}
@@ -236,9 +238,28 @@ function AkunContent() {
         )}
 
         {tab === "komen" && (
-          <p className="py-8 text-center text-xs text-muted-foreground">
-            Komentarmu akan muncul di sini — buka detail anime untuk berkomentar.
-          </p>
+          <div className="thin-scroll max-h-[50vh] overflow-y-auto">
+            {(profile?.myComments ?? []).map((c) => (
+              <button
+                key={c._id}
+                onClick={() => navigate(`/nonton?anime=${c.animeId}`)}
+                className="block w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
+              >
+                <p className="text-sm">{c.text}</p>
+                <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <span>{timeAgo(c.createdAt)}</span>
+                  <span className="flex items-center gap-0.5">
+                    <Heart className="size-3 text-violet-400" /> {c.likeCount}
+                  </span>
+                </p>
+              </button>
+            ))}
+            {profile && (profile.myComments ?? []).length === 0 && (
+              <p className="py-8 text-center text-xs text-muted-foreground">
+                Belum ada komentar — buka detail anime untuk berkomentar.
+              </p>
+            )}
+          </div>
         )}
       </div>
 
@@ -246,6 +267,7 @@ function AkunContent() {
         <SettingsScreen onClose={() => setSettingsOpen(false)} onSignOut={signOut} />
       )}
       {notifOpen && <NotifScreen onClose={() => setNotifOpen(false)} />}
+      {badgesOpen && <BadgesPopup currentLevel={user.level ?? 1} onClose={() => setBadgesOpen(false)} />}
     </div>
   );
 }
@@ -255,6 +277,77 @@ function Stat({ label, value }: { label: string; value: number | string }) {
     <div className="py-1">
       <p className="text-base font-bold text-foreground">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+// ------------------------------------------------- popup badge level ----
+
+function BadgesPopup({
+  currentLevel,
+  onClose,
+}: {
+  currentLevel: number;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="pop-enter w-full max-w-sm rounded-2xl border border-border bg-card p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-center text-sm font-bold">Badge Level</p>
+        <p className="mt-0.5 text-center text-[11px] text-muted-foreground">
+          Naikkan level untuk membuka badge di bawah ini
+        </p>
+        <div className="mt-3 space-y-2">
+          {LEVEL_BADGE_TIERS.map((t) => {
+            const unlocked = currentLevel >= t.minLevel;
+            return (
+              <div
+                key={t.name}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border p-2.5",
+                  unlocked ? "border-violet-500/50 bg-secondary/40" : "border-border/60 opacity-60",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-10 items-center justify-center rounded-xl bg-gradient-to-br text-lg",
+                    t.cls,
+                    unlocked ? t.fx : "grayscale",
+                  )}
+                >
+                  {unlocked ? t.icon : <Lock className="size-4 text-white/80" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Level {t.minLevel}+
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "text-[10px] font-bold",
+                    unlocked ? "text-emerald-400" : "text-zinc-500",
+                  )}
+                >
+                  {unlocked ? "✓ Didapat" : "🔒 Terkunci"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-3 w-full rounded-xl bg-violet-600 py-2 text-sm font-bold text-white"
+        >
+          Tutup
+        </button>
+      </div>
     </div>
   );
 }
@@ -592,6 +685,7 @@ function SpeedRow({
 
 function NotifScreen({ onClose }: { onClose: () => void }) {
   const notifs = useQuery(api.activities.listNotifications, {});
+  const accept = useMutation(api.friends.respondRequest);
   const icons: Record<string, string> = {
     update: "🔔",
     reply: "↗",
@@ -623,6 +717,38 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
               {n.body && <p className="text-xs text-zinc-400">{n.body}</p>}
               <p className="mt-0.5 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
             </div>
+            {n.type === "friend_request" && n.refId && (
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  aria-label="Terima pertemanan"
+                  onClick={async () => {
+                    try {
+                      await accept({ requestId: n.refId, accept: true });
+                      toast.success("Request diterima");
+                    } catch {
+                      toast.error("Gagal menerima");
+                    }
+                  }}
+                  className="flex size-8 items-center justify-center rounded-full bg-emerald-600 text-white"
+                >
+                  <Check className="size-4" />
+                </button>
+                <button
+                  aria-label="Tolak pertemanan"
+                  onClick={async () => {
+                    try {
+                      await accept({ requestId: n.refId, accept: false });
+                      toast.success("Request ditolak");
+                    } catch {
+                      toast.error("Gagal menolak");
+                    }
+                  }}
+                  className="flex size-8 items-center justify-center rounded-full bg-red-600 text-white"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {notifs && notifs.length === 0 && (

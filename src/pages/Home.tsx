@@ -20,6 +20,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -151,22 +153,22 @@ function HomeContent() {
 
   return (
     <div>
-      {/* 1) BELI PREMIUM */}
+      {/* 1) YORUNIME (pembayaran belum dibuka) */}
       <button
-        onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-red-500/15 via-red-500/5 to-transparent p-3.5 text-left transition hover:border-violet-500/70"
+        onClick={() => toast.info("Segera hadir — sistem pembayaran masih dalam proses 🔒")}
+        className="fade-enter mt-4 flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/15 via-violet-600/5 to-transparent p-3.5 text-left transition hover:border-violet-500/70"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
-          <Crown className="size-6 text-red-400" />
+          <Sparkles className="size-6 text-violet-300" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold">Beli Premium</span>
+          <span className="block text-sm font-bold">YoruNime</span>
           <span className="block text-xs text-zinc-400">
-            Mulai 7 ribuan aja — DANA / QRIS / GoPay / VA
+            Dukung YoruNime — sistem pembayaran segera dibuka
           </span>
         </span>
-        <span className="rounded-full bg-violet-600 px-3.5 py-1.5 text-xs font-bold text-white">
-          Beli
+        <span className="flex items-center gap-1 rounded-full bg-zinc-700/80 px-3.5 py-1.5 text-xs font-bold text-zinc-300">
+          <Lock className="size-3.5" /> Segera
         </span>
       </button>
 
@@ -194,11 +196,7 @@ function HomeContent() {
                 }
               >
                 {!a.image && (
-                  <div className="absolute inset-0 bg-hero-gradient">
-                    <p className="absolute right-3 top-3 text-4xl font-black text-white/10">
-                      LStream
-                    </p>
-                  </div>
+                  <div className="absolute inset-0 bg-hero-gradient" />
                 )}
                 <div className="relative w-full p-4">
                   <span className="rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-black text-white">
