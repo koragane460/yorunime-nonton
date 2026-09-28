@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
-import { useHideNavOnMount } from "@/components/AppLayout";
+import { useHideNavOnMount, useHideNavWhile } from "@/components/AppLayout";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
@@ -107,6 +107,8 @@ function NoClan({
   const clans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
+  // Lihat clan dari list = fullscreen juga (navbar & mini player hilang)
+  useHideNavWhile(detailId !== null);
 
   if (detailId)
     return <ClanDetail clanId={detailId} onBack={() => setDetailId(null)} viewerNotMember />;

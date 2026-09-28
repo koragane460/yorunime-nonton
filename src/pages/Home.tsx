@@ -152,10 +152,10 @@ function HomeContent() {
 
   return (
     <div>
-      {/* 1) YORUNIME (pembayaran belum dibuka) */}
+      {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
-        onClick={() => toast.info("Segera hadir — sistem pembayaran masih dalam proses 🔒")}
-        className="fade-enter mt-4 flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/15 via-violet-600/5 to-transparent p-3.5 text-left transition hover:border-violet-500/70"
+        onClick={() => navigate("/premium")}
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/15 via-violet-600/5 to-transparent p-3.5 text-left transition hover:border-violet-500/70"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
           <Sparkles className="size-6 text-violet-300" />
@@ -166,7 +166,15 @@ function HomeContent() {
             Dukung YoruNime — sistem pembayaran segera dibuka
           </span>
         </span>
-        <span className="flex items-center gap-1 rounded-full bg-zinc-700/80 px-3.5 py-1.5 text-xs font-bold text-zinc-300">
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation(); // jangan ikut navigasi card
+            toast.info("Pembayaran masih dalam proses — segera hadir 🔒");
+          }}
+          className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-zinc-700/80 px-3.5 py-1.5 text-xs font-bold text-zinc-300 transition hover:bg-zinc-600/80"
+        >
           <Lock className="size-3.5" /> Segera
         </span>
       </button>

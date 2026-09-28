@@ -240,6 +240,15 @@ export function useHideNavOnMount() {
   }, []);
 }
 
+/** Sembunyikan navbar selama `active` true (untuk screen buka-tutup, bukan mount-once). */
+export function useHideNavWhile(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    setAppOverlayOpen(true);
+    return () => setAppOverlayOpen(false);
+  }, [active]);
+}
+
 // ------------------------------------------------------ mini player ----
 
 type MiniState = {
