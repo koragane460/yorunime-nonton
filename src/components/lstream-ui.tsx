@@ -38,14 +38,24 @@ export function AnimeCard({
             src={image}
             alt={title}
             loading="lazy"
+            onError={(e) => {
+              // Poster gagal load → ganti tampilan fallback gradient + judul
+              const el = e.currentTarget;
+              el.style.display = "none";
+              el.nextElementSibling?.classList.remove("hidden");
+            }}
             className="size-full object-cover transition duration-300 group-hover:scale-105"
           />
-        ) : (
-          <div className="flex size-full flex-col items-center justify-center gap-1 bg-gradient-to-b from-secondary to-muted text-[10px] text-muted-foreground">
-            <Star className="size-5 opacity-40" />
-            {title.split(" ").slice(0, 2).join(" ")}
-          </div>
-        )}
+        ) : null}
+        <div
+          className={cn(
+            "flex size-full flex-col items-center justify-center gap-1 bg-gradient-to-b from-secondary to-muted text-[10px] text-muted-foreground",
+            image && "hidden",
+          )}
+        >
+          <Star className="size-5 opacity-40" />
+          {title.split(" ").slice(0, 2).join(" ")}
+        </div>
         {rank !== undefined && (
           <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-violet-300">
             #{rank}

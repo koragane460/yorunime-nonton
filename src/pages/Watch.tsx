@@ -56,6 +56,7 @@ function WatchContent() {
   const [recorded, setRecorded] = useState(false);
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed">("mp4");
+  const [sourceIdx, setSourceIdx] = useState(0);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
 
   const [detailData, setDetailData] = useState<any>(null);
@@ -65,6 +66,7 @@ function WatchContent() {
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
   const currentEp = epList[epIndex] ?? epList[0];
   const streamUrl =
+    sources[sourceIdx]?.url ??
     sources[0]?.url ??
     epData?.sources?.[0]?.url ??
     "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
@@ -89,6 +91,7 @@ function WatchContent() {
     if (list.length > 0) {
       setSources(list);
       setSourceType(list[0]?.type === "embed" ? "embed" : "mp4");
+      setSourceIdx(0);
     }
   }, [epData]);
 
@@ -277,6 +280,30 @@ function WatchContent() {
           </div>
         </div>
       </div>
+
+      {/* Pilih server (SUB/DUB dsb.) — tampil kalau ada >1 sumber */}
+      {sources.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
+          <span className="text-[11px] text-muted-foreground">Server:</span>
+          {sources.map((s, i) => (
+            <button
+              key={s.label + i}
+              onClick={() => {
+                setSourceIdx(i);
+                setSourceType(s.type === "embed" ? "embed" : "mp4");
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-semibold transition",
+                i === sourceIdx
+                  ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                  : "border-border bg-card text-muted-foreground hover:border-violet-500/50",
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
       <div className="w-full p-3">
