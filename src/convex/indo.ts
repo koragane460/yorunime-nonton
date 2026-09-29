@@ -73,7 +73,10 @@ function pickEpisode<T extends { title?: string; episode?: number; url?: string 
   if (byTitle) return byTitle;
   const byNumber = list.find((e) => Number(e.episode) === ep);
   if (byNumber) return byNumber;
-  return list[ep - 1] ?? list[0] ?? null;
+  const byIndex = list[ep - 1];
+  // Jangan pernah mengembalikan episode lain: kalau daftar lebih pendek dari
+  // episode yang diminta, lebih baik dianggap tidak ada.
+  return byIndex ?? (ep === 1 ? list[0] ?? null : null);
 }
 
 /** Server embed yang bisa diputar di iframe (mega/filedon = link unduh). */
@@ -218,7 +221,7 @@ async function oploverz(title: string, ep: number): Promise<IndoSource[]> {
     .filter((x) => x.slug && x.score >= 20)
     .sort((a, b) => b.score - a.score);
 
-  for (const cand of ranked.slice(0, 3)) {
+  for (const cand of ranked.slice(0, 5)) {
     const detailKey = `op:${cand.slug}`;
     const detail =
       readCache<any>(slugCache, detailKey) ??
@@ -261,6 +264,10 @@ export async function resolveIndo(
     clean.replace(/\b(\d+)(st|nd|rd|th)\s+season\b/gi, "season $1"),
     clean.replace(/\bseason\s+(\d+)\b/gi, "$1$2 season"),
     clean.replace(/\b(season\s*\d+|\d+(st|nd|rd|th)\s+season)\b/gi, "").trim(),
+    // Judul AniList sering ada sufiks format ("Movie", "TV", "ONA") yang tidak
+    // dipakai di katalog Indo.
+    clean.replace(/\b(movie|tv|ova|ona|special|part\s*\d+)\b/gi, "").trim(),
+    clean.replace(/\b(movie|tv|ova|ona|special)\b/gi, "").replace(/\s+/g, " ").trim(),
   ].filter((v, i, arr) => v.length > 2 && arr.indexOf(v) === i);
 
   // Semua varian dicoba untuk Oploverz dulu supaya serendah mungkin ketemu

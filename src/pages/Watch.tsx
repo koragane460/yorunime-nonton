@@ -591,16 +591,57 @@ function WatchContent() {
         </div>
         )}
 
-        {/* Embed (server Sub Indo): iframe-nya yang harus bisa disentuh, jadi
-            kontrol player disembunyikan & diberi tombol layar penuh sendiri. */}
+        {/* Embed (server Sub Indo): iframe-nya harus bisa disentuh, tapi
+            kerangka/UI-nya tetap milik kita — bar atas & bawah sendiri. */}
         {sourceType === "embed" && streamUrl && (
-          <button
-            onClick={toggleFullscreen}
-            className="absolute right-2 top-2 z-20 rounded-full bg-black/60 p-2"
-            aria-label="Layar penuh"
-          >
-            <Maximize className="size-4 text-white" />
-          </button>
+          <>
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-gradient-to-b from-black/75 to-transparent px-3 py-2">
+              <button
+                onClick={() => navigate("/home")}
+                className="pointer-events-auto rounded-full bg-black/50 p-2"
+                aria-label="Kembali"
+              >
+                <ChevronLeft className="size-4 text-white" />
+              </button>
+              <p className="line-clamp-1 text-xs font-semibold text-white">
+                {D.title}
+                {currentEp ? ` — Ep ${currentEp.number}` : ""}
+              </p>
+              <span className="ml-auto shrink-0 rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                SUB ID
+              </span>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 bg-gradient-to-t from-black/85 to-transparent px-2 py-2">
+              <div className="thin-scroll flex flex-1 gap-1.5 overflow-x-auto">
+                {sources.map((s, i) => (
+                  <button
+                    key={s.label + i}
+                    onClick={() => {
+                      setSourceIdx(i);
+                      setSourceType(
+                        s.type === "embed" ? "embed" : s.type === "hls" ? "hls" : "mp4",
+                      );
+                    }}
+                    className={cn(
+                      "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition",
+                      i === sourceIdx
+                        ? "bg-violet-600 text-white"
+                        : "bg-white/15 text-white/80",
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={toggleFullscreen}
+                className="shrink-0 rounded bg-white/15 p-1.5"
+                aria-label="Layar penuh"
+              >
+                <Maximize className="size-4 text-white" />
+              </button>
+            </div>
+          </>
         )}
 
         {/* Lewati intro (kalau MegaPlay memberi timing intro) */}
@@ -619,8 +660,8 @@ function WatchContent() {
           )}
       </div>
 
-      {/* Pilih server (SUB/DUB dsb.) — tampil kalau ada >1 sumber */}
-      {sources.length > 1 && (
+      {/* Pilih server (SUB/DUB dsb.) — untuk mode HLS/mp4 (player sendiri) */}
+      {sources.length > 1 && sourceType !== "embed" && (
         <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
           <span className="text-[11px] text-muted-foreground">Server:</span>
           {sources.map((s, i) => (
