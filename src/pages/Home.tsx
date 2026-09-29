@@ -193,11 +193,16 @@ function HomeContent() {
               )}
             >
               <div
-                className="relative min-h-60 bg-cover bg-center"
+                className="relative min-h-60 overflow-hidden bg-cover bg-center"
                 style={
                   a.image
                     ? {
-                        backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88) 20%, rgba(0,0,0,.15)), url(${a.image})`,
+                        // Layer 1: vignette vertikal gelap (gradient dari bawah ke atas) agar teks terbaca di bawah
+                        // Layer 2: gambar anime
+                        backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.55) 50%, rgba(0,0,0,.2) 100%), url(${a.image})`,
+                        backgroundSize: "100% 100%, cover",
+                        backgroundPosition: "center bottom, center",
+                        backgroundRepeat: "no-repeat, no-repeat",
                       }
                     : undefined
                 }

@@ -199,7 +199,7 @@ export function Avatar({
   online?: boolean;
 }) {
   return (
-    <span className={cn("relative inline-block", className)}>
+    <span className={cn("relative inline-block overflow-hidden rounded-full bg-secondary", className)}>
       <img
         src={src ?? avatarFallback(seed)}
         alt=""

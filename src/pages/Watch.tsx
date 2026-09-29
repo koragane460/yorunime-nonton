@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
+import Hls from "hls.js";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { CommentsSection, type CommentT } from "@/components/Comments";
@@ -41,6 +42,8 @@ function WatchContent() {
 
   const detail = useAction(api.anime.animeDetail);
   const episode = useAction(api.anime.animeEpisode);
+  // MegaPlay: ambil URL HLS langsung (m3u8) + subtitle + timing intro/outro
+  const resolveDirect = useAction(api.megaplay.resolveEpisode);
   const record = useMutation(api.activities.recordWatch);
   const settings = useQuery(api.users.currentUser, {});
 
@@ -55,9 +58,11 @@ function WatchContent() {
   const [duration, setDuration] = useState(0);
   const [recorded, setRecorded] = useState(false);
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
-  const [sourceType, setSourceType] = useState<"mp4" | "embed">("mp4");
+  const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
   const [sourceIdx, setSourceIdx] = useState(0);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
+  // Hasil resolve MegaPlay: subtitle, timing intro/outro, embed cadangan
+  const [direct, setDirect] = useState<any>(null);
 
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
@@ -81,6 +86,19 @@ function WatchContent() {
       episode({ animeId, episodeId: epParam })
         .then((e: any) => setEpData(e))
         .catch(() => {});
+      // Coba direct HLS untuk episode katalog (format `{malId}__ep{n}`)
+      const mm = epParam.match(/^(\d+)__ep(\d+)$/);
+      if (mm) {
+        resolveDirect({ malId: mm[1], ep: Number(mm[2]) || 1 })
+          .then((d: any) => {
+            if (!d?.ok) return;
+            setDirect(d);
+            setSources(d.sources);
+            setSourceType("hls");
+            setSourceIdx(0);
+          })
+          .catch(() => {});
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, epParam]);
@@ -90,10 +108,38 @@ function WatchContent() {
     const list = (epData?.sources ?? []) as { label: string; url: string; type: string }[];
     if (list.length > 0) {
       setSources(list);
-      setSourceType(list[0]?.type === "embed" ? "embed" : "mp4");
+      setSourceType(
+        list[0]?.type === "embed"
+          ? "embed"
+          : list[0]?.type === "hls"
+            ? "hls"
+            : "mp4",
+      );
       setSourceIdx(0);
     }
   }, [epData]);
+
+  // HLS (m3u8) → hls.js (Safari bisa pakai src bawaan)
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || sourceType !== "hls") return;
+    const native = v.canPlayType("application/vnd.apple.mpegurl");
+    if (!Hls.isSupported() && !native) return;
+    let hls: Hls | null = null;
+    if (Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(v);
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data.fatal) toast.error("Gagal memuat stream — coba server lain");
+      });
+    } else {
+      v.src = streamUrl;
+    }
+    return () => {
+      hls?.destroy();
+    };
+  }, [sourceType, streamUrl]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -155,7 +201,7 @@ function WatchContent() {
         ) : (
           <video
             ref={videoRef}
-            src={streamUrl}
+            src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
             className="aspect-video w-full"
             onPlay={() => setPlaying(true)}
@@ -163,7 +209,17 @@ function WatchContent() {
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
             onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
             controls={false}
-          />
+          >
+            {direct?.subtitle?.url && (
+              <track
+                kind="subtitles"
+                src={direct.subtitle.url}
+                srcLang={direct.subtitle.lang ?? "id"}
+                label={direct.subtitle.label ?? "Subtitle"}
+                default
+              />
+            )}
+          </video>
         )}
         {/* Overlay controls */}
         <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
@@ -235,8 +291,11 @@ function WatchContent() {
                       animeTitle: D.title,
                       animeImage: D.image,
                       episodeNumber: currentEp?.number,
-                      streamUrl: sourceType === "embed" ? streamUrl : streamUrl,
-                      isEmbed: sourceType === "embed",
+                      streamUrl:
+                        sourceType === "hls" && direct?.embedSub
+                          ? direct.embedSub
+                          : streamUrl,
+                      isEmbed: sourceType !== "mp4",
                     });
                     toast.success("Mini player aktif — kembali ke Home");
                     navigate("/home");
@@ -279,6 +338,21 @@ function WatchContent() {
             )}
           </div>
         </div>
+
+        {/* Lewati intro (kalau MegaPlay memberi timing intro) */}
+        {direct?.intro?.start !== undefined &&
+          currentTime >= Number(direct.intro.start) &&
+          currentTime < Number(direct.intro.end) && (
+            <button
+              onClick={() => {
+                const v = videoRef.current;
+                if (v) v.currentTime = Number(direct.intro.end) + 1;
+              }}
+              className="absolute bottom-28 right-3 rounded-full border border-white/50 bg-black/75 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-black"
+            >
+              ⏭ Lewati Intro
+            </button>
+          )}
       </div>
 
       {/* Pilih server (SUB/DUB dsb.) — tampil kalau ada >1 sumber */}
@@ -290,7 +364,9 @@ function WatchContent() {
               key={s.label + i}
               onClick={() => {
                 setSourceIdx(i);
-                setSourceType(s.type === "embed" ? "embed" : "mp4");
+                setSourceType(
+                  s.type === "embed" ? "embed" : s.type === "hls" ? "hls" : "mp4",
+                );
               }}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-semibold transition",

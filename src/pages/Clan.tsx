@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { useHideNavOnMount, useHideNavWhile } from "@/components/AppLayout";
@@ -107,6 +107,9 @@ function NoClan({
   const clans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
+  const back = useNavigate();
+  // Daftar clan = layar fullscreen (navbar bawah & mini player disembunyikan)
+  useHideNavOnMount();
   // Lihat clan dari list = fullscreen juga (navbar & mini player hilang)
   useHideNavWhile(detailId !== null);
 
@@ -114,11 +117,20 @@ function NoClan({
     return <ClanDetail clanId={detailId} onBack={() => setDetailId(null)} viewerNotMember />;
 
   return (
-    <div className="py-6">
+    <div className="py-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Daftar Clan ({(clans ?? []).length})
-        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            aria-label="Kembali"
+            onClick={() => back("/home")}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Daftar Clan ({(clans ?? []).length})
+          </p>
+        </div>
         <button
           onClick={() => setMode("buat")}
           className="shrink-0 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500"
