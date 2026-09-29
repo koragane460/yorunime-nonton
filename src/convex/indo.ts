@@ -13,7 +13,11 @@ const API = "https://otakudesu-scrapper.vercel.app";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-export type IndoSource = { label: string; url: string; type: "embed" | "hls" };
+export type IndoSource = {
+  label: string;
+  url: string;
+  type: "embed" | "hls" | "mp4";
+};
 
 async function get(path: string): Promise<any | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -231,26 +235,38 @@ async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
     const links: any[] = Array.isArray(episode?.stream_links)
       ? episode.stream_links
       : [];
-    const player = links.find((l) => /hls\.php/i.test(String(l?.url ?? "")));
-    if (!player?.url) continue;
-    try {
-      const html = await fetch(String(player.url), {
-        headers: { "User-Agent": UA, Referer: XT_REF },
-        signal: AbortSignal.timeout(12_000),
-      });
-      if (!html.ok) continue;
-      const body = await html.text();
-      const m3u8 = body.match(/"file"\s*:\s*"(https?:[^"]+\.m3u8)"/)?.[1];
-      if (!m3u8) continue;
-      return [
-        {
-          label: "HLS · Sub Indo",
-          url: proxied(m3u8, XT_REF),
-          type: "hls",
-        },
-      ];
-    } catch {
-      continue;
+    if (links.length === 0) continue;
+    // Setiap server player (hls.php / btube3.php / cepat.php / ...) dibuka dan
+    // diambil file aslinya: HLS (m3u8) lebih dulu, kalau tidak ada MP4 langsung.
+    for (const l of links) {
+      const playerUrl = String(l?.url ?? "");
+      if (!/^https?:/i.test(playerUrl)) continue;
+      try {
+        const html = await fetch(playerUrl, {
+          headers: { "User-Agent": UA, Referer: XT_REF },
+          signal: AbortSignal.timeout(12_000),
+        });
+        if (!html.ok) continue;
+        const body = await html.text();
+        const m3u8 = body.match(/"file"\s*:\s*"(https?:[^"]+\.m3u8)"/)?.[1];
+        if (m3u8) {
+          return [
+            { label: "HLS · Sub Indo", url: proxied(m3u8, XT_REF), type: "hls" },
+          ];
+        }
+        // Player video.js: file video langsung. URL-nya tidak selalu berakhiran
+        // .mp4 (googlevideo/bloger pakai path videoplayback?...&mime=video/mp4).
+        const mp4 = body
+          .match(/<source[^>]+src="(https?:[^"]+)"[^>]*>/i)?.[1]
+          ?.replace(/&amp;/g, "&");
+        if (mp4 && /mime=video\/mp4|\.mp4(\?|$)/i.test(body)) {
+          return [
+            { label: "HLS · Sub Indo", url: proxied(mp4, XT_REF), type: "mp4" },
+          ];
+        }
+      } catch {
+        continue;
+      }
     }
   }
   return [];
@@ -266,19 +282,26 @@ async function sankaGet(path: string): Promise<any | null> {
   const key = `sanka:${path}`;
   const cached = readCache<any>(epCache, key);
   if (cached) return cached;
-  try {
-    const res = await fetch(`${SANKA}${path}`, {
-      headers: { "User-Agent": UA, Accept: "application/json" },
-      signal: AbortSignal.timeout(9_000),
-    });
-    if (!res.ok) return null;
-    const json: any = await res.json();
-    const data = json?.data ?? null;
-    if (data) writeCache(epCache, key, data);
-    return data;
-  } catch {
-    return null;
+  // SankaApi kadang balas 503 sementara — coba 2x.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${SANKA}${path}`, {
+        headers: { "User-Agent": UA, Accept: "application/json" },
+        signal: AbortSignal.timeout(9_000),
+      });
+      if (!res.ok) {
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      }
+      const json: any = await res.json();
+      const data = json?.data ?? null;
+      if (data) writeCache(epCache, key, data);
+      return data;
+    } catch {
+      await new Promise((r) => setTimeout(r, 800));
+    }
   }
+  return null;
 }
 
 async function samehadaku(title: string, ep: number): Promise<IndoSource[]> {

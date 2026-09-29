@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck } from "@/components/lstream-ui";
 import { ProfileSheet } from "@/components/ProfileSheet";
+import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import {
   Search,
@@ -895,7 +896,6 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   );
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip");
   const requests = useQuery(api.friends.listRequests, user ? {} : "skip");
-  const respond = useMutation(api.friends.respondRequest);
   const sendReq = useMutation(api.friends.sendFriendRequest);
   const [dmPeer, setDmPeer] = useState<{ id: Id<"users">; name: string } | null>(null);
   const dmMsgs = useQuery(
@@ -1065,33 +1065,15 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                           <p className="truncate text-sm font-semibold">{r.username}</p>
                           <p className="text-xs text-muted-foreground">Meminta request</p>
                         </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await respond({ requestId: r.requestId, accept: true });
-                              toast.success(`${r.username} sekarang temanmu!`);
-                            } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Gagal terima");
-                            }
-                          }}
-                          aria-label="Terima"
-                          className="flex size-9 items-center justify-center rounded-full border border-green-500/40 bg-green-500/15 text-green-400 transition hover:bg-green-500/30"
-                        >
-                          <Check className="size-4" />
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await respond({ requestId: r.requestId, accept: false });
-                            } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Gagal tolak");
-                            }
-                          }}
-                          aria-label="Tolak"
-                          className="flex size-9 items-center justify-center rounded-full border border-red-500/40 bg-red-500/15 text-red-400 transition hover:bg-red-500/30"
-                        >
-                          <X className="size-4" />
-                        </button>
+                        <RequestButtons
+                          requestId={r.requestId}
+                          onDone={(accepted) =>
+                            accepted
+                              ? toast.success(`${r.username} sekarang temanmu!`)
+                              : toast.success("Request ditolak")
+                          }
+                          onError={(m) => toast.error(m)}
+                        />
                       </div>
                     ))
                   ) : (
@@ -1247,7 +1229,7 @@ function AnimeDetailScreen({
         <div className="relative">
           {/* Banner: background anime full lebar sampai pinggir (kesamping panjang) */}
           <div
-            className="h-64 w-full bg-cover bg-center"
+            className="h-64 w-full shrink-0 bg-cover bg-center"
             style={
               detail.image
                 ? {
@@ -1280,15 +1262,15 @@ function AnimeDetailScreen({
           </div>
 
           {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
-          <div className="absolute inset-x-0 bottom-0 flex gap-3 px-3 pb-3">
+          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
             {detail.image ? (
               <img
                 src={detail.image}
                 alt=""
-                className="aspect-[2/3] w-24 shrink-0 rounded-lg object-cover shadow-xl"
+                className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg object-cover shadow-xl"
               />
             ) : (
-              <div className="aspect-[2/3] w-24 shrink-0 rounded-lg bg-black/40" />
+              <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
             )}
             <div className="min-w-0 flex-1">
               <h2 className="line-clamp-2 text-lg font-black leading-tight text-white drop-shadow">

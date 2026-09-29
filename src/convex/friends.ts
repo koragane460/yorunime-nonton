@@ -56,27 +56,6 @@ export const listRequests = query({
         level: u?.level,
       });
     }
-    // Dummy request supaya UI tidak kosong (dummy tidak bisa diterima/ditolak)
-    if (out.length === 0) {
-      out.push(
-        {
-          requestId: "dummy-req-1" as any,
-          fromUserId: "dummy-user-1" as any,
-          username: "Haruuu",
-          image: undefined,
-          level: 75,
-          dummy: true,
-        } as any,
-        {
-          requestId: "dummy-req-2" as any,
-          fromUserId: "dummy-user-2" as any,
-          username: "Soraa",
-          image: undefined,
-          level: 60,
-          dummy: true,
-        } as any,
-      );
-    }
     return out;
   },
 });
@@ -148,6 +127,62 @@ export const respondRequest = mutation({
       }
     }
     await ctx.db.patch(requestId, { status: accept ? "accepted" : "rejected" });
+    if (!accept) {
+      const meUser = await ctx.db.get(userId);
+      await ctx.db.insert("notifications", {
+        userId: req.fromUserId,
+        type: "request_rejected",
+        title: `Request pertemanan mu ditolak oleh ${meUser?.username ?? "user"}`,
+        body: "Request pertemanan ke yang lain!",
+        createdAt: Date.now(),
+      });
+    }
+    return { ok: true };
+  },
+});
+
+/**
+ * Balas request berdasarkan user pengirim (dipakai dari panel Notifikasi, yang
+ * hanya menyimpan refUserId — bukan id request-nya).
+ */
+export const respondByUser = mutation({
+  args: { fromUserId: v.id("users"), accept: v.boolean() },
+  handler: async (ctx, { fromUserId, accept }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const req = await ctx.db
+      .query("friendRequests")
+      .withIndex("toUserId_status", (q) =>
+        q.eq("toUserId", userId).eq("status", "pending"),
+      )
+      .filter((q) => q.eq(q.field("fromUserId"), fromUserId))
+      .first();
+    if (!req) throw new Error("Request tidak ada atau sudah dibalas");
+    if (accept) {
+      const existsA = await ctx.db
+        .query("friendships")
+        .withIndex("userA", (q) => q.eq("userA", req.fromUserId))
+        .filter((q) => q.eq(q.field("userB"), userId))
+        .first();
+      if (!existsA) {
+        await ctx.db.insert("friendships", {
+          userA: req.fromUserId,
+          userB: userId,
+          createdAt: Date.now(),
+        });
+      }
+    }
+    await ctx.db.patch(req._id, { status: accept ? "accepted" : "rejected" });
+    // Notifikasi request-nya sendiri dibersihkan supaya tidak muncul lagi.
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .collect();
+    for (const n of notifs) {
+      if (n.type === "friend_request" && n.refUserId === req.fromUserId) {
+        await ctx.db.delete(n._id);
+      }
+    }
     if (!accept) {
       const meUser = await ctx.db.get(userId);
       await ctx.db.insert("notifications", {

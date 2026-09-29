@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
+import { RequestButtons } from "@/components/RequestButtons";
 import {
   Avatar,
   BlueCheck,
@@ -101,22 +102,22 @@ function AkunContent() {
 
       {/* Avatar bulat + background, overlap setengah banner */}
       <div className="w-full px-3">
-        <div className="relative -mt-12 flex items-end gap-3">
-          <div className="rounded-full bg-secondary p-1 ring-2 ring-background">
+        <div className="relative -mt-12 flex items-center gap-3">
+          <span className="relative shrink-0 rounded-full bg-secondary p-1 ring-2 ring-background">
             <Avatar
               src={user.image}
               seed={user.username}
-              className="size-22"
+              className="size-20"
               online={!user.hideOnline}
             />
-          </div>
-          <div className="min-w-0 flex-1 pb-2">
-            <div className="flex items-center gap-1.5">
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
               <p className={cn("truncate text-lg font-black", usernameColor(user.username))}>
                 {user.username}
               </p>
-              {premium && <BlueCheck className="size-5" />}
-              <span className="ml-1 text-xs text-muted-foreground">
+              {premium && <BlueCheck className="size-5 shrink-0" />}
+              <span className="ml-1 shrink-0 text-xs text-muted-foreground">
                 {displayId(user.seqId, user._id)}
               </span>
             </div>
@@ -687,7 +688,11 @@ function SpeedRow({
 
 function NotifScreen({ onClose }: { onClose: () => void }) {
   const notifs = useQuery(api.activities.listNotifications, {});
-  const accept = useMutation(api.friends.respondRequest);
+  const markRead = useMutation(api.activities.markNotificationsRead);
+  useEffect(() => {
+    void markRead();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
   const icons: Record<string, string> = {
     update: "🔔",
@@ -706,9 +711,9 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
         {(notifs ?? []).map((n: any) => (
           <div
             key={n._id}
-            className="flex items-start gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3"
+            className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3"
           >
-            <span className="text-xl">
+            <span className="flex size-8 shrink-0 items-center justify-center text-xl">
               {n.type === "friend_chat" && n.refImage ? (
                 <Avatar src={n.refImage} className="size-8" />
               ) : (
@@ -720,37 +725,14 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
               {n.body && <p className="text-xs text-zinc-400">{n.body}</p>}
               <p className="mt-0.5 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
             </div>
-            {n.type === "friend_request" && n.refId && (
-              <div className="flex shrink-0 gap-1.5">
-                <button
-                  aria-label="Terima pertemanan"
-                  onClick={async () => {
-                    try {
-                      await accept({ requestId: n.refId, accept: true });
-                      toast.success("Request diterima");
-                    } catch {
-                      toast.error("Gagal menerima");
-                    }
-                  }}
-                  className="flex size-8 items-center justify-center rounded-full bg-emerald-600 text-white"
-                >
-                  <Check className="size-4" />
-                </button>
-                <button
-                  aria-label="Tolak pertemanan"
-                  onClick={async () => {
-                    try {
-                      await accept({ requestId: n.refId, accept: false });
-                      toast.success("Request ditolak");
-                    } catch {
-                      toast.error("Gagal menolak");
-                    }
-                  }}
-                  className="flex size-8 items-center justify-center rounded-full bg-red-600 text-white"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
+            {n.type === "friend_request" && n.refUserId && (
+              <RequestButtons
+                userId={n.refUserId as never}
+                onDone={(ok) =>
+                  ok ? toast.success("Request diterima") : toast.success("Request ditolak")
+                }
+                onError={(e) => toast.error(e)}
+              />
             )}
           </div>
         ))}

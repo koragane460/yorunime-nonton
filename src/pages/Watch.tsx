@@ -15,6 +15,7 @@ import {
   Gauge,
   Loader2,
   Maximize,
+  Minimize,
   Pause,
   PictureInPicture2,
   Play,
@@ -33,6 +34,26 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const AUTO_SUB = "Indonesia (otomatis)";
 
 type Cue = { s: number; e: number; t: string };
+
+/** Pilih level HLS yang paling dekat dengan kualitas yang diminta (mis. 720p). */
+function applyLevel(hls: Hls | null, quality: string) {
+  if (!hls) return;
+  const target = parseInt(quality, 10);
+  if (!Number.isFinite(target)) return;
+  const levels = hls.levels ?? [];
+  if (levels.length === 0) return;
+  // Level yang tidak lebih tinggi dari target, atau yang paling dekat.
+  let best = 0;
+  let bestDiff = Infinity;
+  levels.forEach((l, i) => {
+    const diff = Math.abs((l.height || 0) - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = i;
+    }
+  });
+  hls.currentLevel = best;
+}
 
 /** Ubah timestamp WebVTT (00:01:02.500 / 01:02.500) menjadi detik. */
 const tsToSec = (s: string) => {
@@ -78,19 +99,23 @@ function WatchContent() {
   const epParam = params.get("ep");
 
   const detail = useAction(api.anime.animeDetail);
-  const episode = useAction(api.anime.animeEpisode);
-  // MegaPlay: ambil URL HLS langsung (m3u8) + subtitle + timing intro/outro
+  // Resolver tunggal: backend hanya mengembalikan satu server "Direct HLS · SUB"
   const resolveDirect = useAction(api.megaplay.resolveEpisode);
   // Subtitle Indonesia otomatis: subtitle English diterjemahkan di backend
   // lalu dipasang sebagai track di player ini.
   const subtitleIndo = useAction(api.subtitle.subtitleIndo);
   const record = useMutation(api.activities.recordWatch);
+  const saveSettings = useMutation(api.account.updateSettings);
   const settings = useQuery(api.users.currentUser, {});
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
-  const [quality, setQuality] = useState(settings?.defaultQuality ?? "720p");
+  // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
+  // datanya arrive (dan sebaliknya saat user ganti di player).
+  const [quality, setQuality] = useState<string>("720p");
+  const [qualityTouched, setQualityTouched] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
@@ -119,21 +144,42 @@ function WatchContent() {
   const [autoVtt, setAutoVtt] = useState("");
   const [cues, setCues] = useState<Cue[]>([]);
   const [activeCue, setActiveCue] = useState<string>("");
+  // Subtitle Indonesia native (kalau HLS MegaPlay menyediakan track ID)
+  const idTrackLabel =
+    (direct?.subTracks ?? []).find((t: any) => t.lang === "id")?.label ?? "";
+  // Kalau sumber Sub Indo (xtwap) yang dipakai, subtitle Indonesia sudah
+  // menempel di video sehingga tidak perlu track tambahan sama sekali.
+  const bakedSubs = !!direct?.bakedSubs;
+  // True kalau subtitle yang aktif versi Bahasa Indonesia.
+  const [subTouched, setSubTouched] = useState(false);
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
     setActiveSub(label);
+    setSubTouched(true);
     setSubOpen(false);
     // Track bawaan browser dimatikan semua — subtitle kita render sendiri.
     const v = videoRef.current;
     if (v) Array.from(v.textTracks).forEach((t) => (t.mode = "disabled"));
   };
 
-  // Subtitle Indonesia otomatis aktif begitu metadata track siap.
+  // Subtitle selalu Bahasa Indonesia: track ID native kalau ada, kalau tidak
+  // pakai track otomatis (dari subtitle server yang diterjemahkan).
   useEffect(() => {
-    if (!direct?.subtitle?.url) return;
-    setActiveSub(direct.subtitle.label ?? "Subtitle");
-  }, [direct]);
+    if (subTouched) return;
+    // Subtitle sudah menempel di video (HLS Sub Indo) → jangan tambah apa-apa.
+    if (bakedSubs) {
+      setActiveSub("");
+      return;
+    }
+    if (idTrackLabel) {
+      setActiveSub(idTrackLabel);
+      return;
+    }
+    if (autoVtt) setActiveSub(AUTO_SUB);
+    else if (direct?.subtitle?.url)
+      setActiveSub(direct.subtitle.label ?? "Subtitle");
+  }, [idTrackLabel, autoVtt, direct, subTouched, bakedSubs]);
 
   // Ambil isi subtitle terpilih (dari server atau dari track otomatis) lalu
   // simpan sebagai cue untuk digambar sendiri oleh player.
@@ -241,16 +287,11 @@ function WatchContent() {
   }, [autoVtt]);
 
   const [detailData, setDetailData] = useState<any>(null);
-  const [epData, setEpData] = useState<any>(null);
 
   const epList = detailData?.episodeList ?? [];
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
   const currentEp = epList[epIndex] ?? epList[0];
-  const streamUrl =
-    sources[sourceIdx]?.url ??
-    sources[0]?.url ??
-    epData?.sources?.[0]?.url ??
-    "";
+  const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
   useEffect(() => {
     if (animeId) {
@@ -267,20 +308,17 @@ function WatchContent() {
         })
         .catch(() => setDetailData({ error: true }));
     }
-    if (epParam) {
-      episode({ animeId, episodeId: epParam })
-        .then((e: any) => setEpData(e))
-        .catch(() => {});
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, epParam]);
 
-  // Ambil server streaming (HLS MegaPlay + embed Sub Indo). Menunggu detail
-  // selesai supaya judul anime bisa dipakai mencari sumber subtitle Indonesia.
+  // Ambil server streaming. Menunggu detail selesai supaya judul anime bisa
+  // dipakai mencari sumber subtitle Indonesia. Backend mengembalikan tepat satu
+  // server: "Direct HLS · SUB".
   useEffect(() => {
     if (!epParam || !detailData || detailData.error) return;
     const mm = epParam.match(/^(\d+)__ep(\d+)$/);
     if (!mm) return;
+    setDirectErr(null);
     resolveDirect({
       malId: mm[1],
       ep: Number(mm[2]) || 1,
@@ -293,29 +331,20 @@ function WatchContent() {
         }
         setDirectErr(null);
         setDirect(d);
+        setSubTouched(false);
         setSources(d.sources);
-        setSourceType(d.sources?.[0]?.type === "hls" ? "hls" : "embed");
+        setSourceType(
+          d.sources?.[0]?.type === "hls"
+            ? "hls"
+            : d.sources?.[0]?.type === "mp4"
+              ? "mp4"
+              : "embed",
+        );
         setSourceIdx(0);
       })
       .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailData, epParam]);
-
-  // Sinkronkan sumber video dari data episode (mp4 langsung / embed iframe)
-  useEffect(() => {
-    const list = (epData?.sources ?? []) as { label: string; url: string; type: string }[];
-    if (list.length > 0) {
-      setSources(list);
-      setSourceType(
-        list[0]?.type === "embed"
-          ? "embed"
-          : list[0]?.type === "hls"
-            ? "hls"
-            : "mp4",
-      );
-      setSourceIdx(0);
-    }
-  }, [epData]);
 
   // HLS (m3u8) → hls.js (Safari bisa pakai src bawaan)
   useEffect(() => {
@@ -334,18 +363,28 @@ function WatchContent() {
         startFragPrefetch: true,
         abrEwmaDefaultEstimate: 2_000_000,
       });
+      hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(v);
+      // Pasang level sesuai kualitas yang dipilih begitu manifest terbaca.
+      hls.on(Hls.Events.MANIFEST_PARSED, () => applyLevel(hls, quality));
       hls.on(Hls.Events.ERROR, (_evt, data) => {
-        if (data.fatal) toast.error("Gagal memuat stream — coba server lain");
+        if (data.fatal) toast.error("Gagal memuat stream, coba muat ulang");
       });
     } else {
       v.src = streamUrl;
     }
     return () => {
+      hlsRef.current = null;
       hls?.destroy();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceType, streamUrl]);
+
+  // Ganti kualitas saat nonton → langsung terapkan ke level HLS yang aktif.
+  useEffect(() => {
+    if (hlsRef.current) applyLevel(hlsRef.current, quality);
+  }, [quality]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -365,6 +404,24 @@ function WatchContent() {
     if (videoRef.current) videoRef.current.playbackRate = speed;
   }, [speed]);
 
+  // Pengaturan → player: ikut berubah kalau user ubah kualitas di Pengaturan.
+  useEffect(() => {
+    if (qualityTouched) return;
+    const fromSettings = settings?.defaultQuality;
+    if (!fromSettings) return;
+    setQuality(fromSettings);
+  }, [settings?.defaultQuality, qualityTouched]);
+
+  // Player → Pengaturan: mengganti kualitas di player langsung disimpan.
+  const pickQuality = (q: string) => {
+    setQuality(q);
+    setQualityTouched(true);
+    setQualityOpen(false);
+    void saveSettings({ defaultQuality: q }).catch(() => {
+      /* simpan lokal tetap berjalan walau server gagal */
+    });
+  };
+
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
@@ -377,22 +434,20 @@ function WatchContent() {
     if (v) v.currentTime = Math.max(0, v.currentTime + s);
   };
 
-  // Kontrol video: tap untuk tampil/sembunyi, auto-hide saat diputar,
-  // dan fullscreen → landscape dengan kontrol native browser.
+  // Kontrol video: tap untuk tampil/sembunyi, auto-hide 3 detik saat diputar.
+  // Timer hanya bergantung pada [playing, controlsOn] (bukan currentTime),
+  // jadi tidak terus dibatalkan oleh update waktu video.
   const tapVideo = () => setControlsOn((v) => !v);
 
   useEffect(() => {
-    if (isFs) {
-      setControlsOn(true);
-      return;
-    }
     if (!playing) {
       setControlsOn(true);
       return;
     }
+    if (!controlsOn) return;
     const t = window.setTimeout(() => setControlsOn(false), 3000);
     return () => clearTimeout(t);
-  }, [playing, isFs, controlsOn, currentTime]);
+  }, [playing, controlsOn]);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -457,8 +512,9 @@ function WatchContent() {
   const D = detailData;
   // Tombol CC muncul kalau ada track subtitle apa pun (termasuk subtitle
   // Indonesia yang sedang dibuat otomatis).
-  const hasSubMenu =
-    (direct?.subTracks?.length ?? 0) > 0 || !!autoVtt || autoSubLoading;
+  const hasSubMenu = !bakedSubs && (
+    (direct?.subTracks?.length ?? 0) > 0 || !!autoVtt || autoSubLoading
+  );
 
   return (
     <div className="min-h-screen pb-24">
@@ -565,7 +621,21 @@ function WatchContent() {
 
         {/* Lapisan tap: sentuh video → kontrol tampil / hilang */}
         {sourceType !== "embed" && (
-          <div className="absolute inset-0 z-10" onClick={tapVideo} />
+          <div
+            className="absolute inset-0 z-10"
+            onPointerUp={tapVideo}
+          />
+        )}
+
+        {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
+        {isFs && (
+          <button
+            onClick={toggleFullscreen}
+            className="absolute right-3 top-3 z-30 rounded-full bg-black/55 p-2"
+            aria-label="Keluar layar penuh"
+          >
+            <Minimize className="size-5 text-white" />
+          </button>
         )}
 
         {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
@@ -682,11 +752,8 @@ function WatchContent() {
                       animeTitle: D.title,
                       animeImage: D.image,
                       episodeNumber: currentEp?.number,
-                      streamUrl:
-                        sourceType === "hls" && direct?.embedSub
-                          ? direct.embedSub
-                          : streamUrl,
-                      isEmbed: sourceType !== "mp4",
+                      streamUrl: streamUrl,
+                      isEmbed: false,
                     });
                     toast.success("Mini player aktif — kembali ke Home");
                     navigate("/home");
@@ -828,36 +895,27 @@ function WatchContent() {
           )}
       </div>
 
-      {/* Pilih server — tetap di bawah player (semua mode) */}
-      {sources.length > 1 && (
+      {/* Server: hanya satu — Direct HLS · SUB */}
+      {sources.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
           <span className="text-[11px] text-muted-foreground">Server:</span>
-          {sources.map((s, i) => (
-            <button
-              key={s.label + i}
-              onClick={() => {
-                setSourceIdx(i);
-                setSourceType(
-                  s.type === "embed" ? "embed" : s.type === "hls" ? "hls" : "mp4",
-                );
-              }}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-semibold transition",
-                i === sourceIdx
-                  ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                  : "border-border bg-card text-muted-foreground hover:border-violet-500/50",
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500 bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-300">
+            {sources[sourceIdx]?.label ?? "Direct HLS · SUB"}
+            <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
+              ID
+            </span>
+          </span>
         </div>
       )}
 
       {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
       <div className="w-full p-3">
-        <div className="flex gap-3">
-          <img src={D.image} alt="" className="aspect-[2/3] w-16 rounded-lg object-cover" />
+        <div className="flex items-start gap-3">
+          <img
+            src={D.image}
+            alt=""
+            className="aspect-[2/3] w-16 shrink-0 self-start rounded-lg object-cover"
+          />
           <div className="min-w-0 flex-1">
             <h1 className="line-clamp-2 text-base font-bold">{D.title}</h1>
             <p className={cn("mt-1 text-xs leading-5 text-zinc-400", !synopsisOpen && "line-clamp-3")}>
@@ -961,10 +1019,7 @@ function WatchContent() {
             {QUALITIES.map((q) => (
               <button
                 key={q}
-                onClick={() => {
-                  setQuality(q);
-                  setQualityOpen(false);
-                }}
+                onClick={() => pickQuality(q)}
                 className={cn(
                   "rounded-lg border px-4 py-2 text-sm transition",
                   quality === q

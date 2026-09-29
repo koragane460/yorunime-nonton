@@ -55,12 +55,12 @@ export function ProfileSheet({
             >
               <ChevronLeft className="size-4" />
             </button>
-            {/* Foto profile setengah menutupi banner, di tengah */}
-            <div className="relative -mt-10 flex justify-center">
+            {/* Foto profile setengah menutupi banner, tepat di tengah */}
+            <div className="relative -mt-12 flex justify-center">
               <Avatar
                 src={profile.image}
                 seed={profile.username}
-                className="size-24 border-4 border-background"
+                className="size-24"
                 online={!profile.hideOnline}
               />
             </div>
