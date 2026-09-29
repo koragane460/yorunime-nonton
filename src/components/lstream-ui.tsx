@@ -1,6 +1,7 @@
 import { BadgeCheck, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { badgeForLevel, STAFF_BADGE, avatarFallback, clanNameCls } from "@/lib/lstream";
+import { clanPixelIconUrl } from "@/lib/clanIcons";
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -261,6 +262,7 @@ export function ClanTag({
   className?: string;
 }) {
   const galaxy = color === "galaxy" || color === "golden";
+  const pixel = clanPixelIconUrl(icon);
   return (
     <span
       className={cn(
@@ -271,7 +273,16 @@ export function ClanTag({
         className,
       )}
     >
-      <span>{icon}</span> [{tag}]
+      {pixel ? (
+        <img
+          src={pixel}
+          alt=""
+          className="size-3.5 shrink-0 rounded-[2px] [image-rendering:pixelated]"
+        />
+      ) : (
+        <span>{icon}</span>
+      )}{" "}
+      [{tag}]
     </span>
   );
 }

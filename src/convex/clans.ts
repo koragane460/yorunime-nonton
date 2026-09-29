@@ -166,12 +166,12 @@ export const clanDetail = query({
 
 // Clan dummy untuk mengisi list biar tidak kosong (deterministik per hari).
 const DUMMY_CLANS = [
-  { name: "Divine X Desity", tag: "DXD", tagIcon: "🪽", diamonds: 116000, level: 15, members: 23 },
-  { name: "Shadow Monarch", tag: "SHDW", tagIcon: "💀", diamonds: 87400, level: 12, members: 18 },
-  { name: "Eternal Blaze", tag: "ETBL", tagIcon: "🔥", diamonds: 65200, level: 10, members: 15 },
-  { name: "Frozen Star", tag: "FRZN", tagIcon: "❄️", diamonds: 41800, level: 8, members: 12 },
-  { name: "Thunder Owl", tag: "THOW", tagIcon: "⚡", diamonds: 28900, level: 6, members: 9 },
-  { name: "Silver Wing", tag: "SVWG", tagIcon: "🏹", diamonds: 12300, level: 4, members: 6 },
+  { name: "Divine X Desity", tag: "DXD", tagIcon: "pix-angel", diamonds: 116000, level: 15, members: 23 },
+  { name: "Shadow Monarch", tag: "SHDW", tagIcon: "pix-skull", diamonds: 87400, level: 12, members: 18 },
+  { name: "Eternal Blaze", tag: "ETBL", tagIcon: "pix-fire", diamonds: 65200, level: 10, members: 15 },
+  { name: "Frozen Star", tag: "FRZN", tagIcon: "pix-snow", diamonds: 41800, level: 8, members: 12 },
+  { name: "Thunder Owl", tag: "THOW", tagIcon: "pix-bolt", diamonds: 28900, level: 6, members: 9 },
+  { name: "Silver Wing", tag: "SVWG", tagIcon: "pix-bow", diamonds: 12300, level: 4, members: 6 },
 ];
 
 function dummyClanId(tag: string) {
@@ -314,6 +314,22 @@ export const createClan = mutation({
     });
     await ctx.db.patch(userId, { clanTag: cleanTag, clanTagIcon: tagIcon, clanNameColor: "" });
     return { clanId };
+  },
+});
+
+/** ID clan yang sedang kita-request (belum diterima) — buat tombol centang. */
+export const myPendingClanId = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+    const pending = await ctx.db
+      .query("clanRequests")
+      .withIndex("userId_status", (q) =>
+        q.eq("userId", userId).eq("status", "pending"),
+      )
+      .first();
+    return pending?.clanId ?? null;
   },
 });
 

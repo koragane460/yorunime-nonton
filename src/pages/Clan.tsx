@@ -22,10 +22,12 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CLAN_PIXEL_ICONS, clanPixelIconUrl, DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
-const TAG_ICONS = ["🪽", "🔥", "⚡", "☘️", "✳️", "🏹", "💀", "💧", "❄️", "☀️"];
+// Logo tag clan = gambar pixel (bukan emoji), semua sama ukuran & gaya.
+const TAG_ICONS = CLAN_PIXEL_ICONS.map((i) => i.key);
 const DONATE_PRESETS = [100, 200, 300, 500, 700, 1000];
 const ROLE_INFO = `Info Roles
 1. Leader : leader mempunyai akses penuh dalam mengatur peraturan clan apapun itu
@@ -101,11 +103,17 @@ function NoClan({
   initialCreate?: boolean;
   onCreated?: (clanId: Id<"clans">) => void;
 }) {
+  const { user } = useAuth();
   const [mode, setMode] = useState<"none" | "buat" | "gabung">(
     initialCreate ? "buat" : "none",
   );
   const clans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
+  // Clan yang sedang kita-request → tombolnya jadi centang hijau.
+  const myPending = useQuery(
+    api.clans.myPendingClanId,
+    user ? {} : "skip",
+  );
   const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
   const back = useNavigate();
   // Daftar clan = layar fullscreen (navbar bawah & mini player disembunyikan)
@@ -173,9 +181,19 @@ function NoClan({
                       toast.error(err instanceof Error ? err.message : "Gagal request");
                     }
                   }}
-                  className="shrink-0 rounded-full bg-violet-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-violet-500"
+                  aria-label={myPending === c._id ? "Batalkan request" : "Join clan"}
+                  className={cn(
+                    "flex size-10 shrink-0 items-center justify-center rounded-full transition active:scale-95",
+                    myPending === c._id
+                      ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                      : "bg-violet-600 text-white hover:bg-violet-500",
+                  )}
                 >
-                  Join
+                  {myPending === c._id ? (
+                    <Check className="size-5" strokeWidth={3} />
+                  ) : (
+                    <span className="text-xs font-bold">Join</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -250,23 +268,34 @@ function CreateClan({
         <div className="mt-3 rounded-3xl border border-white/10 bg-card p-4">
           <p className="mb-2 text-xs text-muted-foreground">Logo tag clan (pixel)</p>
           <div className="grid grid-cols-5 gap-2">
-            {TAG_ICONS.map((ic) => (
+            {CLAN_PIXEL_ICONS.map((ic) => (
               <button
-                key={ic}
-                onClick={() => setIcon(ic)}
+                key={ic.key}
+                type="button"
+                aria-label={ic.name}
+                title={ic.name}
+                onClick={() => setIcon(ic.key)}
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-xl border text-2xl [image-rendering:pixelated] transition",
-                  icon === ic
+                  "flex aspect-square items-center justify-center overflow-hidden rounded-xl border p-1.5 transition",
+                  icon === ic.key
                     ? "border-[oklch(0.86_0.16_90)] bg-[oklch(0.86_0.16_90)]/15"
                     : "border-border hover:border-[oklch(0.86_0.16_90)]/50",
                 )}
               >
-                {ic}
+                <img
+                  src={clanPixelIconUrl(ic.key) ?? ""}
+                  alt={ic.name}
+                  className="size-full rounded-md object-cover [image-rendering:pixelated]"
+                />
               </button>
             ))}
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-xl">{icon}</span>
+            <img
+              src={clanPixelIconUrl(icon) ?? ""}
+              alt="Logo"
+              className="size-6 shrink-0 rounded-md [image-rendering:pixelated]"
+            />
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -466,7 +495,7 @@ function ClanChat({
           aria-label="Detail clan"
           className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card p-2 text-left"
         >
-          <ClanTag icon={c?.tagIcon ?? "⚔️"} tag={c?.tag ?? "—"} color={c?.color} />
+          <ClanTag icon={c?.tagIcon ?? DEFAULT_CLAN_ICON} tag={c?.tag ?? "—"} color={c?.color} />
           <span className="min-w-0 flex-1 truncate font-bold">{c?.name ?? "Clan"}</span>
           <span className="text-muted-foreground">›</span>
         </button>
@@ -637,15 +666,22 @@ function ClanDetail({
               <button
                 onClick={async () => {
                   try {
-                    await requestJoin({ clanId });
-                    toast.success("Request terkirim");
+                    const r = await requestJoin({ clanId });
+                    toast.success(r.requested ? "Request terkirim" : "Request dibatalkan");
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : "Gagal");
                   }
                 }}
-                className="mt-4 w-full rounded-full bg-[oklch(0.86_0.16_90)] py-4 text-base font-extrabold text-[oklch(0.18_0.04_70)] shadow-lg shadow-black/30 transition hover:brightness-105 active:scale-[0.985]"
+                className={cn(
+                  "mt-4 w-full rounded-full py-4 text-base font-extrabold shadow-lg shadow-black/30 transition active:scale-[0.985]",
+                  detail.myRequestClanId === clanId
+                    ? "bg-emerald-600 text-white hover:brightness-105"
+                    : "bg-[oklch(0.86_0.16_90)] text-[oklch(0.18_0.04_70)] hover:brightness-105",
+                )}
               >
-                Request Join
+                {detail.myRequestClanId === clanId
+                  ? "Request terkirim (batalkan)"
+                  : "Request Join"}
               </button>
             )}
           </div>
@@ -694,113 +730,113 @@ function ClanDetail({
               </button>
             )}
 
-            {/* Tab pill: Members / Donasi Hari Ini (Request dipindah ke Panel Leader) */}
-            <div className="tab-pill-track mt-3">
-              <button
-                onClick={() => setTab("member")}
-                className={cn("tab-pill", tab === "member" && "tab-pill-active")}
-              >
-                Members ({c.memberCount})
-              </button>
-              <button
-                onClick={() => setTab("top")}
-                className={cn("tab-pill", tab === "top" && "tab-pill-active")}
-              >
-                Donasi Hari Ini ({detail.todayDonators})
-              </button>
-            </div>
-
-            {/* Search rounded-full */}
-            <div className="pill-search mt-3">
-              <Search className="size-4 shrink-0 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari member (nama atau ID)"
-              />
-            </div>
-
-            {tab === "member" && (
-              <div className="mt-3 space-y-2.5">
-                {members.length === 0 && (
-                  <p className="py-6 text-center text-xs text-muted-foreground">
-                    Tidak ada member yang cocok.
-                  </p>
-                )}
-                {members.map((m: any) => (
-                  <div
-                    key={m.userId}
-                    className="member-row relative overflow-hidden"
-                    style={
-                      m.bannerUrl
-                        ? {
-                            backgroundImage: `url(${m.bannerUrl})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }
-                        : undefined
-                    }
-                  >
-                    <div className="flex items-center gap-3 bg-black/40 p-3">
-                      <div className="flex flex-col items-center gap-1">
-                        <Avatar src={m.image} seed={m.username} className="size-12" />
-                        <RoleBadge role={m.role} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold text-indigo-50">{m.username}</p>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <ClanTag
-                            icon={c.tagIcon ?? "⚔️"}
-                            tag={c.tag}
-                            color={c.color}
-                          />
-                          <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 text-[10px] font-bold text-black">
-                            Lv.{m.level ?? 1}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-indigo-200/60">
-                          Gabung {Math.max(0, Math.floor((Date.now() - m.joinedAt) / 86400000))} hari lalu
-                        </p>
-                      </div>
-                      <div className="diamond-chip">
-                        <Gem className="size-4 text-violet-400" />
-                        <span className="text-sm font-bold text-white">
-                          {formatK(m.donatedTotal)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {tab === "top" && (
-              <div className="mt-3">
-                <p className="mb-3 rounded-2xl border border-white/10 bg-card p-3 text-center text-xs">
-                  Total donate hari ini terkumpul{" "}
-                  <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonationsTotal}</b>{" "}
-                  Sacret dari{" "}
-                  <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonators}</b> member
-                </p>
-                {topDonate.length >= 3 && (
-                  <div className="mb-3 grid grid-cols-3 items-end gap-2">
-                    <TopPodium rank={2} m={t2} />
-                    <TopPodium rank={1} m={t1} big />
-                    <TopPodium rank={3} m={t3} />
-                  </div>
-                )}
-                {restTop.map((m: any) => (
-                  <MemberDonateRow key={m.userId} m={m} />
-                ))}
-                {topDonate.length === 0 && (
-                  <p className="py-6 text-center text-xs text-muted-foreground">
-                    Belum ada yang donate hari ini
-                  </p>
-                )}
-              </div>
-            )}
-
           </>
+        )}
+
+        {/* Tab: Member / Top Donate Hari Ini — terbuka juga untuk yang belum join */}
+        <div className="tab-pill-track mt-3">
+          <button
+            onClick={() => setTab("member")}
+            className={cn("tab-pill", tab === "member" && "tab-pill-active")}
+          >
+            Member ({c.memberCount})
+          </button>
+          <button
+            onClick={() => setTab("top")}
+            className={cn("tab-pill", tab === "top" && "tab-pill-active")}
+          >
+            Top Donate Hari Ini ({detail.todayDonators})
+          </button>
+        </div>
+
+        {/* Search rounded-full */}
+        <div className="pill-search mt-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari member (nama atau ID)"
+          />
+        </div>
+
+        {tab === "member" && (
+          <div className="mt-3 space-y-2.5">
+            {members.length === 0 && (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                Tidak ada member yang cocok.
+              </p>
+            )}
+            {members.map((m: any) => (
+              <div
+                key={m.userId}
+                className="member-row relative overflow-hidden"
+                style={
+                  m.bannerUrl
+                    ? {
+                        backgroundImage: `url(${m.bannerUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              >
+                <div className="flex items-center gap-3 bg-black/40 p-3">
+                  <div className="flex flex-col items-center gap-1">
+                    <Avatar src={m.image} seed={m.username} className="size-12" />
+                    <RoleBadge role={m.role} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold text-indigo-50">{m.username}</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <ClanTag
+                        icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+                        tag={c.tag}
+                        color={c.color}
+                      />
+                      <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 text-[10px] font-bold text-black">
+                        Lv.{m.level ?? 1}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-indigo-200/60">
+                      Gabung {Math.max(0, Math.floor((Date.now() - m.joinedAt) / 86400000))} hari lalu
+                    </p>
+                  </div>
+                  <div className="diamond-chip">
+                    <Gem className="size-4 text-violet-400" />
+                    <span className="text-sm font-bold text-white">
+                      {formatK(m.donatedTotal)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "top" && (
+          <div className="mt-3">
+            <p className="mb-3 rounded-2xl border border-white/10 bg-card p-3 text-center text-xs">
+              Total donate hari ini terkumpul{" "}
+              <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonationsTotal}</b>{" "}
+              Sacret dari{" "}
+              <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonators}</b> member
+            </p>
+            {topDonate.length >= 3 && (
+              <div className="mb-3 grid grid-cols-3 items-end gap-2">
+                <TopPodium rank={2} m={t2} />
+                <TopPodium rank={1} m={t1} big />
+                <TopPodium rank={3} m={t3} />
+              </div>
+            )}
+            {restTop.map((m: any) => (
+              <MemberDonateRow key={m.userId} m={m} />
+            ))}
+            {topDonate.length === 0 && (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                Belum ada yang donate hari ini
+              </p>
+            )}
+          </div>
         )}
 
         {!isMember && (

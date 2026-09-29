@@ -1,22 +1,31 @@
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   ChevronLeft,
-  Gem,
   MessageSquare,
   History as HistoryIcon,
   Heart,
   LogIn,
+  Plus,
+  UserCheck,
+  Clock,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { xpForLevel } from "@/lib/level";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
+type Tab = "komen" | "history" | "favorite";
+
 /**
- * Detail akun (diri sendiri / orang lain) — muncul saat avatar di chat diklik:
- * banner paling atas, foto profile setengah menutupi banner di tengah,
- * username + centang biru + ID, tag clan + level, tombol Komen/History/Favorite.
+ * Detail akun (diri sendiri / orang lain) — muncul saat avatar diklik:
+ * banner panjang, foto profile menutupi banner di tengah, username + centang
+ * biru + ID, tag clan di kiri badge level, tombol Komen/History/Favorite.
  */
 export function ProfileSheet({
   userId,
@@ -25,10 +34,31 @@ export function ProfileSheet({
   userId: Id<"users">;
   onClose: () => void;
 }) {
+  const { user: me } = useAuth();
   const profile = useQuery(api.account.getPublicProfile, { userId });
+  const addFriend = useMutation(api.friends.sendFriendRequest);
+  const history = useQuery(api.activities.myHistory, me ? {} : "skip");
+  const favorites = useQuery(api.activities.myFavorites, me ? {} : "skip");
+  const [tab, setTab] = useState<Tab>("komen");
+  const [sending, setSending] = useState(false);
+
   const cost = profile ? xpForLevel(profile.level) : 1;
   const inLevel = profile ? Math.max(0, Math.min(profile.xpInLevel, cost)) : 0;
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
+  const isMe = me?._id === userId;
+
+  const requestFriend = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
+      await addFriend({ toUserId: userId });
+      toast.success("Request pertemanan terkirim");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim request");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
@@ -36,10 +66,10 @@ export function ProfileSheet({
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (
         <div className="w-full pb-24">
-          {/* Banner paling atas */}
+          {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div
-              className="h-32 w-full bg-cover bg-center"
+              className="h-48 w-full bg-cover bg-center"
               style={
                 profile.bannerUrl
                   ? { backgroundImage: `url(${profile.bannerUrl})` }
@@ -55,12 +85,12 @@ export function ProfileSheet({
             >
               <ChevronLeft className="size-4" />
             </button>
-            {/* Foto profile setengah menutupi banner, tepat di tengah */}
-            <div className="relative -mt-12 flex justify-center">
+            {/* Foto profile menutupi banner, tepat di tengah */}
+            <div className="relative -mt-14 flex justify-center">
               <Avatar
                 src={profile.image}
                 seed={profile.username}
-                className="size-24"
+                className="size-28"
                 online={!profile.hideOnline}
               />
             </div>
@@ -76,16 +106,31 @@ export function ProfileSheet({
               ID: {profile.seqId !== undefined ? `#${profile.seqId}` : "—"}
             </p>
 
-            {/* Tag clan + level */}
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            {/* Tag clan di kiri, badge level, tombol + add friend di sebelahnya */}
+            <div className="mt-3 flex items-center justify-center gap-2">
               {profile.clanTag && (
                 <ClanTag
-                  icon={profile.clanTagIcon ?? "⚔️"}
+                  icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}
                   tag={profile.clanTag}
                   color={profile.clanNameColor}
                 />
               )}
               <LevelBadge level={profile.level} />
+              {!isMe && (
+                <button
+                  type="button"
+                  onClick={requestFriend}
+                  disabled={sending}
+                  aria-label="Tambah teman"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white transition hover:bg-violet-500 active:scale-95 disabled:opacity-50"
+                >
+                  {sending ? (
+                    <Send className="size-4" />
+                  ) : (
+                    <Plus className="size-5" strokeWidth={3} />
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Bar level: kiri Level n, kanan 1/12.000 */}
@@ -104,13 +149,6 @@ export function ProfileSheet({
               </div>
             </div>
 
-            {/* Sacret saja — jumlah hari premium tidak ditampilkan di detail akun */}
-            <div className="mt-3 flex items-center justify-center gap-4 text-xs">
-              <span className="flex items-center gap-1 font-semibold text-cyan-300">
-                <Gem className="size-3.5" /> {profile.diamonds.toLocaleString("id-ID")}
-              </span>
-            </div>
-
             {/* Stats horizontal tanpa background */}
             <div className="mt-4 grid grid-cols-4 divide-x divide-white/15 text-center">
               <StatCell label="History" value={profile.watchCount} />
@@ -122,26 +160,102 @@ export function ProfileSheet({
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
 
-            {/* Tombol aksi: Komen / History / Favorite */}
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <ActionBtn
-                icon={<MessageSquare className="size-4" />}
-                label="Komen"
-                active
-              />
-              <ActionBtn icon={<HistoryIcon className="size-4" />} label="History" />
-              <ActionBtn icon={<Heart className="size-4" />} label="Favorite" />
+            {/* Tab tanpa background: garis bawah, bisa pindah */}
+            <div className="mt-5 flex border-b border-white/15">
+              {(
+                [
+                  ["komen", "Komen", MessageSquare],
+                  ["history", "History", HistoryIcon],
+                  ["favorite", "Favorite", Heart],
+                ] as const
+              ).map(([key, label, Icon]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTab(key)}
+                  className={cn(
+                    "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 text-sm font-semibold transition",
+                    tab === key ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {label}
+                  {tab === key && (
+                    <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-white/90" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 space-y-2 px-1 text-left">
+              {tab === "komen" && (
+                <EmptyOrList
+                  empty="Belum ada komentar di profil ini."
+                  items={(profile.myComments ?? []).map((c: any) => ({
+                    id: c._id,
+                    title: c.text,
+                    sub: c.animeId,
+                  }))}
+                />
+              )}
+              {tab === "history" && (
+                <EmptyOrList
+                  empty="Belum ada riwayat nonton."
+                  items={(history ?? []).map((h: any) => ({
+                    id: h._id,
+                    title: h.animeTitle,
+                    sub: `Episode ${h.episodeNumber ?? h.episode ?? "?"} · ${h.minutesWatched ?? h.minutes ?? 0} menit`,
+                  }))}
+                />
+              )}
+              {tab === "favorite" && (
+                <EmptyOrList
+                  empty="Belum ada anime favorit."
+                  items={(favorites ?? []).map((f: any) => ({
+                    id: f._id,
+                    title: f.animeTitle,
+                    sub: f.animeId,
+                  }))}
+                />
+              )}
             </div>
 
             {profile.premium === false && (
-              <p className="mt-3 flex items-center justify-center gap-1 text-[11px] text-zinc-500">
-                <LogIn className="size-3.5" /> Belum premium — centang biru eksklusif ✨
+              <p className="mt-4 flex items-center justify-center gap-1 text-[11px] text-zinc-500">
+                <LogIn className="size-3.5" /> Belum premium — centang biru eksklusif
               </p>
             )}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function EmptyOrList({
+  items,
+  empty,
+}: {
+  items: { id: string; title: string; sub?: string }[];
+  empty: string;
+}) {
+  if (items.length === 0)
+    return <p className="py-6 text-center text-xs text-muted-foreground">{empty}</p>;
+  return (
+    <>
+      {items.map((it) => (
+        <div
+          key={it.id}
+          className="flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/30 px-3 py-2.5"
+        >
+          <Clock className="size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{it.title}</p>
+            {it.sub && <p className="truncate text-[11px] text-muted-foreground">{it.sub}</p>}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -154,25 +268,4 @@ function StatCell({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-function ActionBtn({
-  icon,
-  label,
-  active,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={cn(
-        "flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-semibold transition",
-        active
-          ? "border-violet-500 bg-violet-500/15 text-violet-300"
-          : "border-border bg-card text-foreground hover:border-violet-500/60",
-      )}
-    >
-      {icon} {label}
-    </button>
-  );
-}
+void UserCheck;
