@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Crown,
   Gem,
+  Maximize,
   Pause,
   Play,
   X,
@@ -290,6 +291,10 @@ export function MiniPlayerHost() {
       : { w: 164, h: 108 },
   );
   const [pos, setPos] = useState({ x: 14, y: 100 });
+  // UI mini player: tap layar → UI disembunyikan (video tetap jalan).
+  // Muncul lagi kalau video dijeda atau user mengetuk dua kali.
+  const [uiOn, setUiOn] = useState(true);
+  const lastTapRef = useRef(0);
   // Drag: pakai pointer event (mouse + sentuh), tap tanpa geser = buka episode.
   const drag = useRef<{
     id: number;
@@ -308,6 +313,7 @@ export function MiniPlayerHost() {
   const toggle = () => {
     const v = videoRef.current;
     if (!v) return;
+    setUiOn(true);
     if (v.paused) void v.play();
     else v.pause();
   };
@@ -348,10 +354,19 @@ export function MiniPlayerHost() {
         const d = drag.current;
         drag.current = null;
         if (!d || d.moved) return;
-        // Tap (tanpa geser) → buka layar nonton episode ini.
-        navigate(
-          `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
-        );
+        // Ketuk ganda dalam 300ms → buka layar nonton episode ini.
+        const now = Date.now();
+        if (now - lastTapRef.current < 300) {
+          lastTapRef.current = 0;
+          setUiOn(true);
+          navigate(
+            `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
+          );
+          return;
+        }
+        lastTapRef.current = now;
+        // Ketuk tunggal → UI sembunyi / tampil.
+        setUiOn((v) => !v);
       }}
       onPointerCancel={() => {
         drag.current = null;
@@ -376,21 +391,42 @@ export function MiniPlayerHost() {
             onPause={() => setPlaying(false)}
           />
         )}
-        {/* Kontrol overlay: tutup + play/pause + judul (tanpa tombol perbesar) */}
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+        {/* Kontrol overlay: hanya saat UI belum disembunyikan lewat tap */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 flex flex-col justify-between transition-opacity",
+            uiOn ? "opacity-100" : "opacity-0",
+          )}
+        >
           <div className="flex items-start justify-between p-1">
             <span className="max-w-[75%] truncate rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold text-white/85">
               {state.animeTitle}
               {state.episodeNumber ? ` · Ep ${state.episodeNumber}` : ""}
             </span>
-            <button
-              className="pointer-events-auto rounded-full bg-black/60 p-1"
-              aria-label="Tutup mini player"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => setMiniPlayer(null)}
-            >
-              <X className="size-3.5 text-white" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                className="pointer-events-auto rounded-full bg-black/60 p-1"
+                aria-label="Perbesar"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUiOn(true);
+                  navigate(
+                    `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
+                  );
+                }}
+              >
+                <Maximize className="size-3.5 text-white" />
+              </button>
+              <button
+                className="pointer-events-auto rounded-full bg-black/60 p-1"
+                aria-label="Tutup mini player"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setMiniPlayer(null)}
+              >
+                <X className="size-3.5 text-white" />
+              </button>
+            </div>
           </div>
           <button
             className="pointer-events-auto mx-auto flex size-9 items-center justify-center rounded-full bg-black/55 text-white"

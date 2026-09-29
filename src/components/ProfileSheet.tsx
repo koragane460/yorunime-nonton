@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
@@ -10,12 +11,11 @@ import {
   Heart,
   LogIn,
   Plus,
-  UserCheck,
-  Clock,
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { xpForLevel } from "@/lib/level";
+import { timeAgo } from "@/lib/lstream";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -35,6 +35,7 @@ export function ProfileSheet({
   onClose: () => void;
 }) {
   const { user: me } = useAuth();
+  const navigate = useNavigate();
   const profile = useQuery(api.account.getPublicProfile, { userId });
   const addFriend = useMutation(api.friends.sendFriendRequest);
   const history = useQuery(api.activities.myHistory, me ? {} : "skip");
@@ -187,36 +188,93 @@ export function ProfileSheet({
               ))}
             </div>
 
-            <div className="mt-4 space-y-2 px-1 text-left">
+            {/* Isi tab: sama persis dengan tab di halaman AKUN */}
+            <div className="mt-3 space-y-2">
+              {tab === "history" &&
+                (history ?? []).map((h: any) => (
+                  <button
+                    key={h._id}
+                    onClick={() => {
+                      onClose();
+                      navigate(`/nonton?anime=${h.animeId}&ep=`);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+                  >
+                    <img
+                      src={h.animeImage ?? ""}
+                      className="h-14 w-10 rounded object-cover"
+                      alt=""
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Episode {h.episode}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      {timeAgo(h.updatedAt)}
+                    </span>
+                  </button>
+                ))}
+              {tab === "history" && (history ?? []).length === 0 && (
+                <p className="py-8 text-center text-xs text-muted-foreground">
+                  Belum ada history
+                </p>
+              )}
+
+              {tab === "favorite" &&
+                (favorites ?? []).map((f: any) => (
+                  <button
+                    key={f._id}
+                    onClick={() => {
+                      onClose();
+                      navigate(`/nonton?anime=${f.animeId}`);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+                  >
+                    <img
+                      src={f.animeImage ?? ""}
+                      className="h-14 w-10 rounded object-cover"
+                      alt=""
+                    />
+                    <Heart className="size-4 fill-violet-400 text-violet-400" />
+                    <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                      {f.animeTitle}
+                    </p>
+                  </button>
+                ))}
+              {tab === "favorite" && (favorites ?? []).length === 0 && (
+                <p className="py-8 text-center text-xs text-muted-foreground">
+                  Belum ada favorite
+                </p>
+              )}
+
+              {tab === "komen" && (profile.myComments ?? []).length === 0 && (
+                <p className="py-8 text-center text-xs text-muted-foreground">
+                  Belum ada komentar
+                </p>
+              )}
               {tab === "komen" && (
-                <EmptyOrList
-                  empty="Belum ada komentar di profil ini."
-                  items={(profile.myComments ?? []).map((c: any) => ({
-                    id: c._id,
-                    title: c.text,
-                    sub: c.animeId,
-                  }))}
-                />
-              )}
-              {tab === "history" && (
-                <EmptyOrList
-                  empty="Belum ada riwayat nonton."
-                  items={(history ?? []).map((h: any) => ({
-                    id: h._id,
-                    title: h.animeTitle,
-                    sub: `Episode ${h.episodeNumber ?? h.episode ?? "?"} · ${h.minutesWatched ?? h.minutes ?? 0} menit`,
-                  }))}
-                />
-              )}
-              {tab === "favorite" && (
-                <EmptyOrList
-                  empty="Belum ada anime favorit."
-                  items={(favorites ?? []).map((f: any) => ({
-                    id: f._id,
-                    title: f.animeTitle,
-                    sub: f.animeId,
-                  }))}
-                />
+                <div className="thin-scroll max-h-[50vh] overflow-y-auto">
+                  {(profile.myComments ?? []).map((c: any) => (
+                    <button
+                      key={c._id}
+                      onClick={() => {
+                        onClose();
+                        navigate(`/nonton?anime=${c.animeId}`);
+                      }}
+                      className="mb-2 block w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
+                    >
+                      <p className="text-sm">{c.text}</p>
+                      <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>{timeAgo(c.createdAt)}</span>
+                        <span className="flex items-center gap-0.5">
+                          <Heart className="size-3 text-violet-400" /> {c.likeCount}
+                        </span>
+                      </p>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -232,33 +290,6 @@ export function ProfileSheet({
   );
 }
 
-function EmptyOrList({
-  items,
-  empty,
-}: {
-  items: { id: string; title: string; sub?: string }[];
-  empty: string;
-}) {
-  if (items.length === 0)
-    return <p className="py-6 text-center text-xs text-muted-foreground">{empty}</p>;
-  return (
-    <>
-      {items.map((it) => (
-        <div
-          key={it.id}
-          className="flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/30 px-3 py-2.5"
-        >
-          <Clock className="size-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{it.title}</p>
-            {it.sub && <p className="truncate text-[11px] text-muted-foreground">{it.sub}</p>}
-          </div>
-        </div>
-      ))}
-    </>
-  );
-}
-
 function StatCell({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="py-1">
@@ -267,5 +298,3 @@ function StatCell({ label, value }: { label: string; value: number | string }) {
     </div>
   );
 }
-
-void UserCheck;

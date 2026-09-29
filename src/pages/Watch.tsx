@@ -113,6 +113,10 @@ function WatchContent() {
   // Cache hasil resolve per episode supaya ganti episode tidak nunggu
   // pencarian server lagi (langsung pakai URL yang sudah ada).
   const resolvedRef = useRef<Map<string, any>>(new Map());
+  // Kalau user pindah episode saat video masih diputar, episode baru langsung
+  // autoplay — tidak perlu mencet pause/play lagi.
+  const autoplayNextRef = useRef(false);
+  const lastEpRef = useRef<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
   // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
@@ -338,6 +342,12 @@ function WatchContent() {
     };
 
     // Ganti episode → episode lama langsung dihapus total, tidak ada frame sisa.
+    // Kalau perpindahan terjadi saat video masih diputar, tandai untuk autoplay.
+    if (lastEpRef.current && lastEpRef.current !== epParam) {
+      const v = videoRef.current;
+      autoplayNextRef.current = !!(v && !v.paused && !v.ended);
+    }
+    lastEpRef.current = epParam;
     setSources([]);
     setDirect(null);
     setDirectErr(null);
@@ -367,31 +377,34 @@ function WatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailData, epParam]);
 
-  // Pramuat episode berikutnya di latar belakang: saat user menekan episode
-  // berikutnya, URL-nya sudah siap sehingga tidak ada jeda loading 00:00.
+  // Pramuat episode di sekitar episode aktif (sebelum & sesudah) di
+  // latar belakang: saat user menekan episode lain, URL-nya sudah siap sehingga
+  // playback langsung jalan tanpa jeda loading.
   useEffect(() => {
     if (!epParam || !detailData || detailData.error) return;
-    const next = epList[epIndex + 1];
-    if (!next) return;
-    const mm = next.id?.match?.(/^(\d+)__ep(\d+)$/);
-    if (!mm) return;
-    const key = `${mm[1]}__ep${Number(mm[2]) || 1}`;
-    if (resolvedRef.current.has(key)) return;
+    const targets = [epList[epIndex - 1], epList[epIndex + 1]].filter(Boolean);
+    if (targets.length === 0) return;
     let alive = true;
-    resolveDirect({
-      malId: mm[1],
-      ep: Number(mm[2]) || 1,
-      title: detailData.title,
-    })
-      .then((d: any) => {
-        if (alive && d?.ok) resolvedRef.current.set(key, d);
+    const jobs = targets.map((next: any) => {
+      const mm = next?.id?.match?.(/^(\d+)__ep(\d+)$/);
+      if (!mm) return null;
+      const key = `${mm[1]}__ep${Number(mm[2]) || 1}`;
+      if (resolvedRef.current.has(key)) return null;
+      return resolveDirect({
+        malId: mm[1],
+        ep: Number(mm[2]) || 1,
+        title: detailData.title,
       })
-      .catch(() => {});
+        .then((d: any) => {
+          if (alive && d?.ok) resolvedRef.current.set(key, d);
+        })
+        .catch(() => {});
+    });
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epParam, epIndex, epList.length, detailData]);
+  }, [epParam, epIndex, epList, detailData]);
 
   // HLS (m3u8) → hls.js (Safari bisa pakai src bawaan)
   useEffect(() => {
@@ -658,7 +671,14 @@ function WatchContent() {
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+            onLoadedMetadata={(e) => {
+              setDuration(e.currentTarget.duration);
+              // Episode baru langsung diputar kalau sebelumnya masih diputar.
+              if (autoplayNextRef.current) {
+                autoplayNextRef.current = false;
+                void e.currentTarget.play().catch(() => {});
+              }
+            }}
             onWaiting={() => setWaiting(true)}
             onPlaying={() => setWaiting(false)}
             onCanPlay={() => setWaiting(false)}
