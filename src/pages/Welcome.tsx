@@ -150,6 +150,8 @@ function WelcomeFlow() {
   const [dlPct, setDlPct] = useState(0);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const dlTimer = useRef<number | null>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const rulesRef = useRef<HTMLDivElement>(null);
   const updateAvailable = UPDATE_VERSION !== "";
   const updatePending = updateAvailable && dlState !== "done";
 
@@ -228,11 +230,10 @@ function WelcomeFlow() {
   }, [stage, updatePending, reopened, isAuthenticated, navigate]);
 
   // Sudah login sejak awal → jangan tampilkan welcome sama sekali.
+  // CATATAN: early return ini harus SETELAH semua hook (lihat noticeRef/rulesRef
+  // di atas) — kalau tidak, urutan hook berubah antar render → React error #300.
   if (!authLoading && isAuthenticated && !reopened)
     return <div className="fixed inset-0 z-50 bg-[#07060c]" />;
-
-  const noticeRef = useRef<HTMLDivElement>(null);
-  const rulesRef = useRef<HTMLDivElement>(null);
 
   const onScrollProgress = (
     ref: React.RefObject<HTMLDivElement | null>,
