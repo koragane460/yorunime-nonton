@@ -107,9 +107,21 @@ async function isFramable(url: string): Promise<boolean> {
   return ok;
 }
 
+async function otakudesuSearch(q: string): Promise<any[]> {
+  const key = `ot:${q.toLowerCase()}`;
+  const cached = readCache<any[] | null>(searchCache, key);
+  if (cached) return cached;
+  const search = await get(`/otakudesu/search?q=${encodeURIComponent(q)}`);
+  const items = Array.isArray(search) ? search : [];
+  writeCache(searchCache, key, items);
+  if (items.length === 0) {
+    searchCache.get(key)!.at = Date.now() - TTL_OK + TTL_EMPTY;
+  }
+  return items;
+}
+
 async function otakudesu(title: string, ep: number): Promise<IndoSource[]> {
-  const list = await get(`/otakudesu/search?q=${encodeURIComponent(title)}`);
-  const items = Array.isArray(list) ? list : [];
+  const items = await otakudesuSearch(title);
   if (items.length === 0) return [];
   const best = items
     .map((it: any) => ({ it, score: matchScore(title, String(it?.title ?? "")) }))
@@ -118,13 +130,21 @@ async function otakudesu(title: string, ep: number): Promise<IndoSource[]> {
   const animeId = String(best.it?.animeId ?? slugOf(best.it?.sourceUrl) ?? "");
   if (!animeId) return [];
 
-  const detail = await get(`/otakudesu/anime/${encodeURIComponent(animeId)}`);
+  const detailKey = `ot:${animeId}`;
+  const detail =
+    readCache<any>(slugCache, detailKey) ??
+    (await get(`/otakudesu/anime/${encodeURIComponent(animeId)}`));
+  if (detail) writeCache(slugCache, detailKey, detail);
   const target = pickEpisode(detail?.episodeList ?? [], ep);
   if (!target?.url) return [];
   const epSlug = slugOf(target.url);
   if (!epSlug) return [];
 
-  const episode = await get(`/otakudesu/episode/${encodeURIComponent(epSlug)}`);
+  const epKey = `ot:${epSlug}`;
+  const episode =
+    readCache<any>(epCache, epKey) ??
+    (await get(`/otakudesu/episode/${encodeURIComponent(epSlug)}`));
+  if (episode) writeCache(epCache, epKey, episode);
   const out: IndoSource[] = [];
   const fallback = episode?.defaultStreaming;
   if (fallback && (await isFramable(String(fallback)))) {
@@ -147,32 +167,84 @@ async function otakudesu(title: string, ep: number): Promise<IndoSource[]> {
   return out;
 }
 
-async function oploverz(title: string, ep: number): Promise<IndoSource[]> {
-  const list = await get(`/oploverz/search?q=${encodeURIComponent(title)}`);
+/** Cache sederhana biar tidak terlalu banyak kena API pihak ketiga. */
+type CacheEntry = { value: any; at: number };
+const searchCache = new Map<string, CacheEntry>();
+const slugCache = new Map<string, CacheEntry>();
+const epCache = new Map<string, CacheEntry>();
+const TTL_OK = 30 * 60_000;
+const TTL_EMPTY = 5 * 60_000;
+
+function readCache<T>(map: Map<string, CacheEntry>, key: string): T | null {
+  const hit = map.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > TTL_OK) {
+    map.delete(key);
+    return null;
+  }
+  return hit.value as T;
+}
+function writeCache(map: Map<string, CacheEntry>, key: string, value: any) {
+  if (map.size > 400) map.clear();
+  map.set(key, { value, at: Date.now() });
+}
+
+/** Search Oploverz + cache (termasuk hasil kosong, supaya tidak hammering API). */
+async function oploverzSearch(q: string): Promise<any[]> {
+  const key = q.toLowerCase();
+  const cached = readCache<any[] | null>(searchCache, key);
+  if (cached) return cached;
+  const list = await get(`/oploverz/search?q=${encodeURIComponent(q)}`);
   const items = Array.isArray(list) ? list : [];
+  writeCache(searchCache, key, items);
+  if (items.length === 0) {
+    // hasil kosong hanya sebentar, lalu boleh dicoba lagi
+    searchCache.get(key)!.at = Date.now() - TTL_OK + TTL_EMPTY;
+  }
+  return items;
+}
+
+async function oploverz(title: string, ep: number): Promise<IndoSource[]> {
+  const items = await oploverzSearch(title);
   if (items.length === 0) return [];
-  const best = items
-    .map((it: any) => ({ it, score: matchScore(title, String(it?.title ?? "")) }))
-    .sort((a, b) => b.score - a.score)[0];
-  if (!best || best.score < 20) return [];
-  const slug = String(best.it?.slug ?? slugOf(best.it?.sourceUrl) ?? "");
-  if (!slug) return [];
+  // Banyak hasil mirip (mis. "One Piece" → "One Piece: Heroines"). Pilih yang
+  // judulnya paling cocok DAN benar-benar punya episode yang diminta.
+  const ranked = items
+    .map((it: any) => ({
+      it,
+      score: matchScore(title, String(it?.title ?? "")),
+      slug: String(it?.slug ?? slugOf(it?.sourceUrl) ?? ""),
+    }))
+    .filter((x) => x.slug && x.score >= 20)
+    .sort((a, b) => b.score - a.score);
 
-  const detail = await get(`/oploverz/anime/${encodeURIComponent(slug)}`);
-  const target = pickEpisode(detail?.episodeList ?? [], ep);
-  if (!target?.url) return [];
-  const epSlug = slugOf(target.url);
-  if (!epSlug) return [];
-
-  const episode = await get(`/oploverz/episode/${encodeURIComponent(epSlug)}`);
-  const iframe = episode?.iframe ? String(episode.iframe) : "";
-  if (!iframe || !(await isFramable(iframe))) return [];
-  return [{ label: "Oploverz · Sub Indo", url: iframe, type: "embed" }];
+  for (const cand of ranked.slice(0, 3)) {
+    const detailKey = `op:${cand.slug}`;
+    const detail =
+      readCache<any>(slugCache, detailKey) ??
+      (await get(`/oploverz/anime/${encodeURIComponent(cand.slug)}`));
+    if (detail) writeCache(slugCache, detailKey, detail);
+    const eps: any[] = detail?.episodeList ?? [];
+    const target = pickEpisode(eps, ep);
+    // Kalau kandidat ini tidak punya episode yang diminta, coba kandidat lain.
+    if (!target?.url) continue;
+    const epSlug = slugOf(target.url);
+    if (!epSlug) continue;
+    const epKey = `op:${epSlug}`;
+    const episode =
+      readCache<any>(epCache, epKey) ??
+      (await get(`/oploverz/episode/${encodeURIComponent(epSlug)}`));
+    if (episode) writeCache(epCache, epKey, episode);
+    const iframe = episode?.iframe ? String(episode.iframe) : "";
+    if (!iframe || !(await isFramable(iframe))) continue;
+    return [{ label: "Oploverz · Sub Indo", url: iframe, type: "embed" }];
+  }
+  return [];
 }
 
 /**
  * Sumber streaming subtitle Indonesia untuk satu episode.
- * Urutan: Otakudesu (paling lengkap) → Oploverz (cadangan).
+ * Urutan: Oploverz (utama, subtitle Indonesia baked-in) → Otakudesu → MegaPlay.
  */
 export async function resolveIndo(
   title: string,
@@ -191,11 +263,15 @@ export async function resolveIndo(
     clean.replace(/\b(season\s*\d+|\d+(st|nd|rd|th)\s+season)\b/gi, "").trim(),
   ].filter((v, i, arr) => v.length > 2 && arr.indexOf(v) === i);
 
+  // Semua varian dicoba untuk Oploverz dulu supaya serendah mungkin ketemu
+  // subtitle Indonesia, baru Otakudesu sebagai cadangan.
+  for (const q of variants) {
+    const op = await oploverz(q, ep).catch(() => []);
+    if (op.length > 0) return op;
+  }
   for (const q of variants) {
     const ot = await otakudesu(q, ep).catch(() => []);
     if (ot.length > 0) return ot;
-    const op = await oploverz(q, ep).catch(() => []);
-    if (op.length > 0) return op;
   }
   return [];
 }

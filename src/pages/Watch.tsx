@@ -357,6 +357,10 @@ function WatchContent() {
             onWaiting={() => setWaiting(true)}
             onPlaying={() => setWaiting(false)}
             onCanPlay={() => setWaiting(false)}
+            // Preload agresif: frame pertama sudah siap sebelum pencet play,
+            // sehingga tidak perlu lama loading.
+            preload="auto"
+            playsInline
             controls={false}
           >
             {direct?.subtitle?.url && (

@@ -60,8 +60,20 @@ function rewritePlaylist(text: string, base: string) {
 }
 
 const megaStream = httpAction(async (_ctx, request) => {
-  const raw = new URL(request.url).searchParams.get("u");
+  const params = new URL(request.url).searchParams;
+  const raw = params.get("u");
   if (!raw) return new Response("missing u", { status: 400 });
+  // Range diteruskan ke upstream supaya seek & buffering video mulus.
+  const range = request.headers.get("range") ?? undefined;
+  let referer: string | undefined;
+  const refRaw = params.get("r");
+  if (refRaw) {
+    try {
+      referer = b64urlDecode(refRaw);
+    } catch {
+      referer = undefined;
+    }
+  }
 
   let target: string;
   try {
@@ -95,7 +107,14 @@ const megaStream = httpAction(async (_ctx, request) => {
   }
 
   const upstream = await fetch(url.href, {
-    headers: { "User-Agent": UA, Referer: REF, Accept: "*/*" },
+    headers: {
+      "User-Agent": UA,
+      // Host selain MegaPlay (mis. CDN Blogger/Oploverz) butuh Referer-nya
+      // sendiri; bisa dikirim lewat param `r`.
+      Referer: referer ?? REF,
+      Accept: "*/*",
+      ...(range ? { Range: range } : {}),
+    },
   });
   const contentType = upstream.headers.get("content-type") ?? "";
   const cors = {
@@ -142,6 +161,14 @@ const megaStream = httpAction(async (_ctx, request) => {
       ...cors,
       "Content-Type": outType,
       "Cache-Control": cache,
+      // Range/206 diteruskan supaya player bisa seek tanpa buffering ulang.
+      ...(upstream.headers.get("content-range")
+        ? { "Content-Range": upstream.headers.get("content-range") as string }
+        : {}),
+      ...(upstream.headers.get("content-length")
+        ? { "Content-Length": upstream.headers.get("content-length") as string }
+        : {}),
+      "Accept-Ranges": upstream.headers.get("accept-ranges") ?? "bytes",
     },
   });
 });
