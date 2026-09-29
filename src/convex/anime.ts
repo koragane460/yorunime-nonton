@@ -913,6 +913,92 @@ export const animeDetail = action({
     }),
 });
 
+/**
+ * Jadwal rilis yang benar: AniList memberi jam tayang berikutnya tiap anime
+ * yang sedang airing (nextAiringEpisode.airingAt), jadi kita tahu hari DAN jam
+ * episodenya tayang, bukan cuma "hari apa".
+ */
+export const animeAiringSchedule = action({
+  args: {},
+  handler: async () => {
+    const query = `query ($page:Int){
+      Page(page:$page, perPage:50){
+        pageInfo{ hasNextPage }
+        media(type:ANIME, status:RELEASING, sort:POPULARITY_DESC, isAdult:false, countryOfOrigin:JP){
+          id idMal
+          title{ romaji english native }
+          coverImage{ extraLarge large }
+          averageScore
+          episodes
+          format
+          status
+          nextAiringEpisode{ episode airingAt timeUntilAiring }
+        }
+      }
+    }`;
+    const all: any[] = [];
+    try {
+      for (let page = 1; page <= 3; page++) {
+        const d: any = await aniGraphql(query, { page });
+        const media = d?.Page?.media ?? [];
+        all.push(...media);
+        if (!d?.Page?.pageInfo?.hasNextPage) break;
+      }
+    } catch {
+      return [];
+    }
+
+    const DAY_ID = [
+      "Minggu",
+      "Senin",
+      "Selasa",
+      "Rabu",
+      "Kamis",
+      "Jumat",
+      "Sabtu",
+    ];
+    const out: Record<
+      string,
+      {
+        id: string;
+        title: string;
+        image: string;
+        episode: number;
+        airingAt: number;
+        day: string;
+        time: string;
+        score?: number;
+      }[]
+    > = {};
+    for (const key of DAY_ID) out[key] = [];
+
+    for (const m of all) {
+      const ep = m?.nextAiringEpisode;
+      if (!ep?.airingAt) continue;
+      // Convex berjalan di UTC, jadi jam & hari harus dihitung sendiri dalam
+      // zona WIB (UTC+7) supaya yang tampil benar di perangkat user.
+      const d = new Date(ep.airingAt * 1000 + 7 * 3600_000);
+      const day = DAY_ID[d.getUTCDay()];
+      const hh = String(d.getUTCHours()).padStart(2, "0");
+      const mm = String(d.getUTCMinutes()).padStart(2, "0");
+      out[day].push({
+        id: String(m?.idMal ?? m?.id ?? ""),
+        title:
+          m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "Tanpa judul",
+        image: m?.coverImage?.extraLarge ?? m?.coverImage?.large ?? "",
+        episode: Number(ep.episode ?? 0),
+        airingAt: Number(ep.airingAt) * 1000,
+        day,
+        time: `${hh}:${mm}`,
+        score: m?.averageScore ? Math.round(m.averageScore / 10) : undefined,
+      });
+    }
+    for (const key of DAY_ID)
+      out[key].sort((a, b) => a.airingAt - b.airingAt);
+    return out;
+  },
+});
+
 export const animeSchedule = action({
   args: {},
   handler: async (runCtx) =>

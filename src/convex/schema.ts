@@ -191,6 +191,8 @@ const schema = defineSchema(
       animeImage: v.optional(v.string()),
       episode: v.number(),
       minutesWatched: v.number(),
+      /** Posisi playback terakhir (detik) — dipakai tombol "Lanjutkan". */
+      progressSec: v.optional(v.number()),
       updatedAt: v.number(),
     })
       .index("userId_updated", ["userId", "updatedAt"])

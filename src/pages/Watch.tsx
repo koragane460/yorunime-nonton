@@ -105,6 +105,7 @@ function WatchContent() {
   // lalu dipasang sebagai track di player ini.
   const subtitleIndo = useAction(api.subtitle.subtitleIndo);
   const record = useMutation(api.activities.recordWatch);
+  const saveProgress = useMutation(api.activities.saveProgress);
   const saveSettings = useMutation(api.account.updateSettings);
   const settings = useQuery(api.users.currentUser, {});
 
@@ -161,6 +162,12 @@ function WatchContent() {
   // milik kita — jadi overlay subtitle kita dimatikan 100% (teks dan kotaknya
   // sama sekali tidak muncul) supaya tidak	doabel/tumpang tindih.
   const bakedSubs = !!direct?.bakedSubs;
+  // Notifikasi kecepatan di dalam player (mis. "2× speed") seperti subtitle:
+  // muncul sebentar di tengah atas lalu hilang sendiri.
+  const [speedNotice, setSpeedNotice] = useState("");
+  const speedNoticeTimer = useRef<number | null>(null);
+  const speedReadyRef = useRef(false);
+
   // True kalau subtitle yang aktif versi Bahasa Indonesia.
   const [subTouched, setSubTouched] = useState(false);
 
@@ -467,6 +474,41 @@ function WatchContent() {
     if (videoRef.current) videoRef.current.playbackRate = speed;
   }, [speed]);
 
+  // Simpan posisi playback tiap 10 detik supaya tombol "Lanjutkan" di Info
+  // bisa membuka video dari menit terakhir.
+  useEffect(() => {
+    if (!user || !epParam || !detailData || !currentEp) return;
+    if (currentTime < 5) return;
+    const t = window.setInterval(() => {
+      const v = videoRef.current;
+      if (!v || v.paused || !v.currentTime) return;
+      void saveProgress({
+        animeId,
+        animeTitle: detailData.title ?? "Anime",
+        animeImage: detailData.image,
+        episode: currentEp.number,
+        progressSec: v.currentTime,
+        minutesWatched: 0,
+      }).catch(() => {});
+    }, 10_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, epParam, currentEp, detailData]);
+
+  // Munculkan notifikasi kecepatan setiap kali berubah (tidak saat pertama buka).
+  useEffect(() => {
+    if (!speedReadyRef.current) {
+      speedReadyRef.current = true;
+      return;
+    }
+    setSpeedNotice(`${speed}× speed`);
+    if (speedNoticeTimer.current) clearTimeout(speedNoticeTimer.current);
+    speedNoticeTimer.current = window.setTimeout(() => setSpeedNotice(""), 1400);
+    return () => {
+      if (speedNoticeTimer.current) clearTimeout(speedNoticeTimer.current);
+    };
+  }, [speed]);
+
   // Pengaturan → player: ikut berubah kalau user ubah kualitas di Pengaturan.
   useEffect(() => {
     if (qualityTouched) return;
@@ -673,6 +715,15 @@ function WatchContent() {
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
             onLoadedMetadata={(e) => {
               setDuration(e.currentTarget.duration);
+              // Buka dari "Lanjutkan": loncat ke menit terakhir.
+              const t = Number(params.get("t") ?? 0);
+              if (t > 0 && Number.isFinite(t)) {
+                try {
+                  e.currentTarget.currentTime = t;
+                } catch {
+                  /* metadata belum siap, abaikan */
+                }
+              }
               // Episode baru langsung diputar kalau sebelumnya masih diputar.
               if (autoplayNextRef.current) {
                 autoplayNextRef.current = false;
@@ -731,6 +782,16 @@ function WatchContent() {
               )}
             >
               {activeCue}
+            </p>
+          </div>
+        )}
+
+        {/* Notifikasi kecepatan: gaya sama dengan subtitle — kotak hitam
+            transparan, di tengah atas, hilang sendiri setelah 1,4 detik. */}
+        {speedNotice && (
+          <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center px-4">
+            <p className="rounded-full bg-black/55 px-3.5 py-1.5 text-center text-sm font-bold text-white backdrop-blur-sm">
+              {speedNotice}
             </p>
           </div>
         )}

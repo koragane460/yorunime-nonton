@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -5,7 +6,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
 import { Avatar, BlueCheck, ShineBadge } from "@/components/lstream-ui";
 import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
-import { Info as InfoIcon } from "lucide-react";
+import { Bell, PlayCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type Tab = "notif" | "lanjut";
 
 export default function Info() {
   return (
@@ -16,67 +20,152 @@ export default function Info() {
 }
 
 function InfoContent() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const friendComments = useQuery(api.activities.myFriendsComments, user ? {} : "skip");
+  const [tab, setTab] = useState<Tab>("notif");
 
   return (
     <div className="pb-6">
-      <div className="flex items-center gap-2 py-3">
-        <span className="flex size-9 items-center justify-center rounded-full bg-violet-600/20 text-violet-300">
-          <InfoIcon className="size-5" />
-        </span>
-        <div>
-          <h1 className="text-lg font-black leading-tight">Info</h1>
-          <p className="text-[11px] text-muted-foreground">
-            Komentar teman & developer di semua anime — terbaru dulu
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2.5">
-        {(friendComments ?? []).map((c: any) => (
+      {/* Dua tombol dengan garis bawah di bawahnya */}
+      <div className="flex border-b border-white/15">
+        {(
+          [
+            ["notif", "Pemberitahuan", Bell],
+            ["lanjut", "Lanjutkan", PlayCircle],
+          ] as const
+        ).map(([k, label, Icon]) => (
           <button
-            key={c._id}
-            onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
-            className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-violet-500/50"
-          >
-            {c.bannerUrl && (
-              <div
-                className="h-7 w-full bg-cover bg-center opacity-70"
-                style={{ backgroundImage: `url(${c.bannerUrl})` }}
-              />
+            key={k}
+            onClick={() => setTab(k)}
+            className={cn(
+              "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-3 text-sm font-semibold transition",
+              tab === k ? "text-foreground" : "text-muted-foreground",
             )}
-            <div className="flex gap-2.5 p-2.5">
-              <Avatar src={c.image} seed={c.username} className="size-8" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1">
-                  <p className="truncate text-xs font-bold">{c.username}</p>
-                  {c.premium && <BlueCheck className="size-3.5" />}
-                  {c.staffRole && STAFF_BADGE[c.staffRole] && (
-                    <ShineBadge
-                      label={STAFF_BADGE[c.staffRole].name}
-                      gradient={STAFF_BADGE[c.staffRole].cls}
-                    />
-                  )}
-                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                    {timeAgo(c.createdAt)}
-                  </span>
-                </div>
-                <p className="line-clamp-2 text-sm text-zinc-300">{c.text}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  ❤️ {c.likeCount ?? 0}
-                </p>
-              </div>
-            </div>
+          >
+            <Icon className="size-4" />
+            {label}
+            {tab === k && (
+              <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-white/90" />
+            )}
           </button>
         ))}
-        {friendComments && friendComments.length === 0 && (
-          <p className="py-10 text-center text-xs text-muted-foreground">
-            Belum ada komentar teman — tambahkan teman lewat chat!
-          </p>
-        )}
       </div>
+
+      {tab === "notif" ? <NotifTab /> : <LanjutTab />}
     </div>
   );
+}
+
+/** Pemberitahuan: komentar teman & developer (bug/fix/update), terbaru dulu. */
+function NotifTab() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const friendComments = useQuery(
+    api.activities.myFriendsComments,
+    user ? {} : "skip",
+  );
+
+  return (
+    <div className="space-y-2.5 pt-3">
+      {(friendComments ?? []).map((c: any) => (
+        <button
+          key={c._id}
+          onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
+          className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-violet-500/50"
+        >
+          {c.bannerUrl && (
+            <div
+              className="h-7 w-full bg-cover bg-center opacity-70"
+              style={{ backgroundImage: `url(${c.bannerUrl})` }}
+            />
+          )}
+          <div className="flex gap-2.5 p-2.5">
+            <Avatar src={c.image} seed={c.username} className="size-8" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <p className="truncate text-xs font-bold">{c.username}</p>
+                {c.premium && <BlueCheck className="size-3.5" />}
+                {c.staffRole && STAFF_BADGE[c.staffRole] && (
+                  <ShineBadge
+                    label={STAFF_BADGE[c.staffRole].name}
+                    gradient={STAFF_BADGE[c.staffRole].cls}
+                  />
+                )}
+                <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                  {timeAgo(c.createdAt)}
+                </span>
+              </div>
+              <p className="line-clamp-2 text-sm text-zinc-300">{c.text}</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                {c.likeCount ?? 0} suka
+              </p>
+            </div>
+          </div>
+        </button>
+      ))}
+      {friendComments && friendComments.length === 0 && (
+        <p className="py-10 text-center text-xs text-muted-foreground">
+          Belum ada pemberitahuan dari developer atau teman
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Lanjutkan: anime yang belum dituntaskan. Kalau sudah nonton lebih dari 20
+ * menit, dianggap selesai dan tidak muncul di sini.
+ */
+function LanjutTab() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
+
+  return (
+    <div className="space-y-2 pt-3">
+      {(rows ?? []).map((h: any) => {
+        const epId = `${h.animeId}__ep${h.episode}`;
+        const total = h.progressSec ?? 0;
+        return (
+          <button
+            key={h._id}
+            onClick={() =>
+              navigate(
+                `/nonton?anime=${h.animeId}&ep=${epId}&t=${Math.max(0, Math.floor(total))}`,
+              )
+            }
+            className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
+          >
+            <img
+              src={h.animeImage ?? ""}
+              alt=""
+              className="h-16 w-11 shrink-0 rounded-lg object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
+              <p className="text-xs text-muted-foreground">
+                Episode {h.episode} · {h.minutesWatched} menit
+              </p>
+              <p className="text-[11px] text-violet-300">
+                Lanjut dari {fmtTime(total)}
+              </p>
+            </div>
+            <PlayCircle className="size-5 shrink-0 text-violet-400" />
+          </button>
+        );
+      })}
+      {rows && rows.length === 0 && (
+        <p className="py-10 text-center text-xs text-muted-foreground">
+          Belum ada anime yang belum selesai
+        </p>
+      )}
+    </div>
+  );
+}
+
+function fmtTime(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+  return `${m}:${String(r).padStart(2, "0")}`;
 }

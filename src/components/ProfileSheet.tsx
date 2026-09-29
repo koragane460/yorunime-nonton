@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { xpForLevel } from "@/lib/level";
-import { timeAgo } from "@/lib/lstream";
+import { timeAgo, usernameColor } from "@/lib/lstream";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -70,7 +70,7 @@ export function ProfileSheet({
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div
-              className="h-48 w-full bg-cover bg-center"
+              className="h-40 w-full bg-cover bg-center"
               style={
                 profile.bannerUrl
                   ? { backgroundImage: `url(${profile.bannerUrl})` }
@@ -91,16 +91,24 @@ export function ProfileSheet({
               <Avatar
                 src={profile.image}
                 seed={profile.username}
-                className="size-28"
+                className="size-24"
                 online={!profile.hideOnline}
               />
             </div>
           </div>
 
-          <div className="px-4 text-center">
+          <div className="-mt-2 px-4 text-center">
             {/* Username + centang biru + ID */}
-            <div className="mt-2 flex items-center justify-center gap-1.5">
-              <p className="text-lg font-black text-white">{profile.username ?? "user"}</p>
+            <div className="flex items-center justify-center gap-1.5">
+              <p
+                key={profile.username}
+                className={cn(
+                  "text-lg font-black",
+                  usernameColor(profile.username),
+                )}
+              >
+                {profile.username ?? "user"}
+              </p>
               {profile.premium && <BlueCheck className="size-5" />}
             </div>
             <p className="text-xs text-zinc-400">
@@ -108,7 +116,7 @@ export function ProfileSheet({
             </p>
 
             {/* Tag clan di kiri, badge level, tombol + add friend di sebelahnya */}
-            <div className="mt-3 flex items-center justify-center gap-2">
+            <div className="mt-2 flex items-center justify-center gap-2">
               {profile.clanTag && (
                 <ClanTag
                   icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}

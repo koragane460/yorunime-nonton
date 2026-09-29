@@ -103,15 +103,35 @@ function AkunContent() {
 
       {/* Foto profile menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
-        <div className="relative -mt-14 flex flex-col items-center">
+        <div className="relative -mt-10 flex flex-col items-center">
           <Avatar
             src={user.image}
             seed={user.username}
-            className="size-28"
+            className="size-20"
             online={!user.hideOnline}
           />
-          <div className="mt-2 flex min-w-0 max-w-full items-center justify-center gap-1.5">
-            <p className={cn("truncate text-lg font-black", usernameColor(user.username))}>
+          <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
+            <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
+              <LevelBadge level={user.level ?? 1} />
+            </button>
+            {user.clanTag && (
+              <ClanTag
+                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                tag={user.clanTag}
+                color={user.clanNameColor}
+              />
+            )}
+          </div>
+          <div
+            key={user.username}
+            className="mt-2 flex min-w-0 max-w-full items-center justify-center gap-1.5"
+          >
+            <p
+              className={cn(
+                "truncate text-lg font-black",
+                usernameColor(user.username),
+              )}
+            >
               {user.username}
             </p>
             {premium && <BlueCheck className="size-5 shrink-0" />}
@@ -119,19 +139,6 @@ function AkunContent() {
               {displayId(user.seqId, user._id)}
             </span>
           </div>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
-            <LevelBadge level={user.level ?? 1} />
-          </button>
-          {user.clanTag && (
-            <ClanTag
-              icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
-              tag={user.clanTag}
-              color={user.clanNameColor}
-            />
-          )}
         </div>
 
         {/* Bar level */}

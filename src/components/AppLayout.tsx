@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
-import { displayId } from "@/lib/lstream";
+import { displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -156,7 +156,12 @@ function AccountPanel({
             <Avatar src={image} seed={name} className="size-14" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="truncate font-bold text-white">{name}</p>
+                <p
+                  key={name}
+                  className={cn("truncate font-bold", usernameColor(name))}
+                >
+                  {name}
+                </p>
                 {premium && <BlueCheck />}
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">

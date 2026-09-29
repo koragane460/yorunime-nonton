@@ -53,6 +53,80 @@ export const recordWatch = mutation({
   },
 });
 
+/**
+ * Simpan posisi playback terakhir (untuk tombol "Lanjutkan" di halaman Info).
+ * Tidak menambah XP dan tidak menambah menit nonton — cuma posisi.
+ */
+export const saveProgress = mutation({
+  args: {
+    animeId: v.string(),
+    animeTitle: v.string(),
+    animeImage: v.optional(v.string()),
+    episode: v.number(),
+    progressSec: v.number(),
+    minutesWatched: v.optional(v.number()),
+  },
+  handler: async (
+    ctx,
+    { animeId, animeTitle, animeImage, episode, progressSec, minutesWatched },
+  ) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return { ok: false };
+    const existing = await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_anime", (q) =>
+        q.eq("userId", userId).eq("animeId", animeId),
+      )
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        episode,
+        progressSec: Math.max(0, Math.round(progressSec)),
+        minutesWatched: existing.minutesWatched + (minutesWatched ?? 0),
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("watchHistory", {
+        userId,
+        animeId,
+        animeTitle,
+        animeImage,
+        episode,
+        minutesWatched: minutesWatched ?? 0,
+        progressSec: Math.max(0, Math.round(progressSec)),
+        updatedAt: Date.now(),
+      });
+    }
+    return { ok: true };
+  },
+});
+
+/** Riwayat yang belum selesai: sudah nonton tapi masih di bawah 20 menit. */
+export const continueWatching = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const rows = await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_updated", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(30);
+    return rows
+      .filter((r) => (r.minutesWatched ?? 0) > 0 && (r.minutesWatched ?? 0) < 20)
+      .map((r) => ({
+        _id: r._id,
+        animeId: r.animeId,
+        animeTitle: r.animeTitle,
+        animeImage: r.animeImage,
+        episode: r.episode,
+        minutesWatched: r.minutesWatched,
+        progressSec: r.progressSec ?? 0,
+        updatedAt: r.updatedAt,
+      }));
+  },
+});
+
 export const myHistory = query({
   args: {},
   handler: async (ctx) => {
