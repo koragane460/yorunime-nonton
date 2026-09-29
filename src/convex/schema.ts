@@ -250,6 +250,13 @@ const schema = defineSchema(
       value: v.any(),
     }).index("key", ["key"]),
 
+    authAccounts: defineTable({
+      email: v.string(),
+      passwordHash: v.string(),
+      createdAt: v.number(),
+      lastLoginAt: v.optional(v.number()),
+    }).index("email", ["email"]),
+
     contentReports: defineTable({
       reporterId: v.id("users"),
       messageId: v.id("chatMessages"),
