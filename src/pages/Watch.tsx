@@ -29,6 +29,8 @@ import { toast } from "sonner";
 
 const QUALITIES = ["144p", "240p", "360p", "480p", "720p", "1080p"];
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+// Label track subtitle yang dibuat otomatis (diterjemahkan ke Indonesia).
+const AUTO_SUB = "Indonesia (otomatis)";
 
 export default function Watch() {
   return <WatchContent />;
@@ -45,6 +47,9 @@ function WatchContent() {
   const episode = useAction(api.anime.animeEpisode);
   // MegaPlay: ambil URL HLS langsung (m3u8) + subtitle + timing intro/outro
   const resolveDirect = useAction(api.megaplay.resolveEpisode);
+  // Subtitle Indonesia otomatis: subtitle English diterjemahkan di backend
+  // lalu dipasang sebagai track di player ini.
+  const subtitleIndo = useAction(api.subtitle.subtitleIndo);
   const record = useMutation(api.activities.recordWatch);
   const settings = useQuery(api.users.currentUser, {});
 
@@ -73,6 +78,8 @@ function WatchContent() {
   const [direct, setDirect] = useState<any>(null);
   // Alasan stream tidak tersedia (mis. judul upcoming belum tayang)
   const [directErr, setDirectErr] = useState<string | null>(null);
+  const [autoSubUrl, setAutoSubUrl] = useState("");
+  const [autoSubLoading, setAutoSubLoading] = useState(false);
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
@@ -80,8 +87,9 @@ function WatchContent() {
     setActiveSub(label);
     setSubOpen(false);
     if (!v) return;
-    // Urutan <track> di video: subtitle utama dulu, lalu track lain.
-    const order: string[] = direct?.subtitle?.url
+    // Urutan <track> di video: subtitle utama dulu, lalu track lain, dan
+    // track Indonesia otomatis (kalau ada) paling akhir.
+    const base: string[] = direct?.subtitle?.url
       ? [
           direct.subtitle.label ?? "Subtitle",
           ...(direct?.subTracks ?? [])
@@ -89,6 +97,7 @@ function WatchContent() {
             .map((t: any) => t.label),
         ]
       : (direct?.subTracks ?? []).map((t: any) => t.label);
+    const order = autoSubUrl ? [...base, AUTO_SUB] : base;
     Array.from(v.textTracks).forEach((t, i) => {
       t.mode = !label ? "disabled" : order[i] === label ? "showing" : "disabled";
     });
@@ -101,6 +110,67 @@ function WatchContent() {
     if (!v) return;
     setActiveSub(direct.subtitle.label ?? "Subtitle");
   }, [direct]);
+
+  // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
+  // localStorage jadi tidak perlu diterjemahkan ulang.
+  useEffect(() => {
+    const mm = epParam?.match(/^(\d+)__ep(\d+)$/);
+    if (!mm) {
+      setAutoSubUrl("");
+      return;
+    }
+    const key = `yorunime-sub-indo:${mm[1]}:${mm[2]}`;
+    setAutoSubUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return "";
+    });
+    const cached = (() => {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    })();
+    if (cached && cached.includes("WEBVTT")) {
+      setAutoSubUrl(
+        URL.createObjectURL(new Blob([cached], { type: "text/vtt" })),
+      );
+      return;
+    }
+    let alive = true;
+    setAutoSubLoading(true);
+    subtitleIndo({ malId: mm[1], ep: Number(mm[2]) || 1 })
+      .then((r: any) => {
+        if (!alive || !r?.ok || !r.vtt) return;
+        try {
+          localStorage.setItem(key, r.vtt);
+        } catch {
+          /* storage penuh — subtitle tetap dipakai di session ini */
+        }
+        setAutoSubUrl(
+          URL.createObjectURL(new Blob([r.vtt], { type: "text/vtt" })),
+        );
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setAutoSubLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epParam]);
+
+  // Begitu subtitle otomatis siap, langsung aktifkan (kecuali sudah ada
+  // track subtitle Indonesia asli dari server).
+  useEffect(() => {
+    if (!autoSubUrl) return;
+    const hasNative = (direct?.subTracks ?? []).some(
+      (t: any) => t.lang === "id",
+    );
+    if (!hasNative) pickSub(AUTO_SUB);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSubUrl]);
 
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
@@ -308,6 +378,10 @@ function WatchContent() {
     );
 
   const D = detailData;
+  // Tombol CC muncul kalau ada track subtitle apa pun (termasuk subtitle
+  // Indonesia yang sedang dibuat otomatis).
+  const hasSubMenu =
+    (direct?.subTracks?.length ?? 0) > 0 || !!autoSubUrl || autoSubLoading;
 
   return (
     <div className="min-h-screen pb-24">
@@ -370,6 +444,14 @@ function WatchContent() {
                 srcLang={direct.subtitle.lang ?? "id"}
                 label={direct.subtitle.label ?? "Subtitle"}
                 default
+              />
+            )}
+            {autoSubUrl && (
+              <track
+                kind="subtitles"
+                src={autoSubUrl}
+                srcLang="id"
+                label={AUTO_SUB}
               />
             )}
             {/* Track subtitle lain (Indonesia & lainnya) — bisa diganti dari menu CC */}
@@ -492,7 +574,7 @@ function WatchContent() {
                 >
                   {speed}x
                 </button>
-                {(direct?.subTracks?.length ?? 0) > 0 && (
+                {hasSubMenu && (
                   <button
                     onClick={() => setSubOpen((v) => !v)}
                     className={cn(
@@ -585,6 +667,25 @@ function WatchContent() {
                     )}
                   </button>
                 ))}
+                {/* Subtitle Indonesia otomatis (dari subtitle server) */}
+                <button
+                  onClick={() => autoSubUrl && pickSub(AUTO_SUB)}
+                  disabled={!autoSubUrl}
+                  className={cn(
+                    "block w-full rounded px-2 py-1 text-left text-xs",
+                    activeSub === AUTO_SUB
+                      ? "bg-violet-600 text-white"
+                      : "text-white/80 hover:bg-white/10",
+                    !autoSubUrl && "opacity-50",
+                  )}
+                >
+                  {autoSubLoading && !autoSubUrl
+                    ? "Menerjemahkan subtitle…"
+                    : AUTO_SUB}
+                  <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
+                    ID
+                  </span>
+                </button>
               </div>
             )}
           </div>
