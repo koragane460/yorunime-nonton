@@ -826,6 +826,28 @@ export const animeBrowse = action({
   },
 });
 
+export const animeSimilar = action({
+  args: { id: v.string() },
+  handler: async (runCtx, { id }) =>
+    cached(runCtx, `similar:${id}`, DETAIL_TTL, async () => {
+      const malId = Number(String(id).replace(/\D/g, ""));
+      if (!malId) return [];
+      try {
+        const d = await aniGraphql(
+          `query($id:Int){ Media(idMal:$id, type:ANIME){ recommendations(sort:RATING_DESC, perPage:14){ nodes{ mediaRecommendation{ ${ANILIST_FIELDS} } } } } }`,
+          { id: malId },
+        );
+        const nodes = d?.Media?.recommendations?.nodes ?? [];
+        return nodes
+          .map((n: any) => n?.mediaRecommendation)
+          .filter((m: any) => m?.idMal)
+          .map((m: any) => anilistCard(m));
+      } catch {
+        return [];
+      }
+    }),
+});
+
 export const animeDetail = action({
   args: { id: v.string(), source: v.optional(v.string()) },
   handler: async (runCtx, { id, source }) =>

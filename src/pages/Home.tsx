@@ -442,7 +442,13 @@ function HomeContent() {
         />
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
-      {pickId && <AnimeDetailScreen animeId={pickId} onClose={() => setPickId(null)} />}
+      {pickId && (
+        <AnimeDetailScreen
+          animeId={pickId}
+          onClose={() => setPickId(null)}
+          onPick={(id) => setPickId(id)}
+        />
+      )}
     </div>
   );
 }
@@ -1176,22 +1182,36 @@ function DMScreen({
 
 // ------------------------------------------------------- detail screen ----
 
-function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () => void }) {
+function AnimeDetailScreen({
+  animeId,
+  onClose,
+  onPick,
+}: {
+  animeId: string;
+  onClose: () => void;
+  onPick: (id: string) => void;
+}) {
   useHideNavOnMount();
   const navigate = useNavigate();
   const { user } = useAuth();
   const getDetail = useAction(api.anime.animeDetail);
+  const getSimilar = useAction(api.anime.animeSimilar);
   const isFav = useQuery(api.activities.isFavorite, user ? { animeId } : "skip");
   const toggleFav = useMutation(api.activities.toggleFavorite);
   const [detail, setDetail] = useState<any>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [episodeOrder, setEpisodeOrder] = useState<"first" | "last">("first");
   const [allEpisodes, setAllEpisodes] = useState(false);
+  const [similar, setSimilar] = useState<AnimeCardT[]>([]);
 
   useEffect(() => {
     getDetail({ id: animeId })
       .then((d: any) => setDetail(d))
       .catch(() => setDetail({ error: true }));
+    setSimilar([]);
+    getSimilar({ id: animeId })
+      .then((r: any) => setSimilar((r as AnimeCardT[]) ?? []))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId]);
 
@@ -1360,6 +1380,35 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
             >
               {allEpisodes ? "Tutup" : "Tampilkan semua episode"}
             </button>
+          )}
+
+          {/* Yang serupa — anime yang mirip dengan ini */}
+          {similar.length > 0 && (
+            <div className="mt-6">
+              <h2 className="mb-2 text-lg font-bold">Yang serupa</h2>
+              <div className="thin-scroll -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
+                {similar.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onPick(s.id)}
+                    className="w-24 shrink-0 text-left"
+                  >
+                    <img
+                      src={s.image}
+                      alt=""
+                      className="aspect-[2/3] w-full rounded-lg object-cover"
+                      loading="lazy"
+                    />
+                    <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
+                      {s.title}
+                    </p>
+                    {s.score ? (
+                      <p className="text-[10px] text-amber-400">★ {s.score}</p>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Komentar hanya ada di halaman Nonton */}

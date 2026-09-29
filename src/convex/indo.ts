@@ -193,6 +193,66 @@ function writeCache(map: Map<string, CacheEntry>, key: string, value: any) {
 }
 
 /** Search Oploverz + cache (termasuk hasil kosong, supaya tidak hammering API). */
+// ---------------------------------------------------------------- SankaApi --
+// REST API gabungan (sankavollerei.web.id) yangNEW punya 12+ situs Indonesia.
+// Dipakai untuk sumber Samehadaku & Otakudesu: katalognya jauh lebih lengkap
+// (One Piece 1.178 episode, Naruto, Bleach, dst).
+const SANKA = "https://www.sankavollerei.web.id";
+
+async function sankaGet(path: string): Promise<any | null> {
+  const key = `sanka:${path}`;
+  const cached = readCache<any>(epCache, key);
+  if (cached) return cached;
+  try {
+    const res = await fetch(`${SANKA}${path}`, {
+      headers: { "User-Agent": UA, Accept: "application/json" },
+      signal: AbortSignal.timeout(9_000),
+    });
+    if (!res.ok) return null;
+    const json: any = await res.json();
+    const data = json?.data ?? null;
+    if (data) writeCache(epCache, key, data);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function samehadaku(title: string, ep: number): Promise<IndoSource[]> {
+  const list = await sankaGet(
+    `/anime/samehadaku/search?q=${encodeURIComponent(title)}`,
+  );
+  const items: any[] = Array.isArray(list?.animeList) ? list.animeList : [];
+  if (items.length === 0) return [];
+  const ranked = items
+    .map((it: any) => ({
+      it,
+      score: matchScore(title, String(it?.title ?? "")),
+      id: String(it?.animeId ?? slugOf(it?.href) ?? ""),
+    }))
+    .filter((x) => x.id && x.score >= 20)
+    .sort((a, b) => b.score - a.score);
+
+  for (const cand of ranked.slice(0, 3)) {
+    const detail = await sankaGet(`/anime/samehadaku/anime/${cand.id}`);
+    const raw: any[] = Array.isArray(detail?.episodeList) ? detail.episodeList : [];
+    // `title` di Samehadaku adalah nomor episode.
+    const eps = raw.map((e: any) => ({
+      episode: Number(e.title),
+      url: e.href ?? `https://v2.samehadaku.how/${e.episodeId}/`,
+    }));
+    const target = pickEpisode(eps, ep);
+    if (!target?.url) continue;
+    const epId = String(target.url).split("/").filter(Boolean).pop() ?? "";
+    if (!epId) continue;
+    const episode = await sankaGet(`/anime/samehadaku/episode/${epId}`);
+    const url = episode?.defaultStreamingUrl ? String(episode.defaultStreamingUrl) : "";
+    if (!url || !(await isFramable(url))) continue;
+    return [{ label: "Samehadaku · Sub Indo", url, type: "embed" }];
+  }
+  return [];
+}
+
 async function oploverzSearch(q: string): Promise<any[]> {
   const key = q.toLowerCase();
   const cached = readCache<any[] | null>(searchCache, key);
@@ -270,8 +330,12 @@ export async function resolveIndo(
     clean.replace(/\b(movie|tv|ova|ona|special)\b/gi, "").replace(/\s+/g, " ").trim(),
   ].filter((v, i, arr) => v.length > 2 && arr.indexOf(v) === i);
 
-  // Semua varian dicoba untuk Oploverz dulu supaya serendah mungkin ketemu
-  // subtitle Indonesia, baru Otakudesu sebagai cadangan.
+  // Semua varian dicoba untuk sumber bersubtitle Indonesia, urut dari yang
+  // paling lengkap: Samehadaku → Oploverz → Otakudesu.
+  for (const q of variants) {
+    const sh = await samehadaku(q, ep).catch(() => []);
+    if (sh.length > 0) return sh;
+  }
   for (const q of variants) {
     const op = await oploverz(q, ep).catch(() => []);
     if (op.length > 0) return op;

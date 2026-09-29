@@ -87,19 +87,10 @@ function WatchContent() {
     setActiveSub(label);
     setSubOpen(false);
     if (!v) return;
-    // Urutan <track> di video: subtitle utama dulu, lalu track lain, dan
-    // track Indonesia otomatis (kalau ada) paling akhir.
-    const base: string[] = direct?.subtitle?.url
-      ? [
-          direct.subtitle.label ?? "Subtitle",
-          ...(direct?.subTracks ?? [])
-            .filter((t: any) => t.url !== direct?.subtitle?.url)
-            .map((t: any) => t.label),
-        ]
-      : (direct?.subTracks ?? []).map((t: any) => t.label);
-    const order = autoSubUrl ? [...base, AUTO_SUB] : base;
-    Array.from(v.textTracks).forEach((t, i) => {
-      t.mode = !label ? "disabled" : order[i] === label ? "showing" : "disabled";
+    // Pakai label dari DOM langsung supaya tidak pernah salah pasangan
+    // track (urutan <track> bisa berubah).
+    Array.from(v.textTracks).forEach((t) => {
+      t.mode = !label ? "disabled" : t.label === label ? "showing" : "disabled";
     });
   };
 
@@ -712,31 +703,10 @@ function WatchContent() {
                 SUB ID
               </span>
             </div>
-            <div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 bg-gradient-to-t from-black/85 to-transparent px-2 py-2">
-              <div className="thin-scroll flex flex-1 gap-1.5 overflow-x-auto">
-                {sources.map((s, i) => (
-                  <button
-                    key={s.label + i}
-                    onClick={() => {
-                      setSourceIdx(i);
-                      setSourceType(
-                        s.type === "embed" ? "embed" : s.type === "hls" ? "hls" : "mp4",
-                      );
-                    }}
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition",
-                      i === sourceIdx
-                        ? "bg-violet-600 text-white"
-                        : "bg-white/15 text-white/80",
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+            <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-end px-2 py-2">
               <button
                 onClick={toggleFullscreen}
-                className="shrink-0 rounded bg-white/15 p-1.5"
+                className="rounded bg-black/55 p-1.5"
                 aria-label="Layar penuh"
               >
                 <Maximize className="size-4 text-white" />
@@ -761,8 +731,8 @@ function WatchContent() {
           )}
       </div>
 
-      {/* Pilih server (SUB/DUB dsb.) — untuk mode HLS/mp4 (player sendiri) */}
-      {sources.length > 1 && sourceType !== "embed" && (
+      {/* Pilih server — tetap di bawah player (semua mode) */}
+      {sources.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
           <span className="text-[11px] text-muted-foreground">Server:</span>
           {sources.map((s, i) => (
