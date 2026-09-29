@@ -114,6 +114,10 @@ function WelcomeFlow() {
   const [testerPass, setTesterPass] = useState("");
   const [testerError, setTesterError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+  // true = aplikasi baru dibuka kembali (balik dari tab/app lain) → tampilkan
+  // layar YoruNime sebentar supaya konten lama tidak kelihatan.
+  const [reopened, setReopened] = useState(false);
+  const wasHidden = useRef(false);
 
   // --- Mode utama: Login / Register ---
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -174,19 +178,58 @@ function WelcomeFlow() {
     setDevices(loadDevices());
   }, []);
 
-  // Auto-redirect kalau sudah punya sesi (kecuali sedang di tengah register)
+  // Balik dari tab lain / buka ulang aplikasi → layar YoruNime muncul dulu.
   useEffect(() => {
-    if (!authLoading && isAuthenticated && !registering)
+    const onVisible = () => {
+      if (document.visibilityState === "hidden") {
+        wasHidden.current = true;
+        return;
+      }
+      if (wasHidden.current) {
+        wasHidden.current = false;
+        setReopened(true);
+        setStage("intro");
+      }
+    };
+    const onShow = () => {
+      if (wasHidden.current) {
+        wasHidden.current = false;
+        setReopened(true);
+        setStage("intro");
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onShow);
+    };
+  }, []);
+
+  // Auto-redirect kalau sudah punya sesi (kecuali saat splash atau register)
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && !registering && !(reopened && stage === "intro"))
       navigate("/home", { replace: true });
-  }, [authLoading, isAuthenticated, navigate, registering]);
+  }, [authLoading, isAuthenticated, navigate, registering, reopened, stage]);
 
   useEffect(() => {
     if (stage !== "intro") return;
     // Kalau ada update yang belum di-download, tahan di intro dulu.
     if (updatePending) return;
-    const t = setTimeout(() => setStage("notice"), 1800);
+    const t = setTimeout(() => {
+      // Sudah login & hanya splash balik aplikasi → langsung ke beranda.
+      if (reopened && isAuthenticated) {
+        navigate("/home", { replace: true });
+        return;
+      }
+      setStage("notice");
+    }, 1800);
     return () => clearTimeout(t);
-  }, [stage, updatePending]);
+  }, [stage, updatePending, reopened, isAuthenticated, navigate]);
+
+  // Sudah login sejak awal → jangan tampilkan welcome sama sekali.
+  if (!authLoading && isAuthenticated && !reopened)
+    return <div className="fixed inset-0 z-50 bg-[#07060c]" />;
 
   const noticeRef = useRef<HTMLDivElement>(null);
   const rulesRef = useRef<HTMLDivElement>(null);

@@ -332,6 +332,54 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
 
 // -------------------------------------------------------- otakudesu ol ----
 
+/**
+ * Sinkronkan judul & poster katalog statis dengan AniList (by MAL id) supaya
+ * nama anime di hero/kartu selalu sama dengan gambarnya. Sinopsis Indonesia
+ * buatan sendiri tetap dipertahankan.
+ */
+async function hydrateCatalog(cards: AnimeCard[]): Promise<AnimeCard[]> {
+  const ids = [
+    ...new Set(
+      cards
+        .map((c) => Number(c.id))
+        .filter((n) => Number.isInteger(n) && n > 0),
+    ),
+  ];
+  if (ids.length === 0) return cards;
+  try {
+    const d = await aniGraphql(
+      `query($ids:[Int]){ Page(page:1, perPage:50){ media(idMal_in:$ids, type:ANIME){ ${ANILIST_FIELDS} } } }`,
+      { ids: ids.slice(0, 50) },
+    );
+    const byMal = new Map<number, any>(
+      (d?.Page?.media ?? []).map((m: any) => [Number(m.idMal), m]),
+    );
+    return cards.map((c) => {
+      const m = byMal.get(Number(c.id));
+      if (!m) return c;
+      const fresh = anilistCard(m);
+      return {
+        ...c,
+        source: "anilist" as const,
+        title: fresh.title,
+        image: fresh.image,
+        score: fresh.score ?? c.score,
+        episodes: fresh.episodes ?? c.episodes,
+        type: fresh.type ?? c.type,
+        status: fresh.status ?? c.status,
+        synopsis: c.synopsis ?? fresh.synopsis,
+      };
+    });
+  } catch {
+    return cards;
+  }
+}
+
+/** Fallback katalog + hidrasi judul/poster dari AniList. */
+async function fbList(list: AnimeCard[], count: number): Promise<AnimeCard[]> {
+  return hydrateCatalog(rotateByDate(list, count));
+}
+
 function odNum(v: any): number | undefined {
   const n = parseInt(String(v ?? "").replace(/[^0-9]/g, ""), 10);
   return Number.isNaN(n) ? undefined : n;
@@ -417,41 +465,41 @@ function fb(
 }
 
 export const FALLBACK_TOP: AnimeCard[] = [
-  fb("Frieren: Beyond Journey's End", "52991", 9.3, 2023, "Completed", "Penyihir elf berkeliling menengok kembali perjalanan masa lalunya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-qQTzQnEJJ3oB.jpg"),
-  fb("Fullmetal Alchemist: Brotherhood", "5114", 9.1, 2009, "Completed", "Dua bersaudara alkimia mencari Batu Filsafat untuk mengembalikan tubuh mereka.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx5114-nSWCgQlmOMtj.jpg"),
-  fb("Steins;Gate", "9253", 9.0, 2011, "Completed", "Ilmuwan gila menemukan cara mengirim pesan ke masa lalu lewat microwave.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx9253-tIUXF2gfU8Sg.jpg"),
-  fb("Hunter x Hunter (2011)", "11061", 9.0, 2011, "Completed", "Gon berlatih jadi Hunter demi mencari ayahnya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11061-y5gsT1hoHuHw.png"),
-  fb("Attack on Titan", "16498", 8.9, 2013, "Completed", "Manusia bertahan di balik tembok dari serangan Titan raksasa.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-buvcRTBx4NSm.jpg"),
-  fb("Demon Slayer", "38000", 8.8, 2019, "Completed", "Tanjiro memburu iblis untuk menyembuhkan adiknya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-WBsBl0ClmgYL.jpg"),
-  fb("Jujutsu Kaisen", "40748", 8.7, 2020, "Completed", "Siswa SMA menelan jari kutukan dan masuk dunia jujutsu.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-LHBAeoZDIsnF.jpg"),
-  fb("One Punch Man", "30276", 8.6, 2015, "Completed", "Pahlawan yang mengalahkan musuh dengan satu pukulan mencari tantangan.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21087-B5DHjqZ3kW4b.jpg"),
-  fb("Death Note", "1535", 8.9, 2006, "Completed", "Siswa menemukan buku yang bisa membunuh siapa pun namanya ditulis.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-kUgkcrfOrkUM.jpg"),
-  fb("Sousou no Frieren S2", "58567", 9.0, 2026, "Ongoing", "Kelanjutan perjalanan Frieren dan rombongannya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx176496-9BDMjAZGEbq4.png"),
-  fb("Spy x Family Season 3", "54595", 8.6, 2026, "Ongoing", "Keluarga mata-mata paling tidak biasa di dunia.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx161964-JpkEbHI8ivaP.jpg"),
+  fb("Sword Art Online", "11757", 8.1, 2012, "Completed", "Pemain game terperangkap di dunia virtual dan harus membersihkan dungeon untuk bisa keluar.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11757-Fp2q1VbFunu.jpg"),
+  fb("Fullmetal Alchemist: Brotherhood", "5114", 9, 2009, "Completed", "Dua bersaudara alkimia mencari Batu Filsafat untuk mengembalikan tubuh mereka.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx5114-nSWCgQlmOMtj.jpg"),
+  fb("Steins;Gate", "9253", 8.9, 2011, "Completed", "Ilmuwan gila menemukan cara mengirim pesan ke masa lalu lewat microwave.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx9253-tIUXF2gfU8Sg.jpg"),
+  fb("Hunter x Hunter (2011)", "11061", 8.9, 2011, "Completed", "Gon berlatih jadi Hunter demi mencari ayahnya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11061-y5gsT1hoHuHw.png"),
+  fb("Attack on Titan", "16498", 8.5, 2013, "Completed", "Manusia bertahan di balik tembok dari serangan Titan raksasa.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-buvcRTBx4NSm.jpg"),
+  fb("Demon Slayer", "38000", 8.2, 2019, "Completed", "Tanjiro memburu iblis untuk menyembuhkan adiknya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-WBsBl0ClmgYL.jpg"),
+  fb("Jujutsu Kaisen", "40748", 8.4, 2020, "Completed", "Siswa SMA menelan jari kutukan dan masuk dunia jujutsu.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-LHBAeoZDIsnF.jpg"),
+  fb("One Punch Man", "30276", 8.2, 2015, "Completed", "Pahlawan yang mengalahkan musuh dengan satu pukulan mencari tantangan.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21087-B5DHjqZ3kW4b.jpg"),
+  fb("Death Note", "1535", 8.4, 2006, "Completed", "Siswa menemukan buku yang bisa membunuh siapa pun namanya ditulis.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-kUgkcrfOrkUM.jpg"),
+  fb("Frieren: Beyond Journey's End", "52991", 9.1, 2023, "Completed", "Penyihir elf berkeliling menengok kembali perjalanan masa lalunya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-qQTzQnEJJ3oB.jpg"),
+  fb("SPY x FAMILY", "50265", 8.3, 2022, "Completed", "Keluarga mata-mata paling tidak biasa di dunia.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx140960-Kb6R5nYQfjmP.jpg"),
   fb("One Piece", "21", 8.7, 1999, "Ongoing", "Bajak laut topi jerami berlayar mencari One Piece.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg"),
   fb("Vinland Saga S2", "49387", 8.8, 2023, "Completed", "Thorfinn mencari kedamaian setelah masa perbudakannya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx136430-gsBsJjA7hGh9.jpg"),
-  fb("Chainsaw Man", "44511", 8.5, 2022, "Completed", "Denji hidup dengan ibu jantung berantai mesin.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx127230-DdP4vAdssLoz.png"),
-  fb("Mob Psycho 100 III", "51009", 8.6, 2022, "Completed", "Esper muda belajar hidup normal.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx145064-hSNRJM03pvv1.jpg"),
+  fb("Chainsaw Man", "44511", 8.3, 2022, "Completed", "Denji hidup dengan ibu jantung berantai mesin.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx127230-DdP4vAdssLoz.png"),
+  fb("Mob Psycho 100 III", "50172", 8.7, 2022, "Completed", "Esper muda belajar hidup normal.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx140439-bPKmhe1wNxc9.jpg"),
   fb("Bocchi the Rock!", "47917", 8.7, 2022, "Completed", "Gitaris pemalu bergabung dengan band sekolah.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx130003-HTDmeL4RGeJ4.png"),
-  fb("Oshi no Ko", "52034", 8.6, 2023, "Completed", "Dunia gelap industri idola Jepang.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx150672-WqmmwZ4nMzAy.png"),
-  fb("My Hero Academia S7", "53119", 8.0, 2024, "Completed", "Sekolah pahlawan super generasi baru.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx163139-JchZhUFlNTWU.jpg"),
-  fb("Blue Lock S2", "54392", 8.1, 2024, "Completed", "Program pelatihan striker paling brutal.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx163146-BVZPgyzkqi82.png"),
-  fb("Dandadan", "56895", 8.5, 2024, "Completed", "Hantu, alien, dan cinta remaja yang kacau.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx171018-60q1B6GK2Ghb.jpg"),
+  fb("Oshi no Ko", "52034", 8.4, 2023, "Completed", "Dunia gelap industri idola Jepang.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx150672-WqmmwZ4nMzAy.png"),
+  fb("My Hero Academia", "31964", 7.6, 2016, "Completed", "Sekolah pahlawan super generasi baru.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21459-nYh85uj2Fuwr.jpg"),
+  fb("BLUE LOCK", "49596", 7.9, 2022, "Completed", "Program pelatihan striker paling brutal.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx137822-U8naszP96vzC.png"),
+  fb("Dandadan", "57334", 8.3, 2024, "Completed", "Hantu, alien, dan cinta remaja yang kacau.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx171018-60q1B6GK2Ghb.jpg"),
 ];
 
 export const FALLBACK_SEASON: AnimeCard[] = [
-  fb("Sakamoto Days", "58673", 7.8, 2026, "Ongoing", "Pembunuh legendaris pensiun jadi pemilik minimarket.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx177709-e5Qx6RlsBgD5.png"),
-  fb("Kaiju No. 8 S2", "56704", 8.2, 2026, "Ongoing", "Pria dewasa berubah jadi kaiju dan ikut pasukan pertahanan.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx178754-Dgrub8xgC03M.jpg"),
-  fb("Gachiakuta", "58712", 7.9, 2026, "Ongoing", "Anak buangan turun ke dunia sampah penuh monster.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx178025-cWJKEsZynkil.jpg"),
-  fb("Grand Blue S2", "54457", 8.4, 2026, "Ongoing", "Klub penyelaman paling kacau di kampus.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx182309-IfrR8sgHIczv.jpg"),
-  fb("Call of the Night S2", "54087", 8.0, 2026, "Ongoing", "Vampir dan bocah yang jatuh cinta pada malam.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx175914-VsbL90WzuqoM.jpg"),
-  fb("Zom 100: Bucket List", "48736", 7.6, 2023, "Completed", "Daftar keinginan saat kiamat zombie.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx132405-qP7FQYGmNI3d.jpg"),
-  fb("Undead Unluck", "52741", 7.8, 2023, "Completed", "Gadis pembawa sial vs pria abadi.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154116-3ydDI9hhvPgw.png"),
-  fb("Solo Leveling S2", "52299", 8.3, 2026, "Ongoing", "Hunter terlemah bangkit sebagai Shadow Monarch.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151807-it355ZgzquUd.png"),
-  fb("Tensei Slime S3", "52347", 8.0, 2024, "Ongoing", "Rimu bertransformasi jadi raja iblis.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151970-xtIx3VqEk02X.jpg"),
-  fb("Apothecary Diaries S2", "54492", 8.7, 2026, "Ongoing", "Ahli racun istana memecahkan misteri.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx161645-QLbzHXiYRgV2.jpg"),
-  fb("Wind Breaker S2", "56771", 7.9, 2026, "Ongoing", "Geng sekolah pelindung kota.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx170658-l8DJGSXMrUuU.jpg"),
-  fb("Fire Force S3", "55791", 8.0, 2026, "Ongoing", "Regu pemadam melawan pembakar manusia.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx166531-dAL5MsqDHUkj.jpg"),
+  fb("Sakamoto Days", "58939", 7.6, 2025, "Ongoing", "Pembunuh legendaris pensiun jadi pemilik minimarket.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx177709-e5Qx6RlsBgD5.png"),
+  fb("Kaiju No. 8", "52588", 8.1, 2024, "Completed", "Pria dewasa berubah jadi kaiju dan ikut pasukan pertahanan.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx153288-25FBfFJzEQ5O.jpg"),
+  fb("Gachiakuta", "59062", 8.2, 2025, "Ongoing", "Anak buangan turun ke dunia sampah penuh monster.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx178025-cWJKEsZynkil.jpg"),
+  fb("Grand Blue Dreaming", "37105", 8.2, 2018, "Completed", "Klub penyelaman paling kacau di kampus.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx100922-uxEhaCsqMMp3.png"),
+  fb("Call of the Night", "50346", 7.9, 2022, "Completed", "Vampir dan bocah yang jatuh cinta pada malam.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx141391-M3ZgUKTPENUk.jpg"),
+  fb("Zom 100: Bucket List", "54112", 7.6, 2023, "Completed", "Daftar keinginan saat kiamat zombie.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx159831-cJUNqCqzuApc.png"),
+  fb("Undead Unluck", "52741", 7.6, 2023, "Completed", "Gadis pembawa sial vs pria abadi.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154116-3ydDI9hhvPgw.png"),
+  fb("Solo Leveling", "52299", 8, 2024, "Completed", "Hunter terlemah bangkit sebagai Shadow Monarch.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151807-it355ZgzquUd.png"),
+  fb("That Time I Got Reincarnated as a Slime", "37430", 8, 2018, "Completed", "Rimu bertransformasi jadi raja iblis.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101280-tDxCVJm714nt.jpg"),
+  fb("The Apothecary Diaries", "54492", 8.8, 2023, "Completed", "Ahli racun istana memecahkan misteri.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx161645-QLbzHXiYRgV2.jpg"),
+  fb("WIND BREAKER", "54900", 7.7, 2024, "Completed", "Geng sekolah pelindung kota.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx163270-wboZJp0ybwVK.jpg"),
+  fb("Fire Force", "38671", 7.6, 2019, "Completed", "Regu pemadam melawan pembakar manusia.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx105310-2PKUvoaA6fTn.jpg"),
 ];
 
 // -------------------------------------------------------------- actions ----
@@ -494,20 +542,56 @@ function rotateByDate(list: AnimeCard[], count: number): AnimeCard[] {
   return pick(list, day % Math.max(1, list.length), count);
 }
 
+// Daftar utama: AniList dulu (lengkap & stabil), baru otakudesu/Jikan, lalu
+// katalog statis yang sudah dihidrasi dari AniList.
+async function aniList(
+  endpoint: string,
+  ttlMs: number,
+  runCtx: any,
+  where: string,
+  page = 1,
+  limit = 24,
+  sort = "POPULARITY_DESC",
+): Promise<AnimeCard[] | null> {
+  return (await cached(
+    runCtx,
+    `${endpoint}:v2:${page}:${sort}`,
+    ttlMs,
+    async () => {
+      try {
+        const d = await aniGraphql(browseQuery(page, where, sort));
+        const list = (d?.Page?.media ?? [])
+          .filter((m: any) => m?.idMal)
+          .map(anilistCard);
+        if (list.length > 0) return list.slice(0, limit);
+      } catch {
+        /* lanjut ke sumber lain */
+      }
+      if (apiBase()) {
+        try {
+          const od = odList(await fetchJson(`${apiBase()}/otakudesu/ongoing?page=${page}`));
+          if (od.length > 0) return od.slice(0, limit);
+        } catch {
+          /* lanjut */
+        }
+      }
+      return null;
+    },
+  )) as AnimeCard[] | null;
+}
+
 export const animeOngoing = action({
   args: { page: v.optional(v.number()) },
   handler: async (runCtx, { page = 1 }) => {
-    const r = (await withFallback(
-      runCtx,
-      `ongoing:${page}`,
-      async () => odList(await fetchJson(`${apiBase()}/otakudesu/ongoing?page=${page}`)),
-      async () => {
-        const season = await jikanList("seasons/now?limit=24&sfw");
-        if (season.length > 0) return season;
-        return null;
-      },
-    )) as AnimeCard[] | null;
-    return r && r.length > 0 ? r : rotateByDate([...FALLBACK_SEASON, ...FALLBACK_TOP], LIMIT);
+    const r = await aniList("ongoing", LIST_TTL, runCtx, "status:RELEASING", page, 24);
+    if (r && r.length > 0) return r;
+    try {
+      const season = await jikanList("seasons/now?limit=24&sfw");
+      if (season.length > 0) return season;
+    } catch {
+      /* fallback statis */
+    }
+    return fbList([...FALLBACK_SEASON, ...FALLBACK_TOP], LIMIT);
   },
 });
 
@@ -531,78 +615,72 @@ export const animeCompleted = action({
 export const animeTop = action({
   args: {},
   handler: async (runCtx) => {
-    const r = (await withFallback(
-      runCtx,
-      "top",
-      async () => null, // otakudesu tidak punya ranking global
-      async () => {
-        const tv = await jikanList("top/anime?limit=10&type=tv&sfw");
-        if (tv.length > 0) return tv;
-        return null;
-      },
-    )) as AnimeCard[] | null;
-    return r && r.length > 0 ? r.slice(0, 10) : FALLBACK_TOP.slice(0, 10);
+    const r = await aniList("top", LIST_TTL, runCtx, "", 1, 10, "SCORE_DESC");
+    if (r && r.length > 0) return r.slice(0, 10);
+    try {
+      const tv = await jikanList("top/anime?limit=10&type=tv&sfw");
+      if (tv.length > 0) return tv;
+    } catch {
+      /* fallback statis */
+    }
+    return fbList(FALLBACK_TOP, 10);
   },
 });
 
 export const animeTrendingToday = action({
   args: {},
   handler: async (runCtx) => {
+    const r = await aniList("trending", LIST_TTL, runCtx, "", 1, 10, "TRENDING_DESC");
+    if (r && r.length > 0) return r.slice(0, 10);
     const day = DAY_FILTER[(new Date().getDay() + 6) % 7];
-    const r = (await withFallback(
-      runCtx,
-      `trending:${day}`,
-      async () => null,
-      async () => {
-        const sched = await jikanList(`schedules?filter=${day}&limit=10&sfw`);
-        if (sched.length > 0) return sched;
-        return null;
-      },
-    )) as AnimeCard[] | null;
-    return r && r.length > 0 ? r.slice(0, 10) : rotateByDate(FALLBACK_TOP, 10);
+    try {
+      const sched = await jikanList(`schedules?filter=${day}&limit=10&sfw`);
+      if (sched.length > 0) return sched;
+    } catch {
+      /* fallback statis */
+    }
+    return fbList(FALLBACK_TOP, 10);
   },
 });
 
 export const animeForYou = action({
   args: { seed: v.optional(v.number()) },
   handler: async (runCtx, { seed = 0 }) => {
-    const r = (await withFallback(
+    const r = await aniList(
+      "foryou",
+      LIST_TTL,
       runCtx,
-      `foryou:${seed % 5}`,
-      async () => null,
-      async () => {
-        const base = await jikanList("top/anime?limit=12&sfw");
-        const season = await jikanList("seasons/now?limit=12&sfw").catch(() => [] as AnimeCard[]);
-        const all = [...base, ...season];
-        if (all.length === 0) return null;
-        const start = (seed * 7) % Math.max(1, all.length - 12);
-        return all.slice(start, start + 12);
-      },
-    )) as AnimeCard[] | null;
+      "",
+      (seed % 3) + 1,
+      12,
+    );
     if (r && r.length > 0) return r.slice(0, 12);
-    return rotateByDate(FALLBACK_TOP, 12);
+    return fbList(FALLBACK_TOP, 12);
   },
 });
 
 export const animeSearch = action({
-  args: { q: v.string() },
-  handler: async (runCtx, { q }) => {
+  args: { q: v.string(), page: v.optional(v.number()) },
+  handler: async (runCtx, { q, page }) => {
     const query = q.trim();
     if (query.length === 0) return [];
+    const p = Math.max(1, Math.min(6, Math.round(page ?? 1)));
     const lower = query.toLowerCase();
-    // 1) coba otakudesu
-    if (apiBase()) {
-      try {
-        const r = odList(await fetchJson(`${apiBase()}/otakudesu/search?q=${encodeURIComponent(query)}`));
-        if (r.length > 0) return r;
-      } catch {
-        /* lanjut */
-      }
+    // 1) AniList (pencarian lengkap & selalu punya MAL id → bisa distream)
+    try {
+      const d = await aniGraphql(
+        `query($s:String,$p:Int){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:false){ ${ANILIST_FIELDS} } } }`,
+        { s: query, p },
+      );
+      const list = (d?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
+      if (list.length > 0) return list;
+    } catch {
+      /* lanjut */
     }
-    // 2) coba cache dulu
+    // 2) cache
     const row = (await runCtx.runQuery(
       internal.anime.cacheGet,
-      { endpoint: `search:${lower}` },
+      { endpoint: `search:v2:${lower}` },
     )) as { payload?: unknown; updatedAt?: number } | null;
     if (row && row.updatedAt && Date.now() - row.updatedAt < LIST_TTL)
       return (row.payload as AnimeCard[]) ?? [];
@@ -612,7 +690,10 @@ export const animeSearch = action({
         `anime?q=${encodeURIComponent(query)}&limit=24&order_by=members&sort=desc&sfw`,
       );
       if (r.length > 0) {
-        await runCtx.runMutation(internal.anime.cacheSet, { endpoint: `search:${lower}`, payload: r });
+        await runCtx.runMutation(internal.anime.cacheSet, {
+          endpoint: `search:v2:${lower}`,
+          payload: r,
+        });
         return r;
       }
     } catch {
@@ -683,12 +764,25 @@ export const animeByGenre = action({
   },
 });
 
-const BROWSE_MOVIE = `query{ Page(page:1, perPage:20){ media(type:ANIME, format:MOVIE, sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
-const BROWSE_OVA = `query{ Page(page:1, perPage:20){ media(type:ANIME, format_in:[OVA,ONA], sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
-const BROWSE_SPECIAL = `query{ Page(page:1, perPage:20){ media(type:ANIME, format:SPECIAL, sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
-const BROWSE_SEASON = `query($s:MediaSeason,$y:Int){ Page(page:1, perPage:20){ media(type:ANIME, season:$s, seasonYear:$y, format_in:[TV,TV_SHORT], sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
+// Katalog lengkap: ambil banyak halaman sekaligus (50 item per halaman).
+const browseQuery = (page: number, where: string, sort = "POPULARITY_DESC") =>
+  `query{ Page(page:${page}, perPage:50){ media(type:ANIME, sort:${sort}, isAdult:false${where ? ", " + where : ""}){ ${ANILIST_FIELDS} } } }`;
 
-/** Katalog tambahan: Movie / OVA / Special / Season ini (semua bisa ditonton). */
+const BROWSE_WHERE = {
+  movie: "format:MOVIE",
+  ova: "format_in:[OVA,ONA]",
+  special: "format:SPECIAL",
+  upcoming: "status:NOT_YET_RELEASED",
+  popular: "",
+} as const;
+
+const seasonQuery = (page: number, s: string, y: number) =>
+  `query{ Page(page:${page}, perPage:50){ media(type:ANIME, sort:POPULARITY_DESC, isAdult:false, season:${s}, seasonYear:${y}, format_in:[TV,TV_SHORT]){ ${ANILIST_FIELDS} } } }`;
+
+/**
+ * Katalog lengkap: Movie / OVA / Special / Upcoming / Season ini.
+ * `page` dipakai frontend untuk "muat lebih banyak" (tiap halaman 50 item).
+ */
 export const animeBrowse = action({
   args: {
     kind: v.union(
@@ -696,10 +790,14 @@ export const animeBrowse = action({
       v.literal("ova"),
       v.literal("special"),
       v.literal("season"),
+      v.literal("upcoming"),
+      v.literal("popular"),
     ),
+    page: v.optional(v.number()),
   },
-  handler: async (runCtx, { kind }) =>
-    cached(runCtx, `browse:v2:${kind}`, 6 * 60 * 60 * 1000, async () => {
+  handler: async (runCtx, { kind, page }) => {
+    const p = Math.max(1, Math.min(6, Math.round(page ?? 1)));
+    return cached(runCtx, `browse:v3:${kind}:${p}`, 6 * 60 * 60 * 1000, async () => {
       const now = new Date();
       const year = now.getUTCFullYear();
       const season = ["WINTER", "SPRING", "SUMMER", "FALL"][
@@ -710,26 +808,20 @@ export const animeBrowse = action({
           .filter((m) => m?.idMal)
           .map(anilistCard);
       try {
-        if (kind === "movie") {
-          const d = await aniGraphql(BROWSE_MOVIE);
-          return only(d?.Page?.media);
+        if (kind === "season") {
+          const d = await aniGraphql(seasonQuery(p, season, year));
+          const list = only(d?.Page?.media);
+          return list.length >= 8 ? list : await fbList(FALLBACK_SEASON, 12);
         }
-        if (kind === "ova") {
-          const d = await aniGraphql(BROWSE_OVA);
-          return only(d?.Page?.media);
-        }
-        if (kind === "special") {
-          const d = await aniGraphql(BROWSE_SPECIAL);
-          return only(d?.Page?.media);
-        }
-        const d = await aniGraphql(BROWSE_SEASON, { s: season, y: year });
-        const list = only(d?.Page?.media);
-        return list.length >= 8 ? list : rotateByDate(FALLBACK_SEASON, 12);
+        const where = BROWSE_WHERE[kind as keyof typeof BROWSE_WHERE];
+        const d = await aniGraphql(browseQuery(p, where));
+        return only(d?.Page?.media);
       } catch {
-        if (kind === "season") return rotateByDate(FALLBACK_SEASON, 12);
+        if (kind === "season") return fbList(FALLBACK_SEASON, 12);
         return [];
       }
-    }),
+    });
+  },
 });
 
 export const animeDetail = action({

@@ -113,7 +113,9 @@ const megaStream = httpAction(async (_ctx, request) => {
       headers: {
         ...cors,
         "Content-Type": "application/vnd.apple.mpegurl",
-        "Cache-Control": "public, max-age=30",
+        // Playlist pendek: sering berubah, tapi cache browser sangat membantu
+        // agar tidak request ulang tiap beberapa detik.
+        "Cache-Control": "public, max-age=20",
       },
     });
   }
@@ -121,19 +123,25 @@ const megaStream = httpAction(async (_ctx, request) => {
   // Perbaiki MIME yang salah dari CDN (segment .ts dikirim sebagai image/jpeg,
   // subtitle .vtt sebagai octet-stream) supaya hls.js/<track> diterima browser.
   let outType = contentType || "application/octet-stream";
+  let cache = "public, max-age=300";
   if (url.pathname.endsWith(".ts")) outType = "video/mp2t";
-  else if (url.pathname.endsWith(".vtt")) outType = "text/vtt; charset=utf-8";
-  else if (url.pathname.endsWith(".m4s") || url.pathname.endsWith(".mp4"))
+  else if (url.pathname.endsWith(".vtt")) {
+    outType = "text/vtt; charset=utf-8";
+    cache = "public, max-age=3600";
+  } else if (url.pathname.endsWith(".m4s") || url.pathname.endsWith(".mp4"))
     outType = "video/mp4";
   else if (url.pathname.endsWith(".aac") || url.pathname.endsWith(".m4a"))
     outType = "audio/mp4";
+  // Segment immutable → boleh di-cache browser paling lama (anti buffering).
+  if (/\.(ts|m4s|mp4|aac|m4a)$/i.test(url.pathname))
+    cache = "public, max-age=31536000, immutable";
 
   return new Response(upstream.body, {
     status: upstream.status,
     headers: {
       ...cors,
       "Content-Type": outType,
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": cache,
     },
   });
 });

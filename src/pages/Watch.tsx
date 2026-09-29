@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Download,
   Gauge,
+  Loader2,
   Maximize,
   Pause,
   PictureInPicture2,
@@ -62,6 +63,7 @@ function WatchContent() {
   const [isFs, setIsFs] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
   const [activeSub, setActiveSub] = useState<string>("");
+  const [waiting, setWaiting] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
@@ -161,7 +163,15 @@ function WatchContent() {
     if (!Hls.isSupported() && !native) return;
     let hls: Hls | null = null;
     if (Hls.isSupported()) {
-      hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 30,
+        maxBufferLength: 20,
+        maxMaxBufferLength: 60,
+        startFragPrefetch: true,
+        abrEwmaDefaultEstimate: 2_000_000,
+      });
       hls.loadSource(streamUrl);
       hls.attachMedia(v);
       hls.on(Hls.Events.ERROR, (_evt, data) => {
@@ -306,7 +316,10 @@ function WatchContent() {
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
             onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-            controls={isFs}
+            onWaiting={() => setWaiting(true)}
+            onPlaying={() => setWaiting(false)}
+            onCanPlay={() => setWaiting(false)}
+            controls={false}
           >
             {direct?.subtitle?.url && (
               <track
@@ -331,13 +344,32 @@ function WatchContent() {
               ))}
           </video>
         )}
+        {/* Spinner saat buffering */}
+        {waiting && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <Loader2 className="size-10 animate-spin text-white/80" />
+          </div>
+        )}
+
         {/* Lapisan tap: sentuh video → kontrol tampil / hilang */}
         <div className="absolute inset-0 z-10" onClick={tapVideo} />
 
-        {/* Overlay controls */}
-        {controlsOn && !isFs && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
-          <div className="pointer-events-auto flex items-center gap-2 p-3">
+        {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
+        {controlsOn && (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
+            isFs
+              ? "bg-gradient-to-t from-black/70 via-transparent to-black/40 px-6 py-4"
+              : "bg-gradient-to-t from-black/80 via-transparent to-black/50",
+          )}
+        >
+          <div
+            className={cn(
+              "pointer-events-auto flex items-center gap-2",
+              isFs ? "px-2 py-1" : "p-3",
+            )}
+          >
             <button onClick={() => navigate("/")} className="rounded-full bg-black/50 p-2">
               <ChevronLeft className="size-4 text-white" />
             </button>
@@ -345,7 +377,12 @@ function WatchContent() {
               {D.title} {currentEp ? `— Ep ${currentEp.number}` : ""}
             </p>
           </div>
-          <div className="pointer-events-auto flex items-center justify-center gap-6 pb-2">
+          <div
+            className={cn(
+              "pointer-events-auto flex items-center justify-center",
+              isFs ? "gap-12 pb-3" : "gap-6 pb-2",
+            )}
+          >
             <button
               disabled={epIndex <= 0}
               onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`)}
@@ -373,7 +410,12 @@ function WatchContent() {
               <SkipForward className="size-5 text-white" />
             </button>
           </div>
-          <div className="pointer-events-auto space-y-1.5 px-3 pb-3">
+          <div
+            className={cn(
+              "pointer-events-auto space-y-1.5",
+              isFs ? "px-2 pb-1" : "px-3 pb-3",
+            )}
+          >
             {/* Waktu tujuan saat bar digeser */}
             {scrub !== null && (
               <div className="flex justify-center">

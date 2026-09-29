@@ -85,6 +85,62 @@ function GridSkeleton({ count = 10 }: { count?: number }) {
   );
 }
 
+/** Baris katalog lengkap (50 item/halaman) + tombol "muat lebih banyak". */
+function BrowseRow({
+  kind,
+  title,
+  onPick,
+}: {
+  kind: "movie" | "ova" | "special" | "season" | "upcoming" | "popular";
+  title: string;
+  onPick: (id: string) => void;
+}) {
+  const browse = useAction(api.anime.animeBrowse);
+  const [items, setItems] = useState<AnimeCardT[]>([]);
+  const [page, setPage] = useState(1);
+  const [busy, setBusy] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    setBusy(true);
+    browse({ kind, page })
+      .then((r: any) => {
+        if (!alive) return;
+        const list = (r ?? []) as AnimeCardT[];
+        setItems((prev) => (page === 1 ? list : [...prev, ...list]));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setBusy(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [kind, page, browse]);
+
+  return (
+    <>
+      <SectionTitle>{title}</SectionTitle>
+      {items.length === 0 ? (
+        <GridSkeleton count={10} />
+      ) : (
+        <>
+          <AnimeGrid items={items} onPick={onPick} newIds={new Set()} />
+          <div className="mt-3 flex justify-center">
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={busy || page >= 6}
+              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300 disabled:opacity-50"
+            >
+              {busy ? "Memuat…" : page >= 6 ? "Semua item sudah tampil" : "Muat lebih banyak"}
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // ------------------------------------------------------------ home body ----
 
 function HomeContent() {
@@ -103,19 +159,12 @@ function HomeContent() {
   const today = useAction(api.anime.animeTrendingToday);
   const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
-  // Kategori lengkap: Movie / OVA / Special / Season ini
-  const movies = useAction(api.anime.animeBrowse);
-  const ovas = useAction(api.anime.animeBrowse);
-  const seasonNow = useAction(api.anime.animeBrowse);
 
   const [heroList, setHeroList] = useState<AnimeCardT[]>([]);
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
   const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
-  const [movieList, setMovieList] = useState<AnimeCardT[]>([]);
-  const [ovaList, setOvaList] = useState<AnimeCardT[]>([]);
-  const [seasonList, setSeasonList] = useState<AnimeCardT[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
 
@@ -128,10 +177,7 @@ function HomeContent() {
       today({}),
       forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
-      movies({ kind: "movie" }),
-      ovas({ kind: "ova" }),
-      seasonNow({ kind: "season" }),
-    ]).then(([rHero, rTop, rToday, rForYou, rGenres, rMovie, rOva, rSeason]) => {
+    ]).then(([rHero, rTop, rToday, rForYou, rGenres]) => {
       if (!alive) return;
       if (rHero.status === "fulfilled") setHeroList((rHero.value as AnimeCardT[]) ?? []);
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
@@ -139,9 +185,6 @@ function HomeContent() {
       if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
       if (rGenres.status === "fulfilled")
         setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
-      if (rMovie.status === "fulfilled") setMovieList((rMovie.value as AnimeCardT[]) ?? []);
-      if (rOva.status === "fulfilled") setOvaList((rOva.value as AnimeCardT[]) ?? []);
-      if (rSeason.status === "fulfilled") setSeasonList((rSeason.value as AnimeCardT[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -351,51 +394,12 @@ function HomeContent() {
         </>
       )}
 
-      {/* 6c) KATEGORI LENGKAP: Movie / OVA & Special / Season ini */}
-      {(movieList.length > 0 || loading) && (
-        <>
-          <SectionTitle>Movie</SectionTitle>
-          {loading ? (
-            <GridSkeleton count={10} />
-          ) : (
-            <AnimeGrid
-              items={movieList.slice(0, 10)}
-              onPick={openAnime}
-              newIds={new Set()}
-            />
-          )}
-        </>
-      )}
-
-      {(ovaList.length > 0 || loading) && (
-        <>
-          <SectionTitle>OVA &amp; Special</SectionTitle>
-          {loading ? (
-            <GridSkeleton count={10} />
-          ) : (
-            <AnimeGrid
-              items={ovaList.slice(0, 10)}
-              onPick={openAnime}
-              newIds={new Set()}
-            />
-          )}
-        </>
-      )}
-
-      {(seasonList.length > 0 || loading) && (
-        <>
-          <SectionTitle>Season Ini</SectionTitle>
-          {loading ? (
-            <GridSkeleton count={10} />
-          ) : (
-            <AnimeGrid
-              items={seasonList.slice(0, 10)}
-              onPick={openAnime}
-              newIds={new Set()}
-            />
-          )}
-        </>
-      )}
+      {/* 6c) KATEGORI LENGKAP: Movie / OVA / Special / Upcoming / Season ini */}
+      <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
+      <BrowseRow kind="ova" title="OVA &amp; ONA" onPick={openAnime} />
+      <BrowseRow kind="special" title="Special" onPick={openAnime} />
+      <BrowseRow kind="upcoming" title="Segera Rilis (Upcoming)" onPick={openAnime} />
 
       {/* 7) ANIME-ANIME */}
       <SectionTitle>Top Anime</SectionTitle>

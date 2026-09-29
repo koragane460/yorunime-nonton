@@ -77,17 +77,18 @@ export function CommentsSection({
           </button>
         </div>
       )}
-      <div className="flex gap-2">
+      {/* Kolom komentar: satu kotak full width (input + tombol di dalam) */}
+      <div className="flex w-full items-center gap-1 rounded-xl border border-border bg-background/60 px-3 py-1.5 focus-within:border-violet-500/70">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void send()}
           placeholder="Tulis komentar…"
-          className="flex-1 rounded-lg border border-input bg-background/60 px-4 py-2.5 text-sm outline-none"
+          className="h-10 flex-1 bg-transparent px-1 text-sm outline-none"
         />
         <button
           onClick={() => void send()}
-          className="flex items-center justify-center rounded-lg bg-violet-600 px-4 text-white transition hover:bg-violet-500"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500"
           aria-label="Kirim komentar"
         >
           <Send className="size-4" />
