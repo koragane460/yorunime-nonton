@@ -528,11 +528,30 @@ function WatchContent() {
           <ChevronLeft className="size-5 text-white" />
         </button>
       )}
-      {/* Player */}
-      <div ref={playerRef} className="relative bg-black">
+      {/* Player — di fullscreen video tidak di-stretch: area dipagrasio 16:9
+          dan dipusatkan di tengah layar (letterbox), subtitle tetap terlihat. */}
+      <div
+        ref={playerRef}
+        className={cn(
+          "relative flex w-full items-center justify-center bg-black",
+          isFs && "h-[100dvh]",
+        )}
+      >
+      <div
+        className="relative w-full overflow-hidden bg-black"
+        style={
+          isFs
+            ? {
+                aspectRatio: "16 / 9",
+                maxHeight: "100dvh",
+                width: "min(100%, calc(100dvh * 16 / 9))",
+              }
+            : { aspectRatio: "16 / 9" }
+        }
+      >
         {!streamUrl ? (
           <div
-            className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-black text-center"
+            className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black text-center"
             style={D.image ? { backgroundImage: `url(${D.image})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
           >
             <div className="absolute inset-0 bg-black/65" />
@@ -557,7 +576,7 @@ function WatchContent() {
           <iframe
             src={streamUrl}
             title={D.title}
-            className="aspect-video w-full"
+            className="h-full w-full"
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
           />
@@ -566,7 +585,7 @@ function WatchContent() {
             ref={videoRef}
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
-            className="aspect-video w-full"
+            className="h-full w-full object-contain"
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -605,7 +624,14 @@ function WatchContent() {
         {/* Subtitle digambar sendiri: kotak hitam 50% di belakang teks, teks
             dibungkus rapat dan tidak melebar ke samping. */}
         {activeCue && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-16 z-20 flex justify-center px-4 sm:bottom-20">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4",
+              // Portrait: di atas bar kontrol. Fullscreen: sedikit lebih tinggi
+              // supaya tidak tertutup tombol di kanan bawah.
+              isFs ? "bottom-12" : "bottom-16 sm:bottom-20",
+            )}
+          >
             <p className="max-w-[min(92%,38rem)] rounded-md bg-black/50 px-2.5 py-1 text-center text-[13px] font-medium leading-snug text-white sm:text-sm">
               {activeCue}
             </p>
@@ -890,9 +916,10 @@ function WatchContent() {
               }}
               className="absolute bottom-28 right-3 rounded-full border border-white/50 bg-black/75 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-black"
             >
-              ⏭ Lewati Intro
+              Lewati Intro
             </button>
           )}
+      </div>
       </div>
 
       {/* Server: hanya satu — Direct HLS · SUB */}
