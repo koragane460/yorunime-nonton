@@ -79,63 +79,42 @@ async function pickVariant(malId: string, ep: number, kind: "sub" | "dub") {
   };
 }
 
+// Label tunggal untuk semua server: tidak ada pilihan lain di UI.
+const HLS_LABEL = "Direct HLS · SUB";
+
 export const resolveEpisode = action({
   args: { malId: v.string(), ep: v.number(), title: v.optional(v.string()) },
   handler: async (_ctx, { malId, ep, title }) => {
     try {
-      // Sumber subtitle Indonesia (Otakudesu / Oploverz) dicek bersamaan dengan
-      // MegaPlay; hasilnya digabung ke daftar server player.
+      // Sumber Indonesia dicek bersamaan dengan MegaPlay.
       const indo: IndoSource[] = title
         ? await resolveIndo(title, ep).catch(() => [])
         : [];
-      const sub = await pickVariant(malId, ep, "sub");
-      // MegaPlay tidak punya episodenya — kalau sumber Sub Indo ada, tetap main.
-      if (!sub) {
-        if (indo.length > 0) {
-          return {
-            ok: true as const,
-            sources: indo,
-            subtitle: null,
-            subtitles: [],
-            subTracks: [],
-            hasIndonesian: true,
-            intro: null,
-            outro: null,
-            embedSub: null,
-            embedDub: null,
-          };
-        }
-        return { ok: false as const, reason: "Episode tidak tersedia" };
+      const indoHls = indo.filter((s) => s.type === "hls");
+      const indoEmbed = indo.filter((s) => s.type === "embed");
+      const sub = await pickVariant(malId, ep, "sub").catch(() => null);
+
+      // Urutan sumber (satu server saja, tanpa DUB, tanpa embed sebagai pilihan):
+      //   1) HLS Sub Indo (xtwap) — subtitle Indonesia sudah menempel di video.
+      //   2) HLS MegaPlay SUB   — subtitle ID native, atau diterjemahkan otomatis.
+      //   3) Embed Sub Indo     — hanya kalau dua HLS di atas tidak ada.
+      const primary = indoHls[0];
+      const sources: { label: string; url: string; type: "hls" | "embed" }[] =
+        primary
+          ? [{ label: HLS_LABEL, url: primary.url, type: "hls" }]
+          : sub
+            ? [{ label: HLS_LABEL, url: sub.m3u8, type: "hls" }]
+            : indoEmbed.slice(0, 1).map((s) => ({
+                label: HLS_LABEL,
+                url: s.url,
+                type: "embed" as const,
+              }));
+
+      if (sources.length === 0) {
+        return { ok: false as const, reason: "Episode belum tersedia" };
       }
 
-      const dub = await pickVariant(malId, ep, "dub").catch(() => null);
-      const embedSub = `${REF}stream/mal/${malId}/${ep}/sub`;
-      const embedDub = `${REF}stream/mal/${malId}/${ep}/dub`;
-
-      const megaSources = [
-        { label: "Direct HLS · SUB", url: sub.m3u8, type: "hls" },
-        { label: "MegaPlay Player · SUB", url: embedSub, type: "embed" },
-        ...(dub
-          ? [
-              { label: "Direct HLS · DUB", url: dub.m3u8, type: "hls" },
-              { label: "MegaPlay Player · DUB", url: embedDub, type: "embed" },
-            ]
-          : []),
-      ];
-      const allTracks = [
-        ...sub.tracks,
-        ...(dub ? dub.tracks.map((t) => ({ ...t, kind: "dub" })) : []),
-      ];
-
-      // Prioritas server:
-      // - Kalau MegaPlay punya track subtitle Indonesia → pakai HLS (player
-      //   milik kita sendiri, subtitle ID aktif otomatis).
-      // - Selain itu → server Sub Indo (Oploverz/Otakudesu) dulu, baru HLS.
-      const hasIdTrack = allTracks.some((t) => t.lang === "id");
-      const sources = hasIdTrack
-        ? [...megaSources, ...indo]
-        : [...indo, ...megaSources];
-
+      const allTracks: Track[] = sub?.tracks ?? [];
       // Prioritas subtitle: Indonesia > English > track pertama.
       const isEn = (t: Track) =>
         /^en(|-|_)/i.test(t.label.trim()) || t.lang === "en";
@@ -144,6 +123,7 @@ export const resolveEpisode = action({
         allTracks.find(isEn) ??
         allTracks[0] ??
         null;
+      const embedSub = `${REF}stream/mal/${malId}/${ep}/sub`;
 
       return {
         ok: true as const,
@@ -151,12 +131,12 @@ export const resolveEpisode = action({
         subtitle: preferred,
         subtitles: allTracks,
         // Track subtitle versi SUB (untuk pemilih subtitle di player)
-        subTracks: sub.tracks,
-        hasIndonesian: allTracks.some((t) => t.lang === "id") || indo.length > 0,
-        intro: sub.intro,
-        outro: sub.outro,
+        subTracks: allTracks,
+        hasIndonesian:
+          allTracks.some((t) => t.lang === "id") || indoHls.length > 0,
+        intro: sub?.intro ?? null,
+        outro: sub?.outro ?? null,
         embedSub,
-        embedDub,
       };
     } catch (e) {
       return {
