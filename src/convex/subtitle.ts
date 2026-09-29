@@ -14,34 +14,49 @@ const MAX_CUES = 700;
 
 type Cue = { start: string; end: string; text: string };
 
-/** Ambil URL file subtitle dari halaman episode MegaPlay. */
+/** Ambil URL file subtitle dari halaman episode MegaPlay (dengan retry). */
 async function getSources(malId: string, ep: number) {
-  const page = await fetch(`${REF}stream/mal/${malId}/${ep}/sub`, {
-    headers: { "User-Agent": UA, Referer: REF, "Accept-Language": "en-US,en;q=0.9" },
-    signal: AbortSignal.timeout(10_000),
-  });
-  const html = await page.text();
-  const fileId = html.match(/data-id="(\d+)"/)?.[1];
-  if (!fileId) return null;
-  const r = await fetch(`${REF}stream/getSources?id=${fileId}`, {
-    headers: {
-      "User-Agent": UA,
-      Referer: REF,
-      "X-Requested-With": "XMLHttpRequest",
-    },
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!r.ok) return null;
-  return (await r.json()) as any;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const page = await fetch(`${REF}stream/mal/${malId}/${ep}/sub`, {
+        headers: { "User-Agent": UA, Referer: REF, "Accept-Language": "en-US,en;q=0.9" },
+        signal: AbortSignal.timeout(20_000),
+      });
+      const html = await page.text();
+      const fileId = html.match(/data-id="(\d+)"/)?.[1];
+      if (!fileId) return null;
+      const r = await fetch(`${REF}stream/getSources?id=${fileId}`, {
+        headers: {
+          "User-Agent": UA,
+          Referer: REF,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!r.ok) return null;
+      return (await r.json()) as any;
+    } catch {
+      await new Promise((res) => setTimeout(res, 800));
+    }
+  }
+  return null;
 }
 
 async function fetchText(url: string) {
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA, Referer: REF },
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`subtitle ${res.status}`);
-  return res.text();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": UA, Referer: REF },
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!res.ok) throw new Error(`subtitle ${res.status}`);
+      return await res.text();
+    } catch (e) {
+      if (attempt === 1) throw e;
+      await new Promise((res) => setTimeout(res, 800));
+    }
+  }
+  return "";
 }
 
 /** Parse WebVTT (sederhana: blok dipisah baris kosong, timing di baris 1). */
@@ -94,21 +109,42 @@ async function translateBatch(lines: string[]): Promise<string[]> {
   return lines.map((_, i) => parts[i] ?? lines[i]);
 }
 
-async function translateCues(cues: Cue[]): Promise<Cue[]> {
+async function translateCues(cues: Cue[]): Promise<{ cues: Cue[]; translated: boolean }> {
   const CHUNK = 25;
   const out: Cue[] = [];
+  let okCount = 0;
+  // Batas waktu total: kalau translator lambat, sisa cue dipakai apa adanya
+  // supaya player tetap punya subtitle (daripada gagal sama sekali).
+  const deadline = Date.now() + 45_000;
   for (let i = 0; i < cues.length; i += CHUNK) {
     const slice = cues.slice(i, i + CHUNK);
-    try {
-      const done = await translateBatch(slice.map((c) => c.text));
-      slice.forEach((c, k) => out.push({ ...c, text: done[k] || c.text }));
-    } catch {
+    if (Date.now() > deadline) {
+      slice.forEach((c) => out.push(c));
+      continue;
+    }
+    let done: string[] | null = null;
+    // Dua percobaan: Google Translate kadang rate-limit sesaat.
+    for (let attempt = 0; attempt < 2 && !done; attempt++) {
+      try {
+        done = await translateBatch(slice.map((c) => c.text));
+      } catch {
+        done = null;
+        await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+      }
+      if (Date.now() > deadline) break;
+    }
+    if (done) {
+      okCount += slice.length;
+      slice.forEach((c, k) => out.push({ ...c, text: done![k] || c.text }));
+    } else {
       slice.forEach((c) => out.push(c));
     }
     // Jeda kecil supaya Google Translate tidak rate-limit.
     await new Promise((r) => setTimeout(r, 350));
   }
-  return out;
+  // Kalau tak ada satu pun chunk yang berhasil, tetap kirim subtitle aslinya
+  // supaya player tidak kehilangan subtitle sama sekali.
+  return { cues: out, translated: okCount > 0 };
 }
 
 export const subtitleIndo = action({
@@ -131,8 +167,14 @@ export const subtitleIndo = action({
         return { ok: false as const, reason: "Subtitle tidak bisa dibaca" };
 
       const isIndo = /indonesia|indonesian/i.test(String(pick.label ?? ""));
-      const translated = isIndo ? cues : await translateCues(cues);
-      return { ok: true as const, vtt: toVtt(translated), source: isIndo ? "indo" : "auto" };
+      const result = isIndo
+        ? { cues, translated: true }
+        : await translateCues(cues);
+      return {
+        ok: true as const,
+        vtt: toVtt(result.cues),
+        source: isIndo ? "indo" : result.translated ? "auto" : "raw",
+      };
     } catch (e) {
       return {
         ok: false as const,

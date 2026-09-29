@@ -32,6 +32,40 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // Label track subtitle yang dibuat otomatis (diterjemahkan ke Indonesia).
 const AUTO_SUB = "Indonesia (otomatis)";
 
+type Cue = { s: number; e: number; t: string };
+
+/** Ubah timestamp WebVTT (00:01:02.500 / 01:02.500) menjadi detik. */
+const tsToSec = (s: string) => {
+  const parts = String(s)
+    .trim()
+    .split(":")
+    .map((p) => parseFloat(p) || 0);
+  if (parts.length === 3)
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] ?? 0;
+};
+
+/** Parse WebVTT jadi daftar cue untuk ditampilkan sendiri oleh player. */
+function parseVtt(text: string): Cue[] {
+  const out: Cue[] = [];
+  for (const block of text.replace(/\r/g, "").split(/\n{2,}/)) {
+    const lines = block.split("\n").filter((l) => l.trim() !== "");
+    const timing = lines.find((l) => l.includes("-->"));
+    if (!timing) continue;
+    const body = lines
+      .slice(lines.indexOf(timing) + 1)
+      .join(" ")
+      .replace(/<[^>]+>/g, "")
+      .trim();
+    if (!body) continue;
+    const [a, b] = timing.split("-->");
+    if (!a || !b) continue;
+    out.push({ s: tsToSec(a), e: tsToSec(b), t: body });
+  }
+  return out;
+}
+
 export default function Watch() {
   return <WatchContent />;
 }
@@ -80,27 +114,73 @@ function WatchContent() {
   const [directErr, setDirectErr] = useState<string | null>(null);
   const [autoSubUrl, setAutoSubUrl] = useState("");
   const [autoSubLoading, setAutoSubLoading] = useState(false);
+  // Subtitle digambar sendiri (bukan <track> bawaan browser) supaya gaya &
+  // lebar teks persis yang kita mau: kotak hitam 50% di belakang teks.
+  const [autoVtt, setAutoVtt] = useState("");
+  const [cues, setCues] = useState<Cue[]>([]);
+  const [activeCue, setActiveCue] = useState<string>("");
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
-    const v = videoRef.current;
     setActiveSub(label);
     setSubOpen(false);
-    if (!v) return;
-    // Pakai label dari DOM langsung supaya tidak pernah salah pasangan
-    // track (urutan <track> bisa berubah).
-    Array.from(v.textTracks).forEach((t) => {
-      t.mode = !label ? "disabled" : t.label === label ? "showing" : "disabled";
-    });
+    // Track bawaan browser dimatikan semua — subtitle kita render sendiri.
+    const v = videoRef.current;
+    if (v) Array.from(v.textTracks).forEach((t) => (t.mode = "disabled"));
   };
 
   // Subtitle Indonesia otomatis aktif begitu metadata track siap.
   useEffect(() => {
     if (!direct?.subtitle?.url) return;
-    const v = videoRef.current;
-    if (!v) return;
     setActiveSub(direct.subtitle.label ?? "Subtitle");
   }, [direct]);
+
+  // Ambil isi subtitle terpilih (dari server atau dari track otomatis) lalu
+  // simpan sebagai cue untuk digambar sendiri oleh player.
+  useEffect(() => {
+    if (!activeSub) {
+      setCues([]);
+      return;
+    }
+    if (activeSub === AUTO_SUB) {
+      if (!autoVtt) {
+        setCues([]);
+        return;
+      }
+      setCues(parseVtt(autoVtt));
+      return;
+    }
+    const track =
+      (direct?.subtitle?.label === activeSub ? direct?.subtitle : null) ??
+      (direct?.subTracks ?? []).find((t: any) => t.label === activeSub);
+    if (!track?.url) {
+      setCues([]);
+      return;
+    }
+    let alive = true;
+    fetch(track.url)
+      .then((r) => (r.ok ? r.text() : ""))
+      .then((txt) => {
+        if (alive && txt) setCues(parseVtt(txt));
+      })
+      .catch(() => {
+        if (alive) setCues([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [activeSub, autoVtt, direct]);
+
+  // Cue yang sedang tampil mengikuti waktu playback.
+  useEffect(() => {
+    if (cues.length === 0) {
+      setActiveCue("");
+      return;
+    }
+    const t = currentTime;
+    const hit = cues.find((c) => t >= c.s && t <= c.e);
+    setActiveCue(hit?.t ?? "");
+  }, [currentTime, cues]);
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
   // localStorage jadi tidak perlu diterjemahkan ulang.
@@ -122,10 +202,9 @@ function WatchContent() {
         return null;
       }
     })();
+    setAutoVtt("");
     if (cached && cached.includes("WEBVTT")) {
-      setAutoSubUrl(
-        URL.createObjectURL(new Blob([cached], { type: "text/vtt" })),
-      );
+      setAutoVtt(cached);
       return;
     }
     let alive = true;
@@ -138,9 +217,7 @@ function WatchContent() {
         } catch {
           /* storage penuh — subtitle tetap dipakai di session ini */
         }
-        setAutoSubUrl(
-          URL.createObjectURL(new Blob([r.vtt], { type: "text/vtt" })),
-        );
+        setAutoVtt(r.vtt);
       })
       .catch(() => {})
       .finally(() => {
@@ -155,13 +232,13 @@ function WatchContent() {
   // Begitu subtitle otomatis siap, langsung aktifkan (kecuali sudah ada
   // track subtitle Indonesia asli dari server).
   useEffect(() => {
-    if (!autoSubUrl) return;
+    if (!autoVtt) return;
     const hasNative = (direct?.subTracks ?? []).some(
       (t: any) => t.lang === "id",
     );
     if (!hasNative) pickSub(AUTO_SUB);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSubUrl]);
+  }, [autoVtt]);
 
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
@@ -178,7 +255,16 @@ function WatchContent() {
   useEffect(() => {
     if (animeId) {
       detail({ id: animeId })
-        .then((d: any) => setDetailData(d))
+        .then((d: any) => {
+          setDetailData(d);
+          // Tanpa parameter episode → langsung buka episode 1.
+          if (!epParam) {
+            const first = d?.episodeList?.[0]?.id;
+            if (first) {
+              navigate(`/nonton?anime=${animeId}&ep=${first}`, { replace: true });
+            }
+          }
+        })
         .catch(() => setDetailData({ error: true }));
     }
     if (epParam) {
@@ -372,10 +458,20 @@ function WatchContent() {
   // Tombol CC muncul kalau ada track subtitle apa pun (termasuk subtitle
   // Indonesia yang sedang dibuat otomatis).
   const hasSubMenu =
-    (direct?.subTracks?.length ?? 0) > 0 || !!autoSubUrl || autoSubLoading;
+    (direct?.subTracks?.length ?? 0) > 0 || !!autoVtt || autoSubLoading;
 
   return (
     <div className="min-h-screen pb-24">
+      {/* Tombol kembali — selalu terlihat di kiri atas */}
+      {!isFs && (
+        <button
+          onClick={() => (history.length > 1 ? navigate(-1) : navigate("/home"))}
+          className="fixed left-3 top-3 z-40 rounded-full bg-black/55 p-2 backdrop-blur"
+          aria-label="Kembali"
+        >
+          <ChevronLeft className="size-5 text-white" />
+        </button>
+      )}
       {/* Player */}
       <div ref={playerRef} className="relative bg-black">
         {!streamUrl ? (
@@ -434,15 +530,6 @@ function WatchContent() {
                 src={direct.subtitle.url}
                 srcLang={direct.subtitle.lang ?? "id"}
                 label={direct.subtitle.label ?? "Subtitle"}
-                default
-              />
-            )}
-            {autoSubUrl && (
-              <track
-                kind="subtitles"
-                src={autoSubUrl}
-                srcLang="id"
-                label={AUTO_SUB}
               />
             )}
             {/* Track subtitle lain (Indonesia & lainnya) — bisa diganti dari menu CC */}
@@ -459,6 +546,16 @@ function WatchContent() {
               ))}
           </video>
         )}
+        {/* Subtitle digambar sendiri: kotak hitam 50% di belakang teks, teks
+            dibungkus rapat dan tidak melebar ke samping. */}
+        {activeCue && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-16 z-20 flex justify-center px-4 sm:bottom-20">
+            <p className="max-w-[min(92%,38rem)] rounded-md bg-black/50 px-2.5 py-1 text-center text-[13px] font-medium leading-snug text-white sm:text-sm">
+              {activeCue}
+            </p>
+          </div>
+        )}
+
         {/* Spinner saat buffering */}
         {waiting && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -660,17 +757,17 @@ function WatchContent() {
                 ))}
                 {/* Subtitle Indonesia otomatis (dari subtitle server) */}
                 <button
-                  onClick={() => autoSubUrl && pickSub(AUTO_SUB)}
-                  disabled={!autoSubUrl}
+                  onClick={() => autoVtt && pickSub(AUTO_SUB)}
+                  disabled={!autoVtt}
                   className={cn(
                     "block w-full rounded px-2 py-1 text-left text-xs",
                     activeSub === AUTO_SUB
                       ? "bg-violet-600 text-white"
                       : "text-white/80 hover:bg-white/10",
-                    !autoSubUrl && "opacity-50",
+                    !autoVtt && "opacity-50",
                   )}
                 >
-                  {autoSubLoading && !autoSubUrl
+                  {autoSubLoading && !autoVtt
                     ? "Menerjemahkan subtitle…"
                     : AUTO_SUB}
                   <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">

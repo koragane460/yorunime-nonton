@@ -478,16 +478,12 @@ button:not([disabled]):active,
 
 /* Subtitle video — gaya seperti player MegaPlay: teks putih, outline hitam,
    posisi bawah tengah, tidak ada kotak latar. */
+/* Track subtitle bawaan browser tidak dipakai (kita render sendiri), tapi
+   tetap diberi gaya cadangan: tanpa shadow, latar hitam 50%. */
 video::cue {
-  background: transparent;
+  background: rgb(0 0 0 / 0.5);
   color: #fff;
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 1.05em;
-  line-height: 1.35;
-  text-shadow:
-    0 0 3px rgb(0 0 0 / 0.95),
-    0 1px 2px rgb(0 0 0 / 0.9),
-    0 2px 6px rgb(0 0 0 / 0.75);
-  -webkit-text-stroke: 0.4px rgb(0 0 0 / 0.65);
+  font-weight: 500;
+  text-shadow: none;
 }
