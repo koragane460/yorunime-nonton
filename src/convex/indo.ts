@@ -13,7 +13,7 @@ const API = "https://otakudesu-scrapper.vercel.app";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-export type IndoSource = { label: string; url: string; type: "embed" };
+export type IndoSource = { label: string; url: string; type: "embed" | "hls" };
 
 async function get(path: string): Promise<any | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -193,6 +193,69 @@ function writeCache(map: Map<string, CacheEntry>, key: string, value: any) {
 }
 
 /** Search Oploverz + cache (termasuk hasil kosong, supaya tidak hammering API). */
+// ------------------------------------------------------------ xtwap / HLS --
+// Sumber "anime-indo.lol" (lewat SankaApi) menaruh link GDrive yang kalau
+// dibuka menghasilkan player jwplayer dengan URL HLS langsung. Link itu kita
+// ambil -> m3u8 asli -> diputar dengan player milik kita sendiri (hls.js),
+// subtitle Bahasa Indonesia sudah menempel di video.
+const XT_REF = "https://play.xtwap.top/";
+
+const b64url = (s: string) => Buffer.from(s, "utf8").toString("base64url");
+const proxied = (u: string, ref: string) =>
+  `${process.env.CONVEX_SITE_URL ?? ""}/megastream?u=${b64url(u)}&r=${b64url(ref)}`;
+
+async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
+  const list = await sankaGet(`/anime/stream/search/${encodeURIComponent(title)}`);
+  const items: any[] = Array.isArray(list?.anime_list)
+    ? list.anime_list ?? list
+    : Array.isArray(list)
+      ? list
+      : [];
+  if (items.length === 0) return [];
+  const ranked = items
+    .map((it: any) => ({
+      it,
+      score: matchScore(title, String(it?.title ?? "")),
+      slug: String(it?.slug ?? slugOf(it?.href) ?? ""),
+    }))
+    .filter((x) => x.slug && x.score >= 20)
+    .sort((a, b) => b.score - a.score);
+
+  for (const cand of ranked.slice(0, 3)) {
+    const detail = await sankaGet(`/anime/stream/anime/${cand.slug}`);
+    const eps: any[] = Array.isArray(detail?.episodes) ? detail.episodes : [];
+    const target = pickEpisode(eps, ep);
+    const epSlug = String(target?.eps_slug ?? target?.slug ?? "").trim();
+    if (!epSlug) continue;
+    const episode = await sankaGet(`/anime/stream/episode/${epSlug}`);
+    const links: any[] = Array.isArray(episode?.stream_links)
+      ? episode.stream_links
+      : [];
+    const player = links.find((l) => /hls\.php/i.test(String(l?.url ?? "")));
+    if (!player?.url) continue;
+    try {
+      const html = await fetch(String(player.url), {
+        headers: { "User-Agent": UA, Referer: XT_REF },
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (!html.ok) continue;
+      const body = await html.text();
+      const m3u8 = body.match(/"file"\s*:\s*"(https?:[^"]+\.m3u8)"/)?.[1];
+      if (!m3u8) continue;
+      return [
+        {
+          label: "HLS · Sub Indo",
+          url: proxied(m3u8, XT_REF),
+          type: "hls",
+        },
+      ];
+    } catch {
+      continue;
+    }
+  }
+  return [];
+}
+
 // ---------------------------------------------------------------- SankaApi --
 // REST API gabungan (sankavollerei.web.id) yangNEW punya 12+ situs Indonesia.
 // Dipakai untuk sumber Samehadaku & Otakudesu: katalognya jauh lebih lengkap
@@ -330,8 +393,13 @@ export async function resolveIndo(
     clean.replace(/\b(movie|tv|ova|ona|special)\b/gi, "").replace(/\s+/g, " ").trim(),
   ].filter((v, i, arr) => v.length > 2 && arr.indexOf(v) === i);
 
-  // Semua varian dicoba untuk sumber bersubtitle Indonesia, urut dari yang
-  // paling lengkap: Samehadaku → Oploverz → Otakudesu.
+  // Semua varian dicoba untuk sumber bersubtitle Indonesia. Urutan:
+  // 1) HLS xtwap  → HLS asli, bisa diputar player kita sendiri (UI penuh).
+  // 2) Samehadaku → Oploverz → Otakudesu (embed player pihak ketiga).
+  for (const q of variants) {
+    const h = await xtwapHls(q, ep).catch(() => []);
+    if (h.length > 0) return h;
+  }
   for (const q of variants) {
     const sh = await samehadaku(q, ep).catch(() => []);
     if (sh.length > 0) return sh;
