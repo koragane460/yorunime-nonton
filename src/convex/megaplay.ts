@@ -122,6 +122,11 @@ export const resolveEpisode = action({
             ]
           : []),
       ];
+      const allTracks = [
+        ...sub.tracks,
+        ...(dub ? dub.tracks.map((t) => ({ ...t, kind: "dub" })) : []),
+      ];
+
       // Prioritas server:
       // - Kalau MegaPlay punya track subtitle Indonesia → pakai HLS (player
       //   milik kita sendiri, subtitle ID aktif otomatis).
@@ -131,10 +136,6 @@ export const resolveEpisode = action({
         ? [...megaSources, ...indo]
         : [...indo, ...megaSources];
 
-      const allTracks = [
-        ...sub.tracks,
-        ...(dub ? dub.tracks.map((t) => ({ ...t, kind: "dub" })) : []),
-      ];
       // Prioritas subtitle: Indonesia > English > track pertama.
       const isEn = (t: Track) =>
         /^en(|-|_)/i.test(t.label.trim()) || t.lang === "en";
