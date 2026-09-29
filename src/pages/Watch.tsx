@@ -124,28 +124,35 @@ function WatchContent() {
       episode({ animeId, episodeId: epParam })
         .then((e: any) => setEpData(e))
         .catch(() => {});
-      // Coba direct HLS untuk episode katalog (format `{malId}__ep{n}`)
-      const mm = epParam.match(/^(\d+)__ep(\d+)$/);
-      if (mm) {
-        resolveDirect({ malId: mm[1], ep: Number(mm[2]) || 1 })
-          .then((d: any) => {
-            if (!d?.ok) {
-              setDirectErr(d?.reason ?? "Episode belum tersedia");
-              return;
-            }
-            setDirectErr(null);
-            setDirect(d);
-            setSources(d.sources);
-            setSourceType("hls");
-            setSourceIdx(0);
-          })
-          .catch((e: any) =>
-            setDirectErr(e?.message ?? "Gagal memuat episode"),
-          );
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, epParam]);
+
+  // Ambil server streaming (HLS MegaPlay + embed Sub Indo). Menunggu detail
+  // selesai supaya judul anime bisa dipakai mencari sumber subtitle Indonesia.
+  useEffect(() => {
+    if (!epParam || !detailData || detailData.error) return;
+    const mm = epParam.match(/^(\d+)__ep(\d+)$/);
+    if (!mm) return;
+    resolveDirect({
+      malId: mm[1],
+      ep: Number(mm[2]) || 1,
+      title: detailData.title,
+    })
+      .then((d: any) => {
+        if (!d?.ok) {
+          setDirectErr(d?.reason ?? "Episode belum tersedia");
+          return;
+        }
+        setDirectErr(null);
+        setDirect(d);
+        setSources(d.sources);
+        setSourceType(d.sources?.[0]?.type === "hls" ? "hls" : "embed");
+        setSourceIdx(0);
+      })
+      .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailData, epParam]);
 
   // Sinkronkan sumber video dari data episode (mp4 langsung / embed iframe)
   useEffect(() => {

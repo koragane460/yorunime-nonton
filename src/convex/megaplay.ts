@@ -6,6 +6,7 @@
 // segment & .vtt menolak request tanpa Referer.
 import { v } from "convex/values";
 import { action } from "./_generated/server";
+import { resolveIndo, type IndoSource } from "./indo";
 import crypto from "node:crypto";
 
 const UA =
@@ -79,17 +80,39 @@ async function pickVariant(malId: string, ep: number, kind: "sub" | "dub") {
 }
 
 export const resolveEpisode = action({
-  args: { malId: v.string(), ep: v.number() },
-  handler: async (_ctx, { malId, ep }) => {
+  args: { malId: v.string(), ep: v.number(), title: v.optional(v.string()) },
+  handler: async (_ctx, { malId, ep, title }) => {
     try {
+      // Sumber subtitle Indonesia (Otakudesu / Oploverz) dicek bersamaan dengan
+      // MegaPlay; hasilnya digabung ke daftar server player.
+      const indo: IndoSource[] = title
+        ? await resolveIndo(title, ep).catch(() => [])
+        : [];
       const sub = await pickVariant(malId, ep, "sub");
-      if (!sub) return { ok: false as const, reason: "Episode tidak tersedia" };
+      // MegaPlay tidak punya episodenya — kalau sumber Sub Indo ada, tetap main.
+      if (!sub) {
+        if (indo.length > 0) {
+          return {
+            ok: true as const,
+            sources: indo,
+            subtitle: null,
+            subtitles: [],
+            subTracks: [],
+            hasIndonesian: true,
+            intro: null,
+            outro: null,
+            embedSub: null,
+            embedDub: null,
+          };
+        }
+        return { ok: false as const, reason: "Episode tidak tersedia" };
+      }
 
       const dub = await pickVariant(malId, ep, "dub").catch(() => null);
       const embedSub = `${REF}stream/mal/${malId}/${ep}/sub`;
       const embedDub = `${REF}stream/mal/${malId}/${ep}/dub`;
 
-      const sources = [
+      const megaSources = [
         { label: "Direct HLS · SUB", url: sub.m3u8, type: "hls" },
         { label: "MegaPlay Player · SUB", url: embedSub, type: "embed" },
         ...(dub
@@ -99,6 +122,9 @@ export const resolveEpisode = action({
             ]
           : []),
       ];
+      // Server Sub Indo ditaruh di depan supaya user langsung dapat subtitle
+      // bahasa Indonesia; HLS MegaPlay tetap tersedia sebagai alternatif.
+      const sources = [...indo, ...megaSources];
 
       const allTracks = [
         ...sub.tracks,
@@ -120,7 +146,7 @@ export const resolveEpisode = action({
         subtitles: allTracks,
         // Track subtitle versi SUB (untuk pemilih subtitle di player)
         subTracks: sub.tracks,
-        hasIndonesian: allTracks.some((t) => t.lang === "id"),
+        hasIndonesian: allTracks.some((t) => t.lang === "id") || indo.length > 0,
         intro: sub.intro,
         outro: sub.outro,
         embedSub,
