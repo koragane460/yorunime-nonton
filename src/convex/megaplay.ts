@@ -122,9 +122,14 @@ export const resolveEpisode = action({
             ]
           : []),
       ];
-      // Server Sub Indo ditaruh di depan supaya user langsung dapat subtitle
-      // bahasa Indonesia; HLS MegaPlay tetap tersedia sebagai alternatif.
-      const sources = [...indo, ...megaSources];
+      // Prioritas server:
+      // - Kalau MegaPlay punya track subtitle Indonesia → pakai HLS (player
+      //   milik kita sendiri, subtitle ID aktif otomatis).
+      // - Selain itu → server Sub Indo (Oploverz/Otakudesu) dulu, baru HLS.
+      const hasIdTrack = allTracks.some((t) => t.lang === "id");
+      const sources = hasIdTrack
+        ? [...megaSources, ...indo]
+        : [...indo, ...megaSources];
 
       const allTracks = [
         ...sub.tracks,
