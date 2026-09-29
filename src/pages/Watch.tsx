@@ -390,10 +390,12 @@ function WatchContent() {
         )}
 
         {/* Lapisan tap: sentuh video → kontrol tampil / hilang */}
-        <div className="absolute inset-0 z-10" onClick={tapVideo} />
+        {sourceType !== "embed" && (
+          <div className="absolute inset-0 z-10" onClick={tapVideo} />
+        )}
 
         {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
-        {controlsOn && (
+        {controlsOn && sourceType !== "embed" && (
         <div
           className={cn(
             "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
@@ -583,6 +585,18 @@ function WatchContent() {
             )}
           </div>
         </div>
+        )}
+
+        {/* Embed (server Sub Indo): iframe-nya yang harus bisa disentuh, jadi
+            kontrol player disembunyikan & diberi tombol layar penuh sendiri. */}
+        {sourceType === "embed" && streamUrl && (
+          <button
+            onClick={toggleFullscreen}
+            className="absolute right-2 top-2 z-20 rounded-full bg-black/60 p-2"
+            aria-label="Layar penuh"
+          >
+            <Maximize className="size-4 text-white" />
+          </button>
         )}
 
         {/* Lewati intro (kalau MegaPlay memberi timing intro) */}

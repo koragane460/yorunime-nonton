@@ -79,6 +79,34 @@ function pickEpisode<T extends { title?: string; episode?: number; url?: string 
 /** Server embed yang bisa diputar di iframe (mega/filedon = link unduh). */
 const PLAYABLE = /ondesu|odstream|stream|vidhide|upstream|server\s*0/i;
 
+/**
+ * Beberapa host (mis. desustream.net) mengirim X-Frame-Options: SAMEORIGIN
+ * sehingga player di dalam iframe app kita jadi kosong. Server seperti ini
+ * tidak pernah ditawarkan ke user — dicek sekali lalu disimpan di cache.
+ */
+const frameCache = new Map<string, boolean>();
+async function isFramable(url: string): Promise<boolean> {
+  const cached = frameCache.get(url);
+  if (cached !== undefined) return cached;
+  let ok = false;
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { "User-Agent": UA, Range: "bytes=0-1024" },
+      signal: AbortSignal.timeout(8_000),
+    });
+    const xfo = (res.headers.get("x-frame-options") ?? "").toLowerCase();
+    const csp = res.headers.get("content-security-policy") ?? "";
+    ok = res.ok && !xfo && !/frame-ancestors\s+('none'|'self')/i.test(csp);
+  } catch {
+    ok = false;
+  }
+  if (frameCache.size > 500) frameCache.clear();
+  frameCache.set(url, ok);
+  return ok;
+}
+
 async function otakudesu(title: string, ep: number): Promise<IndoSource[]> {
   const list = await get(`/otakudesu/search?q=${encodeURIComponent(title)}`);
   const items = Array.isArray(list) ? list : [];
@@ -99,22 +127,22 @@ async function otakudesu(title: string, ep: number): Promise<IndoSource[]> {
   const episode = await get(`/otakudesu/episode/${encodeURIComponent(epSlug)}`);
   const out: IndoSource[] = [];
   const fallback = episode?.defaultStreaming;
-  if (fallback) {
+  if (fallback && (await isFramable(String(fallback)))) {
     out.push({ label: "Otakudesu · Sub Indo", url: String(fallback), type: "embed" });
   }
   const servers: any[] = Array.isArray(episode?.server) ? episode.server : [];
   const picked = servers
     .filter((s) => PLAYABLE.test(String(s?.title ?? "")))
-    .slice(0, 3);
+    .slice(0, 4);
   for (const s of picked) {
     const data = await get(`/otakudesu/server/${encodeURIComponent(String(s.serverId))}`);
-    if (data?.url) {
-      out.push({
-        label: `Otakudesu · ${String(s.title ?? "Server")} · Sub Indo`,
-        url: String(data.url),
-        type: "embed",
-      });
-    }
+    const u = data?.url ? String(data.url) : "";
+    if (!u || !(await isFramable(u))) continue;
+    out.push({
+      label: `Otakudesu · ${String(s.title ?? "Server")} · Sub Indo`,
+      url: u,
+      type: "embed",
+    });
   }
   return out;
 }
@@ -137,8 +165,9 @@ async function oploverz(title: string, ep: number): Promise<IndoSource[]> {
   if (!epSlug) return [];
 
   const episode = await get(`/oploverz/episode/${encodeURIComponent(epSlug)}`);
-  if (!episode?.iframe) return [];
-  return [{ label: "Oploverz · Sub Indo", url: String(episode.iframe), type: "embed" }];
+  const iframe = episode?.iframe ? String(episode.iframe) : "";
+  if (!iframe || !(await isFramable(iframe))) return [];
+  return [{ label: "Oploverz · Sub Indo", url: iframe, type: "embed" }];
 }
 
 /**
