@@ -71,6 +71,8 @@ function WatchContent() {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   // Hasil resolve MegaPlay: subtitle, timing intro/outro, embed cadangan
   const [direct, setDirect] = useState<any>(null);
+  // Alasan stream tidak tersedia (mis. judul upcoming belum tayang)
+  const [directErr, setDirectErr] = useState<string | null>(null);
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
@@ -110,7 +112,7 @@ function WatchContent() {
     sources[sourceIdx]?.url ??
     sources[0]?.url ??
     epData?.sources?.[0]?.url ??
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
+    "";
 
   useEffect(() => {
     if (animeId) {
@@ -127,13 +129,19 @@ function WatchContent() {
       if (mm) {
         resolveDirect({ malId: mm[1], ep: Number(mm[2]) || 1 })
           .then((d: any) => {
-            if (!d?.ok) return;
+            if (!d?.ok) {
+              setDirectErr(d?.reason ?? "Episode belum tersedia");
+              return;
+            }
+            setDirectErr(null);
             setDirect(d);
             setSources(d.sources);
             setSourceType("hls");
             setSourceIdx(0);
           })
-          .catch(() => {});
+          .catch((e: any) =>
+            setDirectErr(e?.message ?? "Gagal memuat episode"),
+          );
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,7 +166,7 @@ function WatchContent() {
   // HLS (m3u8) → hls.js (Safari bisa pakai src bawaan)
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || sourceType !== "hls") return;
+    if (!v || sourceType !== "hls" || !streamUrl) return;
     const native = v.canPlayType("application/vnd.apple.mpegurl");
     if (!Hls.isSupported() && !native) return;
     let hls: Hls | null = null;
@@ -298,7 +306,30 @@ function WatchContent() {
     <div className="min-h-screen pb-24">
       {/* Player */}
       <div ref={playerRef} className="relative bg-black">
-        {sourceType === "embed" ? (
+        {!streamUrl ? (
+          <div
+            className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-black text-center"
+            style={D.image ? { backgroundImage: `url(${D.image})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+          >
+            <div className="absolute inset-0 bg-black/65" />
+            <div className="relative px-6">
+              <p className="text-sm font-bold text-white">
+                {directErr ?? "Episode belum tersedia"}
+              </p>
+              <p className="mt-1 text-xs text-white/70">
+                {D.status === "Upcoming"
+                  ? "Judul ini belum tayang,cek jadwal rilisnya"
+                  : "Coba episode lain atau kembali ke halaman anime"}
+              </p>
+              <button
+                onClick={() => navigate("/home")}
+                className="mt-3 rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white"
+              >
+                Kembali ke Home
+              </button>
+            </div>
+          </div>
+        ) : sourceType === "embed" ? (
           <iframe
             src={streamUrl}
             title={D.title}

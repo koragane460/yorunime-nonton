@@ -1336,7 +1336,9 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
           </button>
           {eps.length === 0 ? (
             <p className="py-4 text-center text-xs text-muted-foreground">
-              Daftar episode belum tersedia
+              {detail.status === "Upcoming"
+                ? "Belum tayang — nantikan jadwal rilisnya"
+                : "Daftar episode belum tersedia"}
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">

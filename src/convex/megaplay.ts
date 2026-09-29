@@ -104,9 +104,14 @@ export const resolveEpisode = action({
         ...sub.tracks,
         ...(dub ? dub.tracks.map((t) => ({ ...t, kind: "dub" })) : []),
       ];
-      // Utamakan subtitle Indonesia kalau tersedia.
+      // Prioritas subtitle: Indonesia > English > track pertama.
+      const isEn = (t: Track) =>
+        /^en(|-|_)/i.test(t.label.trim()) || t.lang === "en";
       const preferred =
-        allTracks.find((t) => t.lang === "id") ?? allTracks[0] ?? null;
+        allTracks.find((t) => t.lang === "id") ??
+        allTracks.find(isEn) ??
+        allTracks[0] ??
+        null;
 
       return {
         ok: true as const,

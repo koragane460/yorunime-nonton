@@ -307,7 +307,9 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   const m = d?.Media;
   if (!m) return null;
   const card = anilistCard(m);
-  const total = Math.max(1, Math.min(m.episodes ?? 1, 500));
+  // Judul yang belum tayang tidak boleh dikarang jadi episode playable.
+  const upcoming = m.status === "NOT_YET_RELEASED";
+  const total = upcoming ? 0 : Math.max(1, Math.min(m.episodes ?? 1, 500));
   const episodeList: EpisodeItem[] = [];
   for (let i = 1; i <= total; i++) {
     episodeList.push({
