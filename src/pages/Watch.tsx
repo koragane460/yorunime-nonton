@@ -110,6 +110,9 @@ function WatchContent() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  // Cache hasil resolve per episode supaya ganti episode tidak nunggu
+  // pencarian server lagi (langsung pakai URL yang sudah ada).
+  const resolvedRef = useRef<Map<string, any>>(new Map());
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
   // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
@@ -147,8 +150,10 @@ function WatchContent() {
   // Subtitle Indonesia native (kalau HLS MegaPlay menyediakan track ID)
   const idTrackLabel =
     (direct?.subTracks ?? []).find((t: any) => t.lang === "id")?.label ?? "";
-  // Kalau sumber Sub Indo (xtwap) yang dipakai, subtitle Indonesia sudah
-  // menempel di video sehingga tidak perlu track tambahan sama sekali.
+  // Kalau sumber Sub Indo (xtwap) yang dipakai, subtitle Bahasa Indonesia sudah
+  // menempel di dalam berkas video. Subtitle itu milik penyedia konten, bukan
+  // milik kita — jadi overlay subtitle kita dimatikan 100% (teks dan kotaknya
+  // sama sekali tidak muncul) supaya tidak	doabel/tumpang tindih.
   const bakedSubs = !!direct?.bakedSubs;
   // True kalau subtitle yang aktif versi Bahasa Indonesia.
   const [subTouched, setSubTouched] = useState(false);
@@ -318,33 +323,81 @@ function WatchContent() {
     if (!epParam || !detailData || detailData.error) return;
     const mm = epParam.match(/^(\d+)__ep(\d+)$/);
     if (!mm) return;
+    const key = `${mm[1]}__ep${Number(mm[2]) || 1}`;
+    const applyData = (d: any) => {
+      if (!d?.ok) {
+        setDirectErr(d?.reason ?? "Episode belum tersedia");
+        return;
+      }
+      setDirectErr(null);
+      setDirect(d);
+      setSubTouched(false);
+      setSources(d.sources);
+      setSourceType(
+        d.sources?.[0]?.type === "hls"
+          ? "hls"
+          : d.sources?.[0]?.type === "mp4"
+            ? "mp4"
+            : "embed",
+      );
+      setSourceIdx(0);
+    };
+
+    // Ganti episode → episode lama langsung dihapus total, tidak ada frame sisa.
+    setSources([]);
+    setDirect(null);
     setDirectErr(null);
+    setCurrentTime(0);
+    setDuration(0);
+    setCues([]);
+    setActiveCue("");
+    setActiveSub("");
+    setSourceType("mp4");
+
+    // Sudah ada di cache → langsung main tanpa nunggu server.
+    const cached = resolvedRef.current.get(key);
+    if (cached) {
+      applyData(cached);
+      return;
+    }
     resolveDirect({
       malId: mm[1],
       ep: Number(mm[2]) || 1,
       title: detailData.title,
     })
       .then((d: any) => {
-        if (!d?.ok) {
-          setDirectErr(d?.reason ?? "Episode belum tersedia");
-          return;
-        }
-        setDirectErr(null);
-        setDirect(d);
-        setSubTouched(false);
-        setSources(d.sources);
-        setSourceType(
-          d.sources?.[0]?.type === "hls"
-            ? "hls"
-            : d.sources?.[0]?.type === "mp4"
-              ? "mp4"
-              : "embed",
-        );
-        setSourceIdx(0);
+        if (d?.ok) resolvedRef.current.set(key, d);
+        applyData(d);
       })
       .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailData, epParam]);
+
+  // Pramuat episode berikutnya di latar belakang: saat user menekan episode
+  // berikutnya, URL-nya sudah siap sehingga tidak ada jeda loading 00:00.
+  useEffect(() => {
+    if (!epParam || !detailData || detailData.error) return;
+    const next = epList[epIndex + 1];
+    if (!next) return;
+    const mm = next.id?.match?.(/^(\d+)__ep(\d+)$/);
+    if (!mm) return;
+    const key = `${mm[1]}__ep${Number(mm[2]) || 1}`;
+    if (resolvedRef.current.has(key)) return;
+    let alive = true;
+    resolveDirect({
+      malId: mm[1],
+      ep: Number(mm[2]) || 1,
+      title: detailData.title,
+    })
+      .then((d: any) => {
+        if (alive && d?.ok) resolvedRef.current.set(key, d);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epParam, epIndex, epList.length, detailData]);
 
   // HLS (m3u8) → hls.js (Safari bisa pakai src bawaan)
   useEffect(() => {
@@ -382,9 +435,12 @@ function WatchContent() {
   }, [sourceType, streamUrl]);
 
   // Ganti kualitas saat nonton → langsung terapkan ke level HLS yang aktif.
+  // Di landscape (fullscreen) video otomatis dinaikkan ke HD tertinggi supaya
+  // layar besar tidak membuat gambar terlihat buram.
   useEffect(() => {
-    if (hlsRef.current) applyLevel(hlsRef.current, quality);
-  }, [quality]);
+    if (!hlsRef.current) return;
+    applyLevel(hlsRef.current, isFs ? "1080p" : quality);
+  }, [quality, isFs]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -555,21 +611,30 @@ function WatchContent() {
             style={D.image ? { backgroundImage: `url(${D.image})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
           >
             <div className="absolute inset-0 bg-black/65" />
-            <div className="relative px-6">
-              <p className="text-sm font-bold text-white">
-                {directErr ?? "Episode belum tersedia"}
-              </p>
-              <p className="mt-1 text-xs text-white/70">
-                {D.status === "Upcoming"
-                  ? "Judul ini belum tayang,cek jadwal rilisnya"
-                  : "Coba episode lain atau kembali ke halaman anime"}
-              </p>
-              <button
-                onClick={() => navigate("/home")}
-                className="mt-3 rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white"
-              >
-                Kembali ke Home
-              </button>
+            <div className="relative flex flex-col items-center px-6">
+              {directErr ? (
+                <>
+                  <p className="text-sm font-bold text-white">{directErr}</p>
+                  <p className="mt-1 text-xs text-white/70">
+                    {D.status === "Upcoming"
+                      ? "Judul ini belum tayang, cek jadwal rilisnya"
+                      : "Coba episode lain atau kembali ke halaman anime"}
+                  </p>
+                  <button
+                    onClick={() => navigate("/home")}
+                    className="mt-3 rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white"
+                  >
+                    Kembali ke Home
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="size-8 animate-spin text-white/80" />
+                  <p className="mt-2 text-xs text-white/80">
+                    Memuat episode {currentEp ? currentEp.number : ""}...
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : sourceType === "embed" ? (
@@ -582,6 +647,7 @@ function WatchContent() {
           />
         ) : (
           <video
+            key={epParam}
             ref={videoRef}
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
@@ -623,7 +689,7 @@ function WatchContent() {
         )}
         {/* Subtitle digambar sendiri: kotak hitam 50% di belakang teks, teks
             dibungkus rapat dan tidak melebar ke samping. */}
-        {activeCue && (
+        {activeCue && !bakedSubs && (
           <div
             className={cn(
               "pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4",

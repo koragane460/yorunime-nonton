@@ -200,8 +200,13 @@ function writeCache(map: Map<string, CacheEntry>, key: string, value: any) {
 // ------------------------------------------------------------ xtwap / HLS --
 // Sumber "anime-indo.lol" (lewat SankaApi) menaruh link GDrive yang kalau
 // dibuka menghasilkan player jwplayer dengan URL HLS langsung. Link itu kita
-// ambil -> m3u8 asli -> diputar dengan player milik kita sendiri (hls.js),
-// subtitle Bahasa Indonesia sudah menempel di video.
+// ambil -> m3u8 asli -> diputar dengan player milik kita sendiri (hls.js).
+//
+// CATATAN SUBTITLE: file video dari sumber ini sudah membawa subtitle Bahasa
+// Indonesia yang menempel di dalam video. Subtitle itu milik penyedia konten,
+// BUKAN milik kita. Karena itu di player kita tidak menambahkan track subtitle
+// sendiri untuk sumber ini (overlay subtitle dimatikan 100%) supaya tidak
+// doabel dan tidak mengubah file aslinya.
 const XT_REF = "https://play.xtwap.top/";
 
 const b64url = (s: string) => Buffer.from(s, "utf8").toString("base64url");

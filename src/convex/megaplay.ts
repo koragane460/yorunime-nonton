@@ -82,9 +82,24 @@ async function pickVariant(malId: string, ep: number, kind: "sub" | "dub") {
 // Label tunggal untuk semua server: tidak ada pilihan lain di UI.
 const HLS_LABEL = "Direct HLS · SUB";
 
+// Cache hasil akhir per episode. Ganti episode jadi instan karena URL HLS
+// Sub Indo tidak perlu dicari ulang ke penyedia.
+const resultCache = new Map<string, { value: any; at: number }>();
+const RESULT_TTL = 30 * 60_000;
+
 export const resolveEpisode = action({
   args: { malId: v.string(), ep: v.number(), title: v.optional(v.string()) },
   handler: async (_ctx, { malId, ep, title }) => {
+    const key = `${malId}__ep${ep}`;
+    const hit = resultCache.get(key);
+    if (hit && Date.now() - hit.at < RESULT_TTL) return hit.value;
+    if (resultCache.size > 300) resultCache.clear();
+
+    const finish = (value: any) => {
+      if (value?.ok) resultCache.set(key, { value, at: Date.now() });
+      return value;
+    };
+
     try {
       // Sumber Indonesia dicek bersamaan dengan MegaPlay.
       const indo: IndoSource[] = title
@@ -133,7 +148,7 @@ export const resolveEpisode = action({
         allTracks[0] ??
         null;
 
-      return {
+      return finish({
         ok: true as const,
         sources,
         subtitle: preferred,
@@ -148,7 +163,7 @@ export const resolveEpisode = action({
         // Versi HLS MegaPlay — dipakai mini player.
         megaM3u8: sub?.m3u8 ?? null,
         megaRef: REF,
-      };
+      });
     } catch (e) {
       return {
         ok: false as const,
