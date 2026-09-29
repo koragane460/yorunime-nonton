@@ -120,6 +120,8 @@ function WatchContent() {
   const [quality, setQuality] = useState<string>("720p");
   const [qualityTouched, setQualityTouched] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
+  // Kualitas yang dipilih di popup (menunggu disimpan), null = belum pilih.
+  const [qualityDraft, setQualityDraft] = useState<string | null>(null);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -235,10 +237,13 @@ function WatchContent() {
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
   // localStorage jadi tidak perlu diterjemahkan ulang.
+  // Kalau sumber sudah membawa subtitle-nya sendiri (bakedSubs), tidak ada yang
+  // perlu diunduh — subtitle animeindo yang ada di dalam video dipakai.
   useEffect(() => {
     const mm = epParam?.match(/^(\d+)__ep(\d+)$/);
-    if (!mm) {
+    if (!mm || !direct?.ok || bakedSubs) {
       setAutoSubUrl("");
+      setAutoSubLoading(false);
       return;
     }
     const key = `yorunime-sub-indo:${mm[1]}:${mm[2]}`;
@@ -278,18 +283,7 @@ function WatchContent() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epParam]);
-
-  // Begitu subtitle otomatis siap, langsung aktifkan (kecuali sudah ada
-  // track subtitle Indonesia asli dari server).
-  useEffect(() => {
-    if (!autoVtt) return;
-    const hasNative = (direct?.subTracks ?? []).some(
-      (t: any) => t.lang === "id",
-    );
-    if (!hasNative) pickSub(AUTO_SUB);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoVtt]);
+  }, [epParam, bakedSubs, !!direct?.ok]);
 
   const [detailData, setDetailData] = useState<any>(null);
 
@@ -468,14 +462,23 @@ function WatchContent() {
     setQuality(fromSettings);
   }, [settings?.defaultQuality, qualityTouched]);
 
-  // Player → Pengaturan: mengganti kualitas di player langsung disimpan.
-  const pickQuality = (q: string) => {
-    setQuality(q);
+  // Player → Pengaturan: ganti kualitas di player tersimpan ke Pengaturan.
+  // Dua tahap: pilih dulu di popup, baru tekan Simpan baru benar-benar dipakai
+  // dan disimpan — jadi tidak menimpa nilai lama karena salah sentuh.
+  const saveQuality = () => {
+    if (!qualityDraft) return;
+    setQuality(qualityDraft);
     setQualityTouched(true);
     setQualityOpen(false);
-    void saveSettings({ defaultQuality: q }).catch(() => {
+    setQualityDraft(null);
+    void saveSettings({ defaultQuality: qualityDraft }).catch(() => {
       /* simpan lokal tetap berjalan walau server gagal */
     });
+  };
+
+  const cancelQuality = () => {
+    setQualityDraft(null);
+    setQualityOpen(false);
   };
 
   const togglePlay = () => {
@@ -698,7 +701,15 @@ function WatchContent() {
               isFs ? "bottom-12" : "bottom-16 sm:bottom-20",
             )}
           >
-            <p className="max-w-[min(92%,38rem)] rounded-md bg-black/50 px-2.5 py-1 text-center text-[13px] font-medium leading-snug text-white sm:text-sm">
+            {/* Gaya subtitle ala animeindo: teks putih semi-bold dengan outline
+                hitam tebal, tanpa kotak background di belakang teks. */}
+            <p
+              className={cn(
+                "max-w-[min(90%,42rem)] text-center font-semibold leading-snug text-white",
+                "[text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,0_2px_3px_rgba(0,0,0,0.9)]",
+                isFs ? "text-[15px] sm:text-[18px]" : "text-[13px] sm:text-[15px]",
+              )}
+            >
               {activeCue}
             </p>
           </div>
@@ -1078,7 +1089,10 @@ function WatchContent() {
           <ToolButton
             icon={<Settings2 className="size-4" />}
             label={quality}
-            onClick={() => setQualityOpen(true)}
+            onClick={() => {
+              setQualityDraft(quality);
+              setQualityOpen(true);
+            }}
           />
         </div>
 
@@ -1107,15 +1121,15 @@ function WatchContent() {
 
       {/* Popups diperbagus */}
       {qualityOpen && (
-        <Popup onClose={() => setQualityOpen(false)} title="Pilih kualitas">
+        <Popup onClose={cancelQuality} title="Pilih kualitas">
           <div className="flex flex-wrap gap-2">
             {QUALITIES.map((q) => (
               <button
                 key={q}
-                onClick={() => pickQuality(q)}
+                onClick={() => setQualityDraft(q)}
                 className={cn(
                   "rounded-lg border px-4 py-2 text-sm transition",
-                  quality === q
+                  (qualityDraft ?? quality) === q
                     ? "border-violet-500 bg-violet-500/15 text-violet-300"
                     : "border-border hover:border-violet-500/50",
                 )}
@@ -1123,6 +1137,24 @@ function WatchContent() {
                 {q}
               </button>
             ))}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Kualitas ini juga berubah di Pengaturan.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={cancelQuality}
+              className="flex-1 rounded-full border border-border py-2 text-xs font-semibold text-muted-foreground"
+            >
+              Batal
+            </button>
+            <button
+              onClick={saveQuality}
+              disabled={!qualityDraft || qualityDraft === quality}
+              className="flex-1 rounded-full bg-violet-600 py-2 text-xs font-bold text-white disabled:opacity-40"
+            >
+              Simpan
+            </button>
           </div>
         </Popup>
       )}

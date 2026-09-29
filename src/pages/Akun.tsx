@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { RequestButtons } from "@/components/RequestButtons";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Avatar,
   BlueCheck,
@@ -100,27 +101,23 @@ function AkunContent() {
         </button>
       </div>
 
-      {/* Avatar bulat + background, overlap setengah banner */}
+      {/* Foto profile menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
-        <div className="relative -mt-12 flex items-center gap-3">
-          <span className="relative shrink-0 rounded-full bg-secondary p-1 ring-2 ring-background">
-            <Avatar
-              src={user.image}
-              seed={user.username}
-              className="size-20"
-              online={!user.hideOnline}
-            />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <p className={cn("truncate text-lg font-black", usernameColor(user.username))}>
-                {user.username}
-              </p>
-              {premium && <BlueCheck className="size-5 shrink-0" />}
-              <span className="ml-1 shrink-0 text-xs text-muted-foreground">
-                {displayId(user.seqId, user._id)}
-              </span>
-            </div>
+        <div className="relative -mt-14 flex flex-col items-center">
+          <Avatar
+            src={user.image}
+            seed={user.username}
+            className="size-28"
+            online={!user.hideOnline}
+          />
+          <div className="mt-2 flex min-w-0 max-w-full items-center justify-center gap-1.5">
+            <p className={cn("truncate text-lg font-black", usernameColor(user.username))}>
+              {user.username}
+            </p>
+            {premium && <BlueCheck className="size-5 shrink-0" />}
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {displayId(user.seqId, user._id)}
+            </span>
           </div>
         </div>
 
@@ -130,7 +127,7 @@ function AkunContent() {
           </button>
           {user.clanTag && (
             <ClanTag
-              icon={user.clanTagIcon ?? "⚔️"}
+              icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
               tag={user.clanTag}
               color={user.clanNameColor}
             />

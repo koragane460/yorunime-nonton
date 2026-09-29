@@ -152,9 +152,7 @@ function AccountPanel({
         {!bannerUrl && <div className="bg-hero-gradient absolute inset-0" />}
         <div className="relative bg-black/45 p-3">
           <div className="flex items-center gap-3">
-            <span className="shrink-0 overflow-hidden rounded-full ring-2 ring-violet-400/50">
-              <Avatar src={image} seed={name} className="size-14" />
-            </span>
+            <Avatar src={image} seed={name} className="size-14" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <p className="truncate font-bold text-white">{name}</p>

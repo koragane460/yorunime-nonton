@@ -200,11 +200,16 @@ export function Avatar({
   online?: boolean;
 }) {
   return (
-    <span className={cn("relative inline-block shrink-0 rounded-full bg-secondary", className)}>
+    <span
+      className={cn(
+        "relative block shrink-0 overflow-hidden rounded-full bg-secondary align-middle",
+        className,
+      )}
+    >
       <img
         src={src ?? avatarFallback(seed)}
         alt=""
-        className="size-full rounded-full object-cover"
+        className="block size-full rounded-full object-cover"
       />
       {online !== undefined && (
         <span
