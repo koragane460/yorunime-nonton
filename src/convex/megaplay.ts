@@ -113,6 +113,9 @@ export const resolveEpisode = action({
         sources,
         subtitle: preferred,
         subtitles: allTracks,
+        // Track subtitle versi SUB (untuk pemilih subtitle di player)
+        subTracks: sub.tracks,
+        hasIndonesian: allTracks.some((t) => t.lang === "id"),
         intro: sub.intro,
         outro: sub.outro,
         embedSub,

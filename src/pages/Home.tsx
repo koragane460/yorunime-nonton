@@ -103,12 +103,19 @@ function HomeContent() {
   const today = useAction(api.anime.animeTrendingToday);
   const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
+  // Kategori lengkap: Movie / OVA / Special / Season ini
+  const movies = useAction(api.anime.animeBrowse);
+  const ovas = useAction(api.anime.animeBrowse);
+  const seasonNow = useAction(api.anime.animeBrowse);
 
   const [heroList, setHeroList] = useState<AnimeCardT[]>([]);
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
   const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
+  const [movieList, setMovieList] = useState<AnimeCardT[]>([]);
+  const [ovaList, setOvaList] = useState<AnimeCardT[]>([]);
+  const [seasonList, setSeasonList] = useState<AnimeCardT[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
 
@@ -121,7 +128,10 @@ function HomeContent() {
       today({}),
       forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
-    ]).then(([rHero, rTop, rToday, rForYou, rGenres]) => {
+      movies({ kind: "movie" }),
+      ovas({ kind: "ova" }),
+      seasonNow({ kind: "season" }),
+    ]).then(([rHero, rTop, rToday, rForYou, rGenres, rMovie, rOva, rSeason]) => {
       if (!alive) return;
       if (rHero.status === "fulfilled") setHeroList((rHero.value as AnimeCardT[]) ?? []);
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
@@ -129,6 +139,9 @@ function HomeContent() {
       if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
       if (rGenres.status === "fulfilled")
         setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
+      if (rMovie.status === "fulfilled") setMovieList((rMovie.value as AnimeCardT[]) ?? []);
+      if (rOva.status === "fulfilled") setOvaList((rOva.value as AnimeCardT[]) ?? []);
+      if (rSeason.status === "fulfilled") setSeasonList((rSeason.value as AnimeCardT[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -334,6 +347,52 @@ function HomeContent() {
                 </div>
               ))}
             </div>
+          )}
+        </>
+      )}
+
+      {/* 6c) KATEGORI LENGKAP: Movie / OVA & Special / Season ini */}
+      {(movieList.length > 0 || loading) && (
+        <>
+          <SectionTitle>Movie</SectionTitle>
+          {loading ? (
+            <GridSkeleton count={10} />
+          ) : (
+            <AnimeGrid
+              items={movieList.slice(0, 10)}
+              onPick={openAnime}
+              newIds={new Set()}
+            />
+          )}
+        </>
+      )}
+
+      {(ovaList.length > 0 || loading) && (
+        <>
+          <SectionTitle>OVA &amp; Special</SectionTitle>
+          {loading ? (
+            <GridSkeleton count={10} />
+          ) : (
+            <AnimeGrid
+              items={ovaList.slice(0, 10)}
+              onPick={openAnime}
+              newIds={new Set()}
+            />
+          )}
+        </>
+      )}
+
+      {(seasonList.length > 0 || loading) && (
+        <>
+          <SectionTitle>Season Ini</SectionTitle>
+          {loading ? (
+            <GridSkeleton count={10} />
+          ) : (
+            <AnimeGrid
+              items={seasonList.slice(0, 10)}
+              onPick={openAnime}
+              newIds={new Set()}
+            />
           )}
         </>
       )}
@@ -1244,7 +1303,7 @@ function AnimeDetailScreen({ animeId, onClose }: { animeId: string; onClose: () 
           {/* Sinopsis dulu (baca selengkapnya), BARU tombol Nonton */}
           <SectionTitle>Sinopsis</SectionTitle>
           <p className={cn("text-sm leading-6 text-zinc-300", !synopsisOpen && "line-clamp-3")}>
-            {detail.synopsis ?? "Sinopsis belum tersedia."}
+            {detail.synopsisId ?? detail.synopsis ?? "Sinopsis belum tersedia."}
           </p>
           <button
             onClick={() => setSynopsisOpen((v) => !v)}

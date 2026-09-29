@@ -57,12 +57,46 @@ function WatchContent() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [recorded, setRecorded] = useState(false);
+  const [controlsOn, setControlsOn] = useState(true);
+  const [scrub, setScrub] = useState<number | null>(null);
+  const [isFs, setIsFs] = useState(false);
+  const [subOpen, setSubOpen] = useState(false);
+  const [activeSub, setActiveSub] = useState<string>("");
+  const playerRef = useRef<HTMLDivElement>(null);
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
   const [sourceIdx, setSourceIdx] = useState(0);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   // Hasil resolve MegaPlay: subtitle, timing intro/outro, embed cadangan
   const [direct, setDirect] = useState<any>(null);
+
+  // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
+  const pickSub = (label: string) => {
+    const v = videoRef.current;
+    setActiveSub(label);
+    setSubOpen(false);
+    if (!v) return;
+    // Urutan <track> di video: subtitle utama dulu, lalu track lain.
+    const order: string[] = direct?.subtitle?.url
+      ? [
+          direct.subtitle.label ?? "Subtitle",
+          ...(direct?.subTracks ?? [])
+            .filter((t: any) => t.url !== direct?.subtitle?.url)
+            .map((t: any) => t.label),
+        ]
+      : (direct?.subTracks ?? []).map((t: any) => t.label);
+    Array.from(v.textTracks).forEach((t, i) => {
+      t.mode = !label ? "disabled" : order[i] === label ? "showing" : "disabled";
+    });
+  };
+
+  // Subtitle Indonesia otomatis aktif begitu metadata track siap.
+  useEffect(() => {
+    if (!direct?.subtitle?.url) return;
+    const v = videoRef.current;
+    if (!v) return;
+    setActiveSub(direct.subtitle.label ?? "Subtitle");
+  }, [direct]);
 
   const [detailData, setDetailData] = useState<any>(null);
   const [epData, setEpData] = useState<any>(null);
@@ -171,6 +205,70 @@ function WatchContent() {
     if (v) v.currentTime = Math.max(0, v.currentTime + s);
   };
 
+  // Kontrol video: tap untuk tampil/sembunyi, auto-hide saat diputar,
+  // dan fullscreen → landscape dengan kontrol native browser.
+  const tapVideo = () => setControlsOn((v) => !v);
+
+  useEffect(() => {
+    if (isFs) {
+      setControlsOn(true);
+      return;
+    }
+    if (!playing) {
+      setControlsOn(true);
+      return;
+    }
+    const t = window.setTimeout(() => setControlsOn(false), 3000);
+    return () => clearTimeout(t);
+  }, [playing, isFs, controlsOn, currentTime]);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      const fs = document.fullscreenElement === playerRef.current;
+      setIsFs(fs);
+      setControlsOn(true);
+      // Kembalikan orientasi ke portrait saat keluar fullscreen.
+      if (!fs) {
+        try {
+          (screen.orientation as any)?.lock?.("portrait");
+        } catch {
+          /* abaikan */
+        }
+      }
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const el = playerRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if ((el as any).webkitRequestFullscreen)
+        await (el as any).webkitRequestFullscreen();
+      try {
+        await (screen.orientation as any)?.lock?.("landscape");
+      } catch {
+        /* browser tidak mendukung lock orientasi */
+      }
+    } catch {
+      toast.error("Fullscreen tidak didukung di browser ini");
+    }
+  };
+
+  // Seek bar: saat digeser tampil menit tujuan, dilepas → langsung diputar.
+  const commitScrub = (value: number) => {
+    const v = videoRef.current;
+    if (v && Number.isFinite(value)) v.currentTime = value;
+    setCurrentTime(value);
+    setScrub(null);
+  };
+
   const episodeComments = useQuery(
     api.activities.listComments,
     epParam ? { animeId: `${animeId}__ep${epParam}`, sort: "terbaru" } : "skip",
@@ -189,7 +287,7 @@ function WatchContent() {
   return (
     <div className="min-h-screen pb-24">
       {/* Player */}
-      <div className="relative bg-black">
+      <div ref={playerRef} className="relative bg-black">
         {sourceType === "embed" ? (
           <iframe
             src={streamUrl}
@@ -208,7 +306,7 @@ function WatchContent() {
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
             onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-            controls={false}
+            controls={isFs}
           >
             {direct?.subtitle?.url && (
               <track
@@ -219,11 +317,27 @@ function WatchContent() {
                 default
               />
             )}
+            {/* Track subtitle lain (Indonesia & lainnya) — bisa diganti dari menu CC */}
+            {(direct?.subTracks ?? [])
+              .filter((t: any) => t.url !== direct?.subtitle?.url)
+              .map((t: any) => (
+                <track
+                  key={t.url}
+                  kind="subtitles"
+                  src={t.url}
+                  srcLang={t.lang}
+                  label={t.label}
+                />
+              ))}
           </video>
         )}
+        {/* Lapisan tap: sentuh video → kontrol tampil / hilang */}
+        <div className="absolute inset-0 z-10" onClick={tapVideo} />
+
         {/* Overlay controls */}
-        <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
-          <div className="flex items-center gap-2 p-3">
+        {controlsOn && !isFs && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/80 via-transparent to-black/50">
+          <div className="pointer-events-auto flex items-center gap-2 p-3">
             <button onClick={() => navigate("/")} className="rounded-full bg-black/50 p-2">
               <ChevronLeft className="size-4 text-white" />
             </button>
@@ -231,7 +345,7 @@ function WatchContent() {
               {D.title} {currentEp ? `— Ep ${currentEp.number}` : ""}
             </p>
           </div>
-          <div className="flex items-center justify-center gap-6 pb-2">
+          <div className="pointer-events-auto flex items-center justify-center gap-6 pb-2">
             <button
               disabled={epIndex <= 0}
               onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`)}
@@ -259,22 +373,31 @@ function WatchContent() {
               <SkipForward className="size-5 text-white" />
             </button>
           </div>
-          <div className="space-y-1.5 px-3 pb-3">
+          <div className="pointer-events-auto space-y-1.5 px-3 pb-3">
+            {/* Waktu tujuan saat bar digeser */}
+            {scrub !== null && (
+              <div className="flex justify-center">
+                <span className="rounded-full border border-white/30 bg-black/80 px-2.5 py-0.5 text-[11px] font-bold text-white">
+                  {fmt(scrub)} / {fmt(duration)}
+                </span>
+              </div>
+            )}
             <input
               type="range"
               min={0}
               max={duration || 0}
               step={0.1}
-              value={currentTime}
-              onChange={(e) => {
-                const v = videoRef.current;
-                if (v) v.currentTime = Number(e.target.value);
-              }}
+              value={scrub ?? currentTime}
+              onChange={(e) => setScrub(Number(e.target.value))}
+              onPointerUp={() => scrub !== null && commitScrub(scrub)}
+              onPointerCancel={() => setScrub(null)}
+              onKeyUp={() => scrub !== null && commitScrub(scrub)}
+              onMouseUp={() => scrub !== null && commitScrub(scrub)}
               className="w-full accent-red-500"
             />
             <div className="flex items-center justify-between text-[11px] text-white">
               <span>
-                {fmt(currentTime)} / {fmt(duration)}
+                {fmt(scrub ?? currentTime)} / {fmt(duration)}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -283,6 +406,18 @@ function WatchContent() {
                 >
                   {speed}x
                 </button>
+                {(direct?.subTracks?.length ?? 0) > 0 && (
+                  <button
+                    onClick={() => setSubOpen((v) => !v)}
+                    className={cn(
+                      "rounded px-2 py-1 text-[11px] font-bold",
+                      activeSub ? "bg-violet-600 text-white" : "bg-white/15",
+                    )}
+                    aria-label="Pilih subtitle"
+                  >
+                    CC
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     // Kirim ke mini player global (AppLayout) lalu balik ke Home
@@ -306,12 +441,9 @@ function WatchContent() {
                   <PictureInPicture2 className="size-4" />
                 </button>
                 <button
-                  onClick={() => {
-                    const el = document.documentElement;
-                    if (document.fullscreenElement) void document.exitFullscreen();
-                    else void el.requestFullscreen();
-                  }}
+                  onClick={toggleFullscreen}
                   className="rounded bg-white/15 p-1.5"
+                  aria-label="Layar penuh"
                 >
                   <Maximize className="size-4" />
                 </button>
@@ -336,8 +468,42 @@ function WatchContent() {
                 ))}
               </div>
             )}
+            {/* Pemilih subtitle (Indonesia dll) */}
+            {subOpen && (
+              <div className="thin-scroll max-h-40 overflow-y-auto rounded-lg bg-black/90 p-2">
+                <button
+                  onClick={() => pickSub("")}
+                  className={cn(
+                    "block w-full rounded px-2 py-1 text-left text-xs",
+                    !activeSub ? "bg-violet-600 text-white" : "text-white/80 hover:bg-white/10",
+                  )}
+                >
+                  Matikan subtitle
+                </button>
+                {(direct?.subTracks ?? []).map((t: any) => (
+                  <button
+                    key={t.url}
+                    onClick={() => pickSub(t.label)}
+                    className={cn(
+                      "block w-full rounded px-2 py-1 text-left text-xs",
+                      activeSub === t.label
+                        ? "bg-violet-600 text-white"
+                        : "text-white/80 hover:bg-white/10",
+                    )}
+                  >
+                    {t.label}
+                    {t.lang === "id" && (
+                      <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
+                        ID
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+        )}
 
         {/* Lewati intro (kalau MegaPlay memberi timing intro) */}
         {direct?.intro?.start !== undefined &&
@@ -388,7 +554,7 @@ function WatchContent() {
           <div className="min-w-0 flex-1">
             <h1 className="line-clamp-2 text-base font-bold">{D.title}</h1>
             <p className={cn("mt-1 text-xs leading-5 text-zinc-400", !synopsisOpen && "line-clamp-3")}>
-              {D.synopsis}
+              {D.synopsisId ?? D.synopsis}
             </p>
             <button
               onClick={() => setSynopsisOpen((v) => !v)}

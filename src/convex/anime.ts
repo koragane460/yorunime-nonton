@@ -96,7 +96,7 @@ const DETAIL_TTL = 60 * 60 * 1000;
 // ------------------------------------------------------------ normalize ----
 
 export type AnimeCard = {
-  source: "otakudesu" | "jikan" | "fallback";
+  source: "otakudesu" | "jikan" | "fallback" | "anilist";
   id: string;
   title: string;
   image: string;
@@ -106,6 +106,8 @@ export type AnimeCard = {
   status?: string;
   releaseDay?: string;
   synopsis?: string;
+  /** Sinopsis versi Bahasa Indonesia (dihasilkan otomatis). */
+  synopsisId?: string;
 };
 
 export type EpisodeItem = {
@@ -206,6 +208,124 @@ async function jikanDetail(id: string): Promise<AnimeDetail> {
       (a.synopsis ?? "").replace(/\[Written by MAL Rewrite\]/gi, "").trim() ||
       "Sinopsis belum tersedia.",
     totalEpisodes: a.episodes ?? episodeList.length,
+    episodeList,
+  };
+}
+
+// ------------------------------------------------------------- anilist ----
+// AniList dipakai sebagai sumber utama by MAL id: stabil (tidak ada rate limit
+// seperti Jikan) dan selalu mengembalikan judul + poster yang cocok dengan id.
+
+const ANILIST_URL = "https://graphql.anilist.co";
+const ANILIST_FIELDS = `
+  id
+  idMal
+  title { romaji english native }
+  coverImage { extraLarge large }
+  averageScore
+  episodes
+  duration
+  format
+  status
+  seasonYear
+  genres
+  description(asHtml: false)
+`;
+
+async function aniGraphql(
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<any> {
+  const res = await fetch(ANILIST_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "User-Agent": "YoruNime/1.0",
+    },
+    body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`AniList ${res.status}`);
+  const j = await res.json();
+  if (j?.errors?.length) throw new Error(`AniList: ${j.errors[0].message}`);
+  return j?.data;
+}
+
+function anilistCard(m: any): AnimeCard {
+  return {
+    source: "anilist",
+    id: String(m?.idMal ?? m?.id ?? ""),
+    title:
+      m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "Tanpa judul",
+    image: m?.coverImage?.extraLarge ?? m?.coverImage?.large ?? "",
+    score: m?.averageScore ? Number((m.averageScore / 10).toFixed(2)) : undefined,
+    episodes: m?.episodes ?? undefined,
+    type: m?.format ?? undefined,
+    status:
+      m?.status === "RELEASING"
+        ? "Ongoing"
+        : m?.status === "FINISHED"
+          ? "Completed"
+          : m?.status === "NOT_YET_RELEASED"
+            ? "Upcoming"
+            : undefined,
+    synopsis:
+      (m?.description ?? "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim() || undefined,
+  };
+}
+
+/** Terjemahkan sinopsis ke Bahasa Indonesia (best-effort, cache di caller). */
+async function translateId(text: string | undefined): Promise<string | undefined> {
+  const clean = (text ?? "").replace(/\s+/g, " ").trim();
+  if (clean.length < 25) return undefined;
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q=${encodeURIComponent(clean.slice(0, 1200))}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return undefined;
+    const j = await res.json();
+    const out = Array.isArray(j?.[0])
+      ? j[0].map((x: any) => x?.[0] ?? "").join("").trim()
+      : "";
+    return out.length > 20 ? out : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
+  const d = await aniGraphql(
+    `query($id:Int){ Media(idMal:$id, type:ANIME){ ${ANILIST_FIELDS} } }`,
+    { id: Number(malId) },
+  );
+  const m = d?.Media;
+  if (!m) return null;
+  const card = anilistCard(m);
+  const total = Math.max(1, Math.min(m.episodes ?? 1, 500));
+  const episodeList: EpisodeItem[] = [];
+  for (let i = 1; i <= total; i++) {
+    episodeList.push({
+      id: `${malId}__ep${i}`,
+      number: i,
+      title: `Episode ${i}`,
+      duration: m.duration ? `${m.duration} menit` : undefined,
+    });
+  }
+  const synopsis = card.synopsis ?? "Sinopsis belum tersedia.";
+  const synopsisId = await translateId(synopsis);
+  return {
+    ...card,
+    genres: Array.isArray(m.genres) ? m.genres : [],
+    year: m.seasonYear ?? undefined,
+    synopsis,
+    synopsisId: synopsisId ?? undefined,
+    totalEpisodes: total,
     episodeList,
   };
 }
@@ -563,21 +683,117 @@ export const animeByGenre = action({
   },
 });
 
+const BROWSE_MOVIE = `query{ Page(page:1, perPage:20){ media(type:ANIME, format:MOVIE, sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
+const BROWSE_OVA = `query{ Page(page:1, perPage:20){ media(type:ANIME, format_in:[OVA,ONA], sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
+const BROWSE_SPECIAL = `query{ Page(page:1, perPage:20){ media(type:ANIME, format:SPECIAL, sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
+const BROWSE_SEASON = `query($s:MediaSeason,$y:Int){ Page(page:1, perPage:20){ media(type:ANIME, season:$s, seasonYear:$y, format_in:[TV,TV_SHORT], sort:POPULARITY_DESC, isAdult:false){ ${ANILIST_FIELDS} } } }`;
+
+/** Katalog tambahan: Movie / OVA / Special / Season ini (semua bisa ditonton). */
+export const animeBrowse = action({
+  args: {
+    kind: v.union(
+      v.literal("movie"),
+      v.literal("ova"),
+      v.literal("special"),
+      v.literal("season"),
+    ),
+  },
+  handler: async (runCtx, { kind }) =>
+    cached(runCtx, `browse:v2:${kind}`, 6 * 60 * 60 * 1000, async () => {
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const season = ["WINTER", "SPRING", "SUMMER", "FALL"][
+        Math.floor(((now.getUTCMonth() + 1) % 12) / 3)
+      ];
+      const only = (media: any[]) =>
+        (Array.isArray(media) ? media : [])
+          .filter((m) => m?.idMal)
+          .map(anilistCard);
+      try {
+        if (kind === "movie") {
+          const d = await aniGraphql(BROWSE_MOVIE);
+          return only(d?.Page?.media);
+        }
+        if (kind === "ova") {
+          const d = await aniGraphql(BROWSE_OVA);
+          return only(d?.Page?.media);
+        }
+        if (kind === "special") {
+          const d = await aniGraphql(BROWSE_SPECIAL);
+          return only(d?.Page?.media);
+        }
+        const d = await aniGraphql(BROWSE_SEASON, { s: season, y: year });
+        const list = only(d?.Page?.media);
+        return list.length >= 8 ? list : rotateByDate(FALLBACK_SEASON, 12);
+      } catch {
+        if (kind === "season") return rotateByDate(FALLBACK_SEASON, 12);
+        return [];
+      }
+    }),
+});
+
 export const animeDetail = action({
   args: { id: v.string(), source: v.optional(v.string()) },
   handler: async (runCtx, { id, source }) =>
     cached(runCtx, `detail:${source ?? "auto"}:${id}`, DETAIL_TTL, async () => {
-      if (apiBase() && source !== "jikan") {
+      const malId = String(id).replace(/\D/g, "");
+      // 1) Otakudesu hanya untuk kartu yang memang dari otakudesu (id-nya
+      //    berbeda dari MAL id — mencampur keduanya bikin judul ketuker).
+      if (source === "otakudesu" && apiBase()) {
         try {
           return await otakuDetail(id);
         } catch {
-          /* fallback jikan */
+          /* lanjut */
         }
       }
-      if (source === "fallback" || /^\d+$/.test(id) === false) {
-        // fallback statis punya id angka juga; biarkan jikan mencoba
+      // 2) AniList by MAL id (utama): judul & poster selalu cocok dengan kartu.
+      if (malId) {
+        try {
+          const d = await anilistDetail(malId);
+          if (d) return d;
+        } catch {
+          /* lanjut */
+        }
       }
-      return jikanDetail(id);
+      // 3) Jikan (cadangan, sering kena rate limit).
+      if (malId) {
+        try {
+          return await jikanDetail(malId);
+        } catch {
+          /* lanjut */
+        }
+      }
+      // 4) Katalog fallback statis.
+      const card = [...FALLBACK_TOP, ...FALLBACK_SEASON].find((c) => c.id === malId);
+      if (card) {
+        const eps = synthEpisodes(
+          { mal_id: card.id, episodes: card.episodes ?? 12 },
+          [],
+        );
+        return {
+          ...card,
+          genres: [],
+          synopsis: card.synopsis ?? "Sinopsis belum tersedia.",
+          synopsisId: card.synopsis,
+          totalEpisodes: eps.length,
+          episodeList: eps,
+        } as AnimeDetail;
+      }
+      // 5) Terakhir: tetap bisa dibuka & ditonton episode 1.
+      const eps = synthEpisodes({ mal_id: malId || "0", episodes: 1 }, []);
+      return {
+        source: "fallback" as const,
+        id,
+        title: "Anime",
+        image: "",
+        status: "Ongoing",
+        type: "TV",
+        genres: [],
+        synopsis: "Informasi anime belum tersedia.",
+        synopsisId: "Informasi anime belum tersedia.",
+        totalEpisodes: eps.length,
+        episodeList: eps,
+      } as AnimeDetail;
     }),
 });
 

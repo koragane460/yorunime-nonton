@@ -12,7 +12,6 @@ import {
   ChevronRight,
   Crown,
   Gem,
-  Maximize2,
   Pause,
   Play,
   X,
@@ -284,14 +283,29 @@ function useMiniPlayer() {
 export function MiniPlayerHost() {
   const state = useMiniPlayer();
   const navigate = useNavigate();
+  const location = useLocation();
   const [playing, setPlaying] = useState(true);
-  const [size, setSize] = useState({ w: 250, h: 175 });
+  // Ukuran compact: tidak menutupi konten di HP, tetap comfy di tablet/PC.
+  const [size] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 640
+      ? { w: 210, h: 140 }
+      : { w: 164, h: 108 },
+  );
   const [pos, setPos] = useState({ x: 14, y: 100 });
-  const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
+  // Drag: pakai pointer event (mouse + sentuh), tap tanpa geser = buka episode.
+  const drag = useRef<{
+    id: number;
+    dx: number;
+    dy: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const overlay = useAppOverlayOpen();
-  if (!state || overlay) return null;
+  // Mini player tetap hidup di semua layar (tidak ikut hilang saat screen
+  // overlay dibuka); hanya disembunyikan di halaman Nonton itu sendiri.
+  if (!state || location.pathname.startsWith("/nonton")) return null;
 
   const toggle = () => {
     const v = videoRef.current;
@@ -302,18 +316,48 @@ export function MiniPlayerHost() {
 
   return (
     <div
-      className="fixed z-[60] overflow-hidden rounded-xl border border-violet-500/50 shadow-2xl"
+      className="fixed z-[60] touch-none overflow-hidden rounded-xl border border-violet-500/50 shadow-2xl"
       style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
-      onMouseDown={(e) => setDrag({ dx: e.clientX - pos.x, dy: e.clientY - pos.y })}
-      onMouseMove={(e) => {
-        if (!drag) return;
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        drag.current = {
+          id: e.pointerId,
+          dx: e.clientX - pos.x,
+          dy: e.clientY - pos.y,
+          startX: e.clientX,
+          startY: e.clientY,
+          moved: false,
+        };
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d || d.id !== e.pointerId) return;
+        if (Math.abs(e.clientX - d.startX) > 4 || Math.abs(e.clientY - d.startY) > 4)
+          d.moved = true;
+        if (!d.moved) return;
         setPos({
-          x: Math.max(0, Math.min(window.innerWidth - size.w - 8, e.clientX - drag.dx)),
-          y: Math.max(0, Math.min(window.innerHeight - size.h - 8, e.clientY - drag.dy)),
+          x: Math.max(
+            0,
+            Math.min(window.innerWidth - size.w - 8, e.clientX - d.dx),
+          ),
+          y: Math.max(
+            0,
+            Math.min(window.innerHeight - size.h - 8, e.clientY - d.dy),
+          ),
         });
       }}
-      onMouseUp={() => setDrag(null)}
-      onMouseLeave={() => setDrag(null)}
+      onPointerUp={(e) => {
+        const d = drag.current;
+        drag.current = null;
+        if (!d || d.moved) return;
+        // Tap (tanpa geser) → buka layar nonton episode ini.
+        navigate(
+          `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
+        );
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+      }}
     >
       <div className="relative size-full bg-black">
         {state.isEmbed ? (
@@ -334,67 +378,30 @@ export function MiniPlayerHost() {
             onPause={() => setPlaying(false)}
           />
         )}
-        {/* Kontrol overlay */}
-        <div className="absolute inset-0 flex flex-col justify-between">
+        {/* Kontrol overlay: tutup + play/pause + judul (tanpa tombol perbesar) */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
           <div className="flex items-start justify-between p-1">
+            <span className="max-w-[75%] truncate rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold text-white/85">
+              {state.animeTitle}
+              {state.episodeNumber ? ` · Ep ${state.episodeNumber}` : ""}
+            </span>
             <button
-              className="rounded-full bg-black/60 p-1"
-              aria-label="Perbesar"
-              onClick={() => {
-                setMiniPlayer(null);
-                navigate(
-                  `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
-                );
-              }}
-            >
-              <Maximize2 className="size-3.5 text-white" />
-            </button>
-            <button
-              className="rounded-full bg-black/60 p-1"
+              className="pointer-events-auto rounded-full bg-black/60 p-1"
               aria-label="Tutup mini player"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setMiniPlayer(null)}
             >
               <X className="size-3.5 text-white" />
             </button>
           </div>
-          {/* Pause / play */}
           <button
-            className="mx-auto flex size-10 items-center justify-center rounded-full bg-black/55 text-white"
+            className="pointer-events-auto mx-auto flex size-9 items-center justify-center rounded-full bg-black/55 text-white"
             aria-label={playing ? "Pause" : "Play"}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={toggle}
           >
-            {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
+            {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
           </button>
-          {/* Grip resize kiri bawah — pointer events (mouse + touch) */}
-          <div className="flex items-end justify-between p-1">
-            <div
-              className="grip-lines size-6 touch-none rounded"
-              style={{ cursor: "nwse-resize" }}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                e.currentTarget.setPointerCapture(e.pointerId);
-                const start = { x: e.clientX, y: e.clientY, w: size.w, h: size.h };
-                const el = e.currentTarget;
-                const move = (ev: PointerEvent) => {
-                  setSize({
-                    w: Math.max(170, Math.min(480, start.w + (ev.clientX - start.x))),
-                    h: Math.max(120, Math.min(360, start.h + (ev.clientY - start.y))),
-                  });
-                };
-                const up = () => {
-                  el.removeEventListener("pointermove", move);
-                  el.removeEventListener("pointerup", up);
-                  el.removeEventListener("pointercancel", up);
-                };
-                el.addEventListener("pointermove", move);
-                el.addEventListener("pointerup", up);
-                el.addEventListener("pointercancel", up);
-              }}
-            />
-            <span className="pointer-events-none max-w-[70%] truncate text-[9px] text-white/70">
-              {state.animeTitle}
-            </span>
-          </div>
         </div>
       </div>
     </div>
