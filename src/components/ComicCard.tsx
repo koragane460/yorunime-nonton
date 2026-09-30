@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -105,15 +105,18 @@ export function ComicGrid({
   onPick,
   ranked,
   wide,
+  limit,
 }: {
   items: ComicItem[];
   onPick: (slug: string) => void;
   ranked?: boolean;
   wide?: boolean;
+  limit?: number;
 }) {
+  const list = limit ? items.slice(0, limit) : items;
   return (
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-      {items.map((it, i) => (
+      {list.map((it, i) => (
         <ComicCard
           key={it.slug}
           item={it}
@@ -148,7 +151,7 @@ export function ComicBrowseRow({
   items,
   setItems,
   onPick,
-  ranked,
+  limit,
 }: {
   kind: "manga" | "manhwa";
   title: string;
@@ -157,10 +160,11 @@ export function ComicBrowseRow({
   items: ComicItem[];
   setItems: (fn: (prev: ComicItem[]) => ComicItem[]) => void;
   onPick: (slug: string) => void;
-  ranked?: boolean;
+  limit?: number;
 }) {
   const browse = useAction(api.manga.browse);
   const [busy, setBusy] = useState(items.length === 0);
+  const [status, setStatus] = useState<"all" | "ongoing" | "ended">("all");
 
   useEffect(() => {
     let alive = true;
@@ -195,14 +199,58 @@ export function ComicBrowseRow({
     }
   };
 
+  const filtered = useMemo(
+    () =>
+      status === "all"
+        ? items
+        : items.filter((c) => (status === "ongoing" ? c.ongoing : !c.ongoing)),
+    [items, status],
+  );
+  const ongoingCount = items.filter((c) => c.ongoing).length;
+  const endedCount = items.length - ongoingCount;
+
   return (
     <>
-      <h2 className="mb-2 text-base font-bold tracking-tight">{title}</h2>
-      {items.length === 0 ? (
-        <ComicSkeleton count={12} />
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="text-base font-bold tracking-tight">{title}</h2>
+        <span className="text-[11px] text-muted-foreground">
+          {items.length} judul
+        </span>
+      </div>
+      {/* Filter status: masih jalan atau tamat */}
+      <div className="mb-2.5 flex gap-1.5">
+        {(
+          [
+            ["all", `Semua ${items.length}`],
+            ["ongoing", `Ongoing ${ongoingCount}`],
+            ["ended", `Tamat ${endedCount}`],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setStatus(k)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+              status === k
+                ? "border-violet-500 bg-violet-500/15 text-violet-200"
+                : "border-border text-muted-foreground hover:border-violet-500/50",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        items.length === 0 ? (
+          <ComicSkeleton count={12} />
+        ) : (
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            Tidak ada komik dengan status ini di halaman loaded
+          </p>
+        )
       ) : (
         <>
-          <ComicGrid items={items} onPick={onPick} ranked={ranked} />
+          <ComicGrid items={filtered} onPick={onPick} limit={limit} />
           <div className="mt-3 flex justify-center">
             <button
               onClick={() => void loadMore()}

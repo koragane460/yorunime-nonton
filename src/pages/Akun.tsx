@@ -61,6 +61,8 @@ function AkunContent() {
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const comicHistory = useQuery(api.comics.myHistory, user ? {} : "skip");
+  const comicFavorites = useQuery(api.comics.myFavorites, user ? {} : "skip");
   const profile = useQuery(api.account.getPublicProfile, user ? { userId: user._id } : "skip");
 
   if (!user) return null;
@@ -223,9 +225,56 @@ function AkunContent() {
               <span className="text-[10px] text-muted-foreground">{timeAgo(h.updatedAt)}</span>
             </button>
           ))}
-        {tab === "history" && (history ?? []).length === 0 && (
-          <p className="py-8 text-center text-xs text-muted-foreground">Belum ada history</p>
+        {tab === "history" && (comicHistory ?? []).length > 0 && (
+          <>
+            <p className="px-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Manga &amp; Manhwa
+            </p>
+            {(comicHistory ?? []).map((c: any) => (
+              <button
+                key={c._id}
+                onClick={() =>
+                  navigate(
+                    `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
+                  )
+                }
+                className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+              >
+                <img
+                  src={c.comicImage ?? ""}
+                  className="h-14 w-10 rounded object-cover"
+                  alt=""
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{c.comicTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.chapterLabel ?? `Chapter ${c.chapter}`}
+                    {c.totalPages
+                      ? ` · hal ${Math.min((c.page ?? 0) + 1, c.totalPages)}/${c.totalPages}`
+                      : ""}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
+                    c.kind === "manhwa"
+                      ? "bg-fuchsia-600 text-white"
+                      : "bg-sky-600 text-white",
+                  )}
+                >
+                  {c.kind}
+                </span>
+              </button>
+            ))}
+          </>
         )}
+        {tab === "history" &&
+          (history ?? []).length === 0 &&
+          (comicHistory ?? []).length === 0 && (
+            <p className="py-8 text-center text-xs text-muted-foreground">
+              Belum ada history
+            </p>
+          )}
 
         {tab === "favorite" &&
           (favorites ?? []).map((f: any) => (
@@ -238,9 +287,51 @@ function AkunContent() {
               <p className="min-w-0 flex-1 truncate text-sm font-semibold">{f.animeTitle}</p>
             </button>
           ))}
-        {tab === "favorite" && (favorites ?? []).length === 0 && (
-          <p className="py-8 text-center text-xs text-muted-foreground">Belum ada favorite</p>
+        {tab === "favorite" && (comicFavorites ?? []).length > 0 && (
+          <>
+            <p className="px-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Manga &amp; Manhwa
+            </p>
+            {(comicFavorites ?? []).map((f: any) => (
+              <button
+                key={f._id}
+                onClick={() =>
+                  navigate(
+                    `/${f.kind === "manhwa" ? "manhwa" : "manga"}?komik=${encodeURIComponent(f.slug)}`,
+                  )
+                }
+                className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+              >
+                <img
+                  src={f.comicImage ?? ""}
+                  className="h-14 w-10 rounded object-cover"
+                  alt=""
+                />
+                <Heart className="size-4 fill-violet-400 text-violet-400" />
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                  {f.comicTitle}
+                </p>
+                <span
+                  className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
+                    f.kind === "manhwa"
+                      ? "bg-fuchsia-600 text-white"
+                      : "bg-sky-600 text-white",
+                  )}
+                >
+                  {f.kind}
+                </span>
+              </button>
+            ))}
+          </>
         )}
+        {tab === "favorite" &&
+          (favorites ?? []).length === 0 &&
+          (comicFavorites ?? []).length === 0 && (
+            <p className="py-8 text-center text-xs text-muted-foreground">
+              Belum ada favorite
+            </p>
+          )}
 
         {tab === "komen" && (
           <div className="thin-scroll max-h-[50vh] overflow-y-auto">

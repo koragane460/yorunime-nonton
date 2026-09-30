@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
 import { Avatar, BlueCheck, ShineBadge } from "@/components/lstream-ui";
 import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
-import { Bell, PlayCircle } from "lucide-react";
+import { Bell, BookOpen, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "notif" | "lanjut";
@@ -118,9 +118,38 @@ function LanjutTab() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
+  const comicRows = useQuery(api.comics.continueReading, user ? {} : "skip");
 
   return (
     <div className="space-y-2 pt-3">
+      {(comicRows ?? []).map((c: any) => (
+        <button
+          key={c._id}
+          onClick={() =>
+            navigate(
+              `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
+            )
+          }
+          className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
+        >
+          <img
+            src={c.comicImage ?? ""}
+            alt=""
+            className="h-16 w-11 shrink-0 rounded-lg object-cover"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{c.comicTitle}</p>
+            <p className="text-xs text-muted-foreground">
+              {c.chapterLabel ?? `Chapter ${c.chapter}`}
+            </p>
+            <p className="text-[11px] text-violet-300">
+              Lanjut dari halaman {Math.min((c.page ?? 0) + 1, c.totalPages ?? 0)}
+            </p>
+          </div>
+          <BookOpen className="size-5 shrink-0 text-violet-400" />
+        </button>
+      ))}
+
       {(rows ?? []).map((h: any) => {
         const epId = `${h.animeId}__ep${h.episode}`;
         const total = h.progressSec ?? 0;
@@ -152,9 +181,9 @@ function LanjutTab() {
           </button>
         );
       })}
-      {rows && rows.length === 0 && (
+      {rows && rows.length === 0 && (comicRows ?? []).length === 0 && (
         <p className="py-10 text-center text-xs text-muted-foreground">
-          Belum ada anime yang belum selesai
+          Belum ada anime atau komik yang belum selesai
         </p>
       )}
     </div>

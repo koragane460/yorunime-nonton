@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ComicBrowseRow,
+  ComicGrid,
   StatusChip,
   formatViews,
   type ComicItem,
@@ -29,11 +30,19 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
 
   const newest = useAction(api.manga.newest);
   const [heroList, setHeroList] = useState<ComicItem[]>([]);
-  const [topList, setTopList] = useState<ComicItem[]>([]);
-  const [topPage, setTopPage] = useState(1);
   const [catItems, setCatItems] = useState<ComicItem[]>([]);
   const [catPage, setCatPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
+  // "Paling dibaca" diturunkan dari views yang sudah ikut termuat di katalog.
+  const topList = useMemo(
+    () =>
+      catItems
+        .filter((c) => typeof c.views === "number")
+        .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+        .slice(0, 12),
+    [catItems],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -127,27 +136,27 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
       <div className="mt-6">
         <ComicBrowseRow
           kind={kind}
-          title={kind === "manga" ? "Manga Paling Dibaca" : "Manhwa Paling Dibaca"}
-          page={topPage}
-          setPage={setTopPage}
-          items={topList}
-          setItems={setTopList}
-          onPick={open}
-          ranked
-        />
-      </div>
-
-      <div className="mt-6">
-        <ComicBrowseRow
-          kind={kind}
-          title={kind === "manga" ? "Semua Manga" : "Semua Manhwa"}
+          title={
+            kind === "manga" ? "Katalog Manga" : "Katalog Manhwa"
+          }
           page={catPage}
           setPage={setCatPage}
           items={catItems}
           setItems={setCatItems}
           onPick={open}
+          limit={30}
         />
       </div>
+
+      {/* Paling dibaca — dihitung dari jumlah pembaca judul yang sudah dimuat */}
+      {topList.length >= 4 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-base font-bold tracking-tight">
+            {kind === "manga" ? "Manga Paling Dibaca" : "Manhwa Paling Dibaca"}
+          </h2>
+          <ComicGrid items={topList} onPick={open} ranked />
+        </div>
+      )}
 
       {myKindFavs.length > 0 && (
         <>
