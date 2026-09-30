@@ -43,6 +43,7 @@ type PanelUser = {
   mutedPermanent: boolean;
   mutedUntil: number;
   mutedReason: string;
+  adultAccess?: boolean;
 };
 
 /**
@@ -59,6 +60,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
   const moderate = useMutation(api.moderation.moderate);
   const giveClan = useMutation(api.moderation.devGiveClanPremium);
   const simulateFriend = useMutation(api.friends.devSimulateFriendRequest);
+  const toggleAdult = useMutation(api.moderation.toggleAdultAccess);
   const { user: me } = useAuth();
 
   const [picked, setPicked] = useState<PanelUser | null>(null);
@@ -203,6 +205,11 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
             );
             setPicked(null);
           }}
+          onAdultAccess={async () => {
+            const r = await toggleAdult({ targetId: picked._id });
+            toast.success(r.adultAccess ? "Akses 18+ diberikan" : "Akses 18+ dicabut");
+            setPicked(null);
+          }}
           onDialog={(d) => {
             const t = picked;
             setPicked(null);
@@ -275,6 +282,7 @@ function UserActions({
   onUnlimited,
   onDialog,
   onSimulate,
+  onAdultAccess,
 }: {
   user: PanelUser;
   isDev: boolean;
@@ -284,6 +292,7 @@ function UserActions({
   onUnlimited: (w: "sacret" | "premium") => void;
   onDialog: (d: "ban" | "unban" | "mute" | "unmute") => void;
   onSimulate: (from: Id<"users">, to: Id<"users">) => void;
+  onAdultAccess: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm">
@@ -361,6 +370,26 @@ function UserActions({
                 <Crown className="size-3" /> Unlimited Premium
               </button>
             </div>
+
+            <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Izin Konten
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <button
+                onClick={onAdultAccess}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition",
+                  user.adultAccess
+                    ? "border-rose-400 bg-rose-400/20 text-rose-300"
+                    : "border-border text-muted-foreground hover:border-rose-400 hover:text-rose-300",
+                )}
+              >
+                {user.adultAccess ? "Cabut akses 18+" : "Beri akses 18+"}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              User bisa nyalakan toggle 18+ di pencarian anime setelah diizinkan.
+            </p>
 
             <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Simulasi Pertemanan

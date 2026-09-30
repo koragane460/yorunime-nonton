@@ -532,6 +532,9 @@ function WelcomeFlow() {
                   >
                     Lanjut
                   </button>
+                  {/* Ruang kosong di bawah supaya slide selalu bisa di-scroll
+                      walau isinya lebih pendek dari layar. */}
+                  <div className="h-32 shrink-0" aria-hidden />
                 </div>
               </div>
             </div>
@@ -596,6 +599,7 @@ function WelcomeFlow() {
                 </div>
                 <div className="mt-auto">
                   <ScrollHint dir="up" />
+                  <div className="h-28 shrink-0" aria-hidden />
                 </div>
               </div>
             </div>

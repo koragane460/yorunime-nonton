@@ -125,7 +125,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
 
   // ------------------------------------------------- Email + password ----
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim());
-  const passOk = password.length >= 6;
+  const passOk = password.length >= 8;
   const confirmOk = !isRegister || confirm === password;
   const canSubmitPassword = emailOk && passOk && confirmOk && (!isRegister || name.trim().length >= 2);
 
@@ -134,8 +134,8 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     if (!canSubmitPassword) {
       setError(
         isRegister
-          ? "Lengkapi nama, email, dan password (minimal 6 karakter). Password harus sama dua kali."
-          : "Isi email dan password (minimal 6 karakter).",
+          ? "Lengkapi nama, email, dan password (minimal 8 karakter). Ulangi password harus sama."
+          : "Isi email dan password (minimal 8 karakter).",
       );
       return;
     }
@@ -144,13 +144,17 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     try {
       if (isRegister) {
         // Akun baru hanya dibuat di sini — setelah semua kolom terisi.
-        await signUp("password", {
+        await signUp({
           email: email.trim(),
           password,
           name: name.trim(),
         });
       } else {
-        await signIn("password", { email: email.trim(), password });
+        await signIn("password", {
+          email: email.trim(),
+          password,
+          flow: "signIn",
+        });
       }
       navigate(redirect, { replace: true });
     } catch (err) {
@@ -332,7 +336,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     type={showPass ? "text" : "password"}
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Minimal 8 karakter"
                     autoComplete={isRegister ? "new-password" : "current-password"}
                     className="w-full rounded-xl border border-white/12 bg-black/30 px-3 py-2.5 pr-10 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-violet-500"
                   />

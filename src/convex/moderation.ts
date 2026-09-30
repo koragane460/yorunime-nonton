@@ -160,6 +160,7 @@ export const panelUsers = query({
         mutedPermanent: (u.mutedUntil ?? 0) >= PERMANENT,
         mutedUntil: u.mutedUntil ?? 0,
         mutedReason: u.mutedReason ?? "",
+        adultAccess: u.adultAccess === true,
       }));
   },
 });

@@ -669,8 +669,8 @@ button:not([disabled]):active,
 .tab-pill {
   flex: 1;
   border-radius: 999px;
-  padding: 0.34rem 0.85rem;
-  font-size: 0.75rem;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: oklch(0.7 0.015 280);
   transition:

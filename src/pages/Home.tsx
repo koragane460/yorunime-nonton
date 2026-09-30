@@ -632,10 +632,12 @@ function PodiumCard({
   height: string;
 }) {
   return (
-    <div className="flex flex-col items-center">
-      <Avatar src={image} seed={username} className="size-12" />
-      <p className="mt-1 line-clamp-1 max-w-full text-xs font-semibold">{username ?? "user"}</p>
-      <p className="text-[10px] text-violet-300">{xp.toLocaleString("id-ID")} XP</p>
+    <div className="flex min-w-0 flex-col items-center">
+      <Avatar src={image} seed={username} className="size-11" />
+      <p className="mt-1 w-full truncate text-center text-[11px] font-semibold leading-tight">
+        {username ?? "user"}
+      </p>
+      <p className="text-[10px] leading-tight text-violet-300">{xp.toLocaleString("id-ID")} XP</p>
       <div
         className={cn(
           "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-violet-500/40 bg-gradient-to-t from-red-500/10 to-red-500/25 pt-1 text-lg font-black text-red-200",
@@ -718,7 +720,7 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Toggle swap: XP ⇄ Top Give Premium (kecil, tidak sampai memenuhi layar) */}
-        <div className="tab-pill-track mb-3">
+        <div className="tab-pill-track mb-3 w-fit">
           <button
             onClick={() => setMode("xp")}
             className={cn("tab-pill", mode === "xp" && "tab-pill-active")}
