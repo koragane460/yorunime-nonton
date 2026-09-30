@@ -326,6 +326,10 @@ const schema = defineSchema(
       accountLabel: v.optional(v.string()),
       note: v.optional(v.string()),
       contact: v.optional(v.string()),
+      /** Auto-setujui order manual (berguna untuk testing / teman dekat). */
+      autoApprove: v.optional(v.boolean()),
+      /** Batas harga yang boleh auto-disetujui (opsional). */
+      autoApproveMax: v.optional(v.number()),
       updatedAt: v.number(),
     }),
 

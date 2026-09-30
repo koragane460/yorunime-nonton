@@ -238,6 +238,8 @@ export const manualConfig = query({
       accountLabel: row?.accountLabel ?? "",
       note: row?.note ?? "",
       contact: row?.contact ?? "",
+      autoApprove: row?.autoApprove === true,
+      autoApproveMax: row?.autoApproveMax ?? 0,
       ready: !!row?.qrUrl,
     };
   },
@@ -251,6 +253,8 @@ export const saveManualConfig = mutation({
     accountLabel: v.optional(v.string()),
     note: v.optional(v.string()),
     contact: v.optional(v.string()),
+    autoApprove: v.optional(v.boolean()),
+    autoApproveMax: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await staffGuard(ctx, "dev");
@@ -261,6 +265,8 @@ export const saveManualConfig = mutation({
       accountLabel: args.accountLabel?.trim() || undefined,
       note: args.note?.trim() || undefined,
       contact: args.contact?.trim() || undefined,
+      autoApprove: args.autoApprove ?? row?.autoApprove ?? false,
+      autoApproveMax: args.autoApproveMax ?? row?.autoApproveMax ?? undefined,
       updatedAt: Date.now(),
     };
     if (row) await ctx.db.patch(row._id, clean);
@@ -297,7 +303,101 @@ export const createManualOrder = mutation({
       ...(note ? { note: note.slice(0, 200) } : {}),
       createdAt: Date.now(),
     });
-    return { orderId, priceIdr: plan.price, days: plan.days, planLabel: plan.label };
+    // Auto-setuju: kalau developer menyalakan, order langsung lunas tanpa cek manual.
+    const autoMax = row.autoApproveMax ?? 0;
+    if (row.autoApprove === true && plan.price <= (autoMax > 0 ? autoMax : Infinity)) {
+      await grantPremium(ctx, { orderId });
+      return {
+        orderId,
+        priceIdr: plan.price,
+        days: plan.days,
+        planLabel: plan.label,
+        autoApproved: true,
+      };
+    }
+    return {
+      orderId,
+      priceIdr: plan.price,
+      days: plan.days,
+      planLabel: plan.label,
+      autoApproved: false,
+    };
+  },
+});
+
+/** Fungsi bersama: tandai lunas + kirim premium + notifikasi. */
+async function grantPremium(
+  ctx: any,
+  { orderId }: { orderId: string },
+): Promise<{ alreadyPaid: boolean }> {
+  const row = await ctx.db
+    .query("premiumPurchases")
+    .withIndex("orderId", (q: any) => q.eq("orderId", orderId))
+    .first();
+  if (!row) throw new Error("Order tidak ada");
+  if (row.status === "paid") return { alreadyPaid: true };
+  await ctx.db.patch(row._id, { status: "paid" });
+  const me = await ctx.db.get(row.userId);
+  if (me) {
+    const base = Math.max(Date.now(), me.premiumUntil ?? 0);
+    await ctx.db.patch(row.userId, { premiumUntil: base + row.days * 86400000 });
+    await ctx.db.insert("notifications", {
+      userId: row.userId,
+      type: "premium",
+      title: "Premium aktif",
+      body: `Pembayaran ${row.planLabel} sudah dikonfirmasi. Terima kasih!`,
+      createdAt: Date.now(),
+    });
+  }
+  return { alreadyPaid: false };
+}
+
+/**
+ * Simulasi (dev only): buat order manual atas nama user tertentu supaya alur
+ * bayar + verifikasi bisa dicoba tanpa dana sungguhan.
+ */
+export const devSimulatePurchase = mutation({
+  args: { targetId: v.id("users"), planId: v.optional(v.string()) },
+  handler: async (ctx, { targetId, planId }) => {
+    await staffGuard(ctx, "dev");
+    const planKey = planId ?? "p1";
+    const plan = PLANS[planKey];
+    if (!plan) throw new Error("Paket tidak ada");
+    const orderId = `SIM-${targetId.slice(0, 6)}-${Date.now().toString(36).toUpperCase()}`;
+    await ctx.db.insert("premiumPurchases", {
+      userId: targetId,
+      planId: planKey,
+      planLabel: `${plan.label} (simulasi)`,
+      days: plan.days,
+      priceIdr: plan.price,
+      orderId,
+      status: "manual_pending",
+      method: "simulasi",
+      note: "Dibuat dari panel dev",
+      createdAt: Date.now(),
+    });
+    return { orderId };
+  },
+});
+
+/** Dev only: cairkan premium langsung tanpa order (mis. untuk testing). */
+export const devGrantPremium = mutation({
+  args: { targetId: v.id("users"), days: v.number() },
+  handler: async (ctx, { targetId, days }) => {
+    await staffGuard(ctx, "dev");
+    if (days <= 0 || days > 3650) throw new Error("Jumlah hari tidak valid");
+    const u = await ctx.db.get(targetId);
+    if (!u) throw new Error("User tidak ada");
+    const base = Math.max(Date.now(), u.premiumUntil ?? 0);
+    await ctx.db.patch(targetId, { premiumUntil: base + days * 86400000 });
+    await ctx.db.insert("notifications", {
+      userId: targetId,
+      type: "premium",
+      title: "Premium diberikan",
+      body: `Developer memberi ${days} hari premium.`,
+      createdAt: Date.now(),
+    });
+    return { premiumUntil: base + days * 86400000 };
   },
 });
 
@@ -351,25 +451,6 @@ export const approveManualOrder = mutation({
   args: { orderId: v.string() },
   handler: async (ctx, { orderId }) => {
     await staffGuard(ctx, "dev");
-    const row = await ctx.db
-      .query("premiumPurchases")
-      .withIndex("orderId", (q) => q.eq("orderId", orderId))
-      .first();
-    if (!row) throw new Error("Order tidak ada");
-    if (row.status === "paid") return { alreadyPaid: true };
-    await ctx.db.patch(row._id, { status: "paid" });
-    const me = await ctx.db.get(row.userId);
-    if (me) {
-      const base = Math.max(Date.now(), me.premiumUntil ?? 0);
-      await ctx.db.patch(row.userId, { premiumUntil: base + row.days * 86400000 });
-      await ctx.db.insert("notifications", {
-        userId: row.userId,
-        type: "premium",
-        title: "Premium aktif",
-        body: `Pembayaran ${row.planLabel} sudah dikonfirmasi. Terima kasih!`,
-        createdAt: Date.now(),
-      });
-    }
-    return { alreadyPaid: false };
+    return await grantPremium(ctx, { orderId });
   },
 });
