@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Columns3,
   List,
+  Loader2,
   Minus,
   Moon,
   Plus,
@@ -19,13 +20,32 @@ import {
 
 type Chapter = { number: number; label: string; url: string; date?: string };
 
+// Cache halaman antar chapter supaya buka ulang chapter sebelumnya instan.
+const pageCache = new Map<string, string[]>();
+const cacheKey = (slug: string, ch: number) => `${slug}#${ch}`;
+
+/** Ambil daftar gambar chapter (dari cache dulu, lalu pramuat chapter depan). */
+async function loadPages(
+  slug: string,
+  chapter: number,
+  getPages: (a: { slug: string; chapter: number }) => Promise<any>,
+) {
+  const key = cacheKey(slug, chapter);
+  const hit = pageCache.get(key);
+  if (hit) return hit;
+  const r = await getPages({ slug, chapter });
+  const images: string[] = r?.images ?? [];
+  pageCache.set(key, images);
+  return images;
+}
+
 /**
  * Reader manga & manhwa.
- *  - Mode manga: panel satu-satu, geser horizontal (RTL), double-tap zoom.
- *  - Mode manhwa: strip panjang, scroll vertikal, tinggi panel menyesuaikan
- *    lebar layar (gaya webtoon).
- *  - Toolbar: daftar chapter, mode baca, terang/gelap, zoom, dan lompat
- *    ke chapter lalu/sebelumnya.
+ *  - Mode manga  : panel satu-satu, geser horizontal, gambar SELURUH halaman
+ *                  terlihat (contain, tidak di-crop, tidak ter-zoom).
+ *  - Mode manhwa : strip panjang (webtoon), scroll ke bawah.
+ *  - Pemuatan cepat: 3 halaman depan di-pramuat, chapter berikutnya dipramuat
+ *    saat pengguna sudah di halaman >= 60%.
  */
 export default function ReadComic() {
   const { slug = "", chapter = "1" } = useParams();
@@ -46,9 +66,9 @@ export default function ReadComic() {
   const [zoom, setZoom] = useState(1);
   const [strip, setStrip] = useState(kind === "manhwa");
   const [sheet, setSheet] = useState(false);
-  const [broken, setBroken] = useState<Record<number, string>>({});
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const chNum = Number(chapter) || 1;
   const total = images.length;
 
@@ -59,13 +79,11 @@ export default function ReadComic() {
     setImages([]);
     setIndex(0);
     setZoom(1);
-    setBroken({});
     setUiOn(true);
     setStrip(kind === "manhwa");
-    containerRef.current?.scrollTo({ top: 0 });
-    getPages({ slug, chapter: chNum })
-      .then((r: any) => {
-        if (alive) setImages((r?.images ?? []) as string[]);
+    loadPages(slug, chNum, getPages)
+      .then((imgs) => {
+        if (alive) setImages(imgs);
       })
       .catch(() => toast.error("Gagal memuat halaman chapter"))
       .finally(() => alive && setLoading(false));
@@ -75,7 +93,7 @@ export default function ReadComic() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, chNum, kind]);
 
-  // Detail (judul + daftar chapter) — diambil sekali per slug.
+  // Detail (judul + daftar chapter).
   useEffect(() => {
     let alive = true;
     getDetail({ slug })
@@ -87,6 +105,21 @@ export default function ReadComic() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
+  const chapters: Chapter[] = detail?.chapters ?? [];
+  // Daftar chapter dari sumber urut terbaru (idx 0 = terbaru).
+  const olderChapter = chapters.find((c) => c.number === chNum + 1);
+  const newerChapter = chapters.find((c) => c.number === chNum - 1);
+
+  // Pramuat chapter berikutnya di paruh akhir chapter supaya perpindahan instan.
+  useEffect(() => {
+    if (!olderChapter || !chapters.length) return;
+    if (total === 0 || index < Math.ceil(total * 0.6)) return;
+    const key = cacheKey(slug, olderChapter.number);
+    if (pageCache.has(key)) return;
+    void loadPages(slug, olderChapter.number, getPages).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, total, olderChapter, slug, chapters.length]);
+
   // Simpan ke history setiap halaman berganti.
   useEffect(() => {
     if (loading || total === 0 || !detail) return;
@@ -96,145 +129,172 @@ export default function ReadComic() {
       comicImage: detail.image,
       kind: detail.kind ?? kind,
       chapter: chNum,
-      chapterLabel: detail.chapters?.find((c: Chapter) => c.number === chNum)?.label,
+      chapterLabel: chapters.find((c) => c.number === chNum)?.label,
       page: index,
       totalPages: total,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, chNum, total, loading]);
+  }, [index, chNum, total, loading, detail]);
 
+  // Ganti halaman: selalu scroll kontainer yang benar (panel atau strip).
   const goto = useCallback(
     (next: number) => {
-      setIndex(Math.max(0, Math.min(total - 1, next)));
-      if (!strip) containerRef.current?.scrollTo({ left: 0 });
+      const clamped = Math.max(0, Math.min(Math.max(total - 1, 0), next));
+      setIndex(clamped);
+      const el = panelRef.current;
+      if (el) el.scrollTo({ left: clamped * el.clientWidth, behavior: "smooth" });
+      const s = stripRef.current;
+      if (s) s.scrollTo({ top: clamped * s.clientHeight, behavior: "smooth" });
     },
-    [total, strip],
+    [total],
   );
+
+  // Mode panel: tombol kiri = halaman berikutnya (manga dibaca RTL).
+  const nextPage = () => goto(index + 1);
+  const prevPage = () => goto(index - 1);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") goto(strip ? index + 1 : index - 1);
-      if (e.key === "ArrowLeft") goto(strip ? index - 1 : index + 1);
+      if (e.key === "ArrowLeft") nextPage();
+      if (e.key === "ArrowRight") prevPage();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goto, index, strip]);
-
-  const chapters: Chapter[] = detail?.chapters ?? [];
-  const prevCh = chapters.find((c) => c.number === chNum + 1);
-  const nextCh = chapters.find((c) => c.number === chNum - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, total]);
 
   const goChapter = (n: number) => {
     setSheet(false);
     navigate(`/baca/${encodeURIComponent(slug)}/${n}?jenis=${kind}`);
   };
 
+  const atEnd = total > 0 && index >= total - 1;
 
   return (
-    <div
-      className={cn(
-        "fixed inset-0 z-[70] flex flex-col",
-        dark ? "bg-black" : "bg-zinc-100",
-      )}
-    >
+    <div className={cn("fixed inset-0 z-[70] flex flex-col", dark ? "bg-black" : "bg-zinc-100")}>
       {/* Konten */}
-      <div
-        ref={containerRef}
-        onScroll={(e) => {
-          if (!strip) return;
-          const el = e.currentTarget;
-          const idx = Math.round(el.scrollTop / Math.max(1, el.clientHeight));
-          if (idx !== index) setIndex(idx);
-        }}
-        className={cn(
-          "min-h-0 flex-1",
-          strip ? "overflow-y-auto" : "overflow-x-hidden overflow-y-auto",
-        )}
-      >
-        {loading ? (
-          <div className="flex h-full items-center justify-center text-sm text-zinc-400">
-            Memuat chapter {chNum}…
-          </div>
-        ) : total === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-400">
-            <p className="text-sm">Chapter tidak punya gambar</p>
-            <button
-              onClick={() => navigate(-1)}
-              className="rounded-full border border-white/20 px-4 py-2 text-xs"
-            >
-              Kembali
-            </button>
-          </div>
-        ) : strip ? (
-          // ---- Mode manhwa: strip panjang, satu gambar = satu layar ----
+      {loading ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center gap-2 text-sm text-zinc-400">
+          <Loader2 className="size-4 animate-spin" /> Memuat chapter {chNum}…
+        </div>
+      ) : total === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-zinc-400">
+          <p className="text-sm">Chapter ini tidak punya gambar</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="rounded-full border border-white/20 px-4 py-2 text-xs"
+          >
+            Kembali
+          </button>
+        </div>
+      ) : strip ? (
+        // ---- Mode manhwa: strip webtoon, scroll vertikal ----
+        <div
+          ref={stripRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const i = Math.round(el.scrollTop / Math.max(1, el.clientHeight));
+            if (i !== index) setIndex(i);
+          }}
+          className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        >
           <div className="mx-auto w-full max-w-2xl">
             {images.map((src, i) => (
-              <button
-                key={`${src}-${i}`}
-                onClick={() => setUiOn((v) => !v)}
-                onDoubleClick={() =>
-                  setZoom((z) => (z === 1 ? 2 : z === 2 ? 3 : 1))
-                }
-                className="block w-full"
-              >
+              <div key={`${src}-${i}`} className="relative bg-black">
                 <img
-                  src={broken[i] ?? src}
-                  onError={() => setBroken((b) => ({ ...b, [i]: src }))}
+                  src={src}
                   alt={`Halaman ${i + 1}`}
-                  loading="lazy"
-                  style={zoom !== 1 ? { width: `${zoom * 100}%` } : undefined}
-                  className="w-full select-none"
-                />
-              </button>
-            ))}
-            <ChapterNav
-              prevCh={nextCh}
-              nextCh={prevCh}
-              onGo={goChapter}
-              dark={dark}
-              kind={kind}
-            />
-          </div>
-        ) : (
-          // ---- Mode manga: panel satu-satu, geser sideways ----
-          <div
-            className="flex h-full snap-x snap-mandatory overflow-x-auto"
-            onScroll={(e) => {
-              const el = e.currentTarget;
-              const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-              if (i !== index) setIndex(i);
-            }}
-          >
-            {images.map((src, i) => (
-              <div
-                key={`${src}-${i}`}
-                className="flex h-full w-full shrink-0 snap-center items-center justify-center"
-                onClick={() => setUiOn((v) => !v)}
-                onDoubleClick={() => setZoom((z) => (z === 1 ? 2 : 1))}
-              >
-                <img
-                  src={broken[i] ?? src}
-                  alt={`Halaman ${i + 1}`}
-                  loading="lazy"
+                  loading={i < 3 ? "eager" : "lazy"}
+                  decoding="async"
                   draggable={false}
-                  style={zoom !== 1 ? { maxWidth: "none", width: `${zoom * 100}%` } : undefined}
-                  className="max-h-full w-auto max-w-full select-none object-contain"
+                  onClick={() => setUiOn((v) => !v)}
+                  style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: "none" } : undefined}
+                  className="w-full select-none"
                 />
               </div>
             ))}
-            <div className="flex h-full w-full shrink-0 snap-center items-center justify-center">
-              <ChapterNav
-                prevCh={nextCh}
-                nextCh={prevCh}
-                onGo={goChapter}
-                dark={dark}
-                kind={kind}
-                compact
-              />
+            <div
+              className={cn(
+                "px-5 py-10 text-center",
+                dark ? "bg-black text-zinc-400" : "bg-zinc-100 text-zinc-600",
+              )}
+            >
+              <p className="text-xs">Selesai — chapter ini habis dibaca</p>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {olderChapter && (
+                  <button
+                    onClick={() => goChapter(olderChapter.number)}
+                    className="rounded-full bg-violet-600 px-5 py-2.5 text-xs font-bold text-white"
+                  >
+                    Lanjut Chapter {olderChapter.number}
+                  </button>
+                )}
+                {newerChapter && (
+                  <button
+                    onClick={() => goChapter(newerChapter.number)}
+                    className="rounded-full border border-white/25 px-5 py-2.5 text-xs font-semibold"
+                  >
+                    Kembali Chapter {newerChapter.number}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        // ---- Mode manga: panel satu-satu, gambar penuh di dalam layar ----
+        <div
+          ref={panelRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+            if (i !== index) setIndex(i);
+          }}
+          className="flex h-full min-h-0 w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
+        >
+          {images.map((src, i) => (
+            <div
+              key={`${src}-${i}`}
+              className="relative flex h-full w-full shrink-0 snap-center items-center justify-center bg-black"
+              onClick={() => setUiOn((v) => !v)}
+              onDoubleClick={() => setZoom((z) => (z === 1 ? 2 : 1))}
+            >
+              <img
+                src={src}
+                alt={`Halaman ${i + 1}`}
+                loading={i < 2 ? "eager" : "lazy"}
+                decoding="async"
+                draggable={false}
+                style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: "none" } : undefined}
+                className="block h-full w-auto max-w-full select-none object-contain"
+              />
+            </div>
+          ))}
+          <div className="flex h-full w-full shrink-0 snap-center items-center justify-center bg-black">
+            <div className="px-6 text-center text-zinc-400">
+              <p className="text-xs">Selesai — chapter ini habis dibaca</p>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {olderChapter && (
+                  <button
+                    onClick={() => goChapter(olderChapter.number)}
+                    className="rounded-full bg-violet-600 px-5 py-2.5 text-xs font-bold text-white"
+                  >
+                    Lanjut Chapter {olderChapter.number}
+                  </button>
+                )}
+                {newerChapter && (
+                  <button
+                    onClick={() => goChapter(newerChapter.number)}
+                    className="rounded-full border border-white/25 px-5 py-2.5 text-xs font-semibold text-white"
+                  >
+                    Kembali Chapter {newerChapter.number}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar atas */}
       <div
@@ -246,12 +306,15 @@ export default function ReadComic() {
         <div
           className={cn(
             "flex items-center gap-2 px-3 py-2.5",
-            dark ? "bg-gradient-to-b from-black/85 to-transparent" : "bg-gradient-to-b from-white/95 to-transparent",
+            dark
+              ? "bg-gradient-to-b from-black/85 to-transparent"
+              : "bg-gradient-to-b from-white/95 to-transparent",
           )}
         >
           <button
             onClick={() => navigate(-1)}
             className="pointer-events-auto flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white"
+            aria-label="Kembali"
           >
             <ArrowLeft className="size-4" />
           </button>
@@ -265,10 +328,7 @@ export default function ReadComic() {
               {detail?.title ?? "Membaca…"}
             </p>
             <p
-              className={cn(
-                "truncate text-[10px]",
-                dark ? "text-zinc-400" : "text-zinc-600",
-              )}
+              className={cn("truncate text-[10px]", dark ? "text-zinc-400" : "text-zinc-600")}
             >
               Chapter {chNum} · Halaman {Math.min(index + 1, total)}/{total}
             </p>
@@ -298,65 +358,81 @@ export default function ReadComic() {
       </div>
 
       {/* Toolbar bawah: navigasi halaman + zoom */}
-      {uiOn && total > 0 && !strip && (
+      {uiOn && total > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
           <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-black/85 to-transparent px-3 py-3">
-            <button
-              onClick={() => goto(index - 1)}
-              disabled={index <= 0}
-              className="pointer-events-auto flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white disabled:opacity-35"
-            >
-              <ChevronLeft className="size-5" />
-            </button>
+            {!strip ? (
+              <>
+                {/* Manga dibaca kanan -> kiri: tombol kiri = halaman berikutnya */}
+                <button
+                  onClick={prevPage}
+                  disabled={index <= 0}
+                  className="pointer-events-auto flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white disabled:opacity-30"
+                  aria-label="Halaman sebelumnya"
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => goChapter(olderChapter?.number ?? chNum)}
+                disabled={!olderChapter}
+                className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/70 px-3 text-[11px] font-bold text-white disabled:opacity-30"
+              >
+                <ChevronLeft className="size-4" /> Bab
+              </button>
+            )}
+
             <div className="pointer-events-auto flex items-center gap-2">
               <button
                 onClick={() => setZoom((z) => Math.max(1, Number((z - 0.5).toFixed(1))))}
-                className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white"
+                className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white"
+                aria-label="Perkecil"
               >
                 <Minus className="size-4" />
               </button>
-              <span className="min-w-10 text-center text-[11px] font-bold text-white">
+              <span className="min-w-11 text-center text-[11px] font-bold text-white">
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 onClick={() => setZoom((z) => Math.min(4, Number((z + 0.5).toFixed(1))))}
-                className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white"
+                className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white"
+                aria-label="Perbesar"
               >
                 <Plus className="size-4" />
               </button>
             </div>
-            <button
-              onClick={() => goto(index + 1)}
-              disabled={index >= total - 1}
-              className="pointer-events-auto flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white disabled:opacity-35"
-            >
-              <ChevronRight className="size-5" />
-            </button>
-          </div>
-        </div>
-      )}
 
-      {uiOn && total > 0 && strip && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
-          <div className="flex items-center justify-between gap-2 bg-gradient-to-t from-black/85 to-transparent px-3 py-3">
-            <button
-              onClick={() => goChapter(nextCh?.number ?? chNum)}
-              disabled={!nextCh}
-              className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 text-[11px] font-bold text-white disabled:opacity-35"
-            >
-              <ChevronLeft className="size-4" /> Sebelumnya
-            </button>
-            <span className="pointer-events-auto text-[11px] font-bold text-white">
-              {index + 1}/{total}
-            </span>
-            <button
-              onClick={() => goChapter(prevCh?.number ?? chNum)}
-              disabled={!prevCh}
-              className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 text-[11px] font-bold text-white disabled:opacity-35"
-            >
-              Berikutnya <ChevronRight className="size-4" />
-            </button>
+            {strip ? (
+              <button
+                onClick={() => goChapter(olderChapter?.number ?? chNum)}
+                disabled={!olderChapter}
+                className="pointer-events-auto flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/70 px-3 text-[11px] font-bold text-white disabled:opacity-30"
+              >
+                Bab <ChevronRight className="size-4" />
+              </button>
+            ) : (
+              <button
+                onClick={nextPage}
+                disabled={atEnd}
+                className="pointer-events-auto flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white disabled:opacity-30"
+                aria-label="Halaman berikutnya"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+            )}
           </div>
+
+          {strip && atEnd && olderChapter && (
+            <div className="pointer-events-none pb-2">
+              <button
+                onClick={() => goChapter(olderChapter.number)}
+                className="pointer-events-auto mx-auto flex items-center gap-2 rounded-full bg-violet-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg"
+              >
+                Lanjut Chapter {olderChapter.number}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -369,6 +445,7 @@ export default function ReadComic() {
               <button
                 onClick={() => setSheet(false)}
                 className="rounded-full border border-border p-1.5"
+                aria-label="Tutup"
               >
                 <X className="size-4" />
               </button>
@@ -394,59 +471,6 @@ export default function ReadComic() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function ChapterNav({
-  prevCh,
-  nextCh,
-  onGo,
-  dark,
-  kind,
-  compact,
-}: {
-  prevCh?: Chapter;
-  nextCh?: Chapter;
-  onGo: (n: number) => void;
-  dark: boolean;
-  kind: string;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex w-full flex-col items-center gap-3 px-6",
-        compact ? "justify-center" : "py-10",
-      )}
-    >
-      {kind === "manhwa" ? (
-        <p className={cn("text-xs", dark ? "text-zinc-400" : "text-zinc-600")}>
-          Selesai — lanjut ke chapter berikutnya
-        </p>
-      ) : (
-        <p className={cn("text-xs", dark ? "text-zinc-400" : "text-zinc-600")}>
-          Geser untuk halaman berikutnya
-        </p>
-      )}
-      <div className="flex gap-3">
-        {nextCh && (
-          <button
-            onClick={() => onGo(nextCh.number)}
-            className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-bold text-white"
-          >
-            Chapter {nextCh.number} →
-          </button>
-        )}
-        {prevCh && (
-          <button
-            onClick={() => onGo(prevCh.number)}
-            className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-bold text-white"
-          >
-            ← Chapter {prevCh.number}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

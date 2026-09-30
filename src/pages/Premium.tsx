@@ -3,11 +3,18 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { SectionTitle } from "@/components/lstream-ui";
-import { Crown, Check, ShieldCheck, Loader2, CreditCard, AlertTriangle, CircleCheck } from "lucide-react";
+import { Crown, Check, ShieldCheck, Loader2, AlertTriangle, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type Plan = { id: string; label: string; days: number; price: number };
+type PayConfig = {
+  configured: boolean;
+  isProd: boolean;
+  mode?: string;
+  masked?: string;
+  message: string;
+};
 type Purchase = {
   _id: string;
   orderId: string;
@@ -35,13 +42,7 @@ const PERKS = [
   "Akses cepat server streaming",
 ];
 
-function PaymentGuide({
-  config,
-}: {
-  config?:
-    | { configured: boolean; isProd: boolean; mode?: string; masked?: string; message: string }
-    | undefined;
-}) {
+function PaymentGuide({ config }: { config?: PayConfig }) {
   const steps = [
     "Pilih paket di bawah, lalu tekan Beli.",
     "Popup Midtrans Snap terbuka — pilih metode: Virtual Account, QRIS, GoPay, DANA, OVO, atau kartu.",
@@ -93,14 +94,6 @@ function PaymentGuide({
           </li>
         ))}
       </ol>
-
-      <p className="mt-2.5 flex items-start gap-1.5 text-[10px] leading-4 text-muted-foreground">
-        <CreditCard className="mt-0.5 size-3 shrink-0" />
-        Pembayaran memakai Midtrans Snap. Kalau transaksi production ditolak,
-        ganti <span className="font-semibold">MIDTRANS_SERVER_KEY</span> dengan
-        Server Key sandbox (awalan <span className="font-semibold">SB-</span>) —
-        aplikasi otomatis pindah ke mode sandbox.
-      </p>
     </div>
   );
 }
@@ -109,9 +102,29 @@ function PremiumContent() {
   const plans = useQuery(api.payments.premiumPlans, {}) as Plan[] | undefined;
   const myPurchases = useQuery(api.payments.myPurchases, {}) as Purchase[] | undefined;
   const createSnap = useAction(api.payments.createSnapTransaction);
-  const payConfig = useQuery(api.payments.paymentConfig, {}) as
-    | { configured: boolean; isProd: boolean; mode?: string; masked?: string; message: string }
-    | undefined;
+  const getPayConfig = useAction(api.payments.paymentConfig);
+  const [payConfig, setPayConfig] = useState<PayConfig | undefined>(undefined);
+
+  // Status pembayaran butuh env var (Node runtime) → dipanggil manual.
+  useEffect(() => {
+    let alive = true;
+    getPayConfig()
+      .then((c: any) => {
+        if (alive) setPayConfig(c as PayConfig);
+      })
+      .catch((e: any) => {
+        if (!alive) return;
+        setPayConfig({
+          configured: false,
+          isProd: false,
+          message: e instanceof Error ? e.message : "Gagal memuat status pembayaran",
+        });
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const checkStatus = useAction(api.payments.checkOrderStatus);
   const confirm = useMutation(api.payments.confirmPurchase);
   const [busy, setBusy] = useState<string | null>(null);

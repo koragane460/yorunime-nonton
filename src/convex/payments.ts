@@ -7,13 +7,6 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-// Action Node diimpor langsung (bukan lewat `internal.*`) supaya file ini tidak
-// bergantung pada codegen modul baru.
-import {
-  createTransaction as nodeCreateTransaction,
-  orderStatus as nodeOrderStatus,
-  paymentConfig as nodePaymentConfig,
-} from "./paymentsNode";
 
 // ------------------------------------------------------------------ data ----
 
@@ -110,7 +103,7 @@ export const paymentConfig = action({
     masked?: string;
     message: string;
   }> => {
-    const r = (await ctx.runAction(nodePaymentConfig, {})) as {
+    const r = (await ctx.runAction(internal.paymentsNode.paymentConfig, {})) as {
       configured: boolean;
       isProd: boolean;
       mode?: string;
@@ -145,7 +138,7 @@ export const createSnapTransaction = action({
       orderId,
     });
 
-    const res = (await ctx.runAction(nodeCreateTransaction, {
+    const res = (await ctx.runAction(internal.paymentsNode.createTransaction, {
       orderId,
       amount: plan.price,
       itemId: planId,
@@ -186,7 +179,7 @@ export const checkOrderStatus = action({
       status: string;
     } | null;
     if (!row || row.userId !== userId) throw new Error("Order tidak ditemukan");
-    const r = (await ctx.runAction(nodeOrderStatus, {
+    const r = (await ctx.runAction(internal.paymentsNode.orderStatus, {
       orderId,
     })) as { status: string };
     if (r.status === "unconfigured") return { status: row.status };

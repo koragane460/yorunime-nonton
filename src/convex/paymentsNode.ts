@@ -6,7 +6,7 @@
  * dan memanggil file ini lewat `internal.paymentsNode.*`.
  */
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 
 const KEY_HELP =
   "MIDTRANS_SERVER_KEY harus berisi Server Key Midtrans (SB-Mid-server-... untuk sandbox atau Mid-server-... untuk production), bukan Client Key. Buka midtrans.com > Settings > Access Keys > kolom Server Key.";
@@ -43,7 +43,7 @@ function baseUrl(isProd: boolean) {
 }
 
 /** Status konfigurasi (dipakai kartu "Cara Pembelian"). */
-export const paymentConfig = action({
+export const paymentConfig = internalAction({
   args: {},
   handler: async (): Promise<{
     configured: boolean;
@@ -67,7 +67,7 @@ export const paymentConfig = action({
 });
 
 /** Buat transaksi Snap. Price dalam Rupiah penuh (7000 = Rp7.000). */
-export const createTransaction = action({
+export const createTransaction = internalAction({
   args: {
     orderId: v.string(),
     amount: v.number(),
@@ -119,7 +119,7 @@ export const createTransaction = action({
 });
 
 /** Status order langsung dari Midtrans (dipakai polling setelah redirect). */
-export const orderStatus = action({
+export const orderStatus = internalAction({
   args: { orderId: v.string() },
   handler: async (_ctx, { orderId }) => {
     const info = readServerKey();

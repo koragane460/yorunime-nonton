@@ -11,10 +11,12 @@ import {
   type ComicItem,
 } from "@/components/ComicCard";
 import { ComicDetailScreen } from "@/components/ComicDetailScreen";
-import { Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ComicKind = "manga" | "manhwa";
+
+const LABEL = { manga: "Manga", manhwa: "Manhwa" } as const;
 
 /** Halaman katalog manga / manhwa — tata letak mengikuti Home. */
 export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
@@ -23,34 +25,38 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
   const { user } = useAuth();
   // `?komik=<slug>` dipakai halaman Jadwal untuk membuka detail langsung.
   const [pick, setPick] = useState<string | null>(params.get("komik"));
+
+  const trending = useAction(api.manga.trending);
+  const searchComic = useAction(api.manga.search);
+
+  const [heroList, setHeroList] = useState<ComicItem[]>([]);
+  const [hotList, setHotList] = useState<ComicItem[]>([]);
+  const [catItems, setCatItems] = useState<ComicItem[]>([]);
+  const [catPage, setCatPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  const [q, setQ] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<ComicItem[] | null>(null);
+
   useEffect(() => {
     const s = params.get("komik");
     if (s) setPick(s);
   }, [params]);
 
-  const newest = useAction(api.manga.newest);
-  const [heroList, setHeroList] = useState<ComicItem[]>([]);
-  const [catItems, setCatItems] = useState<ComicItem[]>([]);
-  const [catPage, setCatPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-
-  // "Paling dibaca" diturunkan dari views yang sudah ikut termuat di katalog.
-  const topList = useMemo(
-    () =>
-      catItems
-        .filter((c) => typeof c.views === "number")
-        .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
-        .slice(0, 12),
-    [catItems],
-  );
-
+  // Trending = paling banyak dibaca saat ini (judul terkenal, termasuk yang
+  // sudah jadi anime) — dipakai untuk hero sekaligus section "Trending".
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setHeroList([]);
-    newest({ kind })
+    setHotList([]);
+    trending({ kind, limit: 12 })
       .then((r: any) => {
-        if (alive) setHeroList((r as ComicItem[]) ?? []);
+        if (!alive) return;
+        const list = (r ?? []) as ComicItem[];
+        setHotList(list);
+        setHeroList(list.slice(0, 3));
       })
       .catch(() => {})
       .finally(() => alive && setLoading(false));
@@ -60,102 +66,153 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
-  const heroItems = heroList.slice(0, 3);
   const [heroIdx, setHeroIdx] = useState(0);
   useEffect(() => {
     setHeroIdx(0);
-    if (heroItems.length < 2) return;
-    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroItems.length), 6500);
+    if (heroList.length < 2) return;
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroList.length), 6500);
     return () => clearInterval(t);
-  }, [heroItems.length]);
+  }, [heroList.length]);
 
   const favs = useQuery(api.comics.myFavorites, user ? {} : "skip");
   const myKindFavs = (favs ?? []).filter((f: any) => f.kind === kind);
   const open = (slug: string) => setPick(slug);
 
+  // Pencarian judul (dijalankan saat pengguna menekan enter / tombol).
+  const doSearch = async () => {
+    const term = q.trim();
+    if (term.length < 2) {
+      toastSearch();
+      return;
+    }
+    setSearching(true);
+    try {
+      const r: any = await searchComic({ q: term, kind, limit: 18 });
+      setResults((r ?? []) as ComicItem[]);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+  const toastSearch = () => {
+    setResults([]);
+  };
+
   return (
     <div className="pb-24">
+      {/* Hero — bersih seperti Home: poster potret penuh, teks di bawah */}
       <ComicHero
         kind={kind}
-        items={heroItems}
+        items={heroList}
         index={heroIdx}
         onIndex={setHeroIdx}
         loading={loading}
         onPick={open}
       />
 
-      <h2 className="mb-2 mt-5 text-base font-bold tracking-tight">
-        {kind === "manga" ? "Manga Terbaru" : "Manhwa Terbaru"}
-      </h2>
-      <p className="-mt-1 mb-2 text-[11px] text-muted-foreground">
-        Rilisan chapter terbaru, langsung dari sumber
-      </p>
-      {loading ? (
-        <div className="flex gap-2.5">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton h-40 w-28 shrink-0 rounded-xl" />
-          ))}
-        </div>
-      ) : heroList.length === 0 ? (
-        <p className="py-6 text-center text-xs text-muted-foreground">
-          Belum ada {kind} baru — coba refresh nanti
-        </p>
-      ) : (
-        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
-          {heroList.map((c) => (
-            <button
-              key={c.slug}
-              onClick={() => open(c.slug)}
-              className="relative w-28 shrink-0 text-left"
-            >
-              <div className="relative overflow-hidden rounded-xl border border-border/60">
-                <img
-                  src={c.image}
-                  alt=""
-                  loading="lazy"
-                  className="aspect-[2/3] w-full object-cover"
-                />
-                <StatusChip ongoing={c.ongoing} className="absolute right-1 top-1" />
-                {c.latestChapter && (
-                  <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1 text-[9px] font-bold text-white">
-                    {c.latestChapter}
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight">
-                {c.title}
-              </p>
-              {c.updatedAgo && (
-                <p className="text-[9px] text-amber-300">{c.updatedAgo}</p>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-6">
-        <ComicBrowseRow
-          kind={kind}
-          title={
-            kind === "manga" ? "Katalog Manga" : "Katalog Manhwa"
+      {/* Cari manga / manhwa */}
+      <div className="mt-4 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+        <Search className="size-4 shrink-0 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            if (!e.target.value) setResults(null);
+          }}
+          onKeyDown={(e) => e.key === "Enter" && void doSearch()}
+          placeholder={
+            kind === "manga"
+              ? "Cari manga… contoh: one piece, solo leveling"
+              : "Cari manhwa… contoh: tower of god, solo leveling"
           }
-          page={catPage}
-          setPage={setCatPage}
-          items={catItems}
-          setItems={setCatItems}
-          onPick={open}
-          limit={30}
+          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
+        {q && (
+          <button
+            onClick={() => {
+              setQ("");
+              setResults(null);
+            }}
+            aria-label="Bersihkan pencarian"
+          >
+            <X className="size-4 text-muted-foreground" />
+          </button>
+        )}
+        <button
+          onClick={() => void doSearch()}
+          disabled={searching}
+          className="flex shrink-0 items-center gap-1 rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {searching && <Loader2 className="size-3 animate-spin" />}
+          Cari
+        </button>
       </div>
 
-      {/* Paling dibaca — dihitung dari jumlah pembaca judul yang sudah dimuat */}
-      {topList.length >= 4 && (
-        <div className="mt-6">
+      {searching && (
+        <p className="mt-4 text-center text-xs text-muted-foreground">Mencari…</p>
+      )}
+
+      {results !== null && !searching ? (
+        <div className="mt-4">
           <h2 className="mb-2 text-base font-bold tracking-tight">
-            {kind === "manga" ? "Manga Paling Dibaca" : "Manhwa Paling Dibaca"}
+            Hasil untuk “{q.trim()}”
           </h2>
-          <ComicGrid items={topList} onPick={open} ranked />
+          {results.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {LABEL[kind]} tidak ditemukan
+            </p>
+          ) : (
+            <ComicGrid items={results} onPick={open} />
+          )}
+          <button
+            onClick={() => setResults(null)}
+            className="mt-3 w-full rounded-full border border-border py-2 text-xs text-muted-foreground"
+          >
+            Kembali ke katalog
+          </button>
         </div>
+      ) : (
+        <>
+          {/* Trending */}
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-base font-bold tracking-tight">
+                Trending {LABEL[kind]}
+              </h2>
+              <span className="text-[11px] text-muted-foreground">paling banyak dibaca</span>
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i}>
+                    <div className="skeleton aspect-[2/3] w-full rounded-xl" />
+                    <div className="skeleton mt-1.5 h-3 w-full rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : hotList.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                Belum ada data trending — coba refresh nanti
+              </p>
+            ) : (
+              <ComicGrid items={hotList} onPick={open} ranked />
+            )}
+          </div>
+
+          <div className="mt-6">
+            <ComicBrowseRow
+              kind={kind}
+              title={`Katalog ${LABEL[kind]}`}
+              page={catPage}
+              setPage={setCatPage}
+              items={catItems}
+              setItems={setCatItems}
+              onPick={open}
+              limit={30}
+            />
+          </div>
+        </>
       )}
 
       {myKindFavs.length > 0 && (
@@ -185,7 +242,6 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
         </>
       )}
 
-      {/* Tombol pintas pindah jenis */}
       <button
         onClick={() => navigate(kind === "manga" ? "/manhwa" : "/manga")}
         className="fixed bottom-20 right-4 z-30 rounded-full border border-violet-500/50 bg-violet-600/90 px-4 py-2 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-violet-500"
@@ -226,81 +282,90 @@ function ComicHero({
   loading: boolean;
   onPick: (slug: string) => void;
 }) {
-  if (loading) return <div className="skeleton mt-1 h-56 w-full rounded-2xl" />;
+  if (loading) return <div className="skeleton mt-1 h-64 w-full rounded-2xl" />;
   if (items.length === 0) return null;
   const cur = items[index % items.length];
   const views = formatViews(cur.views);
+  const badge = kind === "manga" ? "bg-sky-600" : "bg-fuchsia-600";
   return (
-    <div
-      className="relative mt-1 h-60 overflow-hidden rounded-2xl border border-white/10"
-      style={{
-        backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,.2) 100%), url(${cur.image})`,
-        backgroundSize: "100% 100%, cover",
-        backgroundPosition: "center bottom, center",
-      }}
-    >
-      <div className="relative flex h-full flex-col justify-end p-4">
+    <div className="relative mt-1 overflow-hidden rounded-2xl border border-white/10">
+      {/* Poster potret penuh — sama seperti hero anime di Home */}
+      <img
+        src={cur.image}
+        alt=""
+        className="h-64 w-full object-cover object-top"
+        loading="eager"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+      <div className="absolute inset-0 flex flex-col justify-end p-4">
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
-              "rounded px-2 py-0.5 text-[10px] font-black uppercase",
-              kind === "manga" ? "bg-sky-600 text-white" : "bg-fuchsia-600 text-white",
+              "rounded px-2 py-0.5 text-[10px] font-black uppercase text-white",
+              badge,
             )}
           >
-            {kind === "manga" ? "Manga" : "Manhwa"}
+            {LABEL[kind]}
           </span>
           <StatusChip ongoing={cur.ongoing} />
+          <span className="rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+            Trending
+          </span>
         </div>
         <h1 className="mt-1.5 line-clamp-2 text-lg font-black leading-tight text-white drop-shadow">
           {cur.title}
         </h1>
-        <p className="mt-1 text-[11px] text-zinc-300">
-          {[...cur.genres, cur.latestChapter].filter(Boolean).join(" · ")}
+        <p className="mt-0.5 text-[11px] text-zinc-300">
+          {[...cur.genres.slice(0, 2), cur.latestChapter].filter(Boolean).join(" · ")}
         </p>
         <div className="mt-2.5 flex items-center gap-2">
           <button
             onClick={() => onPick(cur.slug)}
             className={cn(
               "rounded-full px-4 py-1.5 text-xs font-bold text-white transition",
-              kind === "manga"
-                ? "bg-sky-600 hover:bg-sky-500"
-                : "bg-fuchsia-600 hover:bg-fuchsia-500",
+              kind === "manga" ? "bg-sky-600 hover:bg-sky-500" : "bg-fuchsia-600 hover:bg-fuchsia-500",
             )}
           >
             Baca Sekarang
           </button>
           {views && (
-            <span className="rounded-full border border-white/25 bg-black/40 px-3 py-1.5 text-[10px] font-semibold text-white">
+            <span className="rounded-full border border-white/25 bg-black/45 px-3 py-1.5 text-[10px] font-semibold text-white">
               {views} pembaca
             </span>
           )}
         </div>
       </div>
-      <div className="absolute bottom-3 right-3 flex gap-1">
-        <button
-          className="rounded-full bg-black/60 p-1.5 text-white"
-          onClick={() => onIndex((index + items.length - 1) % items.length)}
-        >
-          ‹
-        </button>
-        <button
-          className="rounded-full bg-black/60 p-1.5 text-white"
-          onClick={() => onIndex((index + 1) % items.length)}
-        >
-          ›
-        </button>
-      </div>
-      <div className="absolute bottom-3.5 left-4 flex gap-1">
-        {items.map((it, i) => (
-          <span
-            key={it.slug}
-            className={cn(
-              "h-1 rounded-full transition-all",
-              i === index ? "w-5 bg-red-500" : "w-2 bg-white/30",
-            )}
-          />
-        ))}
-      </div>
+      {items.length > 1 && (
+        <>
+          <div className="absolute bottom-3 right-3 flex gap-1">
+            <button
+              className="rounded-full bg-black/60 p-1.5 text-white"
+              onClick={() => onIndex((index + items.length - 1) % items.length)}
+              aria-label="Sebelumnya"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              className="rounded-full bg-black/60 p-1.5 text-white"
+              onClick={() => onIndex((index + 1) % items.length)}
+              aria-label="Berikutnya"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+          <div className="absolute bottom-3.5 left-4 flex gap-1">
+            {items.map((it, i) => (
+              <span
+                key={it.slug}
+                className={cn(
+                  "h-1 rounded-full transition-all",
+                  i === index ? "w-5 bg-red-500" : "w-2 bg-white/30",
+                )}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

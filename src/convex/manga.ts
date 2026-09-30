@@ -20,6 +20,8 @@ import { internal } from "./_generated/api";
 
 const SITE = "https://komiku.org";
 const ANALYTICS = "https://analytics.komiku.org";
+/** WordPress REST — dipakai untuk cari komik & memastikan jenis (manga/manhwa). */
+const WP_API = `${SITE}/wp-json/wp/v2/manga`;
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -95,6 +97,22 @@ function sectionById(html: string, id: string): string {
   return j < 0 ? html.slice(i) : html.slice(i, j);
 }
 
+async function fetchJson(url: string, timeoutMs = 12_000): Promise<any | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": UA, Accept: "application/json", Referer: SITE + "/" },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+  return null;
+}
+
 async function mapLimit<T, R>(
   items: T[],
   limit: number,
@@ -113,6 +131,43 @@ async function mapLimit<T, R>(
     },
   );
   await Promise.all(workers);
+  return out;
+}
+
+/** Kartu peringkat homepage (<article class="ls4">): rank + views. */
+function parseLs4(block: string): (ComicListItem & { rank: number }) | null {
+  const slug = block.match(/href="\/manga\/([^"/]+)\/"/)?.[1];
+  if (!slug) return null;
+  const image = block.match(/data-src="([^"]+)"/)?.[1] ?? "";
+  const title = text(block.match(/<h4><a[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "");
+  const rank = Number(block.match(/class="rank-num">(\d+)/)?.[1] ?? 0);
+  const statLine = text(block.match(/class="ls4s">([\s\S]*?)<\/span>/)?.[1] ?? "");
+  const parts = statLine.split("·").map((s) => s.trim()).filter(Boolean);
+  const viewsText = parts[parts.length - 1] ?? "";
+  const views = Number(viewsText.replace(/[^\d]/g, ""));
+  return {
+    slug,
+    title: title || slug,
+    image,
+    kind: "manga",
+    ongoing: true,
+    status: "Ongoing",
+    genres: parts.slice(0, -1),
+    latestChapter: text(block.match(/class="ls24"[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "") || undefined,
+    views: Number.isFinite(views) ? views : undefined,
+    rank,
+  };
+}
+
+function parseRanking(html: string) {
+  const section = sectionById(html, "Rekomendasi_Komik");
+  const out: (ComicListItem & { rank: number })[] = [];
+  const re = /<article class="ls4">([\s\S]*?)<\/article>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(section))) {
+    const it = parseLs4(m[1]);
+    if (it) out.push(it);
+  }
   return out;
 }
 
@@ -333,7 +388,135 @@ async function attachViews(ctx: any, items: ComicListItem[]) {
   });
 }
 
+/** Jenis & status pasti dari WordPress REST (class_list: "tipe-manhwa" dll). */
+async function wpMeta(
+  ctx: any,
+  slug: string,
+): Promise<{ kind: ComicKind; ongoing: boolean; genres: string[] } | null> {
+  return cached(ctx, `comic:wp:${slug}`, 30 * 60_000, async () => {
+    const rows = await fetchJson(
+      `${WP_API}?slug=${encodeURIComponent(slug)}&_fields=slug,class_list`,
+    );
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row?.class_list) return null;
+    const cls: string[] = row.class_list;
+    const kind: ComicKind = cls.some((c) => /tipe-manhwa/.test(c)) ? "manhwa" : "manga";
+    const ongoing = !cls.some((c) => /statusmanga-(tamat|end|completed)/i.test(c));
+    const genres = cls
+      .filter((c) => c.startsWith("genre-"))
+      .map((c) => c.slice(6).replace(/-/g, " "))
+      .slice(0, 4);
+    return { kind, ongoing, genres };
+  });
+}
+
 // ------------------------------------------------------------- actions ----
+
+/**
+ * Trending & paling dibaca. Sumber: section "Peringkat Komiku" di homepage
+ * (punya rank + jumlah views), lalu jenisnya dipastikan lewat WordPress REST
+ * supaya manga dan manhwa tidak tercampur. naturally berisi judul terkenal,
+ * termasuk yang sudah jadi anime.
+ */
+export const trending = action({
+  args: {
+    kind: v.union(v.literal("manga"), v.literal("manhwa")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { kind, limit = 12 }) => {
+    const ranked = await cached<(ComicListItem & { rank: number })[]>(
+      ctx,
+      "comic:rank",
+      LIST_TTL,
+      async () => {
+        const html = await fetchHtml(`${SITE}/`);
+        if (!html) return null;
+        const list = parseRanking(html);
+        return list.length > 0 ? list : null;
+      },
+    );
+    const list = ranked ?? [];
+    // Ada dua panel peringkat (harian & mingguan) jadi slug bisa dobel.
+    const seen = new Set<string>();
+    const unique = list.filter((r) => {
+      if (seen.has(r.slug)) return false;
+      seen.add(r.slug);
+      return true;
+    });
+    const resolved = await mapLimit(unique, 6, async (item) => {
+      const meta = await wpMeta(ctx, item.slug);
+      if (!meta) return null;
+      return { ...item, ...meta } as ComicListItem & { rank: number };
+    });
+    return resolved
+      .filter((r): r is ComicListItem & { rank: number } => !!r && r.kind === kind)
+      .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+      .slice(0, limit);
+  },
+});
+
+/** Pencarian judul (WordPress REST) + cover/sinopsis dari detail ter-cache. */
+export const search = action({
+  args: {
+    q: v.string(),
+    kind: v.optional(v.union(v.literal("manga"), v.literal("manhwa"))),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { q, kind, limit = 12 }) => {
+    const query = q.trim().slice(0, 80);
+    if (query.length < 2) return [];
+    const rows = await fetchJson(
+      `${WP_API}?search=${encodeURIComponent(query)}&per_page=${Math.min(40, limit * 3)}&_fields=slug,title,class_list`,
+    );
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+    const candidates = rows
+      .map((r: any) => {
+        const cls: string[] = r?.class_list ?? [];
+        const k: ComicKind = cls.some((c) => /tipe-manhwa/.test(c)) ? "manhwa" : "manga";
+        return {
+          slug: String(r.slug ?? ""),
+          title: text(r?.title?.rendered ?? ""),
+          kind: k,
+          ongoing: !cls.some((c) => /statusmanga-(tamat|end|completed)/i.test(c)),
+        };
+      })
+      .filter((c: any) => c.slug && (!kind || c.kind === kind));
+
+    const out = await mapLimit(candidates.slice(0, limit), 5, async (c: any) => {
+      const d = await cached<ReturnType<typeof parseDetail> | null>(
+        ctx,
+        `comic:detail:${c.slug}`,
+        30 * 60_000,
+        async () => {
+          const html = await fetchHtml(`${SITE}/manga/${c.slug}/`);
+          if (!html) return null;
+          const p = parseDetail(html);
+          return p.title ? p : null;
+        },
+      );
+      if (!d) return null;
+      const id = d.idSeries;
+      const views = id
+        ? ((await cached<number | null>(ctx, `comic:views:${id}`, VIEWS_TTL, () =>
+            viewsFor(id) ?? null,
+          )) ?? undefined)
+        : undefined;
+      const item: ComicListItem = {
+        slug: c.slug,
+        title: d.title || c.title,
+        image: d.image,
+        kind: d.kind,
+        ongoing: d.ongoing,
+        status: d.status,
+        genres: d.genres.slice(0, 4),
+        latestChapter: d.chapters[0]?.label,
+        views,
+      };
+      return item;
+    });
+    return out.filter((x): x is ComicListItem => !!x);
+  },
+});
 
 /** Update terbaru (dari section "Baru Ditambahkan" homepage), per jenis. */
 export const newest = action({
