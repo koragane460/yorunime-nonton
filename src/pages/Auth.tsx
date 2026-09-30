@@ -10,6 +10,13 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { useAuth } from "@/hooks/use-auth";
+import {
+  consumeFirebaseRedirect,
+  firebaseReady,
+  getActiveFirebaseIdToken,
+  getFirebaseIdToken,
+  signInWithGoogleFirebase,
+} from "@/lib/firebase";
 import logo from "@/assets/logo.svg";
 import { ArrowRight, Loader2, Mail, ShieldCheck } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
@@ -79,9 +86,25 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
+    if (!firebaseReady) {
+      setError(
+        "Firebase belum dikonfigurasi. Tambahkan VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, dan VITE_FIREBASE_PROJECT_ID di tab Keys.",
+      );
+      setIsLoading(false);
+      return;
+    }
     try {
-      await signIn("google", { redirectTo: redirect });
-      // signIn("google") me-redirect ke Google, jadi baris di bawah rarely jalan.
+      const fbUser = await signInWithGoogleFirebase();
+      // Di mobile signInWithRedirect() memuat halaman Google; setelah balik,
+      // ID token diambil di bawah ini.
+      if (!fbUser) {
+        setIsLoading(false);
+        return;
+      }
+      const idToken = await getFirebaseIdToken(fbUser);
+      if (!idToken) throw new Error("Gagal mengambil token Firebase");
+      await signIn("firebase", { idToken });
+      navigate(redirect);
     } catch (error) {
       console.error("Google sign-in error:", error);
       setError(
@@ -92,6 +115,33 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       setIsLoading(false);
     }
   };
+
+  // Balik dari redirect Google → kirim tokennya ke Convex lalu masuk.
+  useEffect(() => {
+    if (isLoading || isAuthenticated || !firebaseReady) return;
+    let cancelled = false;
+    void (async () => {
+      const cameBack = await consumeFirebaseRedirect();
+      if (!cameBack || cancelled) return;
+      const idToken = await getActiveFirebaseIdToken();
+      if (!idToken || cancelled) return;
+      setIsLoading(true);
+      try {
+        await signIn("firebase", { idToken });
+        navigate(redirect);
+      } catch (error) {
+        console.error("Firebase redirect sign-in error:", error);
+        setError(
+          error instanceof Error ? error.message : "Gagal masuk dengan Google.",
+        );
+        setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, isAuthenticated]);
 
   // Mode demo/anonim: akun dibuat otomatis tanpa email.
   const handleSimpleLogin = async () => {
@@ -197,6 +247,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     )}
                     Login dengan Google
                   </Button>
+                  {!firebaseReady && (
+                    <p className="text-center text-[11px] text-amber-300/80">
+                      Firebase belum dikonfigurasi — lengkapi dulu di tab Keys.
+                    </p>
+                  )}
                   <Button
                     type="button"
                     className="w-full bg-violet-600 text-white hover:bg-violet-500"

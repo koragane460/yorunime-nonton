@@ -1,0 +1,116 @@
+// YoruNime — konfigurasi Firebase Authentication di sisi browser.
+//
+// Credential diambil dari env (tab Keys / API keys di Freebuff). Prefix
+// VITE_ dipakai karena Vite hanya menyuntik variabel berawalan itu ke client;
+// kalau platform menaruh nilainya tanpa prefix, keduanya tetap dibaca.
+import { getApp, getApps, initializeApp } from "firebase/app";
+import {
+  getAuth,
+  getRedirectResult,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  type User,
+} from "firebase/auth";
+
+const env = import.meta.env as unknown as Record<string, string | undefined>;
+
+const pick = (...names: string[]) => {
+  for (const n of names) {
+    const v = env[n];
+    if (v && v.trim()) return v.trim();
+  }
+  return undefined;
+};
+
+export const firebaseConfig = {
+  apiKey: pick("VITE_FIREBASE_API_KEY", "FIREBASE_API_KEY"),
+  authDomain: pick("VITE_FIREBASE_AUTH_DOMAIN", "FIREBASE_AUTH_DOMAIN"),
+  projectId: pick("VITE_FIREBASE_PROJECT_ID", "FIREBASE_PROJECT_ID"),
+  appId: pick("VITE_FIREBASE_APP_ID", "FIREBASE_APP_ID"),
+  messagingSenderId: pick(
+    "VITE_FIREBASE_MESSAGING_SENDER_ID",
+    "FIREBASE_MESSAGING_SENDER_ID",
+  ),
+  storageBucket: pick(
+    "VITE_FIREBASE_STORAGE_BUCKET",
+    "FIREBASE_STORAGE_BUCKET",
+  ),
+};
+
+/** True kalau credential Firebase sudah terisi di Keys. */
+export const firebaseReady = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId,
+);
+
+/** "AIza..." dari Firebase console → Web API Key. */
+export function firebaseKeyLooksValid() {
+  return (firebaseConfig.apiKey ?? "").startsWith("AIza");
+}
+
+let cachedAuth: ReturnType<typeof getAuth> | null = null;
+
+function getFirebaseAuth() {
+  if (!firebaseReady) return null;
+  if (cachedAuth) return cachedAuth;
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  cachedAuth = getAuth(app);
+  return cachedAuth;
+}
+
+/** Login Google via Firebase.
+ *  Di HP ini memunculkan pemilih akun Google milik device. */
+export async function signInWithGoogleFirebase(): Promise<User | null> {
+  const auth = getFirebaseAuth();
+  if (!auth) return null;
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const isMobile =
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  try {
+    if (isMobile) {
+      // Di mobile popup diabaikan browser, jadi pakai redirect.
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+    const cred = await signInWithPopup(auth, provider);
+    return cred.user;
+  } catch {
+    return null;
+  }
+}
+
+/** Ambil ID token Firebase user yang sedang login (dipakai buat Convex). */
+export async function getFirebaseIdToken(u: User | null): Promise<string | null> {
+  if (!u) return null;
+  try {
+    return await u.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
+/** Ambil ID token milik sesi Firebase yang sedang aktif. */
+export async function getActiveFirebaseIdToken(): Promise<string | null> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return null;
+  try {
+    return await auth.currentUser.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
+/** True kalau halaman ini adalah hasil balik dari redirect Google Firebase. */
+export async function consumeFirebaseRedirect(): Promise<boolean> {
+  const auth = getFirebaseAuth();
+  if (!auth) return false;
+  try {
+    const res = await getRedirectResult(auth);
+    return res !== null;
+  } catch {
+    return false;
+  }
+}
