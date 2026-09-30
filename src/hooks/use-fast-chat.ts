@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { ChatMsg } from "@/components/ChatPanel";
 import { useMutation, useQuery } from "convex/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type SendPayload = {
@@ -41,6 +41,18 @@ export function useFastChat(
   );
   const send = useMutation(api.chat.sendMessage);
   const [pending, setPending] = useState<ChatMsg[]>([]);
+
+  // Ganti room / teman: pesan yang masih "mengambang" dari chat sebelumnya
+  // dibuang supaya chat tiap orang benar-benar terpisah.
+  const argsKey = JSON.stringify(listArgs === "skip" ? "skip" : listArgs) +
+    JSON.stringify(sendArgs);
+  const lastKey = useRef(argsKey);
+  useEffect(() => {
+    if (lastKey.current !== argsKey) {
+      lastKey.current = argsKey;
+      setPending([]);
+    }
+  }, [argsKey]);
 
   const messages = useMemo(() => {
     const real = (raw ?? []) as unknown as ChatMsg[];

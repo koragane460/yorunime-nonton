@@ -147,15 +147,16 @@ export default function ReadComic() {
   const olderChapter = chapters.find((c) => c.number === chNum + 1);
   const newerChapter = chapters.find((c) => c.number === chNum - 1);
 
-  // Pramuat chapter berikutnya di paruh akhir chapter supaya perpindahan instan.
+  // Pramuat chapter berikutnya secepat mungkin (langsung setelah chapter ini
+  // tampil) supaya saat user menekan "Lanjut Chapter", gambar sudah ada dan
+  // chapter berikutnya ter-render seketika.
   useEffect(() => {
     if (!olderChapter || !chapters.length) return;
-    if (total === 0 || index < Math.ceil(total * 0.6)) return;
     const key = cacheKey(slug, olderChapter.number);
     if (pageCache.has(key)) return;
     void loadPages(slug, olderChapter.number, getPages).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, total, olderChapter, slug, chapters.length]);
+  }, [olderChapter, slug, chapters.length, readyKey]);
 
   // Simpan ke history setiap halaman berganti.
   useEffect(() => {
@@ -172,6 +173,29 @@ export default function ReadComic() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, chNum, total, loading, detail]);
+
+  // Efek "masuk chapter": chapter baru langsung tampil halaman 1, tapi dengan
+  // satu geser cepat (manga ke kiri, manhwa ke atas) supaya terasa Alive.
+  useEffect(() => {
+    if (loading || total === 0) return;
+    const panel = panelRef.current;
+    const stripEl = stripRef.current;
+    if (strip) {
+      if (!stripEl) return;
+      stripEl.scrollTop = stripEl.clientHeight * 1.2;
+      const t = window.setTimeout(() => {
+        stripEl.scrollTo({ top: 0, behavior: "smooth" });
+      }, 90);
+      return () => window.clearTimeout(t);
+    }
+    if (!panel) return;
+    panel.scrollLeft = panel.clientWidth * 1.2;
+    const t = window.setTimeout(() => {
+      panel.scrollTo({ left: 0, behavior: "smooth" });
+    }, 90);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readyKey, strip]);
 
   // Ganti halaman: selalu scroll kontainer yang benar (panel atau strip).
   const goto = useCallback(

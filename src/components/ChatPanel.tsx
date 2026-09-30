@@ -91,11 +91,11 @@ function GivePremiumDialog({
   const msgOk = msgLen === 0 || msgLen >= 50;
 
   const submit = async () => {
-    // Dialog ditutup duluan supaya tidak terasa lama menunggu server; kalau
-    // ternyata gagal, pesannya dikembalikan ke user lewat toast.
+    // Dialog ditutup duluan supaya cepat, tapi status baru success setelah
+    // server benar-benar menerima (kalau gagal, user jadi tahu).
     onOpenChange(false);
     setMessage("");
-    toast.success("Premium terkirim!");
+    const t = toast.loading("Mengirim premium…");
     try {
       await give({
         kind,
@@ -105,8 +105,11 @@ function GivePremiumDialog({
         receivers,
         message: message.trim() || undefined,
       });
+      toast.success("Premium terkirim!");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal kirim premium");
+    } finally {
+      toast.dismiss(t);
     }
   };
 
@@ -827,21 +830,24 @@ function ClaimButton({
   meId: string;
 }) {
   const claim = useMutation(api.chat.claimGive);
-  const claimed = give.claimedBy.some((c) => c === (meId as unknown));
+  // Optimistik: begitu diklik, tulisannya langsung berubah tanpa menunggu server.
+  const [mine, setMine] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const claimed = mine || give.claimedBy.some((c) => c === (meId as unknown));
   const full = give.claimedBy.length >= give.slots;
   const taken = Math.min(give.claimedBy.length, give.slots);
   return (
     <div className="mt-2">
       {/* Berapa slot yang sudah terpakai — jadi jelas berapa yang tersisa. */}
       <p className="text-[10px] text-muted-foreground">
-        {taken}/{give.slots} orang sudah claim
+        {mine ? taken + 1 : taken}/{give.slots} orang sudah claim
         {!full && ` · sisa ${give.slots - taken}`}
       </p>
       <Button
         size="sm"
-        disabled={claimed || full}
+        disabled={claimed || full || busy}
         className={cn(
-          "mt-1 w-full",
+          "mt-1 w-full shrink-0 whitespace-nowrap px-2 text-[11px]",
           claimed
             ? "bg-emerald-600 text-white hover:bg-emerald-600"
             : full
@@ -849,16 +855,22 @@ function ClaimButton({
               : "bg-violet-600 text-white hover:bg-violet-500",
         )}
         onClick={async () => {
+          // Tutan: klik sekali langsung berubah jadi "Kamu sudah claim".
+          setBusy(true);
+          setMine(true);
           try {
             await claim({ giveId: give._id });
             toast.success(`Berhasil claim ${give.days} hari premium`);
           } catch (e) {
+            setMine(false);
             toast.error(e instanceof Error ? e.message : "Gagal claim");
+          } finally {
+            setBusy(false);
           }
         }}
       >
         {claimed
-          ? "Sudah kamu claim"
+          ? "Kamu sudah claim"
           : full
             ? "Slot habis"
             : `Claim ${give.days} hari`}

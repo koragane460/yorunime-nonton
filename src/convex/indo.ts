@@ -411,6 +411,9 @@ const INDO_HOSTS = [
   "https://animeindo.me",
   "https://animeindo.tv",
   "https://animeindo.id",
+  "https://animeindo.fun",
+  "https://animeindo.site",
+  "https://animeindo.top",
 ];
 
 const INDO_HEADERS = {
@@ -432,8 +435,15 @@ async function indoHtml(
       const body = await res.text();
       // Halaman tolak/404 di beberapa mirror tetap 200 tapi isinya pendek atau
       // halaman Fawdah — dua-duanya jangan dipakai.
-      if (body.length < 20000) continue;
+      if (body.length < 8000) continue;
       if (/HematQQ|BandarQQ|Situs BandarQQ/i.test(body)) continue;
+      // Cloudflare / proteksi bot: jangan dipakai, coba mirror berikutnya.
+      if (
+        /Just a moment|cf-chl|Enable JavaScript and cookies to continue|Attention Required/i.test(
+          body,
+        )
+      )
+        continue;
       return { host, body };
     } catch {
       continue;
@@ -461,6 +471,23 @@ function pickStreamFromHtml(
       url: fileField.replace(/\\\//g, "/").replace(/&amp;/g, "&"),
       type: "mp4",
     };
+  }
+  return null;
+}
+
+/** Cari iframe player di halaman episode (lebih baik daripada embed halaman penuh). */
+function pickPlayerIframe(body: string, origin: string): string | null {
+  const frames = Array.from(
+    body.matchAll(/<iframe[^>]+src\s*=\s*["']([^"']+)["']/gi),
+  ).map((m) => m[1]!);
+  for (const raw of frames) {
+    const url = raw.trim();
+    if (!url || url.startsWith("javascript:")) continue;
+    if (/disqus|facebook|twitter|ads|doubleclick/i.test(url)) continue;
+    const abs = url.startsWith("http")
+      ? url
+      : new URL(url, `${origin}/`).toString();
+    return abs;
   }
   return null;
 }
@@ -526,8 +553,16 @@ async function animeindo(title: string, ep: number): Promise<IndoSource[]> {
         },
       ];
     }
-    // Tidak ada file yang bisa diambil: halaman episode-nya diputar di iframe.
-    return [{ label: "AnimeIndo \u00b7 Sub Indo", url: target.url, type: "embed" }];
+    // Tidak ada file yang bisa diambil: pakai iframe player-nya kalau ada,
+    // kalau tidak baru halaman episode-nya sendiri sebagai embed.
+    const iframe = pickPlayerIframe(epBody, new URL(target.url).origin);
+    return [
+      {
+        label: "AnimeIndo \u00b7 Sub Indo",
+        url: iframe ?? target.url,
+        type: "embed",
+      },
+    ];
   }
   return [];
 }

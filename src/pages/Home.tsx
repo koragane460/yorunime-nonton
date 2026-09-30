@@ -61,6 +61,11 @@ class QueryBoundary extends Component<
 }
 
 export default function Home() {
+  // Setiap kali Home dibuka (termasuk setelah keluar dari halaman lain),
+  // posisi scroll selalu kembali ke paling atas.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
   return (
     <AppLayout>
       <HomeContent />
@@ -1311,6 +1316,7 @@ function DMScreen({
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
         <ChatPanel
+          key={peer.id}
           kind="dm"
           peerId={peer.id}
           messages={msgs}

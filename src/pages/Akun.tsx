@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { RequestButtons } from "@/components/RequestButtons";
 import { StaffPanel } from "@/components/StaffPanel";
+import { BlurBanner } from "@/components/BlurBanner";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Avatar,
@@ -86,21 +87,8 @@ function AkunContent() {
     <div className="relative -mx-4">
       {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
       <div className="relative">
-        <div
-          className={cn(
-            "h-48 w-full bg-cover bg-center",
-            !user.bannerUrl && "yn-banner",
-          )}
-          style={
-            user.bannerUrl
-              ? { backgroundImage: `url(${user.bannerUrl})` }
-              : undefined
-          }
-        >
-          {user.bannerUrl && (
-            <div className="yn-banner-veil" />
-          )}
-        </div>
+        {/* Banner: foto profil/banner di-blur, kalau tidak ada tetap gelap */}
+        <BlurBanner src={user.bannerUrl ?? user.image} className="h-48 w-full" />
         {/* Echo blur lembut tepat di bawah banner */}
         <div
           aria-hidden
@@ -111,7 +99,9 @@ function AkunContent() {
           style={
             user.bannerUrl
               ? { backgroundImage: `url(${user.bannerUrl})` }
-              : undefined
+              : user.image
+                ? { backgroundImage: `url(${user.image})` }
+                : undefined
           }
         />
         {/* Gradasi biar banner menyatu ke konten di bawahnya */}

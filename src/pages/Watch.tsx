@@ -175,7 +175,17 @@ function WatchContent() {
     });
   }, [roomId, room, joinedRoom, joinRoom]);
 
-  // Room diakhiri host → keluar otomatis.
+  // Kembali dari nonton: JANGAN kembali ke episode sebelumnya (makanya tidak
+  // pakai navigate(-1)); langsung ke beranda dari atas.
+  const goBackFromWatch = () => {
+    try {
+      window.scrollTo({ top: 0 });
+    } catch {
+      /* abaikan */
+    }
+    navigate("/home");
+  };
+
   useEffect(() => {
     if (roomInfo?.ended) {
       toast.info("Host mengakhiri sesi nonton bareng");
@@ -264,7 +274,24 @@ function WatchContent() {
 
   // ------------------------------------- gesture brightness & volume ----
   // Seret ke atas di tengah-kiri = pencahayaan, seret ke atas di kanan = suara.
+  // Netral (50%) = tampilan & suara normal. Tarik penuh ke atas = maksimal
+  // (paling terang / paling keras), bukan sekadar "100% = biasa".
+  const BRIGHT_MIN = 0.25;
+  const BRIGHT_MAX = 2.6;
+  const VOL_MAX = 2; // 2x suara lewat Web Audio (volume HTML mentok di 1)
+  const brightnessToLevel = (b: number) =>
+    (b - BRIGHT_MIN) / (BRIGHT_MAX - BRIGHT_MIN);
+  const levelToBrightness = (l: number) =>
+    BRIGHT_MIN + l * (BRIGHT_MAX - BRIGHT_MIN);
+  /** 1 = volume normal, >1 = lebih keras dari maksimal bawaan. */
+  const gainRef = useRef<number>(1);
+  const audioRef = useRef<{
+    ctx: AudioContext;
+    gain: GainNode;
+  } | null>(null);
+
   const [brightness, setBrightness] = useState(1);
+  const [volumeLevel, setVolumeLevel] = useState(0.5);
   const [gesture, setGesture] = useState<null | {
     kind: "brightness" | "volume";
     value: number;
@@ -285,6 +312,53 @@ function WatchContent() {
       gestureHideTimer.current = window.setTimeout(() => setGesture(null), 650);
     } else {
       setGesture(null);
+    }
+  };
+
+  /**
+   * Volume di atas 100% butuh Web Audio (volume elemen video mentok di 1).
+   * Kalau browser tidak bisa (atau media-nya cross-origin tanpa CORS),
+   * otomatis jatuh ke volume biasa.
+   */
+  const applyVolume = (level: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const l = Math.max(0, Math.min(1, level));
+    setVolumeLevel(l);
+    if (l === 0) {
+      v.muted = true;
+    } else {
+      v.muted = false;
+    }
+    const gainValue = l * VOL_MAX;
+    gainRef.current = gainValue;
+    if (!audioRef.current && l > 0.5) {
+      try {
+        const Ctor =
+          window.AudioContext ??
+          (window as any).webkitAudioContext;
+        if (Ctor && !v.crossOrigin?.includes("anonymous")) {
+          const ctx: AudioContext = new Ctor();
+          const src = ctx.createMediaElementSource(v);
+          const gain = ctx.createGain();
+          gain.gain.value = gainValue;
+          src.connect(gain);
+          gain.connect(ctx.destination);
+          void ctx.resume?.();
+          audioRef.current = { ctx, gain };
+          v.volume = 1;
+          return;
+        }
+      } catch {
+        audioRef.current = null;
+      }
+    }
+    if (audioRef.current) {
+      audioRef.current.gain.gain.value = gainValue;
+      v.volume = 1;
+    } else {
+      // Fallback: volume elemen video hanya sampai 1.
+      v.volume = Math.min(1, gainValue);
     }
   };
 
@@ -718,19 +792,37 @@ function WatchContent() {
     return () => clearTimeout(t);
   }, [playing, controlsOn]);
 
+  // Fullscreen: begitu user masuk, tetap fullscreen walau browser/HP keluar
+  // sendiri (mis. saat_orientation berubah atau tombol sistem ditekan).
+  const wantFs = useRef(false);
   useEffect(() => {
     const onFsChange = () => {
       const fs = document.fullscreenElement === playerRef.current;
       setIsFs(fs);
       setControlsOn(true);
-      // Kembalikan orientasi ke portrait saat keluar fullscreen.
-      if (!fs) {
+      if (fs) {
+        wantFs.current = true;
+        return;
+      }
+      if (!wantFs.current) return;
+      // KeBeen keluar dari fullscreen padahal user masih menonton → masuk lagi.
+      wantFs.current = false;
+      const el = playerRef.current;
+      if (!el) return;
+      window.setTimeout(() => {
+        if (document.fullscreenElement === playerRef.current) return;
+        const req = el.requestFullscreen ?? (el as any).webkitRequestFullscreen;
         try {
-          (screen.orientation as any)?.lock?.("portrait");
+          const p = req?.call(el);
+          if (p && typeof (p as Promise<void>).catch === "function") {
+            (p as Promise<void>).catch(() => {
+              /* user sudah keluar sendiri, biarkan */
+            });
+          }
         } catch {
           /* abaikan */
         }
-      }
+      }, 120);
     };
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
@@ -739,14 +831,17 @@ function WatchContent() {
   const toggleFullscreen = async () => {
     const el = playerRef.current;
     if (!el) return;
+    const req = el.requestFullscreen ?? (el as any).webkitRequestFullscreen;
     try {
       if (document.fullscreenElement) {
+        // Tetap fullscreen: tombol dipake untuk memastikan player fullscreen,
+        // bukan untuk memunculkan navbar.
+        wantFs.current = true;
         await document.exitFullscreen();
         return;
       }
-      if (el.requestFullscreen) await el.requestFullscreen();
-      else if ((el as any).webkitRequestFullscreen)
-        await (el as any).webkitRequestFullscreen();
+      wantFs.current = true;
+      if (req) await req.call(el);
       try {
         await (screen.orientation as any)?.lock?.("landscape");
       } catch {
@@ -754,6 +849,21 @@ function WatchContent() {
       }
     } catch {
       toast.error("Fullscreen tidak didukung di browser ini");
+    }
+  };
+
+  /** Keluar fullscreen dengan sengaja (tombol "keluar layar penuh"). */
+  const exitFullscreen = async () => {
+    wantFs.current = false;
+    try {
+      await document.exitFullscreen();
+      try {
+        await (screen.orientation as any)?.lock?.("portrait");
+      } catch {
+        /* abaikan */
+      }
+    } catch {
+      /* abaikan */
     }
   };
 
@@ -862,7 +972,7 @@ function WatchContent() {
       {/* Tombol kembali — selalu terlihat di kiri atas */}
       {!isFs && (
         <button
-          onClick={() => (history.length > 1 ? navigate(-1) : navigate("/home"))}
+          onClick={() => goBackFromWatch()}
           className="fixed left-3 top-3 z-40 rounded-full bg-black/55 p-2 backdrop-blur"
           aria-label="Kembali"
         >
@@ -1039,14 +1149,13 @@ function WatchContent() {
           <div
             className="absolute inset-0 z-10 touch-none"
             onPointerDown={(e) => {
-              const v = videoRef.current;
               const rect = e.currentTarget.getBoundingClientRect();
               const leftHalf = e.clientX - rect.left < rect.width / 2;
               const kind = leftHalf ? "brightness" : "volume";
               const startValue =
                 kind === "brightness"
-                  ? brightness
-                  : ((v?.volume ?? 1) as number);
+                  ? brightnessToLevel(brightness)
+                  : volumeLevel;
               gestureRef.current = {
                 kind,
                 startY: e.clientY,
@@ -1057,19 +1166,17 @@ function WatchContent() {
             }}
             onPointerMove={(e) => {
               const g = gestureRef.current;
-              const v = videoRef.current;
-              if (!g || !v) return;
+              if (!g) return;
               const dy = g.startY - e.clientY;
               if (!g.moved && Math.abs(dy) < 10) return;
               g.moved = true;
-              // 220px drag = 100% perubahan.
+              // 220px drag = 100% perubahan (0 = paling gelap/senyap, 1 = paling terang/keras).
               const delta = dy / 220;
               const next = Math.max(0, Math.min(1, g.startValue + delta));
               if (g.kind === "brightness") {
-                setBrightness(Math.round(next * 100) / 100);
+                setBrightness(Math.round(levelToBrightness(next) * 100) / 100);
               } else {
-                v.volume = next;
-                v.muted = next === 0;
+                applyVolume(next);
               }
               setGesture({ kind: g.kind, value: next });
             }}
@@ -1114,7 +1221,7 @@ function WatchContent() {
         {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
         {isFs && (
           <button
-            onClick={toggleFullscreen}
+            onClick={exitFullscreen}
             className="absolute right-3 top-3 z-30 rounded-full bg-black/55 p-2"
             aria-label="Keluar layar penuh"
           >
@@ -1138,7 +1245,7 @@ function WatchContent() {
               isFs ? "px-2 py-1" : "p-3",
             )}
           >
-            <button onClick={() => navigate("/")} className="rounded-full bg-black/50 p-2">
+            <button onClick={goBackFromWatch} className="rounded-full bg-black/50 p-2">
               <ChevronLeft className="size-4 text-white" />
             </button>
             <p className="line-clamp-1 text-sm text-white">

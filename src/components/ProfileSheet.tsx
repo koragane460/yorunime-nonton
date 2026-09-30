@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge } from "@/components/lstream-ui";
+import { BlurBanner } from "@/components/BlurBanner";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   ChevronLeft,
@@ -74,21 +75,11 @@ export function ProfileSheet({
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div className="relative">
-              <div
-                className={cn(
-                  "h-44 w-full bg-cover bg-center",
-                  !profile.bannerUrl && "yn-banner",
-                )}
-                style={
-                  profile.bannerUrl
-                    ? { backgroundImage: `url(${profile.bannerUrl})` }
-                    : undefined
-                }
-              >
-                {profile.bannerUrl && (
-                  <div className="yn-banner-veil" />
-                )}
-              </div>
+              {/* Banner: foto profil/banner di-blur (gaya foto), fallback gelap */}
+              <BlurBanner
+                src={profile.bannerUrl ?? profile.image}
+                className="h-44 w-full"
+              />
               {/* Echo blur lembut tepat di bawah banner */}
               <div
                 aria-hidden
