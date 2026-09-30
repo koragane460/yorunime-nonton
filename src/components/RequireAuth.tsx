@@ -1,38 +1,29 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Lock } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
+import logo from "@/assets/logo.svg";
 
 /**
- * Wraps a route that requires a signed-in user.
+ * Membungkus route yang butuh user yang sudah masuk.
  *
- * Signed-out visitors used to be bounced straight to `/auth`, which left them
- * on a bare sign-in form with no idea which page they had asked for or why they
- * were moved. The block is now stated on the page they landed on, and sign-in
- * still returns them to it via `returnTo`. Pass `redirectImmediately` for a
- * route where the bounce really is the better experience.
+ * Pengunjung yang belum masuk tidak lagi dilempar diam-diam ke halaman login
+ * yang generik. Layar blok sekarang memakai identitas YoruNime (bukan
+ * "freebuff"), lalu setelah berhasil masuk they'll dikembalikan ke halaman
+ * yang tadi mereka buka lewat `returnTo`.
  */
 export function RequireAuth({
   children,
-  title = "Sign in to continue",
-  description = "This page is only available to signed-in users.",
+  title = "Kamu belum masuk",
+  description = "Halaman ini khusus buat anggota YoruNime yang sudah masuk.",
   redirectImmediately = false,
 }: {
   children: ReactNode;
-  /** Headline on the blocked screen. */
+  /** Judul di layar blokir. */
   title?: string;
-  /** Says what the visitor gets by signing in. */
+  /** Penjelasan singkat kenapa halaman ini butuh login. */
   description?: string;
-  /** Skip the explanation and go straight to `/auth`. */
+  /** Langsung ke `/auth` tanpa menampilkan layar blokir. */
   redirectImmediately?: boolean;
 }) {
   const { isLoading, isAuthenticated } = useAuth();
@@ -56,33 +47,57 @@ export function RequireAuth({
     }
 
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-                <Lock className="size-5 text-muted-foreground" />
-              </div>
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-5">
+        {/* Cahaya latar: ungu sangat redup di atas, hitam pekat di bawah. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden
+          style={{
+            background:
+              "radial-gradient(760px 420px at 50% -10%, oklch(0.42 0.18 295 / 0.35), transparent 70%), linear-gradient(180deg, oklch(0.16 0.03 285), oklch(0.12 0.02 280) 60%, oklch(0.1 0.015 280))",
+          }}
+        />
+        <section className="pop-enter relative w-full max-w-sm">
+          <div className="rounded-3xl border border-white/10 bg-black/45 p-6 shadow-2xl backdrop-blur-xl">
+            <div className="flex flex-col items-center text-center">
+              <span className="flex size-14 items-center justify-center rounded-2xl border border-white/12 bg-white/5">
+                <img src={logo} alt="" className="size-7" />
+              </span>
+
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.28em] text-violet-300/80">
+                YoruNime
+              </p>
+              <h1 className="mt-1.5 text-lg font-bold leading-tight">{title}</h1>
+              <p className="mt-1.5 max-w-[17rem] text-[12px] leading-relaxed text-muted-foreground">
+                {description}
+              </p>
+
+              <p className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Sparkles className="size-3.5 text-amber-300" />
+                Setelah masuk, kamu balik lagi ke halaman ini.
+              </p>
+
+              <button
+                onClick={() => navigate(signInHref)}
+                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-violet-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500"
+              >
+                Masuk ke YoruNime
+                <ArrowRight className="size-4" />
+              </button>
+
+              <button
+                onClick={() => navigate("/")}
+                className="mt-2 w-full rounded-2xl py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
+              >
+                Balik ke beranda
+              </button>
             </div>
-            <CardTitle className="text-xl">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center text-sm text-muted-foreground">
-            You'll come straight back to this page once you're signed in.
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button className="w-full" onClick={() => navigate(signInHref)}>
-              Sign in
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => navigate("/")}
-            >
-              Back to home
-            </Button>
-          </CardFooter>
-        </Card>
+          </div>
+
+          <p className="mt-4 text-center text-[10px] text-muted-foreground/70">
+            streaming anime, manhwa & manga subtitle Indonesia
+          </p>
+        </section>
       </main>
     );
   }

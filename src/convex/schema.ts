@@ -38,6 +38,8 @@ const schema = defineSchema(
       unlimitedSacret: v.optional(v.boolean()),
       unlimitedPremium: v.optional(v.boolean()),
       bannerUrl: v.optional(v.string()),
+      /** Izin akses konten 18+ (diberikan developer lewat panel). */
+      adultAccess: v.optional(v.boolean()),
       hideOnline: v.optional(v.boolean()),
       autoRejectFriend: v.optional(v.boolean()),
       autoRejectFriendAction: v.optional(v.string()),

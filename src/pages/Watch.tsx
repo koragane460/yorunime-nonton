@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import Hls from "hls.js";
@@ -24,6 +24,8 @@ import {
   Settings2,
   SkipBack,
   SkipForward,
+  Sun,
+  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -31,30 +33,73 @@ import { NobarDock } from "@/components/NobarDock";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const QUALITIES = ["144p", "240p", "360p", "480p", "720p", "1080p"];
+/** 1080p hanya untuk akun premium. */
+const PREMIUM_QUALITY = "1080p";
+/** Penjelasan singkat tiap kualitas — ditampilkan di bawah pilihannya. */
+const QUALITY_INFO: Record<string, string> = {
+  "144p": "Paling ringan, paling hemat kuota data.",
+  "240p": "Ringan, cocok buat HP lama atau jaringan lambat.",
+  "360p": "HD ringan. Sudah cukup jelas di layar HP.",
+  "480p": "HD sedang. Bagus buat HP kelas menengah dan Wi-Fi biasa.",
+  "720p": "Full HD. Paling stabil, recommended buat semua.",
+  "1080p": "Full HD+. Detail paling tajam, khusus Premium.",
+};
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // Label track subtitle yang dibuat otomatis (diterjemahkan ke Indonesia).
 const AUTO_SUB = "Indonesia (otomatis)";
 
 type Cue = { s: number; e: number; t: string };
 
-/** Pilih level HLS yang paling dekat dengan kualitas yang diminta (mis. 720p). */
+/** Tinggi (piksel) sebuah level HLS. Beberapa server tidak mengisi `height`,
+ *  jadi dibaca juga dari nama level / URL (mis. "720p" atau "/720/index.m3u8"). */
+function levelHeight(level: { height?: number; name?: string; url?: string[] }): number {
+  if (level.height && level.height > 0) return level.height;
+  const hay = `${level.name ?? ""} ${(level.url ?? []).join(" ")}`;
+  const m = hay.match(/(\d{3,4})p\b/) ?? hay.match(/\/(\d{3,4})\//);
+  return m ? Number(m[1]) : 0;
+}
+
+/** Daftar resolusi yang benar-benar tersedia di stream HLS ini. */
+function availableQualities(hls: Hls | null): number[] {
+  if (!hls) return [];
+  return (hls.levels ?? [])
+    .map((l) => levelHeight(l as never))
+    .filter((h) => h > 0)
+    .sort((a, b) => a - b);
+}
+
+/**
+ * Pilih level HLS yang benar-benar berpindah. Mengambil level tertinggi yang
+ * TIDAK lebih besar dari target (kalau tidak ada, ambil yang terdekat), lalu
+ * mengunci `currentLevel` supaya hls.js tidak mengabaikannya.
+ */
 function applyLevel(hls: Hls | null, quality: string) {
   if (!hls) return;
   const target = parseInt(quality, 10);
   if (!Number.isFinite(target)) return;
   const levels = hls.levels ?? [];
-  if (levels.length === 0) return;
-  // Level yang tidak lebih tinggi dari target, atau yang paling dekat.
-  let best = 0;
-  let bestDiff = Infinity;
-  levels.forEach((l, i) => {
-    const diff = Math.abs((l.height || 0) - target);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      best = i;
-    }
+  if (levels.length <= 1) return;
+  const heights = levels.map((l) => levelHeight(l as never));
+  let best = -1;
+  // 1) level tertinggi yang masih <= target
+  heights.forEach((h, i) => {
+    if (h > 0 && h <= target && (best === -1 || h > heights[best]!)) best = i;
   });
+  // 2) kalau tidak ada, ambil yang paling dekat
+  if (best === -1) {
+    let bestDiff = Infinity;
+    heights.forEach((h, i) => {
+      if (h <= 0) return;
+      const d = Math.abs(h - target);
+      if (d < bestDiff) {
+        bestDiff = d;
+        best = i;
+      }
+    });
+  }
+  if (best === -1) return;
   hls.currentLevel = best;
+  // autoLevelCapSize tidak dipakai; currentLevel yang mengunci pilihan user.
 }
 
 /** Ubah timestamp WebVTT (00:01:02.500 / 01:02.500) menjadi detik. */
@@ -209,8 +254,45 @@ function WatchContent() {
   const speedNoticeTimer = useRef<number | null>(null);
   const speedReadyRef = useRef(false);
 
+  // ------------------------------------------------------- kualitas ----
+  // Resolusi yang benar-benar ada di stream HLS yang sedang diputar, supaya
+  // pilihan 144p/480p/1080p benar-benar menghasilkan gambar yang berbeda.
+  const [levels, setLevels] = useState<number[]>([]);
+  const isPremium = (user?.premiumUntil ?? 0) > Date.now();
+  // Tampilkan info "1080p khusus Premium" ketika user menekan 1080p.
+  const [premiumTapHint, setPremiumTapHint] = useState(false);
+
+  // ------------------------------------- gesture brightness & volume ----
+  // Seret ke atas di tengah-kiri = pencahayaan, seret ke atas di kanan = suara.
+  const [brightness, setBrightness] = useState(1);
+  const [gesture, setGesture] = useState<null | {
+    kind: "brightness" | "volume";
+    value: number;
+  }>(null);
+  const gestureRef = useRef<{
+    kind: "brightness" | "volume";
+    startY: number;
+    startValue: number;
+    moved: boolean;
+  } | null>(null);
+  const gestureHideTimer = useRef<number | null>(null);
+
+  const endGesture = (wasDrag: boolean) => {
+    gestureRef.current = null;
+    if (gestureHideTimer.current) window.clearTimeout(gestureHideTimer.current);
+    if (wasDrag) {
+      // HUD tetap sebentar supaya user tahu hasilnya, lalu menghilang.
+      gestureHideTimer.current = window.setTimeout(() => setGesture(null), 650);
+    } else {
+      setGesture(null);
+    }
+  };
+
   // True kalau subtitle yang aktif versi Bahasa Indonesia.
   const [subTouched, setSubTouched] = useState(false);
+
+  // Komentar dengan echo lokal: pesan langsung tampil sebelum server menyalinnya.
+  const [pendingComments, setPendingComments] = useState<CommentT[]>([]);
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
@@ -508,12 +590,21 @@ function WatchContent() {
   }, [sourceType, streamUrl]);
 
   // Ganti kualitas saat nonton → langsung terapkan ke level HLS yang aktif.
-  // Di landscape (fullscreen) video otomatis dinaikkan ke HD tertinggi supaya
-  // layar besar tidak membuat gambar terlihat buram.
+  // Di layar penuh (fullscreen) otomatis dinaikkan ke resolusi tertinggi yang
+  // boleh diakses — 1080p hanya kalau akun punya Premium.
+  const isPremiumNow = (user?.premiumUntil ?? 0) > Date.now();
   useEffect(() => {
     if (!hlsRef.current) return;
-    applyLevel(hlsRef.current, isFs ? "1080p" : quality);
-  }, [quality, isFs]);
+    const wanted =
+      isFs && isPremiumNow
+        ? PREMIUM_QUALITY
+        : isFs
+          ? "720p"
+          : quality === PREMIUM_QUALITY && !isPremiumNow
+            ? "720p"
+            : quality;
+    applyLevel(hlsRef.current, wanted);
+  }, [quality, isFs, isPremiumNow]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -726,6 +817,32 @@ function WatchContent() {
   );
   const postComment = useMutation(api.activities.postComment);
 
+  // Resolusi yang benar-benar tersedia di stream HLS yang sedang diputar.
+  useEffect(() => {
+    const hls = hlsRef.current;
+    setLevels(hls ? availableQualities(hls) : []);
+  }, [sources, sourceType, sourceIdx, streamUrl]);
+
+  // Komentar + echo lokal digabung di satu daftar.
+  const shownComments = useMemo(() => {
+    const real = (episodeComments ?? []) as unknown as CommentT[];
+    if (pendingComments.length === 0) return real;
+    const keep = pendingComments.filter(
+      (p) =>
+        !real.some(
+          (r) =>
+            r.userId === p.userId &&
+            r.text === p.text &&
+            (r.replyToId ?? undefined) === (p.replyToId ?? undefined) &&
+            r.createdAt >= p.createdAt - 8000,
+        ),
+    );
+    if (keep.length !== pendingComments.length) {
+      queueMicrotask(() => setPendingComments(keep));
+    }
+    return [...real, ...keep].sort((a, b) => a.createdAt - b.createdAt);
+  }, [episodeComments, pendingComments]);
+
   if (!detailData)
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
@@ -741,7 +858,7 @@ function WatchContent() {
   );
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className={cn("min-h-screen", room ? "pb-4" : "pb-24")}>
       {/* Tombol kembali — selalu terlihat di kiri atas */}
       {!isFs && (
         <button
@@ -819,7 +936,10 @@ function WatchContent() {
             ref={videoRef}
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
-            className="h-full w-full object-contain"
+            className="h-full w-full object-contain transition-[filter] duration-150"
+            style={
+              brightness === 1 ? undefined : { filter: `brightness(${brightness})` }
+            }
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -913,12 +1033,82 @@ function WatchContent() {
           </div>
         )}
 
-        {/* Lapisan tap: sentuh video → kontrol tampil / sembunyi */}
+        {/* Lapisan tap + gesture: sentuh singkat → kontrol tampil/sembunyi.
+            Seret ke atas di kiri = pencahayaan, di kanan = volume suara. */}
         {sourceType !== "embed" && (isHost || !room) && (
           <div
-            className="absolute inset-0 z-10"
-            onPointerUp={tapVideo}
+            className="absolute inset-0 z-10 touch-none"
+            onPointerDown={(e) => {
+              const v = videoRef.current;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const leftHalf = e.clientX - rect.left < rect.width / 2;
+              const kind = leftHalf ? "brightness" : "volume";
+              const startValue =
+                kind === "brightness"
+                  ? brightness
+                  : ((v?.volume ?? 1) as number);
+              gestureRef.current = {
+                kind,
+                startY: e.clientY,
+                startValue,
+                moved: false,
+              };
+              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              const g = gestureRef.current;
+              const v = videoRef.current;
+              if (!g || !v) return;
+              const dy = g.startY - e.clientY;
+              if (!g.moved && Math.abs(dy) < 10) return;
+              g.moved = true;
+              // 220px drag = 100% perubahan.
+              const delta = dy / 220;
+              const next = Math.max(0, Math.min(1, g.startValue + delta));
+              if (g.kind === "brightness") {
+                setBrightness(Math.round(next * 100) / 100);
+              } else {
+                v.volume = next;
+                v.muted = next === 0;
+              }
+              setGesture({ kind: g.kind, value: next });
+            }}
+            onPointerUp={(e) => {
+              const g = gestureRef.current;
+              (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+              if (g && !g.moved) tapVideo();
+              endGesture(!!g?.moved);
+            }}
+            onPointerCancel={() => endGesture(false)}
           />
+        )}
+
+        {/* HUD gesture: bilah terang di kiri, bilah suara di kanan */}
+        {gesture && (
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+            <div
+              className={cn(
+                "flex h-40 w-14 flex-col items-center justify-center gap-2 rounded-2xl border border-white/15 bg-black/55 backdrop-blur-md",
+                gesture.kind === "brightness" ? "left-6" : "right-6",
+                "absolute",
+              )}
+            >
+              {gesture.kind === "brightness" ? (
+                <Sun className="size-5 text-amber-200" />
+              ) : (
+                <Volume2 className="size-5 text-emerald-200" />
+              )}
+              <div className="relative h-24 w-1.5 overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="absolute inset-x-0 bottom-0 rounded-full bg-gradient-to-t from-violet-500 to-fuchsia-400 transition-[height] duration-75"
+                  style={{ height: `${Math.round(gesture.value * 100)}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-bold text-white">
+                {Math.round(gesture.value * 100)}%
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
@@ -1378,18 +1568,44 @@ function WatchContent() {
             <SectionTitle>Diskusi Episode</SectionTitle>
             <CommentsSection
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
-              comments={episodeComments as unknown as CommentT[]}
+              comments={shownComments}
               meId={user?._id}
               onSend={async (text, replyToId) => {
                 if (!epParam || !user) {
                   toast.error("Pilih episode dulu");
                   return;
                 }
-                await postComment({
-                  animeId: `${animeId}__ep${epParam}`,
+                // Echo lokal: komentar langsung nempel tanpa nunggu server.
+                const temp: CommentT = {
+                  _id: `local-c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  userId: user._id as string,
+                  username: user.username ?? "user",
+                  image: user.image,
+                  premium: (user.premiumUntil ?? 0) > Date.now(),
+                  staffRole: user.staffRole,
+                  clanTag: user.clanTag,
+                  clanTagIcon: user.clanTagIcon,
+                  clanNameColor: user.clanNameColor,
                   text,
-                  replyToId: replyToId as never,
-                });
+                  likes: [],
+                  likeCount: 0,
+                  replyToId,
+                  createdAt: Date.now(),
+                };
+                setPendingComments((s) => [...s, temp]);
+                try {
+                  await postComment({
+                    animeId: `${animeId}__ep${epParam}`,
+                    text,
+                    replyToId: replyToId as never,
+                  });
+                } catch (e) {
+                  setPendingComments((s) => s.filter((x) => x._id !== temp._id));
+                  toast.error(
+                    e instanceof Error ? e.message : "Gagal kirim komentar",
+                  );
+                  throw e;
+                }
               }}
             />
           </>
@@ -1399,25 +1615,80 @@ function WatchContent() {
       {/* Popups diperbagus */}
       {qualityOpen && (
         <Popup onClose={cancelQuality} title="Pilih kualitas">
-          <div className="flex flex-wrap gap-2">
-            {QUALITIES.map((q) => (
-              <button
-                key={q}
-                onClick={() => setQualityDraft(q)}
-                className={cn(
-                  "rounded-lg border px-4 py-2 text-sm transition",
-                  (qualityDraft ?? quality) === q
-                    ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                    : "border-border hover:border-violet-500/50",
-                )}
-              >
-                {q}
-              </button>
-            ))}
+          <div className="space-y-1.5">
+            {QUALITIES.map((q) => {
+              const height = parseInt(q, 10);
+              const locked = q === PREMIUM_QUALITY && !isPremium;
+              // Kalau resolusi ini tidak ada di stream, tetap ditampilkan tapi
+              // ditandai supaya user tidak menyangka tombolnya tidak jalan.
+              const missing = levels.length > 0 && !levels.includes(height);
+              const active = (qualityDraft ?? quality) === q;
+              return (
+                <div key={q}>
+                  <button
+                    onClick={() => {
+                      if (locked) {
+                        setPremiumTapHint(true);
+                        window.setTimeout(() => setPremiumTapHint(false), 1800);
+                        return;
+                      }
+                      setQualityDraft(q);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
+                      locked
+                        ? "cursor-not-allowed border-amber-500/40 bg-amber-500/5"
+                        : active
+                          ? "border-violet-500 bg-violet-500/15"
+                          : "border-border hover:border-violet-500/50",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "w-14 text-sm font-bold",
+                        locked ? "text-amber-300" : active ? "text-violet-300" : "",
+                      )}
+                    >
+                      {q}
+                    </span>
+                    {q === PREMIUM_QUALITY && (
+                      <span className="rounded-full border border-amber-400/60 bg-amber-400/15 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                        Premium
+                      </span>
+                    )}
+                    {missing && !locked && (
+                      <span className="text-[9px] text-muted-foreground">
+                        tidak tersedia di episode ini
+                      </span>
+                    )}
+                    {active && !locked && (
+                      <span className="ml-auto text-[10px] font-bold text-violet-300">
+                        dipakai
+                      </span>
+                    )}
+                  </button>
+                  <p className="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
+                    {QUALITY_INFO[q]}
+                  </p>
+                </div>
+              );
+            })}
           </div>
+          {premiumTapHint && (
+            <p className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+              1080p khusus akun Premium. Buka Premium di menu Akun untuk
+              memakainya.
+            </p>
+          )}
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Kualitas ini juga berubah di Pengaturan.
+            Pilihan ini juga disimpan sebagai bawaan di Pengaturan.
           </p>
+          {levels.length > 0 && levels.length <= 1 && (
+            <p className="mt-1 text-[10px] text-amber-300/90">
+              Episode ini hanya menyediakan satu resolusi ({levels[0]}p), jadi
+              pilihan lain tidak bisa dipakai.
+            </p>
+          )}
           <div className="mt-3 flex gap-2">
             <button
               onClick={cancelQuality}
@@ -1427,7 +1698,11 @@ function WatchContent() {
             </button>
             <button
               onClick={saveQuality}
-              disabled={!qualityDraft || qualityDraft === quality}
+              disabled={
+                !qualityDraft ||
+                qualityDraft === quality ||
+                (qualityDraft === PREMIUM_QUALITY && !isPremium)
+              }
               className="flex-1 rounded-full bg-violet-600 py-2 text-xs font-bold text-white disabled:opacity-40"
             >
               Simpan

@@ -28,11 +28,14 @@ type Me = {
  * aslinya sampai dari query, jadi tidak pernah dobel.
  */
 export function useFastChat(
-  listArgs: Record<string, unknown>,
+  listArgs: Record<string, unknown> | "skip",
   sendArgs: Record<string, unknown>,
   me: Me,
 ) {
-  const raw = useQuery(api.chat.listMessages, listArgs as never);
+  const raw = useQuery(
+    api.chat.listMessages,
+    (listArgs === "skip" ? "skip" : listArgs) as never,
+  );
   const send = useMutation(api.chat.sendMessage);
   const [pending, setPending] = useState<ChatMsg[]>([]);
 

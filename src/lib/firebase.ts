@@ -59,26 +59,35 @@ function getFirebaseAuth() {
 }
 
 /** Login Google via Firebase.
- *  Di HP ini memunculkan pemilih akun Google milik device. */
+ *
+ *  Tidak ada UI pilih akun / permission buatan kita sendiri: semuanya pakai
+ *  popup bawaan Firebase. `prompt` sengaja DIKOSONGKAN supaya Google tidak
+ *  memaksa layar pemilihan akun setiap kali — kalau user sudah pernah login,
+ *  langsung masuk. Kalau user mau ganti akun, buka popup dari provider Google
+ *  di HP-nya.
+ *  Popup dipakai di semua perangkat supaya user tidak pernah leaving halaman
+ *  YoruNime. Hanya kalau popup ditolak browser (jarang, biasanya di in-app
+ *  browser dalam aplikasi yang sangat ketat) kita jatuh ke redirect.
+ */
 export async function signInWithGoogleFirebase(): Promise<User | null> {
   const auth = getFirebaseAuth();
   if (!auth) return null;
   const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: "select_account" });
-  const isMobile =
-    typeof window !== "undefined" &&
-    typeof navigator !== "undefined" &&
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  // prompt kosong = tidak memaksa pilih akun & tidak memaksa izin ulang.
+  provider.setCustomParameters({ prompt: "" });
+  provider.addScope("email");
+  provider.addScope("profile");
   try {
-    if (isMobile) {
-      // Di mobile popup diabaikan browser, jadi pakai redirect.
-      await signInWithRedirect(auth, provider);
-      return null;
-    }
     const cred = await signInWithPopup(auth, provider);
     return cred.user;
   } catch {
-    return null;
+    // Popup diblokir / gagal dibuka: pakai redirect sebagai cadangan.
+    try {
+      await signInWithRedirect(auth, provider);
+      return null;
+    } catch {
+      return null;
+    }
   }
 }
 

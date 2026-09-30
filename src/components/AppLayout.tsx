@@ -153,15 +153,10 @@ function AccountPanel({
             : undefined
         }
       >
-        {!bannerUrl && <div className="yn-banner yn-banner-blur absolute inset-0" />}
-        {/* Overlay gelap rata di SELURUH kartu (sebelumnya hanya area teks,
-            jadi bagian banner tanpa teks terlihat lebih terang). */}
-        {bannerUrl && (
-          <>
-            <div className="yn-banner yn-banner-blur absolute inset-0 opacity-60 mix-blend-screen" />
-            <div className="absolute inset-0 bg-black/45" />
-          </>
-        )}
+        {!bannerUrl && <div className="yn-banner absolute inset-0" />}
+        {/* Banner terpasang: hanya kaca gelap tipis di atasnya, jadi warnanya
+            tetap terlihat-through (bukan blur pekat). */}
+        {bannerUrl && <div className="yn-banner-veil" />}
         <div className="relative p-3">
           <div className="flex items-center gap-3">
             <div className="yn-avatar-ring shrink-0">
@@ -611,9 +606,6 @@ function BottomNav() {
                 >
                   {it.label}
                 </span>
-                {active && (
-                  <span className="absolute inset-x-7 top-0 h-0.5 rounded-full bg-violet-500" />
-                )}
               </button>
             );
           })}

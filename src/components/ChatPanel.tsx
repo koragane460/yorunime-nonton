@@ -90,6 +90,11 @@ function GivePremiumDialog({
   const msgOk = msgLen === 0 || msgLen >= 50;
 
   const submit = async () => {
+    // Dialog ditutup duluan supaya tidak terasa lama menunggu server; kalau
+    // ternyata gagal, pesannya dikembalikan ke user lewat toast.
+    onOpenChange(false);
+    setMessage("");
+    toast.success("Premium terkirim!");
     try {
       await give({
         kind,
@@ -99,11 +104,8 @@ function GivePremiumDialog({
         receivers,
         message: message.trim() || undefined,
       });
-      toast.success("Premium terkirim!");
-      onOpenChange(false);
-      setMessage("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : "Gagal kirim premium");
     }
   };
 
@@ -233,6 +235,47 @@ function analyzeImageLocal(file: File): { ok: boolean; reason?: string } {
   return { ok: true };
 }
 
+/**
+ * Perkecil foto sebelum dikirim. Base64 mentah dari HP bisaUkuran 5-10 MB
+ * sehingga ditolak server ("Server Error") tanpa pesan apa pun. Diperkecil ke
+ * max 1280px + JPEG 0.82 supaya selalu muat di dalam satu dokumen chat.
+ */
+async function compressImage(
+  file: File,
+  maxSide = 1280,
+  quality = 0.82,
+): Promise<string> {
+  const raw = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Gagal baca file"));
+    reader.readAsDataURL(file);
+  });
+  // Kalau file-nya kecil sekali, tidak perlu diolah.
+  if (raw.length < 400_000) return raw;
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Gambar tidak bisa dibaca"));
+      el.src = raw;
+    });
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return raw;
+    ctx.drawImage(img, 0, 0, w, h);
+    const out = canvas.toDataURL("image/jpeg", quality);
+    return out.length < raw.length ? out : raw;
+  } catch {
+    return raw;
+  }
+}
+
 function NsfwScanDialog({
   file,
   onDone,
@@ -257,9 +300,9 @@ function NsfwScanDialog({
         clearInterval(t);
         const verdict = analyzeImageLocal(file);
         if (verdict.ok) {
-          const reader = new FileReader();
-          reader.onload = () => onDone(String(reader.result));
-          reader.readAsDataURL(file);
+          void compressImage(file)
+            .then(onDone)
+            .catch(() => onCancel(false));
         } else {
           onCancel(false);
         }
@@ -682,7 +725,18 @@ export function ChatPanel({
           file={scanFile}
           onDone={(dataUrl) => {
             setScanFile(null);
-            void send({ imageUrl: dataUrl });
+            void (async () => {
+              try {
+                await send({ imageUrl: dataUrl });
+                toast.success("Foto terkirim");
+              } catch (e) {
+                toast.error(
+                  e instanceof Error
+                    ? `Foto gagal terkirim: ${e.message}`
+                    : "Foto gagal terkirim, coba foto yang lebih kecil",
+                );
+              }
+            })();
           }}
           onCancel={() => {
             setScanFile(null);
@@ -743,24 +797,41 @@ function ClaimButton({
   const claim = useMutation(api.chat.claimGive);
   const claimed = give.claimedBy.some((c) => c === (meId as unknown));
   const full = give.claimedBy.length >= give.slots;
+  const taken = Math.min(give.claimedBy.length, give.slots);
   return (
-    <Button
-      size="sm"
-      disabled={claimed || full}
-      className={cn(
-        "mt-2 w-full",
-        full && !claimed ? "bg-zinc-500 text-white" : "bg-violet-600 text-white hover:bg-violet-500",
-      )}
-      onClick={async () => {
-        try {
-          await claim({ giveId: give._id });
-        } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Gagal claim");
-        }
-      }}
-    >
-      {claimed ? "Sudah kamu claim" : full ? "Slot habis" : "Claim"}
-    </Button>
+    <div className="mt-2">
+      {/* Berapa slot yang sudah terpakai — jadi jelas berapa yang tersisa. */}
+      <p className="text-[10px] text-muted-foreground">
+        {taken}/{give.slots} orang sudah claim
+        {!full && ` · sisa ${give.slots - taken}`}
+      </p>
+      <Button
+        size="sm"
+        disabled={claimed || full}
+        className={cn(
+          "mt-1 w-full",
+          claimed
+            ? "bg-emerald-600 text-white hover:bg-emerald-600"
+            : full
+              ? "bg-zinc-500 text-white hover:bg-zinc-500"
+              : "bg-violet-600 text-white hover:bg-violet-500",
+        )}
+        onClick={async () => {
+          try {
+            await claim({ giveId: give._id });
+            toast.success(`Berhasil claim ${give.days} hari premium`);
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Gagal claim");
+          }
+        }}
+      >
+        {claimed
+          ? "Sudah kamu claim"
+          : full
+            ? "Slot habis"
+            : `Claim ${give.days} hari`}
+      </Button>
+    </div>
   );
 }
 

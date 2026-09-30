@@ -76,7 +76,7 @@ export function ProfileSheet({
             <div className="relative">
               <div
                 className={cn(
-                  "yn-banner-blur h-44 w-full bg-cover bg-center",
+                  "h-44 w-full bg-cover bg-center",
                   !profile.bannerUrl && "yn-banner",
                 )}
                 style={
@@ -86,10 +86,7 @@ export function ProfileSheet({
                 }
               >
                 {profile.bannerUrl && (
-                  <>
-                    <div className="yn-banner absolute inset-0 opacity-70 mix-blend-screen" />
-                    <div className="absolute inset-0 bg-black/25" />
-                  </>
+                  <div className="yn-banner-veil" />
                 )}
               </div>
               {/* Echo blur lembut tepat di bawah banner */}

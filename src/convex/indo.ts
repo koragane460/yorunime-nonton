@@ -396,9 +396,147 @@ async function oploverz(title: string, ep: number): Promise<IndoSource[]> {
   return [];
 }
 
+// =========================================================== AnimeIndo ====
+// AnimeIndo (animeindo.me / .tv / .id) adalah situs subtitle Indonesia dengan
+// katalog episode lengkap. Polanya:
+//   Search  : /?s=<judul>
+//   Detail  : /anime/<slug>/   (daftar episode: /<slug>-episode-N-subtitle-indonesia/)
+//   Episode : /<slug>-episode-N-subtitle-indonesia/
+// Situs ini berbasis WordPress tema "animestream": file video diambil lewat JS
+// tema atau admin-ajax, jadi pola filenya berbeda tiap versi. Parser di bawah
+// sengaja dibuat toleran (mencoba banyak pola). Kalau tidak ada file yang bisa
+// diambil, halaman episode-nya sendiri dikembalikan sebagai embed supaya tetap
+// bisa ditonton di dalam player.
+const INDO_HOSTS = [
+  "https://animeindo.me",
+  "https://animeindo.tv",
+  "https://animeindo.id",
+];
+
+const INDO_HEADERS = {
+  "User-Agent": UA,
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+};
+
+async function indoHtml(
+  path: string,
+): Promise<{ host: string; body: string } | null> {
+  for (const host of INDO_HOSTS) {
+    try {
+      const res = await fetch(`${host}${path}`, {
+        headers: INDO_HEADERS,
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (!res.ok) continue;
+      const body = await res.text();
+      // Halaman tolak/404 di beberapa mirror tetap 200 tapi isinya pendek atau
+      // halaman Fawdah — dua-duanya jangan dipakai.
+      if (body.length < 20000) continue;
+      if (/HematQQ|BandarQQ|Situs BandarQQ/i.test(body)) continue;
+      return { host, body };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/** Ambil URL video dari HTML episode (banyak sekali polanya di.fmex). */
+function pickStreamFromHtml(
+  body: string,
+): { url: string; type: "hls" | "mp4" } | null {
+  const m3u8 =
+    body.match(
+      /["'`]\s*(?:file|src|url)\s*["'`]\s*:\s*["'`](https?:[^"'`\s]+\.m3u8[^"'`\s]*)["'`]/i,
+    )?.[1] ??
+    body.match(/(https?:\\?\/\\?\/[^"'`\s<>]+?\.m3u8[^"'`\s<>]*)/i)?.[1];
+  if (m3u8) return { url: m3u8.replace(/\\\//g, "/"), type: "hls" };
+  const fileField =
+    body.match(/["'`]file["'`]\s*:\s*["'`]([^"'`]+)["'`]/i)?.[1] ??
+    body.match(/data-file\s*=\s*["']([^"']+)["']/i)?.[1] ??
+    body.match(/<source[^>]+src\s*=\s*["']([^"']+\.mp4[^"']*)["']/i)?.[1];
+  if (fileField && /\.mp4|mime=video/i.test(fileField)) {
+    return {
+      url: fileField.replace(/\\\//g, "/").replace(/&amp;/g, "&"),
+      type: "mp4",
+    };
+  }
+  return null;
+}
+
+async function animeindo(title: string, ep: number): Promise<IndoSource[]> {
+  const searchKey = `ai:s:${title.toLowerCase()}`;
+  let animeUrls: string[] | null = readCache<string[] | null>(
+    searchCache,
+    searchKey,
+  );
+  if (!animeUrls) {
+    const page = await indoHtml(`/?s=${encodeURIComponent(title)}`);
+    animeUrls = page
+      ? Array.from(
+          new Set(
+            Array.from(
+              page.body.matchAll(/href="(https?:\/\/[^"]*\/anime\/[^"]+\/)"/g),
+            ).map((m) => m[1]!),
+          ),
+        )
+      : [];
+    writeCache(searchCache, searchKey, animeUrls);
+  }
+  if (animeUrls.length === 0) return [];
+
+  for (const animeUrl of animeUrls.slice(0, 4)) {
+    const detailKey = `ai:a:${animeUrl}`;
+    let detail = readCache<string | null>(slugCache, detailKey);
+    if (detail === null) {
+      const page = await indoHtml(new URL(animeUrl).pathname);
+      detail = page ? page.body : "";
+      writeCache(slugCache, detailKey, detail);
+    }
+    if (!detail) continue;
+    const eps = Array.from(
+      new Set(
+        Array.from(
+          detail.matchAll(
+            /href="(https?:\/\/[^"]+?-episode-(\d+)-subtitle-indonesia\/)"/g,
+          ),
+        ).map((m) => ({ url: m[1]!, ep: Number(m[2]) })),
+      ),
+    );
+    const target = eps.find((e) => e.ep === ep);
+    if (!target) continue;
+
+    const epKey = `ai:e:${target.url}`;
+    let epBody = readCache<string | null>(epCache, epKey);
+    if (epBody === null) {
+      const page = await indoHtml(new URL(target.url).pathname);
+      epBody = page ? page.body : "";
+      writeCache(epCache, epKey, epBody);
+    }
+    if (!epBody) continue;
+
+    const stream = pickStreamFromHtml(epBody);
+    if (stream) {
+      return [
+        {
+          label: "AnimeIndo \u00b7 Sub Indo",
+          url: proxied(stream.url, `${new URL(target.url).origin}/`),
+          type: stream.type,
+        },
+      ];
+    }
+    // Tidak ada file yang bisa diambil: halaman episode-nya diputar di iframe.
+    return [{ label: "AnimeIndo \u00b7 Sub Indo", url: target.url, type: "embed" }];
+  }
+  return [];
+}
+
 /**
  * Sumber streaming subtitle Indonesia untuk satu episode.
- * Urutan: Oploverz (utama, subtitle Indonesia baked-in) → Otakudesu → MegaPlay.
+ * Urutan: AnimeIndo (lengkap episode) -> HLS xtwap -> Samehadaku -> Oploverz
+ * -> Otakudesu. Tidak pernah menolak episode: kalau AnimeIndo tidak punya
+ * episodenya, otomatis pindah ke sumber Indonesia lain.
  */
 export async function resolveIndo(
   title: string,
@@ -422,8 +560,13 @@ export async function resolveIndo(
   ].filter((v, i, arr) => v.length > 2 && arr.indexOf(v) === i);
 
   // Semua varian dicoba untuk sumber bersubtitle Indonesia. Urutan:
-  // 1) HLS xtwap  → HLS asli, bisa diputar player kita sendiri (UI penuh).
-  // 2) Samehadaku → Oploverz → Otakudesu (embed player pihak ketiga).
+  // 1) AnimeIndo  → katalog episode paling lengkap.
+  // 2) HLS xtwap  → HLS asli, bisa diputar player kita sendiri (UI penuh).
+  // 3) Samehadaku → Oploverz → Otakudesu (embed player pihak ketiga).
+  for (const q of variants) {
+    const ai = await animeindo(q, ep).catch(() => []);
+    if (ai.length > 0) return ai;
+  }
   for (const q of variants) {
     const h = await xtwapHls(q, ep).catch(() => []);
     if (h.length > 0) return h;

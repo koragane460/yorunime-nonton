@@ -54,6 +54,11 @@
   #root {
     font-family: var(--font-sans);
   }
+  /* Teks seluruh aplikasi sedikit lebih kecil dari bawaan (16px -> 15px)
+     supaya layout terasa lebih padat dan enak dibaca di HP. */
+  html {
+    font-size: 15px;
+  }
 }
 
 /* ====== LStream: hitam dominan + tombol ungu, aksen biru/kuning ====== */
@@ -231,10 +236,29 @@
 }
 
 /* ====== Banner akun: aurora bergerak + silau, biar tidak terlihat polos ====== */
-/* Banner diburamkan halus supaya foto di dalamnya terlihat "melayang" */
+/* Banner diburamkan halus supaya foto di dalamnya terlihat "melayang".
+   Blurnya sengaja kecil dan alphanya rendah supaya hasilnya terlihat
+   TRANSPARAN (kaca buram), bukan noda warna-warni yang pekat. */
 .yn-banner-blur {
-  backdrop-filter: blur(6px) saturate(140%);
-  -webkit-backdrop-filter: blur(6px) saturate(140%);
+  backdrop-filter: blur(2px) saturate(115%);
+  -webkit-backdrop-filter: blur(2px) saturate(115%);
+}
+
+/* Lapisan kaca di atas foto banner / foto profil: gelap tipis + blur kecil,
+   jadi warnanya masih terlihat-through, bukan jadi blok hitam. */
+.yn-banner-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(6 6 18 / 0.18) 0%,
+    rgb(6 6 18 / 0.32) 55%,
+    rgb(6 6 18 / 0.5) 100%
+  );
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
 }
 
 /* Echo banner: pantulan lembut di bawah banner.
@@ -247,8 +271,8 @@
   top: 100%;
   height: 56px;
   pointer-events: none;
-  filter: blur(20px) saturate(150%);
-  opacity: 0.5;
+  filter: blur(26px) saturate(130%);
+  opacity: 0.38;
   transform-origin: top center;
   -webkit-mask-image: linear-gradient(
     to bottom,
@@ -264,24 +288,21 @@
   );
 }
 
+/* Banner default (belum pasang banner): gelap pekat, cuma ada semburat ungu
+   tipis yang bergerak pelan. Tidak ada warna-warni ramai. */
 .yn-banner {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background-color: #05060f;
+  background-color: #06060d;
   background-image:
-    radial-gradient(90% 120% at 12% 10%, #6d28d9 0%, transparent 55%),
-    radial-gradient(80% 110% at 88% 20%, #1d4ed8 0%, transparent 55%),
-    radial-gradient(100% 130% at 50% 110%, #be185d 0%, transparent 60%),
-    linear-gradient(120deg, #0b1024, #1a0b2e 45%, #06111f 100%);
-  background-size:
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    220% 100%;
+    radial-gradient(120% 140% at 18% 0%, #2a1b4d 0%, transparent 58%),
+    radial-gradient(110% 130% at 86% 100%, #14213d 0%, transparent 60%),
+    linear-gradient(160deg, #0a0a16, #07070f 55%, #05050b 100%);
+  background-size: 100% 100%, 100% 100%, 200% 100%;
   animation:
-    yn-banner-drift 16s linear infinite,
-    yn-banner-breathe 6s ease-in-out infinite;
+    yn-banner-drift 22s linear infinite,
+    yn-banner-breathe 7s ease-in-out infinite;
 }
 
 /* Kabut cahaya yang bergerak (aurora) */
@@ -294,13 +315,13 @@
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgb(168 85 247 / 0.35) 70deg,
+    rgb(139 92 246 / 0.16) 70deg,
     transparent 150deg,
-    rgb(56 189 248 / 0.3) 230deg,
+    rgb(59 130 246 / 0.14) 230deg,
     transparent 320deg
   );
-  filter: blur(28px);
-  animation: yn-aurora 12s linear infinite;
+  filter: blur(60px);
+  animation: yn-aurora 18s linear infinite;
 }
 
 /* Bintang twinkling */
@@ -332,10 +353,10 @@
 @keyframes yn-banner-breathe {
   0%,
   100% {
-    filter: brightness(0.95) saturate(1);
+    filter: brightness(0.96) saturate(1);
   }
   50% {
-    filter: brightness(1.18) saturate(1.25);
+    filter: brightness(1.1) saturate(1.1);
   }
 }
 @keyframes yn-aurora {
@@ -636,20 +657,20 @@ button:not([disabled]):active,
   }
 }
 
-/* Tab pill: track gelap + pil aktif ungu */
+/* Tab pill: track gelap + pil aktif ungu (kecil, tidak memakan layar) */
 .tab-pill-track {
-  display: flex;
-  gap: 0.25rem;
+  display: inline-flex;
+  gap: 0.2rem;
   border-radius: 999px;
   background: oklch(0.14 0.02 280 / 80%);
   border: 1px solid oklch(0.3 0.03 280 / 40%);
-  padding: 0.3rem;
+  padding: 0.22rem;
 }
 .tab-pill {
   flex: 1;
   border-radius: 999px;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  padding: 0.34rem 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: oklch(0.7 0.015 280);
   transition:

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -23,6 +23,29 @@ type Chapter = { number: number; label: string; url: string; date?: string };
 // Cache halaman antar chapter supaya buka ulang chapter sebelumnya instan.
 const pageCache = new Map<string, string[]>();
 const cacheKey = (slug: string, ch: number) => `${slug}#${ch}`;
+
+/**
+ * Host gambar Komiku punya beberapa domain (img.komiku.org dan image2..13).
+ * Kadang satu domain sedang down, jadi kalau gagal dimuat kita coba domain
+ * lain secara otomatis supaya halaman tidak cuma jadi kotak hitam.
+ */
+function altHostFor(src: string): string | null {
+  if (src.includes("img.komiku.org")) {
+    return src.replace("img.komiku.org", "image2.komiku.to");
+  }
+  const m = src.match(/https:\/\/image\d+\.komiku\.to\//);
+  if (m) return src.replace(m[0], "https://img.komiku.org/");
+  return null;
+}
+
+function retryImage(e: SyntheticEvent<HTMLImageElement>) {
+  const el = e.currentTarget;
+  if (el.dataset.tried === "1") return;
+  const alt = altHostFor(el.src);
+  if (!alt) return;
+  el.dataset.tried = "1";
+  el.src = alt;
+}
 
 /** Ambil daftar gambar chapter (dari cache dulu, lalu pramuat chapter depan). */
 async function loadPages(
@@ -237,6 +260,7 @@ export default function ReadComic() {
                         : { ...d, [i]: el.naturalWidth / el.naturalHeight },
                     );
                   }}
+                  onError={retryImage}
                   onClick={() => setUiOn((v) => !v)}
                   style={
                     zoom !== 1
@@ -301,6 +325,7 @@ export default function ReadComic() {
                 loading={i < 2 ? "eager" : "lazy"}
                 decoding="async"
                 draggable={false}
+                onError={retryImage}
                 style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: "none" } : undefined}
                 className="block h-full w-full select-none object-contain"
               />

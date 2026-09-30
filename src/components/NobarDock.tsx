@@ -83,7 +83,7 @@ export function NobarDock({
   );
 
   return (
-    <div className="-mx-3 mt-4 overflow-hidden border-y border-violet-500/40 bg-gradient-to-b from-violet-600/10 to-transparent">
+    <div className="mt-4 overflow-hidden rounded-2xl border border-violet-500/35 bg-card/60 shadow-lg shadow-black/40">
       {/* Kepala room */}
       <div className="flex items-center gap-2.5 border-b border-violet-500/25 bg-violet-600/10 px-3 py-2.5">
         <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-600/30">
@@ -159,16 +159,26 @@ export function NobarDock({
             </span>
           </>
         )}
-        <button
-          onClick={onLeave}
-          className="flex items-center gap-1.5 rounded-full border border-rose-500/50 bg-rose-500/10 px-3 py-1.5 text-[11px] font-bold text-rose-300"
-        >
-          <LogOut className="size-3" /> Keluar Room
-        </button>
+        {/* Keluar Room = untuk peserta non-host. Bubarkan Room = khusus host. */}
+        {isHost ? (
+          <button
+            onClick={onLeave}
+            className="flex items-center gap-1.5 rounded-full border border-rose-500/60 bg-rose-500/15 px-3 py-1.5 text-[11px] font-bold text-rose-200"
+          >
+            <PhoneOff className="size-3" /> Bubarkan Room
+          </button>
+        ) : (
+          <button
+            onClick={onLeave}
+            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] font-bold text-zinc-200"
+          >
+            <LogOut className="size-3" /> Keluar Room
+          </button>
+        )}
       </div>
 
       {/* Tab: chat / orang */}
-      <div className="flex border-b border-violet-500/20">
+      <div className="flex border-b border-violet-500/20 bg-violet-600/5">
         {(
           [
             ["chat", "Chat Nobar", MessageSquare],
@@ -179,22 +189,21 @@ export function NobarDock({
             key={k}
             onClick={() => setTab(k)}
             className={cn(
-              "relative flex-1 py-2 text-xs font-bold transition",
-              tab === k ? "text-violet-100" : "text-muted-foreground",
+              "flex-1 py-2 text-xs font-bold transition",
+              tab === k
+                ? "bg-violet-600/20 text-violet-100"
+                : "text-muted-foreground",
             )}
           >
             <span className="flex items-center justify-center gap-1.5">
               <Icon className="size-3.5" /> {label}
             </span>
-            {tab === k && (
-              <span className="absolute inset-x-6 bottom-0 h-0.5 rounded-full bg-violet-400" />
-            )}
           </button>
         ))}
       </div>
 
       {tab === "chat" ? (
-        <div className="flex h-[58vh] min-h-80 flex-col overflow-hidden bg-card/40 sm:h-[520px]">
+        <div className="flex h-[46vh] min-h-64 flex-col overflow-hidden bg-card/40 sm:h-[380px]">
           {msgs ? (
             <ChatPanel
               kind="room"
@@ -212,7 +221,7 @@ export function NobarDock({
           )}
         </div>
       ) : (
-        <div className="thin-scroll h-[58vh] min-h-80 space-y-1.5 overflow-y-auto bg-card/40 p-2.5 sm:h-[520px]">
+        <div className="thin-scroll h-[46vh] min-h-64 space-y-1.5 overflow-y-auto bg-card/40 p-2.5 sm:h-[380px]">
           {members.map((m) => (
             <div
               key={m.userId}

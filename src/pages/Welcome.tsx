@@ -505,6 +505,8 @@ function WelcomeFlow() {
                     "Progres nonton, XP, dan level tersimpan otomatis di akunmu.",
                     "Kumpulkan Sacret & naikkan level lewat aktivitas harian.",
                     "Buat clan atau join clan untuk chat bareng & donasi Sacret.",
+                    "Premium membuka kualitas 1080p, banner, dan fitur lainnya.",
+                    "Semua episode memakai subtitle bahasa Indonesia.",
                     "Bawakan dirimu dengan sopan — toxic = banned.",
                   ].map((t, i) => (
                     <motion.li
@@ -522,8 +524,14 @@ function WelcomeFlow() {
                     </motion.li>
                   ))}
                 </ol>
-                <div className="mt-auto">
+                <div className="mt-auto pt-8">
                   <ScrollHint dir="up" />
+                  <button
+                    onClick={() => setStage("rules")}
+                    className="mt-3 w-full rounded-2xl bg-violet-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500"
+                  >
+                    Lanjut
+                  </button>
                 </div>
               </div>
             </div>

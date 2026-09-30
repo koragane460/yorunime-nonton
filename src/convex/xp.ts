@@ -39,12 +39,31 @@ const PERIOD_MS: Record<string, number> = {
   bulanan: 30 * 24 * 3600 * 1000,
 };
 
+/**
+ * Leaderboard mingguan/bulanan hanya menghitung user yang umur akunnya sudah
+ * melewati periode tersebut. Jadi akun yang baru bergabung kemarin tidak
+ * langsung muncul di leaderboard mingguan/bulanan.
+ */
+const PERIOD_MIN_AGE: Record<string, number> = {
+  harian: 0,
+  mingguan: 7 * 24 * 3600 * 1000,
+  bulanan: 30 * 24 * 3600 * 1000,
+};
+
+/** Tanggal gabung user (fallback ke _creationTime). */
+function joinedAt(u: { createdAt?: number; _creationTime: number }): number {
+  return u.createdAt ?? u._creationTime;
+}
+
 export const leaderboard = query({
   args: { period: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { period, limit = 50 }) => {
     const take = Math.min(limit, 50);
     const users = await ctx.db.query("users").collect();
     const byId = new Map(users.map((u) => [u._id, u]));
+    const minAge = PERIOD_MIN_AGE[period] ?? 0;
+    const eligible = (u: (typeof users)[number]) =>
+      minAge === 0 || Date.now() - joinedAt(u) >= minAge;
     let entries: {
       userId: string;
       username?: string;
@@ -75,6 +94,12 @@ export const leaderboard = query({
         xp: u.xp ?? 0,
       }));
     }
+    // Buang user yang belum cukup lama berada di YoruNime untuk periode ini
+    // (mis. akun 2 hari lalu tidak boleh masuk leaderboard mingguan/bulanan).
+    entries = entries.filter((e) => {
+      const u = byId.get(e.userId as any);
+      return u ? eligible(u) : false;
+    });
     entries.sort((a, b) => b.xp - a.xp);
     return entries.slice(0, take).map((e, i) => ({ rank: i + 1, ...e }));
   },

@@ -133,21 +133,26 @@ export const topGive = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 10 }) => {
     const gives = await ctx.db.query("premiumGives").collect();
-    const totals = new Map<string, number>();
+    // Total hari = jumlah hari per penerima × jumlah penerima (slot).
+    // Ini angka yang benar-benar hilang dari premium pengirim, bukan tebakan.
+    const totals = new Map<string, { days: number; slots: number; sends: number }>();
     for (const g of gives) {
-      totals.set(
-        g.fromUserId,
-        (totals.get(g.fromUserId) ?? 0) + g.days * g.slots,
-      );
+      const cur = totals.get(g.fromUserId) ?? { days: 0, slots: 0, sends: 0 };
+      cur.days += g.days * g.slots;
+      cur.slots += g.slots;
+      cur.sends += 1;
+      totals.set(g.fromUserId, cur);
     }
     const users = await ctx.db.query("users").collect();
     const byId = new Map(users.map((u) => [u._id, u]));
     const real = [...totals.entries()]
-      .map(([userId, days]) => ({
+      .map(([userId, t]) => ({
         userId,
         username: byId.get(userId as any)?.username ?? "user",
         image: byId.get(userId as any)?.image,
-        days,
+        days: t.days,
+        slots: t.slots,
+        sends: t.sends,
       }))
       .sort((a, b) => b.days - a.days)
       .slice(0, limit);

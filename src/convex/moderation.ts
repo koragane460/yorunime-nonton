@@ -116,8 +116,9 @@ export const myPanelAccess = query({
       me.staffRole === "creator" ||
       (me.seqId === 1 && !me.staffRole);
     const isMod = isDev || me.staffRole === "mod";
-    // Semua staff (dev/mod/tester/sepuh) boleh mengaktifkan pencarian 18+.
-    const adult = isDev || isMod || !!me.staffRole;
+    // Semua staff (dev/mod/tester/sepuh) boleh 18+, dan developer juga bisa
+    // memberi izin 18+ ke user biasa lewat panel.
+    const adult = isDev || isMod || !!me.staffRole || me.adultAccess === true;
     if (isDev)
       return { level: "dev" as const, adult, username: me.username ?? null };
     if (isMod)
@@ -367,6 +368,28 @@ export const devGiveClanPremium = mutation({
       });
     }
     return { count: members.length };
+  },
+});
+
+/** Developer memberi / mencabut izin akses konten 18+ ke satu user. */
+export const toggleAdultAccess = mutation({
+  args: { targetId: v.id("users") },
+  handler: async (ctx, { targetId }) => {
+    await staffGuard(ctx, "dev");
+    const u = await ctx.db.get(targetId);
+    if (!u) throw new Error("User tidak ada");
+    const next = !(u.adultAccess === true);
+    await ctx.db.patch(targetId, { adultAccess: next });
+    if (next) {
+      await ctx.db.insert("notifications", {
+        userId: targetId,
+        type: "info",
+        title: "Akses 18+ diberikan",
+        body: "Kamu bisa mengaktifkan toggle 18+ di pencarian anime.",
+        createdAt: Date.now(),
+      });
+    }
+    return { adultAccess: next };
   },
 });
 

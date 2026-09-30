@@ -3,7 +3,16 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { SectionTitle } from "@/components/lstream-ui";
-import { Crown, Check, ShieldCheck, Loader2, AlertTriangle, CircleCheck } from "lucide-react";
+import {
+  Crown,
+  Check,
+  ShieldCheck,
+  Loader2,
+  AlertTriangle,
+  CircleCheck,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -33,16 +42,48 @@ export default function Premium() {
 }
 
 const PERKS = [
+  "Kualitas 1080p (khusus Premium) + server streaming lebih cepat",
   "Tonton tanpa iklan gangguan",
-  "Kualitas sampai 1080p",
-  "Download episode untuk nonton offline",
   "Badge centang emas di nama",
   "Bisa give premium ke user lain (dapat XP besar)",
   "Kuis & event eksklusif member premium",
   "Akses cepat server streaming",
 ];
 
+/** Panduan setup pembayaran untuk pemilik aplikasi (Midtrans). */
+const SETUP_STEPS: { t: string; d: string }[] = [
+  {
+    t: "Buat akun di Midtrans",
+    d: "Daftar di midtrans.com, isi data usaha, lalu verifikasi akun sampai statusnya Active. Verifikasi butuh NPWP/NIK dan rekening atas nama sendiri.",
+  },
+  {
+    t: "Aktifkan Snap (halaman pembayaran)",
+    d: "Di menu Products > Snap, aktifkan Snap untuk Production. Snap adalah popup pembayaran yang dipakai YoruNime — user tidak perlu keluar dari aplikasi.",
+  },
+  {
+    t: "Salin Server Key",
+    d: "Buka Settings > Access Keys. Salin kolom Server Key (prefix SB-Mid-server- untuk sandbox, Mid-server- untuk production). Jangan pakai Client Key.",
+  },
+  {
+    t: "Tempel key di tab Keys",
+    d: "Buka tab Keys/API keys di dashboard Freebuff, isi MIDTRANS_SERVER_KEY dengan Server Key tadi. Opsional: MIDTRANS_IS_PRODUCTION = true kalau sudah mau pakai production (default-nya sandbox).",
+  },
+  {
+    t: "Isi rekening penerima",
+    d: "Di Midtrans > Settings > Bank Accounts / E-Wallets, daftarkan rekening bank, Virtual Account, atau QRIS yang akan menerima uang. Tanpa ini transaksi tidak bisa diselesaikan.",
+  },
+  {
+    t: "Cek status di halaman ini",
+    d: "Muat ulang halaman Premium. Kalau badge hijau muncul, berarti konfigurasi sudah terbaca. Uji dulu pakai mode sandbox, lalu pindah ke production saat sudah yakin.",
+  },
+  {
+    t: "Naikkan ke production",
+    d: "Ubah MIDTRANS_IS_PRODUCTION menjadi true, tempel Server Key production, lalu tes sekali pembayaran sungguhan kecil untuk memastikan dana masuk.",
+  },
+];
+
 function PaymentGuide({ config }: { config?: PayConfig }) {
+  const [setupOpen, setSetupOpen] = useState(false);
   const steps = [
     "Pilih paket di bawah, lalu tekan Beli.",
     "Popup Midtrans Snap terbuka — pilih metode: Virtual Account, QRIS, GoPay, DANA, OVO, atau kartu.",
@@ -94,6 +135,42 @@ function PaymentGuide({ config }: { config?: PayConfig }) {
           </li>
         ))}
       </ol>
+
+      {/* Panduan setup untuk pemilik aplikasi */}
+      <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-2.5">
+        <button
+          onClick={() => setSetupOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <span className="text-[11px] font-bold text-zinc-200">
+            Panduan setup pembayaran (Midtrans)
+          </span>
+          {setupOpen ? (
+            <ChevronUp className="size-3.5 text-zinc-400" />
+          ) : (
+            <ChevronDown className="size-3.5 text-zinc-400" />
+          )}
+        </button>
+        {setupOpen && (
+          <ol className="mt-2.5 space-y-2">
+            {SETUP_STEPS.map((s, i) => (
+              <li key={s.t} className="flex gap-2.5">
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-[9px] font-black text-white">
+                  {i + 1}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-bold text-zinc-200">
+                    {s.t}
+                  </span>
+                  <span className="block text-[10px] leading-relaxed text-zinc-400">
+                    {s.d}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 }

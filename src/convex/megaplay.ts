@@ -105,17 +105,17 @@ export const resolveEpisode = action({
       const indo: IndoSource[] = title
         ? await resolveIndo(title, ep).catch(() => [])
         : [];
-      // HLS/MP4 Sub Indo (xtwap) selalu didahulukan: subtitle Indonesia sudah
-      // menempel di video, jadi player kita sendiri bisa memainkannya.
+      // HLS/MP4 Sub Indo selalu didahulukan: subtitle Indonesia sudah menempel di
+      // video, jadi player kita sendiri bisa memainkannya.
       const indoDirect = indo.filter((s) => s.type === "hls" || s.type === "mp4");
       const indoEmbed = indo.filter((s) => s.type === "embed");
       const sub = await pickVariant(malId, ep, "sub").catch(() => null);
 
-      // Urutan sumber (satu server saja, tanpa DUB, tanpa embed sebagai pilihan):
-      //   1) Direct Sub Indo (xtwap) — subtitle Indonesia sudah menempel.
-      //   2) HLS MegaPlay SUB       — subtitle ID native, atau diterjemahkan.
-      //   3) Embed Sub Indo         — hanya kalau dua opsi di atas tidak ada.
-      const primary = indoDirect[0];
+      // Urutan sumber (satu server saja, tanpa DUB):
+      //   1) Direct Sub Indo — subtitle Indonesia sudah menempel (AnimeIndo dulu).
+      //   2) Embed Sub Indo  — kalau sumber Indonesia hanya punya player embed.
+      //   3) HLS MegaPlay SUB — cadangan terakhir supaya episode tidak ditolak.
+      const primary = indoDirect[0] ?? indoEmbed[0] ?? null;
       const sources: {
         label: string;
         url: string;
@@ -124,11 +124,7 @@ export const resolveEpisode = action({
         ? [{ label: HLS_LABEL, url: primary.url, type: primary.type }]
         : sub
           ? [{ label: HLS_LABEL, url: sub.m3u8, type: "hls" }]
-          : indoEmbed.slice(0, 1).map((s) => ({
-              label: HLS_LABEL,
-              url: s.url,
-              type: "embed" as const,
-            }));
+          : [];
 
       if (sources.length === 0) {
         return { ok: false as const, reason: "Episode belum tersedia" };
@@ -137,7 +133,10 @@ export const resolveEpisode = action({
       // Kalau sumber yang dipakai adalah HLS Sub Indo (xtwap), subtitle
       // Indonesia sudah menempel di dalam video. Track subtitle MegaPlay
       // milik video lain, jadi jangan dikirim (biar tidak salah sinkron).
-      const usingIndoHls = !!primary;
+      // Subtitle Indonesia "baked" hanya berlaku kalau yang dipakai sumber
+      // HLS/MP4 Indonesia. Kalau sumbernya player embed, subtitle tetap boleh
+      // ditambahkan dari track MegaPlay.
+      const usingIndoHls = !!indoDirect[0];
       const allTracks: Track[] = usingIndoHls ? [] : (sub?.tracks ?? []);
       // Prioritas subtitle: Indonesia > English > track pertama.
       const isEn = (t: Track) =>

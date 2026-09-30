@@ -88,7 +88,7 @@ function AkunContent() {
       <div className="relative">
         <div
           className={cn(
-            "yn-banner-blur h-48 w-full bg-cover bg-center",
+            "h-48 w-full bg-cover bg-center",
             !user.bannerUrl && "yn-banner",
           )}
           style={
@@ -98,11 +98,7 @@ function AkunContent() {
           }
         >
           {user.bannerUrl && (
-            <>
-              {/* Kabut aurora di atas foto banner biar tidak terlihat polos */}
-              <div className="yn-banner absolute inset-0 opacity-70 mix-blend-screen" />
-              <div className="absolute inset-0 bg-black/25" />
-            </>
+            <div className="yn-banner-veil" />
           )}
         </div>
         {/* Echo blur lembut tepat di bawah banner */}

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
@@ -680,7 +681,7 @@ function TopGiveList() {
   if (data.length === 0)
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Belum ada yang bagi premium — jadilah yang pertama lewat chat! 🎁
+        Belum ada yang bagi premium — jadilah yang pertama lewat chat!
       </p>
     );
   return (
@@ -692,7 +693,7 @@ function TopGiveList() {
           username={g.username}
           image={g.image}
           xp={g.days}
-          suffix="hari dibagi"
+          suffix={`hari · ${g.slots} orang · ${g.sends}x kirim`}
         />
       ))}
     </div>
@@ -716,7 +717,7 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
           <h1 className="text-lg font-bold">Leaderboard</h1>
         </div>
 
-        {/* Toggle swap: XP ⇄ Top Give Premium */}
+        {/* Toggle swap: XP ⇄ Top Give Premium (kecil, tidak sampai memenuhi layar) */}
         <div className="tab-pill-track mb-3">
           <button
             onClick={() => setMode("xp")}
@@ -734,23 +735,24 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
 
         {mode === "xp" && (
           <>
-            <div className="mb-3 flex gap-2">
+            <div className="tab-pill-track mb-2 w-full">
               {["harian", "mingguan", "bulanan"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={cn(
-                    "relative flex-1 rounded-lg py-2 text-sm font-medium capitalize",
-                    period === p ? "text-violet-300" : "text-muted-foreground",
-                  )}
+                  className={cn("tab-pill", period === p && "tab-pill-active")}
                 >
                   {p}
-                  {period === p && (
-                    <span className="absolute inset-x-3 bottom-0 h-0.5 rounded bg-red-500" />
-                  )}
                 </button>
               ))}
             </div>
+            <p className="mb-2.5 px-1 text-[10px] leading-relaxed text-muted-foreground">
+              {period === "harian"
+                ? "XP yang kamu dapet dalam 24 jam terakhir. Semua user ikut dihitung."
+                : period === "mingguan"
+                  ? "XP dalam 7 hari terakhir. Hanya user yang sudah gabung minimal 7 hari yang dihitung."
+                  : "XP dalam 30 hari terakhir. Hanya user yang sudah gabung minimal 30 hari yang dihitung."}
+            </p>
             <LeaderboardList period={period} />
           </>
         )}
@@ -1072,37 +1074,20 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<"chat" | "teman">("chat");
   const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
-  const msgsRaw = useQuery(api.chat.listMessages, { kind: "global", limit: 60 });
-  const send = useMutation(api.chat.sendMessage);
-  // Echo lokal: pesan langsung tampil sebelum server menyalinnya, supaya
-  // mengetik terasa instan. Dihapus otomatis begitu pesan aslinya masuk.
-  const [pending, setPending] = useState<ChatMsg[]>([]);
-  const msgs = useMemo(() => {
-    const real = (msgsRaw ?? []) as unknown as ChatMsg[];
-    if (!pending.length) return real;
-    const keep = pending.filter(
-      (p) =>
-        !real.some(
-          (r) =>
-            r.userId === p.userId &&
-            (r.text ?? "") === (p.text ?? "") &&
-            (r.imageUrl ?? "") === (p.imageUrl ?? "") &&
-            r.createdAt >= p.createdAt - 2000,
-        ),
-    );
-    if (keep.length !== pending.length) {
-      // dibersihkan setelah render berikutnya supaya tidak setState di render
-      queueMicrotask(() => setPending(keep));
-    }
-    return [...real, ...keep].sort((a, b) => a.createdAt - b.createdAt);
-  }, [msgsRaw, pending]);
+  const { messages: msgs, sendFast } = useFastChat(
+    { kind: "global", limit: 60 },
+    { kind: "global" },
+    user,
+  );
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip");
   const requests = useQuery(api.friends.listRequests, user ? {} : "skip");
   const sendReq = useMutation(api.friends.sendFriendRequest);
   const [dmPeer, setDmPeer] = useState<{ id: Id<"users">; name: string } | null>(null);
-  const dmMsgs = useQuery(
-    api.chat.listMessages,
+  // Chat pribadi juga pakai echo lokal supaya pesan langsung nempel di layar.
+  const { messages: dmMsgs, sendFast: sendDmFast } = useFastChat(
     dmPeer ? { kind: "dm", peerId: dmPeer.id, limit: 100 } : "skip",
+    { kind: "dm", peerId: dmPeer?.id as Id<"users"> },
+    user,
   );
   const meId = user?._id as string;
 
@@ -1155,28 +1140,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   meId={meId}
                   onOpenProfile={(id) => setProfileId(id)}
                   onSend={async (p) => {
-                    const temp: ChatMsg = {
-                      _id: `local-${Date.now()}` as unknown as Id<"chatMessages">,
-                      userId: user!._id,
-                      username: user?.username ?? "user",
-                      image: user?.image,
-                      level: user?.level ?? 1,
-                      premium: (user?.premiumUntil ?? 0) > Date.now(),
-                      staffRole: user?.staffRole,
-                      clanTag: user?.clanTag,
-                      clanTagIcon: user?.clanTagIcon,
-                      clanNameColor: user?.clanNameColor,
-                      text: p.text,
-                      imageUrl: p.imageUrl,
-                      createdAt: Date.now(),
-                    };
-                    setPending((s) => [...s, temp]);
-                    try {
-                      await send({ kind: "global", ...p });
-                    } catch (e) {
-                      setPending((s) => s.filter((x) => x._id !== temp._id));
-                      throw e;
-                    }
+                    // Echo lokal sudah ditangani useFastChat: pesan langsung
+                    // tampil di layar sebelum server menyalinnya.
+                    await sendFast(p);
                   }}
                 />
               ) : (
@@ -1290,7 +1256,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           onBack={() => setDmPeer(null)}
           onOpenProfile={(id) => setProfileId(id)}
           onSend={async (p) => {
-            await send({ kind: "dm", peerId: dmPeer.id, ...p });
+            await sendDmFast(p);
           }}
           onAddFriend={async () => {
             try {
@@ -1341,7 +1307,7 @@ function DMScreen({
           + Teman
         </button>
       </div>
-      <div className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col">
         <ChatPanel
           kind="dm"
           peerId={peer.id}
@@ -1349,6 +1315,7 @@ function DMScreen({
           meId={meId}
           onOpenProfile={onOpenProfile}
           onSend={onSend}
+          noPremium
         />
       </div>
     </div>
