@@ -290,30 +290,38 @@ export const givePremium = mutation({
     const myClanTag = me.clanTag;
     if (!me.unlimitedPremium) {
       await ctx.db.patch(userId, {
-        premiumUntil: (me.premiumUntil ?? 0) - cost * 86400000,
+        premiumUntil: Math.max(
+          0,
+          (me.premiumUntil ?? 0) - cost * 86400000,
+        ),
       });
     }
 
-    const giveId = await ctx.db.insert("premiumGives", {
+    // Dokumen disusun tanpa key bernilai undefined supaya Convex tidak
+    // menolak dengan "Server Error" (undefined tidak boleh ada di doc).
+    const msgText = message?.trim();
+    const giveDoc: Record<string, unknown> = {
       fromUserId: userId,
       days,
       cost,
       slots: receivers,
-      message: message && message.trim().length >= 50 ? message.trim() : undefined,
       claimedBy: [],
       claimedAt: 0,
       expired: false,
       createdAt: Date.now(),
-    });
-    const messageId = await ctx.db.insert("chatMessages", {
+    };
+    if (msgText && msgText.length >= 50) giveDoc.message = msgText;
+
+    const giveId = await ctx.db.insert("premiumGives", giveDoc as never);
+    const chatDoc: Record<string, unknown> = {
       kind,
-      clanId,
-      dmKey:
-        kind === "dm" && peerId ? dmKey(userId, peerId) : undefined,
       userId,
       premiumGiveId: giveId,
       createdAt: Date.now(),
-    });
+    };
+    if (clanId) chatDoc.clanId = clanId;
+    if (kind === "dm" && peerId) chatDoc.dmKey = dmKey(userId, peerId);
+    const messageId = await ctx.db.insert("chatMessages", chatDoc as never);
     await ctx.db.patch(giveId, { chatMessageId: messageId });
 
     await addXpInternal(ctx, userId, giveXp(days, receivers), "give_premium");

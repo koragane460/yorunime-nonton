@@ -233,24 +233,35 @@
 /* ====== Banner akun: aurora bergerak + silau, biar tidak terlihat polos ====== */
 /* Banner diburamkan halus supaya foto di dalamnya terlihat "melayang" */
 .yn-banner-blur {
-  backdrop-filter: blur(7px) saturate(135%);
-  -webkit-backdrop-filter: blur(7px) saturate(135%);
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
 }
 
-/* Echo banner: salinan blur yang melorot ke bawah (efek depth) */
+/* Echo banner: pantulan lembut di bawah banner.
+   Sengaja TIDAK dicerminkan (scaleY -1) supaya tidak muncul kotak hitam,
+   dan disamarkan penuh lewat mask + blur supaya menyatu dengan latar. */
 .yn-banner-echo {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: -8%;
+  right: -8%;
   top: 100%;
-  height: 64px;
+  height: 56px;
   pointer-events: none;
-  transform: scaleY(-1);
-  transform-origin: top;
-  filter: blur(12px);
-  opacity: 0.6;
-  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%);
-  mask-image: linear-gradient(to bottom, #000, transparent 85%);
+  filter: blur(20px) saturate(150%);
+  opacity: 0.5;
+  transform-origin: top center;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.9),
+    rgb(0 0 0 / 0.35) 45%,
+    transparent 92%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.9),
+    rgb(0 0 0 / 0.35) 45%,
+    transparent 92%
+  );
 }
 
 .yn-banner {

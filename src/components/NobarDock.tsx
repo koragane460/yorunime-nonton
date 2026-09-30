@@ -15,7 +15,9 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
-import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
+import { useFastChat } from "@/hooks/use-fast-chat";
+import { useAuth } from "@/hooks/use-auth";
+import { ChatPanel } from "@/components/ChatPanel";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type RoomInfo = {
@@ -73,11 +75,15 @@ export function NobarDock({
   durationSec: number;
 }) {
   const [tab, setTab] = useState<"chat" | "orang">("chat");
-  const send = useMutation(api.chat.sendMessage);
-  const msgs = useQuery(api.chat.listMessages, { kind: "room", roomId: room._id, limit: 100 });
+  const { user } = useAuth();
+  const { messages: msgs, sendFast } = useFastChat(
+    { kind: "room", roomId: room._id, limit: 60 },
+    { kind: "room", roomId: room._id },
+    user,
+  );
 
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-violet-500/40 bg-gradient-to-b from-violet-600/10 to-transparent">
+    <div className="-mx-3 mt-4 overflow-hidden border-y border-violet-500/40 bg-gradient-to-b from-violet-600/10 to-transparent">
       {/* Kepala room */}
       <div className="flex items-center gap-2.5 border-b border-violet-500/25 bg-violet-600/10 px-3 py-2.5">
         <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-600/30">
@@ -188,18 +194,16 @@ export function NobarDock({
       </div>
 
       {tab === "chat" ? (
-        <div className="max-h-80 min-h-56 flex-col overflow-hidden bg-card/40">
+        <div className="flex h-[58vh] min-h-80 flex-col overflow-hidden bg-card/40 sm:h-[520px]">
           {msgs ? (
             <ChatPanel
               kind="room"
               roomId={room._id}
               compact
               noPremium
-              messages={msgs as unknown as ChatMsg[]}
+              messages={msgs}
               meId={meId ?? ""}
-              onSend={async (p) => {
-                await send({ kind: "room", roomId: room._id, ...p });
-              }}
+              onSend={(p) => sendFast(p)}
             />
           ) : (
             <p className="py-10 text-center text-xs text-muted-foreground">
@@ -208,7 +212,7 @@ export function NobarDock({
           )}
         </div>
       ) : (
-        <div className="max-h-80 space-y-1.5 overflow-y-auto bg-card/40 p-2.5">
+        <div className="thin-scroll h-[58vh] min-h-80 space-y-1.5 overflow-y-auto bg-card/40 p-2.5 sm:h-[520px]">
           {members.map((m) => (
             <div
               key={m.userId}

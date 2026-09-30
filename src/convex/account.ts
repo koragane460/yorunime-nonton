@@ -52,10 +52,6 @@ export const ensureUser = mutation({
     if (user.createdAt === undefined) patch.createdAt = Date.now();
     if (user.nsfwStrikes === undefined) patch.nsfwStrikes = 0;
     if (user.theme === undefined) patch.theme = "dark";
-    if (user.staffRole === undefined && user.seqId === 1) {
-      // Akun #1 (pembuat pertama) otomatis jadi developer.
-      patch.staffRole = "dev";
-    }
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
   },

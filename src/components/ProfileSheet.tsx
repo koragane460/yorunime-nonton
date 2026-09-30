@@ -73,37 +73,41 @@ export function ProfileSheet({
         <div className="w-full pb-24">
           {/* Banner paling atas (panjang) */}
           <div className="relative">
-            <div
-              className={cn(
-                "yn-banner-blur h-44 w-full bg-cover bg-center",
-                !profile.bannerUrl && "yn-banner",
-              )}
-              style={
-                profile.bannerUrl
-                  ? { backgroundImage: `url(${profile.bannerUrl})` }
-                  : undefined
-              }
-            >
-              {profile.bannerUrl && (
-                <>
-                  <div className="yn-banner absolute inset-0 opacity-70 mix-blend-screen" />
-                  <div className="absolute inset-0 bg-black/25" />
-                </>
-              )}
+            <div className="relative">
+              <div
+                className={cn(
+                  "yn-banner-blur h-44 w-full bg-cover bg-center",
+                  !profile.bannerUrl && "yn-banner",
+                )}
+                style={
+                  profile.bannerUrl
+                    ? { backgroundImage: `url(${profile.bannerUrl})` }
+                    : undefined
+                }
+              >
+                {profile.bannerUrl && (
+                  <>
+                    <div className="yn-banner absolute inset-0 opacity-70 mix-blend-screen" />
+                    <div className="absolute inset-0 bg-black/25" />
+                  </>
+                )}
+              </div>
+              {/* Echo blur lembut tepat di bawah banner */}
+              <div
+                aria-hidden
+                className={cn(
+                  "yn-banner-echo",
+                  profile.bannerUrl ? "bg-cover bg-center" : "yn-banner",
+                )}
+                style={
+                  profile.bannerUrl
+                    ? { backgroundImage: `url(${profile.bannerUrl})` }
+                    : undefined
+                }
+              />
+              {/* Gradasi halus biar echo menyatu ke konten */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-background via-background/60 to-transparent" />
             </div>
-            {/* Echo blur di bawah banner */}
-            <div
-              aria-hidden
-              className={cn(
-                "yn-banner-echo",
-                profile.bannerUrl ? "bg-cover bg-center" : "yn-banner",
-              )}
-              style={
-                profile.bannerUrl
-                  ? { backgroundImage: `url(${profile.bannerUrl})` }
-                  : undefined
-              }
-            />
             <button
               onClick={onClose}
               className="absolute left-4 top-3 rounded-full bg-black/60 p-2 text-white"

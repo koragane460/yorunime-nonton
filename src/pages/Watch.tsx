@@ -476,8 +476,26 @@ function WatchContent() {
       hls.attachMedia(v);
       // Pasang level sesuai kualitas yang dipilih begitu manifest terbaca.
       hls.on(Hls.Events.MANIFEST_PARSED, () => applyLevel(hls, quality));
+      // Error HLS selalu dicoba dipulihkan dulu sebelum memberi tahu user —
+      // seek / ganti menit sering memicu error sementara yang sebenarnya
+      // bisa diperbaiki sendiri (hls.js), jadi tidak perlu "muat ulang".
+      let fatalCount = 0;
       hls.on(Hls.Events.ERROR, (_evt, data) => {
-        if (data.fatal) toast.error("Gagal memuat stream, coba muat ulang");
+        if (!data.fatal || !hls) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          fatalCount += 1;
+          if (fatalCount <= 3) {
+            hls.startLoad();
+            return;
+          }
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          fatalCount += 1;
+          if (fatalCount <= 3) {
+            hls.recoverMediaError();
+            return;
+          }
+        }
+        toast.error("Gagal memuat stream, coba muat ulang");
       });
     } else {
       v.src = streamUrl;
@@ -651,11 +669,14 @@ function WatchContent() {
   // Seek bar: saat digeser tampil menit tujuan, dilepas → langsung diputar.
   const commitScrub = (value: number) => {
     const v = videoRef.current;
-    if (v && Number.isFinite(value)) v.currentTime = value;
-    setCurrentTime(value);
+    // Clamp supaya tidak.seek jauh di luar durasi (bikin HLS error).
+    const maxT = Number.isFinite(duration) && duration > 0 ? duration : Infinity;
+    const target = Math.max(0, Math.min(value, maxT));
+    if (v && Number.isFinite(target)) v.currentTime = target;
+    setCurrentTime(target);
     setScrub(null);
     if (room && isHost)
-      void roomSetPosition({ roomId: room._id, positionSec: value });
+      void roomSetPosition({ roomId: room._id, positionSec: target });
   };
 
   // ------------------------------------------------ sinkronisasi Nobar ----
@@ -1008,7 +1029,7 @@ function WatchContent() {
               type="range"
               min={0}
               max={duration || 0}
-              step={0.1}
+              step={0.5}
               value={scrub ?? currentTime}
               onChange={(e) => setScrub(Number(e.target.value))}
               onPointerUp={() => scrub !== null && commitScrub(scrub)}

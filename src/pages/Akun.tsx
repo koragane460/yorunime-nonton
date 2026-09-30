@@ -105,7 +105,7 @@ function AkunContent() {
             </>
           )}
         </div>
-        {/* Echo blur yang melorot ke bawah — bikin banner terlihat melayang */}
+        {/* Echo blur lembut tepat di bawah banner */}
         <div
           aria-hidden
           className={cn(
@@ -119,7 +119,7 @@ function AkunContent() {
           }
         />
         {/* Gradasi biar banner menyatu ke konten di bawahnya */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/55 to-transparent" />
         <button
           onClick={() => setSettingsOpen(true)}
           aria-label="Pengaturan"

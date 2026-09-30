@@ -91,8 +91,9 @@ async function staffGuard(ctx: any, need: "dev" | "mod") {
     me.role === "admin" ||
     me.staffRole === "dev" ||
     me.staffRole === "creator" ||
-    // Akun ID #1 = developer (akun pembuat pertama).
-    me.seqId === 1;
+    // Akun ID #1 = developer, KECUALI kalau title-nya sudah diganti
+    // (mis. jadi moderator) lewat Developer Panel.
+    (me.seqId === 1 && !me.staffRole);
   const isMod = isDev || me.staffRole === "mod";
   if (need === "dev" && !isDev) throw new Error("Hanya developer");
   if (need === "mod" && !isMod) throw new Error("Hanya moderator/developer");
@@ -113,7 +114,7 @@ export const myPanelAccess = query({
       me.role === "admin" ||
       me.staffRole === "dev" ||
       me.staffRole === "creator" ||
-      me.seqId === 1;
+      (me.seqId === 1 && !me.staffRole);
     const isMod = isDev || me.staffRole === "mod";
     // Semua staff (dev/mod/tester/sepuh) boleh mengaktifkan pencarian 18+.
     const adult = isDev || isMod || !!me.staffRole;

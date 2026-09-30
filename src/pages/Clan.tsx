@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
+import { useFastChat } from "@/hooks/use-fast-chat";
 import { useHideNavOnMount, useHideNavWhile } from "@/components/AppLayout";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -734,8 +735,11 @@ function ClanChat({
 }) {
   const { user } = useAuth();
   useHideNavOnMount();
-  const msgs = useQuery(api.chat.listMessages, { kind: "clan", clanId, limit: 100 });
-  const send = useMutation(api.chat.sendMessage);
+  const { messages: msgs, sendFast } = useFastChat(
+    { kind: "clan", clanId, limit: 60 },
+    { kind: "clan", clanId },
+    user,
+  );
   const detail = useQuery(api.clans.clanDetail, { clanId });
   const c = detail?.clan;
   const isLeader = detail?.myRole === "leader";
@@ -769,15 +773,23 @@ function ClanChat({
             <ChatPanel
               kind="clan"
               clanId={clanId}
-              messages={msgs as never}
+              messages={msgs}
               meId={user._id}
-              onSend={async (p) => {
-                await send({ kind: "clan", clanId, ...(p as any) });
-              }}
+              onSend={(p) => sendFast(p)}
             />
           </div>
         ) : (
-          <p className="py-10 text-center text-sm text-muted-foreground">Memuat…</p>
+          <div className="space-y-2.5 p-3">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="msg-skeleton size-9 shrink-0 rounded-full" />
+                <div
+                  className="msg-skeleton h-10 rounded-lg"
+                  style={{ width: `${50 + ((i * 19) % 36)}%` }}
+                />
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

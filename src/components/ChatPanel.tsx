@@ -86,6 +86,8 @@ function GivePremiumDialog({
   const give = useMutation(api.chat.givePremium);
   const cost = (GIVE_COST[days] ?? days + 1) + receiverCost(receivers);
   const xp = (GIVE_XP[days] ?? days * 200) + Math.max(0, receivers - 5) * 100;
+  const msgLen = message.trim().length;
+  const msgOk = msgLen === 0 || msgLen >= 50;
 
   const submit = async () => {
     try {
@@ -180,6 +182,11 @@ function GivePremiumDialog({
             rows={3}
             className="w-full rounded-lg border border-input bg-background/60 p-3 text-sm"
           />
+          {msgLen > 0 && msgLen < 50 && (
+            <p className="text-[11px] font-semibold text-amber-300">
+              Pesan masih {50 - msgLen} karakter kurang — atau kosongkan saja.
+            </p>
+          )}
           <div className="rounded-lg bg-violet-500/10 p-3 text-sm">
             <p>
               Biaya: <b>{cost} hari</b> premium kamu
@@ -194,7 +201,11 @@ function GivePremiumDialog({
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button className="flex-1 bg-violet-600 text-white hover:bg-violet-500" onClick={submit}>
+            <Button
+              disabled={!msgOk}
+              className="flex-1 bg-violet-600 text-white hover:bg-violet-500"
+              onClick={submit}
+            >
               Kirim
             </Button>
           </div>
