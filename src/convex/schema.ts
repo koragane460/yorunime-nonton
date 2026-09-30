@@ -23,7 +23,9 @@ const schema = defineSchema(
       name: v.optional(v.string()),
       image: v.optional(v.string()),
       email: v.optional(v.string()),
+      phone: v.optional(v.string()),
       emailVerificationTime: v.optional(v.number()),
+      phoneVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
 
@@ -65,7 +67,11 @@ const schema = defineSchema(
       clanTagIcon: v.optional(v.string()),
       clanNameColor: v.optional(v.string()),
     })
+      // Index WAJIB sama dengan bawaan Convex Auth (authTables.users),
+      // kalau tidak, login (anonim/email/Google) akan error
+      // "Index ... not found" di backend.
       .index("email", ["email"])
+      .index("phone", ["phone"])
       .index("username", ["username"])
       .index("xp", ["xp"]),
 
@@ -325,12 +331,23 @@ const schema = defineSchema(
       value: v.any(),
     }).index("key", ["key"]),
 
+    // authAccounts: gabungan field bawaan Convex Auth (wajib, supaya
+    // login anonim/email/Google jalan) + field login email+password.
     authAccounts: defineTable({
-      email: v.string(),
-      passwordHash: v.string(),
-      createdAt: v.number(),
+      userId: v.optional(v.id("users")),
+      provider: v.optional(v.string()),
+      providerAccountId: v.optional(v.string()),
+      secret: v.optional(v.string()),
+      emailVerified: v.optional(v.string()),
+      phoneVerified: v.optional(v.string()),
+      email: v.optional(v.string()),
+      passwordHash: v.optional(v.string()),
+      createdAt: v.optional(v.number()),
       lastLoginAt: v.optional(v.number()),
-    }).index("email", ["email"]),
+    })
+      .index("userIdAndProvider", ["userId", "provider"])
+      .index("providerAndAccountId", ["provider", "providerAccountId"])
+      .index("email", ["email"]),
 
     contentReports: defineTable({
       reporterId: v.id("users"),
