@@ -145,6 +145,29 @@ export const myHistory = query({
   },
 });
 
+/** History anime milik user lain (dipakai di detail akun). */
+export const historyOf = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_updated", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(30);
+  },
+});
+
+/** Favorite anime milik user lain. */
+export const favoritesOf = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("animeFavorites")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .take(30);
+  },
+});
+
 export const toggleFavorite = mutation({
   args: {
     animeId: v.string(),

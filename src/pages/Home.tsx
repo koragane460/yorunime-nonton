@@ -4,7 +4,8 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck } from "@/components/lstream-ui";
+import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
@@ -351,6 +352,11 @@ function HomeContent() {
         </QueryBoundary>
       </button>
 
+      {/* 5b) KOTAK CLAN — langsung di bawah Chat bareng (hanya kalau punya clan) */}
+      <QueryBoundary label="Gagal memuat clan">
+        <ClanBox onOpen={() => navigate("/clan")} />
+      </QueryBoundary>
+
       {/* 6) CARI ANIME — buka layar full screen */}
       <SectionTitle>Cari Anime</SectionTitle>
       <button
@@ -451,6 +457,92 @@ function HomeContent() {
         />
       )}
     </div>
+  );
+}
+
+// ------------------------------------------------------- kotak clan ----
+
+/**
+ * Kotak clan yang muncul di Home tepat di bawah "Chat bareng".
+ * Hanya dirender kalau user punya clan (atau belum punya, biar ada ajakan).
+ */
+function ClanBox({ onOpen }: { onOpen: () => void }) {
+  const { user } = useAuth();
+  const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
+  const clan = useQuery(
+    api.clans.clanDetail,
+    membership?.clanId ? { clanId: membership.clanId } : "skip",
+  );
+  const msgs = useQuery(
+    api.chat.listMessages,
+    membership?.clanId ? { kind: "clan", clanId: membership.clanId, limit: 4 } : "skip",
+  );
+
+  if (!membership) {
+    return (
+      <button
+        onClick={onOpen}
+        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-violet-500/40"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
+          <Trophy className="size-5 text-violet-300" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">Belum punya clan</span>
+          <span className="block text-xs text-zinc-400">
+            Buat clan dan kumpulkan XP bersama teman
+          </span>
+        </span>
+        <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+          Buat
+        </span>
+      </button>
+    );
+  }
+
+  if (!clan) return null;
+  const c = clan.clan;
+  const last = msgs?.[msgs.length - 1];
+  return (
+    <button
+      onClick={onOpen}
+      className="fade-enter mt-2.5 w-full overflow-hidden rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-violet-500/40"
+    >
+      <div className="flex items-center gap-3">
+        <img
+          src={c.avatarUrl}
+          alt=""
+          className="size-11 shrink-0 rounded-xl object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-sm font-bold">{c.name}</p>
+            <ClanTag
+              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={c.tag}
+              color={c.color}
+              className="px-1.5 py-0 text-[9px]"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Lv.{c.level} · {c.memberCount} member ·{" "}
+            {c.diamonds.toLocaleString("id-ID")} Sacret
+          </p>
+        </div>
+        <ChevronRight className="size-5 shrink-0 text-zinc-500" />
+      </div>
+      <div className="my-2.5 h-px bg-white/10" />
+      {last ? (
+        <p className="truncate text-xs text-zinc-400">
+          <span className="font-semibold text-violet-300">{last.username}</span>:{" "}
+          {last.text ?? (last.premiumGive ? "Give premium" : "[foto]")}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Belum ada chat di clan — sapa teman kamu!
+        </p>
+      )}
+    </button>
   );
 }
 

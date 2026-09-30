@@ -2,6 +2,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireActive } from "./moderation";
 
 export const listFriends = query({
   args: {},
@@ -68,6 +69,8 @@ export const sendFriendRequest = mutation({
     if (userId === toUserId) throw new Error("Tidak bisa request diri sendiri");
     const target = await ctx.db.get(toUserId);
     if (!target) throw new Error("User tidak ada");
+    const me = await ctx.db.get(userId);
+    if (me) await requireActive(me);
     if (target.autoRejectFriend) {
       const reject = target.autoRejectFriendAction ?? "reject";
       await ctx.db.insert("notifications", {
@@ -81,11 +84,14 @@ export const sendFriendRequest = mutation({
     }
     const dup = await ctx.db
       .query("friendRequests")
-      .withIndex("fromUserId_status", (q) =>
-        q.eq("fromUserId", userId).eq("status", "pending"),
+      .withIndex("from_to_status", (q) =>
+        q
+          .eq("fromUserId", userId)
+          .eq("toUserId", toUserId)
+          .eq("status", "pending"),
       )
       .first();
-    if (dup) throw new Error("Request sudah pernah dikirim");
+    if (dup) throw new Error("Request sudah pernah dikirim ke orang ini");
     await ctx.db.insert("friendRequests", {
       fromUserId: userId,
       toUserId,

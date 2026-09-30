@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { RequestButtons } from "@/components/RequestButtons";
+import { StaffPanel } from "@/components/StaffPanel";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Avatar,
@@ -13,6 +14,7 @@ import {
   LevelBadge,
   SectionTitle,
   ShineBadge,
+  TitleBadge,
 } from "@/components/lstream-ui";
 import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
@@ -83,9 +85,7 @@ function AkunContent() {
   return (
     <div className="relative -mx-4">
       {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
-      <div className="relative">
-        <div
-          className="h-36 w-full bg-cover bg-center"
+      <div className="relative">        <div className="h-40 w-full bg-cover bg-center"
           style={
             user.bannerUrl
               ? { backgroundImage: `url(${user.bannerUrl})` }
@@ -105,28 +105,22 @@ function AkunContent() {
 
       {/* Foto profile menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
-        <div className="relative -mt-10 flex flex-col items-center">
-          <Avatar
-            src={user.image}
-            seed={user.username}
-            className="size-20"
-            online={!user.hideOnline}
-          />
-          <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
-            <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
-              <LevelBadge level={user.level ?? 1} />
-            </button>
-            {user.clanTag && (
-              <ClanTag
-                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                tag={user.clanTag}
-                color={user.clanNameColor}
+        <div className="relative -mt-12 flex flex-col items-center">
+          {/* Cincin glow di sekeliling avatar supaya tidak terlihat polos */}
+          <div className="rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-[3px] shadow-[0_8px_28px_-6px_rgba(168,85,247,.75)]">
+            <div className="rounded-full bg-background p-[2px]">
+              <Avatar
+                src={user.image}
+                seed={user.username}
+                className="size-20"
+                online={!user.hideOnline}
               />
-            )}
+            </div>
           </div>
+          {/* Urutan: username -> ID -> level badge + tag clan */}
           <div
             key={user.username}
-            className="mt-2 flex min-w-0 max-w-full items-center justify-center gap-1.5"
+            className="mt-2.5 flex min-w-0 max-w-full items-center justify-center gap-1.5"
           >
             <p
               className={cn(
@@ -137,9 +131,22 @@ function AkunContent() {
               {user.username}
             </p>
             {premium && <BlueCheck className="size-5 shrink-0" />}
+            <TitleBadge role={user.staffRole} />
             <span className="shrink-0 text-xs text-muted-foreground">
               {displayId(user.seqId, user._id)}
             </span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
+            <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
+              <LevelBadge level={user.level ?? 1} />
+            </button>
+            {user.clanTag && (
+              <ClanTag
+                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                tag={user.clanTag}
+                color={user.clanNameColor}
+              />
+            )}
           </div>
         </div>
 
@@ -466,6 +473,10 @@ function SettingsScreen({
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
+  // Panel hanya untuk developer (#1 / title dev) & moderator.
+  const access = useQuery(api.moderation.myPanelAccess, {});
+  const panelLevel: "dev" | "mod" | "none" =
+    access?.level === "dev" ? "dev" : access?.level === "mod" ? "mod" : "none";
   useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
 
   if (!user) return null;
@@ -641,7 +652,7 @@ function SettingsScreen({
           </div>
         </div>
 
-        <DevModPanel />
+        {panelLevel !== "none" && <StaffPanel level={panelLevel} />}
       </div>
 
       {/* Email support + Log out — sekarang di Pengaturan */}
@@ -840,213 +851,6 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
 }
 
 // ---------------------------------------------------------- dev/mod panel ----
-
-function DevModPanel() {
-  const { user } = useAuth();
-  const isDev =
-    user?.role === "admin" || user?.staffRole === "dev" || user?.staffRole === "creator";
-  const isMod = isDev || user?.staffRole === "mod";
-  const [q, setQ] = useState("");
-  const search = useQuery(api.moderation.searchUsersPanel, q.length > 1 ? { q } : "skip");
-  const moderate = useMutation(api.moderation.moderate);
-  const setStaffRole = useMutation(api.moderation.setStaffRole);
-  const giveClan = useMutation(api.moderation.devGiveClanPremium);
-  const [picked, setPicked] = useState<any>(null);
-  const [permanent, setPermanent] = useState(false);
-  const [duration, setDuration] = useState("1 hari");
-  const [reason, setReason] = useState("");
-  const [clanId, setClanId] = useState("");
-  const [days, setDays] = useState(30);
-
-  if (!isDev && !isMod) return null;
-
-  return (
-    <div className="rounded-2xl border border-violet-500/40 bg-card p-3.5">
-      <p className="text-sm font-bold text-red-400">
-        {isDev ? "Dev Panel" : "Moderator Panel"}
-      </p>
-      <div className="mt-2 flex gap-2">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Cari username…"
-          className="flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
-        />
-      </div>
-      {search && search.length > 0 && (
-        <div className="mt-2 space-y-1">
-          {search.map((u: any) => (
-            <button
-              key={u._id}
-              onClick={() => setPicked(u)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-lg border p-2 text-left text-sm",
-                picked?._id === u._id ? "border-violet-500" : "border-border/70",
-              )}
-            >
-              <span className="flex-1 truncate">{u.username}</span>
-              {u.staffRole && (
-                <ShineBadge label={u.staffRole} gradient={STAFF_BADGE[u.staffRole]?.cls ?? ""} />
-              )}
-              {(u.bannedUntil ?? 0) > Date.now() && (
-                <span className="text-[10px] text-red-400">BANNED</span>
-              )}
-              {(u.mutedUntil ?? 0) > Date.now() && (
-                <span className="text-[10px] text-violet-300">MUTED</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-      {picked && (
-        <div className="mt-3 space-y-2 rounded-xl border border-border p-3">
-          <p className="text-sm font-semibold">{picked.username}</p>
-          <input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Alasan (wajib)"
-            className="w-full rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
-          />
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={permanent}
-              onChange={(e) => setPermanent(e.target.checked)}
-            />
-            Selamanya
-          </label>
-          {!permanent && (
-            <input
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              placeholder="contoh: 3 hari / 12 jam / 30 menit"
-              className="w-full rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
-            />
-          )}
-          <div className="flex flex-wrap gap-1.5">
-            <PanelBtn
-              label="Mute"
-              onClick={async () => {
-                await moderate({
-                  targetId: picked._id,
-                  action: "mute",
-                  permanent,
-                  durationText: duration,
-                  reason,
-                });
-                toast.success("User dimute");
-              }}
-            />
-            <PanelBtn
-              label="Banned"
-              onClick={async () => {
-                await moderate({
-                  targetId: picked._id,
-                  action: "ban",
-                  permanent,
-                  durationText: duration,
-                  reason,
-                });
-                toast.success("User dibanned");
-              }}
-            />
-            <PanelBtn
-              label="Unmute"
-              onClick={async () => {
-                await moderate({
-                  targetId: picked._id,
-                  action: "unmute",
-                  permanent: false,
-                  reason: reason || "-",
-                });
-                toast.success("Unmute");
-              }}
-            />
-            <PanelBtn
-              label="Unbanned"
-              onClick={async () => {
-                await moderate({
-                  targetId: picked._id,
-                  action: "unban",
-                  permanent: false,
-                  reason: reason || "-",
-                });
-                toast.success("Unbanned");
-              }}
-            />
-            {isDev &&
-              (
-                [
-                  ["dev", "+Dev"],
-                  ["mod", "+Mod"],
-                  ["tester", "+Tester"],
-                  ["sepuh", "+Sepuh"],
-                  ["creator", "+Creator"],
-                  ["none", "-Role"],
-                ] as const
-              ).map(([r, label]) => (
-                <PanelBtn
-                  key={r}
-                  label={label}
-                  onClick={async () => {
-                    await setStaffRole({ targetId: picked._id, staffRole: r });
-                    toast.success(label);
-                  }}
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {isDev && (
-        <div className="mt-3 rounded-xl border border-border p-3">
-          <p className="text-xs font-semibold text-violet-300">
-            Give premium ke semua member clan
-          </p>
-          <div className="mt-2 flex gap-2">
-            <input
-              value={clanId}
-              onChange={(e) => setClanId(e.target.value)}
-              placeholder="Clan ID (dari URL detail clan)"
-              className="flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-xs"
-            />
-            <input
-              type="number"
-              value={days}
-              onChange={(e) => setDays(Number(e.target.value))}
-              className="w-24 rounded-lg border border-input bg-background/60 px-3 py-2 text-xs"
-            />
-            <button
-              disabled={!clanId || days <= 0}
-              onClick={async () => {
-                try {
-                  const r = await giveClan({ clanId: clanId as Id<"clans">, days });
-                  toast.success(`Premium ${days} hari diberikan ke ${r.count} member`);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Gagal");
-                }
-              }}
-              className="rounded-lg bg-violet-600 px-3 text-xs font-bold text-white disabled:opacity-40"
-            >
-              Give Premium
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PanelBtn({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-full border border-violet-500/40 px-3 py-1.5 text-xs font-semibold text-violet-300 hover:bg-violet-500/10"
-    >
-      {label}
-    </button>
-  );
-}
 
 // ------------------------------------------------------------- fullscr ----
 

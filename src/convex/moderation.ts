@@ -1,4 +1,4 @@
-// YoruNime — moderation helpers + dev/mod panel backend.
+// YoruNime — backend untuk Developer Panel & Moderator Panel.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import {
@@ -7,6 +7,8 @@ import {
   mutation,
   query,
 } from "./_generated/server";
+
+export const PERMANENT = 253402300799000; // 9999-12-31, dipakai sebagai "permanen".
 
 /** Dipakai mutasi lain untuk menolak user yang dimute/banned. */
 export async function requireActive(me: {
@@ -44,14 +46,14 @@ export const blockStatus = query({
     if ((me.bannedUntil ?? 0) > now)
       return {
         type: "banned" as const,
-        permanent: me.bannedUntil === Number.MAX_SAFE_INTEGER,
+        permanent: (me.bannedUntil ?? 0) >= PERMANENT,
         until: me.bannedUntil,
         reason: me.bannedReason ?? "",
       };
     if ((me.mutedUntil ?? 0) > now)
       return {
         type: "muted" as const,
-        permanent: me.mutedUntil === Number.MAX_SAFE_INTEGER,
+        permanent: (me.mutedUntil ?? 0) >= PERMANENT,
         until: me.mutedUntil,
         reason: me.mutedReason ?? "",
       };
@@ -59,16 +61,26 @@ export const blockStatus = query({
   },
 });
 
-function parseDuration(text: string): number | null {
-  const m = text.trim().match(/^(\d+)\s*(menit|jam|hari)?$/i);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  if (Number.isNaN(n)) return null;
-  const unit = (m[2] ?? "hari").toLowerCase();
-  if (unit === "menit") return n * 60 * 1000;
-  if (unit === "jam") return n * 3600 * 1000;
-  return n * 24 * 3600 * 1000;
+/** Hitung durasi dari nilai + satuan (hari/minggu/bulan/tahun). */
+export function durationMs(value: number, unit: string): number {
+  const n = Math.max(0, Math.floor(value));
+  switch (unit) {
+    case "jam":
+      return n * 3_600_000;
+    case "menit":
+      return n * 60_000;
+    case "minggu":
+      return n * 7 * 86_400_000;
+    case "bulan":
+      return n * 30 * 86_400_000;
+    case "tahun":
+      return n * 365 * 86_400_000;
+    default:
+      return n * 86_400_000;
+  }
 }
+
+const UNIT_MS = (u: string) => durationMs(1, u);
 
 async function staffGuard(ctx: any, need: "dev" | "mod") {
   const userId = await getAuthUserId(ctx);
@@ -78,11 +90,135 @@ async function staffGuard(ctx: any, need: "dev" | "mod") {
   const isDev =
     me.role === "admin" || me.staffRole === "dev" || me.staffRole === "creator";
   const isMod = isDev || me.staffRole === "mod";
-  if (need === "dev" && !isDev) throw new Error("Hanya dev");
-  if (need === "mod" && !isMod) throw new Error("Hanya moderator/dev");
+  if (need === "dev" && !isDev) throw new Error("Hanya developer");
+  if (need === "mod" && !isMod) throw new Error("Hanya moderator/developer");
   return { userId, me };
 }
 
+/** Level akses panel untuk user yang sedang login. */
+export const myPanelAccess = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return { level: "none" as const };
+    const me = await ctx.db.get(userId);
+    if (!me) return { level: "none" as const };
+    const isDev =
+      me.role === "admin" || me.staffRole === "dev" || me.staffRole === "creator";
+    const isMod = isDev || me.staffRole === "mod";
+    if (isDev) return { level: "dev" as const, username: me.username };
+    if (isMod) return { level: "mod" as const, username: me.username };
+    return { level: "none" as const, username: me.username };
+  },
+});
+
+/** Daftar user untuk panel dev (penuh) & panel moderator (baca saja). */
+export const panelUsers = query({
+  args: { q: v.optional(v.string()) },
+  handler: async (ctx, { q }) => {
+    await staffGuard(ctx, "mod");
+    const needle = (q ?? "").trim().toLowerCase();
+    const all = await ctx.db.query("users").collect();
+    const now = Date.now();
+    return all
+      .filter((u) => (needle ? (u.username ?? "").toLowerCase().includes(needle) : true))
+      .sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+      .slice(0, needle ? 20 : 60)
+      .map((u) => ({
+        _id: u._id,
+        username: u.username ?? "user",
+        image: u.image,
+        seqId: u.seqId,
+        staffRole: u.staffRole,
+        diamonds: u.diamonds ?? 0,
+        unlimitedSacret: !!u.unlimitedSacret,
+        unlimitedPremium: !!u.unlimitedPremium,
+        premiumUntil: u.premiumUntil ?? 0,
+        level: u.level ?? 1,
+        clanTag: u.clanTag,
+        clanNameColor: u.clanNameColor,
+        banned: (u.bannedUntil ?? 0) > now,
+        bannedPermanent: (u.bannedUntil ?? 0) >= PERMANENT,
+        bannedUntil: u.bannedUntil ?? 0,
+        bannedReason: u.bannedReason ?? "",
+        muted: (u.mutedUntil ?? 0) > now,
+        mutedPermanent: (u.mutedUntil ?? 0) >= PERMANENT,
+        mutedUntil: u.mutedUntil ?? 0,
+        mutedReason: u.mutedReason ?? "",
+      }));
+  },
+});
+
+const TITLE_LABEL: Record<string, string> = {
+  dev: "Developer",
+  mod: "Moderator",
+  tester: "Tester",
+  sepuh: "Sepuh",
+};
+
+/** Kasih / copot title. Pencet title yang sama -> title dilepas (toggle). */
+export const toggleTitle = mutation({
+  args: {
+    targetId: v.id("users"),
+    title: v.union(
+      v.literal("dev"),
+      v.literal("mod"),
+      v.literal("tester"),
+      v.literal("sepuh"),
+    ),
+  },
+  handler: async (ctx, { targetId, title }) => {
+    await staffGuard(ctx, "dev");
+    const target = await ctx.db.get(targetId);
+    if (!target) throw new Error("User tidak ada");
+    const same = target.staffRole === title;
+    await ctx.db.patch(targetId, {
+      staffRole: same ? undefined : title,
+    });
+    await ctx.db.insert("notifications", {
+      userId: targetId,
+      type: "moderation",
+      title: same
+        ? "Title dilepas"
+        : `Kamu dapat title ${TITLE_LABEL[title]}`,
+      body: same
+        ? `Title ${TITLE_LABEL[title]} sudah dicabut.`
+        : `Sekarang kamu jadi ${TITLE_LABEL[title]}.`,
+      createdAt: Date.now(),
+    });
+    return { granted: !same, title: same ? undefined : title };
+  },
+});
+
+/** Unlimited Sacret / premium — toggle. */
+export const toggleUnlimited = mutation({
+  args: {
+    targetId: v.id("users"),
+    what: v.union(v.literal("sacret"), v.literal("premium")),
+  },
+  handler: async (ctx, { targetId, what }) => {
+    await staffGuard(ctx, "dev");
+    const target = await ctx.db.get(targetId);
+    if (!target) throw new Error("User tidak ada");
+    const field = what === "sacret" ? "unlimitedSacret" : "unlimitedPremium";
+    const next = !(target[field] ?? false);
+    await ctx.db.patch(targetId, { [field]: next });
+    await ctx.db.insert("notifications", {
+      userId: targetId,
+      type: "moderation",
+      title: next
+        ? `Unlimited ${what === "sacret" ? "Sacret" : "Premium"} aktif`
+        : `Unlimited ${what === "sacret" ? "Sacret" : "Premium"} dimatikan`,
+      body: next
+        ? `Kamu sekarang punya ${what === "sacret" ? "Sacret" : "Premium"} tanpa batas.`
+        : "Batas normal kembali berlaku.",
+      createdAt: Date.now(),
+    });
+    return { unlimited: next };
+  },
+});
+
+/** Ban / unban / mute / unmute dengan durasi bebas. */
 export const moderate = mutation({
   args: {
     targetId: v.id("users"),
@@ -93,73 +229,78 @@ export const moderate = mutation({
       v.literal("unban"),
     ),
     permanent: v.boolean(),
-    durationText: v.optional(v.string()),
+    value: v.optional(v.number()),
+    unit: v.optional(v.string()),
     reason: v.string(),
   },
-  handler: async (ctx, { targetId, action, permanent, durationText, reason }) => {
+  handler: async (ctx, { targetId, action, permanent, value, unit, reason }) => {
     await staffGuard(ctx, "mod");
-    if (reason.trim().length === 0) throw new Error("Alasan wajib diisi");
+    if ((action === "ban" || action === "mute") && reason.trim().length === 0)
+      throw new Error("Pesan/alasan wajib diisi");
     const now = Date.now();
+    const until = permanent
+      ? PERMANENT
+      : now + Math.max(UNIT_MS(unit ?? "hari"), durationMs(value ?? 1, unit ?? "hari"));
+
     if (action === "mute") {
-      const until = permanent
-        ? Number.MAX_SAFE_INTEGER
-        : now + (parseDuration(durationText ?? "") ?? 24 * 3600 * 1000);
       await ctx.db.patch(targetId, { mutedUntil: until, mutedReason: reason });
     } else if (action === "unmute") {
       await ctx.db.patch(targetId, { mutedUntil: 0, mutedReason: undefined });
     } else if (action === "ban") {
-      const until = permanent
-        ? Number.MAX_SAFE_INTEGER
-        : now + (parseDuration(durationText ?? "") ?? 24 * 3600 * 1000);
       await ctx.db.patch(targetId, { bannedUntil: until, bannedReason: reason });
     } else {
       await ctx.db.patch(targetId, { bannedUntil: 0, bannedReason: undefined });
     }
+
+    const titles: Record<string, string> = {
+      mute: permanent ? "Kamu dimute selamanya" : "Kamu dimute sementara",
+      unmute: "Mute dicabut",
+      ban: permanent ? "Akun kamu dibanned permanen" : "Akun kamu dibanned sementara",
+      unban: "Ban dicabut",
+    };
     await ctx.db.insert("notifications", {
       userId: targetId,
       type: "moderation",
-      title:
-        action === "mute"
-          ? `Kamu dimute${permanent ? " selamanya" : ""}`
-          : action === "ban"
-            ? `Kamu dibanned${permanent ? " selamanya" : ""}`
-            : action === "unmute"
-              ? "Mute dicabut"
-              : "Ban dicabut",
-      body: reason,
+      title: titles[action],
+      body: reason || "Tidak ada keterangan",
       createdAt: now,
     });
-    return { ok: true };
+    return { ok: true, until: permanent ? PERMANENT : until };
   },
 });
 
-export const setStaffRole = mutation({
-  args: {
-    targetId: v.id("users"),
-    staffRole: v.union(
-      v.literal("dev"),
-      v.literal("mod"),
-      v.literal("tester"),
-      v.literal("sepuh"),
-      v.literal("creator"),
-      v.literal("none"),
-    ),
-  },
-  handler: async (ctx, { targetId, staffRole }) => {
+/** Dev: kirim broadcast ke semua user lewat halaman Pemberitahuan. */
+export const broadcast = mutation({
+  args: { title: v.string(), body: v.string() },
+  handler: async (ctx, { title, body }) => {
     await staffGuard(ctx, "dev");
-    await ctx.db.patch(targetId, {
-      staffRole: staffRole === "none" ? undefined : staffRole,
-    });
-    return { ok: true };
+    if (!title.trim()) throw new Error("Title pesan wajib diisi");
+    if (!body.trim()) throw new Error("Isi pesan wajib diisi");
+    const users = await ctx.db.query("users").collect();
+    for (const u of users) {
+      await ctx.db.insert("notifications", {
+        userId: u._id,
+        type: "broadcast",
+        title: title.trim(),
+        body: body.trim(),
+        createdAt: Date.now(),
+      });
+    }
+    return { sent: users.length };
   },
 });
 
 /** Dev-only: beri premium ke semua member clan. */
 export const devGiveClanPremium = mutation({
-  args: { clanId: v.id("clans"), days: v.number() },
-  handler: async (ctx, { clanId, days }) => {
+  args: {
+    clanId: v.id("clans"),
+    value: v.number(),
+    unit: v.string(),
+    label: v.optional(v.string()),
+  },
+  handler: async (ctx, { clanId, value, unit }) => {
     await staffGuard(ctx, "dev");
-    if (days <= 0 || days > 3650) throw new Error("Jumlah hari tidak valid");
+    const ms = Math.max(UNIT_MS(unit), durationMs(value, unit));
     const members = await ctx.db
       .query("clanMembers")
       .withIndex("clanId", (q) => q.eq("clanId", clanId))
@@ -167,12 +308,41 @@ export const devGiveClanPremium = mutation({
     const now = Date.now();
     for (const m of members) {
       const u = await ctx.db.get(m.userId);
-      const current = Math.max(now, u?.premiumUntil ?? 0);
-      await ctx.db.patch(m.userId, {
-        premiumUntil: current + days * 86400000,
+      if (!u) continue;
+      const base = Math.max(now, u.premiumUntil ?? 0);
+      await ctx.db.patch(m.userId, { premiumUntil: base + ms });
+      await ctx.db.insert("notifications", {
+        userId: m.userId,
+        type: "clan_premium",
+        title: "Premium untuk clan",
+        body: `Clan kamu dapat premium ${value} ${unit}.`,
+        createdAt: now,
       });
     }
     return { count: members.length };
+  },
+});
+
+/** Clan yang bisa dipilih di panel dev. */
+export const panelClans = query({
+  args: {},
+  handler: async (ctx) => {
+    await staffGuard(ctx, "dev");
+    const clans = await ctx.db.query("clans").collect();
+    const out = [];
+    for (const c of clans) {
+      const n = await ctx.db
+        .query("clanMembers")
+        .withIndex("clanId", (q) => q.eq("clanId", c._id))
+        .collect();
+      out.push({
+        _id: c._id,
+        name: c.name,
+        tag: c.tag,
+        members: n.length,
+      });
+    }
+    return out.sort((a, b) => b.members - a.members);
   },
 });
 
@@ -194,5 +364,18 @@ export const searchUsersPanel = query({
         mutedUntil: u.mutedUntil,
         bannedUntil: u.bannedUntil,
       }));
+  },
+});
+
+/** Title milik user lain (dipakai supaya tag ikut muncul di chat/komen). */
+export const titlesOf = internalQuery({
+  args: { userIds: v.array(v.id("users")) },
+  handler: async (ctx, { userIds }) => {
+    const map: Record<string, string> = {};
+    for (const id of userIds) {
+      const u = await ctx.db.get(id);
+      if (u?.staffRole) map[id] = u.staffRole;
+    }
+    return map;
   },
 });

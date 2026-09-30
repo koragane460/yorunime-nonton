@@ -95,6 +95,7 @@ export const listMessages = query({
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,
+        staffRole: u?.staffRole,
         text: r.text,
         imageUrl: r.imageUrl,
         premiumGive: give

@@ -1,7 +1,36 @@
 import { BadgeCheck, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { badgeForLevel, STAFF_BADGE, avatarFallback, clanNameCls } from "@/lib/lstream";
+import { badgeForLevel, avatarFallback } from "@/lib/lstream";
 import { clanPixelIconUrl } from "@/lib/clanIcons";
+
+/** Gaya title staff: dev merah, moderator biru, tester emas, sepuh kuning. */
+const TITLE_STYLE: Record<string, { label: string; icon: string; cls: string }> = {
+  dev: {
+    label: "Developer",
+    icon: "\u{1F525}",
+    cls: "bg-gradient-to-r from-red-700 via-red-500 to-rose-600",
+  },
+  creator: {
+    label: "Creator",
+    icon: "\u{1F3A8}",
+    cls: "bg-gradient-to-r from-red-700 via-red-500 to-rose-600",
+  },
+  mod: {
+    label: "Moderator",
+    icon: "\u{1F6E1}",
+    cls: "bg-gradient-to-r from-blue-700 via-blue-500 to-sky-600",
+  },
+  tester: {
+    label: "Tester",
+    icon: "\u{1F9EA}",
+    cls: "bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-500",
+  },
+  sepuh: {
+    label: "Sepuh",
+    icon: "\u{1F451}",
+    cls: "bg-gradient-to-r from-yellow-600 via-yellow-400 to-amber-500",
+  },
+};
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -145,6 +174,37 @@ export function ShineBadge({
   );
 }
 
+/**
+ * Title staff dengan efek silau. Warna: dev merah, moderator biru,
+ * tester emas, sepuh kuning.
+ */
+export function TitleBadge({
+  role,
+  className,
+  compact,
+}: {
+  role?: string;
+  className?: string;
+  compact?: boolean;
+}) {
+  if (!role) return null;
+  const def = TITLE_STYLE[role];
+  if (!def) return null;
+  return (
+    <span
+      className={cn(
+        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 rounded-md font-black uppercase tracking-wide text-white shadow",
+        compact ? "px-1.5 py-0 text-[8px]" : "px-2 py-0.5 text-[10px]",
+        def.cls,
+        className,
+      )}
+    >
+      <span aria-hidden>{def.icon}</span>
+      {def.label}
+    </span>
+  );
+}
+
 /** Centang biru ala TikTok untuk user premium. */
 export function BlueCheck({ className }: { className?: string }) {
   return (
@@ -181,9 +241,7 @@ export function UserBadges({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <LevelBadge level={level} />
-      {staffRole && STAFF_BADGE[staffRole] && (
-        <ShineBadge label={STAFF_BADGE[staffRole].name} gradient={STAFF_BADGE[staffRole].cls} />
-      )}
+      <TitleBadge role={staffRole} />
     </div>
   );
 }
@@ -266,15 +324,13 @@ export function ClanTag({
   color?: string;
   className?: string;
 }) {
-  const galaxy = color === "galaxy" || color === "golden";
   const pixel = clanPixelIconUrl(icon);
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg rounded-tl-none rounded-br-none border border-white/20 px-2 py-0.5 text-xs font-bold",
-        galaxy
-          ? "clan-tag-galaxy"
-          : cn("bg-black/40", clanNameCls(color) || "text-gold"),
+        // Bentuk tag clan: persegi dengan dua sudut terpotong (sama seperti
+        // preview saat bikin clan) + latar galaxy yang terus berkilau.
+        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-black tracking-wide text-white",
         className,
       )}
     >
@@ -282,12 +338,14 @@ export function ClanTag({
         <img
           src={pixel}
           alt=""
-          className="size-3.5 shrink-0 rounded-[2px] [image-rendering:pixelated]"
+          className="relative z-[2] size-3.5 shrink-0 rounded-[2px] [image-rendering:pixelated]"
         />
       ) : (
-        <span>{icon}</span>
-      )}{" "}
-      [{tag}]
+        <span className="relative z-[2] leading-none">{icon}</span>
+      )}
+      <span className="relative z-[2] drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+        [{tag}]
+      </span>
     </span>
   );
 }

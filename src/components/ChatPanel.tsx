@@ -4,6 +4,8 @@ import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { avatarFallback, usernameColor } from "@/lib/lstream";
+import { ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -446,10 +448,10 @@ export function ChatPanel({
                   className="size-9 shrink-0 rounded-full border border-white/15 object-cover"
                 />
               </button>
-              <div className={cn("flex max-w-[78%] flex-col", mine ? "items-end" : "items-start")}>
+              <div className={cn("flex max-w-[76%] min-w-0 flex-col", mine ? "items-end" : "items-start")}>
                 <div
                   className={cn(
-                    "border px-3 py-2",
+                    "w-fit max-w-full min-w-0 border px-3 py-2",
                     "rounded-md",
                     give
                       ? "border-violet-500/60 bg-violet-500/15"
@@ -459,9 +461,21 @@ export function ChatPanel({
                     blinkId === m._id && "reply-blink",
                   )}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span className={cn("text-xs font-semibold", usernameColor(m.username))}>{m.username}</span>
-                    {m.premium && <BlueCheck className="size-3.5" />}
+                  {/* Header bubble: username + centang + title, clan tag di kanan */}
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className={cn("truncate text-xs font-semibold", usernameColor(m.username))}>
+                      {m.username}
+                    </span>
+                    {m.premium && <BlueCheck className="size-3.5 shrink-0" />}
+                    <TitleBadge role={(m as any).staffRole} compact />
+                    {m.clanTag && (
+                      <ClanTag
+                        icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                        tag={m.clanTag}
+                        color={m.clanNameColor}
+                        className="ml-auto shrink-0 scale-90 px-1.5 py-0 text-[9px]"
+                      />
+                    )}
                   </div>
                   {m.replyTo && (
                     <div className="mt-1 rounded-lg border-l-2 border-violet-500/70 bg-black/25 px-2 py-1 text-xs">
@@ -487,7 +501,9 @@ export function ChatPanel({
                     </div>
                   ) : (
                     <>
-                      {m.text && <p className="mt-0.5 break-words text-sm">{m.text}</p>}
+                      {m.text && (
+                        <p className="mt-0.5 w-fit max-w-full break-words text-sm">{m.text}</p>
+                      )}
                       {m.imageUrl && (
                         <img
                           src={m.imageUrl}
@@ -499,19 +515,6 @@ export function ChatPanel({
                     </>
                   )}
                 </div>
-                {/* Tag clan di bawah bubble */}
-                {m.clanTag && (
-                  <span
-                    className={cn(
-                      "mt-0.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold",
-                      m.clanNameColor === "galaxy" || m.clanNameColor === "golden"
-                        ? "clan-tag-galaxy"
-                        : "bg-black/40 text-gold",
-                    )}
-                  >
-                    {m.clanTagIcon} [{m.clanTag}]
-                  </span>
-                )}
                 <div
                   className={cn(
                     "mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground",

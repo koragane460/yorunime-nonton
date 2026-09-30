@@ -32,6 +32,9 @@ const schema = defineSchema(
       level: v.optional(v.number()),
       diamonds: v.optional(v.number()),
       premiumUntil: v.optional(v.number()),
+      /** Panel dev: saldo Sacret & premium tanpa batas. */
+      unlimitedSacret: v.optional(v.boolean()),
+      unlimitedPremium: v.optional(v.boolean()),
       bannerUrl: v.optional(v.string()),
       hideOnline: v.optional(v.boolean()),
       autoRejectFriend: v.optional(v.boolean()),
@@ -165,7 +168,10 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("toUserId_status", ["toUserId", "status"])
-      .index("fromUserId_status", ["fromUserId", "status"]),
+      .index("fromUserId_status", ["fromUserId", "status"])
+      // Dipakai biar request duplikat hanya terdeteksi ke user yang SAMA
+      // (sebelumnya satu request pending = blokir semua request berikutnya).
+      .index("from_to_status", ["fromUserId", "toUserId", "status"]),
 
     notifications: defineTable({
       userId: v.id("users"),

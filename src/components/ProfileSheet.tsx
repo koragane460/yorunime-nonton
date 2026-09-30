@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   ChevronLeft,
@@ -38,9 +38,10 @@ export function ProfileSheet({
   const navigate = useNavigate();
   const profile = useQuery(api.account.getPublicProfile, { userId });
   const addFriend = useMutation(api.friends.sendFriendRequest);
-  const history = useQuery(api.activities.myHistory, me ? {} : "skip");
-  const favorites = useQuery(api.activities.myFavorites, me ? {} : "skip");
-  // Komik milik user yang sedang dilihat, bukan milik penonton.
+  // PENTING: yang ditampilkan adalah data user yang sedang dibuka, bukan
+  // data akun yang sedang dipakai (dulu selalu pakai akun sendiri).
+  const history = useQuery(api.activities.historyOf, { userId });
+  const favorites = useQuery(api.activities.favoritesOf, { userId });
   const comicHistory = useQuery(api.comics.historyOf, { userId });
   const comicFavorites = useQuery(api.comics.favoritesOf, { userId });
   const [tab, setTab] = useState<Tab>("komen");
@@ -89,19 +90,23 @@ export function ProfileSheet({
             >
               <ChevronLeft className="size-4" />
             </button>
-            {/* Foto profile menutupi banner, tepat di tengah */}
-            <div className="relative -mt-14 flex justify-center">
-              <Avatar
-                src={profile.image}
-                seed={profile.username}
-                className="size-24"
-                online={!profile.hideOnline}
-              />
+            {/* Foto profile menutupi banner, tepat di tengah — dengan cincin glow */}
+            <div className="relative -mt-16 flex justify-center">
+              <div className="rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-[3px] shadow-[0_10px_32px_-6px_rgba(168,85,247,.8)]">
+                <div className="rounded-full bg-background p-[2px]">
+                  <Avatar
+                    src={profile.image}
+                    seed={profile.username}
+                    className="size-24"
+                    online={!profile.hideOnline}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="-mt-2 px-4 text-center">
-            {/* Username + centang biru + ID */}
+          <div className="-mt-1 px-4 text-center">
+            {/* Urutan: username -> ID -> level badge + tag clan */}
             <div className="flex items-center justify-center gap-1.5">
               <p
                 key={profile.username}
@@ -113,13 +118,14 @@ export function ProfileSheet({
                 {profile.username ?? "user"}
               </p>
               {profile.premium && <BlueCheck className="size-5" />}
+              <TitleBadge role={profile.staffRole} />
             </div>
             <p className="text-xs text-zinc-400">
               ID: {profile.seqId !== undefined ? `#${profile.seqId}` : "—"}
             </p>
 
-            {/* Tag clan di kiri, badge level, tombol + add friend di sebelahnya */}
-            <div className="mt-2 flex items-center justify-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              <LevelBadge level={profile.level} />
               {profile.clanTag && (
                 <ClanTag
                   icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}
@@ -127,7 +133,6 @@ export function ProfileSheet({
                   color={profile.clanNameColor}
                 />
               )}
-              <LevelBadge level={profile.level} />
               {!isMe && (
                 <button
                   type="button"
