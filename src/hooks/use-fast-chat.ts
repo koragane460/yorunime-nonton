@@ -6,6 +6,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 export type SendPayload = {
   text?: string;
+  /** Foto sudah diunggah ke storage, jadi cukup kirim storageId-nya. */
+  imageStorageId?: string;
+  /** URL hasil resolusistorageId, hanya untuk echo lokal. */
   imageUrl?: string;
   replyToId?: Id<"chatMessages">;
 };
@@ -76,11 +79,18 @@ export function useFastChat(
       clanNameColor: me.clanNameColor,
       text: p.text,
       imageUrl: p.imageUrl,
+      imageStorageId: p.imageStorageId,
       createdAt: Date.now(),
     };
     setPending((s) => [...s, temp]);
     try {
-      await send({ ...sendArgs, ...p } as never);
+      // imageUrl hanya untuk echo lokal (blob: sementara), tidak disimpan.
+      await send({
+        ...sendArgs,
+        text: p.text,
+        imageStorageId: p.imageStorageId,
+        replyToId: p.replyToId,
+      } as never);
     } catch (e) {
       setPending((s) => s.filter((x) => x._id !== temp._id));
       throw e;

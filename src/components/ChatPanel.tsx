@@ -34,6 +34,7 @@ export type ChatMsg = {
   clanNameColor?: string;
   text?: string;
   imageUrl?: string;
+  imageStorageId?: string;
   premiumGive?: {
     _id: Id<"premiumGives">;
     days: number;
@@ -240,19 +241,25 @@ function analyzeImageLocal(file: File): { ok: boolean; reason?: string } {
  * sehingga ditolak server ("Server Error") tanpa pesan apa pun. Diperkecil ke
  * max 1280px + JPEG 0.82 supaya selalu muat di dalam satu dokumen chat.
  */
+/**
+ * Perkecil foto sebelum dikirim. Hasilnya Blob (bukan base64) supaya bisa
+ * diunggah ke Convex storage - dokumen cuma boleh 1MB.
+ */
 async function compressImage(
   file: File,
   maxSide = 1280,
   quality = 0.82,
-): Promise<string> {
+): Promise<Blob> {
   const raw = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Gagal baca file"));
     reader.readAsDataURL(file);
   });
-  // Kalau file-nya kecil sekali, tidak perlu diolah.
-  if (raw.length < 400_000) return raw;
+  // File kecil sudah aman (di bawah ~300KB setelah base64).
+  if (raw.length < 400_000) {
+    return await (await fetch(raw)).blob();
+  }
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
@@ -267,12 +274,14 @@ async function compressImage(
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return raw;
+    if (!ctx) return await (await fetch(raw)).blob();
     ctx.drawImage(img, 0, 0, w, h);
-    const out = canvas.toDataURL("image/jpeg", quality);
-    return out.length < raw.length ? out : raw;
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality),
+    );
+    return blob ?? (await (await fetch(raw)).blob());
   } catch {
-    return raw;
+    return await (await fetch(raw)).blob();
   }
 }
 
@@ -282,7 +291,7 @@ function NsfwScanDialog({
   onCancel,
 }: {
   file: File;
-  onDone: (dataUrl: string) => void;
+  onDone: (blob: Blob) => void;
   onCancel: (banned: boolean) => void;
 }) {
   const [step, setStep] = useState(0);
@@ -439,7 +448,12 @@ export function ChatPanel({
   peerId?: Id<"users">;
   roomId?: Id<"watchRooms">;
   messages: ChatMsg[];
-  onSend: (payload: { text?: string; imageUrl?: string; replyToId?: Id<"chatMessages"> }) => Promise<void>;
+  onSend: (payload: {
+    text?: string;
+    imageStorageId?: string;
+    imageUrl?: string;
+    replyToId?: Id<"chatMessages">;
+  }) => Promise<void>;
   meId: string;
   compact?: boolean;
   onOpenProfile?: (id: Id<"users">) => void;
@@ -458,6 +472,7 @@ export function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nsfwReport = useMutation(api.chat.nsfwReport);
+  const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const { muted } = useModeration();
 
   useEffect(() => {
@@ -465,7 +480,11 @@ export function ChatPanel({
   }, [messages.length]);
 
   const send = useCallback(
-    async (payload: { text?: string; imageUrl?: string }) => {
+    async (payload: {
+      text?: string;
+      imageStorageId?: string;
+      imageUrl?: string;
+    }) => {
       await onSend({ ...payload, replyToId: replyTo?._id });
       if (replyTo) {
         setBlinkId(replyTo._id);
@@ -723,11 +742,24 @@ export function ChatPanel({
       {scanFile && (
         <NsfwScanDialog
           file={scanFile}
-          onDone={(dataUrl) => {
+          onDone={(blob) => {
             setScanFile(null);
             void (async () => {
               try {
-                await send({ imageUrl: dataUrl });
+                // 1) upload file ke Convex storage
+                const uploadUrl = await getUploadUrl();
+                const res = await fetch(uploadUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": blob.type || "image/jpeg" },
+                  body: blob,
+                });
+                if (!res.ok) throw new Error("Upload gagal");
+                const { storageId } = (await res.json()) as { storageId: string };
+                // 2) baru kirim storageId-nya di pesan
+                await send({
+                  imageStorageId: storageId,
+                  imageUrl: URL.createObjectURL(blob),
+                });
                 toast.success("Foto terkirim");
               } catch (e) {
                 toast.error(

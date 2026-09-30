@@ -85,6 +85,7 @@ const schema = defineSchema(
       userId: v.id("users"),
       text: v.optional(v.string()),
       imageUrl: v.optional(v.string()),
+      imageStorageId: v.optional(v.string()),
       replyToId: v.optional(v.id("chatMessages")),
       premiumGiveId: v.optional(v.id("premiumGives")),
       createdAt: v.number(),

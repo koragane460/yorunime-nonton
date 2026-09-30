@@ -65,8 +65,12 @@ const SETUP_STEPS: { t: string; d: string }[] = [
     d: "Buka Settings > Access Keys. Salin kolom Server Key (prefix SB-Mid-server- untuk sandbox, Mid-server- untuk production). Jangan pakai Client Key.",
   },
   {
-    t: "Tempel key di tab Keys",
-    d: "Buka tab Keys/API keys di dashboard Freebuff, isi MIDTRANS_SERVER_KEY dengan Server Key tadi. Opsional: MIDTRANS_IS_PRODUCTION = true kalau sudah mau pakai production (default-nya sandbox).",
+    t: "Tempel key di BACKEND (tab Keys)",
+    d: "Buka tab Keys/API keys di dashboard Freebuff, isi MIDTRANS_SERVER_KEY dengan Server Key tadi. Hanya backend yang memakai key ini, jadi TIDAK ada key yang ditaruh di frontend. Opsional: MIDTRANS_IS_PRODUCTION = true kalau sudah mau production (default-nya sandbox, terdeteksi juga dari awalan SB-).",
+  },
+  {
+    t: "Frontend tidak butuh key",
+    d: "Popup Snap dibuat dari server (backend Balikin token + URL Midtrans), lalu frontend hanya menampilkan token itu. Jadi tidak ada Client Key / Secret Key yang perlu ditaruh di kode frontend.",
   },
   {
     t: "Isi rekening penerima",

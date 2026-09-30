@@ -113,7 +113,9 @@ export const listMessages = query({
         clanNameColor: u?.clanNameColor,
         staffRole: u?.staffRole,
         text: r.text,
-        imageUrl: r.imageUrl,
+        imageUrl: r.imageStorageId
+          ? ((await ctx.storage.getUrl(r.imageStorageId)) ?? r.imageUrl)
+          : r.imageUrl,
         premiumGive: give
           ? {
               _id: give._id,
@@ -141,15 +143,20 @@ export const sendMessage = mutation({
     peerId: v.optional(v.id("users")),
     text: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.string()),
     replyToId: v.optional(v.id("chatMessages")),
   },
-  handler: async (ctx, { kind, clanId, roomId, peerId, text, imageUrl, replyToId }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, text, imageUrl, imageStorageId, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     await requireActive(me);
-    if (!text?.trim() && !imageUrl) throw new Error("Pesan kosong");
+    if (!text?.trim() && !imageUrl && !imageStorageId) throw new Error("Pesan kosong");
+    // Data-URL/base64 ditolak: batas dokumen Convex cuma 1MB. Foto harus lewat storage.
+    if (imageUrl && imageUrl.startsWith("data:")) {
+      throw new Error("Kirim foto lewat tombol foto (bukan teks gambar)");
+    }
     if (text && text.length > TEXT_MAX) throw new Error("Pesan terlalu panjang");
 
     let index: string | undefined = undefined;
@@ -187,6 +194,7 @@ export const sendMessage = mutation({
       userId,
       text: text?.trim() || undefined,
       imageUrl,
+      imageStorageId,
       replyToId,
       createdAt: Date.now(),
     });
