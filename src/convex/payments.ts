@@ -1,11 +1,21 @@
 // YoruNime — pembelian premium via Midtrans Snap (DANA / QRIS / GoPay / VA).
-// Isi MIDTRANS_SERVER_KEY di tab Keys untuk mengaktifkan pembayaran nyata.
-// Tanpa key: pembelian dicatat sebagai "menunggu pembayaran" + trial 1 hari.
-
+//
+// CATATAN: file ini sengaja TIDAK memakai "use node" supaya bisa exporting
+// query & mutation. Semua pembacaan env var dan semua panggilan HTTP ke
+// Midtrans dilakukan di `paymentsNode.ts` (Node runtime).
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+// Action Node diimpor langsung (bukan lewat `internal.*`) supaya file ini tidak
+// bergantung pada codegen modul baru.
+import {
+  createTransaction as nodeCreateTransaction,
+  orderStatus as nodeOrderStatus,
+  paymentConfig as nodePaymentConfig,
+} from "./paymentsNode";
+
+// ------------------------------------------------------------------ data ----
 
 export const getOrderBy = internalQuery({
   args: { orderId: v.string() },
@@ -71,55 +81,6 @@ export const markPaidInternal = internalMutation({
   },
 });
 
-// ------------------------------------------------------------- key config ----
-// Isi tab Keys dengan MIDTRANS_SERVER_KEY. Kunci yang dibutuhkan adalah
-// *Server Key* (format `SB-Mid-server-...` untuk sandbox, `Mid-server-...`
-// untuk production). Kalau yang tertempel adalah Client Key
-// (`...-client-...`), transaksi akan ditolak 401 — makanya error di bawah
-// menjelaskan ke user daripada diam-diam gagal.
-const KEY_HELP =
-  "MIDTRANS_SERVER_KEY harus berisi Server Key Midtrans (SB-Mid-server-... untuk sandbox atau Mid-server-... untuk production), bukan Client Key. Buka midtrans.com > Settings > Access Keys > kolom Server Key.";
-
-type KeyInfo = { key: string; isProd: boolean } | { error: string };
-
-function readServerKey(): KeyInfo {
-  const key = (process.env.MIDTRANS_SERVER_KEY ?? "").trim();
-  if (!key) {
-    return { error: "MIDTRANS_SERVER_KEY belum diisi di tab Keys." };
-  }
-  if (!/server/i.test(key)) {
-    return { error: KEY_HELP };
-  }
-  // Awalan SB- = sandbox; selain itu production. Nilai manual
-  // MIDTRANS_IS_PRODUCTION hanya dipakai kalau key tidak punya awalan.
-  const isProd = process.env.MIDTRANS_IS_PRODUCTION
-    ? !!process.env.MIDTRANS_IS_PRODUCTION && process.env.MIDTRANS_IS_PRODUCTION !== "false"
-    : !/^SB-/i.test(key);
-  return { key, isProd };
-}
-
-function basicAuth(key: string) {
-  return `Basic ${Buffer.from(`${key}:`).toString("base64")}`;
-}
-
-/** Info konfigurasi pembayaran (ditampilkan di halaman Premium). */
-export const paymentConfig = query({
-  args: {},
-  handler: async () => {
-    const info = readServerKey();
-    if ("error" in info) {
-      return { configured: false, isProd: false, message: info.error };
-    }
-    return {
-      configured: true,
-      isProd: info.isProd,
-      mode: info.isProd ? "Production" : "Sandbox",
-      masked: `${info.key.slice(0, 8)}…${info.key.slice(-4)}`,
-      message: "",
-    };
-  },
-});
-
 const PLANS: Record<string, { label: string; days: number; price: number }> = {
   p1: { label: "1 Bulan", days: 30, price: 7000 },
   p2: { label: "3 Bulan", days: 90, price: 30000 },
@@ -128,10 +89,48 @@ const PLANS: Record<string, { label: string; days: number; price: number }> = {
   p5: { label: "7 Tahun", days: 2555, price: 200000 },
 };
 
+// --------------------------------------------------------------- actions ----
+
+type SnapResult = {
+  ok: boolean;
+  message?: string;
+  token?: string | null;
+  redirectUrl?: string | null;
+};
+
+/** Status konfigurasi Midtrans — action (butuh Node runtime untuk env). */
+export const paymentConfig = action({
+  args: {},
+  handler: async (
+    ctx,
+  ): Promise<{
+    configured: boolean;
+    isProd: boolean;
+    mode?: string;
+    masked?: string;
+    message: string;
+  }> => {
+    const r = (await ctx.runAction(nodePaymentConfig, {})) as {
+      configured: boolean;
+      isProd: boolean;
+      mode?: string;
+      masked?: string;
+      message: string;
+    };
+    return r;
+  },
+});
+
 /** Buat transaksi Midtrans Snap; return token/redirect untuk popup pembayaran. */
 export const createSnapTransaction = action({
   args: { planId: v.string() },
-  handler: async (ctx, { planId }) => {
+  handler: async (
+    ctx,
+    { planId },
+  ): Promise<
+    | { configured: true; orderId: string; token: string | null; redirectUrl: string | null }
+    | { configured: false; orderId: string; message: string }
+  > => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const plan = PLANS[planId];
@@ -146,61 +145,60 @@ export const createSnapTransaction = action({
       orderId,
     });
 
-    const info = readServerKey();
-    if ("error" in info) {
+    const res = (await ctx.runAction(nodeCreateTransaction, {
+      orderId,
+      amount: plan.price,
+      itemId: planId,
+      itemName: `YoruNime Premium ${plan.label}`,
+      userId,
+    })) as SnapResult;
+
+    if (!res.ok) {
       return {
-        configured: false as const,
+        configured: false,
         orderId,
-        message: `${info.error} Sementara ini kamu dapat trial 1 hari gratis.`,
+        message: `${res.message ?? "Gagal membuat transaksi."} Sementara ini kamu dapat trial 1 hari gratis.`,
       };
     }
-    const { key: serverKey, isProd } = info;
-
-    const url = isProd
-      ? "https://app.midtrans.com/snap/v1/transactions"
-      : "https://app.sandbox.midtrans.com/snap/v1/transactions";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: basicAuth(serverKey),
-      },
-      body: JSON.stringify({
-        transaction_details: { order_id: orderId, gross_amount: plan.price },
-        item_details: [
-          {
-            id: planId,
-            price: plan.price,
-            quantity: 1,
-            name: `YoruNime Premium ${plan.label}`,
-          },
-        ],
-        customer_details: { user_id: userId },
-        callbacks: { finish: `${process.env.CONVEX_SITE_URL ?? ""}/premium` },
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      if (res.status === 401) throw new Error(KEY_HELP);
-      throw new Error(`Midtrans menolak transaksi (${res.status}). ${body.slice(0, 160)}`);
+    if (res.redirectUrl) {
+      await ctx.runMutation(internal.payments.setPaymentUrl, {
+        orderId,
+        paymentUrl: res.redirectUrl,
+      });
     }
-    const data = (await res.json()) as { token?: string; redirect_url?: string };
-    if (!data.token && !data.redirect_url) throw new Error("Midtrans tidak mengembalikan token");
-    await ctx.runMutation(internal.payments.setPaymentUrl, {
-      orderId,
-      paymentUrl: data.redirect_url,
-    });
     return {
-      configured: true as const,
+      configured: true,
       orderId,
-      token: data.token,
-      redirectUrl: data.redirect_url,
+      token: res.token ?? null,
+      redirectUrl: res.redirectUrl ?? null,
     };
   },
 });
 
-/** Klien konfirmasi setelah Snap sukses (snap.js on-success) atau polling. */
+/** Cek status order langsung ke Midtrans (untuk polling setelah redirect). */
+export const checkOrderStatus = action({
+  args: { orderId: v.string() },
+  handler: async (ctx, { orderId }): Promise<{ status: string }> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const row = (await ctx.runQuery(internal.payments.getOrderBy, { orderId })) as {
+      userId: string;
+      status: string;
+    } | null;
+    if (!row || row.userId !== userId) throw new Error("Order tidak ditemukan");
+    const r = (await ctx.runAction(nodeOrderStatus, {
+      orderId,
+    })) as { status: string };
+    if (r.status === "unconfigured") return { status: row.status };
+    if (r.status === "settlement" || r.status === "capture") {
+      await ctx.runMutation(internal.payments.markPaidInternal, { orderId });
+      return { status: "paid" };
+    }
+    return { status: row.status };
+  },
+});
+
+/** Klien konfirmasi setelah Snap sukses atau saat halaman dimuat ulang. */
 export const confirmPurchase = mutation({
   args: { orderId: v.string() },
   handler: async (ctx, { orderId }): Promise<{ alreadyPaid: boolean }> => {
@@ -214,32 +212,6 @@ export const confirmPurchase = mutation({
     return (await ctx.runMutation(internal.payments.markPaidInternal, { orderId })) as {
       alreadyPaid: boolean;
     };
-  },
-});
-
-/** Cek status order langsung ke Midtrans (untuk polling setelah redirect). */
-export const checkOrderStatus = action({
-  args: { orderId: v.string() },
-  handler: async (ctx, { orderId }): Promise<{ status: string }> => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not signed in");
-    const row = (await ctx.runQuery(internal.payments.getOrderBy, { orderId })) as
-      | { userId: string; status: string }
-      | null;
-    if (!row || row.userId !== userId) throw new Error("Order tidak ditemukan");
-    const info = readServerKey();
-    if ("error" in info) return { status: row.status };
-    const res = await fetch(
-      `${info.isProd ? "https://api.midtrans.com" : "https://api.sandbox.midtrans.com"}/v2/${orderId}/status`,
-      { headers: { Accept: "application/json", Authorization: basicAuth(info.key) } },
-    );
-    if (!res.ok) return { status: row.status };
-    const data = (await res.json()) as { transaction_status?: string };
-    if (data.transaction_status === "settlement" || data.transaction_status === "capture") {
-      await ctx.runMutation(internal.payments.markPaidInternal, { orderId });
-      return { status: "paid" };
-    }
-    return { status: row.status };
   },
 });
 
