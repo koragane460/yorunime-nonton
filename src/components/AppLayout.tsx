@@ -16,6 +16,8 @@ import {
   Pause,
   Play,
   X,
+  BookOpen,
+  PanelsTopLeft,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
@@ -312,8 +314,13 @@ export function MiniPlayerHost() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Mini player tetap hidup di semua layar (tidak ikut hilang saat screen
-  // overlay dibuka); hanya disembunyikan di halaman Nonton itu sendiri.
-  if (!state || location.pathname.startsWith("/nonton")) return null;
+  // overlay dibuka); hanya disembunyikan di halaman Nonton & reader komik.
+  if (
+    !state ||
+    location.pathname.startsWith("/nonton") ||
+    location.pathname.startsWith("/baca")
+  )
+    return null;
 
   const toggle = () => {
     const v = videoRef.current;
@@ -453,6 +460,22 @@ function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const overlay = useAppOverlayOpen();
+  // Tekan lama tombol Home (~550ms) → muncul 2 pilihan Manga / Manhwa di atasnya.
+  const [switcher, setSwitcher] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
+  // Tutup switcher saat pindah halaman.
+  useEffect(() => {
+    setSwitcher(false);
+  }, [location.pathname]);
+
   if (overlay) return null;
   const items: { path: string; label: string; icon: ComponentType<{ className?: string }> }[] = [
     { path: "/home", label: "Home", icon: Home },
@@ -460,8 +483,80 @@ function BottomNav() {
     { path: "/info", label: "Info", icon: Info },
     { path: "/akun", label: "Akun", icon: UserRound },
   ];
+
+  const startHold = (path: string) => {
+    fired.current = false;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      fired.current = true;
+      setSwitcher(true);
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, 550);
+    // Prevent default supaya browser tidak_NS_treat sebagai klik ganda.
+    void path;
+  };
+  const cancelHold = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  const onClickItem = (path: string) => {
+    if (fired.current) {
+      fired.current = false;
+      cancelHold();
+      return;
+    }
+    navigate(path);
+  };
+
   return (
     <>
+      {/* Pilihan Manga / Manhwa — muncul di atas tombol Home setelah ditekan lama */}
+      {switcher && (
+        <>
+          <button
+            aria-label="Tutup pilihan"
+            className="fixed inset-0 z-40"
+            onClick={() => setSwitcher(false)}
+          />
+          <div className="pop-enter fixed inset-x-0 bottom-[68px] z-50 mx-auto w-full max-w-md px-6 md:max-w-2xl lg:max-w-4xl">
+            <div className="overflow-hidden rounded-2xl border border-violet-500/40 bg-background/95 shadow-2xl backdrop-blur">
+              <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Ganti kategori
+              </p>
+              <div className="grid grid-cols-2 gap-2 p-3">
+                {(
+                  [
+                    ["/manga", "Manga", BookOpen, "Baca kanan ke kiri"],
+                    ["/manhwa", "Manhwa", PanelsTopLeft, "Gaya webtoon"],
+                  ] as const
+                ).map(([path, label, Icon, sub]) => {
+                  const active = location.pathname.startsWith(path);
+                  return (
+                    <button
+                      key={path}
+                      onClick={() => {
+                        setSwitcher(false);
+                        navigate(path);
+                      }}
+                      className={cn(
+                        "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition",
+                        active
+                          ? "border-violet-500 bg-violet-500/15"
+                          : "border-border hover:border-violet-500/60",
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5 text-sm font-bold">
+                        <Icon className="size-4 text-violet-300" /> {label}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       {/* Navbar lurus full-width, solid — tanpa footer teks */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
         <div className="mx-auto grid w-full max-w-md grid-cols-4 md:max-w-2xl lg:max-w-4xl">
@@ -471,11 +566,17 @@ function BottomNav() {
               base === "/home"
                 ? location.pathname === "/home" || location.pathname === "/"
                 : location.pathname.startsWith(base);
+            const isHome = base === "/home";
             const Icon = it.icon;
             return (
               <button
                 key={it.path}
-                onClick={() => navigate(it.path)}
+                onPointerDown={() => (isHome ? startHold(it.path) : undefined)}
+                onPointerUp={cancelHold}
+                onPointerLeave={cancelHold}
+                onPointerCancel={cancelHold}
+                onContextMenu={(e) => isHome && e.preventDefault()}
+                onClick={() => onClickItem(it.path)}
                 className="nav-item relative flex flex-col items-center gap-0.5 py-2"
               >
                 <Icon

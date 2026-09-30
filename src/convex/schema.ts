@@ -218,6 +218,36 @@ const schema = defineSchema(
       .index("userId_created", ["userId", "createdAt"])
       .index("userId_anime", ["userId", "animeId"]),
 
+    /** Riwayat baca manga & manhwa (bukan anime). */
+    comicHistory: defineTable({
+      userId: v.id("users"),
+      slug: v.string(),
+      comicTitle: v.string(),
+      comicImage: v.optional(v.string()),
+      /** "manga" | "manhwa" — menentukan tema & arah baca. */
+      kind: v.string(),
+      chapter: v.number(),
+      chapterLabel: v.optional(v.string()),
+      /** Halaman terakhir yang dibuka (untuk tombol "Lanjutkan"). */
+      page: v.optional(v.number()),
+      totalPages: v.optional(v.number()),
+      updatedAt: v.number(),
+    })
+      .index("userId_updated", ["userId", "updatedAt"])
+      .index("userId_slug", ["userId", "slug"]),
+
+    /** Favorite manga & manhwa — terlihat oleh user lain lewat profile. */
+    comicFavorites: defineTable({
+      userId: v.id("users"),
+      slug: v.string(),
+      comicTitle: v.string(),
+      comicImage: v.optional(v.string()),
+      kind: v.string(),
+      createdAt: v.number(),
+    })
+      .index("userId_slug", ["userId", "slug"])
+      .index("userId_created", ["userId", "createdAt"]),
+
     premiumPurchases: defineTable({
       userId: v.id("users"),
       planId: v.string(),

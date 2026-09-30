@@ -20,6 +20,9 @@ const Jadwal = lazy(() => import("./pages/Jadwal.tsx"));
 const Akun = lazy(() => import("./pages/Akun.tsx"));
 const Info = lazy(() => import("./pages/Info.tsx"));
 const Premium = lazy(() => import("./pages/Premium.tsx"));
+const Manga = lazy(() => import("./pages/Manga.tsx"));
+const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
+const ReadComic = lazy(() => import("./pages/ReadComic.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -181,6 +184,31 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Akun />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/manga"
+                element={
+                  <RequireAuth>
+                    <Manga />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/manhwa"
+                element={
+                  <RequireAuth>
+                    <Manhwa />
+                  </RequireAuth>
+                }
+              />
+              {/* Reader layar penuh: navbar & mini player disembunyikan otomatis */}
+              <Route
+                path="/baca/:slug/:chapter"
+                element={
+                  <RequireAuth>
+                    <ReadComic />
                   </RequireAuth>
                 }
               />
