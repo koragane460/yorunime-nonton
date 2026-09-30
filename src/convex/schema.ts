@@ -308,12 +308,26 @@ const schema = defineSchema(
       priceIdr: v.number(),
       status: v.string(),
       orderId: v.string(),
+      method: v.optional(v.string()),
+      proofUrl: v.optional(v.string()),
+      note: v.optional(v.string()),
       paymentRef: v.optional(v.string()),
       paymentUrl: v.optional(v.string()),
       createdAt: v.number(),
     })
       .index("userId_created", ["userId", "createdAt"])
-      .index("orderId", ["orderId"]),
+      .index("orderId", ["orderId"])
+      .index("status_created", ["status", "createdAt"]),
+
+    // Pengaturan pembayaran manual (QRIS statis). Satu baris saja, id tetap.
+    paymentSettings: defineTable({
+      qrUrl: v.optional(v.string()),
+      accountName: v.optional(v.string()),
+      accountLabel: v.optional(v.string()),
+      note: v.optional(v.string()),
+      contact: v.optional(v.string()),
+      updatedAt: v.number(),
+    }),
 
     clickGame: defineTable({
       userId: v.id("users"),

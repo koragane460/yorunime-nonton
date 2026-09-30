@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -162,6 +162,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         )}
       </div>
 
+      {isDev && <ManualPaymentPanel />}
       {isDev && (
         <button
           onClick={() => setDialog("clan")}
@@ -270,6 +271,156 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Mode pembayaran manual (QRIS statis): developer menempelkan foto QRIS +
+ * rekening, lalu menyetujui order yang sudah dibayar user.
+ */
+function ManualPaymentPanel() {
+  const config = useQuery(api.payments.manualConfig, {});
+  const pending = useQuery(api.payments.pendingManualOrders, {});
+  const save = useMutation(api.payments.saveManualConfig);
+  const approve = useMutation(api.payments.approveManualOrder);
+  const [open, setOpen] = useState(false);
+  const [qrUrl, setQrUrl] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountLabel, setAccountLabel] = useState("");
+  const [contact, setContact] = useState("");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!config) return;
+    setQrUrl(config.qrUrl ?? "");
+    setAccountName(config.accountName ?? "");
+    setAccountLabel(config.accountLabel ?? "");
+    setContact(config.contact ?? "");
+    setNote(config.note ?? "");
+  }, [config]);
+
+  return (
+    <div className="mt-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span className="text-xs font-bold text-emerald-300">
+          Pembayaran manual (QRIS)
+        </span>
+        <span className="text-[10px] text-emerald-300/80">
+          {config?.ready ? `aktif · ${(pending ?? []).length} menunggu` : "belum diaktifkan"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-2.5 space-y-2">
+          <Field2 label="Link foto QRIS" value={qrUrl} onChange={setQrUrl} placeholder="https://.../qris.png" />
+          <Field2 label="Nama pemilik rekening" value={accountName} onChange={setAccountName} placeholder="Nama di akun bank" />
+          <Field2 label="Bank / e-wallet" value={accountLabel} onChange={setAccountLabel} placeholder="mis. GoPay - 08xx" />
+          <Field2 label="Kontak (WA/Discord)" value={contact} onChange={setContact} placeholder="wa.me/xxxx" />
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder="Instruksi tambahan (opsional)"
+            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none"
+          />
+          {qrUrl && (
+            <img src={qrUrl} alt="QRIS" className="h-28 w-28 rounded-lg bg-white object-contain p-1" />
+          )}
+          <button
+            onClick={async () => {
+              try {
+                await save({
+                  qrUrl: qrUrl || undefined,
+                  accountName: accountName || undefined,
+                  accountLabel: accountLabel || undefined,
+                  contact: contact || undefined,
+                  note: note || undefined,
+                });
+                toast.success("Pengaturan QRIS disimpan");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+              }
+            }}
+            className="w-full rounded-lg bg-emerald-600 py-2 text-xs font-bold text-white"
+          >
+            Simpan pengaturan
+          </button>
+
+          <p className="pt-1 text-[11px] font-bold text-emerald-300">
+            Order menunggu verifikasi
+          </p>
+          {(pending ?? []).length === 0 && (
+            <p className="text-[10px] text-muted-foreground">Belum ada order manual.</p>
+          )}
+          {(pending ?? []).map((o: any) => (
+            <div
+              key={o._id}
+              className="flex items-center gap-2 rounded-lg border border-border bg-background/60 p-2"
+            >
+              <img
+                src={o.image ?? ""}
+                alt=""
+                className="size-8 shrink-0 rounded-full bg-secondary object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-bold">{o.username}</p>
+                <p className="truncate font-mono text-[10px] text-muted-foreground">
+                  {o.orderId}
+                </p>
+                <p className="text-[10px] text-emerald-300">
+                  {o.planLabel} · Rp {o.priceIdr.toLocaleString("id-ID")}
+                </p>
+                {o.note && (
+                  <p className="truncate text-[10px] text-muted-foreground">"{o.note}"</p>
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await approve({ orderId: o.orderId });
+                    toast.success("Premium dikirim ke user");
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Gagal");
+                  }
+                }}
+                className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
+              >
+                Setujui
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field2({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-emerald-500"
+      />
+    </label>
   );
 }
 

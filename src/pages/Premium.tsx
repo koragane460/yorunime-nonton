@@ -12,6 +12,7 @@ import {
   CircleCheck,
   ChevronDown,
   ChevronUp,
+  QrCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -50,39 +51,27 @@ const PERKS = [
   "Akses cepat server streaming",
 ];
 
-/** Panduan setup pembayaran untuk pemilik aplikasi (Midtrans). */
+/** Panduan setup pembayaran untuk pemilik aplikasi (QRIS manual / Midtrans). */
 const SETUP_STEPS: { t: string; d: string }[] = [
   {
-    t: "Buat akun di Midtrans",
-    d: "Daftar di midtrans.com, isi data usaha, lalu verifikasi akun sampai statusnya Active. Verifikasi butuh NPWP/NIK dan rekening atas nama sendiri.",
+    t: "Cara sekarang: QRIS statis (tanpa gateway)",
+    d: "Buka aplikasi GoPay/GoBiz di HP orang tua, buat QRIS statis, lalu salin link gambarnya. Tempel di panel dev > Pembayaran Manual (QRIS) bersama nama & nomor rekening. Tidak ada NPWP/KTP, tidak ada verifikasi, tidak ada biaya.",
   },
   {
-    t: "Aktifkan Snap (halaman pembayaran)",
-    d: "Di menu Products > Snap, aktifkan Snap untuk Production. Snap adalah popup pembayaran yang dipakai YoruNime — user tidak perlu keluar dari aplikasi.",
+    t: "Alur pembayarannya",
+    d: "User pilih paket > dapat kode pesanan + QRIS > transfer sendiri > kirim bukti ke developer > developer tekan Setujui di panel dev. Premium langsung masuk ke akun user (dan notifikasi dikirim).",
   },
   {
-    t: "Salin Server Key",
-    d: "Buka Settings > Access Keys. Salin kolom Server Key (prefix SB-Mid-server- untuk sandbox, Mid-server- untuk production). Jangan pakai Client Key.",
+    t: "Alternatif kalau nanti sudah punya NPWP",
+    d: "Midtrans (Snap/VA/QRIS) atau Xendit bisa dipasang supaya pembayaran otomatis tanpa verifikasi manual. Keduanya butuh merchant atas nama orang dewasa + NIK (NPWP untuk Midtrans).",
   },
   {
-    t: "Tempel key di BACKEND (tab Keys)",
-    d: "Buka tab Keys/API keys di dashboard Freebuff, isi MIDTRANS_SERVER_KEY dengan Server Key tadi. Hanya backend yang memakai key ini, jadi TIDAK ada key yang ditaruh di frontend. Opsional: MIDTRANS_IS_PRODUCTION = true kalau sudah mau production (default-nya sandbox, terdeteksi juga dari awalan SB-).",
+    t: "Kalau memakai Midtrans",
+    d: "Daftar di midtrans.com, verifikasi merchant, aktifkan Snap, lalu salin Server Key (SB-Mid-server- untuk sandbox). Tempel sebagai MIDTRANS_SERVER_KEY di tab Keys (backend saja, tidak ada key di frontend), opsional MIDTRANS_IS_PRODUCTION=true untuk production.",
   },
   {
-    t: "Frontend tidak butuh key",
-    d: "Popup Snap dibuat dari server (backend Balikin token + URL Midtrans), lalu frontend hanya menampilkan token itu. Jadi tidak ada Client Key / Secret Key yang perlu ditaruh di kode frontend.",
-  },
-  {
-    t: "Isi rekening penerima",
-    d: "Di Midtrans > Settings > Bank Accounts / E-Wallets, daftarkan rekening bank, Virtual Account, atau QRIS yang akan menerima uang. Tanpa ini transaksi tidak bisa diselesaikan.",
-  },
-  {
-    t: "Cek status di halaman ini",
-    d: "Muat ulang halaman Premium. Kalau badge hijau muncul, berarti konfigurasi sudah terbaca. Uji dulu pakai mode sandbox, lalu pindah ke production saat sudah yakin.",
-  },
-  {
-    t: "Naikkan ke production",
-    d: "Ubah MIDTRANS_IS_PRODUCTION menjadi true, tempel Server Key production, lalu tes sekali pembayaran sungguhan kecil untuk memastikan dana masuk.",
+    t: "Prioritasnya",
+    d: "Selama mode QRIS manual aktif (QRIS terisi), aplikasi memakai pembayaran manual. Begitu MIDTRANS_SERVER_KEY diisi, Snap otomatis menggantikan alur manual.",
   },
 ];
 
@@ -147,7 +136,7 @@ function PaymentGuide({ config }: { config?: PayConfig }) {
           className="flex w-full items-center justify-between gap-2 text-left"
         >
           <span className="text-[11px] font-bold text-zinc-200">
-            Panduan setup pembayaran (Midtrans)
+            Panduan setup pembayaran (QRIS manual / Midtrans)
           </span>
           {setupOpen ? (
             <ChevronUp className="size-3.5 text-zinc-400" />
@@ -182,6 +171,15 @@ function PaymentGuide({ config }: { config?: PayConfig }) {
 function PremiumContent() {
   const plans = useQuery(api.payments.premiumPlans, {}) as Plan[] | undefined;
   const myPurchases = useQuery(api.payments.myPurchases, {}) as Purchase[] | undefined;
+  // Mode manual: QRIS statis, tanpa gateway (Midtrans butuh NPWP/KTP merchant).
+  const manual = useQuery(api.payments.manualConfig, {});
+  const createManual = useMutation(api.payments.createManualOrder);
+  const [manualOrder, setManualOrder] = useState<{
+    orderId: string;
+    priceIdr: number;
+    days: number;
+    planLabel: string;
+  } | null>(null);
   const createSnap = useAction(api.payments.createSnapTransaction);
   const getPayConfig = useAction(api.payments.paymentConfig);
   const [payConfig, setPayConfig] = useState<PayConfig | undefined>(undefined);
@@ -250,6 +248,47 @@ function PremiumContent() {
   const buy = async (plan: Plan) => {
     setBusy(plan.id);
     try {
+      // 1) Midtrans kalau Server Key-nya sudah diisi.
+      if (payConfig?.configured) {
+        const r = (await createSnap({ planId: plan.id })) as {
+          configured?: boolean;
+          orderId?: string;
+          token?: string;
+          redirectUrl?: string;
+          message?: string;
+        };
+        if (r?.configured && (r.token || r.redirectUrl)) {
+          if (r.orderId) sessionStorage.setItem("ls_pending_order", r.orderId);
+          if (r.redirectUrl) {
+            toast.info("Membuka halaman pembayaran…");
+            window.location.href = r.redirectUrl;
+          } else if (r.token) {
+            const w = window.open(
+              `https://app.sandbox.midtrans.com/snap/v2/vtweb/${r.token}`,
+              "_blank",
+            );
+            if (!w) toast.error("Popup diblokir browser — izinkan popup lalu coba lagi");
+          }
+          setBusy(null);
+          return;
+        }
+      }
+
+      // 2) Mode QRIS statis (dipakai sekarang): bayar manual, developer cek lalu
+      if (manual?.ready) {
+        const r = (await createManual({ planId: plan.id })) as {
+          orderId: string;
+          priceIdr: number;
+          days: number;
+          planLabel: string;
+        };
+        setManualOrder(r);
+        toast.success("Kode pesanan dibuat — scan QRIS di bawah");
+        setBusy(null);
+        return;
+      }
+
+      // 3) Belum ada configured apa pun → demo (premium langsung aktif).
       const r = (await createSnap({ planId: plan.id })) as {
         configured?: boolean;
         orderId?: string;
@@ -333,6 +372,77 @@ function PremiumContent() {
         </div>
       )}
 
+      {/* ---- Panel QRIS statis (mode manual) ---- */}
+      {manual?.ready && (
+        <div className="mt-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
+            <QrCode className="size-4" /> Bayar via QRIS
+          </p>
+          {manualOrder ? (
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src={manual.qrUrl}
+                  alt="QRIS"
+                  className="size-52 rounded-xl bg-white object-contain p-2"
+                />
+                <p className="text-xs text-zinc-400">
+                  Scan pakai GoPay / DANA / ShopeePay / m-banking apa pun
+                </p>
+              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-black/40 p-3 text-center">
+                <p className="text-[11px] uppercase tracking-wider text-zinc-400">
+                  Total yang dibayar
+                </p>
+                <p className="text-xl font-black text-emerald-300">
+                  Rp {manualOrder.priceIdr.toLocaleString("id-ID")}
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-400">
+                  {manualOrder.planLabel} · {manualOrder.days} hari premium
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-secondary/40 p-3">
+                <p className="text-[11px] uppercase tracking-wider text-zinc-400">
+                  Kode pesanan (kirim ke developer)
+                </p>
+                <button
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(manualOrder.orderId);
+                    toast.success("Kode pesanan disalin");
+                  }}
+                  className="mt-1 w-full break-all rounded-lg bg-black/50 px-3 py-2 font-mono text-xs text-emerald-300"
+                >
+                  {manualOrder.orderId}
+                </button>
+              </div>
+              {manual.accountName && (
+                <p className="text-center text-xs text-zinc-300">
+                  Atas nama: <b>{manual.accountName}</b>
+                  {manual.accountLabel ? ` · ${manual.accountLabel}` : ""}
+                </p>
+              )}
+              <p className="rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-[11px] leading-relaxed text-amber-200">
+                {manual.note ||
+                  "Setelah transfer, kirim bukti + kode pesanan ke developer. Premium aktif setelah pembayaran dicek (biasanya beberapa menit)."}
+                {manual.contact ? ` Hubungi: ${manual.contact}` : ""}
+              </p>
+              <button
+                onClick={() => setManualOrder(null)}
+                className="w-full rounded-xl py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200"
+              >
+                Batal / buat pesanan lain
+              </button>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+              Pilih paket di atas, lalu tekan Beli. Kamu dapat kode pesanan + QRIS
+              untuk dibayar manual, dan premium aktif setelah developer
+              memverifikasi pembayaran.
+            </p>
+          )}
+        </div>
+      )}
+
       <SectionTitle>Kegunaan Premium</SectionTitle>
       <div className="rounded-2xl border border-border bg-card p-4">
         <ul className="space-y-2">
@@ -345,8 +455,9 @@ function PremiumContent() {
         </ul>
         <p className="mt-3 flex items-start gap-1.5 text-[11px] text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
-          Pembayaran aman via Midtrans Snap: DANA, GoPay, ShopeePay, QRIS, dan Virtual
-          Account. Kamu akan diarahkan ke halaman pembayaran lalu premium aktif otomatis.
+          {manual?.ready
+            ? "Pembayaran lewat QRIS statis: scan QRIS, kirim bukti ke developer, premium aktif setelah diverifikasi."
+            : "Pembayaran aman via Midtrans Snap: DANA, GoPay, ShopeePay, QRIS, dan Virtual Account. Kamu akan diarahkan ke halaman pembayaran lalu premium aktif otomatis."}
         </p>
       </div>
 
@@ -368,7 +479,11 @@ function PremiumContent() {
                     p.status === "paid" ? "text-emerald-400" : "text-amber-300",
                   )}
                 >
-                  {p.status === "paid" ? "lunas ✓" : "menunggu pembayaran"}
+                  {p.status === "paid"
+                    ? "lunas ✓"
+                    : p.status === "manual_pending"
+                      ? "menunggu verifikasi developer"
+                      : "menunggu pembayaran"}
                 </span>
               </div>
             ))}
