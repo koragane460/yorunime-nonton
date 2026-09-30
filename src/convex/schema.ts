@@ -173,6 +173,11 @@ const schema = defineSchema(
       // (sebelumnya satu request pending = blokir semua request berikutnya).
       .index("from_to_status", ["fromUserId", "toUserId", "status"]),
 
+    counters: defineTable({
+      key: v.string(),
+      value: v.number(),
+    }).index("key", ["key"]),
+
     notifications: defineTable({
       userId: v.id("users"),
       type: v.string(),

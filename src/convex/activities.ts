@@ -254,6 +254,7 @@ export const listComments = query({
         image: u?.image,
         bannerUrl: u?.bannerUrl,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
+        staffRole: u?.staffRole,
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,

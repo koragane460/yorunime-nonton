@@ -28,10 +28,13 @@ export const buyWithDiamonds = mutation({
     if (!item) throw new Error("Item tidak ada");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
-    if ((me.diamonds ?? 0) < item.cost) throw new Error("Diamond tidak cukup");
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < item.cost)
+      throw new Error("Diamond tidak cukup");
     const base = Math.max(Date.now(), me.premiumUntil ?? 0);
     await ctx.db.patch(userId, {
-      diamonds: (me.diamonds ?? 0) - item.cost,
+      diamonds: me.unlimitedSacret
+        ? (me.diamonds ?? 0)
+        : (me.diamonds ?? 0) - item.cost,
       premiumUntil: base + item.days * 86400000,
     });
     return { ok: true };

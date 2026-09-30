@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
+import { useModeration } from "@/components/ModerationGuard";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Crown, ImagePlus, MoreVertical, Plus, Reply, Send, Trash2, X } from "lucide-react";
+import { Crown, ImagePlus, MoreVertical, Plus, Reply, Send, Trash2, VolumeX, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -397,6 +398,7 @@ export function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nsfwReport = useMutation(api.chat.nsfwReport);
+  const { muted } = useModeration();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -415,6 +417,10 @@ export function ChatPanel({
   );
 
   const submit = async () => {
+    if (muted) {
+      toast.error("Kamu sedang dimute, tidak bisa mengirim pesan");
+      return;
+    }
     if (!text.trim()) return;
     const t = text;
     setText("");
@@ -428,8 +434,17 @@ export function ChatPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {muted && (
+        <div className="mb-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-500/30 bg-zinc-500/10 px-3 py-1.5 text-[11px] font-semibold text-zinc-300">
+          <VolumeX className="size-3.5" /> Kamu sedang dimute — kolom chat dikunci
+        </div>
+      )}
       {/* daftar pesan */}
-      <div className={`thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-1 ${compact ? "py-2" : "py-3"}`}>
+      <div
+        className={`thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-1 ${
+          compact ? "py-2" : "py-3"
+        } ${muted ? "pointer-events-none select-none opacity-40 grayscale" : ""}`}
+      >
         {messages.length === 0 && (
           <p className="py-10 text-center text-sm text-muted-foreground">
             Belum ada pesan — mulai percakapan!
@@ -448,7 +463,7 @@ export function ChatPanel({
                   className="size-9 shrink-0 rounded-full border border-white/15 object-cover"
                 />
               </button>
-              <div className={cn("flex max-w-[76%] min-w-0 flex-col", mine ? "items-end" : "items-start")}>
+              <div className={cn("flex max-w-[70%] min-w-0 flex-col", mine ? "items-end" : "items-start")}>
                 <div
                   className={cn(
                     "w-fit max-w-full min-w-0 border px-3 py-2",
@@ -462,7 +477,7 @@ export function ChatPanel({
                   )}
                 >
                   {/* Header bubble: username + centang + title, clan tag di kanan */}
-                  <div className="flex min-w-0 items-center gap-1.5">
+                  <div className="flex w-fit min-w-0 max-w-full items-center gap-1.5">
                     <span className={cn("truncate text-xs font-semibold", usernameColor(m.username))}>
                       {m.username}
                     </span>
@@ -473,7 +488,7 @@ export function ChatPanel({
                         icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
                         tag={m.clanTag}
                         color={m.clanNameColor}
-                        className="ml-auto shrink-0 scale-90 px-1.5 py-0 text-[9px]"
+                        className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
                       />
                     )}
                   </div>
@@ -572,7 +587,14 @@ export function ChatPanel({
               variant="outline"
               size="icon"
               className="rounded-full"
-              onClick={() => setPlusOpen((v) => !v)}
+              disabled={muted}
+              onClick={() => {
+                if (muted) {
+                  toast.error("Kamu sedang dimute, tidak bisa kirim foto atau premium");
+                  return;
+                }
+                setPlusOpen((v) => !v);
+              }}
             >
               <Plus className="size-4" />
             </Button>
@@ -600,11 +622,13 @@ export function ChatPanel({
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
-            placeholder="Tulis pesan…"
-            className="flex-1 rounded-full"
+            placeholder={muted ? "Kamu sedang dimute…" : "Tulis pesan…"}
+            disabled={muted}
+            className="flex-1 rounded-full disabled:opacity-50"
           />
           <Button
             size="icon"
+            disabled={muted}
             className="rounded-full bg-violet-600 text-white hover:bg-violet-500"
             onClick={submit}
           >

@@ -74,14 +74,22 @@ export function ProfileSheet({
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div
-              className="h-40 w-full bg-cover bg-center"
+              className={cn(
+                "h-44 w-full bg-cover bg-center",
+                !profile.bannerUrl && "yn-banner",
+              )}
               style={
                 profile.bannerUrl
                   ? { backgroundImage: `url(${profile.bannerUrl})` }
                   : undefined
               }
             >
-              {!profile.bannerUrl && <div className="h-full w-full bg-hero-gradient" />}
+              {profile.bannerUrl && (
+                <>
+                  <div className="yn-banner absolute inset-0 opacity-70 mix-blend-screen" />
+                  <div className="absolute inset-0 bg-black/25" />
+                </>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -92,7 +100,7 @@ export function ProfileSheet({
             </button>
             {/* Foto profile menutupi banner, tepat di tengah — dengan cincin glow */}
             <div className="relative -mt-16 flex justify-center">
-              <div className="rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-[3px] shadow-[0_10px_32px_-6px_rgba(168,85,247,.8)]">
+              <div className="yn-avatar-ring">
                 <div className="rounded-full bg-background p-[2px]">
                   <Avatar
                     src={profile.image}

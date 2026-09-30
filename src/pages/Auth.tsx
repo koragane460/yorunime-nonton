@@ -74,13 +74,31 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
-  // Google (test) & login tester memakai flow anonim internal — akun dibuat otomatis.
+  // Google OAuth: browser diarahkan ke Google, jadi pemilih akun Google
+  // yang ada di device langsung muncul (tanpa input Gmail manual).
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await signIn("google", { redirectTo: redirect });
+      // signIn("google") me-redirect ke Google, jadi baris di bawah rarely jalan.
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Gagal masuk dengan Google. Coba lagi.",
+      );
+      setIsLoading(false);
+    }
+  };
+
+  // Mode demo/anonim: akun dibuat otomatis tanpa email.
   const handleSimpleLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
       await signIn("anonymous");
-      navigate(redirect);
     } catch (error) {
       console.error("Login error:", error);
       setError(
@@ -168,6 +186,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <CardContent className="flex flex-col gap-3 pb-6">
                   <Button
                     type="button"
+                    className="w-full bg-white text-zinc-900 hover:bg-zinc-100"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <GoogleIcon />
+                    )}
+                    Login dengan Google
+                  </Button>
+                  <Button
+                    type="button"
                     className="w-full bg-violet-600 text-white hover:bg-violet-500"
                     onClick={() => setMode("email")}
                     disabled={isLoading}
@@ -176,26 +207,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleSimpleLogin}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <GoogleIcon />
-                    )}
-                    Login dengan Google (test)
-                  </Button>
-                  <Button
-                    type="button"
                     variant="ghost"
                     className="w-full text-muted-foreground"
                     onClick={() => setMode("tester")}
                     disabled={isLoading}
                   >
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Login Tester
+                    <ShieldCheck className="mr-2 h-4 w-4" /> Masuk Mode Demo
                   </Button>
                   {error && <p className="text-sm text-red-500">{error}</p>}
                 </CardContent>
@@ -313,9 +330,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             {mode === "tester" && (
               <>
                 <CardHeader className="text-center">
-                  <CardTitle className="mt-4">Login Tester</CardTitle>
+                  <CardTitle className="mt-4">Masuk Mode Demo</CardTitle>
                   <CardDescription>
-                    Masukkan ID akun dan password tester
+                    Masuk tanpa email untuk mencoba YoruNime
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleTesterLogin}>
@@ -367,7 +384,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             )}
 
             <div className="rounded-b-lg border-t bg-muted px-6 py-4 text-center text-xs text-muted-foreground">
-              YoruNime — mode test
+              YoruNime — nonton anime, manhwa & manga
             </div>
           </Card>
         </div>

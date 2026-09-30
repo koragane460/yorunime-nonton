@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
 import { Avatar, BlueCheck, ShineBadge } from "@/components/lstream-ui";
 import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
-import { Bell, BookOpen, PlayCircle } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  Megaphone,
+  PlayCircle,
+  Plus,
+  Send,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 type Tab = "notif" | "lanjut";
 
@@ -54,7 +64,7 @@ function InfoContent() {
   );
 }
 
-/** Pemberitahuan: komentar teman & developer (bug/fix/update), terbaru dulu. */
+/** Pemberitahuan: broadcast developer, notifikasi sistem, dan komentar teman. */
 function NotifTab() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -62,9 +72,63 @@ function NotifTab() {
     api.activities.myFriendsComments,
     user ? {} : "skip",
   );
+  const access = useQuery(api.moderation.myPanelAccess, user ? {} : "skip");
+  const notifs = useQuery(
+    api.moderation.myNotifications,
+    user ? {} : "skip",
+  );
+  const [composeOpen, setComposeOpen] = useState(false);
+  const isDev = access?.level === "dev";
 
   return (
     <div className="space-y-2.5 pt-3">
+      {/* Tombol + khusus developer: kirim pesan ke semua user */}
+      {isDev && (
+        <div className="flex items-center justify-between rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-violet-200">
+            <Megaphone className="size-3.5" /> Developer Panel
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setComposeOpen((v) => !v)}
+            className="rounded-full bg-violet-600 text-white hover:bg-violet-500"
+          >
+            {composeOpen ? <X className="size-3.5" /> : <Plus className="size-4" />}
+            {composeOpen ? "Batal" : "Kirim"}
+          </Button>
+        </div>
+      )}
+
+      {composeOpen && isDev && (
+        <BroadcastComposer onDone={() => setComposeOpen(false)} />
+      )}
+
+      {(notifs ?? []).map((n) => (
+        <div
+          key={n._id}
+          className="flex gap-2.5 rounded-lg border border-violet-500/25 bg-violet-500/5 p-2.5"
+        >
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-600/25">
+            <Bell className="size-4 text-violet-200" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-xs font-bold text-violet-100">
+                {n.title}
+              </p>
+              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                {timeAgo(n.createdAt)}
+              </span>
+            </div>
+            {n.body && (
+              <p className="mt-0.5 text-sm leading-snug text-zinc-300">
+                {n.body}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+
       {(friendComments ?? []).map((c: any) => (
         <button
           key={c._id}
@@ -101,11 +165,63 @@ function NotifTab() {
           </div>
         </button>
       ))}
-      {friendComments && friendComments.length === 0 && (
+      {friendComments && friendComments.length === 0 && (notifs ?? []).length === 0 && (
         <p className="py-10 text-center text-xs text-muted-foreground">
           Belum ada pemberitahuan dari developer atau teman
         </p>
       )}
+    </div>
+  );
+}
+
+/** Dialog dev: kirim pesan + title ke semua user lewat halaman Pemberitahuan. */
+function BroadcastComposer({ onDone }: { onDone: () => void }) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const send = useMutation(api.moderation.broadcast);
+
+  const submit = async () => {
+    if (!title.trim() || !body.trim()) {
+      toast.error("Title dan isi pesan wajib diisi");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await send({ title: title.trim(), body: body.trim() });
+      toast.success(`Terkirim ke ${res.sent} user`);
+      setTitle("");
+      setBody("");
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title pesan"
+        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500/70"
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Isi pesan untuk semua user"
+        rows={4}
+        className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500/70"
+      />
+      <Button
+        onClick={() => void submit()}
+        disabled={busy}
+        className="w-full rounded-full bg-violet-600 font-bold text-white hover:bg-violet-500"
+      >
+        <Send className="size-4" /> {busy ? "Mengirim…" : "Kirim"}
+      </Button>
     </div>
   );
 }

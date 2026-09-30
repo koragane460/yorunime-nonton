@@ -1,5 +1,6 @@
 // YoruNime — penyedia data anime (Otakudesu via ANIME_API_BASE + Jikan rate-limit guard + fallback statis)
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 
@@ -666,6 +667,18 @@ export const animeSearch = action({
   handler: async (runCtx, { q, page, adult = false }) => {
     const query = q.trim();
     if (query.length === 0) return [];
+    // Pencarian 18+ hanya untuk staff (dev/mod/tester/sepuh).
+    let allowAdult = false;
+    if (adult) {
+      const authUserId = await getAuthUserId(runCtx);
+      if (authUserId) {
+        const me = await runCtx.runQuery(internal.moderation.adultAccess, {
+          userId: authUserId,
+        });
+        allowAdult = !!me;
+      }
+      if (!allowAdult) return [];
+    }
     const p = Math.max(1, Math.min(6, Math.round(page ?? 1)));
     const lower = query.toLowerCase();
     // 1) AniList (pencarian lengkap & selalu punya MAL id → bisa distream).

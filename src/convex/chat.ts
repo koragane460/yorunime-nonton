@@ -254,12 +254,15 @@ export const givePremium = mutation({
       Math.floor(((me.premiumUntil ?? 0) - Date.now()) / 86400000),
     );
     const cost = giveCost(days, receivers);
-    if (remaining < cost)
+    // Premium unlimited (diberikan developer): premium tidak berkurang.
+    if (!me.unlimitedPremium && remaining < cost)
       throw new Error(`Premium kamu kurang ${cost - remaining} hari`);
     const myClanTag = me.clanTag;
-    await ctx.db.patch(userId, {
-      premiumUntil: (me.premiumUntil ?? 0) - cost * 86400000,
-    });
+    if (!me.unlimitedPremium) {
+      await ctx.db.patch(userId, {
+        premiumUntil: (me.premiumUntil ?? 0) - cost * 86400000,
+      });
+    }
 
     const giveId = await ctx.db.insert("premiumGives", {
       fromUserId: userId,

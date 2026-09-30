@@ -810,6 +810,13 @@ function SearchScreen({
   const [activeGenre, setActiveGenre] = useState<string | "all">("all");
   const [adult, setAdult] = useState(false);
   const [adultUnlocked, setAdultUnlocked] = useState(false);
+  // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
+  const { user } = useAuth();
+  const panelAccess = useQuery(
+    api.moderation.myPanelAccess,
+    user ? {} : "skip",
+  );
+  const canAdult = !!panelAccess?.adult;
   const genres = useAction(api.anime.animeGenres);
 
   useEffect(() => {
@@ -914,7 +921,8 @@ function SearchScreen({
           </button>
         </div>
 
-        {/* Filter 18+ — perlu konfirmasi umur */}
+        {/* Filter 18+ — hanya untuk user yang punya akses */}
+        {canAdult && (
         <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
           <button
             onClick={() => {
@@ -960,6 +968,7 @@ function SearchScreen({
             </button>
           )}
         </div>
+        )}
 
         {/* Genre collapsible — "Semua" paling kiri */}
         <div className="mt-3">
@@ -1016,7 +1025,7 @@ function SearchScreen({
                   Coba kata kunci lebih pendek, atau tanpa spasi — misalnya
                   &quot;onepiece&quot;, &quot;solo leveling&quot;.
                 </p>
-                {!adult && (
+                {!adult && canAdult && (
                   <button
                     onClick={() => {
                       setAdult(true);

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Avatar, BlueCheck } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { Heart, Reply, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/lstream";
+import { useModeration } from "@/components/ModerationGuard";
 
 export type CommentT = {
   _id: string;
@@ -14,6 +16,7 @@ export type CommentT = {
   image?: string;
   bannerUrl?: string;
   premium?: boolean;
+  staffRole?: string;
   clanTag?: string;
   clanTagIcon?: string;
   clanNameColor?: string;
@@ -45,8 +48,13 @@ export function CommentsSection({
   const [sort, setSort] = useState<"terbaru" | "populer">("terbaru");
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<CommentT | null>(null);
+  const { muted } = useModeration();
 
   const send = async () => {
+    if (muted) {
+      toast.error("Kamu sedang dimute, tidak bisa komentar");
+      return;
+    }
     if (!text.trim()) return;
     try {
       await onSend(text, replyTo?._id);
@@ -83,12 +91,14 @@ export function CommentsSection({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void send()}
-          placeholder="Tulis komentar…"
-          className="h-10 flex-1 bg-transparent px-1 text-sm outline-none"
+          placeholder={muted ? "Kamu sedang dimute…" : "Tulis komentar…"}
+          disabled={muted}
+          className="h-10 flex-1 bg-transparent px-1 text-sm outline-none disabled:opacity-50"
         />
         <button
           onClick={() => void send()}
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500"
+          disabled={muted}
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500 disabled:opacity-50"
           aria-label="Kirim komentar"
         >
           <Send className="size-4" />
@@ -161,8 +171,13 @@ function CommentRow({ c, meId, onReply }: { c: CommentT; meId?: string; onReply:
           <div className="flex items-center gap-1">
             <p className="truncate text-xs font-bold">{c.username}</p>
             {c.premium && <BlueCheck className="size-3.5" />}
+            <TitleBadge role={c.staffRole} compact />
             {c.clanTag && (
-              <span className="ml-1 text-[10px] text-gold">[{c.clanTag}]</span>
+              <ClanTag
+                icon={c.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                tag={c.clanTag}
+                className="ml-1 scale-90 px-1.5 py-0 text-[9px]"
+              />
             )}
           </div>
           <p className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</p>

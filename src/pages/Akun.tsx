@@ -85,15 +85,28 @@ function AkunContent() {
   return (
     <div className="relative -mx-4">
       {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
-      <div className="relative">        <div className="h-40 w-full bg-cover bg-center"
+      <div className="relative">
+        <div
+          className={cn(
+            "h-48 w-full bg-cover bg-center",
+            !user.bannerUrl && "yn-banner",
+          )}
           style={
             user.bannerUrl
               ? { backgroundImage: `url(${user.bannerUrl})` }
               : undefined
           }
         >
-          {!user.bannerUrl && <div className="bg-hero-gradient h-full w-full" />}
+          {user.bannerUrl && (
+            <>
+              {/* Kabut aurora di atas foto banner biar tidak terlihat polos */}
+              <div className="yn-banner absolute inset-0 opacity-70 mix-blend-screen" />
+              <div className="absolute inset-0 bg-black/25" />
+            </>
+          )}
         </div>
+        {/* Gradasi biar banner menyatu ke konten di bawahnya */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
         <button
           onClick={() => setSettingsOpen(true)}
           aria-label="Pengaturan"
@@ -105,14 +118,14 @@ function AkunContent() {
 
       {/* Foto profile menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
-        <div className="relative -mt-12 flex flex-col items-center">
-          {/* Cincin glow di sekeliling avatar supaya tidak terlihat polos */}
-          <div className="rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-[3px] shadow-[0_8px_28px_-6px_rgba(168,85,247,.75)]">
+        <div className="relative -mt-14 flex flex-col items-center">
+          {/* Cincin gradient berdenyut di sekeliling avatar */}
+          <div className="yn-avatar-ring">
             <div className="rounded-full bg-background p-[2px]">
               <Avatar
                 src={user.image}
                 seed={user.username}
-                className="size-20"
+                className="size-24"
                 online={!user.hideOnline}
               />
             </div>

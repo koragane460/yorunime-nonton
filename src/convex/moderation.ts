@@ -100,15 +100,21 @@ export const myPanelAccess = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) return { level: "none" as const };
+    if (userId === null)
+      return { level: "none" as const, adult: false, username: null };
     const me = await ctx.db.get(userId);
-    if (!me) return { level: "none" as const };
+    if (!me)
+      return { level: "none" as const, adult: false, username: null };
     const isDev =
       me.role === "admin" || me.staffRole === "dev" || me.staffRole === "creator";
     const isMod = isDev || me.staffRole === "mod";
-    if (isDev) return { level: "dev" as const, username: me.username };
-    if (isMod) return { level: "mod" as const, username: me.username };
-    return { level: "none" as const, username: me.username };
+    // Semua staff (dev/mod/tester/sepuh) boleh mengaktifkan pencarian 18+.
+    const adult = isDev || isMod || !!me.staffRole;
+    if (isDev)
+      return { level: "dev" as const, adult, username: me.username ?? null };
+    if (isMod)
+      return { level: "mod" as const, adult, username: me.username ?? null };
+    return { level: "none" as const, adult, username: me.username ?? null };
   },
 });
 
@@ -287,6 +293,39 @@ export const broadcast = mutation({
       });
     }
     return { sent: users.length };
+  },
+});
+
+/** Apakah user boleh memakai pencarian 18+ (semua staff). */
+export const adultAccess = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const me = await ctx.db.get(userId);
+    if (!me) return false;
+    return me.role === "admin" || !!me.staffRole;
+  },
+});
+
+/** Notifikasi milik user yang sedang login (broadcast developer, dll). */
+export const myNotifications = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 40 }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const rows = await ctx.db
+      .query("notifications")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .collect();
+    return rows
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, limit)
+      .map((n) => ({
+        _id: n._id,
+        type: n.type,
+        title: n.title,
+        body: n.body ?? "",
+        createdAt: n.createdAt,
+      }));
   },
 });
 

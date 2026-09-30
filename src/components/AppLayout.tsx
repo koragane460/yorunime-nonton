@@ -2,7 +2,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Avatar, BlueCheck, LevelBadge, ClanTag } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Home,
   CalendarDays,
@@ -152,13 +153,22 @@ function AccountPanel({
             : undefined
         }
       >
-        {!bannerUrl && <div className="bg-hero-gradient absolute inset-0" />}
+        {!bannerUrl && <div className="yn-banner absolute inset-0" />}
         {/* Overlay gelap rata di SELURUH kartu (sebelumnya hanya area teks,
             jadi bagian banner tanpa teks terlihat lebih terang). */}
-        {bannerUrl && <div className="absolute inset-0 bg-black/45" />}
+        {bannerUrl && (
+          <>
+            <div className="yn-banner absolute inset-0 opacity-60 mix-blend-screen" />
+            <div className="absolute inset-0 bg-black/45" />
+          </>
+        )}
         <div className="relative p-3">
           <div className="flex items-center gap-3">
-            <Avatar src={image} seed={name} className="size-14" />
+            <div className="yn-avatar-ring shrink-0">
+              <div className="rounded-full bg-background p-[2px]">
+                <Avatar src={image} seed={name} className="size-14" />
+              </div>
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <p
@@ -168,13 +178,21 @@ function AccountPanel({
                   {name}
                 </p>
                 {premium && <BlueCheck />}
+                <TitleBadge role={staffRole} compact />
               </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-              <LevelBadge level={level} />
-              <span className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-zinc-400">
                 ID: {displayId(seqId, id)}
-              </span>
-            </div>
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <LevelBadge level={level} />
+                {clanTag && (
+                  <ClanTag
+                    icon={clanTagIcon ?? DEFAULT_CLAN_ICON}
+                    tag={clanTag}
+                    className="scale-90 px-1.5 py-0 text-[9px]"
+                  />
+                )}
+              </div>
             </div>
             <ChevronRight className="size-5 shrink-0 text-zinc-400" />
           </div>

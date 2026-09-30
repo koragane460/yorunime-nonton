@@ -271,7 +271,7 @@ export const createClan = mutation({
     if (userId === null) throw new ConvexError("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new ConvexError("User not found");
-    if ((me.diamonds ?? 0) < CREATE_COST)
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < CREATE_COST)
       throw new ConvexError(
         `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} 💎 — butuh ${CREATE_COST} 💎 buat bikin clan (donasi ke clan lain / beli premium untuk nambah)`,
       );
@@ -290,7 +290,11 @@ export const createClan = mutation({
       .withIndex("userId", (q) => q.eq("userId", userId))
       .first();
     if (existing) throw new ConvexError("Kamu sudah punya clan");
-    await ctx.db.patch(userId, { diamonds: (me.diamonds ?? 0) - CREATE_COST });
+    await ctx.db.patch(userId, {
+      diamonds: me.unlimitedSacret
+        ? (me.diamonds ?? 0)
+        : (me.diamonds ?? 0) - CREATE_COST,
+    });
     const clanId = await ctx.db.insert("clans", {
       name: name.trim(),
       tag: cleanTag,
@@ -446,11 +450,16 @@ export const donate = mutation({
     const res = await myClan(ctx, userId);
     if (!res) throw new Error("Kamu belum join clan");
     if (amount < 50) throw new Error("Minimal 50 Sacret");
-    if ((me.diamonds ?? 0) < amount) throw new Error("Sacret tidak cukup");
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < amount)
+      throw new Error("Sacret tidak cukup");
     const today = dayString();
     const member = res.member;
     const donatedToday = member.lastDonateDay === today ? member.donatedToday : 0;
-    await ctx.db.patch(userId, { diamonds: (me.diamonds ?? 0) - amount });
+    await ctx.db.patch(userId, {
+      diamonds: me.unlimitedSacret
+        ? (me.diamonds ?? 0)
+        : (me.diamonds ?? 0) - amount,
+    });
     await ctx.db.patch(member._id, {
       donatedTotal: member.donatedTotal + amount,
       donatedToday: donatedToday + amount,

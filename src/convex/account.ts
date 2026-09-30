@@ -13,8 +13,20 @@ export const ensureUser = mutation({
     if (!user) return null;
     const patch: Record<string, unknown> = {};
     if (user.seqId === undefined) {
-      // Semua akun ID-nya #1 (mode test) — counter direset ke 1.
-      patch.seqId = 1;
+      // Nomor urut akun: increment counter global supaya #1 dipakai akun pertama
+      // (developer) dan seterusnya berurutan.
+      const row = await ctx.db
+        .query("counters")
+        .withIndex("key", (q) => q.eq("key", "userSeq"))
+        .first();
+      if (row) {
+        const next = row.value + 1;
+        await ctx.db.patch(row._id, { value: next });
+        patch.seqId = next;
+      } else {
+        await ctx.db.insert("counters", { key: "userSeq", value: 1 });
+        patch.seqId = 1;
+      }
     }
     if (user.username === undefined) {
       const base =
@@ -40,6 +52,15 @@ export const ensureUser = mutation({
     if (user.createdAt === undefined) patch.createdAt = Date.now();
     if (user.nsfwStrikes === undefined) patch.nsfwStrikes = 0;
     if (user.theme === undefined) patch.theme = "dark";
+    if (user.staffRole === undefined && user.seqId === 1) {
+      // Hanya akun #1 yang paling lama_created yang menjadi developer.
+      const other = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("seqId"), 1))
+        .first();
+      if (!other || (other.createdAt ?? Infinity) > (user.createdAt ?? 0))
+        patch.staffRole = "dev";
+    }
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
   },
