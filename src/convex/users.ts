@@ -344,6 +344,60 @@ export const devGiveClanPremium = mutation({
   },
 });
 
+/** Alfabet UID: tanpa huruf/angka yang mudah tertukar (O/0, I/1, S/5). */
+const UID_ALPHABET = "ABCDEFGHJKLMNPQRTUVWXYZ2346789";
+
+function randomUid(len = 7): string {
+  let out = "";
+  for (let i = 0; i < len; i++) {
+    out += UID_ALPHABET[Math.floor(Math.random() * UID_ALPHABET.length)];
+  }
+  return out;
+}
+
+/** Pastikan akun punya UID 7 karakter (dipanggil sekali saat akun dibuka). */
+export const ensureUid = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+    if (user.uidCode) return { uidCode: user.uidCode };
+    for (let i = 0; i < 6; i++) {
+      const code = randomUid();
+      const clash = await ctx.db
+        .query("users")
+        .withIndex("uidCode", (q) => q.eq("uidCode", code))
+        .first();
+      if (!clash) {
+        await ctx.db.patch(userId, { uidCode: code });
+        return { uidCode: code };
+      }
+    }
+    throw new Error("Gagal membuat UID, coba lagi");
+  },
+});
+
+/** Cari akun berdasarkan UID (dipakai form verifikasi pembelian). */
+export const findByUid = query({
+  args: { code: v.string() },
+  handler: async (ctx, { code }) => {
+    const clean = code.trim().toUpperCase();
+    if (!/^[A-Z0-9]{7}$/.test(clean)) return null;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("uidCode", (q) => q.eq("uidCode", clean))
+      .first();
+    if (!user) return null;
+    return {
+      uidCode: clean,
+      username: user.username ?? "user",
+      premium: (user.premiumUntil ?? 0) > Date.now(),
+    };
+  },
+});
+
 export const internalEnsureUser = internalMutation({
   args: {},
   handler: async (ctx) => {
@@ -358,6 +412,7 @@ export const internalEnsureUser = internalMutation({
     if (user.diamonds === undefined) patch.diamonds = 45000;
     if (user.createdAt === undefined) patch.createdAt = Date.now();
     if (user.nsfwStrikes === undefined) patch.nsfwStrikes = 0;
+    if (user.uidCode === undefined) patch.uidCode = randomUid();
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
   },

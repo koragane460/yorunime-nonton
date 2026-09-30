@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
@@ -283,6 +283,12 @@ function ManualPaymentPanel() {
   const pending = useQuery(api.payments.pendingManualOrders, {});
   const save = useMutation(api.payments.saveManualConfig);
   const approve = useMutation(api.payments.approveManualOrder);
+  const simulate = useMutation(api.payments.devSimulatePurchase);
+  const simulateBot = useAction(api.payments.devSimulateWithBot);
+  const { user: me } = useAuth();
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [autoMax, setAutoMax] = useState("");
+  const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -297,6 +303,8 @@ function ManualPaymentPanel() {
     setAccountLabel(config.accountLabel ?? "");
     setContact(config.contact ?? "");
     setNote(config.note ?? "");
+    setAutoApprove(config.autoApprove === true);
+    setAutoMax(config.autoApproveMax ? String(config.autoApproveMax) : "");
   }, [config]);
 
   return (
@@ -338,6 +346,8 @@ function ManualPaymentPanel() {
                   accountLabel: accountLabel || undefined,
                   contact: contact || undefined,
                   note: note || undefined,
+                  autoApprove,
+                  autoApproveMax: autoMax ? Number(autoMax) : 0,
                 });
                 toast.success("Pengaturan QRIS disimpan");
               } catch (e) {
@@ -348,6 +358,64 @@ function ManualPaymentPanel() {
           >
             Simpan pengaturan
           </button>
+
+          <div className="rounded-lg border border-border bg-background/60 p-2">
+            <label className="flex items-center gap-2 text-[11px] font-semibold">
+              <input
+                type="checkbox"
+                checked={autoApprove}
+                onChange={(e) => setAutoApprove(e.target.checked)}
+                className="size-4 accent-emerald-500"
+              />
+              Auto-setujui order (tanpa cek manual)
+            </label>
+            <input
+              value={autoMax}
+              onChange={(e) => setAutoMax(e.target.value.replace(/[^0-9]/g, ""))}
+              inputMode="numeric"
+              placeholder="Batas harga auto-setuju (0 = semua)"
+              className="mt-1.5 w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs outline-none"
+            />
+            <button
+              disabled={!me?._id}
+              onClick={async () => {
+                if (!me?._id) return;
+                try {
+                  const r = await simulate({ targetId: me._id, planId: "p1" });
+                  toast.success(`Order simulasi dibuat: ${r.orderId}`);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Gagal membuat simulasi");
+                }
+              }}
+              className="mt-2 w-full rounded-lg border border-emerald-500/50 py-1.5 text-[11px] font-bold text-emerald-300"
+            >
+              Simulasikan pembelian (akun saya)
+            </button>
+            <button
+              disabled={!me?._id}
+              onClick={async () => {
+                if (!me?._id) return;
+                setBusy(true);
+                try {
+                  const r = await simulateBot({ targetId: me._id, planId: "p1" });
+                  toast.success(
+                    `Bot AI: ${r.verdict === "verified" ? "terverifikasi, premium masuk" : r.verdict === "rejected" ? "ditolak" : "menunggu developer"}`,
+                  );
+                  if (r.verdict === "verified") toast.success("Catatan bot: " + r.note);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Gagal simulasi");
+                }
+                setBusy(false);
+              }}
+              className="mt-2 w-full rounded-lg bg-emerald-600 py-1.5 text-[11px] font-bold text-white"
+            >
+              {busy ? "Menjalankan bot AI…" : "Simulasikan + jalankan bot AI"}
+            </button>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Order simulasi muncul di daftar di bawah -&gt; bisa dipakai mencoba
+              tombol Setujui.
+            </p>
+          </div>
 
           <p className="pt-1 text-[11px] font-bold text-emerald-300">
             Order menunggu verifikasi

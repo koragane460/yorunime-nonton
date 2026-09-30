@@ -147,6 +147,18 @@ function AkunContent() {
             <span className="shrink-0 text-xs text-muted-foreground">
               {displayId(user.seqId, user._id)}
             </span>
+            {user.uidCode && (
+              <button
+                onClick={() => {
+                  void navigator.clipboard?.writeText(user.uidCode!);
+                  toast.success("UID disalin");
+                }}
+                title="Klik untuk menyalin UID"
+                className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-300"
+              >
+                UID {user.uidCode}
+              </button>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
             <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">

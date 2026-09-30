@@ -40,6 +40,9 @@ const schema = defineSchema(
       bannerUrl: v.optional(v.string()),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
+      // Kode UID 7 karakter (huruf + angka) sebagai identitas akun saat
+      // verifikasi pembelian.
+      uidCode: v.optional(v.string()),
       hideOnline: v.optional(v.boolean()),
       autoRejectFriend: v.optional(v.boolean()),
       autoRejectFriendAction: v.optional(v.string()),
@@ -75,6 +78,7 @@ const schema = defineSchema(
       .index("email", ["email"])
       .index("phone", ["phone"])
       .index("username", ["username"])
+      .index("uidCode", ["uidCode"])
       .index("xp", ["xp"]),
 
     chatMessages: defineTable({
@@ -310,6 +314,11 @@ const schema = defineSchema(
       orderId: v.string(),
       method: v.optional(v.string()),
       proofUrl: v.optional(v.string()),
+      proofText: v.optional(v.string()),
+      proofHash: v.optional(v.string()),
+      uidCode: v.optional(v.string()),
+      analysisNote: v.optional(v.string()),
+      analyzedBy: v.optional(v.string()),
       note: v.optional(v.string()),
       paymentRef: v.optional(v.string()),
       paymentUrl: v.optional(v.string()),
@@ -317,7 +326,8 @@ const schema = defineSchema(
     })
       .index("userId_created", ["userId", "createdAt"])
       .index("orderId", ["orderId"])
-      .index("status_created", ["status", "createdAt"]),
+      .index("status_created", ["status", "createdAt"])
+      .index("proofHash", ["proofHash"]),
 
     // Pengaturan pembayaran manual (QRIS statis). Satu baris saja, id tetap.
     paymentSettings: defineTable({
@@ -326,6 +336,8 @@ const schema = defineSchema(
       accountLabel: v.optional(v.string()),
       note: v.optional(v.string()),
       contact: v.optional(v.string()),
+      autoApprove: v.optional(v.boolean()),
+      autoApproveMax: v.optional(v.number()),
       updatedAt: v.number(),
     }),
 

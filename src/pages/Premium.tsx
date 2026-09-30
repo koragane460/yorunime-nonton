@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
+import { VerifyPurchase } from "@/components/VerifyPurchase";
 import { SectionTitle } from "@/components/lstream-ui";
 import {
   Crown,
@@ -460,6 +461,8 @@ function PremiumContent() {
             : "Pembayaran aman via Midtrans Snap: DANA, GoPay, ShopeePay, QRIS, dan Virtual Account. Kamu akan diarahkan ke halaman pembayaran lalu premium aktif otomatis."}
         </p>
       </div>
+
+      {manual?.ready && <VerifyPurchase />}
 
       {(myPurchases ?? []).length > 0 && (
         <>
