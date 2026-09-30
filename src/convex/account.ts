@@ -53,13 +53,8 @@ export const ensureUser = mutation({
     if (user.nsfwStrikes === undefined) patch.nsfwStrikes = 0;
     if (user.theme === undefined) patch.theme = "dark";
     if (user.staffRole === undefined && user.seqId === 1) {
-      // Hanya akun #1 yang paling lama_created yang menjadi developer.
-      const other = await ctx.db
-        .query("users")
-        .filter((q) => q.eq(q.field("seqId"), 1))
-        .first();
-      if (!other || (other.createdAt ?? Infinity) > (user.createdAt ?? 0))
-        patch.staffRole = "dev";
+      // Akun #1 (pembuat pertama) otomatis jadi developer.
+      patch.staffRole = "dev";
     }
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);

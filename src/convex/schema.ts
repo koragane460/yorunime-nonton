@@ -72,6 +72,7 @@ const schema = defineSchema(
     chatMessages: defineTable({
       kind: v.string(),
       clanId: v.optional(v.id("clans")),
+      roomId: v.optional(v.id("watchRooms")),
       dmKey: v.optional(v.string()),
       userId: v.id("users"),
       text: v.optional(v.string()),
@@ -82,6 +83,7 @@ const schema = defineSchema(
       deleted: v.optional(v.boolean()),
     })
       .index("kind_clan_created", ["kind", "clanId", "createdAt"])
+      .index("roomId_created", ["roomId", "createdAt"])
       .index("dmKey_created", ["dmKey", "createdAt"])
       .index("premiumGiveId", ["premiumGiveId"]),
 
@@ -172,6 +174,34 @@ const schema = defineSchema(
       // Dipakai biar request duplikat hanya terdeteksi ke user yang SAMA
       // (sebelumnya satu request pending = blokir semua request berikutnya).
       .index("from_to_status", ["fromUserId", "toUserId", "status"]),
+
+    // ---------------------------------------------------- nonton bareng ----
+    watchRooms: defineTable({
+      name: v.string(),
+      hostId: v.id("users"),
+      animeId: v.string(),
+      animeTitle: v.optional(v.string()),
+      animeImage: v.optional(v.string()),
+      episode: v.number(),
+      positionSec: v.number(),
+      playing: v.boolean(),
+      visibility: v.union(v.literal("all"), v.literal("selected")),
+      allowedUserIds: v.optional(v.array(v.id("users"))),
+      clanId: v.optional(v.id("clans")),
+      startedAt: v.number(),
+      updatedAt: v.number(),
+      endedAt: v.optional(v.number()),
+    })
+      .index("hostId", ["hostId"])
+      .index("animeId", ["animeId"]),
+
+    watchRoomMembers: defineTable({
+      roomId: v.id("watchRooms"),
+      userId: v.id("users"),
+      joinedAt: v.number(),
+    })
+      .index("roomId", ["roomId"])
+      .index("userId", ["userId"]),
 
     counters: defineTable({
       key: v.string(),

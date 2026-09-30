@@ -1,4 +1,4 @@
-import { Component, useEffect, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,6 +9,7 @@ import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
+import { NobarBar } from "@/components/NobarBar";
 import {
   Search,
   ChevronLeft,
@@ -1068,16 +1069,33 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   useHideNavOnMount();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
+  const [tab, setTab] = useState<"chat" | "teman">("chat");
   const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
-  const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 100 });
+  const msgsRaw = useQuery(api.chat.listMessages, { kind: "global", limit: 60 });
   const send = useMutation(api.chat.sendMessage);
-  const myClan = useQuery(api.clans.myMembership, user ? {} : "skip");
-  const clanMsgs = useQuery(
-    api.chat.listMessages,
-    myClan?.clanId ? { kind: "clan", clanId: myClan.clanId, limit: 100 } : "skip",
-  );
+  // Echo lokal: pesan langsung tampil sebelum server menyalinnya, supaya
+  // mengetik terasa instan. Dihapus otomatis begitu pesan aslinya masuk.
+  const [pending, setPending] = useState<ChatMsg[]>([]);
+  const msgs = useMemo(() => {
+    const real = (msgsRaw ?? []) as unknown as ChatMsg[];
+    if (!pending.length) return real;
+    const keep = pending.filter(
+      (p) =>
+        !real.some(
+          (r) =>
+            r.userId === p.userId &&
+            (r.text ?? "") === (p.text ?? "") &&
+            (r.imageUrl ?? "") === (p.imageUrl ?? "") &&
+            r.createdAt >= p.createdAt - 2000,
+        ),
+    );
+    if (keep.length !== pending.length) {
+      // dibersihkan setelah render berikutnya supaya tidak setState di render
+      queueMicrotask(() => setPending(keep));
+    }
+    return [...real, ...keep].sort((a, b) => a.createdAt - b.createdAt);
+  }, [msgsRaw, pending]);
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip");
   const requests = useQuery(api.friends.listRequests, user ? {} : "skip");
   const sendReq = useMutation(api.friends.sendFriendRequest);
@@ -1099,9 +1117,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           <h1 className="truncate text-lg font-bold">Chat</h1>
         </div>
         <div className="w-full px-4">
-          {/* Tab tanpa kotak — garis bawah saat aktif */}
+          {/* Tab tanpa kotak — garis bawah saat aktif (chat clan pindah ke kotak clan di Home) */}
           <div className="flex border-b border-border/60">
-            {(["chat", "clan", "teman"] as const).map((t) => (
+            {(["chat", "teman"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1110,7 +1128,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   tab === t ? "text-foreground" : "text-muted-foreground",
                 )}
               >
-                {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
+                {t === "chat" ? "Chat" : "Teman"}
                 {tab === t && (
                   <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500" />
                 )}
@@ -1123,6 +1141,13 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         <div className="flex min-h-0 w-full flex-1 flex-col pb-2 pt-3">
           {tab === "chat" && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
+              {/* Nobar: daftar room nonton bareng */}
+              <NobarBar
+                onJoined={(roomId) => {
+                  onClose();
+                  navigate(`/nonton?room=${roomId}`);
+                }}
+              />
               {msgs && user ? (
                 <ChatPanel
                   kind="global"
@@ -1130,60 +1155,45 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   meId={meId}
                   onOpenProfile={(id) => setProfileId(id)}
                   onSend={async (p) => {
-                    await send({ kind: "global", ...p });
+                    const temp: ChatMsg = {
+                      _id: `local-${Date.now()}` as unknown as Id<"chatMessages">,
+                      userId: user!._id,
+                      username: user?.username ?? "user",
+                      image: user?.image,
+                      level: user?.level ?? 1,
+                      premium: (user?.premiumUntil ?? 0) > Date.now(),
+                      staffRole: user?.staffRole,
+                      clanTag: user?.clanTag,
+                      clanTagIcon: user?.clanTagIcon,
+                      clanNameColor: user?.clanNameColor,
+                      text: p.text,
+                      imageUrl: p.imageUrl,
+                      createdAt: Date.now(),
+                    };
+                    setPending((s) => [...s, temp]);
+                    try {
+                      await send({ kind: "global", ...p });
+                    } catch (e) {
+                      setPending((s) => s.filter((x) => x._id !== temp._id));
+                      throw e;
+                    }
                   }}
                 />
               ) : (
-                <p className="py-10 text-center text-sm text-muted-foreground">Memuat…</p>
+                <div className="space-y-2.5 p-3">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="msg-skeleton size-9 shrink-0 rounded-full" />
+                      <div
+                        className="msg-skeleton h-10 rounded-lg"
+                        style={{ width: `${50 + ((i * 19) % 36)}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
-
-          {tab === "clan" &&
-            (myClan ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
-                {clanMsgs && user ? (
-                  <ChatPanel
-                    kind="clan"
-                    clanId={myClan.clanId}
-                    messages={clanMsgs as unknown as ChatMsg[]}
-                    meId={meId}
-                    onSend={async (p) => {
-                      await send({ kind: "clan", clanId: myClan.clanId, ...(p as any) });
-                    }}
-                  />
-                ) : (
-                  <p className="py-10 text-center text-sm text-muted-foreground">Memuat…</p>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-                <p className="text-base font-bold">Kamu belum join clan</p>
-                <p className="max-w-xs text-xs text-muted-foreground">
-                  Join clan untuk mendapatkan Sacret dan buat clan mu nomor 1
-                </p>
-                <div className="flex w-56 flex-col gap-2">
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/clan?buat=1");
-                    }}
-                    className="rounded-full bg-violet-600 py-2.5 text-sm font-bold text-white transition hover:bg-violet-500"
-                  >
-                    Buat Clan
-                  </button>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/clan");
-                    }}
-                    className="rounded-full border border-border py-2.5 text-sm font-semibold transition hover:border-violet-500"
-                  >
-                    Lihat Clan
-                  </button>
-                </div>
-              </div>
-            ))}
 
           {tab === "teman" && (
             <div className="flex min-h-0 flex-1 flex-col">

@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { NobarDock } from "@/components/NobarDock";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const QUALITIES = ["144p", "240p", "360p", "480p", "720p", "1080p"];
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -95,8 +97,47 @@ function WatchContent() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const animeId = params.get("anime") ?? "";
-  const epParam = params.get("ep");
+
+  // ------------------------------------------------------ mode Nobar ----
+  // Kalau URL punya ?room=…, halaman ini dipakai sebagai room nonton bareng:
+  // anime dan episode mengikuti room, host yang mengatur playback.
+  const roomParam = params.get("room");
+  const roomId = (roomParam ?? null) as Id<"watchRooms"> | null;
+  const roomInfo = useQuery(
+    api.watchroom.roomDetail,
+    roomId ? { roomId } : "skip",
+  );
+  const room = roomInfo?.allowed && roomInfo.room ? roomInfo.room : null;
+  const isHost = !!roomInfo?.isHost;
+  const joinRoom = useMutation(api.watchroom.joinRoom);
+  const leaveRoom = useMutation(api.watchroom.leaveRoom);
+  const roomSetPosition = useMutation(api.watchroom.setPosition);
+  const roomSetPlaying = useMutation(api.watchroom.setPlaying);
+  const roomSetEpisode = useMutation(api.watchroom.setEpisode);
+  const endRoom = useMutation(api.watchroom.endRoom);
+  const [joinedRoom, setJoinedRoom] = useState(false);
+
+  const animeId = params.get("anime") ?? room?.animeId ?? "";
+  const epParam =
+    params.get("ep") ?? (room ? `${room.animeId}__ep${room.episode}` : null);
+
+  // Otomatis join begitu membuka room (kecuali room yang membatasi peserta).
+  useEffect(() => {
+    if (!roomId || !room || joinedRoom) return;
+    setJoinedRoom(true);
+    void joinRoom({ roomId }).catch(() => {
+      /* room penuh/ditutup — biarkan, tampilan tetap jalan */
+    });
+  }, [roomId, room, joinedRoom, joinRoom]);
+
+  // Room diakhiri host → keluar otomatis.
+  useEffect(() => {
+    if (roomInfo?.ended) {
+      toast.info("Host mengakhiri sesi nonton bareng");
+      navigate("/home", { replace: true });
+    }
+  }, [roomInfo?.ended, navigate]);
+
 
   const detail = useAction(api.anime.animeDetail);
   // Resolver tunggal: backend hanya mengembalikan satu server "Direct HLS · SUB"
@@ -542,11 +583,15 @@ function WatchContent() {
     if (!v) return;
     if (v.paused) void v.play();
     else v.pause();
+    if (room && isHost) void roomSetPlaying({ roomId: room._id, playing: v.paused });
   };
 
   const skip = (s: number) => {
     const v = videoRef.current;
-    if (v) v.currentTime = Math.max(0, v.currentTime + s);
+    if (!v) return;
+    v.currentTime = Math.max(0, v.currentTime + s);
+    if (room && isHost)
+      void roomSetPosition({ roomId: room._id, positionSec: v.currentTime });
   };
 
   // Kontrol video: tap untuk tampil/sembunyi, auto-hide 3 detik saat diputar.
@@ -609,7 +654,50 @@ function WatchContent() {
     if (v && Number.isFinite(value)) v.currentTime = value;
     setCurrentTime(value);
     setScrub(null);
+    if (room && isHost)
+      void roomSetPosition({ roomId: room._id, positionSec: value });
   };
+
+  // ------------------------------------------------ sinkronisasi Nobar ----
+  // Penonton ikut posisi dan status play/pause yang diatur host.
+  useEffect(() => {
+    if (!room || isHost) return;
+    const sync = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      const target = room.positionSec;
+      if (target > 0 && Math.abs(v.currentTime - target) > 1.2) {
+        try {
+          v.currentTime = target;
+        } catch {
+          /* metadata belum siap */
+        }
+      }
+      if (room.playing) void v.play().catch(() => {});
+      else v.pause();
+    };
+    sync();
+    // Coba lagi berkala selama 12 detik supaya ikut sinkron saat video siap.
+    const t = setInterval(sync, 1000);
+    const stop = setTimeout(() => clearInterval(t), 12000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.positionSec, room?.playing, isHost, sources.length]);
+
+  // Host: kirim posisi ke semua orang tiap 3 detik saat diputar.
+  useEffect(() => {
+    if (!room || !isHost) return;
+    const t = setInterval(() => {
+      const v = videoRef.current;
+      if (v && !v.paused)
+        void roomSetPosition({ roomId: room._id, positionSec: v.currentTime });
+    }, 3000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?._id, isHost]);
 
   const episodeComments = useQuery(
     api.activities.listComments,
@@ -804,8 +892,8 @@ function WatchContent() {
           </div>
         )}
 
-        {/* Lapisan tap: sentuh video → kontrol tampil / hilang */}
-        {sourceType !== "embed" && (
+        {/* Lapisan tap: sentuh video → kontrol tampil / sembunyi */}
+        {sourceType !== "embed" && (isHost || !room) && (
           <div
             className="absolute inset-0 z-10"
             onPointerUp={tapVideo}
@@ -824,7 +912,7 @@ function WatchContent() {
         )}
 
         {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
-        {controlsOn && sourceType !== "embed" && (
+        {controlsOn && sourceType !== "embed" && (isHost || !room) && (
         <div
           className={cn(
             "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
@@ -853,9 +941,21 @@ function WatchContent() {
             )}
           >
             <button
-              disabled={epIndex <= 0}
-              onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`)}
-              className={cn("rounded-full bg-black/50 p-2", epIndex <= 0 && "opacity-30")}
+              disabled={room ? (currentEp?.number ?? 1) <= 1 : epIndex <= 0}
+              onClick={() => {
+                if (room) {
+                  void roomSetEpisode({
+                    roomId: room._id,
+                    episode: (currentEp?.number ?? 1) - 1,
+                  });
+                  return;
+                }
+                navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`);
+              }}
+              className={cn(
+                "rounded-full bg-black/50 p-2",
+                (room ? (currentEp?.number ?? 1) <= 1 : epIndex <= 0) && "opacity-30",
+              )}
             >
               <SkipBack className="size-5 text-white" />
             </button>
@@ -869,11 +969,22 @@ function WatchContent() {
               <RotateCw className="size-6 text-white" />
             </button>
             <button
-              disabled={epIndex >= epList.length - 1}
-              onClick={() => navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex + 1].id}`)}
+              disabled={room ? (currentEp?.number ?? 1) >= epList.length : epIndex >= epList.length - 1}
+              onClick={() => {
+                if (room) {
+                  void roomSetEpisode({
+                    roomId: room._id,
+                    episode: (currentEp?.number ?? 1) + 1,
+                  });
+                  return;
+                }
+                navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex + 1].id}`);
+              }}
               className={cn(
                 "rounded-full bg-black/50 p-2",
-                epIndex >= epList.length - 1 && "opacity-30",
+                (room
+                  ? (currentEp?.number ?? 1) >= epList.length
+                  : epIndex >= epList.length - 1) && "opacity-30",
               )}
             >
               <SkipForward className="size-5 text-white" />
@@ -1116,89 +1227,152 @@ function WatchContent() {
           </div>
         </div>
 
-        {/* Episode: grid + jumlah di kanan atas */}
-        <div className="mb-2 mt-4 flex items-center justify-between">
-          <h2 className="text-base font-bold">Episode</h2>
-          <span className="text-xs text-muted-foreground">{epList.length} episode</span>
-        </div>
-        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
-          {(epList ?? []).map((e: any) => (
-            <button
-              key={e.id}
-              onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
-              className={cn(
-                "rounded-md border py-2 text-xs font-semibold",
-                e.id === epParam
-                  ? "border-violet-500 bg-violet-500/20 text-red-200"
-                  : "border-border bg-secondary/40 text-foreground hover:border-violet-500/60",
-              )}
-            >
-              {e.number}
-            </button>
-          ))}
-        </div>
+        {/* Episode: grid + jumlah di kanan atas (host room nobar juga boleh) */}
+        {(isHost || !room) && (
+          <>
+            <div className="mb-2 mt-4 flex items-center justify-between">
+              <h2 className="text-base font-bold">Episode</h2>
+              <span className="text-xs text-muted-foreground">{epList.length} episode</span>
+            </div>
+            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+              {(epList ?? []).map((e: any) => (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    if (room) {
+                      void roomSetEpisode({ roomId: room._id, episode: e.number });
+                      return;
+                    }
+                    navigate(`/nonton?anime=${animeId}&ep=${e.id}`);
+                  }}
+                  className={cn(
+                    "rounded-md border py-2 text-xs font-semibold",
+                    e.id === epParam
+                      ? "border-violet-500 bg-violet-500/20 text-red-200"
+                      : "border-border bg-secondary/40 text-foreground hover:border-violet-500/60",
+                  )}
+                >
+                  {e.number}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Garis pembatas di atas toolbar */}
         <div className="my-3 h-px bg-white/15" />
 
-        {/* Toolbar: kecepatan, download, mini, kualitas — di bawah episode, dipisah garis */}
-        <div className="grid grid-cols-4 gap-2">
-          <ToolButton
-            icon={<Gauge className="size-4" />}
-            label={`${speed}x`}
-            onClick={() => setSpeedOpen(true)}
-          />
-          <ToolButton
-            icon={<Download className="size-4" />}
-            label="Download"
-            onClick={() => setDownloadOpen(true)}
-          />
-          <ToolButton
-            icon={<PictureInPicture2 className="size-4" />}
-            label="Mini"
-            onClick={() => {
-              setMiniPlayer({
-                animeId,
-                animeTitle: D.title,
-                animeImage: D.image,
-                episodeNumber: currentEp?.number,
-                streamUrl,
-                isEmbed: sourceType === "embed",
-              });
-              navigate("/home");
-            }}
-          />
-          <ToolButton
-            icon={<Settings2 className="size-4" />}
-            label={quality}
-            onClick={() => {
-              setQualityDraft(quality);
-              setQualityOpen(true);
-            }}
-          />
-        </div>
+        {/* Toolbar: kecepatan, download, mini, kualitas — hanya di luar mode Nobar */}
+        {(isHost || !room) && (
+          <div className="grid grid-cols-4 gap-2">
+            <ToolButton
+              icon={<Gauge className="size-4" />}
+              label={`${speed}x`}
+              onClick={() => setSpeedOpen(true)}
+            />
+            <ToolButton
+              icon={<Download className="size-4" />}
+              label="Download"
+              onClick={() => setDownloadOpen(true)}
+            />
+            <ToolButton
+              icon={<PictureInPicture2 className="size-4" />}
+              label="Mini"
+              onClick={() => {
+                setMiniPlayer({
+                  animeId,
+                  animeTitle: D.title,
+                  animeImage: D.image,
+                  episodeNumber: currentEp?.number,
+                  streamUrl,
+                  isEmbed: sourceType === "embed",
+                });
+                navigate("/home");
+              }}
+            />
+            <ToolButton
+              icon={<Settings2 className="size-4" />}
+              label={quality}
+              onClick={() => {
+                setQualityDraft(quality);
+                setQualityOpen(true);
+              }}
+            />
+          </div>
+        )}
 
         {/* Garis pembatas sebelum diskusi */}
         <div className="my-3 h-px bg-white/15" />
 
-        {/* Komentar episode — gaya baru */}
-        <SectionTitle>Diskusi Episode</SectionTitle>
-        <CommentsSection
-          animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
-          comments={episodeComments as unknown as CommentT[]}
-          meId={user?._id}
-          onSend={async (text, replyToId) => {
-            if (!epParam || !user) {
-              toast.error("Pilih episode dulu");
-              return;
+        {/* Mode Nobar: panel room (info, member, kontrol host, chat nobar) */}
+        {room ? (
+          <NobarDock
+            room={room}
+            isHost={isHost}
+            members={(roomInfo?.members ?? []) as never}
+            meId={user?._id as unknown as string}
+            currentSec={currentTime}
+            durationSec={duration}
+            onSeek={(delta) => {
+              const v = videoRef.current;
+              if (!v || !isHost) return;
+              const next = Math.max(0, v.currentTime + delta);
+              v.currentTime = next;
+              setCurrentTime(next);
+              void roomSetPosition({ roomId: room._id, positionSec: next });
+            }}
+            onTogglePlay={() => {
+              if (!isHost) return;
+              const v = videoRef.current;
+              if (!v) return;
+              if (v.paused) void v.play();
+              else v.pause();
+              void roomSetPlaying({ roomId: room._id, playing: v.paused });
+            }}
+            onNextEpisode={() =>
+              void roomSetEpisode({
+                roomId: room._id,
+                episode: (currentEp?.number ?? 1) + 1,
+              })
             }
-            await postComment({
-              animeId: `${animeId}__ep${epParam}`,
-              text,
-              replyToId: replyToId as never,
-            });
-          }}
-        />
+            onPrevEpisode={() =>
+              void roomSetEpisode({
+                roomId: room._id,
+                episode: Math.max(1, (currentEp?.number ?? 1) - 1),
+              })
+            }
+            onLeave={async () => {
+              try {
+                if (isHost) await endRoom({ roomId: room._id });
+                else await leaveRoom({ roomId: room._id });
+              } catch {
+                /* room sudah tertutup */
+              }
+              navigate("/home", { replace: true });
+            }}
+          />
+        ) : (
+          <>
+            {/* Komentar episode — gaya baru */}
+            <SectionTitle>Diskusi Episode</SectionTitle>
+            <CommentsSection
+              animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
+              comments={episodeComments as unknown as CommentT[]}
+              meId={user?._id}
+              onSend={async (text, replyToId) => {
+                if (!epParam || !user) {
+                  toast.error("Pilih episode dulu");
+                  return;
+                }
+                await postComment({
+                  animeId: `${animeId}__ep${epParam}`,
+                  text,
+                  replyToId: replyToId as never,
+                });
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Popups diperbagus */}

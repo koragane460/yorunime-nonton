@@ -88,7 +88,7 @@ function AkunContent() {
       <div className="relative">
         <div
           className={cn(
-            "h-48 w-full bg-cover bg-center",
+            "yn-banner-blur h-48 w-full bg-cover bg-center",
             !user.bannerUrl && "yn-banner",
           )}
           style={
@@ -105,6 +105,19 @@ function AkunContent() {
             </>
           )}
         </div>
+        {/* Echo blur yang melorot ke bawah — bikin banner terlihat melayang */}
+        <div
+          aria-hidden
+          className={cn(
+            "yn-banner-echo",
+            user.bannerUrl ? "bg-cover bg-center" : "yn-banner",
+          )}
+          style={
+            user.bannerUrl
+              ? { backgroundImage: `url(${user.bannerUrl})` }
+              : undefined
+          }
+        />
         {/* Gradasi biar banner menyatu ke konten di bawahnya */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
         <button
@@ -543,11 +556,11 @@ function SettingsScreen({
             }}
           />
         </label>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex min-w-0 gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
             placeholder="Ubah nama"
           />
           <button
@@ -559,7 +572,7 @@ function SettingsScreen({
                 toast.error(err instanceof Error ? err.message : "Gagal");
               }
             }}
-            className="rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
+            className="shrink-0 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
           >
             OK
           </button>
@@ -578,7 +591,7 @@ function SettingsScreen({
         />
         <div className="rounded-2xl border border-border bg-card p-3.5">
           <p className="text-sm font-medium">Tema</p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex min-w-0 gap-2">
             {["dark", "light", "custom"].map((t) => (
               <button
                 key={t}
@@ -588,7 +601,7 @@ function SettingsScreen({
                   quickSave({ theme: t });
                 }}
                 className={cn(
-                  "flex-1 rounded-lg border py-2 text-xs capitalize",
+                  "min-w-0 flex-1 truncate rounded-lg border py-2 text-xs capitalize",
                   theme === t ? "border-violet-500 text-violet-300" : "border-border",
                 )}
               >
@@ -597,7 +610,7 @@ function SettingsScreen({
             ))}
           </div>
           {theme === "custom" && (
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex min-w-0 items-center gap-2">
               <input
                 type="color"
                 value={customColor}
@@ -605,14 +618,14 @@ function SettingsScreen({
                   setCustomColor(e.target.value);
                   applyTheme("custom", e.target.value);
                 }}
-                className="h-9 w-14 rounded border border-border bg-transparent"
+                className="h-9 w-14 shrink-0 rounded border border-border bg-transparent"
               />
               <button
                 onClick={() => {
                   quickSave({ customColor });
                   toast.success("Warna tersimpan");
                 }}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white"
+                className="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white"
               >
                 Simpan warna
               </button>
@@ -646,19 +659,19 @@ function SettingsScreen({
 
         <div className="rounded-2xl border border-border bg-card p-3.5">
           <p className="text-sm font-medium">Background gif akun</p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex min-w-0 gap-2">
             <input
               value={banner}
               onChange={(e) => setBanner(e.target.value)}
               placeholder="URL gambar/gif background"
-              className="flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
             />
             <button
               onClick={async () => {
                 await updateProfile({ bannerUrl: banner });
                 toast.success("Background diubah");
               }}
-              className="rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
+              className="shrink-0 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
             >
               OK
             </button>
@@ -877,8 +890,8 @@ function FullScreen({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
-      <div className="w-full p-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-background">
+      <div className="w-full min-w-0 p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />

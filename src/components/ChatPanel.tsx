@@ -28,6 +28,7 @@ export type ChatMsg = {
   image?: string;
   level?: number;
   premium?: boolean;
+  staffRole?: string;
   clanTag?: string;
   clanTagIcon?: string;
   clanNameColor?: string;
@@ -371,20 +372,25 @@ export function ChatPanel({
   kind,
   clanId,
   peerId,
+  roomId,
   messages,
   onSend,
   meId,
   compact,
   onOpenProfile,
+  noPremium,
 }: {
   kind: string;
   clanId?: Id<"clans">;
   peerId?: Id<"users">;
+  roomId?: Id<"watchRooms">;
   messages: ChatMsg[];
   onSend: (payload: { text?: string; imageUrl?: string; replyToId?: Id<"chatMessages"> }) => Promise<void>;
   meId: string;
   compact?: boolean;
   onOpenProfile?: (id: Id<"users">) => void;
+  /** Room nobar: tombol give premium disembunyikan. */
+  noPremium?: boolean;
 }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
@@ -433,7 +439,7 @@ export function ChatPanel({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {muted && (
         <div className="mb-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-500/30 bg-zinc-500/10 px-3 py-1.5 text-[11px] font-semibold text-zinc-300">
           <VolumeX className="size-3.5" /> Kamu sedang dimute — kolom chat dikunci
@@ -454,7 +460,10 @@ export function ChatPanel({
           const mine = m.userId === meId;
           const give = m.premiumGive;
           return (
-            <div key={m._id} className={cn("flex gap-2", mine && "flex-row-reverse")}>
+            <div
+              key={m._id}
+              className={cn("msg-in flex gap-2", mine && "flex-row-reverse")}
+            >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
                 <img
@@ -468,11 +477,15 @@ export function ChatPanel({
                   className={cn(
                     "w-fit max-w-full min-w-0 border px-3 py-2",
                     "rounded-md",
-                    give
-                      ? "border-violet-500/60 bg-violet-500/15"
-                      : mine
-                        ? "bubble-mine"
-                        : "bubble-other",
+                    // Pesan yang isinya cuma foto: bubble dibuat transparan
+                    // supaya tidak ada kotak hitam di belakang fotonya.
+                    m.imageUrl && !m.text
+                      ? "border-transparent bg-transparent p-0 shadow-none"
+                      : give
+                        ? "border-violet-500/60 bg-violet-500/15"
+                        : mine
+                          ? "bubble-mine"
+                          : "bubble-other",
                     blinkId === m._id && "reply-blink",
                   )}
                 >
@@ -482,7 +495,7 @@ export function ChatPanel({
                       {m.username}
                     </span>
                     {m.premium && <BlueCheck className="size-3.5 shrink-0" />}
-                    <TitleBadge role={(m as any).staffRole} compact />
+                    <TitleBadge role={m.staffRole} compact />
                     {m.clanTag && (
                       <ClanTag
                         icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
@@ -524,7 +537,10 @@ export function ChatPanel({
                           src={m.imageUrl}
                           alt="lampiran"
                           onClick={() => setZoomImg(m.imageUrl ?? null)}
-                          className="mt-1 max-h-48 cursor-zoom-in rounded-lg object-cover transition hover:opacity-90"
+                          className={cn(
+                            "max-h-48 cursor-zoom-in object-contain transition hover:opacity-90",
+                            m.text ? "mt-1 rounded-lg" : "rounded-md",
+                          )}
                         />
                       )}
                     </>
@@ -606,6 +622,7 @@ export function ChatPanel({
                 >
                   <ImagePlus className="size-4" /> Kirim foto
                 </button>
+                {!noPremium && (
                 <button
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-300 hover:bg-accent"
                   onClick={() => {
@@ -615,6 +632,7 @@ export function ChatPanel({
                 >
                   <Crown className="size-4" /> Give premium
                 </button>
+                )}
               </div>
             )}
           </div>

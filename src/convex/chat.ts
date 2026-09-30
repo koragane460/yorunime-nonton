@@ -20,12 +20,13 @@ function dmKey(a: string, b: string) {
 
 export const listMessages = query({
   args: {
-    kind: v.string(), // global | dm | clan
+    kind: v.string(), // global | dm | clan | room
     clanId: v.optional(v.id("clans")),
+    roomId: v.optional(v.id("watchRooms")),
     peerId: v.optional(v.id("users")),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { kind, clanId, peerId, limit = 80 }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, limit = 80 }) => {
     const block = await blocked(ctx);
     if (block) return [];
     let index: string | undefined = undefined;
@@ -35,7 +36,22 @@ export const listMessages = query({
       index = dmKey(me, peerId);
     }
     let rows;
-    if (kind === "dm" && index) {
+    if (kind === "room" && roomId) {
+      const me = await getAuthUserId(ctx);
+      if (me === null) return [];
+      const room = await ctx.db.get(roomId);
+      if (!room) return [];
+      const isHost = room.hostId === me;
+      if (!isHost && room.visibility === "selected") {
+        const allowed = (room.allowedUserIds ?? []).some((id) => id === me);
+        if (!allowed) return [];
+      }
+      rows = await ctx.db
+        .query("chatMessages")
+        .withIndex("roomId_created", (q) => q.eq("roomId", roomId))
+        .order("desc")
+        .take(limit);
+    } else if (kind === "dm" && index) {
       rows = await ctx.db
         .query("chatMessages")
         .withIndex("dmKey_created", (q) => q.eq("dmKey", index!))
@@ -121,12 +137,13 @@ export const sendMessage = mutation({
   args: {
     kind: v.string(),
     clanId: v.optional(v.id("clans")),
+    roomId: v.optional(v.id("watchRooms")),
     peerId: v.optional(v.id("users")),
     text: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     replyToId: v.optional(v.id("chatMessages")),
   },
-  handler: async (ctx, { kind, clanId, peerId, text, imageUrl, replyToId }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, text, imageUrl, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
@@ -149,10 +166,23 @@ export const sendMessage = mutation({
       if (!member || member.clanId !== clanId)
         throw new Error("Kamu bukan member clan ini");
     }
+    if (kind === "room") {
+      if (!roomId) throw new Error("Room tidak ada");
+      const room = await ctx.db.get(roomId);
+      if (!room || room.endedAt) throw new Error("Room sudah diakhiri");
+      const isHost = room.hostId === userId;
+      if (
+        !isHost &&
+        room.visibility === "selected" &&
+        !(room.allowedUserIds ?? []).some((id) => id === userId)
+      )
+        throw new Error("Kamu tidak diundang ke room ini");
+    }
 
     const messageId = await ctx.db.insert("chatMessages", {
       kind,
       clanId,
+      roomId,
       dmKey: index,
       userId,
       text: text?.trim() || undefined,

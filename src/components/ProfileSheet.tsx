@@ -75,7 +75,7 @@ export function ProfileSheet({
           <div className="relative">
             <div
               className={cn(
-                "h-44 w-full bg-cover bg-center",
+                "yn-banner-blur h-44 w-full bg-cover bg-center",
                 !profile.bannerUrl && "yn-banner",
               )}
               style={
@@ -91,6 +91,19 @@ export function ProfileSheet({
                 </>
               )}
             </div>
+            {/* Echo blur di bawah banner */}
+            <div
+              aria-hidden
+              className={cn(
+                "yn-banner-echo",
+                profile.bannerUrl ? "bg-cover bg-center" : "yn-banner",
+              )}
+              style={
+                profile.bannerUrl
+                  ? { backgroundImage: `url(${profile.bannerUrl})` }
+                  : undefined
+              }
+            />
             <button
               onClick={onClose}
               className="absolute left-4 top-3 rounded-full bg-black/60 p-2 text-white"

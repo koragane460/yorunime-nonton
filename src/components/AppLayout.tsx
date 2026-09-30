@@ -153,12 +153,12 @@ function AccountPanel({
             : undefined
         }
       >
-        {!bannerUrl && <div className="yn-banner absolute inset-0" />}
+        {!bannerUrl && <div className="yn-banner yn-banner-blur absolute inset-0" />}
         {/* Overlay gelap rata di SELURUH kartu (sebelumnya hanya area teks,
             jadi bagian banner tanpa teks terlihat lebih terang). */}
         {bannerUrl && (
           <>
-            <div className="yn-banner absolute inset-0 opacity-60 mix-blend-screen" />
+            <div className="yn-banner yn-banner-blur absolute inset-0 opacity-60 mix-blend-screen" />
             <div className="absolute inset-0 bg-black/45" />
           </>
         )}
