@@ -285,6 +285,7 @@ function ManualPaymentPanel() {
   const approve = useMutation(api.payments.approveManualOrder);
   const simulate = useMutation(api.payments.devSimulatePurchase);
   const simulateBot = useAction(api.payments.devSimulateWithBot);
+  const testBot = useAction(api.payments.devTestBot);
   const { user: me } = useAuth();
   const [autoApprove, setAutoApprove] = useState(false);
   const [autoMax, setAutoMax] = useState("");
@@ -410,6 +411,23 @@ function ManualPaymentPanel() {
               className="mt-2 w-full rounded-lg bg-emerald-600 py-1.5 text-[11px] font-bold text-white"
             >
               {busy ? "Menjalankan bot AI…" : "Simulasikan + jalankan bot AI"}
+            </button>
+            <button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const r = await testBot({ expectedAmount: 7000 });
+                  toast.success(`Engine: ${r.engine} · verdict: ${r.verdict}`);
+                  toast.info(r.note);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Gagal tes bot");
+                }
+                setBusy(false);
+              }}
+              className="mt-2 w-full rounded-lg border border-emerald-500/50 py-1.5 text-[11px] font-bold text-emerald-300"
+            >
+              Tes bot AI (cek key)
             </button>
             <p className="mt-1 text-[10px] text-muted-foreground">
               Order simulasi muncul di daftar di bawah -&gt; bisa dipakai mencoba

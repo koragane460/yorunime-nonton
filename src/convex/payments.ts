@@ -711,6 +711,31 @@ export const devSimulateWithBot = action({
   },
 });
 
+/** Dev only: tes apakah bot AI (Gemini) sudah aktif, tanpa bikin order. */
+export const devTestBot = action({
+  args: {
+    expectedAmount: v.optional(v.number()),
+    proofText: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    { expectedAmount, proofText, imageUrl },
+  ): Promise<{ verdict: string; note: string; engine: string }> => {
+    await staffGuard(ctx, "dev");
+    const r = (await ctx.runAction(internal.aiNode.analyzeProof, {
+      imageUrl: imageUrl ?? null,
+      proofText:
+        proofText ?? `Transfer Rp ${expectedAmount ?? 7000} via QRIS atas nama Rii`,
+      expectedAmount: expectedAmount ?? 7000,
+      planLabel: "1 Bulan",
+      uidCode: "",
+      accountName: "",
+    })) as { verdict: string; note: string; engine: string };
+    return r;
+  },
+});
+
 /** Dev only: cairkan premium langsung tanpa order (untuk testing). */
 export const devGrantPremium = mutation({
   args: { targetId: v.id("users"), days: v.number() },
