@@ -16,6 +16,7 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
+  UserPlus,
   VolumeX,
   X,
 } from "lucide-react";
@@ -57,6 +58,8 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
   const toggleUnlimited = useMutation(api.moderation.toggleUnlimited);
   const moderate = useMutation(api.moderation.moderate);
   const giveClan = useMutation(api.moderation.devGiveClanPremium);
+  const simulateFriend = useMutation(api.friends.devSimulateFriendRequest);
+  const { user: me } = useAuth();
 
   const [picked, setPicked] = useState<PanelUser | null>(null);
   /** User yang jadi target dialog ban/mute (harus bertahan setelah sheet ditutup). */
@@ -170,7 +173,24 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         <UserActions
           user={picked}
           isDev={isDev}
+          meId={me?._id as Id<"users"> | undefined}
           onClose={() => setPicked(null)}
+          onSimulate={async (from, to) => {
+            const t = picked;
+            const fromName = from === me?._id ? (me?.username ?? "Kamu") : t.username;
+            const toName = to === me?._id ? (me?.username ?? "Kamu") : t.username;
+            try {
+              const r = await simulateFriend({ fromUserId: from, toUserId: to });
+              if (r.status === "friends")
+                toast.info(`${fromName} sudah berteman dengan ${toName}`);
+              else if (r.status === "pending")
+                toast.info(`Request ${fromName} ke ${toName} masih pending`);
+              else toast.success(`${fromName} mengirim request ke ${toName}`);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Gagal");
+            }
+            setPicked(null);
+          }}
           onTitle={async (title) => {
             const r = await toggleTitle({ targetId: picked._id, title });
             toast.success(r.granted ? `Title ${title} diberikan` : "Title dilepas");
@@ -249,17 +269,21 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
 function UserActions({
   user,
   isDev,
+  meId,
   onClose,
   onTitle,
   onUnlimited,
   onDialog,
+  onSimulate,
 }: {
   user: PanelUser;
   isDev: boolean;
+  meId?: Id<"users">;
   onClose: () => void;
   onTitle: (t: "dev" | "mod" | "tester" | "sepuh") => void;
   onUnlimited: (w: "sacret" | "premium") => void;
   onDialog: (d: "ban" | "unban" | "mute" | "unmute") => void;
+  onSimulate: (from: Id<"users">, to: Id<"users">) => void;
 }) {
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm">
@@ -337,6 +361,29 @@ function UserActions({
                 <Crown className="size-3" /> Unlimited Premium
               </button>
             </div>
+
+            <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Simulasi Pertemanan
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <button
+                disabled={!meId || meId === user._id}
+                onClick={() => meId && onSimulate(meId, user._id)}
+                className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 px-3 py-1.5 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-40"
+              >
+                <UserPlus className="size-3" /> Aku add dia
+              </button>
+              <button
+                disabled={!meId || meId === user._id}
+                onClick={() => meId && onSimulate(user._id, meId)}
+                className="flex items-center gap-1.5 rounded-full border border-sky-500/50 px-3 py-1.5 text-xs font-bold text-sky-300 transition hover:bg-sky-500/10 disabled:opacity-40"
+              >
+                <UserPlus className="size-3" /> Dia add aku
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              Request masuk sungguhan ke tab Request, notifikasi ikut muncul.
+            </p>
           </>
         )}
 

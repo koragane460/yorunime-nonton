@@ -82,7 +82,7 @@ export function durationMs(value: number, unit: string): number {
 
 const UNIT_MS = (u: string) => durationMs(1, u);
 
-async function staffGuard(ctx: any, need: "dev" | "mod") {
+export async function staffGuard(ctx: any, need: "dev" | "mod") {
   const userId = await getAuthUserId(ctx);
   if (userId === null) throw new Error("Not signed in");
   const me = await ctx.db.get(userId);

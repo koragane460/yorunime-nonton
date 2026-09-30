@@ -2,7 +2,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireActive } from "./moderation";
+import { requireActive, staffGuard } from "./moderation";
 
 export const listFriends = query({
   args: {},
@@ -200,6 +200,62 @@ export const respondByUser = mutation({
       });
     }
     return { ok: true };
+  },
+});
+
+/**
+ * Simulasi pertemanan (khusus developer): bikin satu user mengirim request
+ * pertemanan ke user lain supaya alur notifikasi & list request bisa diuji.
+ * Kalau sudah berteman atau request-nya masih pending, tidak diduplikasi.
+ */
+export const devSimulateFriendRequest = mutation({
+  args: {
+    fromUserId: v.id("users"),
+    toUserId: v.id("users"),
+  },
+  handler: async (ctx, { fromUserId, toUserId }): Promise<{
+    ok: boolean;
+    status: "sent" | "pending" | "friends";
+  }> => {
+    await staffGuard(ctx, "dev");
+    if (fromUserId === toUserId) throw new Error("Pilih dua user berbeda");
+    const from = await ctx.db.get(fromUserId);
+    const to = await ctx.db.get(toUserId);
+    if (!from || !to) throw new Error("User tidak ada");
+
+    const alreadyFriends = await ctx.db
+      .query("friendships")
+      .withIndex("userA", (q) => q.eq("userA", fromUserId))
+      .filter((q) => q.or(q.eq(q.field("userB"), toUserId), q.eq(q.field("userA"), toUserId)))
+      .first();
+    if (alreadyFriends) return { ok: true, status: "friends" };
+
+    const pending = await ctx.db
+      .query("friendRequests")
+      .withIndex("from_to_status", (q) =>
+        q
+          .eq("fromUserId", fromUserId)
+          .eq("toUserId", toUserId)
+          .eq("status", "pending"),
+      )
+      .first();
+    if (pending) return { ok: true, status: "pending" };
+
+    await ctx.db.insert("friendRequests", {
+      fromUserId,
+      toUserId,
+      status: "pending",
+      createdAt: Date.now(),
+    });
+    await ctx.db.insert("notifications", {
+      userId: toUserId,
+      type: "friend_request",
+      title: "Request pertemanan",
+      body: "Terima atau tolak di request an",
+      refUserId: fromUserId,
+      createdAt: Date.now(),
+    });
+    return { ok: true, status: "sent" };
   },
 });
 
