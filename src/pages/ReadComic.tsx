@@ -58,35 +58,49 @@ export default function ReadComic() {
   const recordRead = useMutation(api.comics.recordRead);
 
   const [images, setImages] = useState<string[]>([]);
+  /** Chapter yang gambarnya sudah siap tampil — mencegah panel "chapter
+   *  selesai" dari chapter lama muncul sesaat sebelum pindah chapter. */
+  const [readyKey, setReadyKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [uiOn, setUiOn] = useState(true);
   const [dark, setDark] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [strip, setStrip] = useState(kind === "manhwa");
   const [sheet, setSheet] = useState(false);
+  /** Ukuran gambar yang sudah diketahui — dipakai untuk reserves tinggi
+   *  gambar agar tidak ada lompatan scroll saat gambar lazy selesai dimuat. */
+  const [dims, setDims] = useState<Record<number, number>>({});
 
   const stripRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const chNum = Number(chapter) || 1;
+  const currentKey = cacheKey(slug, chNum);
+  const loading = readyKey !== currentKey;
   const total = images.length;
 
   // Muat gambar chapter.
   useEffect(() => {
     let alive = true;
-    setLoading(true);
     setImages([]);
+    setReadyKey(null);
+    setDims({});
     setIndex(0);
     setZoom(1);
     setUiOn(true);
     setStrip(kind === "manhwa");
     loadPages(slug, chNum, getPages)
       .then((imgs) => {
-        if (alive) setImages(imgs);
+        if (!alive) return;
+        setImages(imgs);
+        setReadyKey(cacheKey(slug, chNum));
       })
-      .catch(() => toast.error("Gagal memuat halaman chapter"))
-      .finally(() => alive && setLoading(false));
+      .catch(() => {
+        if (!alive) return;
+        setImages([]);
+        setReadyKey(cacheKey(slug, chNum));
+        toast.error("Gagal memuat halaman chapter");
+      });
     return () => {
       alive = false;
     };
@@ -197,19 +211,39 @@ export default function ReadComic() {
             if (i !== index) setIndex(i);
           }}
           className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          style={{ overflowAnchor: "none" }}
         >
           <div className="mx-auto w-full max-w-2xl">
             {images.map((src, i) => (
-              <div key={`${src}-${i}`} className="relative bg-black">
+              <div
+                key={`${src}-${i}`}
+                className="relative w-full bg-black"
+                // Placeholder 3:4 dipakai selagi ukuran asli belum diketahui,
+                // supaya tinggi konten stabil dan scroll tidak melompat.
+                style={{ aspectRatio: dims[i] ? String(dims[i]) : "3 / 4" }}
+              >
                 <img
                   src={src}
                   alt={`Halaman ${i + 1}`}
                   loading={i < 3 ? "eager" : "lazy"}
                   decoding="async"
                   draggable={false}
+                  onLoad={(e) => {
+                    const el = e.currentTarget;
+                    if (!el.naturalHeight) return;
+                    setDims((d) =>
+                      d[i] === el.naturalWidth / el.naturalHeight
+                        ? d
+                        : { ...d, [i]: el.naturalWidth / el.naturalHeight },
+                    );
+                  }}
                   onClick={() => setUiOn((v) => !v)}
-                  style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: "none" } : undefined}
-                  className="w-full select-none"
+                  style={
+                    zoom !== 1
+                      ? { width: `${zoom * 100}%`, maxWidth: "none", aspectRatio: "auto" }
+                      : undefined
+                  }
+                  className="absolute inset-0 h-full w-full select-none object-contain"
                 />
               </div>
             ))}
@@ -259,6 +293,8 @@ export default function ReadComic() {
               onClick={() => setUiOn((v) => !v)}
               onDoubleClick={() => setZoom((z) => (z === 1 ? 2 : 1))}
             >
+              {/* object-contain + w/h full: seluruh halaman selalu terlihat
+                  utuh, tidak terpotong dan tidak ter-zoom. */}
               <img
                 src={src}
                 alt={`Halaman ${i + 1}`}
@@ -266,7 +302,7 @@ export default function ReadComic() {
                 decoding="async"
                 draggable={false}
                 style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: "none" } : undefined}
-                className="block h-full w-auto max-w-full select-none object-contain"
+                className="block h-full w-full select-none object-contain"
               />
             </div>
           ))}

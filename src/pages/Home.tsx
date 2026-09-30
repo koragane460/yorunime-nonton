@@ -716,6 +716,8 @@ function SearchScreen({
   const [genresOpen, setGenresOpen] = useState(false);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   const [activeGenre, setActiveGenre] = useState<string | "all">("all");
+  const [adult, setAdult] = useState(false);
+  const [adultUnlocked, setAdultUnlocked] = useState(false);
   const genres = useAction(api.anime.animeGenres);
 
   useEffect(() => {
@@ -766,13 +768,20 @@ function SearchScreen({
     }
     setSearching(true);
     try {
-      const r = (await searchAnime({ q: query })) as AnimeCardT[];
+      const r = (await searchAnime({ q: query, adult })) as AnimeCardT[];
       setResults(r ?? []);
     } catch {
       setResults([]);
     }
     setSearching(false);
   };
+
+  // Ganti status 18+ → cari ulang otomatis.
+  useEffect(() => {
+    if (results === null) return;
+    void doSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adult]);
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -811,6 +820,53 @@ function SearchScreen({
           >
             Cari
           </button>
+        </div>
+
+        {/* Filter 18+ — perlu konfirmasi umur */}
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+          <button
+            onClick={() => {
+              if (!adultUnlocked) {
+                setAdultUnlocked(true);
+                setAdult(true);
+                return;
+              }
+              setAdult((v) => !v);
+            }}
+            className={cn(
+              "relative h-6 w-11 shrink-0 rounded-full transition",
+              adult ? "bg-red-600" : "bg-zinc-700",
+            )}
+            aria-label="Sertakan judul 18+"
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 size-5 rounded-full bg-white transition-all",
+                adult ? "left-5.5" : "left-0.5",
+              )}
+            />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold">Sertakan judul 18+</p>
+            <p className="text-[10px] text-muted-foreground">
+              {adultUnlocked
+                ? adult
+                  ? "Judul dewasa ikut ditampilkan"
+                  : "Cuma judul biasa yang dicari"
+                : "Butuh konfirmasi, hanya untuk kamu yang sudah 18 tahun"}
+            </p>
+          </div>
+          {adultUnlocked && (
+            <button
+              onClick={() => {
+                setAdult(false);
+                setAdultUnlocked(false);
+              }}
+              className="shrink-0 text-[10px] font-semibold text-violet-300 underline"
+            >
+              reset
+            </button>
+          )}
         </div>
 
         {/* Genre collapsible — "Semua" paling kiri */}
@@ -860,9 +916,36 @@ function SearchScreen({
         {results !== null && !searching && (
           <div className="mt-4">
             {results.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                Anime tidak ditemukan
-              </p>
+              <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Judul persis itu tidak ada
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  Coba kata kunci lebih pendek, atau tanpa spasi — misalnya
+                  &quot;onepiece&quot;, &quot;solo leveling&quot;.
+                </p>
+                {!adult && (
+                  <button
+                    onClick={() => {
+                      setAdult(true);
+                      setAdultUnlocked(true);
+                    }}
+                    className="mt-3 rounded-full border border-red-500/60 px-4 py-1.5 text-xs font-semibold text-red-300"
+                  >
+                    Cari juga judul 18+
+                  </button>
+                )}
+                <div className="mt-6 text-left">
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                    Mungkin kamu mencari salah satu ini
+                  </p>
+                  {listLoading ? (
+                    <GridSkeleton count={6} />
+                  ) : (
+                    <AnimeGrid items={list.slice(0, 10)} onPick={onPick} newIds={new Set()} />
+                  )}
+                </div>
+              </div>
             ) : (
               <AnimeGrid items={results} onPick={onPick} newIds={new Set()} />
             )}

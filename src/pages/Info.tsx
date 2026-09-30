@@ -152,14 +152,14 @@ function LanjutTab() {
 
       {(rows ?? []).map((h: any) => {
         const epId = `${h.animeId}__ep${h.episode}`;
-        const total = h.progressSec ?? 0;
+        const pos = Math.max(0, h.progressSec ?? 0);
+        const dur = h.durationSec ?? 0;
+        const pct = dur > 0 ? Math.min(100, Math.round((pos / dur) * 100)) : 0;
         return (
           <button
             key={h._id}
             onClick={() =>
-              navigate(
-                `/nonton?anime=${h.animeId}&ep=${epId}&t=${Math.max(0, Math.floor(total))}`,
-              )
+              navigate(`/nonton?anime=${h.animeId}&ep=${epId}&t=${Math.floor(pos)}`)
             }
             className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
           >
@@ -171,11 +171,21 @@ function LanjutTab() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
               <p className="text-xs text-muted-foreground">
-                Episode {h.episode} · {h.minutesWatched} menit
+                Episode {h.episode}
+                {dur > 0 ? ` · durasi ${fmtTime(dur)}` : ""}
               </p>
-              <p className="text-[11px] text-violet-300">
-                Lanjut dari {fmtTime(total)}
-              </p>
+              {/* Posisi terakhir + durasi episode, jadi jelas sudah berapa lama */}
+              <div className="mt-1 flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-full bg-violet-500"
+                    style={{ width: `${dur > 0 ? pct : 0}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-[10px] font-semibold text-violet-300">
+                  {dur > 0 ? `${fmtTime(pos)} / ${fmtTime(dur)}` : fmtTime(pos)}
+                </span>
+              </div>
             </div>
             <PlayCircle className="size-5 shrink-0 text-violet-400" />
           </button>

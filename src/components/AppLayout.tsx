@@ -153,7 +153,10 @@ function AccountPanel({
         }
       >
         {!bannerUrl && <div className="bg-hero-gradient absolute inset-0" />}
-        <div className="relative bg-black/45 p-3">
+        {/* Overlay gelap rata di SELURUH kartu (sebelumnya hanya area teks,
+            jadi bagian banner tanpa teks terlihat lebih terang). */}
+        {bannerUrl && <div className="absolute inset-0 bg-black/45" />}
+        <div className="relative p-3">
           <div className="flex items-center gap-3">
             <Avatar src={image} seed={name} className="size-14" />
             <div className="min-w-0 flex-1">
@@ -166,12 +169,12 @@ function AccountPanel({
                 </p>
                 {premium && <BlueCheck />}
               </div>
-              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                <LevelBadge level={level} />
-                <span className="text-[11px] text-zinc-400">
-                  ID: {displayId(seqId, id)}
-                </span>
-              </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+              <LevelBadge level={level} />
+              <span className="text-[11px] text-zinc-400">
+                ID: {displayId(seqId, id)}
+              </span>
+            </div>
             </div>
             <ChevronRight className="size-5 shrink-0 text-zinc-400" />
           </div>

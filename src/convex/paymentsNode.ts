@@ -95,7 +95,18 @@ export const createTransaction = internalAction({
     });
     const body = await res.text();
     if (!res.ok) {
-      if (res.status === 401 || res.status === 403) return { ok: false as const, message: KEY_HELP };
+      // 401/403 biasanya artinya: key bukan Server Key, atau akun belum
+      // disetujui untuk production. Tampilkan jawaban Midtrans apa adanya
+      // supaya penyebabnya jelas, bukan tebakan.
+      if (res.status === 401 || res.status === 403) {
+        return {
+          ok: false as const,
+          message: `${KEY_HELP} (Midtrans menjawab 401: ${body
+            .replace(/<[^>]*>/g, " ")
+            .replace(/\s+/g, " ")
+            .slice(0, 180)})`,
+        };
+      }
       return {
         ok: false as const,
         message: `Midtrans menolak transaksi (${res.status}). ${body.slice(0, 200)}`,

@@ -193,6 +193,8 @@ const schema = defineSchema(
       minutesWatched: v.number(),
       /** Posisi playback terakhir (detik) — dipakai tombol "Lanjutkan". */
       progressSec: v.optional(v.number()),
+      /** Durasi episode terakhir (detik) — untuk bar progres "Lanjutkan". */
+      durationSec: v.optional(v.number()),
       updatedAt: v.number(),
     })
       .index("userId_updated", ["userId", "updatedAt"])

@@ -662,38 +662,46 @@ export const animeForYou = action({
 });
 
 export const animeSearch = action({
-  args: { q: v.string(), page: v.optional(v.number()) },
-  handler: async (runCtx, { q, page }) => {
+  args: { q: v.string(), page: v.optional(v.number()), adult: v.optional(v.boolean()) },
+  handler: async (runCtx, { q, page, adult = false }) => {
     const query = q.trim();
     if (query.length === 0) return [];
     const p = Math.max(1, Math.min(6, Math.round(page ?? 1)));
     const lower = query.toLowerCase();
-    // 1) AniList (pencarian lengkap & selalu punya MAL id → bisa distream)
+    // 1) AniList (pencarian lengkap & selalu punya MAL id → bisa distream).
+    //    `isAdult` mengikuti pilihan 18+ pengguna.
     try {
       const d = await aniGraphql(
-        `query($s:String,$p:Int){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:false){ ${ANILIST_FIELDS} } } }`,
-        { s: query, p },
+        `query($s:String,$p:Int,$a:Boolean){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:$a){ ${ANILIST_FIELDS} } } }`,
+        { s: query, p, a: !!adult },
       );
       const list = (d?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
       if (list.length > 0) return list;
+      // Retry tanpa sort SEARCH_MATCH — beberapa judul hanya ketemu di mode ini.
+      const d2 = await aniGraphql(
+        `query($s:String,$a:Boolean){ Page(page:1, perPage:50){ media(type:ANIME, search:$s, isAdult:$a){ ${ANILIST_FIELDS} } } }`,
+        { s: query, a: !!adult },
+      );
+      const list2 = (d2?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
+      if (list2.length > 0) return list2;
     } catch {
       /* lanjut */
     }
     // 2) cache
-    const row = (await runCtx.runQuery(
-      internal.anime.cacheGet,
-      { endpoint: `search:v2:${lower}` },
-    )) as { payload?: unknown; updatedAt?: number } | null;
+    const cacheKey = `search:v3:${adult ? "18+" : "sfw"}:${lower}`;
+    const row = (await runCtx.runQuery(internal.anime.cacheGet, {
+      endpoint: cacheKey,
+    })) as { payload?: unknown; updatedAt?: number } | null;
     if (row && row.updatedAt && Date.now() - row.updatedAt < LIST_TTL)
       return (row.payload as AnimeCard[]) ?? [];
-    // 3) jikan
+    // 3) jikan — tanpa `sfw` supaya tidak membuat judul 18+ lenyap dari hasil.
     try {
       const r = await jikanList(
-        `anime?q=${encodeURIComponent(query)}&limit=24&order_by=members&sort=desc&sfw`,
+        `anime?q=${encodeURIComponent(query)}&limit=24&order_by=members&sort=desc`,
       );
       if (r.length > 0) {
         await runCtx.runMutation(internal.anime.cacheSet, {
-          endpoint: `search:v2:${lower}`,
+          endpoint: cacheKey,
           payload: r,
         });
         return r;
@@ -701,7 +709,7 @@ export const animeSearch = action({
     } catch {
       /* lanjut */
     }
-    // 4) fallback statis
+    // 4) fallback statis (supaya halaman tidak pernah kosong)
     return [...FALLBACK_TOP, ...FALLBACK_SEASON].filter(
       (a) => a.title.toLowerCase().includes(lower) || lower.length >= 3,
     );

@@ -489,6 +489,7 @@ function WatchContent() {
         episode: currentEp.number,
         progressSec: v.currentTime,
         minutesWatched: 0,
+        durationSec: Number.isFinite(v.duration) ? v.duration : undefined,
       }).catch(() => {});
     }, 10_000);
     return () => clearInterval(t);

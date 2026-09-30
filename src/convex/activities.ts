@@ -65,10 +65,12 @@ export const saveProgress = mutation({
     episode: v.number(),
     progressSec: v.number(),
     minutesWatched: v.optional(v.number()),
+    /** Durasi episode (detik) — biar "Lanjutkan" bisa tampil_progress. */
+    durationSec: v.optional(v.number()),
   },
   handler: async (
     ctx,
-    { animeId, animeTitle, animeImage, episode, progressSec, minutesWatched },
+    { animeId, animeTitle, animeImage, episode, progressSec, minutesWatched, durationSec },
   ) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return { ok: false };
@@ -83,6 +85,7 @@ export const saveProgress = mutation({
         episode,
         progressSec: Math.max(0, Math.round(progressSec)),
         minutesWatched: existing.minutesWatched + (minutesWatched ?? 0),
+        ...(durationSec ? { durationSec: Math.round(durationSec) } : {}),
         updatedAt: Date.now(),
       });
     } else {
@@ -94,6 +97,7 @@ export const saveProgress = mutation({
         episode,
         minutesWatched: minutesWatched ?? 0,
         progressSec: Math.max(0, Math.round(progressSec)),
+        ...(durationSec ? { durationSec: Math.round(durationSec) } : {}),
         updatedAt: Date.now(),
       });
     }
@@ -122,6 +126,7 @@ export const continueWatching = query({
         episode: r.episode,
         minutesWatched: r.minutesWatched,
         progressSec: r.progressSec ?? 0,
+        durationSec: r.durationSec,
         updatedAt: r.updatedAt,
       }));
   },
