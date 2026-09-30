@@ -3,7 +3,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { SectionTitle } from "@/components/lstream-ui";
-import { Crown, Check, ShieldCheck, Loader2 } from "lucide-react";
+import { Crown, Check, ShieldCheck, Loader2, CreditCard, AlertTriangle, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -35,10 +35,83 @@ const PERKS = [
   "Akses cepat server streaming",
 ];
 
+function PaymentGuide({
+  config,
+}: {
+  config?:
+    | { configured: boolean; isProd: boolean; mode?: string; masked?: string; message: string }
+    | undefined;
+}) {
+  const steps = [
+    "Pilih paket di bawah, lalu tekan Beli.",
+    "Popup Midtrans Snap terbuka — pilih metode: Virtual Account, QRIS, GoPay, DANA, OVO, atau kartu.",
+    "Selesaikan pembayaran sesuai instruksi di layar.",
+    "Premium langsung aktif di akun kamu, tidak perlu login ulang.",
+  ];
+  return (
+    <div className="mt-4 rounded-2xl border border-white/10 bg-card p-3.5">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
+          {config?.configured ? (
+            <CircleCheck className="size-4 text-emerald-400" />
+          ) : (
+            <AlertTriangle className="size-4 text-amber-300" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">Cara Pembelian</p>
+          {config?.configured ? (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Midtrans{" "}
+              <span
+                className={cn(
+                  "font-bold",
+                  config.isProd ? "text-emerald-400" : "text-amber-300",
+                )}
+              >
+                {config.mode}
+              </span>{" "}
+              aktif · key {config.masked}
+            </p>
+          ) : (
+            <p className="mt-0.5 text-[11px] text-amber-300">
+              {config?.message ?? "Memuat status pembayaran…"}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="my-2.5 h-px bg-white/10" />
+
+      <ol className="space-y-1.5">
+        {steps.map((s, i) => (
+          <li key={s} className="flex gap-2.5 text-xs leading-5 text-zinc-300">
+            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[9px] font-black text-white">
+              {i + 1}
+            </span>
+            {s}
+          </li>
+        ))}
+      </ol>
+
+      <p className="mt-2.5 flex items-start gap-1.5 text-[10px] leading-4 text-muted-foreground">
+        <CreditCard className="mt-0.5 size-3 shrink-0" />
+        Pembayaran memakai Midtrans Snap. Kalau transaksi production ditolak,
+        ganti <span className="font-semibold">MIDTRANS_SERVER_KEY</span> dengan
+        Server Key sandbox (awalan <span className="font-semibold">SB-</span>) —
+        aplikasi otomatis pindah ke mode sandbox.
+      </p>
+    </div>
+  );
+}
+
 function PremiumContent() {
   const plans = useQuery(api.payments.premiumPlans, {}) as Plan[] | undefined;
   const myPurchases = useQuery(api.payments.myPurchases, {}) as Purchase[] | undefined;
   const createSnap = useAction(api.payments.createSnapTransaction);
+  const payConfig = useQuery(api.payments.paymentConfig, {}) as
+    | { configured: boolean; isProd: boolean; mode?: string; masked?: string; message: string }
+    | undefined;
   const checkStatus = useAction(api.payments.checkOrderStatus);
   const confirm = useMutation(api.payments.confirmPurchase);
   const [busy, setBusy] = useState<string | null>(null);
@@ -126,6 +199,8 @@ function PremiumContent() {
           Buka semua fitur terbaik, dukung YoruNime terus berkembang
         </p>
       </div>
+
+      <PaymentGuide config={payConfig} />
 
       <SectionTitle>Pilih Paket</SectionTitle>
       <div className="space-y-2.5">

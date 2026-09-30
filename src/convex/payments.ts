@@ -71,6 +71,55 @@ export const markPaidInternal = internalMutation({
   },
 });
 
+// ------------------------------------------------------------- key config ----
+// Isi tab Keys dengan MIDTRANS_SERVER_KEY. Kunci yang dibutuhkan adalah
+// *Server Key* (format `SB-Mid-server-...` untuk sandbox, `Mid-server-...`
+// untuk production). Kalau yang tertempel adalah Client Key
+// (`...-client-...`), transaksi akan ditolak 401 — makanya error di bawah
+// menjelaskan ke user daripada diam-diam gagal.
+const KEY_HELP =
+  "MIDTRANS_SERVER_KEY harus berisi Server Key Midtrans (SB-Mid-server-... untuk sandbox atau Mid-server-... untuk production), bukan Client Key. Buka midtrans.com > Settings > Access Keys > kolom Server Key.";
+
+type KeyInfo = { key: string; isProd: boolean } | { error: string };
+
+function readServerKey(): KeyInfo {
+  const key = (process.env.MIDTRANS_SERVER_KEY ?? "").trim();
+  if (!key) {
+    return { error: "MIDTRANS_SERVER_KEY belum diisi di tab Keys." };
+  }
+  if (!/server/i.test(key)) {
+    return { error: KEY_HELP };
+  }
+  // Awalan SB- = sandbox; selain itu production. Nilai manual
+  // MIDTRANS_IS_PRODUCTION hanya dipakai kalau key tidak punya awalan.
+  const isProd = process.env.MIDTRANS_IS_PRODUCTION
+    ? !!process.env.MIDTRANS_IS_PRODUCTION && process.env.MIDTRANS_IS_PRODUCTION !== "false"
+    : !/^SB-/i.test(key);
+  return { key, isProd };
+}
+
+function basicAuth(key: string) {
+  return `Basic ${Buffer.from(`${key}:`).toString("base64")}`;
+}
+
+/** Info konfigurasi pembayaran (ditampilkan di halaman Premium). */
+export const paymentConfig = query({
+  args: {},
+  handler: async () => {
+    const info = readServerKey();
+    if ("error" in info) {
+      return { configured: false, isProd: false, message: info.error };
+    }
+    return {
+      configured: true,
+      isProd: info.isProd,
+      mode: info.isProd ? "Production" : "Sandbox",
+      masked: `${info.key.slice(0, 8)}…${info.key.slice(-4)}`,
+      message: "",
+    };
+  },
+});
+
 const PLANS: Record<string, { label: string; days: number; price: number }> = {
   p1: { label: "1 Bulan", days: 30, price: 7000 },
   p2: { label: "3 Bulan", days: 90, price: 30000 },
@@ -97,18 +146,16 @@ export const createSnapTransaction = action({
       orderId,
     });
 
-    const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    if (!serverKey) {
+    const info = readServerKey();
+    if ("error" in info) {
       return {
         configured: false as const,
         orderId,
-        message:
-          "Pembayaran belum aktif: minta admin isi MIDTRANS_SERVER_KEY di tab Keys. Sementara ini kamu dapat trial 1 hari gratis.",
+        message: `${info.error} Sementara ini kamu dapat trial 1 hari gratis.`,
       };
     }
+    const { key: serverKey, isProd } = info;
 
-    const auth = Buffer.from(`${serverKey}:`).toString("base64");
-    const isProd = !!process.env.MIDTRANS_IS_PRODUCTION;
     const url = isProd
       ? "https://app.midtrans.com/snap/v1/transactions"
       : "https://app.sandbox.midtrans.com/snap/v1/transactions";
@@ -117,7 +164,7 @@ export const createSnapTransaction = action({
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`,
+        Authorization: basicAuth(serverKey),
       },
       body: JSON.stringify({
         transaction_details: { order_id: orderId, gross_amount: plan.price },
@@ -133,7 +180,11 @@ export const createSnapTransaction = action({
         callbacks: { finish: `${process.env.CONVEX_SITE_URL ?? ""}/premium` },
       }),
     });
-    if (!res.ok) throw new Error(`Midtrans error ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      if (res.status === 401) throw new Error(KEY_HELP);
+      throw new Error(`Midtrans menolak transaksi (${res.status}). ${body.slice(0, 160)}`);
+    }
     const data = (await res.json()) as { token?: string; redirect_url?: string };
     if (!data.token && !data.redirect_url) throw new Error("Midtrans tidak mengembalikan token");
     await ctx.runMutation(internal.payments.setPaymentUrl, {
@@ -176,13 +227,11 @@ export const checkOrderStatus = action({
       | { userId: string; status: string }
       | null;
     if (!row || row.userId !== userId) throw new Error("Order tidak ditemukan");
-    const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    if (!serverKey) return { status: row.status };
-    const auth = Buffer.from(`${serverKey}:`).toString("base64");
-    const isProd = !!process.env.MIDTRANS_IS_PRODUCTION;
+    const info = readServerKey();
+    if ("error" in info) return { status: row.status };
     const res = await fetch(
-      `${isProd ? "https://api.midtrans.com" : "https://api.sandbox.midtrans.com"}/v2/${orderId}/status`,
-      { headers: { Accept: "application/json", Authorization: `Basic ${auth}` } },
+      `${info.isProd ? "https://api.midtrans.com" : "https://api.sandbox.midtrans.com"}/v2/${orderId}/status`,
+      { headers: { Accept: "application/json", Authorization: basicAuth(info.key) } },
     );
     if (!res.ok) return { status: row.status };
     const data = (await res.json()) as { transaction_status?: string };
