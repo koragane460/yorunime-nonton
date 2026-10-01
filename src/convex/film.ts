@@ -215,37 +215,62 @@ function pickList(json: any): any[] {
   return [];
 }
 
+/**
+ * Bentuk data film. `febriadj/lk21-api` memakai nama field `_id`,
+ * `posterImg`, `type`, `qualityResolution`, `synopsis`, `releaseDate`,
+ * dan `trailerUrl` — bukan `id`/`poster`/`description` seperti API lain.
+ * Semua alias itu ditangani di sini.
+ */
 function shapeLk(raw: any): FilmItem | null {
   if (!raw || typeof raw !== "object") return null;
   const m = raw.movie ?? raw.film ?? raw.data ?? raw;
-  if (m && typeof m === "object" && !Array.isArray(m) && (m.title || m.name)) {
-    const inner = m;
-    const id = String(inner.id ?? inner.movieId ?? inner.slug ?? inner.code ?? "");
-    const title = String(inner.title ?? inner.name ?? "");
-    if (id && title)
-      return {
-        id,
-        title,
-        poster: String(inner.poster ?? inner.thumbnail ?? inner.image ?? inner.img ?? ""),
-        backdrop: inner.backdrop ? String(inner.backdrop) : undefined,
-        description: inner.description ? String(inner.description) : undefined,
-        year: inner.year ? String(inner.year) : undefined,
-        rating: inner.rating ? String(inner.rating) : undefined,
-        genre: Array.isArray(inner.genres)
-          ? inner.genres
-              .map((g: any) => (typeof g === "string" ? g : g?.name ?? g?.genreName ?? ""))
-              .filter(Boolean)
-              .join(", ")
-          : inner.genre
-            ? String(inner.genre)
-            : undefined,
-        duration: inner.duration ? String(inner.duration) : undefined,
-        video: inner.video || inner.streamUrl || inner.embedUrl || inner.url
-          ? String(inner.video ?? inner.streamUrl ?? inner.embedUrl ?? inner.url)
-          : undefined,
-      };
+  if (!m || typeof m !== "object" || Array.isArray(m)) return null;
+  const title = String(m.title ?? m.name ?? "");
+  const id = String(m._id ?? m.id ?? m.movieId ?? m.slug ?? m.code ?? "");
+  if (!id || !title) return null;
+  const poster = String(m.posterImg ?? m.poster ?? m.thumbnail ?? m.image ?? m.img ?? "");
+  const release = m.releaseDate ? String(m.releaseDate) : undefined;
+  return {
+    id,
+    title,
+    poster,
+    backdrop: m.backdrop ? String(m.backdrop) : undefined,
+    description: m.synopsis ?? m.description
+      ? String(m.synopsis ?? m.description)
+      : undefined,
+    year: m.year ? String(m.year) : release ? release.slice(0, 4) : undefined,
+    rating: m.rating ? String(m.rating) : undefined,
+    genre: Array.isArray(m.genres)
+      ? m.genres
+          .map((g: any) => (typeof g === "string" ? g : g?.name ?? g?.genreName ?? ""))
+          .filter(Boolean)
+          .join(", ")
+      : m.genre
+        ? String(m.genre)
+        : undefined,
+    duration: m.duration ? String(m.duration) : undefined,
+    trailer: m.trailerUrl ? String(m.trailerUrl) : undefined,
+  };
+}
+
+/** Sumber streaming film: API LK21 memisahkannya di endpoint /streams. */
+export type FilmSource = { provider: string; url: string; resolutions: string[] };
+
+function shapeSources(raw: any): FilmSource[] {
+  const list = Array.isArray(raw) ? raw : pickList(raw);
+  const out: FilmSource[] = [];
+  for (const s of list) {
+    const url = s?.url ?? s?.link ?? s?.embedUrl ?? s?.file;
+    if (typeof url !== "string" || !url) continue;
+    out.push({
+      provider: String(s?.provider ?? s?.name ?? "Server"),
+      url,
+      resolutions: Array.isArray(s?.resolutions)
+        ? s.resolutions.map((r: any) => String(r))
+        : [],
+    });
   }
-  return null;
+  return out;
 }
 
 function shapeTmdb(raw: any): FilmItem | null {
@@ -304,6 +329,18 @@ async function lkDetail(id: string): Promise<FilmItem | null> {
     (await fetchJson(`${base}/movie/${enc}`)) ??
     (await fetchJson(`${base}/detail/${enc}`));
   return shapeLk(json);
+}
+
+/** Daftar server streaming untuk satu film (sub Indo). */
+async function lkSources(id: string): Promise<FilmSource[]> {
+  const base = lk21Base();
+  if (!base) return [];
+  const enc = encodeURIComponent(id);
+  const json =
+    (await fetchJson(`${base}/movies/${enc}/streams`)) ??
+    (await fetchJson(`${base}/movies/${enc}/sources`)) ??
+    (await fetchJson(`${base}/streams/${enc}`));
+  return shapeSources(json);
 }
 
 // -------------------------------------------------------------- tmdb ----
@@ -431,4 +468,14 @@ export const filmDetail = action({
       const trailer = await cached(`tmdb-trailer:${id}`, () => tmdbTrailer(Number(id)));
       return trailer ? { id, title: "Film", poster: "", trailer } : null;
     }),
+});
+
+/**
+ * Server streaming untuk satu film. Film dari API LK21 memakai ini; kalau
+ * kosong, film tersebut belum punya sumber yang bisa dimuat.
+ */
+export const filmSourcesFor = action({
+  args: { id: v.string() },
+  handler: async (ctx, { id }): Promise<FilmSource[]> =>
+    cached(`sources:${id}`, () => lkSources(id)),
 });

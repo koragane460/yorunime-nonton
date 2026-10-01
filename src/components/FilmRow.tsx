@@ -23,7 +23,7 @@ type Film = {
  * Baris Film di beranda. Sembunyi total kalau server belum punya sumber
  * film atau user belum diberi akses, jadi tidak ada tombol mati.
  */
-export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: string) => void }) {
+export function FilmRow() {
   const access = useAction(api.film.filmAccess);
   const listFilms = useAction(api.film.films);
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -31,6 +31,7 @@ export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: st
   const [items, setItems] = useState<Film[]>([]);
   const [loading, setLoading] = useState(false);
   const [pick, setPick] = useState<Film | null>(null);
+  const [playing, setPlaying] = useState<{ url: string; title: string } | null>(null);
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<Film[] | null>(null);
@@ -179,13 +180,60 @@ export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: st
           film={pick}
           onClose={() => setPick(null)}
           onWatch={(url, title) => {
-            setPick(null);
-            if (onOpenWatch) onOpenWatch(url, title);
-            else toast.info("Pemutaran film belum siap");
+            setPlaying({ url, title });
           }}
         />
       )}
+
+      {playing && <FilmPlayer url={playing.url} title={playing.title} onClose={() => setPlaying(null)} />}
     </>
+  );
+}
+
+/** Player film fullscreen: memuat mp4 langsung atau iframe embed. */
+function FilmPlayer({
+  url,
+  title,
+  onClose,
+}: {
+  url: string;
+  title: string;
+  onClose: () => void;
+}) {
+  useHideNavOnMount();
+  const isFile = /\.(mp4|m3u8|mkv|webm)(\?|$)/i.test(url);
+  return (
+    <div className="fixed inset-0 z-[90] flex flex-col bg-black">
+      <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
+        <button
+          onClick={onClose}
+          aria-label="Tutup player"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <p className="min-w-0 flex-1 truncate text-sm font-bold">{title}</p>
+      </div>
+      <div className="relative flex-1">
+        {isFile ? (
+          <video
+            src={url}
+            controls
+            autoPlay
+            playsInline
+            className="size-full bg-black"
+          />
+        ) : (
+          <iframe
+            src={url}
+            title={title}
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            className="size-full border-0"
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -201,6 +249,10 @@ function FilmDetail({
 }) {
   useHideNavOnMount();
   const getDetail = useAction(api.film.filmDetail);
+  const getSources = useAction(api.film.filmSourcesFor);
+  const [sources, setSources] = useState<
+    { provider: string; url: string; resolutions: string[] }[]
+  >([]);
   const [full, setFull] = useState<Film>(film);
   const [loading, setLoading] = useState(true);
 
@@ -208,12 +260,18 @@ function FilmDetail({
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setSources([]);
     getDetail({ id: film.id })
       .then((d: any) => {
         if (alive && d) setFull({ ...film, ...d });
       })
       .catch(() => {})
       .finally(() => alive && setLoading(false));
+    getSources({ id: film.id })
+      .then((s: any) => {
+        if (alive) setSources(s ?? []);
+      })
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -248,23 +306,54 @@ function FilmDetail({
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             {[full.year, full.duration, full.genre].filter(Boolean).join(" · ")}
           </p>
-          <div className="mt-3 flex gap-2">
-            {full.video ? (
+          <div className="mt-3 space-y-2">
+            {sources.length > 0 ? (
+              <>
+                <p className="text-[11px] font-bold text-muted-foreground">
+                  Pilih server
+                </p>
+                <div className="space-y-1.5">
+                  {sources.map((s, i) => (
+                    <button
+                      key={`${s.provider}-${i}`}
+                      onClick={() => onWatch(s.url, full.title)}
+                      className="flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left"
+                    >
+                      <Play className="size-4 shrink-0 text-violet-300" />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                        {s.provider}
+                      </span>
+                      {s.resolutions.length > 0 && (
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                          {s.resolutions.slice(0, 2).join(" · ")}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => onWatch(sources[0].url, full.title)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
+                >
+                  <Play className="size-4" /> Lanjutkan
+                </button>
+              </>
+            ) : full.video ? (
               <button
                 onClick={() => onWatch(full.video ?? "", full.title)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
               >
                 <Play className="size-4" /> Lanjutkan
               </button>
             ) : full.trailer ? (
               <button
                 onClick={() => onWatch(full.trailer ?? "", full.title)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
               >
-                <Play className="size-4" /> Lanjutkan
+                <Play className="size-4" /> Trailer resmi
               </button>
             ) : (
-              <p className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center text-[11px] text-muted-foreground">
+              <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center text-[11px] text-muted-foreground">
                 {loading ? "Memuat sumber…" : "Belum ada sumber tayang untuk film ini"}
               </p>
             )}
