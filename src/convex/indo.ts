@@ -92,7 +92,13 @@ const slugOf = (url?: string) =>
     .filter(Boolean)
     .pop() ?? "";
 
-/** Cari episode ke-n dari daftar {title|url} atau {episode|url}. */
+/**
+ * Cari episode ke-n dari daftar {title|url} atau {episode|url}.
+ * Kalau daftar sudah membawa nomor episode, nomor itulah yang dipakai — urutan
+ * array TIDAK boleh dipakai sebagai tebakan, karena itu bisa mengembalikan
+ * video episode lain. Index hanya dipakai kalau tidak ada satu pun nomor
+ * episode di daftar (sumber yang memang tidak menomori).
+ */
 function pickEpisode<T extends { title?: string; episode?: number; url?: string }>(
   list: T[],
   ep: number,
@@ -101,8 +107,10 @@ function pickEpisode<T extends { title?: string; episode?: number; url?: string 
   const re = new RegExp(`episode\\s*0*${ep}\\b|ep\\s*0*${ep}\\b`, "i");
   const byTitle = list.find((e) => re.test(String(e.title ?? "")));
   if (byTitle) return byTitle;
-  const byNumber = list.find((e) => Number(e.episode) === ep);
-  if (byNumber) return byNumber;
+  const numbered = list.filter((e) => Number.isFinite(Number(e.episode)));
+  if (numbered.length > 0) {
+    return numbered.find((e) => Number(e.episode) === ep) ?? null;
+  }
   const byIndex = list[ep - 1];
   // Jangan pernah mengembalikan episode lain: kalau daftar lebih pendek dari
   // episode yang diminta, lebih baik dianggap tidak ada.
@@ -240,6 +248,7 @@ const proxied = (u: string, ref: string) =>
   `${process.env.CONVEX_SITE_URL ?? ""}/megastream?u=${b64url(u)}&r=${b64url(ref)}`;
 
 async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
+  const out: IndoSource[] = [];
   const list = await sankaGet(`/anime/stream/search/${encodeURIComponent(title)}`);
   const items: any[] = Array.isArray(list?.anime_list)
     ? list.anime_list ?? list
@@ -258,9 +267,22 @@ async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
 
   for (const cand of ranked.slice(0, 3)) {
     const detail = await sankaGet(`/anime/stream/anime/${cand.slug}`);
-    const eps: any[] = Array.isArray(detail?.episodes) ? detail.episodes : [];
+    const raw: any[] = Array.isArray(detail?.episodes) ? detail.episodes : [];
+    // Nomor episode dibaca dari `eps_title` ("Episode  3"). Kalau tidak ada
+    // nomor sama sekali, baris dianggap tidak punya episode yang bisa dicari.
+    const eps = raw
+      .map((e: any) => {
+        const label = String(e?.eps_title ?? e?.title ?? "");
+        const num = Number(label.match(/(\d+)/)?.[1]);
+        return {
+          episode: Number.isFinite(num) ? num : undefined,
+          title: label,
+          eps_slug: e?.eps_slug ?? e?.slug ?? "",
+        };
+      })
+      .filter((e: any) => e.eps_slug && Number.isFinite(e.episode));
     const target = pickEpisode(eps, ep);
-    const epSlug = String(target?.eps_slug ?? target?.slug ?? "").trim();
+    const epSlug = String(target?.eps_slug ?? "").trim();
     if (!epSlug) continue;
     const episode = await sankaGet(`/anime/stream/episode/${epSlug}`);
     const links: any[] = Array.isArray(episode?.stream_links)
@@ -269,7 +291,10 @@ async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
     if (links.length === 0) continue;
     // Setiap server player (hls.php / btube3.php / cepat.php / ...) dibuka dan
     // diambil file aslinya: HLS (m3u8) lebih dulu, kalau tidak ada MP4 langsung.
+    // Semua server yang berhasil diambil dikembalikan, bukan cuma yang pertama,
+    // supaya player punya cadangan kalau satu server mati.
     for (const l of links) {
+      if (out.length >= 3) break;
       const playerUrl = String(l?.url ?? "");
       if (!/^https?:/i.test(playerUrl)) continue;
       try {
@@ -281,9 +306,12 @@ async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
         const body = await html.text();
         const m3u8 = body.match(/"file"\s*:\s*"(https?:[^"]+\.m3u8)"/)?.[1];
         if (m3u8) {
-          return [
-            { label: "HLS · Sub Indo", url: proxied(m3u8, XT_REF), type: "hls" },
-          ];
+          out.push({
+            label: `Anime-indo · Server ${out.length + 1}`,
+            url: proxied(m3u8, XT_REF),
+            type: "hls",
+          });
+          continue;
         }
         // Player video.js: file video langsung. URL-nya tidak selalu berakhiran
         // .mp4 (googlevideo/bloger pakai path videoplayback?...&mime=video/mp4).
@@ -291,16 +319,19 @@ async function xtwapHls(title: string, ep: number): Promise<IndoSource[]> {
           .match(/<source[^>]+src="(https?:[^"]+)"[^>]*>/i)?.[1]
           ?.replace(/&amp;/g, "&");
         if (mp4 && /mime=video\/mp4|\.mp4(\?|$)/i.test(body)) {
-          return [
-            { label: "HLS · Sub Indo", url: proxied(mp4, XT_REF), type: "mp4" },
-          ];
+          out.push({
+            label: `Anime-indo · Server ${out.length + 1}`,
+            url: proxied(mp4, XT_REF),
+            type: "mp4",
+          });
         }
       } catch {
         continue;
       }
     }
+    if (out.length > 0) break;
   }
-  return [];
+  return out;
 }
 
 // ---------------------------------------------------------------- SankaApi --
@@ -595,9 +626,11 @@ async function animeindo(title: string, ep: number): Promise<IndoSource[]> {
 
 /**
  * Sumber streaming subtitle Indonesia untuk satu episode.
- * Urutan: AnimeIndo (lengkap episode) -> HLS xtwap -> Samehadaku -> Oploverz
- * -> Otakudesu. Tidak pernah menolak episode: kalau AnimeIndo tidak punya
- * episodenya, otomatis pindah ke sumber Indonesia lain.
+ *
+ * PENTING: semua provider dicoba, bukan hanya yang pertama yang cocok.
+ * Hasil digabung menurut urutan prioritas dan dibatasi maksimal 5 server supaya
+ * player punya banyak cadangan: kalau satu server mati, player otomatis
+ * pindah ke server berikutnya tanpa perlu user memuat ulang.
  */
 export async function resolveIndo(
   title: string,
@@ -630,29 +663,42 @@ export async function resolveIndo(
     return true;
   });
 
-  // Semua varian dicoba untuk sumber bersubtitle Indonesia. Urutan:
-  // 1) AnimeIndo  → katalog episode paling lengkap.
-  // 2) HLS xtwap  → HLS asli, bisa diputar player kita sendiri (UI penuh).
+  // Semua varian dan semua provider dicoba. Hasilnya digabung supaya ada
+  // beberapa server untuk satu episode (cadangan kalau ada yang error).
+  // Urutan prioritas: 1) AnimeIndo  → episode paling lengkap.
+  // 2) Anime-indo (xtwap) → HLS asli, diputar player kita sendiri.
   // 3) Samehadaku → Oploverz → Otakudesu (embed player pihak ketiga).
+  const MAX = 5;
+  const collected: IndoSource[] = [];
+  const seen = new Set<string>();
+  const push = (list: IndoSource[]) => {
+    for (const s of list) {
+      if (collected.length >= MAX) return;
+      if (!s?.url || seen.has(s.url)) continue;
+      seen.add(s.url);
+      collected.push(s);
+    }
+  };
+
   for (const q of variants) {
-    const ai = await animeindo(q, ep).catch(() => []);
-    if (ai.length > 0) return ai;
+    push(await animeindo(q, ep).catch(() => []));
+    if (collected.length >= 2) break;
   }
   for (const q of variants) {
-    const h = await xtwapHls(q, ep).catch(() => []);
-    if (h.length > 0) return h;
+    push(await xtwapHls(q, ep).catch(() => []));
+    if (collected.length >= 4) break;
   }
   for (const q of variants) {
-    const sh = await samehadaku(q, ep).catch(() => []);
-    if (sh.length > 0) return sh;
+    push(await samehadaku(q, ep).catch(() => []));
+    if (collected.length >= MAX) break;
   }
   for (const q of variants) {
-    const op = await oploverz(q, ep).catch(() => []);
-    if (op.length > 0) return op;
+    push(await oploverz(q, ep).catch(() => []));
+    if (collected.length >= MAX) break;
   }
   for (const q of variants) {
-    const ot = await otakudesu(q, ep).catch(() => []);
-    if (ot.length > 0) return ot;
+    push(await otakudesu(q, ep).catch(() => []));
+    if (collected.length >= MAX) break;
   }
-  return [];
+  return collected;
 }

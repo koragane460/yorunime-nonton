@@ -79,8 +79,8 @@ async function pickVariant(malId: string, ep: number, kind: "sub" | "dub") {
   };
 }
 
-// Label tunggal untuk semua server: tidak ada pilihan lain di UI.
-const HLS_LABEL = "Direct HLS · SUB";
+// Label cadangan kalau tidak ada sumber Indonesia.
+const HLS_LABEL = "MegaPlay · SUB";
 
 // Cache hasil akhir per episode. Ganti episode jadi instan karena URL HLS
 // Sub Indo tidak perlu dicari ulang ke penyedia.
@@ -111,20 +111,22 @@ export const resolveEpisode = action({
       const indoEmbed = indo.filter((s) => s.type === "embed");
       const sub = await pickVariant(malId, ep, "sub").catch(() => null);
 
-      // Urutan sumber (satu server saja, tanpa DUB):
-      //   1) Direct Sub Indo — subtitle Indonesia sudah menempel (AnimeIndo dulu).
+      // Urutan sumber (semua server dikembalikan, bukan hanya satu):
+      //   1) HLS/MP4 Sub Indo — subtitle Indonesia sudah menempel di video.
       //   2) Embed Sub Indo  — kalau sumber Indonesia hanya punya player embed.
       //   3) HLS MegaPlay SUB — cadangan terakhir supaya episode tidak ditolak.
-      const primary = indoDirect[0] ?? indoEmbed[0] ?? null;
+      // Player memakai daftar ini untuk otomatis pindah server saat error.
       const sources: {
         label: string;
         url: string;
         type: "hls" | "mp4" | "embed";
-      }[] = primary
-        ? [{ label: HLS_LABEL, url: primary.url, type: primary.type }]
-        : sub
-          ? [{ label: HLS_LABEL, url: sub.m3u8, type: "hls" }]
-          : [];
+      }[] = [
+        ...indoDirect.map((s) => ({ label: s.label, url: s.url, type: s.type })),
+        ...indoEmbed.map((s) => ({ label: s.label, url: s.url, type: s.type })),
+      ];
+      if (sub) {
+        sources.push({ label: HLS_LABEL, url: sub.m3u8, type: "hls" });
+      }
 
       if (sources.length === 0) {
         return { ok: false as const, reason: "Episode belum tersedia" };
@@ -136,7 +138,7 @@ export const resolveEpisode = action({
       // Subtitle Indonesia "baked" hanya berlaku kalau yang dipakai sumber
       // HLS/MP4 Indonesia. Kalau sumbernya player embed, subtitle tetap boleh
       // ditambahkan dari track MegaPlay.
-      const usingIndoHls = !!indoDirect[0];
+      const usingIndoHls = sources[0]?.type === "hls" || sources[0]?.type === "mp4";
       const allTracks: Track[] = usingIndoHls ? [] : (sub?.tracks ?? []);
       // Prioritas subtitle: Indonesia > English > track pertama.
       const isEn = (t: Track) =>

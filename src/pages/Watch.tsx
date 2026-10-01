@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import Hls from "hls.js";
@@ -240,6 +240,9 @@ function WatchContent() {
   const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
   const [sourceIdx, setSourceIdx] = useState(0);
+  // Server yang sudah dicoba dan gagal untuk episode ini, supaya auto-failover
+  // tidak berputar ke server yang sama.
+  const deadServers = useRef<Set<string>>(new Set());
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   // Hasil resolve MegaPlay: subtitle, timing intro/outro, embed cadangan
   const [direct, setDirect] = useState<any>(null);
@@ -535,6 +538,33 @@ function WatchContent() {
     epIndex >= 0 ? epList[epIndex] : (epList.find((e: any) => e.id === epParam) ?? null);
   const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
+  /**
+   * Server yang sedang diputar error → tandai mati lalu pindah ke server
+   * berikutnya yang belum dicoba. Posisi playback disimpan supaya user tidak
+   * mundur ke awal. Kalau semua server sudah dicoba, baru tampilkan pesan.
+   */
+  const failoverServer = useCallback((from: number) => {
+    const list = sources;
+    const at = from >= 0 && from < list.length ? list[from] : null;
+    if (at) deadServers.current.add(at.url);
+    const next = list.findIndex(
+      (s, i) => i !== from && !deadServers.current.has(s.url),
+    );
+    if (next < 0) {
+      // Semua server sudah dicoba: tampilkan pesan, jangan biarkan player
+      // diam-diam menampilkan server yang sudah jelas rusak.
+      setDirectErr("Semua server gagal memuat episode ini");
+      setSources([]);
+      return;
+    }
+    resumeAtRef.current = videoRef.current?.currentTime ?? 0;
+    autoplayNextRef.current = true;
+    setSourceIdx(next);
+    const t = list[next]?.type;
+    setSourceType(t === "hls" ? "hls" : t === "mp4" ? "mp4" : "embed");
+    setWaiting(false);
+  }, [sources]);
+
   useEffect(() => {
     if (animeId) {
       detail({ id: animeId })
@@ -580,13 +610,13 @@ function WatchContent() {
       setSourceIdx(0);
     };
 
-    // Ganti episode → episode lama langsung dihapus total, tidak ada frame sisa.
     // Kalau perpindahan terjadi saat video masih diputar, tandai untuk autoplay.
     if (lastEpRef.current && lastEpRef.current !== epParam) {
       const v = videoRef.current;
       autoplayNextRef.current = !!(v && !v.paused && !v.ended);
     }
     lastEpRef.current = epParam;
+    deadServers.current = new Set();
     setSources([]);
     setDirect(null);
     setDirectErr(null);
@@ -686,7 +716,8 @@ function WatchContent() {
             return;
           }
         }
-        toast.error("Gagal memuat stream, coba muat ulang");
+        // Sudah tidak bisa dipulihkan: pindah server lain secara otomatis.
+        failoverServer(sourceIdx);
       });
     } else {
       v.src = streamUrl;
@@ -1120,6 +1151,7 @@ function WatchContent() {
               }
             }}
             onWaiting={() => setWaiting(true)}
+            onError={() => failoverServer(sourceIdx)}
             onPlaying={() => setWaiting(false)}
             onCanPlay={() => setWaiting(false)}
             // Setting ulang posisi setelah transisi layar penuh: jangan sampai
@@ -1580,16 +1612,39 @@ function WatchContent() {
       </div>
       </div>
 
-      {/* Server: hanya satu — Direct HLS · SUB */}
+      {/* Server: bisa dipilih manual, dan player otomatis pindah kalau error. */}
       {sources.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
-          <span className="text-[11px] text-muted-foreground">Server:</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500 bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-300">
-            {sources[sourceIdx]?.label ?? "Direct HLS · SUB"}
-            <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
-              ID
-            </span>
-          </span>
+        <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-2 pb-1">
+          <span className="shrink-0 text-[11px] text-muted-foreground">Server:</span>
+          {sources.map((s, i) => (
+            <button
+              key={s.url}
+              onClick={() => {
+                if (i === sourceIdx) return;
+                resumeAtRef.current = videoRef.current?.currentTime ?? 0;
+                autoplayNextRef.current = true;
+                setSourceIdx(i);
+                setSourceType(
+                  s.type === "hls" ? "hls" : s.type === "mp4" ? "mp4" : "embed",
+                );
+              }}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition",
+                i === sourceIdx
+                  ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                  : deadServers.current.has(s.url)
+                    ? "border-border text-muted-foreground/50 line-through"
+                    : "border-border text-muted-foreground hover:border-violet-500/60",
+              )}
+            >
+              {s.label}
+              {i === sourceIdx && (
+                <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
+                  ID
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       )}
 
