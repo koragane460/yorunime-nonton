@@ -47,6 +47,7 @@ export function AnimeCard({
   rank,
   onClick,
   isNew,
+  imageOnly,
 }: {
   id?: string;
   title: string;
@@ -56,6 +57,8 @@ export function AnimeCard({
   rank?: number;
   onClick?: () => void;
   isNew?: boolean;
+  /** true = hanya poster, judul & skor ditampilkan oleh pemanggil. */
+  imageOnly?: boolean;
 }) {
   return (
     <button
@@ -102,14 +105,16 @@ export function AnimeCard({
           </span>
         )}
       </div>
-      <div className="p-2">
-        <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4">{title}</p>
-        {score !== undefined && score > 0 && (
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-gold">
-            <Star className="size-3 fill-gold" /> {score.toFixed(2)}
-          </p>
-        )}
-      </div>
+      {!imageOnly && (
+        <div className="p-2">
+          <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4">{title}</p>
+          {score !== undefined && score > 0 && (
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-gold">
+              <Star className="size-3 fill-gold" /> {score.toFixed(2)}
+            </p>
+          )}
+        </div>
+      )}
     </button>
   );
 }

@@ -23,6 +23,7 @@ const Info = lazy(() => import("./pages/Info.tsx"));
 const Premium = lazy(() => import("./pages/Premium.tsx"));
 const Manga = lazy(() => import("./pages/Manga.tsx"));
 const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
+const FilmPage = lazy(() => import("./components/FilmPage.tsx"));
 const ReadComic = lazy(() => import("./pages/ReadComic.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -202,6 +203,15 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Manhwa />
+                  </RequireAuth>
+                }
+              />
+              {/* Film: hanya untuk user yang dapat akses dari developer */}
+              <Route
+                path="/film"
+                element={
+                  <RequireAuth>
+                    <FilmPage />
                   </RequireAuth>
                 }
               />

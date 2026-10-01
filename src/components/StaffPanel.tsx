@@ -3,6 +3,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { CsBadge, CsScreen } from "@/components/CsDevScreens";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
@@ -19,9 +20,7 @@ import {
   Gem,
   Headset,
   Infinity as InfinityIcon,
-  PhoneOff,
   Search,
-  Send,
   Shield,
   ShieldCheck,
   Sparkles,
@@ -76,6 +75,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
   const { user: me } = useAuth();
 
   const [picked, setPicked] = useState<PanelUser | null>(null);
+  const [csOpen, setCsOpen] = useState(false);
   /** User yang jadi target dialog ban/mute (harus bertahan setelah sheet ditutup). */
   const [target, setTarget] = useState<PanelUser | null>(null);
   const [dialog, setDialog] = useState<null | "ban" | "mute" | "clan">(null);
@@ -105,7 +105,20 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
           : "Kelola ban & mute user"}
       </p>
 
-      {isDev && <CsPanel />}
+      {isDev && (
+        <button
+          onClick={() => setCsOpen(true)}
+          className="mt-2.5 flex w-full items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/5 px-3 py-2.5 text-left transition hover:border-violet-400"
+        >
+          <Headset className="size-4 shrink-0 text-violet-300" />
+          <span className="min-w-0 flex-1 text-xs font-bold text-violet-200">
+            Customer Service
+          </span>
+          <CsBadge />
+          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+        </button>
+      )}
+      {csOpen && <CsScreen onClose={() => setCsOpen(false)} />}
 
       <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
         <Search className="size-3.5 shrink-0 text-muted-foreground" />
@@ -294,227 +307,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
   );
 }
 
-/** Panel CS developer: daftar pengirim, terima/tolak, dan layar chat. */
-function CsPanel() {
-  const queue = useQuery(api.cs.devQueue, {});
-  const [pickedId, setPickedId] = useState<Id<"csThreads"> | null>(null);
-  const messages = useQuery(
-    api.cs.threadMessages,
-    pickedId ? { threadId: pickedId } : "skip",
-  );
-  const accept = useMutation(api.cs.accept);
-  const reject = useMutation(api.cs.reject);
-  const end = useMutation(api.cs.endThread);
-  const reply = useMutation(api.cs.devReply);
-  const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
-
-  const waiting = queue?.waiting ?? [];
-  const open = queue?.open ?? [];
-  const picked = useQuery(
-    api.cs.devThreadInfo,
-    pickedId ? { threadId: pickedId } : "skip",
-  ) as {
-    username: string;
-    image?: string;
-    status: string;
-  } | null;
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages?.length, pickedId]);
-
-  const send = async () => {
-    const body = text.trim();
-    if (!body || !pickedId) return;
-    try {
-      await reply({ threadId: pickedId, text: body });
-      setText("");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
-    }
-  };
-
-  return (
-    <div className="mt-2.5 rounded-xl border border-violet-500/30 bg-violet-500/5 p-2.5">
-      <p className="flex items-center gap-1.5 text-xs font-bold text-violet-300">
-        <Headset className="size-3.5" /> Customer Service
-        {waiting.length > 0 && (
-          <span className="rounded-full bg-violet-500 px-1.5 font-mono text-[10px] text-white">
-            {waiting.length}
-          </span>
-        )}
-      </p>
-
-      {!pickedId ? (
-        <div className="mt-2 space-y-3">
-          {waiting.length === 0 && open.length === 0 && (
-            <p className="py-2 text-[11px] text-muted-foreground">
-              Belum ada permintaan CS.
-            </p>
-          )}
-          {waiting.length > 0 && (
-            <div>
-              <p className="mb-1 text-[10px] text-muted-foreground">Menunggu</p>
-              <div className="space-y-1.5">
-                {waiting.map((t) => (
-                  <div
-                    key={t.threadId}
-                    className="rounded-lg border border-white/10 bg-background/60 p-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Avatar src={t.image} seed={t.username} className="size-8" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold">{t.username}</p>
-                        <p className="truncate text-[10px] text-muted-foreground">
-                          {t.preview || "kosong"}
-                        </p>
-                      </div>
-                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                        {t.ageMin}m
-                      </span>
-                    </div>
-                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                      <button
-                        onClick={async () => {
-                          try {
-                            await accept({ threadId: t.threadId });
-                            toast.success("Permintaan CS diterima");
-                            setPickedId(t.threadId);
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Gagal");
-                          }
-                        }}
-                        className="flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-[11px] font-bold text-primary-foreground"
-                      >
-                        <Check className="size-3.5" /> Terima
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            await reject({ threadId: t.threadId });
-                            toast.success("Permintaan CS ditolak");
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Gagal");
-                          }
-                        }}
-                        className="flex items-center justify-center gap-1 rounded-lg border border-white/15 py-2 text-[11px] font-bold text-muted-foreground"
-                      >
-                        <X className="size-3.5" /> Tolak
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {open.length > 0 && (
-            <div>
-              <p className="mb-1 text-[10px] text-muted-foreground">Sedang jalan</p>
-              <div className="space-y-1.5">
-                {open.map((t) => (
-                  <button
-                    key={t.threadId}
-                    onClick={() => setPickedId(t.threadId)}
-                    className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-background/60 p-2 text-left"
-                  >
-                    <Avatar src={t.image} seed={t.username} className="size-8" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold">{t.username}</p>
-                      <p className="truncate text-[10px] text-muted-foreground">
-                        {t.preview || "kosong"}
-                      </p>
-                    </div>
-                    <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="mt-2">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                setPickedId(null);
-                setText("");
-              }}
-              className="flex size-8 items-center justify-center rounded-lg border border-white/10"
-              aria-label="Kembali ke daftar"
-            >
-              <ChevronLeft className="size-3.5" />
-            </button>
-            <Avatar src={picked?.image} seed={picked?.username} className="size-8" />
-            <p className="min-w-0 flex-1 truncate text-xs font-semibold">
-              {picked?.username ?? "user"}
-            </p>
-            <button
-              onClick={async () => {
-                if (!pickedId) return;
-                try {
-                  await end({ threadId: pickedId });
-                  toast.success("CS diakhiri");
-                  setPickedId(null);
-                  setText("");
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Gagal");
-                }
-              }}
-              className="flex items-center gap-1 rounded-lg border border-red-500/40 px-2.5 py-1.5 text-[11px] font-bold text-red-400"
-            >
-              <PhoneOff className="size-3.5" /> Akhiri CS
-            </button>
-          </div>
-          <div className="thin-scroll mt-2 max-h-56 space-y-1.5 overflow-y-auto">
-            {(messages ?? []).map((m: any) => (
-              <div
-                key={m._id}
-                className={cn(
-                  "max-w-[85%] rounded-xl px-2.5 py-1.5 text-[12px]",
-                  m.from === "dev"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "bg-white/[0.06]",
-                )}
-              >
-                {m.text}
-              </div>
-            ))}
-            <div ref={endRef} />
-          </div>
-          <div className="mt-1.5 flex items-end gap-1.5">
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send();
-                }
-              }}
-              rows={1}
-              placeholder="Balas user…"
-              className="min-h-[36px] flex-1 resize-none rounded-xl border border-border bg-background/60 px-3 py-2 text-[12px] outline-none focus:border-violet-500"
-            />
-            <button
-              onClick={() => void send()}
-              disabled={!text.trim()}
-              aria-label="Kirim"
-              className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-xl",
-                text.trim() ? "bg-primary text-primary-foreground" : "bg-white/[0.06] text-zinc-600",
-              )}
-            >
-              <Send className="size-4" />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
+ /**
  * Mode pembayaran manual (QRIS statis): developer menempelkan foto QRIS +
  * rekening, lalu menyetujui order yang sudah dibayar user.
  */

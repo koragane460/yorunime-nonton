@@ -424,16 +424,26 @@ function HomeContent() {
                 <button
                   key={`${a.id}-${a.episode}`}
                   onClick={() => openAnime(a.id)}
-                  className="relative w-28 shrink-0 text-left"
+                  className="w-28 shrink-0 text-left"
                 >
-                  <AnimeCard title={a.title} image={a.image} onClick={() => openAnime(a.id)} />
-                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold text-primary-foreground">
-                    Ep {a.episode}
-                  </span>
-                  {/* Jam rilis mengikuti zona waktu device user. */}
-                  <span className="absolute inset-x-1 bottom-1 rounded bg-black/70 px-1 py-0.5 text-center font-mono text-[9px] text-white">
+                  <div className="relative">
+                    <AnimeCard
+                      title={a.title}
+                      image={a.image}
+                      imageOnly
+                      onClick={() => openAnime(a.id)}
+                    />
+                    <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold text-primary-foreground">
+                      Ep {a.episode}
+                    </span>
+                  </div>
+                  <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
+                    {a.title}
+                  </p>
+                  {/* Jam rilis di bawah judul, mengikuti zona waktu device. */}
+                  <p className="font-mono text-[10px] text-muted-foreground">
                     {a.timeLabel}
-                  </span>
+                  </p>
                 </button>
               ))}
             </div>
