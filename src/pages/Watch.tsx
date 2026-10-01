@@ -214,6 +214,8 @@ function WatchContent() {
   // autoplay — tidak perlu mencet pause/play lagi.
   const autoplayNextRef = useRef(false);
   const lastEpRef = useRef<string | null>(null);
+  // Posisi playback yang harus dipulihkan setelah transisi layar penuh.
+  const resumeAtRef = useRef(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
   // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
@@ -527,7 +529,10 @@ function WatchContent() {
 
   const epList = detailData?.episodeList ?? [];
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
-  const currentEp = epList[epIndex] ?? epList[0];
+  // Kalau episode yang diminta tidak ada di daftar, jangan diam-diam memakai
+  // episode 1: itu bikin judul dan nomor episode di layar salah.
+  const currentEp =
+    epIndex >= 0 ? epList[epIndex] : (epList.find((e: any) => e.id === epParam) ?? null);
   const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
   useEffect(() => {
@@ -825,11 +830,25 @@ function WatchContent() {
   // Fullscreen: begitu user masuk, tetap fullscreen walau browser/HP keluar
   // sendiri (mis. saat_orientation berubah atau tombol sistem ditekan).
   const wantFs = useRef(false);
+  // Perpindahan masuk/keluar layar penuh mengubah ukuran & rasio kotak video,
+  // dan beberapa browser (Chrome di Android) deems ulang dekode frame sehingga
+  // event `waiting` sempat menyala. Kalau spinner langsung ditampilkan, user
+  // mengira videonya buffering padahal masih diputar. Jadi ada jeda singkat
+  // tanpa spinner setiap kali status layar penuh berubah.
+  const [fsSettle, setFsSettle] = useState(false);
   useEffect(() => {
     const onFsChange = () => {
       const fs = document.fullscreenElement === playerRef.current;
       setIsFs(fs);
       setControlsOn(true);
+      // Simpan posisi sekarang supaya playback tidak mundur saat browser
+      // Reads ulang dekode frame setelah ukuran layar berubah.
+      resumeAtRef.current = videoRef.current?.currentTime ?? 0;
+      setFsSettle(true);
+      window.setTimeout(() => {
+        setFsSettle(false);
+        setWaiting(false);
+      }, 900);
       if (fs) {
         wantFs.current = true;
         return;
@@ -1103,6 +1122,20 @@ function WatchContent() {
             onWaiting={() => setWaiting(true)}
             onPlaying={() => setWaiting(false)}
             onCanPlay={() => setWaiting(false)}
+            // Setting ulang posisi setelah transisi layar penuh: jangan sampai
+            // playback mundur ke 0 saat keluaar fullscreen.
+            onLoadedData={(e) => {
+              if (!resumeAtRef.current) return;
+              const at = resumeAtRef.current;
+              resumeAtRef.current = 0;
+              try {
+                if (Math.abs(e.currentTarget.currentTime - at) > 1.5) {
+                  e.currentTarget.currentTime = at;
+                }
+              } catch {
+                /* metadata belum siap, abaikan */
+              }
+            }}
             // Preload agresif: frame pertama sudah siap sebelum pencet play,
             // sehingga tidak perlu lama loading.
             preload="auto"
@@ -1166,8 +1199,9 @@ function WatchContent() {
           </div>
         )}
 
-        {/* Spinner saat buffering */}
-        {waiting && (
+        {/* Spinner saat buffering. Saat transisi layar penuh baru saja terjadi
+            spinner ditahan supaya tidakikut terlihat. */}
+        {waiting && !fsSettle && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
             <Loader2 className="size-10 animate-spin text-white/80" />
           </div>

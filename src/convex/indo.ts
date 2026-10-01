@@ -44,10 +44,33 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
-/** Skor kecocokan sederhana antara judul anime & judul hasil pencarian. */
+/** Nomor season dari judul, null kalau judul tidak menyebut season. */
+const seasonOf = (s: string): number | null => {
+  const t = norm(s);
+  const m =
+    t.match(/\bseason\s*0*(\d+)\b/) ??
+    t.match(/\b0*(\d+)\s*(?:st|nd|rd|th)\s+season\b/) ??
+    t.match(/\b0*(\d+)\s+season\b/);
+  return m ? Number(m[1]) : null;
+};
+
+/**
+ * Skor kecocokan antara judul anime & judul hasil pencarian.
+ * Season itu pembeda, bukan hiasan: "X Season 2" tidak boleh dicocokkan dengan
+ * entri "X" (Season 1), dan sebaliknya. Kalau tidak, user menekan episode 1
+ * Season 2 tapi yang diputar video Season 1.
+ */
 function matchScore(query: string, title: string): number {
-  const q = norm(query);
-  const t = norm(title);
+  const qs = seasonOf(query);
+  const ts = seasonOf(title);
+  if (qs !== null && ts !== null && qs !== ts) return 0;
+  const q = stripSeason(norm(query));
+  const t = stripSeason(norm(title));
+  // Salah satu menyebut season, yang lain tidak, tapi sisa kata identik
+  // ("X Season 2" vs "X 2") tetap boleh. Kalau sisa kata berbeda, judulnya
+  // beda seri sehingga ditolak.
+  if (qs !== null && ts === null && q !== t) return 0;
+  if (qs === null && ts !== null && q !== t) return 0;
   if (!q || !t) return 0;
   if (t === q) return 100;
   if (t.startsWith(q)) return 80;
@@ -57,6 +80,9 @@ function matchScore(query: string, title: string): number {
   const hit = qt.filter((w) => t.includes(w)).length;
   return Math.round((hit / qt.length) * 50);
 }
+
+/** Buang kata "season" supaya "X Season 2" jadi "X 2". */
+const stripSeason = (s: string) => s.replace(/\bseason\b/g, " ").replace(/\s+/g, " ").trim();
 
 /** Ambil slug episode dari URL sumber (https://otakudesu.blog/episode/<slug>/). */
 const slugOf = (url?: string) =>
@@ -582,17 +608,27 @@ export async function resolveIndo(
     .replace(/\s+/g, " ")
     .trim();
   if (!clean) return [];
-  // Varian penulisan season di situs Indo: "2nd Season" ↔ "Season 2".
+  // Varian penulisan season di situs Indo: "2nd Season" <-> "Season 2".
+  // Nomor season TIDAK PERNAH dihapus dari query: kalau Season 2 di_search
+  // tanpa season, hasilnya cocok dengan Season 1 dan user Creation1. Yang
+  // dibuang hanya format/format parenthetical.
+  const hasSeason = seasonOf(clean) !== null;
   const variants = [
     clean,
-    clean.replace(/\b(\d+)(st|nd|rd|th)\s+season\b/gi, "season $1"),
-    clean.replace(/\bseason\s+(\d+)\b/gi, "$1$2 season"),
-    clean.replace(/\b(season\s*\d+|\d+(st|nd|rd|th)\s+season)\b/gi, "").trim(),
+    clean.replace(/\b(\d+)\s*(st|nd|rd|th)\s+season\b/gi, "season $1"),
+    clean.replace(/\b(\d+)\s+season\b/gi, "season $1"),
     // Judul AniList sering ada sufiks format ("Movie", "TV", "ONA") yang tidak
     // dipakai di katalog Indo.
     clean.replace(/\b(movie|tv|ova|ona|special|part\s*\d+)\b/gi, "").trim(),
     clean.replace(/\b(movie|tv|ova|ona|special)\b/gi, "").replace(/\s+/g, " ").trim(),
-  ].filter((v, i, arr) => v.length > 2 && arr.indexOf(v) === i);
+  ].filter((v, i, arr) => {
+    if (v.length <= 2) return false;
+    if (arr.indexOf(v) !== i) return false;
+    // Varian yang kehilangan nomor season hanya boleh dipakai kalau judul
+    // aslinya memang tidak menyebut season.
+    if (hasSeason && seasonOf(v) === null) return false;
+    return true;
+  });
 
   // Semua varian dicoba untuk sumber bersubtitle Indonesia. Urutan:
   // 1) AnimeIndo  → katalog episode paling lengkap.

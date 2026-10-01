@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction } from "convex/react";
+
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { BookOpen, ChevronDown, ChevronUp, Clapperboard, Clock, PanelsTopLeft, Tv } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Clock, PanelsTopLeft, Tv } from "lucide-react";
 
 const DAYS_ID = [
   "Minggu",
@@ -41,7 +42,7 @@ type ComicSlot = {
   time: string;
 };
 
-type Tab = "anime" | "manga" | "manhwa" | "film";
+type Tab = "anime" | "manga" | "manhwa";
 
 export default function Jadwal() {
   return (
@@ -75,7 +76,7 @@ function JadwalContent() {
 
   // Manga & manhwa dimuat saat tabnya dibuka (hemat request).
   useEffect(() => {
-    if (tab === "anime" || tab === "film" || comics[tab]) return;
+    if (tab === "anime" || comics[tab]) return;
     let alive = true;
     setComicLoading(true);
     comicSchedule({ kind: tab })
@@ -125,60 +126,16 @@ function JadwalContent() {
     comicCounts[t] = Object.values(comics[t] ?? {}).reduce((s, v) => s + (v?.length ?? 0), 0);
   }
 
-  // Film: hanya untuk user yang dapat akses, dan tidak punya jadwal tayang
-  // resmi. Yang ditampilkan adalah film yang baru ditambahkan, jadi user
-  // tahu film mana yang baru bisa ditonton.
-  const filmAccess = useAction(api.film.filmAccess);
-  const fetchFilms = useAction(api.film.films);
-  const [filmOk, setFilmOk] = useState(false);
-  const [filmList, setFilmList] = useState<
-    { id: string; title: string; poster: string; year?: string }[]
-  >([]);
-  useEffect(() => {
-    let alive = true;
-    filmAccess({})
-      .then((r: any) => {
-        if (!alive) return;
-        const ok = !!r?.allowed;
-        setFilmOk(ok);
-        if (!ok) return;
-        return fetchFilms({ kind: "recent" }).then((list: any) => {
-          if (alive) setFilmList(list ?? []);
-        });
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const tabs: { key: Tab; label: string; icon: typeof Tv; count: number }[] = [
     { key: "anime", label: "Anime", icon: Tv, count: animeTotal },
     { key: "manga", label: "Manga", icon: BookOpen, count: comicCounts.manga },
     { key: "manhwa", label: "Manhwa", icon: PanelsTopLeft, count: comicCounts.manhwa },
-    // Film hanya untuk user yang dapat akses dari developer.
-    ...(filmOk
-      ? [
-          {
-            key: "film" as Tab,
-            label: "Film",
-            icon: Clapperboard,
-            count: filmList.length,
-          },
-        ]
-      : []),
   ];
   const active = tabs.find((t) => t.key === tab) ?? tabs[0];
   const ActiveIcon = active.icon;
   const list =
-    tab === "anime"
-      ? (sched[DAYS_ID[day]] ?? [])
-      : tab === "film"
-        ? filmList
-        : (comics[tab]?.[DAYS_ID[day]] ?? []);
-  const totalShown =
-    tab === "anime" ? animeTotal : tab === "film" ? filmList.length : comicCounts[tab];
+    tab === "anime" ? (sched[DAYS_ID[day]] ?? []) : (comics[tab]?.[DAYS_ID[day]] ?? []);
+  const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
 
   return (
     <div className="py-3">
@@ -186,9 +143,7 @@ function JadwalContent() {
       <p className="mb-3 text-[11px] text-muted-foreground">
         {tab === "anime"
           ? "Jam tayang dalam waktu lokal kamu — dari jadwal tayang resmi AniList"
-          : tab === "film"
-            ? "Film yang baru ditambahkan ke YoruNime"
-            : "Proyeksi chapter berikutnya dari rata-rata jarak rilis chapter terakhir"}
+          : "Proyeksi chapter berikutnya dari rata-rata jarak rilis chapter terakhir"}
       </p>
 
       {/* Switcher: anime di atas, pilihan manga & manhwa muncul saat diklik */}
@@ -201,9 +156,7 @@ function JadwalContent() {
               ? "border-amber-300/60 bg-amber-300/10"
               : tab === "manga"
                 ? "border-sky-500/60 bg-sky-500/10"
-                : tab === "film"
-                  ? "border-violet-500/60 bg-violet-500/10"
-                  : "border-fuchsia-500/60 bg-fuchsia-500/10",
+                : "border-fuchsia-500/60 bg-fuchsia-500/10",
           )}
         >
           <ActiveIcon className="size-4" />
@@ -241,11 +194,7 @@ function JadwalContent() {
       <div className="thin-scroll mb-3 flex gap-1.5 overflow-x-auto pb-1">
         {DAYS_ID.map((d, i) => {
           const count =
-            tab === "anime"
-              ? (sched[d] ?? []).length
-              : tab === "film"
-                ? filmList.length
-                : (comics[tab]?.[d] ?? []).length;
+            tab === "anime" ? (sched[d] ?? []).length : (comics[tab]?.[d] ?? []).length;
           return (
             <button
               key={d}
@@ -296,41 +245,6 @@ function JadwalContent() {
             ))}
           </div>
         )
-      ) : tab === "film" ? (
-        totalShown === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada film yang bisa ditonton
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {(list as { id: string; title: string; poster: string; year?: string }[]).map(
-              (f) => (
-                <button
-                  key={f.id}
-                  onClick={() => navigate("/film")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-400/60"
-                >
-                  {f.poster ? (
-                    <img
-                      src={f.poster}
-                      alt=""
-                      className="h-16 w-11 shrink-0 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-card">
-                      <Clapperboard className="size-4 text-muted-foreground" />
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{f.title}</p>
-                    <p className="text-xs text-muted-foreground">Baru ditambahkan</p>
-                  </div>
-                  <ChevronDown className="size-5 shrink-0 -rotate-90 text-violet-300/80" />
-                </button>
-              ),
-            )}
-          </div>
-        )
       ) : comicLoading ? (
         <p className="py-12 text-center text-sm text-muted-foreground">Memuat jadwal…</p>
       ) : totalShown === 0 ? (
@@ -371,9 +285,7 @@ function JadwalContent() {
       <p className="mt-4 text-center text-[10px] text-muted-foreground">
         {tab === "anime"
           ? "Sumber: AniList"
-          : tab === "film"
-            ? "Sumber: LK21"
-            : "Estimasi, bukan jadwal resmi — chapter bisa saja terlambat."}
+          : "Estimasi, bukan jadwal resmi — chapter bisa saja terlambat."}
       </p>
     </div>
   );

@@ -40,8 +40,7 @@ const schema = defineSchema(
       bannerUrl: v.optional(v.string()),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
-      /** Izin akses konten Film (diberikan developer lewat panel). */
-      filmAccess: v.optional(v.boolean()),
+      
       // Kode UID 7 karakter (huruf + angka) sebagai identitas akun saat
       // verifikasi pembelian.
       uidCode: v.optional(v.string()),

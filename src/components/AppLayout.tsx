@@ -20,7 +20,7 @@ import {
   X,
   BookOpen,
   PanelsTopLeft,
-  Clapperboard,
+  
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
@@ -532,20 +532,6 @@ function BottomNav() {
     };
   }, []);
 
-  // Film hanya untuk user yang sudah diberi akses developer.
-  const filmAccess = useAction(api.film.filmAccess);
-  const [filmOk, setFilmOk] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    filmAccess({})
-      .then((r: any) => alive && setFilmOk(!!r?.allowed))
-      .catch(() => alive && setFilmOk(false));
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Tutup switcher saat pindah halaman.
   useEffect(() => {
     setSwitcher(false);
@@ -598,20 +584,11 @@ function BottomNav() {
               <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ganti kategori
               </p>
-              {/* Film hanya muncul kalau user punya akses dari developer. */}
-              <div
-                className={cn(
-                  "grid gap-2 p-3",
-                  filmOk ? "grid-cols-3" : "grid-cols-2",
-                )}
-              >
+              <div className="grid grid-cols-2 gap-2 p-3">
                 {(
                   [
                     ["/manga", "Manga", BookOpen, "Baca kanan ke kiri"],
                     ["/manhwa", "Manhwa", PanelsTopLeft, "Gaya webtoon"],
-                    ...(filmOk
-                      ? [["/film", "Film", Clapperboard, "Subtitle Indonesia"] as const]
-                      : []),
                   ] as const
                 ).map(([path, label, Icon, sub]) => {
                   const active = location.pathname.startsWith(path);

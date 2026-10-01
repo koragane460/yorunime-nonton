@@ -1,9 +1,9 @@
-import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { FilmRow } from "@/components/FilmRow";
+
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
@@ -164,6 +164,10 @@ function HomeContent() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
   const [updateFirst, setUpdateFirst] = useState(true);
+  // Jangkar tombol pencarian: tinggi warna ungu pada latar-global diukur dari
+  // sini, lalu disimpan sebagai --yn-tint-end supaya warna berhenti tepat di
+  // bawah tombol dan sisanya hitam penuh.
+  const searchAnchor = useRef<HTMLDivElement | null>(null);
 
   const hero = useAction(api.anime.animeOngoing);
   const top = useAction(api.anime.animeTop);
@@ -240,6 +244,22 @@ function HomeContent() {
   }, [heroItems.length]);
 
   const openAnime = (id: string) => setPickId(id);
+
+  // Ukur posisi tombol pencarian lalu tulis ke --yn-tint-end pada elemen latar.
+  // Dicek ulang saat ukuran layar berubah supaya batasnya tetap tepat.
+  useEffect(() => {
+    const el = searchAnchor.current;
+    if (!el) return;
+    const paint = () => {
+      const host = el.closest(".yn-app-bg") as HTMLElement | null;
+      if (!host) return;
+      const bottom = el.getBoundingClientRect().bottom + window.scrollY;
+      host.style.setProperty("--yn-tint-end", `${Math.max(320, Math.round(bottom))}px`);
+    };
+    paint();
+    window.addEventListener("resize", paint);
+    return () => window.removeEventListener("resize", paint);
+  }, [heroList.length, todayAiring.length]);
 
   return (
     <div className="pb-8">
@@ -382,26 +402,27 @@ function HomeContent() {
         <ClanBox onOpen={() => navigate("/clan")} />
       </QueryBoundary>
 
-      {/* 6) CARI ANIME — buka layar full screen */}
-      <SectionTitle>Cari Anime</SectionTitle>
-      <button
-        onClick={() => {
-          setSearchGenre(null);
-          setShowSearch(true);
-        }}
+      {/* 6) CARI ANIME — buka layar full screen.
+          `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
+          warna itu harus berhenti tepat di bawah tombol ini. */}
+      <div ref={searchAnchor}>
+        <SectionTitle>Cari Anime</SectionTitle>
+        <button
+          onClick={() => {
+            setSearchGenre(null);
+            setShowSearch(true);
+          }}
         className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
-      >
-        <Search className="size-4 shrink-0 text-muted-foreground" />
-        <span className="flex-1 text-sm text-muted-foreground">Contoh: naruto, frieren…</span>
-        <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
-          Cari
-        </span>
-      </button>
+        >
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <span className="flex-1 text-sm text-muted-foreground">Contoh: naruto, frieren…</span>
+          <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+            Cari
+          </span>
+        </button>
+      </div>
 
-      {/* 6a) FILM — hanya untuk user yang diberi akses developer */}
-      <FilmRow />
-
-      {/* 6b) ANIME UPDATE NEWS — di bawah tombol search */}
+      {/* 6a) ANIME UPDATE NEWS — di bawah tombol search */}
       {updateFirst && (
         <>
           <div className="mt-4 flex items-center justify-between">

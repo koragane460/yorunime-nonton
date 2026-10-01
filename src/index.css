@@ -257,13 +257,24 @@
   );
 }
 
-/* Latar brand YoruNime: tinta malam keunguan. Dipakai di Home dan panel
-   supaya tidak ada bidang hitam mati di belakang tombol. */
+/* Latar brand YoruNime: tinta malam keunguan di bagian atas, lalu hitam penuh.
+   Warna ungu sengaja DIPBATAS: hanya sampai bawah tombol pencarian anime
+   (posisi sebenarnya diukur Home lalu disimpan ke --yn-tint-end), sesudahnya
+   gradasi hitam full sampai bawah halaman. */
 .yn-app-bg {
-  background:
-    radial-gradient(120% 60% at 50% -10%, oklch(0.3 0.12 292 / 0.5) 0%, transparent 62%),
-    radial-gradient(90% 42% at 6% 2%, oklch(0.25 0.08 258 / 0.38) 0%, transparent 60%),
-    linear-gradient(180deg, oklch(0.17 0.035 285) 0%, oklch(0.14 0.024 280) 45%, var(--background) 100%);
+  --yn-tint-end: 860px;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(760px 460px at 50% 0%, oklch(0.3 0.12 292 / 0.5) 0%, transparent 70%),
+    radial-gradient(560px 320px at 6% 0%, oklch(0.25 0.08 258 / 0.38) 0%, transparent 70%),
+    linear-gradient(
+      180deg,
+      oklch(0.17 0.035 285) 0%,
+      oklch(0.145 0.024 280) calc(var(--yn-tint-end) - 260px),
+      var(--background) var(--yn-tint-end)
+    );
+  background-repeat: no-repeat;
+  background-position: top;
 }
 
 /* Bilah sambung warna di bawah banner: sapuan tipis yang langsung hilang.
