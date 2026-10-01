@@ -75,7 +75,7 @@ export function ProfileSheet({
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div className="relative">
-              {/* Banner: foto tampil tajam, hanya kaki banner yang diburamkan */}
+              {/* Banner: foto profil/banner di-blur (gaya foto), fallback gelap */}
               <BlurBanner
                 src={profile.bannerUrl ?? profile.image}
                 className="h-44 w-full"

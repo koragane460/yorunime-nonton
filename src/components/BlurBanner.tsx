@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Banner akun: fotonya tampil apa adanya (tajam, tidak di-blur seluruhnya).
- * Hanya kaki banner yang diburamkan supaya foto menyatu pelan ke konten di
- * bawahnya dan teks tetap terbaca.
+ * Banner bercorak foto: fotonya diperbesar + diblur halus, lalu diberi
+ * gradasi gelap di bawah supaya teks di atasnya tetap terbaca. Kalau tidak
+ * ada fotonya, banner jatuh ke warna gelap (bukan kosong).
  */
 export function BlurBanner({
   src,
@@ -22,12 +22,11 @@ export function BlurBanner({
             src={src}
             alt=""
             aria-hidden
-            className="absolute inset-0 size-full object-cover"
+            className="absolute inset-0 h-full w-full scale-150 object-cover blur-2xl opacity-80"
           />
-          {/* Redup tipis supaya username/badge tetap kebaca */}
+          {/* Kabut gelap biar tidak terlalu mencolok */}
           <div className="absolute inset-0 bg-black/25" />
-          {/* Kabut hanya di bawah, bagian atas tetap tajam */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/45 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/35 to-transparent" />
         </>
       ) : (
         <div className="yn-banner absolute inset-0" />
