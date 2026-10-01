@@ -3,7 +3,6 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { Clapperboard, Loader2, Play, Search, X, ChevronLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type Film = {
@@ -17,6 +16,7 @@ type Film = {
   genre?: string;
   duration?: string;
   video?: string;
+  trailer?: string;
 };
 
 /**
@@ -119,11 +119,22 @@ export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: st
 
       {!configured ? (
         <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-[11px] leading-relaxed text-muted-foreground">
-          Sumber film belum dipasang. Developer perlu mengisi
-          <span className="mx-1 rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-            FILM_API_BASE
+          Sumber film belum dipasang. Developer perlu mengisi salah satu di tab
+          Keys/API keys:
+          <span className="mt-1.5 block space-y-1">
+            <span className="block">
+              <span className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                TMDB_API_KEY
+              </span>{" "}
+              metadata + trailer resmi
+            </span>
+            <span className="block">
+              <span className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                FILM_API_BASE
+              </span>{" "}
+              API LK21 (subtitle Indonesia)
+            </span>
           </span>
-          di tab Keys/API keys.
         </p>
       ) : loading ? (
         <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
@@ -238,16 +249,25 @@ function FilmDetail({
             {[full.year, full.duration, full.genre].filter(Boolean).join(" · ")}
           </p>
           <div className="mt-3 flex gap-2">
-            <button
-              disabled={loading}
-              onClick={() => onWatch(full.video ?? "", full.title)}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-bold",
-                loading ? "bg-white/10 text-zinc-500" : "bg-primary text-primary-foreground",
-              )}
-            >
-              <Play className="size-4" /> Lanjutkan
-            </button>
+            {full.video ? (
+              <button
+                onClick={() => onWatch(full.video ?? "", full.title)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
+              >
+                <Play className="size-4" /> Lanjutkan
+              </button>
+            ) : full.trailer ? (
+              <button
+                onClick={() => onWatch(full.trailer ?? "", full.title)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
+              >
+                <Play className="size-4" /> Lanjutkan
+              </button>
+            ) : (
+              <p className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center text-[11px] text-muted-foreground">
+                {loading ? "Memuat sumber…" : "Belum ada sumber tayang untuk film ini"}
+              </p>
+            )}
           </div>
           {full.rating && (
             <p className="mt-2 text-[11px] text-muted-foreground">Rating {full.rating}</p>
