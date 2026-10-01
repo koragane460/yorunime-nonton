@@ -724,16 +724,21 @@ export const schedule = action({
         const fresh = parseLs2All(sectionById(html, "Baru_Ditambahkan")).filter(
           (c) => c.kind === kind,
         );
-        // Kalau "Baru Ditambahkan" terlalu sedikit, lengkapi dari katalog.
-        let wanted = fresh.slice(0, 14);
-        if (wanted.length < 8) {
-          const catHtml = await fetchHtml(`${SITE}/daftar-komik/?tipe=${kind}&halaman=1`);
-          const seen = new Set(wanted.map((w) => w.slug));
+        // Jadwal harus terisi penuh untuk tiap hari, bukan cuma segelintir.
+        // "Baru Ditambahkan" sering hanya 3-5 item per jenis, jadi sisanya
+        // diambil dari halaman katalog (beberapa halaman sekaligus).
+        const WANTED = 30;
+        const seen = new Set(fresh.map((w) => w.slug));
+        const wanted = [...fresh];
+        for (let page = 1; page <= 3 && wanted.length < WANTED; page++) {
+          const catHtml = await fetchHtml(
+            `${SITE}/daftar-komik/?tipe=${kind}&halaman=${page}`,
+          );
           for (const c of parseCatalog(catHtml ?? "")) {
             if (c.kind !== kind || !c.ongoing || seen.has(c.slug)) continue;
             seen.add(c.slug);
             wanted.push(c);
-            if (wanted.length >= 14) break;
+            if (wanted.length >= WANTED) break;
           }
         }
         const out = await mapLimit(wanted, 4, async (c) => {

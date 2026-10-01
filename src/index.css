@@ -405,21 +405,22 @@
   }
 }
 
-/* Tag clan: latar galaxy gelap yang terus "denyut silau" + sapuan cahaya. */
+/* Tag clan: latar galaksi yang benar-benar bergeser pelan. Dua denyut
+   sebelumnya (drift + brightness pulse) saling bertabrakan dan bikin
+   tag kedip hitam sesaat, jadi sekarang hanya satu gerak: pergeseran
+   warna horizontal yang lambat dan tanpa perubahan brightness. */
 .clan-tag {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background-color: #0b1020;
+  background-color: #131a33;
   background-image:
-    radial-gradient(120% 180% at 10% 0%, #4c1d95 0%, transparent 55%),
-    radial-gradient(120% 180% at 90% 20%, #1d4ed8 0%, transparent 55%),
-    radial-gradient(140% 200% at 50% 110%, #831843 0%, transparent 60%),
+    radial-gradient(130% 190% at 8% 0%, #4c1d95 0%, transparent 58%),
+    radial-gradient(130% 190% at 92% 15%, #1d4ed8 0%, transparent 58%),
+    radial-gradient(150% 210% at 50% 115%, #831843 0%, transparent 62%),
     linear-gradient(90deg, #1e1b4b, #0f172a, #111827, #1e1b4b);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 260% 100%;
-  animation:
-    tag-galaxy-drift 9s linear infinite,
-    tag-pulse 2.6s ease-in-out infinite;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 300% 100%;
+  animation: tag-galaxy-drift 14s linear infinite;
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 0.14),
     0 0 0 1px rgb(124 58 237 / 0.35),
@@ -427,7 +428,8 @@
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.85);
 }
 
-/* Bintang-bintang kecil yang twinkle */
+/* Bintang statis. Tidak berkedip: kilatan light adalah salah satu penyebab
+   tag terlihat "kedip" saat warna latar bergerak. */
 .clan-tag::before {
   content: "";
   position: absolute;
@@ -440,12 +442,10 @@
     radial-gradient(1.5px 1.5px at 84% 68%, #fff, transparent),
     radial-gradient(1px 1px at 34% 76%, #f5d0fe, transparent),
     radial-gradient(1px 1px at 8% 14%, #fff, transparent);
-  background-size: 100% 100%;
-  opacity: 0.85;
-  animation: tag-twinkle 2.2s ease-in-out infinite;
+  opacity: 0.55;
 }
 
-/* Tag clan: sapuan cahaya dimatikan, warna clan jadi penanda utama. */
+/* Tag clan: tanpa sapuan cahaya, tanpa denyut. Warna clan penanda utama. */
 .clan-tag::after {
   content: none;
 }
@@ -456,16 +456,18 @@
       0 0,
       0 0,
       0 0,
-      260% 0;
+      300% 0;
   }
 }
+/* Keyframe lama (denyut terang) dihapus: `--brightness 0.9 -> 1.25` itulah
+   yang bikin tag clan terlihat berkedip. */
 @keyframes tag-pulse {
   0%,
   100% {
-    filter: brightness(0.9) saturate(1);
+    filter: brightness(1);
   }
   50% {
-    filter: brightness(1.25) saturate(1.2);
+    filter: brightness(1.06);
   }
 }
 @keyframes tag-twinkle {

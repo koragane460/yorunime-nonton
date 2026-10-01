@@ -304,6 +304,24 @@ function WatchContent() {
   } | null>(null);
   const gestureHideTimer = useRef<number | null>(null);
 
+  // Pindah episode = elemen <video> baru. AudioContext lama masih terpasang
+  // ke elemen yang sudah dibuang, jadi harus dilepas; kalau tidak, suara
+  // episode berikutnya bisa hilang.
+  useEffect(() => {
+    const a = audioRef.current;
+    audioRef.current = null;
+    if (a) {
+      try {
+        void a.ctx.close();
+      } catch {
+        /* context sudah tertutup */
+      }
+    }
+    const v = videoRef.current;
+    if (v) v.volume = Math.min(1, gainRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epParam]);
+
   const endGesture = (wasDrag: boolean) => {
     gestureRef.current = null;
     if (gestureHideTimer.current) window.clearTimeout(gestureHideTimer.current);
@@ -347,6 +365,17 @@ function WatchContent() {
           void ctx.resume?.();
           audioRef.current = { ctx, gain };
           v.volume = 1;
+          // PENTING: begitu video disambungkan ke Web Audio, suara hanya
+          // keluar lewat AudioContext. Kalau context-nya belum running,
+          // suara hilang total. Kalau setelah 400ms masih belum running,
+          // kembalikan ke volume bawaan video saja.
+          window.setTimeout(() => {
+            if (audioRef.current?.ctx !== ctx) return;
+            if (ctx.state !== "running") {
+              audioRef.current = null;
+              v.volume = Math.min(1, gainValue);
+            }
+          }, 400);
           return;
         }
       } catch {
@@ -354,6 +383,7 @@ function WatchContent() {
       }
     }
     if (audioRef.current) {
+      if (audioRef.current.ctx.state !== "running") void audioRef.current.ctx.resume?.();
       audioRef.current.gain.gain.value = gainValue;
       v.volume = 1;
     } else {
@@ -944,7 +974,7 @@ function WatchContent() {
             r.userId === p.userId &&
             r.text === p.text &&
             (r.replyToId ?? undefined) === (p.replyToId ?? undefined) &&
-            r.createdAt >= p.createdAt - 8000,
+            r.createdAt >= p.createdAt - 3000,
         ),
     );
     if (keep.length !== pendingComments.length) {
@@ -1359,6 +1389,7 @@ function WatchContent() {
                   </button>
                 )}
                 <button
+                  disabled={!streamUrl}
                   onClick={async () => {
                     // Kirim ke mini player global (AppLayout) lalu balik ke Home
                     setMiniPlayer({
@@ -1372,7 +1403,12 @@ function WatchContent() {
                     toast.success("Mini player aktif — kembali ke Home");
                     navigate("/home");
                   }}
-                  className="rounded bg-white/15 p-1.5"
+                  className={cn(
+                    "rounded p-1.5",
+                    !streamUrl
+                      ? "cursor-not-allowed bg-white/[0.04] text-zinc-600"
+                      : "bg-white/15",
+                  )}
                   aria-label="Mini player"
                 >
                   <PictureInPicture2 className="size-4" />
@@ -1596,6 +1632,7 @@ function WatchContent() {
             <ToolButton
               icon={<PictureInPicture2 className="size-4" />}
               label="Mini"
+              disabled={!streamUrl}
               onClick={() => {
                 setMiniPlayer({
                   animeId,
@@ -1706,6 +1743,9 @@ function WatchContent() {
                     text,
                     replyToId: replyToId as never,
                   });
+                  // Echo lokal langsung dilepas begitu server sudah menerima,
+                  // supaya komentar yang sama tidak pernah tampil dua kali.
+                  setPendingComments((s) => s.filter((x) => x._id !== temp._id));
                 } catch (e) {
                   setPendingComments((s) => s.filter((x) => x._id !== temp._id));
                   toast.error(
@@ -1866,15 +1906,23 @@ function ToolButton({
   icon,
   label,
   onClick,
+  disabled,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card py-2.5 text-[11px] font-medium transition hover:border-violet-500/60"
+      disabled={disabled}
+      className={cn(
+        "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[11px] font-medium transition",
+        disabled
+          ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
+          : "border-border bg-card hover:border-violet-500/60",
+      )}
     >
       {icon}
       {label}

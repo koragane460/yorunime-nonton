@@ -161,6 +161,7 @@ export const panelUsers = query({
         mutedUntil: u.mutedUntil ?? 0,
         mutedReason: u.mutedReason ?? "",
         adultAccess: u.adultAccess === true,
+        filmAccess: u.filmAccess === true,
       }));
   },
 });
@@ -406,6 +407,28 @@ export const toggleAdultAccess = mutation({
       });
     }
     return { adultAccess: next };
+  },
+});
+
+/** Izin akses konten Film (diberikan developer lewat panel). */
+export const toggleFilmAccess = mutation({
+  args: { targetId: v.id("users") },
+  handler: async (ctx, { targetId }) => {
+    await staffGuard(ctx, "dev");
+    const u = await ctx.db.get(targetId);
+    if (!u) throw new Error("User tidak ada");
+    const next = !(u.filmAccess === true);
+    await ctx.db.patch(targetId, { filmAccess: next });
+    if (next) {
+      await ctx.db.insert("notifications", {
+        userId: targetId,
+        type: "info",
+        title: "Akses Film diberikan",
+        body: "Tombol Film sekarang muncul di beranda.",
+        createdAt: Date.now(),
+      });
+    }
+    return { filmAccess: next };
   },
 });
 

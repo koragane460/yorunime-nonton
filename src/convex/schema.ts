@@ -40,6 +40,8 @@ const schema = defineSchema(
       bannerUrl: v.optional(v.string()),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
+      /** Izin akses konten Film (diberikan developer lewat panel). */
+      filmAccess: v.optional(v.boolean()),
       // Kode UID 7 karakter (huruf + angka) sebagai identitas akun saat
       // verifikasi pembelian.
       uidCode: v.optional(v.string()),
@@ -385,6 +387,35 @@ const schema = defineSchema(
       .index("userIdAndProvider", ["userId", "provider"])
       .index("providerAndAccountId", ["provider", "providerAccountId"])
       .index("email", ["email"]),
+
+    /** Satu percakapan Customer Service. Satu user hanya boleh satu thread aktif. */
+    csThreads: defineTable({
+      userId: v.id("users"),
+      /** waiting = menunggu developer, open = sudah diterima, ended = selesai, rejected = ditolak */
+      status: v.union(
+        v.literal("waiting"),
+        v.literal("open"),
+        v.literal("ended"),
+        v.literal("rejected"),
+      ),
+      startedAt: v.number(),
+      acceptedAt: v.optional(v.number()),
+      closedAt: v.optional(v.number()),
+      lastMessageAt: v.number(),
+      lastUserMessage: v.optional(v.string()),
+      /** Waktu paling awal user boleh buka CS lagi setelah thread ditutup. */
+      cooldownUntil: v.optional(v.number()),
+    })
+      .index("userId", ["userId"])
+      .index("status_lastMessage", ["status", "lastMessageAt"]),
+
+    csMessages: defineTable({
+      threadId: v.id("csThreads"),
+      from: v.union(v.literal("user"), v.literal("dev"), v.literal("bot")),
+      text: v.string(),
+      createdAt: v.number(),
+    })
+      .index("threadId_created", ["threadId", "createdAt"]),
 
     contentReports: defineTable({
       reporterId: v.id("users"),

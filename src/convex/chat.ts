@@ -349,6 +349,9 @@ export const claimGive = mutation({
       throw new Error("Slot sudah habis");
     if (give.claimedBy.some((c) => c === userId))
       throw new Error("Sudah pernah claim");
+    // Orang yang memberi give tidak bisa claim give-nya sendiri.
+    if (give.fromUserId === userId)
+      throw new Error("Tidak bisa claim give milik sendiri");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     const base = Math.max(Date.now(), me.premiumUntil ?? 0);

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { FilmRow } from "@/components/FilmRow";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
@@ -18,6 +19,7 @@ import {
   Check,
   Heart,
   Trophy,
+  Gift,
   X,
   Gem,
   SlidersHorizontal,
@@ -203,7 +205,31 @@ function HomeContent() {
   }, []);
 
   const heroItems = heroList.slice(0, 2);
-  const updateNews = heroList.slice(0, 8);
+  // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
+  // lengkap jam tayangnya (dihitung dari zona waktu device user).
+  const todayNews = useAction(api.anime.animeTodayAiring);
+  const [todayAiring, setTodayAiring] = useState<
+    { id: string; title: string; image: string; episode: number; timeLabel: string }[]
+  >([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    setNewsLoading(true);
+    todayNews({ limit: 14 })
+      .then((r: any) => {
+        if (alive) setTodayAiring(r ?? []);
+      })
+      .catch(() => {
+        if (alive) setTodayAiring([]);
+      })
+      .finally(() => {
+        if (alive) setNewsLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const favQuery = useQuery(api.activities.myFavorites, user ? {} : "skip");
 
   // Auto-rotate hero
@@ -220,7 +246,7 @@ function HomeContent() {
       {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/15 via-violet-600/5 to-transparent p-3.5 text-left transition hover:border-violet-500/70"
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-gradient-to-r from-violet-600/20 via-violet-600/5 to-transparent p-3.5 text-left transition hover:border-violet-500/60"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
           <Sparkles className="size-6 text-violet-300" />
@@ -228,19 +254,11 @@ function HomeContent() {
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">YoruNime</span>
           <span className="block text-xs text-zinc-400">
-            Dukung YoruNime — sistem pembayaran segera dibuka
+            Dukung YoruNime — nonton tanpa batas, tanpa iklan
           </span>
         </span>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation(); // jangan ikut navigasi card
-            toast.info("Pembayaran masih dalam proses — segera hadir 🔒");
-          }}
-          className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-zinc-700/80 px-3.5 py-1.5 text-xs font-bold text-zinc-300 transition hover:bg-zinc-600/80"
-        >
-          <Lock className="size-3.5" /> Segera
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground">
+          Beli
         </span>
       </button>
 
@@ -380,6 +398,9 @@ function HomeContent() {
         </span>
       </button>
 
+      {/* 6a) FILM — hanya untuk user yang diberi akses developer */}
+      <FilmRow />
+
       {/* 6b) ANIME UPDATE NEWS — di bawah tombol search */}
       {updateFirst && (
         <>
@@ -387,21 +408,33 @@ function HomeContent() {
             <h2 className="text-lg font-bold tracking-tight">Anime Update News</h2>
             <span className="text-[11px] text-muted-foreground">rilis hari ini</span>
           </div>
-          {loading ? (
+          {newsLoading ? (
             <div className="mt-2 flex gap-2.5">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
               ))}
             </div>
+          ) : todayAiring.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground">
+              Tidak ada episode baru hari ini.
+            </p>
           ) : (
             <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
-              {updateNews.map((a) => (
-                <div key={a.id} className="relative w-28 shrink-0">
+              {todayAiring.map((a) => (
+                <button
+                  key={`${a.id}-${a.episode}`}
+                  onClick={() => openAnime(a.id)}
+                  className="relative w-28 shrink-0 text-left"
+                >
                   <AnimeCard title={a.title} image={a.image} onClick={() => openAnime(a.id)} />
-                  <span className="absolute left-1.5 top-1.5 rounded bg-violet-600 px-1 text-[9px] font-bold text-white">
-                    New
+                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold text-primary-foreground">
+                    Ep {a.episode}
                   </span>
-                </div>
+                  {/* Jam rilis mengikuti zona waktu device user. */}
+                  <span className="absolute inset-x-1 bottom-1 rounded bg-black/70 px-1 py-0.5 text-center font-mono text-[9px] text-white">
+                    {a.timeLabel}
+                  </span>
+                </button>
               ))}
             </div>
           )}
@@ -714,42 +747,52 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="w-full p-3">
-        <div className="mb-3 mt-3 flex items-center gap-3">
+        <div className="mb-3 mt-3 flex items-center gap-2">
           <button
             onClick={onClose}
-            className="rounded-full border border-border p-2 transition hover:border-violet-500"
+            aria-label="Kembali"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="text-lg font-bold">Leaderboard</h1>
-        </div>
-
-        {/* Toggle swap: XP ⇄ Top Give Premium (kecil, tidak sampai memenuhi layar) */}
-        <div className="tab-pill-track mb-3 w-fit">
+          <div className="min-w-0">
+            <h1 className="text-base font-bold leading-tight">
+              {mode === "xp" ? "Leaderboard XP" : "Top Give Premium"}
+            </h1>
+            <p className="text-[11px] text-muted-foreground">
+              {mode === "xp" ? "Peringkat XP komunitas" : "Peringkat orang paling banyak memberi premium"}
+            </p>
+          </div>
+          {/* Tukar mode lewat ikon di kanan — tidak ada lagi dua pil lebar. */}
           <button
-            onClick={() => setMode("xp")}
-            className={cn("tab-pill", mode === "xp" && "tab-pill-active")}
+            onClick={() => setMode(mode === "xp" ? "give" : "xp")}
+            aria-label={mode === "xp" ? "Lihat Top Give Premium" : "Lihat Leaderboard XP"}
+            className="ml-auto flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
           >
-            Leaderboard XP
-          </button>
-          <button
-            onClick={() => setMode("give")}
-            className={cn("tab-pill", mode === "give" && "tab-pill-active")}
-          >
-            Top Give Premium
+            {mode === "xp" ? (
+              <Gift className="size-4 text-[oklch(0.86_0.16_90)]" />
+            ) : (
+              <Trophy className="size-4" />
+            )}
           </button>
         </div>
 
         {mode === "xp" && (
           <>
-            <div className="tab-pill-track mb-2 w-full">
+            <div className="mb-2 flex gap-1 border-b border-white/10">
               {["harian", "mingguan", "bulanan"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={cn("tab-pill", period === p && "tab-pill-active")}
+                  className={cn(
+                    "relative flex-1 pb-2 text-xs font-medium capitalize",
+                    period === p ? "text-foreground" : "text-muted-foreground",
+                  )}
                 >
                   {p}
+                  {period === p && (
+                    <span className="absolute inset-x-4 bottom-0 h-px bg-foreground/70" />
+                  )}
                 </button>
               ))}
             </div>

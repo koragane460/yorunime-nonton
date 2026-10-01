@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -26,10 +26,12 @@ import {
   Crown,
   Gem,
   Heart,
+  Headset,
   History as HistoryIcon,
   LogOut,
   Mail,
   MessageSquare,
+  Send,
   Settings as SettingsIcon,
   X,
   Check,
@@ -58,10 +60,11 @@ function AkunContent() {
         ? "history"
         : "komen",
   );
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(tabParam === "settings");
   const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
   const [badgesOpen, setBadgesOpen] = useState(false);
   const [titlesOpen, setTitlesOpen] = useState(false);
+  const [csOpen, setCsOpen] = useState(false);
 
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
@@ -107,7 +110,7 @@ function AkunContent() {
       {/* Banner full-bleed. Wrapper-nya memotong overflow supaya tidak ada
           elemen yang keluar dari lebar layar (ruang hitam di kanan). */}
       <div className="yn-banner-box -mx-4 md:-mx-6">
-        <BlurBanner src={user.bannerUrl ?? user.image} className="h-44 w-full" />
+        <BlurBanner src={user.bannerUrl ?? user.image} className="h-52 w-full" />
         {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
         <div aria-hidden className="yn-banner-fade" />
         <button
@@ -129,22 +132,22 @@ function AkunContent() {
             aria-label="Buka title"
             aria-expanded={titlesOpen}
             className={cn(
-              "z-20 -mb-1 flex h-8 items-center gap-1 rounded-full border px-3 text-[11px] font-bold transition",
+              "z-20 -mb-2 flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-bold transition",
               titlesOpen
                 ? "border-violet-400 bg-violet-500/25 text-violet-100"
-                : "border-white/25 bg-black/45 text-zinc-100 backdrop-blur-sm hover:border-violet-400",
+                : "border-white/20 bg-black/55 text-zinc-100 backdrop-blur-sm hover:border-violet-400",
             )}
           >
-            <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
+            <Crown className="size-3 text-[oklch(0.86_0.16_90)]" />
             Title
             {titles.length > 0 && (
-              <span className="rounded-full bg-white/15 px-1.5 font-mono text-[10px]">
+              <span className="rounded-full bg-white/15 px-1 font-mono text-[9px]">
                 {titles.length}
               </span>
             )}
             <ChevronDown
               className={cn(
-                "size-3.5 transition",
+                "size-3 transition",
                 titlesOpen && "rotate-180",
               )}
             />
@@ -298,7 +301,7 @@ function AkunContent() {
               {icon} {label}
             </span>
             {tab === k && (
-              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-violet-500" />
+              <span className="absolute inset-x-3 bottom-0 h-px bg-foreground/70" />
             )}
           </button>
         ))}
@@ -455,10 +458,18 @@ function AkunContent() {
       </div>
 
       {settingsOpen && (
-        <SettingsScreen onClose={() => setSettingsOpen(false)} onSignOut={signOut} />
+        <SettingsScreen
+          onClose={() => setSettingsOpen(false)}
+          onSignOut={signOut}
+          onOpenCs={() => {
+            setSettingsOpen(false);
+            setCsOpen(true);
+          }}
+        />
       )}
       {notifOpen && <NotifScreen onClose={() => setNotifOpen(false)} />}
       {badgesOpen && <BadgesPopup currentLevel={user.level ?? 1} onClose={() => setBadgesOpen(false)} />}
+      {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
     </div>
   );
 }
@@ -484,18 +495,20 @@ function BadgesPopup({
   useHideNavOnMount(); // popup fullscreen: navbar hilang total
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm sm:items-center"
       onClick={onClose}
     >
       <div
-        className="pop-enter w-full max-w-sm rounded-2xl border border-border bg-card p-4"
+        className="pop-enter w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-background"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-center text-sm font-bold">Badge Level</p>
-        <p className="mt-0.5 text-center text-[11px] text-muted-foreground">
-          Naikkan level untuk membuka badge di bawah ini
-        </p>
-        <div className="mt-3 space-y-2">
+        <div className="border-b border-white/10 px-4 py-3">
+          <p className="text-sm font-bold">Badge Level</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Naikkan level untuk membuka badge di bawah ini
+          </p>
+        </div>
+        <div className="p-4">
           {LEVEL_BADGE_TIERS.map((t) => {
             const unlocked = currentLevel >= t.minLevel;
             return (
@@ -549,9 +562,11 @@ function BadgesPopup({
 function SettingsScreen({
   onClose,
   onSignOut,
+  onOpenCs,
 }: {
   onClose: () => void;
   onSignOut: () => Promise<void>;
+  onOpenCs: () => void;
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -743,9 +758,24 @@ function SettingsScreen({
         {panelLevel !== "none" && <StaffPanel level={panelLevel} />}
       </div>
 
-      {/* Email support + Log out — sekarang di Pengaturan */}
+      {/* CS + email + log out */}
       <BlockTitle>Lainnya</BlockTitle>
       <div className="space-y-2">
+        <button
+          onClick={onOpenCs}
+          className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition hover:border-violet-500/60"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
+            <Headset className="size-[18px] text-violet-300" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-semibold">CS</span>
+            <span className="block text-[11px] text-muted-foreground">
+              Customer service YoruNime
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </button>
         <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px]">
           <Mail className="size-4 shrink-0 text-primary" /> Lstreamsupport@gmail.com
         </div>
@@ -950,6 +980,161 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------- dev/mod panel ----
 
 // ------------------------------------------------------------- fullscr ----
+
+// -------------------------------------------------------------- CS chat ----
+
+/** Avatar bot CS: kepala headset di atas lingkaran brand. Bukan emoji. */
+function CsBotAvatar({ size = 36 }: { size?: number }) {
+  return (
+    <span
+      className="relative flex shrink-0 items-center justify-center rounded-full border border-violet-400/40 bg-violet-500/15"
+      style={{ width: size, height: size }}
+    >
+      <Headset className="text-violet-300" style={{ width: size * 0.5, height: size * 0.5 }} />
+    </span>
+  );
+}
+
+function CsChatScreen({ onClose }: { onClose: () => void }) {
+  useHideNavOnMount();
+  const { user } = useAuth();
+  const thread = useQuery(api.cs.myThread, {});
+  const messages = useQuery(
+    api.cs.threadMessages,
+    thread?.threadId ? { threadId: thread.threadId } : "skip",
+  );
+  const send = useMutation(api.cs.sendMessage);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages?.length, thread?.threadId]);
+
+  const waiting = thread?.status === "waiting";
+  const ended = thread && !thread.canOpen;
+  const locked = !!waiting || !!ended;
+
+  const submit = async () => {
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    try {
+      await send({ text: body });
+      setText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col bg-background">
+      <div className="flex items-center gap-2.5 border-b border-white/10 px-3 py-2.5">
+        <button
+          onClick={onClose}
+          aria-label="Kembali"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <CsBotAvatar size={38} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold leading-tight">Customer Service</p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {waiting ? "Menunggu developer" : "Developer YoruNime"}
+          </p>
+        </div>
+      </div>
+
+      <div className="thin-scroll flex-1 space-y-2 overflow-y-auto px-3 py-3">
+        {(messages ?? []).map((m: any) => {
+          const mine = m.from === "user";
+          return (
+            <div
+              key={m._id}
+              className={cn("flex items-end gap-2", mine && "flex-row-reverse")}
+            >
+              {!mine && <CsBotAvatar size={26} />}
+              <div
+                className={cn(
+                  "max-w-[78%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed",
+                  mine
+                    ? "rounded-br-md bg-primary text-primary-foreground"
+                    : "rounded-bl-md border border-white/10 bg-card",
+                )}
+              >
+                {m.text}
+              </div>
+            </div>
+          );
+        })}
+        {!thread?.threadId && (
+          <p className="py-10 text-center text-xs text-muted-foreground">
+            Tulis keluhan atau pertanyaan kamu. Developer akan membalas di sini.
+          </p>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Kolom pesan terkunci Grey selama menunggu / selesai. */}
+      <div className="border-t border-white/10 p-3 pb-6">
+        {ended && (
+          <p className="mb-2 text-center text-[11px] text-muted-foreground">
+            CS sudah selesai. Bisa buka lagi dalam 24 jam.
+          </p>
+        )}
+        <div
+          className={cn(
+            "flex items-end gap-2 rounded-2xl border px-3 py-2 transition",
+            locked
+              ? "border-white/10 bg-white/[0.04]"
+              : "border-border bg-card focus-within:border-violet-500/60",
+          )}
+        >
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!locked) void submit();
+              }
+            }}
+            disabled={locked}
+            rows={1}
+            placeholder={
+              waiting
+                ? "Menunggu developer menerima..."
+                : ended
+                  ? "CS sudah selesai"
+                  : "Tulis pesan..."
+            }
+            className={cn(
+              "max-h-28 min-h-[36px] flex-1 resize-none bg-transparent py-2 text-[13px] outline-none",
+              locked ? "cursor-not-allowed text-zinc-600" : "",
+            )}
+          />
+          <button
+            onClick={() => void submit()}
+            disabled={locked || !text.trim() || busy}
+            aria-label="Kirim"
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-xl",
+              locked || !text.trim()
+                ? "bg-white/[0.06] text-zinc-600"
+                : "bg-primary text-primary-foreground",
+            )}
+          >
+            <Send className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FullScreen({
   title,

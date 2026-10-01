@@ -84,18 +84,22 @@ function NotifTab() {
     <div className="space-y-2.5 pt-3">
       {/* Tombol + khusus developer: kirim pesan ke semua user */}
       {isDev && (
-        <div className="flex items-center justify-between rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2">
-          <p className="flex items-center gap-1.5 text-xs font-bold text-violet-200">
-            <Megaphone className="size-3.5" /> Developer Panel
+        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+          <p className="flex items-center gap-1.5 text-xs font-semibold">
+            <Megaphone className="size-3.5 text-muted-foreground" /> Broadcast
           </p>
-          <Button
-            size="sm"
+          <button
             onClick={() => setComposeOpen((v) => !v)}
-            className="rounded-full bg-violet-600 text-white hover:bg-violet-500"
+            className={cn(
+              "flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold transition",
+              composeOpen
+                ? "border border-white/15 text-muted-foreground"
+                : "bg-primary text-primary-foreground",
+            )}
           >
             {composeOpen ? <X className="size-3.5" /> : <Plus className="size-4" />}
             {composeOpen ? "Batal" : "Kirim"}
-          </Button>
+          </button>
         </div>
       )}
 
@@ -106,22 +110,20 @@ function NotifTab() {
       {(notifs ?? []).map((n) => (
         <div
           key={n._id}
-          className="flex gap-2.5 rounded-lg border border-violet-500/25 bg-violet-500/5 p-2.5"
+          className="flex gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5"
         >
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-600/25">
-            <Bell className="size-4 text-violet-200" />
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+            <Bell className="size-4 text-muted-foreground" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="truncate text-xs font-bold text-violet-100">
-                {n.title}
-              </p>
-              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+              <p className="truncate text-xs font-bold">{n.title}</p>
+              <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
                 {timeAgo(n.createdAt)}
               </span>
             </div>
             {n.body && (
-              <p className="mt-0.5 text-sm leading-snug text-zinc-300">
+              <p className="mt-0.5 text-[13px] leading-snug text-zinc-300">
                 {n.body}
               </p>
             )}

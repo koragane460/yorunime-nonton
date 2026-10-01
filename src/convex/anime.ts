@@ -1035,6 +1035,136 @@ export const animeAiringSchedule = action({
   },
 });
 
+export type TodayAiring = {
+  id: string;
+  title: string;
+  image: string;
+  episode: number;
+  airingAt: number;
+  /** Jam rilis dalam zona waktu user, mis. "19:30 WIB". */
+  timeLabel: string;
+  score?: number;
+};
+
+/** Zona waktu yang dipakai di label jam, urut dari yang paling umum. */
+const ZONES: { label: string; offsetMin: number }[] = [
+  { label: "WIB", offsetMin: 420 },
+  { label: "WITA", offsetMin: 480 },
+  { label: "WIT", offsetMin: 540 },
+  { label: "GMT", offsetMin: 0 },
+];
+
+/** Ambil zona waktu browser user, fallback ke WIB. */
+function userZone(): { label: string; offsetMin: number } {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const guess = new Intl.DateTimeFormat(undefined, {
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(new Date())
+      .find((p) => p.type === "timeZoneName")?.value;
+    const m = guess?.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (m) {
+      const mins =
+        (Number(m[2]) * 60 + Number(m[3] ?? 0)) * (m[1] === "-" ? -1 : 1);
+      const known = ZONES.find((z) => z.offsetMin === mins);
+      return known ?? { label: tz, offsetMin: mins };
+    }
+  } catch {
+    /* fallback */
+  }
+  return ZONES[0];
+}
+
+/** Awal hari (00:00) menurut zona waktu user, dalam ms epoch. */
+function startOfLocalDay(nowMs: number, offsetMin: number): number {
+  const local = new Date(nowMs + offsetMin * 60_000);
+  return Date.UTC(
+    local.getUTCFullYear(),
+    local.getUTCMonth(),
+    local.getUTCDate(),
+  ) - offsetMin * 60_000;
+}
+
+/** "19:30 WIB" dari timestamp tayang, mengikuti zona waktu user. */
+export function airingLabel(airingAtMs: number): string {
+  const z = userZone();
+  const d = new Date(airingAtMs + z.offsetMin * 60_000);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm} ${z.label}`;
+}
+
+/**
+ * Anime yang benar-benar rilis episode baru HARI INI, lengkap dengan jam
+ * tayangnya. Dipakai "Anime Update News" supaya isinya bukan sekadar
+ * anime sedang tayang, tapi yang episodenya benar-benar keluar hari ini.
+ */
+export const animeTodayAiring = action({
+  args: { limit: v.optional(v.number()) },
+  handler: async (runCtx, { limit }) =>
+    cached(runCtx, "anime:today-airing", 30 * 60 * 1000, async () => {
+      // AniList punya airing schedule resmi per hari; itu sumber paling
+      // akurat untuk "anime yang episodenya benar-benar keluar hari ini".
+      const z = userZone();
+      const now = Date.now();
+      const dayStart = startOfLocalDay(now, z.offsetMin);
+      const dayEnd = dayStart + 24 * 3600_000;
+      const query = `query ($start:Int, $end:Int, $page:Int){
+        Page(page:$page, perPage:50){
+          pageInfo{ hasNextPage }
+          airingSchedules(airingAt_greater: $start, airingAt_lesser: $end, sort: TIME){
+            episode
+            airingAt
+            media{
+              id idMal
+              title{ romaji english native }
+              coverImage{ extraLarge large }
+              averageScore
+              format
+            }
+          }
+        }
+      }`;
+      const all: any[] = [];
+      try {
+        for (let page = 1; page <= 2; page++) {
+          const d: any = await aniGraphql(query, {
+            start: Math.floor(dayStart / 1000),
+            end: Math.floor(dayEnd / 1000),
+            page,
+          });
+          all.push(...(d?.Page?.airingSchedules ?? []));
+          if (!d?.Page?.pageInfo?.hasNextPage) break;
+        }
+      } catch {
+        return [] as TodayAiring[];
+      }
+      const seen = new Set<string>();
+      const out: TodayAiring[] = [];
+      for (const s of all) {
+        const m = s?.media;
+        if (!m || s?.airingAt == null) continue;
+        const key = `${m.id}-${s.episode}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const airingAt = Number(s.airingAt) * 1000;
+        out.push({
+          id: String(m.idMal ?? m.id ?? ""),
+          title:
+            m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "Tanpa judul",
+          image: m?.coverImage?.extraLarge ?? m?.coverImage?.large ?? "",
+          episode: Number(s.episode ?? 0),
+          airingAt,
+          timeLabel: airingLabel(airingAt),
+          score: m?.averageScore ? Math.round(m.averageScore / 10) : undefined,
+        });
+      }
+      out.sort((a, b) => a.airingAt - b.airingAt);
+      return out.slice(0, Math.max(1, limit ?? 12));
+    }),
+});
+
 export const animeSchedule = action({
   args: {},
   handler: async (runCtx) =>

@@ -41,6 +41,9 @@ export function useFastChat(
   );
   const send = useMutation(api.chat.sendMessage);
   const [pending, setPending] = useState<ChatMsg[]>([]);
+  // Kunci anti double-submit: tanpa ini, mengetuk "Kirim" dua kali (atau
+  // Enter lalu Ketuk) mengirim dua pesan yang isinya sama.
+  const sending = useRef(false);
 
   // Ganti room / teman: pesan yang masih "mengambang" dari chat sebelumnya
   // dibuang supaya chat tiap orang benar-benar terpisah.
@@ -74,6 +77,16 @@ export function useFastChat(
   }, [raw, pending]);
 
   const sendFast = async (p: SendPayload) => {
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      await doSend(p);
+    } finally {
+      sending.current = false;
+    }
+  };
+
+  const doSend = async (p: SendPayload) => {
     if (!me?._id) {
       await send({ ...sendArgs, ...p } as never);
       return;
@@ -103,6 +116,10 @@ export function useFastChat(
         imageStorageId: p.imageStorageId,
         replyToId: p.replyToId,
       } as never);
+      // Echo langsung dilepas begitu server mengonfirmasi. Query akan
+      // mengirim pesan aslinya; kalau echo ditahan terlalu lama, yang tampil
+      // adalah dua salinan pesan yang sama.
+      setPending((s) => s.filter((x) => x._id !== temp._id));
     } catch (e) {
       setPending((s) => s.filter((x) => x._id !== temp._id));
       throw e;

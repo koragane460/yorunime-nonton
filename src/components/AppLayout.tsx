@@ -14,6 +14,7 @@ import {
   Crown,
   Gem,
   Maximize,
+  Settings,
   Pause,
   Play,
   X,
@@ -134,14 +135,24 @@ function AccountPanel({
   const goto = useNavigate();
   return (
     <div className="yn-banner-box pop-enter relative mt-3 w-full rounded-2xl border border-white/15">
-      {/* Tombol notifikasi — kecil, di pojok kanan panel */}
-      <button
-        aria-label="Notifikasi"
-        onClick={() => goto("/akun?tab=notif")}
-        className="absolute right-2 top-2 z-10 flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
-      >
-        <Bell className="size-4" />
-      </button>
+      {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
+          Keduanya di luar area teks supaya tidak saling nimpa. */}
+      <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1.5">
+        <button
+          aria-label="Pengaturan"
+          onClick={() => goto("/akun?tab=settings")}
+          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
+        >
+          <Settings className="size-4" />
+        </button>
+        <button
+          aria-label="Notifikasi"
+          onClick={() => goto("/akun?tab=notif")}
+          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
+        >
+          <Bell className="size-4" />
+        </button>
+      </div>
       <button onClick={onOpen} className="block w-full text-left"
         style={
           bannerUrl
@@ -302,7 +313,10 @@ type MiniState = {
 
 let miniListeners: ((s: MiniState | null) => void)[] = [];
 let miniCurrent: MiniState | null = null;
+/** Posisi terakhir playback, dipakai untuk lanjut dari tempat yang sama. */
+let miniTime = 0;
 export function setMiniPlayer(s: MiniState | null) {
+  if (s?.streamUrl !== miniCurrent?.streamUrl) miniTime = 0;
   miniCurrent = s;
   miniListeners.forEach((l) => l(s));
 }
@@ -434,6 +448,19 @@ export function MiniPlayerHost() {
             autoPlay
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
+            onTimeUpdate={(e) => {
+              miniTime = e.currentTarget.currentTime;
+            }}
+            onLoadedMetadata={(e) => {
+              // Lanjut dari posisi terakhir, jangan mulai dari nol.
+              if (miniTime > 1 && miniTime < (e.currentTarget.duration || 0) - 5) {
+                try {
+                  e.currentTarget.currentTime = miniTime;
+                } catch {
+                  /* stream belum siap seek */
+                }
+              }
+            }}
           />
         )}
         {/* Kontrol overlay: hanya saat UI belum disembunyikan lewat tap */}
