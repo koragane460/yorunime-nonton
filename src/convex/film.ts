@@ -15,9 +15,15 @@ import { api } from "./_generated/api";
 
 const TTL = 30 * 60 * 1000;
 
+/** Base URL API film. Env ini diisi lewat tab Keys/API keys di dashboard. */
 function base(): string | null {
-  const b = (process.env.FILM_API_BASE ?? "").trim().replace(/\/+$/, "");
-  return b.startsWith("http") ? b : null;
+  const raw =
+    process.env.FILM_API_BASE ??
+    process.env.LK21_API_BASE ??
+    process.env.FILM_API_URL ??
+    "";
+  const b = raw.trim().replace(/\/+$/, "");
+  return /^https?:\/\//i.test(b) ? b : null;
 }
 
 async function get(path: string, timeoutMs = 12_000): Promise<any | null> {
@@ -83,21 +89,29 @@ function shapeFilm(raw: any): FilmItem | null {
   };
 }
 
-/** Status akses Film untuk user yang sedang login. */
+/**
+ * Status Film untuk user yang sedang login.
+ * - configured: sumber film sudah dikonfigurasi (FILM_API_BASE terisi)
+ * - allowed: punya izin akses Film. Developer selalu boleh, bahkan kalau
+ *   sumber belum dikonfigurasi, supaya menunya tetap kelihatan dan bisa
+ *   dipakai setelah sumber dipasang.
+ */
 export const filmAccess = action({
   args: {},
-  handler: async (ctx): Promise<{ enabled: boolean; allowed: boolean }> => {
-    const enabled = base() !== null;
+  handler: async (
+    ctx,
+  ): Promise<{ configured: boolean; allowed: boolean }> => {
+    const configured = base() !== null;
     const userId = await getAuthUserId(ctx);
-    if (!enabled || userId === null) return { enabled, allowed: false };
+    if (userId === null) return { configured, allowed: false };
     const me: any = await ctx.runQuery(api.users.currentUser, {});
-    if (!me) return { enabled, allowed: false };
+    if (!me) return { configured, allowed: false };
     const isDev =
       me.role === "admin" ||
       me.staffRole === "dev" ||
       me.staffRole === "creator" ||
       (me.seqId === 1 && !me.staffRole);
-    return { enabled, allowed: isDev || me.filmAccess === true };
+    return { configured, allowed: isDev || me.filmAccess === true };
   },
 });
 

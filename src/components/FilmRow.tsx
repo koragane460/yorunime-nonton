@@ -27,6 +27,7 @@ export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: st
   const access = useAction(api.film.filmAccess);
   const listFilms = useAction(api.film.films);
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [configured, setConfigured] = useState(false);
   const [items, setItems] = useState<Film[]>([]);
   const [loading, setLoading] = useState(false);
   const [pick, setPick] = useState<Film | null>(null);
@@ -39,7 +40,9 @@ export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: st
     let alive = true;
     access({})
       .then((r: any) => {
-        if (alive) setAllowed(!!r?.allowed);
+        if (!alive) return;
+        setAllowed(!!r?.allowed);
+        setConfigured(!!r?.configured);
       })
       .catch(() => alive && setAllowed(false));
     return () => {
@@ -114,7 +117,15 @@ export function FilmRow({ onOpenWatch }: { onOpenWatch?: (url: string, title: st
         ) : null}
       </div>
 
-      {loading ? (
+      {!configured ? (
+        <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-[11px] leading-relaxed text-muted-foreground">
+          Sumber film belum dipasang. Developer perlu mengisi
+          <span className="mx-1 rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+            FILM_API_BASE
+          </span>
+          di tab Keys/API keys.
+        </p>
+      ) : loading ? (
         <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton h-40 w-28 shrink-0 rounded-xl" />
