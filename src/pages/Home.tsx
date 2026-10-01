@@ -216,7 +216,7 @@ function HomeContent() {
   const openAnime = (id: string) => setPickId(id);
 
   return (
-    <div>
+    <div className="pb-8">
       {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
         onClick={() => navigate("/premium")}
@@ -1389,7 +1389,10 @@ function AnimeDetailScreen({
 
   const eps: any[] = [...(detail.episodeList ?? [])];
   if (episodeOrder === "last") eps.reverse();
-  const shownEps = allEpisodes ? eps : eps.slice(0, 15);
+  // Anime panjang bisa punya ribuan episode, jadi ditampilkan bertahap
+  // (60 per halaman) supaya HP tidak berat.
+  const PAGE = 60;
+  const shownEps = allEpisodes ? eps : eps.slice(0, PAGE);
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -1524,12 +1527,12 @@ function AnimeDetailScreen({
               ))}
             </div>
           )}
-          {eps.length > 15 && (
+          {eps.length > PAGE && (
             <button
               onClick={() => setAllEpisodes((v) => !v)}
               className="mt-2 w-full rounded-lg border border-border py-2 text-xs"
             >
-              {allEpisodes ? "Tutup" : "Tampilkan semua episode"}
+              {allEpisodes ? "Tampilkan lebih sedikit" : `Tampilkan semua ${eps.length} episode`}
             </button>
           )}
 

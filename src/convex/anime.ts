@@ -166,7 +166,9 @@ async function jikanList(path: string): Promise<AnimeCard[]> {
 
 function synthEpisodes(a: any, eps: EpisodeItem[]): EpisodeItem[] {
   if (eps.length > 0) return eps;
-  const total = Math.min(a.episodes ?? 12, 24) || 12;
+  // Jumlah episode harus jujur mengikuti data anime. Dulu di-cap 24 supaya
+  // anime panjang (One Piece >1000 episode) jadi terpotong.
+  const total = Math.min(a.episodes ?? 12, 3000) || 12;
   const out: EpisodeItem[] = [];
   for (let i = 1; i <= total; i++) {
     out.push({
@@ -209,6 +211,7 @@ async function jikanDetail(id: string): Promise<AnimeDetail> {
       (a.synopsis ?? "").replace(/\[Written by MAL Rewrite\]/gi, "").trim() ||
       "Sinopsis belum tersedia.",
     totalEpisodes: a.episodes ?? episodeList.length,
+    episodes: episodeList.length,
     episodeList,
   };
 }
@@ -231,6 +234,7 @@ const ANILIST_FIELDS = `
   seasonYear
   genres
   description(asHtml: false)
+  nextAiringEpisode { episode }
 `;
 
 async function aniGraphql(
@@ -310,7 +314,15 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   const card = anilistCard(m);
   // Judul yang belum tayang tidak boleh dikarang jadi episode playable.
   const upcoming = m.status === "NOT_YET_RELEASED";
-  const total = upcoming ? 0 : Math.max(1, Math.min(m.episodes ?? 1, 500));
+  // AniList mengisi `episodes` dengan null untuk anime yang masih tayang
+  // (One Piece, Naruto, dll). `nextAiringEpisode.episode` adalah episode
+  // terakhir yang sudah tayang, jadi itu jumlah episode yang bisa ditonton.
+  const counted =
+    m.episodes ??
+    (m.status === "RELEASING" && m.nextAiringEpisode?.episode
+      ? m.nextAiringEpisode.episode - 1
+      : undefined);
+  const total = upcoming ? 0 : Math.max(1, Math.min(counted ?? 1, 3000));
   const episodeList: EpisodeItem[] = [];
   for (let i = 1; i <= total; i++) {
     episodeList.push({
@@ -326,6 +338,7 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
     ...card,
     genres: Array.isArray(m.genres) ? m.genres : [],
     year: m.seasonYear ?? undefined,
+    episodes: total,
     synopsis,
     synopsisId: synopsisId ?? undefined,
     totalEpisodes: total,
@@ -454,6 +467,7 @@ function fb(
   status: string,
   synopsis: string,
   image = "",
+  episodes?: number,
 ): AnimeCard {
   return {
     source: "fallback",
@@ -463,6 +477,7 @@ function fb(
     score,
     status,
     type: "TV",
+    episodes,
     synopsis: `${title} (${year}). ${synopsis}`,
   };
 }
@@ -479,7 +494,7 @@ export const FALLBACK_TOP: AnimeCard[] = [
   fb("Death Note", "1535", 8.4, 2006, "Completed", "Siswa menemukan buku yang bisa membunuh siapa pun namanya ditulis.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-kUgkcrfOrkUM.jpg"),
   fb("Frieren: Beyond Journey's End", "52991", 9.1, 2023, "Completed", "Penyihir elf berkeliling menengok kembali perjalanan masa lalunya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-qQTzQnEJJ3oB.jpg"),
   fb("SPY x FAMILY", "50265", 8.3, 2022, "Completed", "Keluarga mata-mata paling tidak biasa di dunia.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx140960-Kb6R5nYQfjmP.jpg"),
-  fb("One Piece", "21", 8.7, 1999, "Ongoing", "Bajak laut topi jerami berlayar mencari One Piece.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg"),
+  fb("One Piece", "21", 8.7, 1999, "Ongoing", "Bajak laut topi jerami berlayar mencari One Piece.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg", 1100),
   fb("Vinland Saga S2", "49387", 8.8, 2023, "Completed", "Thorfinn mencari kedamaian setelah masa perbudakannya.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx136430-gsBsJjA7hGh9.jpg"),
   fb("Chainsaw Man", "44511", 8.3, 2022, "Completed", "Denji hidup dengan ibu jantung berantai mesin.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx127230-DdP4vAdssLoz.png"),
   fb("Mob Psycho 100 III", "50172", 8.7, 2022, "Completed", "Esper muda belajar hidup normal.", "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx140439-bPKmhe1wNxc9.jpg"),

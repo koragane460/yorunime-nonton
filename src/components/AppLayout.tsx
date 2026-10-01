@@ -53,7 +53,7 @@ export function AppLayout({
   const showPanel = !hideAccountPanel && isHome && location.pathname === "/home";
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center">
+    <div className="yn-app-bg flex min-h-dvh w-full flex-col items-center">
       {showPanel && user && (
         <div className="w-full px-4 md:mx-auto md:max-w-2xl md:px-6 lg:max-w-4xl">
           <AccountPanel
@@ -88,6 +88,7 @@ export function AppLayout({
       </div>
       <BottomNav />
       <MiniPlayerHost />
+      <OverlayScrollLock />
     </div>
   );
 }
@@ -132,18 +133,16 @@ function AccountPanel({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="pop-enter relative mt-3 w-full">
-      {/* Tombol notifikasi — kecil, di samping kanan panel, sejajar */}
+    <div className="yn-banner-box pop-enter relative mt-3 w-full rounded-2xl border border-white/15">
+      {/* Tombol notifikasi — kecil, di pojok kanan panel */}
       <button
         aria-label="Notifikasi"
         onClick={() => goto("/akun?tab=notif")}
-        className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow transition hover:border-violet-400"
+        className="absolute right-2 top-2 z-10 flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
       >
-        <Bell className="size-3.5 text-white" />
+        <Bell className="size-4" />
       </button>
-      <button
-        onClick={onOpen}
-        className="block w-full overflow-hidden rounded-2xl border border-white/15 text-left"
+      <button onClick={onOpen} className="block w-full text-left"
         style={
           bannerUrl
             ? {
@@ -155,8 +154,8 @@ function AccountPanel({
         }
       >
         {!bannerUrl && <div className="yn-banner absolute inset-0" />}
-        {/* Banner terpasang: hanya kaca gelap tipis di atasnya, jadi warnanya
-            tetap terlihat-through (bukan blur pekat). */}
+        {/* Banner terpasang: lapisan gelap penuh di atas foto, jadi tidak ada
+            sisa warna cerah yang menerawang dari kiri. */}
         {bannerUrl && <div className="yn-banner-veil" />}
         <div className="relative p-3">
           <div className="flex items-center gap-3">
@@ -209,8 +208,8 @@ function AccountPanel({
             </div>
           </div>
 
-          {/* Garis pembatas putih transparan */}
-          <div className="my-2.5 h-px bg-white/25" />
+          {/* Garis pembatas tipis */}
+          <div className="my-2.5 h-px bg-white/15" />
 
           {/* Total Sacret + sisa hari premium */}
           <div className="flex items-center gap-4 text-xs">
@@ -243,6 +242,23 @@ export function setAppOverlayOpen(v: boolean) {
   overlayOpen = v;
   overlayListeners.forEach((l) => l(v));
 }
+/**
+ * Sambil overlay (layar fullscreen) terbuka: hentikan scroll halaman di
+ * belakang tanpa mengubah posisinya, jadi begitu ditutup halaman langsung
+ * kembali persis di tempat sebelumnya tanpa lompatan scrollbar.
+ */
+function OverlayScrollLock() {
+  const overlay = useAppOverlayOpen();
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    if (overlay) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [overlay]);
+  return null;
+}
+
 function useAppOverlayOpen() {
   return useSyncExternalStore(
     (cb) => {

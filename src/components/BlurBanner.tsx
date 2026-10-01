@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Banner akun: fotonya tampil apa adanya (tajam, tidak di-blur seluruhnya).
- * Hanya kaki banner yang diberi kabut supaya foto menyatu pelan ke konten di
- * bawahnya dan teks tetap terbaca.
+ * Banner akun: foto tampil apa adanya (tajam, tanpa blur) lalu luntur pelan
+ * ke warna background di bagian bawah. Tidak ada filter apa pun di sini,
+ * supaya banner tidak pernah terbaca sebagai kotak buram.
  */
 export function BlurBanner({
   src,
@@ -15,7 +15,7 @@ export function BlurBanner({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={cn("relative overflow-hidden bg-[#0b0b14]", className)}>
+    <div className={cn("yn-banner-box bg-[#0b0b14]", className)}>
       {src ? (
         <>
           <img
@@ -25,9 +25,9 @@ export function BlurBanner({
             className="absolute inset-0 size-full object-cover"
           />
           {/* Redup tipis supaya username dan badge tetap kebaca */}
-          <div className="absolute inset-0 bg-black/25" />
-          {/* Kabut hanya di bawah; bagian atas foto tetap tajam */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/45 to-transparent" />
+          <div className="absolute inset-0 bg-black/30" />
+          {/* Luntur ke warna halaman: bawahnya penuh, makin ke atas transparan */}
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-background via-background/80 to-transparent" />
         </>
       ) : (
         <div className="yn-banner absolute inset-0" />

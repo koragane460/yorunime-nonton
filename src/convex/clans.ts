@@ -154,6 +154,10 @@ export const clanDetail = query({
       topDonateToday: [...todayDonations]
         .sort((a, b) => b.donatedToday - a.donatedToday)
         .slice(0, 50),
+      topDonateAll: [...memberViews]
+        .filter((m) => m.donatedTotal > 0)
+        .sort((a, b) => b.donatedTotal - a.donatedTotal)
+        .slice(0, 50),
       myRole: me?.role,
       myDonatedTotal: me?.donatedTotal,
       myLastClaimDay: me?.lastClaimDay,

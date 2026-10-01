@@ -75,30 +75,17 @@ export function ProfileSheet({
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div className="relative">
-              {/* Banner: foto profil/banner di-blur (gaya foto), fallback gelap */}
+              {/* Banner: foto profil/banner tajam, luntur ke warna halaman */}
               <BlurBanner
                 src={profile.bannerUrl ?? profile.image}
                 className="h-44 w-full"
               />
-              {/* Echo blur lembut tepat di bawah banner */}
-              <div
-                aria-hidden
-                className={cn(
-                  "yn-banner-echo",
-                  profile.bannerUrl ? "bg-cover bg-center" : "yn-banner",
-                )}
-                style={
-                  profile.bannerUrl
-                    ? { backgroundImage: `url(${profile.bannerUrl})` }
-                    : undefined
-                }
-              />
-              {/* Gradasi halus biar echo menyatu ke konten */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-background via-background/60 to-transparent" />
+              {/* Bilah sambung warna tipis di bawah banner */}
+              <div aria-hidden className="yn-banner-fade" />
             </div>
             <button
               onClick={onClose}
-              className="absolute left-4 top-3 rounded-full bg-black/60 p-2 text-white"
+              className="absolute left-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm"
               aria-label="Tutup"
             >
               <ChevronLeft className="size-4" />

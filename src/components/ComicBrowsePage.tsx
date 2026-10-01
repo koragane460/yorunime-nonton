@@ -288,15 +288,16 @@ function ComicHero({
   const views = formatViews(cur.views);
   const badge = kind === "manga" ? "bg-sky-600" : "bg-fuchsia-600";
   return (
-    <div className="relative mt-1 overflow-hidden rounded-2xl border border-white/10">
-      {/* Poster potret penuh — sama seperti hero anime di Home */}
+    <div className="yn-banner-box relative mt-1 rounded-2xl border border-white/10 bg-black">
+      {/* Poster komik vertikal: tinggi mengikuti rasio gambar asli supaya
+          tidak terpotong, dan tetap tajam karena cover-nya 720px. */}
       <img
         src={cur.image}
         alt=""
-        className="h-64 w-full object-cover object-top"
+        className="block max-h-[420px] w-full bg-black object-cover object-top"
         loading="eager"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-black/5" />
       <div className="absolute inset-0 flex flex-col justify-end p-4">
         <div className="flex items-center gap-1.5">
           <span

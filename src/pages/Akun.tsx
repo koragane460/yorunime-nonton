@@ -14,7 +14,6 @@ import {
   ClanTag,
   LevelBadge,
   RedMark,
-  ShineBadge,
   TitleBadge,
 } from "@/components/lstream-ui";
 import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
@@ -23,6 +22,7 @@ import { Lock } from "lucide-react";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Crown,
   Gem,
   Heart,
@@ -103,82 +103,96 @@ function AkunContent() {
     });
 
   return (
-    <div className="relative -mx-4">
-      {/* Banner paling atas full-bleed + tombol Pengaturan kanan atas (jelas terlihat) */}
-      <div className="relative">
-        {/* Banner: foto profil/banner di-blur, kalau tidak ada tetap gelap */}
-        <BlurBanner src={user.bannerUrl ?? user.image} className="h-48 w-full" />
-        {/* Echo blur lembut tepat di bawah banner */}
-        <div
-          aria-hidden
-          className={cn(
-            "yn-banner-echo",
-            user.bannerUrl ? "bg-cover bg-center" : "yn-banner",
-          )}
-          style={
-            user.bannerUrl
-              ? { backgroundImage: `url(${user.bannerUrl})` }
-              : user.image
-                ? { backgroundImage: `url(${user.image})` }
-                : undefined
-          }
-        />
-        {/* Gradasi biar banner menyatu ke konten di bawahnya */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/55 to-transparent" />
+    <div className="relative">
+      {/* Banner full-bleed. Wrapper-nya memotong overflow supaya tidak ada
+          elemen yang keluar dari lebar layar (ruang hitam di kanan). */}
+      <div className="yn-banner-box -mx-4 md:-mx-6">
+        <BlurBanner src={user.bannerUrl ?? user.image} className="h-44 w-full" />
+        {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
+        <div aria-hidden className="yn-banner-fade" />
         <button
           onClick={() => setSettingsOpen(true)}
           aria-label="Pengaturan"
-          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-full border border-white/30 bg-black/70 text-white shadow-lg transition hover:border-violet-500"
+          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
         >
-          <SettingsIcon className="size-[18px] text-white" />
+          <SettingsIcon className="size-[18px]" />
         </button>
-        {/* Tombol title: di kiri, sedikit di atas foto profil */}
-        <button
-          onClick={() => setTitlesOpen((v) => !v)}
-          aria-label="Buka title"
-          className="absolute left-3 top-3 z-10 flex size-10 items-center justify-center rounded-full border border-white/30 bg-black/70 text-white shadow-lg"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-
-        {titlesOpen && (
-          <div className="pop-enter absolute left-3 top-14 z-20 w-[min(18rem,calc(100%-1.5rem))] rounded-2xl border border-white/20 bg-neutral-900/92 p-2.5 shadow-xl">
-            <div className="mb-1.5 flex items-center gap-2 px-0.5">
-              <p className="text-[11px] font-bold text-zinc-300">Title kamu</p>
-              <button
-                onClick={() => setTitlesOpen(false)}
-                aria-label="Tutup title"
-                className="ml-auto flex size-7 items-center justify-center rounded-full bg-white/10 text-white"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-            {titles.length === 0 ? (
-              <p className="px-0.5 py-2 text-[11px] leading-5 text-zinc-400">
-                Belum ada title. Gabung clan atau kumpulkan XP dulu.
-              </p>
-            ) : (
-              <ul className="space-y-1.5">
-                {titles.map((t) => (
-                  <li
-                    key={t.name}
-                    className="flex items-center gap-2 rounded-lg bg-white/6 px-2.5 py-2"
-                  >
-                    <span className="text-[13px] font-bold text-white">{t.name}</span>
-                    <span className="ml-auto shrink-0 text-[10px] text-zinc-400">
-                      {t.note}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Foto profile menutupi banner, tepat di tengah layar */}
+      {/* Foto profil menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
-        <div className="relative -mt-14 flex flex-col items-center">
+        <div className="relative -mt-12 flex flex-col items-center">
+          {/* Tombol title: tepat di tengah atas foto profil, bentuk chip
+              kecil tanpa latar hitam bulat. */}
+          <button
+            onClick={() => setTitlesOpen((v) => !v)}
+            aria-label="Buka title"
+            aria-expanded={titlesOpen}
+            className={cn(
+              "z-20 -mb-1 flex h-8 items-center gap-1 rounded-full border px-3 text-[11px] font-bold transition",
+              titlesOpen
+                ? "border-violet-400 bg-violet-500/25 text-violet-100"
+                : "border-white/25 bg-black/45 text-zinc-100 backdrop-blur-sm hover:border-violet-400",
+            )}
+          >
+            <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
+            Title
+            {titles.length > 0 && (
+              <span className="rounded-full bg-white/15 px-1.5 font-mono text-[10px]">
+                {titles.length}
+              </span>
+            )}
+            <ChevronDown
+              className={cn(
+                "size-3.5 transition",
+                titlesOpen && "rotate-180",
+              )}
+            />
+          </button>
+
+          {titlesOpen && (
+            <div className="pop-enter absolute left-1/2 top-full z-30 mt-1 w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 overflow-hidden rounded-2xl border border-violet-500/30 bg-neutral-950/95 shadow-2xl">
+              <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+                <span className="flex size-6 items-center justify-center rounded-md bg-[oklch(0.86_0.16_90)]/15">
+                  <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
+                </span>
+                <p className="text-[12px] font-bold">Title kamu</p>
+                <button
+                  onClick={() => setTitlesOpen(false)}
+                  aria-label="Tutup title"
+                  className="ml-auto flex size-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              {titles.length === 0 ? (
+                <p className="px-3 py-4 text-[12px] leading-5 text-zinc-400">
+                  Belum ada title. Gabung clan atau kumpulkan XP dulu.
+                </p>
+              ) : (
+                <ul className="divide-y divide-white/8">
+                  {titles.map((t, i) => (
+                    <li key={t.name} className="flex items-center gap-2.5 px-3 py-2.5">
+                      <span
+                        className={cn(
+                          "title-shine shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold text-white",
+                          i % 2 === 0
+                            ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black"
+                            : "bg-gradient-to-r from-violet-600 to-fuchsia-500",
+                        )}
+                      >
+                        {t.name}
+                      </span>
+                      <span className="ml-auto text-right font-mono text-[10px] text-zinc-400">
+                        {t.note}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {/* Cincin gradient berdenyut di sekeliling avatar */}
           <div className="yn-avatar-ring">
             <div className="rounded-full bg-background p-[2px]">

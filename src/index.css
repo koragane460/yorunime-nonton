@@ -162,6 +162,14 @@
     @apply bg-background text-foreground;
     overflow-x: hidden;
   }
+  /* Pagar terakhir: tidak ada elemen yang boleh membuat halaman bisa
+     di-scroll horizontal di HP (itulah sumber ruang hitam di kanan). */
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: clip;
+  }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;
@@ -243,40 +251,45 @@
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgb(6 6 18 / 0.18) 0%,
-    rgb(6 6 18 / 0.32) 55%,
-    rgb(6 6 18 / 0.5) 100%
+    rgb(6 6 18 / 0.6) 0%,
+    rgb(6 6 18 / 0.72) 45%,
+    rgb(6 6 18 / 0.88) 100%
   );
-  backdrop-filter: blur(14px) saturate(125%);
-  -webkit-backdrop-filter: blur(14px) saturate(125%);
 }
 
-/* Echo banner: pantulan lembut di bawah banner.
-   Sengaja TIDAK dicerminkan (scaleY -1) supaya tidak muncul kotak hitam,
-   dan disamarkan penuh lewat mask + blur supaya menyatu dengan latar. */
-.yn-banner-echo {
+/* Latar brand YoruNime: tinta malam keunguan. Dipakai di Home dan panel
+   supaya tidak ada bidang hitam mati di belakang tombol. */
+.yn-app-bg {
+  background:
+    radial-gradient(120% 60% at 50% -10%, oklch(0.3 0.12 292 / 0.5) 0%, transparent 62%),
+    radial-gradient(90% 42% at 6% 2%, oklch(0.25 0.08 258 / 0.38) 0%, transparent 60%),
+    linear-gradient(180deg, oklch(0.17 0.035 285) 0%, oklch(0.14 0.024 280) 45%, var(--background) 100%);
+}
+
+/* Bilah sambung warna di bawah banner: sapuan tipis yang langsung hilang.
+   Dulu pakai `left/right:-8%` + blur besar, itu membuat halaman bisa
+   digeser dan muncul ruang hitam di kanan. */
+.yn-banner-fade {
   position: absolute;
-  left: -8%;
-  right: -8%;
+  inset-inline: 0;
   top: 100%;
-  height: 56px;
+  height: 40px;
   pointer-events: none;
-  filter: blur(26px) saturate(130%);
-  opacity: 0.38;
-  transform-origin: top center;
-  -webkit-mask-image: linear-gradient(
+  background: linear-gradient(
     to bottom,
-    rgb(0 0 0 / 0.9),
-    rgb(0 0 0 / 0.35) 45%,
-    transparent 92%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 0.9),
-    rgb(0 0 0 / 0.35) 45%,
-    transparent 92%
+    oklch(0.13 0.02 280 / 0.55),
+    oklch(0.13 0.02 280 / 0)
   );
 }
+
+/* Wadah banner: potong overflow supaya isinya tidak menambah lebar layar. */
+.yn-banner-box {
+  position: relative;
+  overflow: hidden;
+  overflow-x: clip;
+}
+
+
 
 /* Banner default (belum pasang banner): gelap pekat, cuma ada semburat ungu
    tipis yang bergerak pelan. Tidak ada warna-warni ramai. */

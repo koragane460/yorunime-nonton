@@ -15,6 +15,7 @@ import {
 import {
   ChevronLeft,
   Gem,
+  Inbox,
   Info,
   LogOut,
   Radio,
@@ -818,6 +819,7 @@ function ClanDetail({
   const setBackground = useMutation(api.clans.setBackground);
   const respond = useMutation(api.clans.respondRequest);
   const [tab, setTab] = useState<"member" | "top">("member");
+  const [topScope, setTopScope] = useState<"today" | "all">("today");
   const [search, setSearch] = useState("");
   const [donateOpen, setDonateOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -840,10 +842,24 @@ function ClanDetail({
       m.username.toLowerCase().includes(needle) ||
       String(m.userId).toLowerCase().includes(needle),
   );
-  const topDonate = detail.topDonateToday.filter((m: any) =>
-    m.username.toLowerCase().includes(needle),
+  const rankAll = [...(detail.topDonateAll ?? [])].sort(
+    (a: any, b: any) => b.donatedTotal - a.donatedTotal,
   );
-  const [t1, t2, t3, ...restTop] = topDonate;
+  const topDonate: any[] =
+    topScope === "all"
+      ? rankAll
+      : tab === "top"
+        ? detail.topDonateToday
+        : detail.topDonateToday.filter((m: any) =>
+            m.username.toLowerCase().includes(needle),
+          );
+  const topTotal =
+    topScope === "all"
+      ? rankAll.reduce((s: number, m: any) => s + (m.donatedTotal ?? 0), 0)
+      : detail.todayDonationsTotal;
+  const t1 = topDonate[0];
+  const t2 = topDonate[1];
+  const t3 = topDonate[2];
   void viewerNotMember;
 
   return (
@@ -885,8 +901,11 @@ function ClanDetail({
               : undefined
           }
         >
-          <div className="bg-black/25 p-4">
-            <div className="flex items-center gap-3">
+          <div className="relative p-4">
+            {/* Lapisan gelap penuh di atas foto background clan, supaya tidak
+                ada warna cerah yang bocor dari tepi. */}
+            <div className="yn-banner-veil" />
+            <div className="relative flex items-center gap-3">
               <Avatar src={c.avatarUrl} seed={c.name} className="size-14" />
               <div className="min-w-0 flex-1">
                 <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} />
@@ -987,19 +1006,29 @@ function ClanDetail({
             </div>
 
             {canPanel && (
-              <button
-                onClick={() => setPanelOpen(true)}
-                className="mt-3 w-full rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
-              >
-                <Settings className="mr-1.5 inline size-4" /> Panel {isLeader ? "Leader" : "Officer"}{" "}
-                ({detail.requests.length} request)
-              </button>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setPanelOpen(true)}
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
+                >
+                  <Settings className="size-4" /> Panel {isLeader ? "Leader" : "Officer"}
+                </button>
+                <button
+                  onClick={() => setPanelOpen(true)}
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
+                >
+                  <Inbox className="size-4" /> Request
+                  <span className="rounded-full bg-white/15 px-1.5 font-mono text-[10px]">
+                    {detail.requests.length}
+                  </span>
+                </button>
+              </div>
             )}
 
           </>
         )}
 
-        {/* Tab: Member / Top Donate Hari Ini — terbuka juga untuk yang belum join */}
+        {/* Tab: Member / Top Donate — terbuka juga untuk yang belum join */}
         <div className="tab-pill-track mt-3">
           <button
             onClick={() => setTab("member")}
@@ -1011,19 +1040,21 @@ function ClanDetail({
             onClick={() => setTab("top")}
             className={cn("tab-pill", tab === "top" && "tab-pill-active")}
           >
-            Top Donate Hari Ini ({detail.todayDonators})
+            Top Donate ({detail.todayDonators})
           </button>
         </div>
 
         {/* Search rounded-full */}
-        <div className="pill-search mt-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari member (nama atau ID)"
-          />
-        </div>
+        {tab === "member" && (
+          <div className="pill-search mt-3">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari member (nama atau ID)"
+            />
+          </div>
+        )}
 
         {tab === "member" && (
           <div className="mt-3 space-y-2.5">
@@ -1046,7 +1077,11 @@ function ClanDetail({
                     : undefined
                 }
               >
-                <div className="flex items-center gap-3 bg-black/40 p-3">
+                <div className="relative p-3">
+                  {/* Lapisan gelap penuh di atas banner member, supaya tidak
+                      ada warna cerah yang menerawang dari tepi. */}
+                  <div className="yn-banner-veil" />
+                  <div className="relative flex items-center gap-3">
                   <div className="flex flex-col items-center gap-1">
                     <Avatar src={m.image} seed={m.username} className="size-12" />
                     <RoleBadge role={m.role} />
@@ -1073,6 +1108,7 @@ function ClanDetail({
                       {formatK(m.donatedTotal)}
                     </span>
                   </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1081,25 +1117,51 @@ function ClanDetail({
 
         {tab === "top" && (
           <div className="mt-3">
-            <p className="mb-3 rounded-2xl border border-white/10 bg-card p-3 text-center text-xs">
-              Total donate hari ini terkumpul{" "}
-              <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonationsTotal}</b>{" "}
-              Sacret dari{" "}
-              <b className="text-[oklch(0.86_0.16_90)]">{detail.todayDonators}</b> member
-            </p>
+            <div className="tab-pill-track w-fit">
+              <button
+                onClick={() => setTopScope("today")}
+                className={cn("tab-pill", topScope === "today" && "tab-pill-active")}
+              >
+                Hari ini
+              </button>
+              <button
+                onClick={() => setTopScope("all")}
+                className={cn("tab-pill", topScope === "all" && "tab-pill-active")}
+              >
+                Sepanjang masa
+              </button>
+            </div>
+            <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-card px-3 py-2.5">
+              <div>
+                <p className="text-[11px] text-muted-foreground">
+                  {topScope === "today" ? "Donate hari ini" : "Total donate"}
+                </p>
+                <p className="font-mono text-lg font-bold text-[oklch(0.86_0.16_90)]">
+                  {topTotal}{" "}
+                  <span className="text-[11px] font-sans text-muted-foreground">Sacret</span>
+                </p>
+              </div>
+              <p className="text-right text-[11px] text-muted-foreground">
+                dari
+                <br />
+                <b className="font-mono text-sm text-foreground">{topDonate.length}</b> member
+              </p>
+            </div>
             {topDonate.length >= 3 && (
-              <div className="mb-3 grid grid-cols-3 items-end gap-2">
-                <TopPodium rank={2} m={t2} />
-                <TopPodium rank={1} m={t1} big />
-                <TopPodium rank={3} m={t3} />
+              <div className="mt-3 grid grid-cols-3 items-end gap-2">
+                <TopPodium rank={2} m={t2} scope={topScope} />
+                <TopPodium rank={1} m={t1} big scope={topScope} />
+                <TopPodium rank={3} m={t3} scope={topScope} />
               </div>
             )}
-            {restTop.map((m: any) => (
-              <MemberDonateRow key={m.userId} m={m} />
-            ))}
+            <div className="mt-3 space-y-1.5">
+              {topDonate.map((m: any, i: number) => (
+                <MemberDonateRow key={m.userId} m={m} rank={i + 1} scope={topScope} />
+              ))}
+            </div>
             {topDonate.length === 0 && (
               <p className="py-6 text-center text-xs text-muted-foreground">
-                Belum ada yang donate hari ini
+                Belum ada donate di periode ini
               </p>
             )}
           </div>
@@ -1191,14 +1253,29 @@ function ClanDetail({
   );
 }
 
+type DonateRow = {
+  username: string;
+  image?: string;
+  donatedToday?: number;
+  donatedTotal?: number;
+  bannerUrl?: string;
+};
+
+/** Angka yang dipakai untuk sort & tampil, sesuai periode yang dipilih. */
+function donateAmount(m: DonateRow, scope: "today" | "all"): number {
+  return scope === "all" ? (m.donatedTotal ?? 0) : (m.donatedToday ?? 0);
+}
+
 function TopPodium({
   rank,
   m,
   big,
+  scope,
 }: {
   rank: number;
-  m?: { username: string; image?: string; donatedToday: number };
+  m?: DonateRow;
   big?: boolean;
+  scope: "today" | "all";
 }) {
   if (!m) return <div />;
   return (
@@ -1206,38 +1283,35 @@ function TopPodium({
       <span className="text-lg font-black text-[oklch(0.86_0.16_90)]">{rank}</span>
       <Avatar src={m.image} seed={m.username} className={cn("mt-1", big ? "size-14" : "size-11")} />
       <p className="line-clamp-1 max-w-full px-1 text-xs font-semibold">{m.username}</p>
-      <p className="text-[10px] text-indigo-100/60">Donate Hari Ini :</p>
-      <p className="mb-1 text-xs font-bold text-[oklch(0.86_0.16_90)]">💎 {m.donatedToday}</p>
+      <p className="text-[10px] text-muted-foreground">
+        {scope === "all" ? "Sepanjang masa" : "Hari ini"}
+      </p>
+      <p className="mb-1 font-mono text-xs font-bold text-[oklch(0.86_0.16_90)]">
+        {formatK(donateAmount(m, scope))}
+      </p>
     </div>
   );
 }
 
 function MemberDonateRow({
   m,
+  rank,
+  scope,
 }: {
-  m: { username: string; image?: string; donatedToday: number; bannerUrl?: string };
+  m: DonateRow;
+  rank: number;
+  scope: "today" | "all";
 }) {
   return (
-    <div
-      className="member-row relative mb-2.5 overflow-hidden"
-      style={
-        m.bannerUrl
-          ? { backgroundImage: `url(${m.bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-          : undefined
-      }
-    >
-      <div className="flex items-center gap-3 bg-black/40 p-3">
-        <div className="flex flex-col items-center gap-1">
-          <Avatar src={m.image} seed={m.username} className="size-12" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-bold text-indigo-50">{m.username}</p>
-        </div>
-        <div className="diamond-chip">
-          <Gem className="size-4 text-violet-400" />
-          <span className="text-sm font-bold text-white">{formatK(m.donatedToday)}</span>
-        </div>
-      </div>
+    <div className="member-row flex items-center gap-3 p-2.5">
+      <span className="w-6 shrink-0 text-center font-mono text-sm font-bold text-muted-foreground">
+        {rank}
+      </span>
+      <Avatar src={m.image} seed={m.username} className="size-10" />
+      <p className="min-w-0 flex-1 truncate text-sm font-bold">{m.username}</p>
+      <span className="shrink-0 font-mono text-sm font-bold text-[oklch(0.86_0.16_90)]">
+        {formatK(donateAmount(m, scope))}
+      </span>
     </div>
   );
 }

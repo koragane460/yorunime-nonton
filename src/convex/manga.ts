@@ -138,7 +138,7 @@ async function mapLimit<T, R>(
 function parseLs4(block: string): (ComicListItem & { rank: number }) | null {
   const slug = block.match(/href="\/manga\/([^"/]+)\/"/)?.[1];
   if (!slug) return null;
-  const image = block.match(/data-src="([^"]+)"/)?.[1] ?? "";
+  const image = hdCover(block.match(/data-src="([^"]+)"/)?.[1] ?? "");
   const title = text(block.match(/<h4><a[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "");
   const rank = Number(block.match(/class="rank-num">(\d+)/)?.[1] ?? 0);
   const statLine = text(block.match(/class="ls4s">([\s\S]*?)<\/span>/)?.[1] ?? "");
@@ -173,11 +173,21 @@ function parseRanking(html: string) {
 
 // -------------------------------------------------------------- parser ----
 
+/**
+ * Cover komik dari listing hanya dikirim resolusi kecil (`?resize=240,280`).
+ * Kalau dipakai di hero yang besar, hasilnya pecah dan pecahanSamplingBlur.
+ * Jadi naikkan ke ukuran yang masih ringan tapi tajam.
+ */
+function hdCover(url: string): string {
+  if (!url) return url;
+  return url.replace(/([?&])resize=\d+,\d+/, "$1resize=720,840");
+}
+
 /** Kartu katalog (daftar-komik / pencarian): <article class="manga-card"> */
 function parseCatalogCard(block: string): ComicListItem | null {
   const slug = block.match(/href="\/manga\/([^"/]+)\/"/)?.[1];
   if (!slug) return null;
-  const image = block.match(/data-src="([^"]+)"/)?.[1] ?? "";
+  const image = hdCover(block.match(/data-src="([^"]+)"/)?.[1] ?? "");
   const title = text(block.match(/<h4>\s*<a[^>]*>([\s\S]*?)<\/a>\s*<\/h4>/)?.[1] ?? "");
   const meta = block.match(/<p class="meta">([\s\S]*?)<\/p>/)?.[1] ?? "";
   const [typePart, statusPart] = meta.split(/<br\s*\/?>/i);
@@ -213,7 +223,7 @@ function parseCatalog(html: string): ComicListItem[] {
 function parseLs2(block: string): (ComicListItem & { latestUrl?: string }) | null {
   const slug = block.match(/href="\/manga\/([^"/]+)\/"/)?.[1];
   if (!slug) return null;
-  const image = block.match(/data-src="([^"]+)"/)?.[1] ?? "";
+  const image = hdCover(block.match(/data-src="([^"]+)"/)?.[1] ?? "");
   const title = text(block.match(/<h3><a[^>]*>([\s\S]*?)<\/a><\/h3>/)?.[1] ?? "");
   const meta = text(block.match(/<span class="ls2t">([\s\S]*?)<\/span>/)?.[1] ?? "");
   const flag = block.match(/class="flag" src="\/asset\/img\/(\w+)\.png"/)?.[1]?.toLowerCase();
@@ -264,7 +274,7 @@ function parseDetail(html: string) {
   const synopsis = text(
     html.match(/<p class="desc" itemprop="description">([\s\S]*?)<\/p>/)?.[1] ?? "",
   );
-  const image = html.match(/<div class="ims">\s*<img src="([^"]+)"/)?.[1] ?? "";
+  const image = hdCover(html.match(/<div class="ims">\s*<img src="([^"]+)"/)?.[1] ?? "");
   const rawType = (html.match(/itemprop="additionalType" content="([^"]+)"/)?.[1] ?? "").toLowerCase();
   const kind: ComicKind = rawType.includes("manhwa") ? "manhwa" : "manga";
   const statusRaw = (html.match(/itemprop="creativeWorkStatus" content="([^"]+)"/)?.[1] ?? "").trim();
@@ -622,6 +632,26 @@ export const detail = action({
   },
 });
 
+/** URL chapter asli dari daftar chapter di halaman detail seri. */
+async function chapterUrlFor(
+  ctx: any,
+  slug: string,
+  chapter: number,
+): Promise<string | undefined> {
+  const d = await cached<ReturnType<typeof parseDetail> | null>(
+    ctx,
+    `comic:detail:${slug}`,
+    DETAIL_TTL,
+    async () => {
+      const html = await fetchHtml(`${SITE}/manga/${slug}/`);
+      if (!html) return null;
+      const parsed = parseDetail(html);
+      return parsed.title ? parsed : null;
+    },
+  );
+  return d?.chapters?.find((c) => c.number === chapter)?.url;
+}
+
 /** URL gambar untuk satu chapter (urutan baca). */
 export const pages = action({
   args: { slug: v.string(), chapter: v.number() },
@@ -633,7 +663,15 @@ export const pages = action({
       key,
       DETAIL_TTL,
       async () => {
-        const html = await fetchHtml(`${SITE}/${s}-chapter-${chapter}/`);
+        // URL chapter tidak selalu memakai slug yang sama dengan slug seri
+        // (mis. seri "komik-one-piece-indo" punya chapter "/one-piece-chapter-1/").
+        // Jadi coba pola langsung dulu, kalau gagal ambil URL aslinya dari
+        // daftar chapter di halaman detail.
+        let html = await fetchHtml(`${SITE}/${s}-chapter-${chapter}/`);
+        if (!html) {
+          const alt = await chapterUrlFor(ctx, s, chapter);
+          if (alt) html = await fetchHtml(`${SITE}${alt}`);
+        }
         if (!html) return null;
         const found: { id: number; url: string }[] = [];
         const re = /<img\s[^>]*>/g;
