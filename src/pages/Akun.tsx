@@ -312,7 +312,11 @@ function AkunContent() {
           (history ?? []).map((h: any) => (
             <button
               key={h._id}
-              onClick={() => navigate(`/nonton?anime=${h.animeId}&ep=`)}
+              onClick={() =>
+                navigate(
+                  `/nonton?anime=${h.animeId}&ep=&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
+                )
+              }
               className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
             >
               <img src={h.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />
@@ -378,7 +382,11 @@ function AkunContent() {
           (favorites ?? []).map((f: any) => (
             <button
               key={f._id}
-              onClick={() => navigate(`/nonton?anime=${f.animeId}`)}
+              onClick={() =>
+                navigate(
+                  `/nonton?anime=${f.animeId}&judul=${encodeURIComponent(f.animeTitle ?? "")}`,
+                )
+              }
               className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
             >
               <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />                <Heart className="size-4 fill-violet-400 text-violet-400" />

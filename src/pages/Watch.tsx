@@ -567,7 +567,7 @@ function WatchContent() {
 
   useEffect(() => {
     if (animeId) {
-      detail({ id: animeId })
+      detail({ id: animeId, title: params.get("judul") ?? undefined })
         .then((d: any) => {
           setDetailData(d);
           // Tanpa parameter episode → langsung buka episode 1.
@@ -588,9 +588,15 @@ function WatchContent() {
   // server: "Direct HLS · SUB".
   useEffect(() => {
     if (!epParam || !detailData || detailData.error) return;
+    // Dua bentuk id episode:
+    //  - "<malId>__ep<no>" untuk anime dari AniList/Jikan (MAL id).
+    //  - id episode bebas (mis. Otakudesu) untuk anime tanpa MAL id. Nomor
+    //    episodenya diambil dari daftar detail, dan backend hanya memakai
+    //    sumber subtitle Indonesia karena MegaPlay butuh MAL id.
     const mm = epParam.match(/^(\d+)__ep(\d+)$/);
-    if (!mm) return;
-    const key = `${mm[1]}__ep${Number(mm[2]) || 1}`;
+    const epNumber = mm ? Number(mm[2]) || 1 : (currentEp?.number ?? 1);
+    const malId = mm ? mm[1] : (/^\d+$/.test(animeId) ? animeId : undefined);
+    const key = `${malId ?? animeId}__ep${epNumber}`;
     const applyData = (d: any) => {
       if (!d?.ok) {
         setDirectErr(d?.reason ?? "Episode belum tersedia");
@@ -634,8 +640,8 @@ function WatchContent() {
       return;
     }
     resolveDirect({
-      malId: mm[1],
-      ep: Number(mm[2]) || 1,
+      malId,
+      ep: epNumber,
       title: detailData.title,
     })
       .then((d: any) => {
@@ -656,12 +662,13 @@ function WatchContent() {
     let alive = true;
     const jobs = targets.map((next: any) => {
       const mm = next?.id?.match?.(/^(\d+)__ep(\d+)$/);
-      if (!mm) return null;
-      const key = `${mm[1]}__ep${Number(mm[2]) || 1}`;
+      const epNumber = mm ? Number(mm[2]) || 1 : (next?.number ?? 1);
+      const malId = mm ? mm[1] : (/^\d+$/.test(animeId) ? animeId : undefined);
+      const key = `${malId ?? animeId}__ep${epNumber}`;
       if (resolvedRef.current.has(key)) return null;
       return resolveDirect({
-        malId: mm[1],
-        ep: Number(mm[2]) || 1,
+        malId,
+        ep: epNumber,
         title: detailData.title,
       })
         .then((d: any) => {

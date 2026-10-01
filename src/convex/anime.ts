@@ -86,9 +86,18 @@ async function fetchJson(url: string, timeoutMs = 12_000): Promise<any> {
   return await res.json();
 }
 
+// Base API data anime. Kalau env belum diisi, pakai API publik Otakudesu
+// supaya katalog, detail, dan sinopsis tetap jalan tanpa konfigurasi.
+const PUBLIC_ANIME_API = "https://otakudesu-scrapper.vercel.app";
+
 function apiBase(): string | null {
-  const base = process.env.ANIME_API_BASE;
-  return base && base.startsWith("http") ? base.replace(/\/+$/, "") : null;
+  const raw =
+    process.env.ANIME_API_BASE ??
+    process.env.ANIME_API_URL ??
+    process.env.OTAKUDESU_API ??
+    process.env.OTAKUDESU_API_BASE;
+  const base = String(raw ?? "").trim() || PUBLIC_ANIME_API;
+  return base.startsWith("http") ? base.replace(/\/+$/, "") : PUBLIC_ANIME_API;
 }
 
 const LIST_TTL = 15 * 60 * 1000;
@@ -233,6 +242,8 @@ const ANILIST_FIELDS = `
   status
   seasonYear
   genres
+  isAdult
+  studios(isMain: true) { nodes { name } }
   description(asHtml: false)
   nextAiringEpisode { episode }
 `;
@@ -338,6 +349,11 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
     ...card,
     genres: Array.isArray(m.genres) ? m.genres : [],
     year: m.seasonYear ?? undefined,
+    studio:
+      m.studios?.nodes?.[0]?.name ??
+      m.studios?.nodes?.map((n: any) => n?.name).filter(Boolean).join(", ") ??
+      undefined,
+    rating: m.isAdult ? "Rating 17+" : "Rating 13+",
     episodes: total,
     synopsis,
     synopsisId: synopsisId ?? undefined,
@@ -421,13 +437,36 @@ function odList(json: any): AnimeCard[] {
   }));
 }
 
+/** Sinopsis Otakudesu datang sebagai objek paragraphList, bukan string. */
+function otakuSynopsis(v: any): string {
+  if (!v) return "";
+  if (typeof v === "string") return v.replace(/<[^>]*>/g, " ").trim();
+  const parts = Array.isArray(v?.paragraphList)
+    ? v.paragraphList
+    : Array.isArray(v)
+      ? v
+      : [];
+  return parts
+    .map((p: any) => (typeof p === "string" ? p : (p?.text ?? "")))
+    .filter(Boolean)
+    .join("\n\n")
+    .replace(/<[^>]*>/g, " ")
+    .trim();
+}
+
 async function otakuDetail(id: string): Promise<AnimeDetail> {
   const base = apiBase()!;
   const json = await fetchJson(`${base}/otakudesu/anime/${encodeURIComponent(id)}`);
   const d = json?.data ?? {};
-  const genres = (d.genres ?? []).map((x: any) =>
-    typeof x === "string" ? x : (x.genreName ?? x.name ?? ""),
-  );
+  // Genre ada di `genreList` (objek { title }) atau `genres` (string/objek).
+  const genres = [
+    ...(Array.isArray(d.genreList) ? d.genreList : []),
+    ...(Array.isArray(d.genres) ? d.genres : []),
+  ]
+    .map((x: any) =>
+      typeof x === "string" ? x : (x?.title ?? x?.genreName ?? x?.name ?? ""),
+    )
+    .filter(Boolean) as string[];
   const raw = d.episodeList ?? d.data?.episodeList ?? [];
   const episodeList: EpisodeItem[] = (Array.isArray(raw) ? raw : []).map((e: any, i: number) => {
     const title = e.episodeTitle ?? e.title ?? e.episode ?? `Episode ${i + 1}`;
@@ -437,10 +476,25 @@ async function otakuDetail(id: string): Promise<AnimeDetail> {
       number: num,
       title,
       aired: e.uploadedOn ?? e.releaseDate ?? undefined,
-      duration: "24 menit",
+      duration: d.duration ?? "24 menit",
     };
   });
   const status = String(d.status ?? "");
+  const synopsis = otakuSynopsis(d.synopsis);
+  // Jumlah episode dari katalog lebih dipercaya daripada panjang daftar:
+  // kadang daftar episode belum lengkap padahal anime sudah selesai tayang.
+  const declared = odNum(d.episodes);
+  const total = Math.max(episodeList.length, declared ?? 0);
+  const episodeAll: EpisodeItem[] =
+    episodeList.length === total
+      ? episodeList
+      : Array.from({ length: total }, (_, i) => ({
+          id: `${id}__ep${i + 1}`,
+          number: i + 1,
+          title: `Episode ${i + 1}`,
+          duration: d.duration ?? "24 menit",
+        }));
+  const year = Number(String(d.aired ?? "").match(/\b(19|20)\d{2}\b/)?.[0]);
   return {
     source: "otakudesu",
     id,
@@ -448,12 +502,14 @@ async function otakuDetail(id: string): Promise<AnimeDetail> {
     image: d.poster ?? "",
     score: d.score ? odNum(d.score) : undefined,
     status: status.includes("Ongoing") ? "Ongoing" : status.includes("Completed") ? "Completed" : "OVA",
-    synopsis: String(d.synopsis ?? "").replace(/<[^>]*>/g, "").trim(),
+    synopsis: synopsis || "Sinopsis belum tersedia.",
+    synopsisId: synopsis || undefined,
     genres,
-    studio: d.studios ?? undefined,
+    studio: typeof d.studios === "string" ? d.studios : (d.studios?.[0] ?? undefined),
     rating: d.rating ?? undefined,
-    totalEpisodes: episodeList.length,
-    episodeList,
+    year: Number.isFinite(year) ? year : undefined,
+    totalEpisodes: total,
+    episodeList: episodeAll,
   };
 }
 
@@ -885,15 +941,22 @@ export const animeSimilar = action({
 });
 
 export const animeDetail = action({
-  args: { id: v.string(), source: v.optional(v.string()) },
-  handler: async (runCtx, { id, source }) =>
-    cached(runCtx, `detail:${source ?? "auto"}:${id}`, DETAIL_TTL, async () => {
-      const malId = String(id).replace(/\D/g, "");
-      // 1) Otakudesu hanya untuk kartu yang memang dari otakudesu (id-nya
-      //    berbeda dari MAL id — mencampur keduanya bikin judul ketuker).
-      if (source === "otakudesu" && apiBase()) {
+  args: {
+    id: v.string(),
+    source: v.optional(v.string()),
+    title: v.optional(v.string()),
+  },
+  handler: async (runCtx, { id, source, title }) =>
+    cached(runCtx, `detail:${source ?? "auto"}:${id}:${title ?? ""}`, DETAIL_TTL, async () => {
+      const raw = String(id ?? "").trim();
+      const isMalId = /^\d+$/.test(raw);
+      const malId = isMalId ? raw : raw.replace(/\D/g, "");
+      // 1) Otakudesu untuk kartu yang memang dari otakudesu (id-nya slug,
+      //    bukan MAL id — mencampur keduanya bikin judul ketuker). Dipakai juga
+      //    kalau id-nya sama sekali bukan angka, karena itu pasti bukan MAL id.
+      if ((source === "otakudesu" || !isMalId) && apiBase()) {
         try {
-          return await otakuDetail(id);
+          return await otakuDetail(raw);
         } catch {
           /* lanjut */
         }
@@ -903,6 +966,29 @@ export const animeDetail = action({
         try {
           const d = await anilistDetail(malId);
           if (d) return d;
+        } catch {
+          /* lanjut */
+        }
+      }
+      // 2b) Id tidak dikenal sebagai MAL id, tapi kartu membawa judulnya.
+      // Cari judul itu di AniList supaya sinopsis, studio, rating, dan jumlah
+      // episodenya benar — bukan lagiplaceholder "Anime" yang kosong.
+      const wanted = String(title ?? "").trim();
+      if (wanted.length > 2) {
+        try {
+          const d = await aniGraphql(
+            `query($s:String){ Page(page:1, perPage:5){ media(type:ANIME, search:$s, sort:SEARCH_MATCH){ ${ANILIST_FIELDS} } } }`,
+            { s: wanted },
+          );
+          const hit = (d?.Page?.media ?? []).find((m: any) => m?.idMal);
+          if (hit?.idMal) {
+            const found = await anilistDetail(String(hit.idMal));
+            if (found) {
+              // Judul dari kartu lebih dikenal user daripada hasil pencarian,
+              // tapi id tetap memakai id kartu supaya URL tidak berubah.
+              return { ...found, id: raw, title: wanted || found.title };
+            }
+          }
         } catch {
           /* lanjut */
         }
@@ -931,12 +1017,14 @@ export const animeDetail = action({
           episodeList: eps,
         } as AnimeDetail;
       }
-      // 5) Terakhir: tetap bisa dibuka & ditonton episode 1.
+      // 5) Terakhir. Placeholder "Anime" hanya muncul kalau benar-benar tidak
+      //    ada data sama sekali. Kalau kartu membawa judul, judul itu tetap
+      //    dipakai supaya halaman tidak menampilkan teks generik.
       const eps = synthEpisodes({ mal_id: malId || "0", episodes: 1 }, []);
       return {
         source: "fallback" as const,
-        id,
-        title: "Anime",
+        id: raw,
+        title: wanted || "Anime",
         image: "",
         status: "Ongoing",
         type: "TV",

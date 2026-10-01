@@ -213,7 +213,9 @@ export function ProfileSheet({
                     key={h._id}
                     onClick={() => {
                       onClose();
-                      navigate(`/nonton?anime=${h.animeId}&ep=`);
+                      navigate(
+                        `/nonton?anime=${h.animeId}&ep=&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
+                      );
                     }}
                     className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
                   >
@@ -282,7 +284,9 @@ export function ProfileSheet({
                     key={f._id}
                     onClick={() => {
                       onClose();
-                      navigate(`/nonton?anime=${f.animeId}`);
+                      navigate(
+                        `/nonton?anime=${f.animeId}&judul=${encodeURIComponent(f.animeTitle ?? "")}`,
+                      );
                     }}
                     className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
                   >

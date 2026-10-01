@@ -243,7 +243,14 @@ function HomeContent() {
     return () => clearInterval(t);
   }, [heroItems.length]);
 
-  const openAnime = (id: string) => setPickId(id);
+  // Judul ikut disimpan: kartu dari sumber non-MAL (mis. Otakudesu) punya id
+  // berupa slug, jadi tanpa judul backend tidak bisa menemukan sinopsis,
+  // studio, rating, dan jumlah episodenya.
+  const [pickTitle, setPickTitle] = useState<string | undefined>(undefined);
+  const openAnime = (id: string, title?: string) => {
+    setPickId(id);
+    setPickTitle(title);
+  };
 
   // Ukur posisi tombol pencarian lalu tulis ke --yn-tint-end pada elemen latar.
   // Dicek ulang saat ukuran layar berubah supaya batasnya tetap tepat.
@@ -323,7 +330,7 @@ function HomeContent() {
                   </p>
                   <div className="mt-2.5 flex gap-2">
                     <button
-                      onClick={() => openAnime(a.id)}
+                      onClick={() => openAnime(a.id, a.title)}
                       className="rounded-full bg-violet-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-violet-500"
                     >
                       Lihat detail
@@ -444,7 +451,7 @@ function HomeContent() {
               {todayAiring.map((a) => (
                 <button
                   key={`${a.id}-${a.episode}`}
-                  onClick={() => openAnime(a.id)}
+                  onClick={() => openAnime(a.id, a.title)}
                   className="w-28 shrink-0 text-left"
                 >
                   <div className="relative">
@@ -452,7 +459,7 @@ function HomeContent() {
                       title={a.title}
                       image={a.image}
                       imageOnly
-                      onClick={() => openAnime(a.id)}
+                      onClick={() => openAnime(a.id, a.title)}
                     />
                     <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold text-primary-foreground">
                       Ep {a.episode}
@@ -523,8 +530,15 @@ function HomeContent() {
       {pickId && (
         <AnimeDetailScreen
           animeId={pickId}
-          onClose={() => setPickId(null)}
-          onPick={(id) => setPickId(id)}
+          animeTitle={pickTitle}
+          onClose={() => {
+            setPickId(null);
+            setPickTitle(undefined);
+          }}
+          onPick={(id, title) => {
+            setPickId(id);
+            setPickTitle(title);
+          }}
         />
       )}
     </div>
@@ -1409,12 +1423,14 @@ function DMScreen({
 
 function AnimeDetailScreen({
   animeId,
+  animeTitle,
   onClose,
   onPick,
 }: {
   animeId: string;
+  animeTitle?: string;
   onClose: () => void;
-  onPick: (id: string) => void;
+  onPick: (id: string, title?: string) => void;
 }) {
   useHideNavOnMount();
   const navigate = useNavigate();
@@ -1430,7 +1446,7 @@ function AnimeDetailScreen({
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
 
   useEffect(() => {
-    getDetail({ id: animeId })
+    getDetail({ id: animeId, title: animeTitle })
       .then((d: any) => setDetail(d))
       .catch(() => setDetail({ error: true }));
     setSimilar([]);
@@ -1438,7 +1454,7 @@ function AnimeDetailScreen({
       .then((r: any) => setSimilar((r as AnimeCardT[]) ?? []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animeId]);
+  }, [animeId, animeTitle]);
 
   if (!detail)
     return (
@@ -1565,7 +1581,13 @@ function AnimeDetailScreen({
           </button>
 
           <button
-            onClick={() => navigate(`/nonton?anime=${animeId}`)}
+            onClick={() =>
+              navigate(
+                `/nonton?anime=${animeId}${
+                  animeTitle ? `&judul=${encodeURIComponent(animeTitle)}` : ""
+                }`,
+              )
+            }
             className="mt-4 w-full rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
           >
             ▶ Nonton
@@ -1618,7 +1640,7 @@ function AnimeDetailScreen({
                 {similar.map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => onPick(s.id)}
+                    onClick={() => onPick(s.id, s.title)}
                     className="w-24 shrink-0 text-left"
                   >
                     <img

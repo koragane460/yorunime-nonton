@@ -87,9 +87,44 @@ const HLS_LABEL = "MegaPlay · SUB";
 const resultCache = new Map<string, { value: any; at: number }>();
 const RESULT_TTL = 30 * 60_000;
 
+/** Bentuk hasil yang sama dengan resolveEpisode, dirakit dari sumber Indo saja. */
+async function resolveByTitle(
+  ep: number,
+  title: string | undefined,
+): Promise<Record<string, any> | { ok: false; reason: string }> {
+  if (!title) return { ok: false as const, reason: "Episode belum tersedia" };
+  const indo = await resolveIndo(title, ep).catch(() => []);
+  const sources = indo.map((s) => ({ label: s.label, url: s.url, type: s.type }));
+  if (sources.length === 0) {
+    return { ok: false as const, reason: "Episode belum tersedia" };
+  }
+  return {
+    ok: true as const,
+    sources,
+    subtitle: null,
+    subtitles: [],
+    subTracks: [],
+    hasIndonesian: true,
+    bakedSubs: true,
+    intro: null,
+    outro: null,
+    megaM3u8: null,
+    megaRef: REF,
+  };
+}
+
 export const resolveEpisode = action({
-  args: { malId: v.string(), ep: v.number(), title: v.optional(v.string()) },
+  args: {
+    malId: v.optional(v.string()),
+    ep: v.number(),
+    title: v.optional(v.string()),
+  },
   handler: async (_ctx, { malId, ep, title }) => {
+    // Anime dari sumber non-MAL (mis. Otakudesu) tidak punya MAL id, jadi
+    // MegaPlay tidak bisa dipakai. Hanya sumber subtitle Indonesia yang bisa.
+    if (!malId || !/^\d+$/.test(malId)) {
+      return resolveByTitle(ep, title);
+    }
     const key = `${malId}__ep${ep}`;
     const hit = resultCache.get(key);
     if (hit && Date.now() - hit.at < RESULT_TTL) return hit.value;

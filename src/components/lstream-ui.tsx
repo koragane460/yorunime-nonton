@@ -132,7 +132,9 @@ export function AnimeGrid({
     score?: number;
     status?: string;
   }[];
-  onPick: (id: string) => void;
+  // Judul ikut diteruskan supaya halaman detail bisa mencari metadata anime
+  // dari kartu penghasilnya, walau id-nya bukan MAL id.
+  onPick: (id: string, title?: string) => void;
   ranked?: boolean;
   newIds?: Set<string>;
 }) {
@@ -148,7 +150,7 @@ export function AnimeGrid({
           status={a.status}
           rank={ranked ? i + 1 : undefined}
           isNew={newIds?.has(a.id)}
-          onClick={() => onPick(a.id)}
+          onClick={() => onPick(a.id, a.title)}
         />
       ))}
     </div>
