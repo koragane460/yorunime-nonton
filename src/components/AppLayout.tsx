@@ -55,7 +55,7 @@ export function AppLayout({
   return (
     <div className="flex min-h-dvh w-full flex-col items-center">
       {showPanel && user && (
-        <div className="w-full max-w-md bg-background px-4 md:max-w-2xl lg:max-w-4xl">
+        <div className="w-full px-4 md:mx-auto md:max-w-2xl md:px-6 lg:max-w-4xl">
           <AccountPanel
             onOpen={() => navigate("/akun")}
             name={user.username ?? "user"}
@@ -78,12 +78,13 @@ export function AppLayout({
           />
         </div>
       )}
-      {/* Animasi halus setiap kali layar berpindah — konten terpusat di PC */}
+      {/* Konten full-bleed di HP; di desktop (md+) konten tetap di tengah biar
+          enak dibaca. Tidak ada lagi kolom kosong di kanan layar HP. */}
       <div
         key={location.pathname}
-        className="screen-enter flex w-full max-w-md flex-1 flex-col px-4 md:max-w-2xl lg:max-w-4xl"
+        className="screen-enter w-full flex-1 md:mx-auto md:max-w-2xl lg:max-w-4xl"
       >
-        {children}
+        <div className="px-4 md:px-6">{children}</div>
       </div>
       <BottomNav />
       <MiniPlayerHost />
@@ -534,7 +535,7 @@ function BottomNav() {
             className="fixed inset-0 z-40"
             onClick={() => setSwitcher(false)}
           />
-          <div className="pop-enter fixed inset-x-0 bottom-[68px] z-50 mx-auto w-full max-w-md px-6 md:max-w-2xl lg:max-w-4xl">
+          <div className="pop-enter fixed inset-x-0 bottom-[68px] z-50 mx-auto w-full max-w-2xl px-6 lg:max-w-4xl">
             <div className="overflow-hidden rounded-2xl border border-violet-500/40 bg-background/95 shadow-2xl backdrop-blur">
               <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ganti kategori
@@ -573,9 +574,9 @@ function BottomNav() {
           </div>
         </>
       )}
-      {/* Navbar lurus full-width, solid — tanpa footer teks */}
+      {/* Navbar full width. Angka kolom ikut melebar di desktop. */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
-        <div className="mx-auto grid w-full max-w-md grid-cols-4 md:max-w-2xl lg:max-w-4xl">
+        <div className="mx-auto grid w-full grid-cols-4 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
             const base = it.path.split("?")[0];
             const active =
