@@ -227,6 +227,7 @@ export const getPublicProfile = query({
       premium: (u.premiumUntil ?? 0) > now,
       premiumDays: Math.max(0, Math.floor(((u.premiumUntil ?? 0) - now) / 86400000)),
       staffRole: u.staffRole,
+      devTagged: (u.devTagUntil ?? 0) > now,
       hideOnline: u.hideOnline,
       clanTag: clan?.tag,
       clanTagIcon: clan?.tagIcon,

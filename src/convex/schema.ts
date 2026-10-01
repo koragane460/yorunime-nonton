@@ -43,6 +43,9 @@ const schema = defineSchema(
       // Kode UID 7 karakter (huruf + angka) sebagai identitas akun saat
       // verifikasi pembelian.
       uidCode: v.optional(v.string()),
+      // Developer menandai akun lewat "@username" di panel dev. Selama aktif,
+      // akun yang ditandai tampil dengan logo merah.
+      devTagUntil: v.optional(v.number()),
       hideOnline: v.optional(v.boolean()),
       autoRejectFriend: v.optional(v.boolean()),
       autoRejectFriendAction: v.optional(v.string()),
@@ -320,6 +323,7 @@ const schema = defineSchema(
       analysisNote: v.optional(v.string()),
       analyzedBy: v.optional(v.string()),
       note: v.optional(v.string()),
+      mentions: v.optional(v.array(v.string())),
       paymentRef: v.optional(v.string()),
       paymentUrl: v.optional(v.string()),
       createdAt: v.number(),
@@ -332,10 +336,14 @@ const schema = defineSchema(
     // Pengaturan pembayaran manual (QRIS statis). Satu baris saja, id tetap.
     paymentSettings: defineTable({
       qrUrl: v.optional(v.string()),
+      // Foto QRIS yang diunggah developer lewat panel (disimpan di file storage).
+      qrStorageId: v.optional(v.string()),
       accountName: v.optional(v.string()),
       accountLabel: v.optional(v.string()),
       note: v.optional(v.string()),
       contact: v.optional(v.string()),
+      // Email tujuan notifikasi order yang tidak bisa dipastikan AI.
+      devEmail: v.optional(v.string()),
       autoApprove: v.optional(v.boolean()),
       autoApproveMax: v.optional(v.number()),
       updatedAt: v.number(),

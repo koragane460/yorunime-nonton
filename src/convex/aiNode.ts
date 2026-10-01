@@ -106,8 +106,8 @@ export const analyzeProof = internalAction({
       "- verified hanya kalau benar-benar terlihat layar transfer berhasil dengan nominal persis Rp " +
         args.expectedAmount +
         ".",
-      "- rejected kalau nominal jelas berbeda, transfer gagal, atau gambar bukan bukti transfer.",
-      "- manual kalau nominal tidak terbaca / gambar buram / tidak ada bukti.",
+      "- rejected kalau gambar buram, nominal jelas berbeda, transfer gagal, atau gambar bukan bukti transfer.",
+      "- manual kalau nominalnya tidak terbaca atau layar transfer tidak terlihat jelas. Ini berarti developer akan memeriksanya sendiri, jadi jangan menebak.",
     ]
       .filter(Boolean)
       .join("\n");

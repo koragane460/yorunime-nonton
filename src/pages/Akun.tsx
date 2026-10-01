@@ -13,6 +13,7 @@ import {
   BlueCheck,
   ClanTag,
   LevelBadge,
+  RedMark,
   SectionTitle,
   ShineBadge,
   TitleBadge,
@@ -143,6 +144,7 @@ function AkunContent() {
               {user.username}
             </p>
             {premium && <BlueCheck className="size-5 shrink-0" />}
+            {(user.devTagUntil ?? 0) > Date.now() && <RedMark className="size-5" />}
             <TitleBadge role={user.staffRole} />
             <span className="shrink-0 text-xs text-muted-foreground">
               {displayId(user.seqId, user._id)}

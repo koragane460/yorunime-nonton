@@ -372,6 +372,21 @@ export const devGiveClanPremium = mutation({
   },
 });
 
+/** Cari user berdasarkan username persis (dipakai panel dev). */
+export const findByExactUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    await staffGuard(ctx, "mod");
+    const clean = username.trim().replace(/^@/, "");
+    const row = await ctx.db
+      .query("users")
+      .withIndex("username", (q) => q.eq("username", clean))
+      .first();
+    if (!row) return null;
+    return { _id: row._id, username: row.username ?? clean, image: row.image };
+  },
+});
+
 /** Developer memberi / mencabut izin akses konten 18+ ke satu user. */
 export const toggleAdultAccess = mutation({
   args: { targetId: v.id("users") },

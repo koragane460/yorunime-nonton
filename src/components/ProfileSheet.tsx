@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
 import { BlurBanner } from "@/components/BlurBanner";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
@@ -131,6 +131,7 @@ export function ProfileSheet({
                 {profile.username ?? "user"}
               </p>
               {profile.premium && <BlueCheck className="size-5" />}
+              {profile.devTagged && <RedMark className="size-5" />}
               <TitleBadge role={profile.staffRole} />
             </div>
             <p className="text-xs text-zinc-400">

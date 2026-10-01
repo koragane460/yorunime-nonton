@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Ban,
+  ChevronDown,
+  ChevronUp,
   Crown,
   Gem,
   Infinity as InfinityIcon,
@@ -16,6 +18,7 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
+  Upload,
   UserPlus,
   VolumeX,
   X,
@@ -162,6 +165,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         )}
       </div>
 
+      {isDev && <GrantPremiumPanel />}
       {isDev && <ManualPaymentPanel />}
       {isDev && (
         <button
@@ -279,30 +283,37 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
  * rekening, lalu menyetujui order yang sudah dibayar user.
  */
 function ManualPaymentPanel() {
-  const config = useQuery(api.payments.manualConfig, {});
+  const config = useQuery(api.payments.devSettings, {});
   const pending = useQuery(api.payments.pendingManualOrders, {});
+  const qrFile = useQuery(
+    api.storage.getUrl,
+    config?.qrStorageId ? { storageId: config.qrStorageId } : "skip",
+  );
   const save = useMutation(api.payments.saveManualConfig);
   const approve = useMutation(api.payments.approveManualOrder);
-  const simulate = useMutation(api.payments.devSimulatePurchase);
-  const simulateBot = useAction(api.payments.devSimulateWithBot);
+  const reject = useMutation(api.payments.rejectManualOrder);
   const testBot = useAction(api.payments.devTestBot);
-  const { user: me } = useAuth();
+  const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const [autoApprove, setAutoApprove] = useState(false);
   const [autoMax, setAutoMax] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
+  const [qrStorageId, setQrStorageId] = useState("");
   const [accountName, setAccountName] = useState("");
   const [accountLabel, setAccountLabel] = useState("");
   const [contact, setContact] = useState("");
+  const [devEmail, setDevEmail] = useState("");
   const [note, setNote] = useState("");
 
   useEffect(() => {
     if (!config) return;
     setQrUrl(config.qrUrl ?? "");
+    setQrStorageId(config.qrStorageId ?? "");
     setAccountName(config.accountName ?? "");
     setAccountLabel(config.accountLabel ?? "");
     setContact(config.contact ?? "");
+    setDevEmail(config.devEmail ?? "");
     setNote(config.note ?? "");
     setAutoApprove(config.autoApprove === true);
     setAutoMax(config.autoApproveMax ? String(config.autoApproveMax) : "");
@@ -328,6 +339,12 @@ function ManualPaymentPanel() {
           <Field2 label="Nama pemilik rekening" value={accountName} onChange={setAccountName} placeholder="Nama di akun bank" />
           <Field2 label="Bank / e-wallet" value={accountLabel} onChange={setAccountLabel} placeholder="mis. GoPay - 08xx" />
           <Field2 label="Kontak (WA/Discord)" value={contact} onChange={setContact} placeholder="wa.me/xxxx" />
+          <Field2
+            label="Email developer (notifikasi order)"
+            value={devEmail}
+            onChange={setDevEmail}
+            placeholder="email@kamu.com"
+          />
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -335,17 +352,50 @@ function ManualPaymentPanel() {
             placeholder="Instruksi tambahan (opsional)"
             className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none"
           />
-          {qrUrl && (
-            <img src={qrUrl} alt="QRIS" className="h-28 w-28 rounded-lg bg-white object-contain p-1" />
+          <label className="flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-emerald-500/50 py-2 text-[11px] font-bold text-emerald-300">
+            <Upload className="size-3.5" /> Unggah foto QRIS
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                try {
+                  const uploadUrl = await getUploadUrl();
+                  const res = await fetch(uploadUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": f.type || "image/jpeg" },
+                    body: f,
+                  });
+                  if (!res.ok) throw new Error("Unggah gagal");
+                  const { storageId } = (await res.json()) as { storageId: string };
+                  setQrStorageId(storageId);
+                  toast.success("Foto QRIS siap, tekan Simpan pengaturan");
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Unggah gagal");
+                }
+              }}
+            />
+          </label>
+          {(qrFile || qrUrl) && (
+            <img
+              src={qrFile ?? qrUrl}
+              alt="QRIS"
+              className="h-28 w-28 rounded-lg bg-white object-contain p-1"
+            />
           )}
           <button
             onClick={async () => {
               try {
                 await save({
                   qrUrl: qrUrl || undefined,
+                  qrStorageId: qrStorageId || undefined,
                   accountName: accountName || undefined,
                   accountLabel: accountLabel || undefined,
                   contact: contact || undefined,
+                  devEmail: devEmail || undefined,
                   note: note || undefined,
                   autoApprove,
                   autoApproveMax: autoMax ? Number(autoMax) : 0,
@@ -378,41 +428,6 @@ function ManualPaymentPanel() {
               className="mt-1.5 w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs outline-none"
             />
             <button
-              disabled={!me?._id}
-              onClick={async () => {
-                if (!me?._id) return;
-                try {
-                  const r = await simulate({ targetId: me._id, planId: "p1" });
-                  toast.success(`Order simulasi dibuat: ${r.orderId}`);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Gagal membuat simulasi");
-                }
-              }}
-              className="mt-2 w-full rounded-lg border border-emerald-500/50 py-1.5 text-[11px] font-bold text-emerald-300"
-            >
-              Simulasikan pembelian (akun saya)
-            </button>
-            <button
-              disabled={!me?._id}
-              onClick={async () => {
-                if (!me?._id) return;
-                setBusy(true);
-                try {
-                  const r = await simulateBot({ targetId: me._id, planId: "p1" });
-                  toast.success(
-                    `Bot AI: ${r.verdict === "verified" ? "terverifikasi, premium masuk" : r.verdict === "rejected" ? "ditolak" : "menunggu developer"}`,
-                  );
-                  if (r.verdict === "verified") toast.success("Catatan bot: " + r.note);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Gagal simulasi");
-                }
-                setBusy(false);
-              }}
-              className="mt-2 w-full rounded-lg bg-emerald-600 py-1.5 text-[11px] font-bold text-white"
-            >
-              {busy ? "Menjalankan bot AI…" : "Simulasikan + jalankan bot AI"}
-            </button>
-            <button
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -430,8 +445,8 @@ function ManualPaymentPanel() {
               Tes bot AI (cek key)
             </button>
             <p className="mt-1 text-[10px] text-muted-foreground">
-              Order simulasi muncul di daftar di bawah -&gt; bisa dipakai mencoba
-              tombol Setujui.
+              Kalau engine-nya heuristik, berarti GEMINI_API_KEY belum terisi di
+              tab Keys. Order tetap bisa kamu setujui manual di bawah.
             </p>
           </div>
 
@@ -442,42 +457,216 @@ function ManualPaymentPanel() {
             <p className="text-[10px] text-muted-foreground">Belum ada order manual.</p>
           )}
           {(pending ?? []).map((o: any) => (
-            <div
-              key={o._id}
-              className="flex items-center gap-2 rounded-lg border border-border bg-background/60 p-2"
-            >
-              <img
-                src={o.image ?? ""}
-                alt=""
-                className="size-8 shrink-0 rounded-full bg-secondary object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-bold">{o.username}</p>
-                <p className="truncate font-mono text-[10px] text-muted-foreground">
-                  {o.orderId}
-                </p>
-                <p className="text-[10px] text-emerald-300">
-                  {o.planLabel} · Rp {o.priceIdr.toLocaleString("id-ID")}
-                </p>
-                {o.note && (
-                  <p className="truncate text-[10px] text-muted-foreground">"{o.note}"</p>
-                )}
-              </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await approve({ orderId: o.orderId });
-                    toast.success("Premium dikirim ke user");
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Gagal");
-                  }
-                }}
-                className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
-              >
-                Setujui
-              </button>
-            </div>
+            <PendingOrderRow key={o._id} order={o} onApprove={approve} onReject={reject} />
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type PendingOrder = {
+  _id: string;
+  orderId: string;
+  status: string;
+  planLabel: string;
+  priceIdr: number;
+  proofText?: string;
+  proofUrl?: string;
+  analysisNote?: string;
+  username: string;
+  image?: string;
+  uidCode?: string;
+};
+
+function PendingOrderRow({
+  order,
+  onApprove,
+  onReject,
+}: {
+  order: PendingOrder;
+  onApprove: ReturnType<typeof useMutation<typeof api.payments.approveManualOrder>>;
+  onReject: ReturnType<typeof useMutation<typeof api.payments.rejectManualOrder>>;
+}) {
+  const proofUrl = useQuery(
+    api.storage.getUrl,
+    order.proofUrl ? { storageId: order.proofUrl } : "skip",
+  );
+  const [showProof, setShowProof] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="rounded-lg border border-border bg-background/60 p-2">
+      <div className="flex items-center gap-2">
+        <img
+          src={order.image ?? ""}
+          alt=""
+          className="size-8 shrink-0 rounded-full bg-secondary object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-bold">{order.username}</p>
+          <p className="truncate font-mono text-[10px] text-muted-foreground">
+            {order.orderId}
+          </p>
+          <p className="text-[10px] text-emerald-300">
+            {order.planLabel} · Rp {order.priceIdr.toLocaleString("id-ID")}
+          </p>
+          {order.status === "manual_review" && order.proofUrl && (
+            <button
+              onClick={() => setShowProof((v) => !v)}
+              className="text-[10px] font-bold text-amber-300"
+            >
+              {showProof ? "Sembunyikan bukti" : "Lihat bukti transfer"}
+            </button>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-col gap-1">
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onApprove({ orderId: order.orderId });
+                toast.success("Premium dikirim ke user");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal");
+              }
+              setBusy(false);
+            }}
+            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
+          >
+            Setujui
+          </button>
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onReject({ orderId: order.orderId, reason: "Bukti tidak valid." });
+                toast.info("Bukti ditolak");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal");
+              }
+              setBusy(false);
+            }}
+            className="rounded-lg border border-red-500/50 px-3 py-1.5 text-[11px] font-bold text-red-300"
+          >
+            Tolak
+          </button>
+        </div>
+      </div>
+      {order.proofText && (
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          "{order.proofText}"
+        </p>
+      )}
+      {order.analysisNote && (
+        <p className="mt-1 text-[10px] text-amber-300/90">
+          Catatan AI: {order.analysisNote}
+        </p>
+      )}
+      {showProof && proofUrl && (
+        <img
+          src={proofUrl}
+          alt="Bukti transfer"
+          className="mt-2 max-h-48 w-full rounded-lg border border-border object-contain"
+        />
+      )}
+    </div>
+  );
+}
+
+/** Panel developer: beri premium manual ke user dengan durasi dan nominal. */
+function GrantPremiumPanel() {
+  const grant = useMutation(api.payments.devGrantPremium);
+  const [target, setTarget] = useState("");
+  const findUserByName = useQuery(
+    api.moderation.findByExactUsername,
+    target.trim() ? { username: target.trim() } : "skip",
+  ) as { _id: Id<"users">; username: string; image?: string } | undefined;
+  const [days, setDays] = useState("0");
+  const [months, setMonths] = useState("1");
+  const [years, setYears] = useState("0");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="mt-2.5 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span className="text-xs font-bold text-amber-300">Kasih premium ke user</span>
+        {open ? (
+          <ChevronUp className="size-3.5 text-amber-300/80" />
+        ) : (
+          <ChevronDown className="size-3.5 text-amber-300/80" />
+        )}
+      </button>
+      {open && (
+        <div className="mt-2.5 space-y-2">
+          <Field2
+            label="Nama user persis"
+            value={target}
+            onChange={setTarget}
+            placeholder="username tanpa @"
+          />
+          <div className="grid grid-cols-3 gap-1.5">
+            <Field2 label="Hari" value={days} onChange={setDays} />
+            <Field2 label="Bulan" value={months} onChange={setMonths} />
+            <Field2 label="Tahun" value={years} onChange={setYears} />
+          </div>
+          <Field2
+            label="Nominal (Rp)"
+            value={amount}
+            onChange={(v) => setAmount(v.replace(/[^0-9]/g, ""))}
+            placeholder="7000"
+          />
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder="Catatan ke user. Bisa tag: @username (pakai username asli)"
+            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none"
+          />
+          <button
+            disabled={busy || !target.trim()}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                if (!findUserByName) {
+                  toast.error("Username tidak ada, cek ejaan persis");
+                } else {
+                  const r = await grant({
+                    targetId: findUserByName._id,
+                    days: Number(days) || 0,
+                    months: Number(months) || 0,
+                    years: Number(years) || 0,
+                    amountIdr: Number(amount) || 0,
+                    ...(note.trim() ? { note: note.trim() } : {}),
+                  });
+                  toast.success("Premium dikirim, order kini lunas");
+                  if (r.tagged.length > 0) {
+                    toast.info("Bertanda merah: " + r.tagged.join(", "));
+                  }
+                  if (r.unknown.length > 0) {
+                    toast.error("Username tidak ditemukan: " + r.unknown.join(", "));
+                  }
+                }
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal");
+              }
+              setBusy(false);
+            }}
+            className="w-full rounded-lg bg-amber-500 py-2.5 text-xs font-black text-black disabled:opacity-40"
+          >
+            {busy ? "Mengirim…" : "Kirim"}
+          </button>
+          <p className="text-[10px] text-muted-foreground">
+            Order dibuat berstatus menunggu pembayaran lalu langsung dilunasi.
+            Tag hanya berlaku kalau username-nya benar-benar ada.
+          </p>
         </div>
       )}
     </div>

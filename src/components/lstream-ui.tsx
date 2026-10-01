@@ -1,4 +1,4 @@
-import { BadgeCheck, Star } from "lucide-react";
+import { BadgeCheck, Flag, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { badgeForLevel, avatarFallback } from "@/lib/lstream";
 import { clanPixelIconUrl } from "@/lib/clanIcons";
@@ -212,6 +212,22 @@ export function BlueCheck({ className }: { className?: string }) {
       className={cn("size-4 shrink-0 fill-sky-500 text-white", className)}
       aria-label="Premium"
     />
+  );
+}
+
+/** Logo merah untuk akun yang ditandai developer lewat "@username". */
+export function RedMark({ className }: { className?: string }) {
+  return (
+    <span
+      title="Ditandai developer"
+      aria-label="Ditandai developer"
+      className={cn(
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-red-600 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)_inset]",
+        className,
+      )}
+    >
+      <Flag className="size-3 fill-current" />
+    </span>
   );
 }
 
