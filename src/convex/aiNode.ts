@@ -130,7 +130,7 @@ export const analyzeProof = internalAction({
       );
       if (!res.ok) {
         const r = heuristic(args.proofText, args.expectedAmount);
-        return { ...r, note: `${r.note} (AI gagal dimanggil)`, engine: "heuristik" };
+        return { ...r, engine: "heuristik" };
       }
       const json = (await res.json()) as any;
       const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
@@ -149,13 +149,11 @@ export const analyzeProof = internalAction({
         note: (parsed.catatan ?? "Bot AI memeriksa bukti.").slice(0, 300),
         engine: "gemini",
       };
-    } catch (e) {
+    } catch {
+      // Jalur ini cukup jarang: kalau gagal, pakai aturan sederhana supaya
+      // order tetap bisa jatuh ke tangan developer.
       const r = heuristic(args.proofText, args.expectedAmount);
-      return {
-        ...r,
-        note: `${r.note} (AI error: ${e instanceof Error ? e.message : "tidak diketahui"})`,
-        engine: "heuristik",
-      };
+      return { ...r, engine: "heuristik" };
     }
   },
 });

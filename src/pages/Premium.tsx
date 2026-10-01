@@ -1,9 +1,17 @@
 import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { SectionTitle } from "@/components/lstream-ui";
-import { Crown, Check, ShieldCheck, QrCode, Upload, Loader2 } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  Crown,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+  Upload,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -247,7 +255,7 @@ function Plans() {
   };
 
   const send = async () => {
-    if (!order || !proof) return;
+    if (!order || !proof || !note.trim()) return;
     setBusy("send");
     try {
       await attachProof({
@@ -272,55 +280,33 @@ function Plans() {
     <section>
       <SectionTitle>Pilih Paket</SectionTitle>
       <div className="space-y-2.5">
-        {(plans ?? []).map((p) => {
-          const open = order?.planLabel === p.label;
-          return (
-            <div
-              key={p.id}
-              className={cn(
-                "rounded-2xl border transition",
-                open
-                  ? "border-amber-300/70 bg-amber-300/10"
-                  : "border-border bg-card hover:border-amber-300/40",
-              )}
-            >
-              <div className="flex items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold">{p.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.days} hari premium
-                  </p>
-                </div>
-                <p className="shrink-0 text-lg font-black text-amber-300">
-                  Rp {p.price.toLocaleString("id-ID")}
+        {(plans ?? []).map((p) => (
+          <div
+            key={p.id}
+            className="rounded-xl border border-border bg-card p-3 transition hover:border-amber-300/40"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold leading-tight">
+                  {p.label}
                 </p>
-                <button
-                  disabled={busy === "order"}
-                  onClick={() => void startOrder(p)}
-                  className="shrink-0 rounded-full bg-amber-300 px-4 py-2.5 text-xs font-bold text-black transition hover:bg-amber-200 disabled:opacity-50"
-                >
-                  {busy === "order" ? "…" : "Beli dan dapatkan premium"}
-                </button>
+                <p className="text-[10px] leading-tight text-muted-foreground">
+                  {p.days} hari premium
+                </p>
               </div>
-              {open && order && (
-                <Checkout
-                  order={order}
-                  image={image}
-                  accountName={config?.accountName}
-                  accountLabel={config?.accountLabel}
-                  preview={preview}
-                  proof={proof !== null}
-                  busy={busy}
-                  note={note}
-                  onNote={setNote}
-                  onPick={() => fileRef.current?.click()}
-                  onSend={() => void send()}
-                  verdict={verdict}
-                />
-              )}
+              <p className="shrink-0 text-[15px] font-bold leading-none text-amber-300">
+                Rp {p.price.toLocaleString("id-ID")}
+              </p>
             </div>
-          );
-        })}
+            <button
+              disabled={busy !== null}
+              onClick={() => void startOrder(p)}
+              className="mt-2.5 flex min-h-10 w-full items-center justify-center rounded-lg bg-amber-300 text-[11px] font-bold text-black transition hover:bg-amber-200 disabled:opacity-50"
+            >
+              {busy === "order" ? "Menyiapkan…" : "Beli dan dapatkan premium"}
+            </button>
+          </div>
+        ))}
         {!ready && (
           <p className="rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-xs text-amber-200">
             Pembayaran sedang disiapkan developer. Cek lagi nanti.
@@ -338,7 +324,94 @@ function Plans() {
           e.target.value = "";
         }}
       />
+
+      {order && (
+        <CheckoutOverlay
+          order={order}
+          image={image}
+          accountName={config?.accountName}
+          accountLabel={config?.accountLabel}
+          preview={preview}
+          proof={proof !== null}
+          busy={busy}
+          note={note}
+          onNote={setNote}
+          onPick={() => fileRef.current?.click()}
+          onSend={() => void send()}
+          verdict={verdict}
+          onClose={() => {
+            setOrder(null);
+            setVerdict(null);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+/** Layar bayar: satu layar penuh berisi QRIS, nominal, dan bukti transfer. */
+function CheckoutOverlay({
+  order,
+  image,
+  accountName,
+  accountLabel,
+  preview,
+  proof,
+  busy,
+  note,
+  onNote,
+  onPick,
+  onSend,
+  verdict,
+  onClose,
+}: {
+  order: Order;
+  image: string;
+  accountName?: string;
+  accountLabel?: string;
+  preview: string | null;
+  proof: boolean;
+  busy: string | null;
+  note: string;
+  onNote: (v: string) => void;
+  onPick: () => void;
+  onSend: () => void;
+  verdict: Verdict | null;
+  onClose: () => void;
+}) {
+  useHideNavOnMount(); // navbar disembunyikan selama layar bayar terbuka
+  return (
+    <div className="screen-enter fixed inset-0 z-[80] overflow-y-auto bg-background">
+      <div className="mx-auto w-full max-w-md p-3 pb-10">
+        <div className="mb-3 mt-1 flex items-center gap-2">
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-zinc-200"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">{order.planLabel}</p>
+            <p className="text-[11px] text-muted-foreground">Bayar lewat QRIS</p>
+          </div>
+        </div>
+        <Checkout
+          order={order}
+          image={image}
+          accountName={accountName}
+          accountLabel={accountLabel}
+          preview={preview}
+          proof={proof}
+          busy={busy}
+          note={note}
+          onNote={onNote}
+          onPick={onPick}
+          onSend={onSend}
+          verdict={verdict}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -372,7 +445,7 @@ function Checkout({
   const live = useQuery(api.payments.myOrder, { orderId: order.orderId });
   if (live?.status === "paid" && !verdict) {
     return (
-      <div className="space-y-2 border-t border-amber-300/20 p-4">
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
         <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
           <ShieldCheck className="size-4" /> Premium sudah aktif
         </p>
@@ -383,16 +456,16 @@ function Checkout({
     );
   }
   return (
-    <div className="space-y-3 border-t border-amber-300/20 p-4">
+    <div className="space-y-3 rounded-2xl border border-border bg-card p-3">
       <div className="flex flex-col items-center gap-2">
         {image ? (
           <img
             src={image}
             alt="QRIS YoruNime"
-            className="size-48 rounded-xl bg-white object-contain p-2"
+            className="size-44 rounded-xl bg-white object-contain p-2"
           />
         ) : (
-          <div className="flex size-48 items-center justify-center rounded-xl bg-black/40 text-xs text-zinc-400">
+          <div className="flex size-44 items-center justify-center rounded-xl bg-black/40 text-xs text-zinc-400">
             QRIS belum tersedia
           </div>
         )}
@@ -452,18 +525,28 @@ function Checkout({
             className="mt-2 max-h-40 w-full rounded-xl border border-white/10 object-contain"
           />
         )}
+      </div>
+
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+          Keterangan transfer
+        </p>
         <textarea
           value={note}
           onChange={(e) => onNote(e.target.value)}
           rows={2}
-          placeholder="Opsional: contoh Transfer Rp 7.000 dari GoPay atas nama Rii"
-          className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs outline-none focus:border-amber-300/60"
+          placeholder="contoh: Transfer Rp 7.000 dari GoPay atas nama Rii"
+          className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs outline-none focus:border-amber-300/60"
         />
+        <p className="mt-1 text-[11px] text-zinc-500">
+          Keterangan wajib diisi, ini yang dipakai bot AI untuk mencocokkan
+          nominal dengan bukti.
+        </p>
       </div>
 
       <button
         onClick={onSend}
-        disabled={!proof || busy !== null}
+        disabled={!proof || note.trim().length === 0 || busy !== null}
         className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-300 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:opacity-40"
       >
         {busy === "send" ? (
