@@ -538,6 +538,17 @@ export const devTestBot = action({
   },
 });
 
+/** Dev only: cek apakah RESEND_API_KEY sudah terbaca backend. */
+export const devMailStatus = action({
+  args: {},
+  handler: async (ctx): Promise<{ keyPresent: boolean }> => {
+    await staffGuard(ctx, "dev");
+    return (await ctx.runAction(internal.mailNode.mailStatus, {})) as {
+      keyPresent: boolean;
+    };
+  },
+});
+
 /** Baris user untuk dipakai action/internal. */
 export const getOrderOwner = internalQuery({
   args: { userId: v.id("users") },

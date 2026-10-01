@@ -9,6 +9,13 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 
+export const mailStatus = internalAction({
+  args: {},
+  handler: async (): Promise<{ keyPresent: boolean }> => {
+    return { keyPresent: (process.env.RESEND_API_KEY ?? "").trim().length > 0 };
+  },
+});
+
 export const notifyDeveloper = internalAction({
   args: {
     to: v.string(),

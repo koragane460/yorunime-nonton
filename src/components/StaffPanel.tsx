@@ -293,6 +293,7 @@ function ManualPaymentPanel() {
   const approve = useMutation(api.payments.approveManualOrder);
   const reject = useMutation(api.payments.rejectManualOrder);
   const testBot = useAction(api.payments.devTestBot);
+  const mailStatus = useAction(api.payments.devMailStatus);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const [autoApprove, setAutoApprove] = useState(false);
   const [autoMax, setAutoMax] = useState("");
@@ -443,6 +444,23 @@ function ManualPaymentPanel() {
               className="mt-2 w-full rounded-lg border border-emerald-500/50 py-1.5 text-[11px] font-bold text-emerald-300"
             >
               Tes bot AI (cek key)
+            </button>
+            <button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const r = await mailStatus({});
+                  if (r.keyPresent) toast.success("RESEND_API_KEY terbaca, email siap");
+                  else toast.error("RESEND_API_KEY belum terbaca di backend");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Gagal cek");
+                }
+                setBusy(false);
+              }}
+              className="mt-2 w-full rounded-lg border border-amber-500/50 py-1.5 text-[11px] font-bold text-amber-300 disabled:opacity-50"
+            >
+              Cek kunci email
             </button>
             <p className="mt-1 text-[10px] text-muted-foreground">
               Kalau engine-nya heuristik, berarti GEMINI_API_KEY belum terisi di
