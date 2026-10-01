@@ -29,21 +29,133 @@ function lk21Base(): string | null {
     process.env.FILM_API_BASE ??
     process.env.LK21_API_BASE ??
     process.env.FILM_API_URL ??
+    process.env.LK21_API_URL ??
+    process.env.MOVIE_API_BASE ??
     "";
   const b = raw.trim().replace(/\/+$/, "");
   return /^https?:\/\//i.test(b) ? b : null;
 }
 
-function tmdbKey(): string | null {
-  const k = (process.env.TMDB_API_KEY ?? "").trim();
-  return k.length > 0 ? k : null;
+/** TMDB punya dua jenis key: API Key v3 (hex) dan Read Access Token v4. */
+function tmdbKey(): { key: string; v4: boolean } | null {
+  const token = (process.env.TMDB_READ_TOKEN ?? process.env.TMDB_ACCESS_TOKEN ?? "").trim();
+  if (token) return { key: token, v4: true };
+  const k = (process.env.TMDB_API_KEY ?? process.env.TMDB_KEY ?? "").trim();
+  return k ? { key: k, v4: false } : null;
+}
+
+/** Susun URL TMDB dengan api_key v3 atau Bearer token v4. */
+function tmdbUrl(path: string, extra: Record<string, string> = {}): string | null {
+  const cred = tmdbKey();
+  if (!cred) return null;
+  const params = new URLSearchParams({
+    language: "id-ID",
+    region: "ID",
+    ...extra,
+  });
+  const sep = path.includes("?") ? "&" : "?";
+  return cred.v4
+    ? `${TMDB}${path}${sep}${params.toString()}`
+    : `${TMDB}${path}${sep}${params.toString()}&api_key=${encodeURIComponent(cred.key)}`;
+}
+
+async function tmdbGet(path: string): Promise<any | null> {
+  const cred = tmdbKey();
+  if (!cred) return null;
+  const params = new URLSearchParams({ language: "id-ID", region: "ID" });
+  const sep = path.includes("?") ? "&" : "?";
+  const url = cred.v4
+    ? `${TMDB}${path}${sep}${params.toString()}`
+    : `${TMDB}${path}${sep}${params.toString()}&api_key=${encodeURIComponent(cred.key)}`;
+  const json = await fetchJson(url);
+  return json;
+}
+
+/** Nama env yang Dipakai, untuk diagnostik di panel developer. */
+const ENV_NAMES = [
+  "FILM_API_BASE",
+  "LK21_API_BASE",
+  "FILM_API_URL",
+  "LK21_API_URL",
+  "MOVIE_API_BASE",
+  "TMDB_API_KEY",
+  "TMDB_KEY",
+  "TMDB_READ_TOKEN",
+  "TMDB_ACCESS_TOKEN",
+] as const;
+
+function envReport(): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const n of ENV_NAMES) {
+    out[n] = (process.env[n] ?? "").trim().length > 0;
+  }
+  return out;
 }
 
 /** Sumber yang benar-benar terpasang. */
 export const filmSources = action({
   args: {},
-  handler: async (): Promise<{ lk21: boolean; tmdb: boolean }> => {
-    return { lk21: lk21Base() !== null, tmdb: tmdbKey() !== null };
+  handler: async (): Promise<{
+    lk21: boolean;
+    tmdb: boolean;
+    env: Record<string, boolean>;
+  }> => {
+    return { lk21: lk21Base() !== null, tmdb: tmdbKey() !== null, env: envReport() };
+  },
+});
+
+/**
+ * Diagnostik untuk developer: cek env mana yang terbaca dan coba panggil
+ * sumbernya, supaya tidak menebak-nebak nama variabel.
+ */
+export const filmDiag = action({
+  args: {},
+  handler: async (): Promise<{
+    env: Record<string, boolean>;
+    lk21Url: string | null;
+    tmdbSample: { ok: boolean; count: number; error: string | null };
+    lk21Sample: { ok: boolean; count: number; error: string | null };
+  }> => {
+    const lk = lk21Base();
+    let tm: { ok: boolean; count: number; error: string | null } = {
+      ok: false,
+      count: 0,
+      error: null,
+    };
+    if (tmdbKey()) {
+      try {
+        const j = await fetchJson(tmdbUrl("/movie/popular") ?? "");
+        const list = pickList(j);
+        tm = {
+          ok: !!j && !j.status_message && !j.status_code,
+          count: list.length,
+          error:
+            j?.status_message ??
+            (j?.status_code ? `HTTP ${j.status_code}` : null),
+        };
+      } catch (e) {
+        tm = { ok: false, count: 0, error: e instanceof Error ? e.message : "gagal" };
+      }
+    }
+    let lkS: { ok: boolean; count: number; error: string | null } = {
+      ok: false,
+      count: 0,
+      error: null,
+    };
+    if (lk) {
+      try {
+        const j = await fetchJson(`${lk}/movies`);
+        lkS = { ok: !!j, count: pickList(j).length, error: null };
+      } catch (e) {
+        lkS = { ok: false, count: 0, error: e instanceof Error ? e.message : "gagal" };
+      }
+    }
+    return {
+      env: envReport(),
+      lk21Url: lk,
+      tmdbSample: tm,
+      lk21Sample: lkS,
+    };
   },
 });
 
@@ -199,12 +311,7 @@ async function lkDetail(id: string): Promise<FilmItem | null> {
 const TMDB = "https://api.themoviedb.org/3";
 
 async function tmdbList(path: string): Promise<FilmItem[]> {
-  const key = tmdbKey();
-  if (!key) return [];
-  const sep = path.includes("?") ? "&" : "?";
-  const json = await fetchJson(
-    `${TMDB}${path}${sep}language=id-ID&region=ID&api_key=${key}`,
-  );
+  const json = await tmdbGet(path);
   return pickList(json)
     .map(shapeTmdb)
     .filter((f): f is FilmItem => !!f && !!f.poster);
@@ -212,12 +319,8 @@ async function tmdbList(path: string): Promise<FilmItem[]> {
 
 /** Trailer resmi (YouTube) untuk satu film TMDB. */
 async function tmdbTrailer(id: number): Promise<string | undefined> {
-  const key = tmdbKey();
-  if (!key) return undefined;
-  const json = await fetchJson(
-    `${TMDB}/movie/${id}/videos?language=id-ID&api_key=${key}`,
-  );
-  const list = pickList(json.results);
+  const json = await tmdbGet(`/movie/${id}/videos`);
+  const list = pickList(json?.results);
   const yt =
     list.find((v: any) => v.site === "YouTube" && v.type === "Trailer") ??
     list.find((v: any) => v.site === "YouTube");
@@ -281,7 +384,6 @@ export const searchFilms = action({
     if (term.length < 2) return [];
     return cached(`search:${term.toLowerCase()}`, async () => {
       const base = lk21Base();
-      const key = tmdbKey();
       const [lk, tm] = await Promise.all([
         base
           ? fetchJson(`${base}/search/${encodeURIComponent(term)}`).then((j) =>
@@ -290,11 +392,9 @@ export const searchFilms = action({
                 .filter((f): f is FilmItem => !!f && !!f.title),
             )
           : Promise.resolve([] as FilmItem[]),
-        key
-          ? tmdbList(
-              `/search/movie?query=${encodeURIComponent(term)}&include_adult=false`,
-            )
-          : Promise.resolve([] as FilmItem[]),
+        tmdbList(
+          `/search/movie?query=${encodeURIComponent(term)}&include_adult=false`,
+        ),
       ]);
       const seen = new Set<string>();
       const out: FilmItem[] = [];
@@ -317,11 +417,7 @@ export const filmDetail = action({
       if (id.startsWith("tmdb-")) {
         const num = Number(id.slice(5));
         if (!Number.isFinite(num)) return null;
-        const key = tmdbKey();
-        if (!key) return null;
-        const json = await fetchJson(
-          `${TMDB}/movie/${num}?append_to_response=videos&language=id-ID&api_key=${key}`,
-        );
+        const json = await tmdbGet(`/movie/${num}?append_to_response=videos`);
         const base = shapeTmdb(json);
         if (!base) return null;
         const vids = pickList(json?.videos?.results);

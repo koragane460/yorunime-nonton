@@ -119,6 +119,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         </button>
       )}
       {csOpen && <CsScreen onClose={() => setCsOpen(false)} />}
+      {isDev && <FilmDiagPanel />}
 
       <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
         <Search className="size-3.5 shrink-0 text-muted-foreground" />
@@ -308,6 +309,68 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
 }
 
  /**
+ * Diagnostik sumber film: menampilkan env mana yang terbaca dari tab Keys
+ * dan mencoba memanggil TMDB / API LK21, supaya developer tidak perlu
+ * menebak nama variabel yang salah.
+ */
+function FilmDiagPanel() {
+  const diag = useAction(api.film.filmDiag);
+  const [data, setData] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+      <div className="flex items-center gap-2">
+        <Clapperboard className="size-3.5 shrink-0 text-muted-foreground" />
+        <p className="min-w-0 flex-1 text-xs font-bold">Sumber Film</p>
+        <button
+          onClick={async () => {
+            setBusy(true);
+            try {
+              setData(await diag({}));
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Gagal");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="rounded-lg border border-white/15 px-2.5 py-1.5 text-[11px] font-bold"
+        >
+          {busy ? "Memeriksa…" : "Periksa"}
+        </button>
+      </div>
+      {open && data && (
+        <div className="mt-2 space-y-1.5 font-mono text-[10px]">
+          {Object.entries(data.env ?? {}).map(([k, v]) => (
+            <p key={k} className={v ? "text-emerald-400" : "text-zinc-600"}>
+              {v ? "TERISI" : "kosong "} {k}
+            </p>
+          ))}
+          <p className="pt-1 text-zinc-400">
+            TMDB: {data.tmdbSample?.ok ? `${data.tmdbSample.count} film` : `gagal - ${data.tmdbSample?.error ?? "key kosong"}`}
+          </p>
+          <p className="text-zinc-400">
+            LK21:{" "}
+            {data.lk21Url
+              ? data.lk21Sample?.ok
+                ? `${data.lk21Sample.count} film`
+                : "dijangkau tapi respons kosong"
+              : "base URL belum diisi"}
+          </p>
+        </div>
+      )}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="mt-1.5 text-[10px] text-muted-foreground underline"
+      >
+        {open ? "Sembunyikan" : "Lihat rincian"}
+      </button>
+    </div>
+  );
+}
+
+/**
  * Mode pembayaran manual (QRIS statis): developer menempelkan foto QRIS +
  * rekening, lalu menyetujui order yang sudah dibayar user.
  */
