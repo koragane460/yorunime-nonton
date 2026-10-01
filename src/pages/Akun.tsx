@@ -14,7 +14,6 @@ import {
   ClanTag,
   LevelBadge,
   RedMark,
-  SectionTitle,
   ShineBadge,
   TitleBadge,
 } from "@/components/lstream-ui";
@@ -23,6 +22,7 @@ import { xpForLevel } from "@/lib/level";
 import { Lock } from "lucide-react";
 import {
   ChevronLeft,
+  ChevronRight,
   Crown,
   Gem,
   Heart,
@@ -61,6 +61,7 @@ function AkunContent() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
   const [badgesOpen, setBadgesOpen] = useState(false);
+  const [titlesOpen, setTitlesOpen] = useState(false);
 
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
@@ -68,6 +69,9 @@ function AkunContent() {
   const comicHistory = useQuery(api.comics.myHistory, user ? {} : "skip");
   const comicFavorites = useQuery(api.comics.myFavorites, user ? {} : "skip");
   const profile = useQuery(api.account.getPublicProfile, user ? { userId: user._id } : "skip");
+  // Data title: clan, peringkat XP, dan peringkat give premium.
+  const xpBoard = useQuery(api.account.totalLeaderboard, { limit: 50 });
+  const giveBoard = useQuery(api.account.topGive, { limit: 10 });
 
   if (!user) return null;
   const xpInLevel = user.xp ?? 0;
@@ -83,6 +87,20 @@ function AkunContent() {
     setTab(t);
     setParams({});
   };
+
+  // Title hanya muncul kalau datanya memang ada, tidak ada title karangan.
+  const xpRank = (xpBoard ?? []).findIndex((r) => r.userId === user._id);
+  const giveRank = (giveBoard ?? []).findIndex((r) => r.userId === user._id);
+  const titles: { name: string; note: string }[] = [];
+  if (user.clanTag)
+    titles.push({ name: `Anggota ${user.clanTag}`, note: "Title clan" });
+  if (xpRank >= 0)
+    titles.push({ name: "Puncak XP", note: `Peringkat #${xpRank + 1}` });
+  if (giveRank >= 0)
+    titles.push({
+      name: "Raja Premium",
+      note: `Peringkat #${giveRank + 1} · ${giveBoard![giveRank].days} hari diberikan`,
+    });
 
   return (
     <div className="relative -mx-4">
@@ -114,6 +132,48 @@ function AkunContent() {
         >
           <SettingsIcon className="size-[18px] text-white" />
         </button>
+        {/* Tombol title: di kiri, sedikit di atas foto profil */}
+        <button
+          onClick={() => setTitlesOpen((v) => !v)}
+          aria-label="Buka title"
+          className="absolute left-3 top-3 z-10 flex size-10 items-center justify-center rounded-full border border-white/30 bg-black/70 text-white shadow-lg"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+
+        {titlesOpen && (
+          <div className="pop-enter absolute left-3 top-14 z-20 w-[min(18rem,calc(100%-1.5rem))] rounded-2xl border border-white/20 bg-neutral-900/92 p-2.5 shadow-xl">
+            <div className="mb-1.5 flex items-center gap-2 px-0.5">
+              <p className="text-[11px] font-bold text-zinc-300">Title kamu</p>
+              <button
+                onClick={() => setTitlesOpen(false)}
+                aria-label="Tutup title"
+                className="ml-auto flex size-7 items-center justify-center rounded-full bg-white/10 text-white"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+            {titles.length === 0 ? (
+              <p className="px-0.5 py-2 text-[11px] leading-5 text-zinc-400">
+                Belum ada title. Gabung clan atau kumpulkan XP dulu.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {titles.map((t) => (
+                  <li
+                    key={t.name}
+                    className="flex items-center gap-2 rounded-lg bg-white/6 px-2.5 py-2"
+                  >
+                    <span className="text-[13px] font-bold text-white">{t.name}</span>
+                    <span className="ml-auto shrink-0 text-[10px] text-zinc-400">
+                      {t.note}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Foto profile menutupi banner, tepat di tengah layar */}
@@ -146,21 +206,9 @@ function AkunContent() {
             {premium && <BlueCheck className="size-5 shrink-0" />}
             {(user.devTagUntil ?? 0) > Date.now() && <RedMark className="size-5" />}
             <TitleBadge role={user.staffRole} />
-            <span className="shrink-0 text-xs text-muted-foreground">
+            <span className="shrink-0 font-mono text-[11px] text-zinc-500">
               {displayId(user.seqId, user._id)}
             </span>
-            {user.uidCode && (
-              <button
-                onClick={() => {
-                  void navigator.clipboard?.writeText(user.uidCode!);
-                  toast.success("UID disalin");
-                }}
-                title="Klik untuk menyalin UID"
-                className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-300"
-              >
-                UID {user.uidCode}
-              </button>
-            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
             <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
@@ -260,7 +308,7 @@ function AkunContent() {
           ))}
         {tab === "history" && (comicHistory ?? []).length > 0 && (
           <>
-            <p className="px-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="px-1 pt-2 text-[11px] font-semibold text-muted-foreground">
               Manga &amp; Manhwa
             </p>
             {(comicHistory ?? []).map((c: any) => (
@@ -322,7 +370,7 @@ function AkunContent() {
           ))}
         {tab === "favorite" && (comicFavorites ?? []).length > 0 && (
           <>
-            <p className="px-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="px-1 pt-2 text-[11px] font-semibold text-muted-foreground">
               Manga &amp; Manhwa
             </p>
             {(comicFavorites ?? []).map((f: any) => (
@@ -521,16 +569,16 @@ function SettingsScreen({
 
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
-      <SectionTitle>Akun</SectionTitle>
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-3">
-          <Avatar src={user.image} seed={user.username} className="size-16" />
-          <div>
-            <p className="flex items-center gap-1.5 font-bold">
+      <BlockTitle>Akun</BlockTitle>
+      <div className="rounded-xl border border-border bg-card p-3">
+        <div className="flex items-center gap-2.5">
+          <Avatar src={user.image} seed={user.username} className="size-14" />
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-[13px] font-bold">
               {user.username}
               {(user.premiumUntil ?? 0) > Date.now() && <BlueCheck />}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               ID: {displayId(user.seqId, user._id)} · Level {user.level}
             </p>
             <div className="mt-1">
@@ -538,7 +586,7 @@ function SettingsScreen({
             </div>
           </div>
         </div>
-        <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground">
+        <label className="mt-2.5 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-border py-2 text-[11px] text-muted-foreground">
           Ganti photo profile
           <input
             type="file"
@@ -560,7 +608,7 @@ function SettingsScreen({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-[13px]"
             placeholder="Ubah nama"
           />
           <button
@@ -572,14 +620,14 @@ function SettingsScreen({
                 toast.error(err instanceof Error ? err.message : "Gagal");
               }
             }}
-            className="shrink-0 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
+            className="shrink-0 rounded-lg bg-primary px-4 text-[13px] font-bold text-primary-foreground"
           >
             OK
           </button>
         </div>
       </div>
 
-      <SectionTitle>Pengaturan</SectionTitle>
+      <BlockTitle>Pengaturan</BlockTitle>
       <div className="space-y-2">
         <ToggleRow
           label="Auto tolak request pertemanan"
@@ -589,8 +637,8 @@ function SettingsScreen({
             quickSave({ autoRejectFriend: v, autoRejectFriendAction: "reject" });
           }}
         />
-        <div className="rounded-2xl border border-border bg-card p-3.5">
-          <p className="text-sm font-medium">Tema</p>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-[13px] font-medium">Tema</p>
           <div className="mt-2 flex min-w-0 gap-2">
             {["dark", "light", "custom"].map((t) => (
               <button
@@ -657,21 +705,21 @@ function SettingsScreen({
           }}
         />
 
-        <div className="rounded-2xl border border-border bg-card p-3.5">
-          <p className="text-sm font-medium">Background gif akun</p>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-[13px] font-medium">Background gif akun</p>
           <div className="mt-2 flex min-w-0 gap-2">
             <input
               value={banner}
               onChange={(e) => setBanner(e.target.value)}
               placeholder="URL gambar/gif background"
-              className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-[13px]"
             />
             <button
               onClick={async () => {
                 await updateProfile({ bannerUrl: banner });
                 toast.success("Background diubah");
               }}
-              className="shrink-0 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white"
+              className="shrink-0 rounded-lg bg-primary px-4 text-[13px] font-bold text-primary-foreground"
             >
               OK
             </button>
@@ -682,22 +730,31 @@ function SettingsScreen({
       </div>
 
       {/* Email support + Log out — sekarang di Pengaturan */}
-      <SectionTitle>Lainnya</SectionTitle>
+      <BlockTitle>Lainnya</BlockTitle>
       <div className="space-y-2">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm">
-          <Mail className="size-5 text-violet-400" /> Lstreamsupport@gmail.com
+        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px]">
+          <Mail className="size-4 shrink-0 text-primary" /> Lstreamsupport@gmail.com
         </div>
         <button
           onClick={async () => {
             await onSignOut();
             navigate("/home");
           }}
-          className="flex w-full items-center gap-3 rounded-2xl border border-violet-500/40 bg-card p-3.5 text-sm text-violet-400"
+          className="flex w-full items-center gap-2.5 rounded-xl border border-destructive/40 bg-card p-3 text-[13px] text-destructive"
         >
-          <LogOut className="size-5" /> Log out dari akun
+          <LogOut className="size-4 shrink-0" /> Log out dari akun
         </button>
       </div>
     </FullScreen>
+  );
+}
+
+/** Judul bagian di pengaturan: kecil, bukan seperti judul halaman. */
+function BlockTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-1.5 mt-4 text-[13px] font-bold text-muted-foreground">
+      {children}
+    </h2>
   );
 }
 
@@ -713,10 +770,10 @@ function ToggleRow({
   onToggle: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+        <p className="text-[13px] font-medium">{label}</p>
+        {desc && <p className="text-[11px] text-muted-foreground">{desc}</p>}
       </div>
       <button
         onClick={() => onToggle(!value)}
@@ -748,10 +805,10 @@ function QualityRow({
   const [open, setOpen] = useState(false);
   const Q = ["144p", "240p", "360p", "480p", "720p", "1080p"];
   return (
-    <div className="rounded-2xl border border-border bg-card p-3.5">
+    <div className="rounded-xl border border-border bg-card p-3">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
-        <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-violet-300">{value}</span>
+        <p className="text-[13px] font-medium">{label}</p>
+        <span className="text-[11px] text-primary">{value}</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -788,10 +845,10 @@ function SpeedRow({
   const [open, setOpen] = useState(false);
   const S = [0.5, 0.75, 1, 1.25, 1.5, 2];
   return (
-    <div className="rounded-2xl border border-border bg-card p-3.5">
+    <div className="rounded-xl border border-border bg-card p-3">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
-        <p className="text-sm font-medium">{label}</p>
-        <span className="text-xs text-violet-300">{value}x</span>
+        <p className="text-[13px] font-medium">{label}</p>
+        <span className="text-[11px] text-primary">{value}x</span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -891,12 +948,16 @@ function FullScreen({
 }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-background">
-      <div className="w-full min-w-0 p-3">
-        <div className="mb-3 mt-3 flex items-center gap-3">
-          <button onClick={onClose} className="rounded-full border border-border p-2">
+      <div className="w-full min-w-0 px-3 pb-8">
+        <div className="mb-2 mt-1 flex items-center gap-2">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border"
+          >
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="text-lg font-bold">{title}</h1>
+          <h1 className="text-base font-bold">{title}</h1>
         </div>
         {children}
       </div>

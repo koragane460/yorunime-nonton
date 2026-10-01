@@ -45,7 +45,9 @@
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --font-sans:
-    "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Sora", "Plus Jakarta Sans", ui-sans-serif, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 
 @layer base {
@@ -58,6 +60,15 @@
      supaya layout terasa lebih padat dan enak dibaca di HP. */
   html {
     font-size: 15px;
+  }
+  body {
+    line-height: 1.45;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
   }
 }
 
@@ -159,20 +170,21 @@
 
 /* ---------- LStream utils ---------- */
 
-/* Latar gradasi ungu gelap ke hitam */
+/* Latar halaman premium: tinta pekat, tanpa glow ungu. Cahaya datang dari
+   satu garis tipis di tepi atas, bukan dari radial gradient besar. */
 .bg-hero-gradient {
   background:
-    radial-gradient(1000px 460px at 50% -160px, oklch(0.38 0.16 295 / 0.45), transparent),
-    linear-gradient(180deg, oklch(0.17 0.04 285) 0%, oklch(0.13 0.02 280) 45%);
+    linear-gradient(180deg, oklch(0.17 0.02 275) 0%, oklch(0.13 0.015 275) 60%),
+    var(--card);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
 }
 
-/* Hero clan: kartu ungu gelap */
+/* Hero clan: kartu tinta dengan satu aksen, bukan gradien ungu menyala */
 .clan-hero-gradient {
   background: linear-gradient(
-    165deg,
-    oklch(0.32 0.13 295) 0%,
-    oklch(0.21 0.07 290) 55%,
-    oklch(0.15 0.03 285) 100%
+    170deg,
+    oklch(0.2 0.03 275) 0%,
+    oklch(0.14 0.02 275) 100%
   );
 }
 
@@ -191,34 +203,12 @@
   );
 }
 
-/* Badge kilau (dev/mod/tester/roles clan) */
+/* Badge staff/clan: warna datar. Tidak ada sapuan cahaya yang berulang,
+   karena gerakan tanpa alasan cuma buang energi di layar. */
 .badge-shine {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-}
-.badge-shine::after {
-  content: "";
-  position: absolute;
-  inset: -60%;
-  background: linear-gradient(
-    115deg,
-    transparent 42%,
-    rgba(255, 255, 255, 0.75) 50%,
-    transparent 58%
-  );
-  transform: translateX(-120%);
-  animation: badge-sweep 2.8s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes badge-sweep {
-  0% {
-    transform: translateX(-120%);
-  }
-  55%,
-  100% {
-    transform: translateX(120%);
-  }
 }
 
 /* Kotak pesan yang dibalas berkedip */
@@ -305,23 +295,10 @@
     yn-banner-breathe 7s ease-in-out infinite;
 }
 
-/* Kabut cahaya yang bergerak (aurora) */
+/* Kabut cahaya yang bergerak (aurora) — dimatikan. Cahaya ungu bergerak di
+   belakang banner bikin banner terasa seperti template, bukan identitas. */
 .yn-banner::before {
-  content: "";
-  position: absolute;
-  inset: -30%;
-  z-index: 0;
-  pointer-events: none;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgb(139 92 246 / 0.16) 70deg,
-    transparent 150deg,
-    rgb(59 130 246 / 0.14) 230deg,
-    transparent 320deg
-  );
-  filter: blur(60px);
-  animation: yn-aurora 18s linear infinite;
+  content: none;
 }
 
 /* Bintang twinkling */
@@ -408,14 +385,10 @@
 @keyframes yn-ring-glow {
   0%,
   100% {
-    box-shadow:
-      0 0 0 1px rgb(255 255 255 / 0.18),
-      0 10px 30px -6px rgb(168 85 247 / 0.7);
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16);
   }
   50% {
-    box-shadow:
-      0 0 0 2px rgb(255 255 255 / 0.32),
-      0 12px 38px -4px rgb(236 72 153 / 0.9);
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.3);
   }
 }
 
@@ -459,21 +432,9 @@
   animation: tag-twinkle 2.2s ease-in-out infinite;
 }
 
-/* Sapuan cahaya melintang (efek silau) */
+/* Tag clan: sapuan cahaya dimatikan, warna clan jadi penanda utama. */
 .clan-tag::after {
-  content: "";
-  position: absolute;
-  inset: -60%;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    112deg,
-    transparent 42%,
-    rgb(255 255 255 / 0.55) 50%,
-    transparent 58%
-  );
-  transform: translateX(-130%);
-  animation: badge-sweep 2.8s ease-in-out infinite;
+  content: none;
 }
 
 @keyframes tag-galaxy-drift {
@@ -513,9 +474,9 @@
   }
 }
 
-/* Title staff: denyut+silau */
+/* Title staff: warna datar, tidak denyut terus-menerus. */
 .title-shine {
-  animation: title-pulse 2.2s ease-in-out infinite;
+  animation: none;
 }
 @keyframes title-pulse {
   0%,
@@ -678,9 +639,8 @@ button:not([disabled]):active,
     color 0.18s ease;
 }
 .tab-pill-active {
-  background: linear-gradient(180deg, oklch(0.56 0.24 295), oklch(0.48 0.22 295));
-  color: oklch(0.98 0.01 300);
-  box-shadow: 0 4px 14px oklch(0.55 0.25 295 / 40%);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 /* Search rounded-full */
@@ -818,9 +778,9 @@ button:not([disabled]):active,
 video::cue {
   background: transparent;
   color: #ffffff;
-  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 1.05rem;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
   line-height: 1.35;
   text-shadow:
     -2px -2px 0 #000,

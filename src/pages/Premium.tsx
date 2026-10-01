@@ -1,9 +1,15 @@
 import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { AppLayout } from "@/components/AppLayout";
-import { SectionTitle } from "@/components/lstream-ui";
-import { Crown, Check, ShieldCheck, QrCode, Upload, Loader2 } from "lucide-react";
+import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
+import {
+  Check,
+  ChevronLeft,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+  Upload,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -25,18 +31,18 @@ type History = {
 };
 
 const PERKS = [
-  "Kualitas 1080p dan server streaming lebih cepat",
-  "Tonton tanpa iklan yang mengganggu",
-  "Badge centang emas di nama akun",
-  "Bisa give premium ke user lain dan dapat XP besar",
+  "Tanpa iklan yang menyela di tengah nonton",
+  "Kualitas 1080p, buffering lebih jarang",
+  "Centang emas di samping namamu",
+  "Bisa kasih premium ke orang lain dan kumpulkan XP",
   "Kuis dan event khusus member premium",
 ];
 
 const HOW_IT_WORKS = [
-  "Pindai QR yang tampil saat kamu menekan tombol beli premium.",
-  "Transfer tepat sesuai nominal paket yang dipilih.",
-  "Screenshot bukti transfer, lalu tempel di kolom bukti.",
-  "Transfermu langsung dianalisis supaya cepat masuk premium.",
+  "Buka paket, tekan Beli premium.",
+  "Scan QRIS yang muncul, transfer sesuai nominal.",
+  "Screenshot bukti transfer, lalu unggah di kolom bukti.",
+  "Isi keterangan transfer, tekan Kirim Transfer, lalu tunggu dicek.",
 ];
 
 /** Bukti transfer harus tajam. Skor di bawah ini berarti foto buram. */
@@ -148,27 +154,32 @@ export default function Premium() {
 
 function Hero() {
   return (
-    <div className="bg-hero-gradient pop-enter rounded-2xl border border-white/10 p-5 text-center">
-      <Crown className="mx-auto size-11 text-amber-300" />
-      <h1 className="mt-2 text-xl font-black">YoruNime Premium</h1>
-      <p className="mt-1 text-sm text-zinc-400">
-        Bayar sekali, semua konten premium terbuka
+    <header className="pop-enter border-b border-white/10 pb-4 pt-1">
+      <p className="font-mono text-[10px] tracking-[0.22em] text-zinc-500">
+        YORUNIME
       </p>
-    </div>
+      <h1 className="mt-1.5 text-2xl font-extrabold leading-tight">
+        Premium
+        <span className="text-gold">.</span>
+      </h1>
+      <p className="mt-1.5 max-w-[19rem] text-[13px] leading-6 text-zinc-400">
+        Nonton tanpa iklan, kualitas 1080p, dan centang emas di samping namamu.
+      </p>
+    </header>
   );
 }
 
 function HowTo() {
   return (
-    <section className="mt-4 rounded-2xl border border-white/10 bg-card p-4">
-      <h2 className="text-sm font-bold">Cara Beli Premium</h2>
-      <ol className="mt-2.5 space-y-2">
+    <section className="mt-5">
+      <h2 className="text-[13px] font-bold text-gold">Cara beli</h2>
+      <ol className="mt-2 divide-y divide-white/10">
         {HOW_IT_WORKS.map((step, i) => (
-          <li key={step} className="flex gap-2.5 text-xs leading-5 text-zinc-300">
-            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-black">
-              {i + 1}
+          <li key={step} className="flex items-start gap-3 py-2">
+            <span className="mt-px w-4 shrink-0 font-mono text-[11px] text-zinc-500">
+              {String(i + 1).padStart(2, "0")}
             </span>
-            {step}
+            <span className="text-[13px] leading-6 text-zinc-300">{step}</span>
           </li>
         ))}
       </ol>
@@ -237,7 +248,7 @@ function Plans() {
       const { storageId } = (await res.json()) as { storageId: string };
       setProof({ storageId, hash: hashBytes(buf) });
       setPreview(URL.createObjectURL(blob));
-      toast.success("Bukti diterima, lanjut kirim");
+      toast.success("Bukti diterima, isi keterangan lalu kirim");
     } catch (e) {
       setProof(null);
       setPreview(null);
@@ -247,14 +258,14 @@ function Plans() {
   };
 
   const send = async () => {
-    if (!order || !proof) return;
+    if (!order || !proof || !note.trim()) return;
     setBusy("send");
     try {
       await attachProof({
         orderId: order.orderId,
         proofStorageId: proof.storageId,
         proofHash: proof.hash,
-        ...(note.trim() ? { proofText: note.trim() } : {}),
+        proofText: note.trim(),
       });
       const r = (await analyze({ orderId: order.orderId })) as Verdict;
       setVerdict(r);
@@ -269,64 +280,37 @@ function Plans() {
   };
 
   return (
-    <section>
-      <SectionTitle>Pilih Paket</SectionTitle>
-      <div className="space-y-2.5">
-        {(plans ?? []).map((p) => {
-          const open = order?.planLabel === p.label;
-          return (
-            <div
-              key={p.id}
-              className={cn(
-                "rounded-2xl border transition",
-                open
-                  ? "border-amber-300/70 bg-amber-300/10"
-                  : "border-border bg-card hover:border-amber-300/40",
-              )}
-            >
-              <div className="flex items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold">{p.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.days} hari premium
-                  </p>
-                </div>
-                <p className="shrink-0 text-lg font-black text-amber-300">
-                  Rp {p.price.toLocaleString("id-ID")}
-                </p>
-                <button
-                  disabled={busy === "order"}
-                  onClick={() => void startOrder(p)}
-                  className="shrink-0 rounded-full bg-amber-300 px-4 py-2.5 text-xs font-bold text-black transition hover:bg-amber-200 disabled:opacity-50"
-                >
-                  {busy === "order" ? "…" : "Beli dan dapatkan premium"}
-                </button>
-              </div>
-              {open && order && (
-                <Checkout
-                  order={order}
-                  image={image}
-                  accountName={config?.accountName}
-                  accountLabel={config?.accountLabel}
-                  preview={preview}
-                  proof={proof !== null}
-                  busy={busy}
-                  note={note}
-                  onNote={setNote}
-                  onPick={() => fileRef.current?.click()}
-                  onSend={() => void send()}
-                  verdict={verdict}
-                />
-              )}
+    <section className="mt-5">
+      <h2 className="text-[13px] font-bold text-gold">Paket</h2>
+      <div className="mt-2 divide-y divide-white/10 border-y border-white/10">
+        {(plans ?? []).map((p) => (
+          <div key={p.id} className="flex items-center gap-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold leading-tight">
+                {p.label}
+              </p>
+              <p className="font-mono text-[10px] leading-tight text-zinc-500">
+                {p.days} hari
+              </p>
             </div>
-          );
-        })}
-        {!ready && (
-          <p className="rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-xs text-amber-200">
-            Pembayaran sedang disiapkan developer. Cek lagi nanti.
-          </p>
-        )}
+            <p className="shrink-0 font-mono text-[13px] font-bold text-gold">
+              {p.price.toLocaleString("id-ID")}
+            </p>
+            <button
+              disabled={busy !== null}
+              onClick={() => void startOrder(p)}
+              className="min-h-10 shrink-0 rounded-lg bg-gold px-3 text-[11px] font-bold text-black transition hover:brightness-95 disabled:opacity-50"
+            >
+              {busy === "order" ? "Menyiapkan…" : "Beli premium"}
+            </button>
+          </div>
+        ))}
       </div>
+      {!ready && (
+        <p className="mt-2 text-[11px] text-zinc-500">
+          Pembayaran sedang disiapkan developer. Cek lagi nanti.
+        </p>
+      )}
       <input
         ref={fileRef}
         type="file"
@@ -338,7 +322,94 @@ function Plans() {
           e.target.value = "";
         }}
       />
+
+      {order && (
+        <CheckoutOverlay
+          order={order}
+          image={image}
+          accountName={config?.accountName}
+          accountLabel={config?.accountLabel}
+          preview={preview}
+          proof={proof !== null}
+          busy={busy}
+          note={note}
+          onNote={setNote}
+          onPick={() => fileRef.current?.click()}
+          onSend={() => void send()}
+          verdict={verdict}
+          onClose={() => {
+            setOrder(null);
+            setVerdict(null);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+/** Layar bayar: satu layar penuh berisi QRIS, nominal, dan bukti transfer. */
+function CheckoutOverlay({
+  order,
+  image,
+  accountName,
+  accountLabel,
+  preview,
+  proof,
+  busy,
+  note,
+  onNote,
+  onPick,
+  onSend,
+  verdict,
+  onClose,
+}: {
+  order: Order;
+  image: string;
+  accountName?: string;
+  accountLabel?: string;
+  preview: string | null;
+  proof: boolean;
+  busy: string | null;
+  note: string;
+  onNote: (v: string) => void;
+  onPick: () => void;
+  onSend: () => void;
+  verdict: Verdict | null;
+  onClose: () => void;
+}) {
+  useHideNavOnMount(); // navbar disembunyikan selama layar bayar terbuka
+  return (
+    <div className="screen-enter fixed inset-0 z-[80] overflow-y-auto bg-background">
+      <div className="mx-auto w-full max-w-md px-3 pb-10">
+        <div className="mb-3 mt-1 flex items-center gap-2">
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">{order.planLabel}</p>
+            <p className="font-mono text-[10px] text-zinc-500">Bayar lewat QRIS</p>
+          </div>
+        </div>
+        <Checkout
+          order={order}
+          image={image}
+          accountName={accountName}
+          accountLabel={accountLabel}
+          preview={preview}
+          proof={proof}
+          busy={busy}
+          note={note}
+          onNote={onNote}
+          onPick={onPick}
+          onSend={onSend}
+          verdict={verdict}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -372,47 +443,45 @@ function Checkout({
   const live = useQuery(api.payments.myOrder, { orderId: order.orderId });
   if (live?.status === "paid" && !verdict) {
     return (
-      <div className="space-y-2 border-t border-amber-300/20 p-4">
+      <div className="border border-emerald-500/30 bg-emerald-500/10 p-3.5">
         <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
           <ShieldCheck className="size-4" /> Premium sudah aktif
         </p>
-        <p className="text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-zinc-400">
           {order.planLabel} masuk ke akun kamu. Terima kasih!
         </p>
       </div>
     );
   }
   return (
-    <div className="space-y-3 border-t border-amber-300/20 p-4">
+    <div className="space-y-4">
       <div className="flex flex-col items-center gap-2">
         {image ? (
           <img
             src={image}
             alt="QRIS YoruNime"
-            className="size-48 rounded-xl bg-white object-contain p-2"
+            className="size-44 rounded-lg bg-white object-contain p-2"
           />
         ) : (
-          <div className="flex size-48 items-center justify-center rounded-xl bg-black/40 text-xs text-zinc-400">
+          <div className="flex size-44 items-center justify-center rounded-lg bg-black/40 text-xs text-zinc-400">
             QRIS belum tersedia
           </div>
         )}
         <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-          <QrCode className="size-3.5" /> Scan dari aplikasi apa pun yang bisa QRIS
+          <QrCode className="size-3.5" /> Scan dari app apa pun yang bisa QRIS
         </p>
         {accountName && (
           <p className="text-[11px] text-zinc-300">
-            Atas nama: <b>{accountName}</b>
+            Atas nama <b>{accountName}</b>
             {accountLabel ? ` (${accountLabel})` : ""}
           </p>
         )}
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
-        <p className="text-[11px] uppercase tracking-wider text-zinc-400">
-          Transfer tepat sebanyak
-        </p>
-        <p className="text-2xl font-black text-amber-300">
-          Rp {order.priceIdr.toLocaleString("id-ID")}
+      <div className="border-y border-white/10 py-3 text-center">
+        <p className="font-mono text-[10px] text-zinc-500">total transfer</p>
+        <p className="font-mono text-3xl font-bold text-gold">
+          {order.priceIdr.toLocaleString("id-ID")}
         </p>
         <p className="mt-0.5 text-[11px] text-zinc-400">
           {order.planLabel} · {order.days} hari
@@ -420,14 +489,12 @@ function Checkout({
       </div>
 
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-          Bukti transfer
-        </p>
+        <p className="text-[13px] font-bold">Bukti transfer</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <button
             onClick={onPick}
             disabled={busy !== null}
-            className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold text-zinc-100 transition hover:border-amber-300/60 disabled:opacity-50"
+            className="flex min-h-11 items-center gap-2 rounded-lg border border-white/15 px-3.5 text-xs font-bold text-zinc-100 transition hover:border-gold/60 disabled:opacity-50"
           >
             {busy === "proof" ? (
               <Loader2 className="size-4 animate-spin" />
@@ -443,28 +510,35 @@ function Checkout({
           )}
         </div>
         <p className="mt-1.5 text-[11px] text-zinc-500">
-          Screenshot harus jelas. Foto buram akan ditolak.
+          Screenshot harus jelas. Foto buram ditolak.
         </p>
         {preview && (
           <img
             src={preview}
             alt="Pratinjau bukti"
-            className="mt-2 max-h-40 w-full rounded-xl border border-white/10 object-contain"
+            className="mt-2 max-h-40 w-full rounded-lg border border-white/10 object-contain"
           />
         )}
+      </div>
+
+      <div>
+        <p className="text-[13px] font-bold">Keterangan transfer</p>
         <textarea
           value={note}
           onChange={(e) => onNote(e.target.value)}
           rows={2}
-          placeholder="Opsional: contoh Transfer Rp 7.000 dari GoPay atas nama Rii"
-          className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs outline-none focus:border-amber-300/60"
+          placeholder="contoh: Transfer Rp 7.000 dari GoPay atas nama Rii"
+          className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-xs outline-none focus:border-gold/70"
         />
+        <p className="mt-1 text-[11px] text-zinc-500">
+          Wajib diisi. Ini yang dicocokkan dengan bukti transfer.
+        </p>
       </div>
 
       <button
         onClick={onSend}
-        disabled={!proof || busy !== null}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-300 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:opacity-40"
+        disabled={!proof || note.trim().length === 0 || busy !== null}
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-gold text-sm font-bold text-black transition hover:brightness-95 disabled:opacity-40"
       >
         {busy === "send" ? (
           <>
@@ -478,12 +552,12 @@ function Checkout({
       {verdict && (
         <div
           className={cn(
-            "rounded-xl border px-3 py-2.5 text-[11px] leading-relaxed",
+            "border px-3 py-2.5 text-[11px] leading-relaxed",
             verdict.verdict === "verified"
               ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
               : verdict.verdict === "rejected"
                 ? "border-red-500/40 bg-red-500/10 text-red-200"
-                : "border-amber-500/40 bg-amber-500/10 text-amber-200",
+                : "border-gold/40 bg-gold/10 text-amber-200",
           )}
         >
           <p className="flex items-center gap-1.5 font-bold">
@@ -503,18 +577,19 @@ function Checkout({
 
 function Perks() {
   return (
-    <section>
-      <SectionTitle>Kegunaan Premium</SectionTitle>
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <ul className="space-y-2">
-          {PERKS.map((p) => (
-            <li key={p} className="flex items-start gap-2 text-sm text-zinc-300">
-              <Check className="mt-0.5 size-4 shrink-0 text-emerald-400" />
-              {p}
-            </li>
-          ))}
-        </ul>
-      </div>
+    <section className="mt-6">
+      <h2 className="text-[13px] font-bold text-gold">Kegunaannya</h2>
+      <ul className="mt-2 space-y-1.5">
+        {PERKS.map((p) => (
+          <li
+            key={p}
+            className="flex items-start gap-2 text-[13px] leading-6 text-zinc-300"
+          >
+            <Check className="mt-1 size-3.5 shrink-0 text-emerald-400" />
+            {p}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -523,32 +598,35 @@ function HistoryList() {
   const history = useQuery(api.payments.myPurchases, {}) as History[] | undefined;
   if (!history || history.length === 0) return null;
   return (
-    <section>
-      <SectionTitle>Riwayat Pembelian</SectionTitle>
-      <div className="space-y-1.5">
+    <section className="mt-6">
+      <h2 className="text-[13px] font-bold text-gold">Riwayat</h2>
+      <ul className="mt-2 divide-y divide-white/10">
         {history.map((h) => (
-          <div
+          <li
             key={h._id}
-            className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-secondary/30 p-3 text-sm"
+            className="flex items-center justify-between gap-2 py-2 text-[13px]"
           >
             <span className="min-w-0 truncate">
-              {h.planLabel} · Rp {h.priceIdr.toLocaleString("id-ID")}
+              {h.planLabel}{" "}
+              <span className="font-mono text-[11px] text-zinc-500">
+                {h.priceIdr.toLocaleString("id-ID")}
+              </span>
             </span>
             <span
               className={cn(
-                "shrink-0 text-xs font-semibold",
+                "shrink-0 text-[11px] font-semibold",
                 h.status === "paid"
                   ? "text-emerald-400"
                   : h.status === "rejected"
                     ? "text-red-400"
-                    : "text-amber-300",
+                    : "text-gold",
               )}
             >
               {STATUS_LABEL[h.status] ?? h.status}
             </span>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

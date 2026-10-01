@@ -34,7 +34,7 @@ const TITLE_STYLE: Record<string, { label: string; icon: string; cls: string }> 
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2 mt-5 text-lg font-bold tracking-tight">{children}</h2>
+    <h2 className="mb-2 mt-5 text-[15px] font-bold">{children}</h2>
   );
 }
 
@@ -163,7 +163,7 @@ export function ShineBadge({
   return (
     <span
       className={cn(
-        "badge-shine inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow",
+        "badge-shine inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold text-white shadow",
         "bg-gradient-to-r",
         gradient,
         className,
@@ -193,8 +193,8 @@ export function TitleBadge({
   return (
     <span
       className={cn(
-        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 rounded-md font-black uppercase tracking-wide text-white shadow",
-        compact ? "px-1.5 py-0 text-[8px]" : "px-2 py-0.5 text-[10px]",
+        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 rounded-md font-bold text-white shadow",
+        compact ? "px-1.5 py-0 text-[9px]" : "px-2 py-0.5 text-[10px]",
         def.cls,
         className,
       )}
