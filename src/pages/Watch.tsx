@@ -208,14 +208,25 @@ function WatchContent() {
   }, [roomId, room, joinedRoom, joinRoom]);
 
   // Kembali dari nonton: JANGAN kembali ke episode sebelumnya (makanya tidak
-  // pakai navigate(-1)); langsung ke beranda dari atas.
+  // pakai navigate(-1)). Balik ke halaman terakhir yang dikunjungi user
+  // (disimpan RouteSyncer) — bukan selalu ke Home.
   const goBackFromWatch = () => {
     try {
       window.scrollTo({ top: 0 });
     } catch {
       /* abaikan */
     }
-    navigate("/home");
+    let target = "";
+    try {
+      target = sessionStorage.getItem("yn-return-to") ?? "";
+    } catch {
+      /* storage diblokir */
+    }
+    // Jangan balik ke diri sendiri / ke halaman nonton lain.
+    if (!target || target.startsWith("/nonton") || target.startsWith("/baca")) {
+      target = "/home";
+    }
+    navigate(target);
   };
 
   useEffect(() => {
@@ -343,7 +354,26 @@ function WatchContent() {
   // Lapisan gelap hanya untuk sisi gelap. Sisi terang memakai opacity kecil
   // saja supaya layar tidak terlihat ditutup cat putih.
   const dimOpacity = brightness < 0.5 ? (0.5 - brightness) * 1.2 : 0;
-  const liftOpacity = brightness > 0.5 ? (brightness - 0.5) * 0.26 : 0;
+  /**
+   * Kecerahan di atas 50% TIDAK memakai lapisan putih (itu bikin gambar
+   * pucat, bukan lebih jernih). Diganti filter komposit di elemen video:
+   * kontras & saturasi naik, kesannya gambar lebih tajam dan "HD".
+   * Filter CSS dijalankan GPU setelah frame jadi, jadi tidak menambah
+   * beban decode dan HP tidak jadi panas.
+   */
+  const liftAmount = brightness > 0.5 ? (brightness - 0.5) * 2 : 0;
+  /** Toggle "HD" — hanya tampil di layar penuh lanskap. */
+  const [hdBoost, setHdBoost] = useState(false);
+  const videoFilter = [
+    `contrast(${(1.06 + liftAmount * 0.18 + (hdBoost ? 0.16 : 0)).toFixed(3)})`,
+    `saturate(${(1.04 + liftAmount * 0.22 + (hdBoost ? 0.2 : 0)).toFixed(3)})`,
+    // Naikkan kecerahan sedikit tanpa menutupi gambar dengan cat putih.
+    liftAmount > 0 ? `brightness(${(1 + liftAmount * 0.24).toFixed(3)})` : "",
+    // Ketajaman: tekanan lokal di tepi, membuat gambar burem terasa lebih tajam.
+    hdBoost ? "drop-shadow(0 0 0.6px rgba(255,255,255,0.35))" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const [volumeLevel, setVolumeLevel] = useState(0.5);
   const [gesture, setGesture] = useState<null | {
     kind: "brightness" | "volume";
@@ -351,7 +381,7 @@ function WatchContent() {
   }>(null);
   const gestureRef = useRef<{
     kind: "brightness" | "volume";
-    startY: number;
+    startX: number;
     startValue: number;
     moved: boolean;
   } | null>(null);
@@ -449,16 +479,16 @@ function WatchContent() {
   const [subTouched, setSubTouched] = useState(false);
 
   /**
-   * Geser kecerahan/volume HANYA berlaku kalau jari mulai dari tombolnya.
-   * Menggeser permukaan video tidak mengubah apa pun, jadi tidak ada
-   * efek samping yang tidak diinginkan.
+   * Geser kecerahan/volume HANYA berlaku kalau jari mulai dari tombolnya,
+   * dan arahnya KIRI-KANAN (bukan atas-bawah), mengikuti arah bilah isian
+   * yang terlihat di layar. Geser permukaan video tidak mengubah apa pun.
    */
   const startLevelDrag =
     (kind: "brightness" | "volume") => (e: React.PointerEvent) => {
       const startValue = kind === "brightness" ? brightness : volumeLevel;
       gestureRef.current = {
         kind,
-        startY: e.clientY,
+        startX: e.clientX,
         startValue,
         moved: false,
       };
@@ -467,12 +497,11 @@ function WatchContent() {
   const moveLevelDrag = (e: React.PointerEvent) => {
     const g = gestureRef.current;
     if (!g) return;
-    const dy = g.startY - e.clientY;
-    if (!g.moved && Math.abs(dy) < 8) return;
+    const dx = e.clientX - g.startX;
+    if (!g.moved && Math.abs(dx) < 8) return;
     g.moved = true;
-    // 160px geser = 100% perubahan. Jarak pendek supaya tidak perlu jauh
-    // sampai teratas di layar HP.
-    const next = Math.max(0, Math.min(1, g.startValue + dy / 160));
+    // 140px geser = 100% perubahan. Arah kanan = naik, kiri = turun.
+    const next = Math.max(0, Math.min(1, g.startValue + dx / 140));
     if (g.kind === "brightness") {
       setBrightness(Math.round(levelToBrightness(next) * 100) / 100);
     } else {
@@ -498,6 +527,8 @@ function WatchContent() {
 
   // Komentar dengan echo lokal: pesan langsung tampil sebelum server menyalinnya.
   const [pendingComments, setPendingComments] = useState<CommentT[]>([]);
+  // Komentar yang baru saja dihapus user — dikeluarkan dari daftar seketika.
+  const [removedComments, setRemovedComments] = useState<Set<string>>(new Set());
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
@@ -1183,10 +1214,13 @@ function WatchContent() {
 
   // Komentar + echo lokal digabung di satu daftar.
   const shownComments = useMemo(() => {
-    const real = (episodeComments ?? []) as unknown as CommentT[];
+    const real = ((episodeComments ?? []) as unknown as CommentT[]).filter(
+      (r) => !removedComments.has(r._id),
+    );
     if (pendingComments.length === 0) return real;
     const keep = pendingComments.filter(
       (p) =>
+        !removedComments.has(p._id) &&
         !real.some(
           (r) =>
             r.userId === p.userId &&
@@ -1199,7 +1233,7 @@ function WatchContent() {
       queueMicrotask(() => setPendingComments(keep));
     }
     return [...real, ...keep].sort((a, b) => a.createdAt - b.createdAt);
-  }, [episodeComments, pendingComments]);
+  }, [episodeComments, pendingComments, removedComments]);
 
   if (!detailData)
     return (
@@ -1250,26 +1284,15 @@ function WatchContent() {
             : { aspectRatio: "16 / 9" }
         }
       >
-        {/* Kecerahan layar: sisi gelap pakai lapisan hitam, sisi terang pakai
-            lapisan putih yang sangat tipis. Tidak menyentuh decode video, jadi
-            HP tidak kerja lebih keras. */}
-        {(dimOpacity > 0 || liftOpacity > 0) && (
-          <>
-            {dimOpacity > 0 && (
-              <div
-                aria-hidden
-                className="pointer-events-none fixed inset-0 z-[100] bg-black"
-                style={{ opacity: dimOpacity }}
-              />
-            )}
-            {liftOpacity > 0 && (
-              <div
-                aria-hidden
-                className="pointer-events-none fixed inset-0 z-[100] bg-white"
-                style={{ opacity: liftOpacity }}
-              />
-            )}
-          </>
+        {/* Kecerahan layar: hanya sisi gelap yang pakai lapisan hitam. Sisi
+            terang tidak ada lapisan putih sama sekali — kecerahan di atas 50%
+            diterapkan sebagai filter di elemen video (lihat `videoFilter`). */}
+        {dimOpacity > 0 && (
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-[100] bg-black"
+            style={{ opacity: dimOpacity }}
+          />
         )}
 
         {!streamUrl ? (
@@ -1319,12 +1342,7 @@ function WatchContent() {
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
             className="h-full w-full object-contain"
-            style={
-              // Video dapat sedikit kontras & saturasi supaya tidak terlihat
-              // Video dapat sedikit kontras & saturasi supaya tidak terlihat
-              //washed out. Filter ini ringan, tidak memicu dekode ulang frame.
-              { filter: "contrast(1.06) saturate(1.04)" }
-            }
+            style={{ filter: videoFilter }}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -1480,13 +1498,30 @@ function WatchContent() {
 
         {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
         {isFs && (
-          <button
-            onClick={exitFullscreen}
-            className="absolute right-3 top-3 z-30 rounded-full bg-black/55 p-2"
-            aria-label="Keluar layar penuh"
-          >
-            <Minimize className="size-5 text-white" />
-          </button>
+          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+            {/* Perapian gambar: aktifkan waktu gambar burem terasa lebih tajam.
+                Hanya tampil di layar penuh (landscape). */}
+            <button
+              onClick={() => setHdBoost((v) => !v)}
+              aria-pressed={hdBoost}
+              aria-label="Perjelas gambar"
+              className={cn(
+                "rounded-full px-3 py-1.5 text-xs font-bold",
+                hdBoost
+                  ? "bg-white text-black"
+                  : "bg-black/55 text-white backdrop-blur",
+              )}
+            >
+              HD
+            </button>
+            <button
+              onClick={exitFullscreen}
+              className="rounded-full bg-black/55 p-2"
+              aria-label="Keluar layar penuh"
+            >
+              <Minimize className="size-5 text-white" />
+            </button>
+          </div>
         )}
 
         {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
@@ -1571,47 +1606,7 @@ function WatchContent() {
             >
               <SkipForward className="size-5 text-white" />
             </button>
-            {/* Kecerahan layar & volume suara juga tersedia di fullscreen,
-                posisinya di samping tombol play supaya tidak perlu keluar dari
-                layar penuh dulu. */}
-            <button
-              onPointerDown={startLevelDrag("brightness")}
-              onPointerMove={moveLevelDrag}
-              onPointerUp={endLevelDrag}
-              onPointerCancel={() => endGesture(false)}
-              onClick={bumpLevel("brightness")}
-              aria-label="Kecerahan layar"
-              className="flex size-11 touch-none select-none flex-col items-center justify-center gap-0.5 rounded-lg bg-black/50 text-white"
-            >
-              <Sun className="size-4" />
-              <span className="w-7 overflow-hidden">
-                <span
-                  className="block h-0.5 rounded-full bg-white"
-                  style={{ width: `${Math.round(brightness * 100)}%` }}
-                />
-              </span>
-            </button>
-            <button
-              onPointerDown={startLevelDrag("volume")}
-              onPointerMove={moveLevelDrag}
-              onPointerUp={endLevelDrag}
-              onPointerCancel={() => endGesture(false)}
-              onClick={bumpLevel("volume")}
-              aria-label="Volume suara"
-              className="flex size-11 touch-none select-none flex-col items-center justify-center gap-0.5 rounded-lg bg-black/50 text-white"
-            >
-              {volumeLevel === 0 ? (
-                <VolumeX className="size-4" />
-              ) : (
-                <Volume2 className="size-4" />
-              )}
-              <span className="w-7 overflow-hidden">
-                <span
-                  className="block h-0.5 rounded-full bg-white"
-                  style={{ width: `${Math.round(volumeLevel * 100)}%` }}
-                />
-              </span>
-            </button>
+            {/* Tombol keluar layar penuh yang posisinya tetap (di baris atas) */}
           </div>
           <div
             className={cn(
@@ -1619,6 +1614,37 @@ function WatchContent() {
               isFs ? "px-2 pb-1" : "px-3 pb-3",
             )}
           >
+            {/* Kecerahan & volume: hanya di layar penuh, posisi tetap di atas
+                seek bar supaya mudah dijangkau dengan ibu jari. Geser ke
+                kanan untuk naik, ke kiri untuk turun. */}
+            {isFs && (
+              <div className="grid grid-cols-2 gap-3 pb-1">
+                <LevelSlider
+                  icon={<Sun className="size-4" />}
+                  label="Kecerahan"
+                  value={brightness}
+                  onPointerDown={startLevelDrag("brightness")}
+                  onPointerMove={moveLevelDrag}
+                  onPointerUp={endLevelDrag}
+                  onPointerCancel={() => endGesture(false)}
+                />
+                <LevelSlider
+                  icon={
+                    volumeLevel === 0 ? (
+                      <VolumeX className="size-4" />
+                    ) : (
+                      <Volume2 className="size-4" />
+                    )
+                  }
+                  label="Volume"
+                  value={volumeLevel}
+                  onPointerDown={startLevelDrag("volume")}
+                  onPointerMove={moveLevelDrag}
+                  onPointerUp={endLevelDrag}
+                  onPointerCancel={() => endGesture(false)}
+                />
+              </div>
+            )}
             {/* Waktu tujuan saat bar digeser */}
             {scrub !== null && (
               <div className="flex justify-center">
@@ -1976,31 +2002,8 @@ function WatchContent() {
           </div>
         )}
 
-        {/* Kecerahan layar & volume suara: tombolnya selalu terlihat, tidak
-            hanya muncul setelah digeser. Ketuk untuk naik satu tingkat,
-            geser ke atas/ke bawah dari tombolnya untuk atur halus. */}
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <LevelToolButton
-            icon={<Sun className="size-4" />}
-            label="Kecerahan"
-            value={brightness}
-            onPointerDown={startLevelDrag("brightness")}
-            onPointerMove={moveLevelDrag}
-            onPointerUp={endLevelDrag}
-            onPointerCancel={() => endGesture(false)}
-            onClick={bumpLevel("brightness")}
-          />
-          <LevelToolButton
-            icon={<Volume2 className="size-4" />}
-            label="Volume"
-            value={volumeLevel}
-            onPointerDown={startLevelDrag("volume")}
-            onPointerMove={moveLevelDrag}
-            onPointerUp={endLevelDrag}
-            onPointerCancel={() => endGesture(false)}
-            onClick={bumpLevel("volume")}
-          />
-        </div>
+        {/* Kecerahan & volume HANYA ada di layar penuh. Di luar layar penuh
+            tidak ada tombolnya sama sekali, sesuai permintaan. */}
 
         {/* Garis pembatas sebelum diskusi */}
         <div className="my-3 h-px bg-white/15" />
@@ -2060,6 +2063,12 @@ function WatchContent() {
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
               comments={shownComments}
               meId={user?._id}
+              onDeleted={(id) => {
+                // Komentar yang baru dihapus langsung dikeluarkan dari daftar
+                // supaya tidak perlu menunggu update query.
+                setPendingComments((s) => s.filter((x) => x._id !== id));
+                setRemovedComments((s) => new Set(s).add(id));
+              }}
               onSend={async (text, replyToId) => {
                 if (!epParam || !user) {
                   toast.error("Pilih episode dulu");
@@ -2278,12 +2287,12 @@ function ToolButton({
 }
 
 /**
- * Tombol kecerahan layar / volume suara.
+ * Bilah kecerahan layar / volume suara — khusus mode layar penuh.
  *
- * Nilai selalu terlihat di dalam tombol, jadi user tidak perlu menebak.
- * Geser hanya berlaku kalau jari mulai dari tombol ini.
+ * Bilahnya horizontal, jadi geserannya juga ke kanan (naik) atau ke kiri
+ * (turun). Persentase selalu terlihat di ujung kanan.
  */
-function LevelToolButton({
+function LevelSlider({
   icon,
   label,
   value,
@@ -2291,7 +2300,6 @@ function LevelToolButton({
   onPointerMove,
   onPointerUp,
   onPointerCancel,
-  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -2300,34 +2308,32 @@ function LevelToolButton({
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
   onPointerCancel: () => void;
-  onClick: () => void;
 }) {
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
   return (
-    <button
+    <div
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      onClick={onClick}
-      className="flex h-14 touch-none select-none flex-col items-center justify-center gap-0.5 rounded-lg border border-border bg-card px-2 transition hover:border-foreground/40"
+      role="slider"
+      aria-label={label}
+      aria-valuenow={pct}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className="flex h-11 touch-none select-none items-center gap-2 rounded-lg bg-black/55 px-2.5"
     >
-      <span className="flex items-center gap-1.5 text-[11px] font-medium">
-        {icon}
-        {label}
+      <span className="shrink-0 text-white">{icon}</span>
+      <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
+        <span
+          className="block h-full rounded-full bg-white"
+          style={{ width: `${pct}%` }}
+        />
       </span>
-      <span className="flex w-full items-center gap-1.5">
-        <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/15">
-          <span
-            className="block h-full rounded-full bg-foreground"
-            style={{ width: `${pct}%` }}
-          />
-        </span>
-        <span className="w-7 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
-          {pct}%
-        </span>
+      <span className="w-9 shrink-0 text-right font-mono text-[10px] font-bold text-white">
+        {pct}%
       </span>
-    </button>
+    </div>
   );
 }
 

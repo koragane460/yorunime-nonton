@@ -291,20 +291,36 @@ function useAppOverlayOpen() {
   );
 }
 
-/** Hook untuk layar fullscreen: sembunyikan navbar saat mounted. */
-export function useHideNavOnMount() {
+/** Hook untuk layar fullscreen: sembunyikan navbar selama mounted.
+ *  Memakai penghitung, jadi kalau dua layar fullscreen bertumpuk (mis. halaman
+ *  Premium yang di atasnya membuka layar bayar), navbar tetap tersembunyi
+ *  sampai yang terakhir ikut tertutup. */
+let hideNavCount = 0;
+function useHideNav() {
   useEffect(() => {
+    hideNavCount += 1;
     setAppOverlayOpen(true);
-    return () => setAppOverlayOpen(false);
+    return () => {
+      hideNavCount = Math.max(0, hideNavCount - 1);
+      setAppOverlayOpen(hideNavCount > 0);
+    };
   }, []);
+}
+
+export function useHideNavOnMount() {
+  useHideNav();
 }
 
 /** Sembunyikan navbar selama `active` true (untuk screen buka-tutup, bukan mount-once). */
 export function useHideNavWhile(active: boolean) {
   useEffect(() => {
     if (!active) return;
+    hideNavCount += 1;
     setAppOverlayOpen(true);
-    return () => setAppOverlayOpen(false);
+    return () => {
+      hideNavCount = Math.max(0, hideNavCount - 1);
+      setAppOverlayOpen(hideNavCount > 0);
+    };
   }, [active]);
 }
 

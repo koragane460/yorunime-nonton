@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -83,9 +83,20 @@ function NotifTab() {
     user ? {} : "skip",
   );
   const [composeOpen, setComposeOpen] = useState(false);
-  // Panel popup pengumenical hanya diambil datanya saat dibuka.
+  // Panel popup pengumuman hanya diambil datanya saat dibuka.
   const [annOpen, setAnnOpen] = useState(false);
   const isDev = access?.level === "dev";
+
+  // Tandai semua sudah dibaca + buang notifikasi lawas (lebih dari 20, dan
+  // hanya yang sudah berumur 10 menit atau sudah dibaca).
+  const markRead = useMutation(api.activities.markNotificationsRead);
+  const prune = useMutation(api.moderation.pruneMyNotifications);
+  useEffect(() => {
+    if (!user) return;
+    void markRead({}).catch(() => {});
+    void prune({}).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!notifs]);
 
   return (
     <div className="space-y-2.5 pt-3">

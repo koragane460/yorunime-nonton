@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import {
@@ -146,8 +147,29 @@ function hashBytes(buf: ArrayBuffer): string {
 }
 
 export default function Premium() {
+  // Layar bayar tampil penuh: navbar atas-bawah ikut disembunyikan supaya
+  // isi layar memenuhi layar HP tanpa ada yang menutupi.
+  useHideNavOnMount();
+  const navigate = useNavigate();
   return (
     <AppLayout hideAccountPanel>
+      {/* Tombol balik — selalu terlihat di kiri atas */}
+      <button
+        onClick={() => {
+          let target = "";
+          try {
+            target = sessionStorage.getItem("yn-return-to") ?? "";
+          } catch {
+            /* storage diblokir */
+          }
+          if (!target || target.startsWith("/premium")) target = "/home";
+          navigate(target);
+        }}
+        className="fixed left-3 top-3 z-50 flex size-10 items-center justify-center rounded-full bg-black/60 backdrop-blur"
+        aria-label="Kembali"
+      >
+        <ChevronLeft className="size-5 text-white" />
+      </button>
       <div className="py-3">
         <Hero />
         <HowTo />

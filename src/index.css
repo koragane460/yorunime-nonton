@@ -82,9 +82,10 @@
  */
 :root {
   --radius: 0.75rem;
-  --brand: oklch(0.68 0.075 55);         /* aksen tanah liat */
-  --brand-foreground: oklch(0.16 0.01 55);
-  --gold: oklch(0.85 0.15 95);           /* kuning aksen */
+  /* Aksen utama: kuning tua (mustard redam). Warna awal website YoruNime. */
+  --brand: oklch(0.66 0.1 88);          /* kuning tua */
+  --brand-foreground: oklch(0.17 0.03 85);
+  --gold: oklch(0.85 0.15 95);           /* kuning terang, untuk aksen kecil */
   --gold-foreground: oklch(0.18 0.04 70);
   --background: oklch(0.145 0.004 60);   /* hitam lembut */
   --foreground: oklch(0.96 0.004 80);
@@ -92,8 +93,8 @@
   --card-foreground: oklch(0.96 0.004 80);
   --popover: oklch(0.175 0.005 60);
   --popover-foreground: oklch(0.96 0.004 80);
-  --primary: oklch(0.68 0.075 55);       /* tombol utama = aksen */
-  --primary-foreground: oklch(0.16 0.01 55);
+  --primary: oklch(0.66 0.1 88);         /* tombol utama = kuning tua */
+  --primary-foreground: oklch(0.17 0.03 85);
   --secondary: oklch(0.225 0.006 60);
   --secondary-foreground: oklch(0.93 0.004 80);
   --muted: oklch(0.215 0.005 60);
@@ -103,20 +104,20 @@
   --destructive: oklch(0.55 0.14 27);
   --border: oklch(0.32 0.006 70 / 55%);
   --input: oklch(0.27 0.006 60 / 60%);
-  --ring: oklch(0.68 0.075 55 / 55%);
-  --chart-1: oklch(0.68 0.075 55);
+  --ring: oklch(0.66 0.1 88 / 55%);
+  --chart-1: oklch(0.66 0.1 88);
   --chart-2: oklch(0.75 0.12 250);
   --chart-3: oklch(0.85 0.15 95);
   --chart-4: oklch(0.70 0.13 230);
   --chart-5: oklch(0.70 0.14 150);
   --sidebar: oklch(0.165 0.025 280);
   --sidebar-foreground: oklch(0.96 0.005 280);
-  --sidebar-primary: oklch(0.68 0.075 55);
-  --sidebar-primary-foreground: oklch(0.98 0.01 300);
+  --sidebar-primary: oklch(0.66 0.1 88);
+  --sidebar-primary-foreground: oklch(0.17 0.03 85);
   --sidebar-accent: oklch(0.21 0.03 280);
   --sidebar-accent-foreground: oklch(0.93 0.01 280);
   --sidebar-border: oklch(0.3 0.03 280 / 55%);
-  --sidebar-ring: oklch(0.68 0.075 55 / 55%);
+  --sidebar-ring: oklch(0.66 0.1 88 / 55%);
 }
 
 /* Tema terang opsional dari pengaturan */
@@ -127,8 +128,8 @@
   --card-foreground: oklch(0.17 0.006 60);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.006 60);
-  --primary: oklch(0.55 0.075 55);
-  --primary-foreground: oklch(0.99 0.004 80);
+  --primary: oklch(0.58 0.09 88);
+  --primary-foreground: oklch(0.99 0.01 90);
   --secondary: oklch(0.96 0.004 80);
   --secondary-foreground: oklch(0.24 0.006 60);
   --muted: oklch(0.95 0.004 80);
@@ -147,8 +148,8 @@
   --card-foreground: oklch(0.96 0.004 80);
   --popover: oklch(0.175 0.005 60);
   --popover-foreground: oklch(0.96 0.004 80);
-  --primary: oklch(0.68 0.075 55);
-  --primary-foreground: oklch(0.16 0.01 55);
+  --primary: oklch(0.66 0.1 88);
+  --primary-foreground: oklch(0.17 0.03 85);
   --secondary: oklch(0.225 0.006 60);
   --secondary-foreground: oklch(0.93 0.004 80);
   --muted: oklch(0.215 0.005 60);
@@ -158,7 +159,7 @@
   --destructive: oklch(0.55 0.14 27);
   --border: oklch(0.32 0.006 70 / 55%);
   --input: oklch(0.27 0.006 60 / 60%);
-  --ring: oklch(0.68 0.075 55 / 55%);
+  --ring: oklch(0.66 0.1 88 / 55%);
 }
 
 @layer base {
@@ -230,10 +231,10 @@
 @keyframes reply-blink {
   0%,
   100% {
-    box-shadow: 0 0 0 0 oklch(0.68 0.075 55 / 0%);
+    box-shadow: 0 0 0 0 oklch(0.66 0.1 88 / 0%);
   }
   50% {
-    box-shadow: 0 0 0 3px oklch(0.68 0.075 55 / 55%);
+    box-shadow: 0 0 0 3px oklch(0.66 0.1 88 / 55%);
   }
 }
 .reply-blink {
@@ -675,7 +676,7 @@ html.antilag .yn-banner-box::after {
   height: 6px;
 }
 .thin-scroll::-webkit-scrollbar-thumb {
-  background: oklch(0.68 0.075 55 / 35%);
+  background: oklch(0.66 0.1 88 / 35%);
   border-radius: 999px;
 }
 .thin-scroll::-webkit-scrollbar-track {

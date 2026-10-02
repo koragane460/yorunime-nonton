@@ -456,6 +456,13 @@ export function ChatPanel({
     imageStorageId?: string;
     imageUrl?: string;
     replyToId?: Id<"chatMessages">;
+    /** Kutipan reply untuk echo lokal — hanya dipakai sebelum server balas. */
+    _replyTo?: {
+      _id: string;
+      username: string;
+      text?: string;
+      premiumGiveId?: string;
+    };
   }) => Promise<void>;
   meId: string;
   compact?: boolean;
@@ -488,9 +495,24 @@ export function ChatPanel({
       imageStorageId?: string;
       imageUrl?: string;
     }) => {
-      await onSend({ ...payload, replyToId: replyTo?._id });
-      if (replyTo) {
-        setBlinkId(replyTo._id);
+      // Kutipan reply ditampilkan langsung di bubble lokal, supaya pesan yang
+      // barusan dikirim tidak pernah muncul tanpa konteks balasannya.
+      const target = replyTo;
+      const replyToId =
+        target && !String(target._id).startsWith("local-")
+          ? target._id
+          : undefined;
+      const quoted = target
+        ? {
+            _id: target._id,
+            username: target.username,
+            text: target.text ?? undefined,
+            premiumGiveId: target.premiumGive?._id,
+          }
+        : undefined;
+      await onSend({ ...payload, replyToId, _replyTo: quoted } as never);
+      if (target) {
+        setBlinkId(target._id);
         setTimeout(() => setBlinkId(null), 3400);
         setReplyTo(null);
       }
@@ -582,7 +604,9 @@ export function ChatPanel({
                     )}
                   </div>
                   {m.replyTo && (
-                    <div className="mt-1 rounded-lg border-l-2 border-foreground/40 bg-black/25 px-2 py-1 text-xs">
+                    // Tanpa garis di kiri: kutipan cuma kotak tipis yang
+                    // lebih rapi dan tidak memakan tempat.
+                    <div className="mt-1 rounded-md bg-black/30 px-2 py-1 text-xs">
                       <p className="font-medium text-primary">{m.replyTo.username}</p>
                       <p className="truncate text-muted-foreground">
                         {m.replyTo.text ?? (m.replyTo.premiumGiveId ? "Give premium" : "[foto]")}
@@ -661,7 +685,7 @@ export function ChatPanel({
       {/* reply preview + input */}
       <div className="border-t border-border/60 p-2">
         {replyTo && (
-          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-foreground/40 bg-primary/10 px-3 py-1.5 text-xs">
+          <div className="mb-2 flex items-center justify-between rounded-md bg-primary/10 px-3 py-1.5 text-xs">
             <div className="min-w-0">
               <p className="font-medium text-primary">{replyTo.username}</p>
               <p className="truncate text-muted-foreground">

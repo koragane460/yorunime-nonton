@@ -2,15 +2,20 @@ import { api } from "@/convex/_generated/api";
 import type { ChatMsg } from "@/components/ChatPanel";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Id } from "@/convex/_generated/dataModel";
-
-export type SendPayload = {
+import type { Id } from "@/convex/_generated/dataModel";export type SendPayload = {
   text?: string;
   /** Foto sudah diunggah ke storage, jadi cukup kirim storageId-nya. */
   imageStorageId?: string;
-  /** URL hasil resolusistorageId, hanya untuk echo lokal. */
+  /** URL hasil resolusi storageId, hanya untuk echo lokal. */
   imageUrl?: string;
   replyToId?: Id<"chatMessages">;
+  /** Kutipan reply untuk echo lokal, supaya balasan langsung kelihatan. */
+  _replyTo?: {
+    _id: string;
+    username: string;
+    text?: string;
+    premiumGiveId?: string;
+  };
 };
 
 type Me = {
@@ -87,8 +92,11 @@ export function useFastChat(
   };
 
   const doSend = async (p: SendPayload) => {
+    // Kutipan reply ikut dikirim ke server supaya pesan balasan tidak pernah
+    // muncul tanpa konteks (masalah lama: pesan reply tidak tampil sama sekali).
+    const quoted: Id<"chatMessages"> | undefined = p.replyToId;
     if (!me?._id) {
-      await send({ ...sendArgs, ...p } as never);
+      await send({ ...sendArgs, ...p, replyToId: quoted, _replyTo: undefined } as never);
       return;
     }
     const temp: ChatMsg = {
@@ -105,6 +113,7 @@ export function useFastChat(
       text: p.text,
       imageUrl: p.imageUrl,
       imageStorageId: p.imageStorageId,
+      replyTo: p._replyTo as ChatMsg["replyTo"],
       createdAt: Date.now(),
     };
     setPending((s) => [...s, temp]);
@@ -114,7 +123,7 @@ export function useFastChat(
         ...sendArgs,
         text: p.text,
         imageStorageId: p.imageStorageId,
-        replyToId: p.replyToId,
+        replyToId: quoted,
       } as never);
       // Echo langsung dilepas begitu server mengonfirmasi. Query akan
       // mengirim pesan aslinya; kalau echo ditahan terlalu lama, yang tampil

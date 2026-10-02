@@ -104,6 +104,20 @@ function RouteSyncer() {
     );
   }, [location.pathname]);
 
+  // Ingat halaman terakhir yang BUKAN halaman nonton. Dipakai tombol "kembali"
+  // di player supaya balik ke tempat user datang, bukan selalu ke Home.
+  useEffect(() => {
+    if (location.pathname === "/nonton" || location.pathname === "/baca") return;
+    try {
+      sessionStorage.setItem(
+        "yn-return-to",
+        `${location.pathname}${location.search}`,
+      );
+    } catch {
+      /* storage diblokir — tombol kembali jatuh ke Home */
+    }
+  }, [location.pathname, location.search]);
+
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data?.type === "navigate") {

@@ -314,7 +314,7 @@ export const adultAccess = internalQuery({
 /** Notifikasi milik user yang sedang login (broadcast developer, dll). */
 export const myNotifications = query({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit = 40 }) => {
+  handler: async (ctx, { limit = 20 }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return [];
     const rows = await ctx.db
@@ -329,8 +329,42 @@ export const myNotifications = query({
         type: n.type,
         title: n.title,
         body: n.body ?? "",
+        read: !!n.read,
         createdAt: n.createdAt,
       }));
+  },
+});
+
+/**
+ * Bersihkan notifikasi sendiri.
+ *
+ * Aturan: yang tampil cuma 20 terbaru. Sisanya dibuang, tapi hanya kalau
+ * notifikasi itu sudah berumur lebih dari 10 menit ATAU sudah dibaca —
+ * jadi pesan yang belum sempat dibaca tidak hilang diam-diam.
+ */
+export const pruneMyNotifications = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return { removed: 0 };
+    const KEEP = 20;
+    const GRACE_MS = 10 * 60 * 1000;
+    const now = Date.now();
+    const rows = await ctx.db
+      .query("notifications")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+    let removed = 0;
+    for (let i = 0; i < rows.length; i += 1) {
+      const n = rows[i];
+      if (i < KEEP) continue;
+      const oldEnough = now - n.createdAt > GRACE_MS;
+      if (!oldEnough && !n.read) continue;
+      await ctx.db.delete(n._id);
+      removed += 1;
+    }
+    return { removed };
   },
 });
 
