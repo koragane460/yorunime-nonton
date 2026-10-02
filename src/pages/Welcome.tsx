@@ -380,6 +380,14 @@ function WelcomeFlow() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]">
         <Starfield />
+        <motion.img
+          src="/logo-source.jpg"
+          alt="YoruNime"
+          className="mb-6 size-24 rounded-3xl object-cover"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
         <motion.h1
           // Serif besar dengan line-height rapat: kesan lebih tenang dan
           // premium, bukan judul bergaya neon.

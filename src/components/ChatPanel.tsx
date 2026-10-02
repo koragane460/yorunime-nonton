@@ -643,7 +643,7 @@ export function ChatPanel({
                     /* Tombol ":" di pojok pesan → popup lapor */
                     <button
                       aria-label="Laporkan pesan"
-                      title="Laporkan"
+                      title="Lapor"
                       onClick={() => setReportMsg(m)}
                       className="hover:text-foreground"
                     >

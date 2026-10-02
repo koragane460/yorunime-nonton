@@ -57,7 +57,7 @@ export function CsScreen({ onClose }: { onClose: () => void }) {
           <Headset className="size-4 text-primary" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold leading-tight">Customer Service</p>
+          <p className="text-sm font-bold leading-tight">CS YoruNime</p>
           <p className="text-[11px] text-muted-foreground">
             {waiting.length > 0
               ? `${waiting.length} permintaan menunggu`

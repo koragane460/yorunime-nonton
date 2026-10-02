@@ -2108,7 +2108,7 @@ function WatchContent() {
 
       {/* Popups diperbagus */}
       {qualityOpen && (
-        <Popup onClose={cancelQuality} title="Pilih kualitas">
+        <Popup onClose={cancelQuality} title="Kualitas">
           <div className="space-y-1.5">
             {QUALITIES.map((q) => {
               const height = parseInt(q, 10);
@@ -2205,7 +2205,7 @@ function WatchContent() {
         </Popup>
       )}
       {speedOpen && (
-        <Popup onClose={() => setSpeedOpen(false)} title="Kecepatan putar">
+        <Popup onClose={() => setSpeedOpen(false)} title="Kecepatan">
           <div className="flex flex-wrap gap-2">
             {SPEEDS.map((s) => (
               <button
@@ -2228,7 +2228,7 @@ function WatchContent() {
         </Popup>
       )}
       {downloadOpen && (
-        <Popup onClose={() => setDownloadOpen(false)} title="Download kualitas">
+        <Popup onClose={() => setDownloadOpen(false)} title="Unduh">
           <div className="flex flex-wrap gap-2">
             {QUALITIES.slice(2).map((q) => (
               <button

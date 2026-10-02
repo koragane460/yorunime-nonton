@@ -1,15 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="YoruNime">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 640 640" width="640" height="640" role="img" aria-label="YoruNime">
   <!--
     Logo YoruNime.
-    Latar digambar penuh, jadi tidak ada bidang putih di sekeliling ikon.
+    Memakai file gambar asli (logo-source.jpg) lalu dipotong mengikuti
+    persegi membulat, supaya sudut putih di sekeliling gambar hilang total.
   -->
-  <rect width="64" height="64" rx="14" fill="#120e1c"/>
-  <!-- Bulan sabit: lambang "Yoru" (malam) di dalam nama YoruNime. -->
-  <path d="M40.5 15.8a16.5 16.5 0 1 0 7.7 12.9A14 14 0 0 1 40.5 15.8Z" fill="#b98cff"/>
-  <!-- Bintang kecil. -->
-  <circle cx="17" cy="18" r="1.6" fill="#f4e9ff"/>
-  <circle cx="49" cy="47" r="1.2" fill="#f4e9ff"/>
-  <circle cx="13" cy="45" r="1.1" fill="#f4e9ff"/>
-  <!-- Huruf Y di tengah, putih polos. -->
-  <path d="M25 33.5h4.4l3.6 4.6 3.6-4.6H41l-6 7.4V48h-4v-7.1Z" fill="#ffffff"/>
+  <defs>
+    <clipPath id="ynSquircle">
+      <rect width="640" height="640" rx="140" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#ynSquircle)">
+    <image width="640" height="640"
+           preserveAspectRatio="xMidYMid slice"
+           href="logo-source.jpg"
+           xlink:href="logo-source.jpg" />
+  </g>
 </svg>

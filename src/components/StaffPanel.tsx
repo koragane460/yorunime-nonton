@@ -144,8 +144,8 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
       </p>
       <p className="mt-0.5 text-[10px] text-muted-foreground">
         {isDev
-          ? "Kelola title, unlimited, CS, ban & mute semua user"
-          : "Kelola ban & mute user"}
+          ? "Atur title, saldo, CS, ban & mute"
+          : "Ban & mute user"}
       </p>
 
       {isDev && (
@@ -155,7 +155,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         >
           <Headset className="size-4 shrink-0 text-primary" />
           <span className="min-w-0 flex-1 text-xs font-bold text-primary">
-            Customer Service
+            CS YoruNime
           </span>
           <CsBadge />
         </button>
@@ -202,7 +202,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
       {isDev && (
         <div className="mt-2.5 rounded-xl border border-red-500/30 bg-red-500/[0.04] p-2.5">
           <p className="text-[11px] font-bold text-red-400">
-            Bersihin semua user &amp; clan
+            Bersihin semua user & clan
           </p>
           <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
             Hapus semua akun dan clan. Yang tetap: ID 1, semua akun bertitle,

@@ -158,7 +158,7 @@ function ErrorDialog({
 
         <DialogFooter className="gap-3 sm:items-center">
           <span className="text-xs text-zinc-500">
-            Detail errornya tersimpan di chat juga.
+            Detail errornya juga terkirim ke chat dev.
           </span>
           <a
             href={`https://freebuff.com/project/${import.meta.env.VITE_VLY_APP_ID}`}

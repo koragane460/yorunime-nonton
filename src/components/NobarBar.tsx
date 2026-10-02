@@ -379,7 +379,7 @@ function CreateRoomSheet({
   };
 
   return (
-    <Sheet title="Bikin Room Nobar" onClose={onClose}>
+    <Sheet title="Bikin Room" onClose={onClose}>
       <div className="space-y-3">
         <div>
           <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
