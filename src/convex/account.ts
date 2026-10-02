@@ -242,6 +242,7 @@ export const getPublicProfile = query({
         .map((cm: any) => ({
           _id: cm._id,
           animeId: cm.animeId,
+          animeTitle: cm.animeTitle,
           text: cm.text,
           createdAt: cm.createdAt,
           likeCount: cm.likes?.length ?? 0,

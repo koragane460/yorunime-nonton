@@ -260,6 +260,8 @@ const schema = defineSchema(
 
     animeComments: defineTable({
       animeId: v.string(),
+      /** Judul anime saat komentar dibuat, biar tautan komentar tetap lengkap. */
+      animeTitle: v.optional(v.string()),
       userId: v.id("users"),
       text: v.string(),
       replyToId: v.optional(v.id("animeComments")),

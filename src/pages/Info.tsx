@@ -277,7 +277,9 @@ function LanjutTab() {
           <button
             key={h._id}
             onClick={() =>
-              navigate(`/nonton?anime=${h.animeId}&ep=${epId}&t=${Math.floor(pos)}`)
+              navigate(
+                `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
+              )
             }
             className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
           >

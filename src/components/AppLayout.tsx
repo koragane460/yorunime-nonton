@@ -308,6 +308,8 @@ type MiniState = {
   animeTitle: string;
   animeImage?: string;
   episodeNumber?: number;
+  /** Id episode utuh (mis. "21__ep5") supaya layar nonton membuka ep yang sama. */
+  episodeId?: string;
   streamUrl: string;
   isEmbed: boolean;
 };
@@ -420,7 +422,7 @@ export function MiniPlayerHost() {
           lastTapRef.current = 0;
           setUiOn(true);
           navigate(
-            `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
+            `/nonton?anime=${encodeURIComponent(state.animeId)}${state.episodeId ?? (state.episodeNumber ? `&ep=${state.episodeNumber}` : "")}&judul=${encodeURIComponent(state.animeTitle ?? "")}`,
           );
           return;
         }
@@ -485,7 +487,7 @@ export function MiniPlayerHost() {
                   e.stopPropagation();
                   setUiOn(true);
                   navigate(
-                    `/nonton?anime=${state.animeId}${state.episodeNumber ? `&ep=${state.episodeNumber}` : ""}`,
+                    `/nonton?anime=${encodeURIComponent(state.animeId)}${state.episodeId ?? (state.episodeNumber ? `&ep=${state.episodeNumber}` : "")}&judul=${encodeURIComponent(state.animeTitle ?? "")}`,
                   );
                 }}
               >

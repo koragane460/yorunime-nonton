@@ -354,7 +354,9 @@ export function ProfileSheet({
                       key={c._id}
                       onClick={() => {
                         onClose();
-                        navigate(`/nonton?anime=${c.animeId}`);
+                        navigate(
+                          `/nonton?anime=${encodeURIComponent(String(c.animeId).split("__ep")[0] ?? "")}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
+                        );
                       }}
                       className="mb-2 block w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
                     >

@@ -336,7 +336,11 @@ function HomeContent() {
                       Lihat detail
                     </button>
                     <button
-                      onClick={() => navigate(`/nonton?anime=${a.id}`)}
+                      onClick={() =>
+                        navigate(
+                          `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
+                        )
+                      }
                       className="rounded-full border border-white/25 bg-black/40 px-4 py-1.5 text-xs font-semibold text-white transition hover:border-white/50"
                     >
                       ▶ Tonton

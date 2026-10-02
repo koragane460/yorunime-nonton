@@ -271,8 +271,13 @@ export const listComments = query({
 });
 
 export const postComment = mutation({
-  args: { animeId: v.string(), text: v.string(), replyToId: v.optional(v.id("animeComments")) },
-  handler: async (ctx, { animeId, text, replyToId }) => {
+  args: {
+    animeId: v.string(),
+    animeTitle: v.optional(v.string()),
+    text: v.string(),
+    replyToId: v.optional(v.id("animeComments")),
+  },
+  handler: async (ctx, { animeId, animeTitle, text, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
@@ -281,6 +286,7 @@ export const postComment = mutation({
     if (text.trim().length === 0) throw new Error("Komentar kosong");
     const commentId = await ctx.db.insert("animeComments", {
       animeId,
+      animeTitle,
       userId,
       text: text.trim(),
       replyToId,

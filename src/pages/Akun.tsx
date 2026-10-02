@@ -444,7 +444,13 @@ function AkunContent() {
             {(profile?.myComments ?? []).map((c) => (
               <button
                 key={c._id}
-                onClick={() => navigate(`/nonton?anime=${c.animeId}`)}
+                onClick={() =>
+                  navigate(
+                    // Id komentar berbentuk "<animeId>__ep<...>"; bagian episode
+                    // dibuang supaya halaman nonton membuka anime yang benar.
+                    `/nonton?anime=${encodeURIComponent(String(c.animeId).split("__ep")[0] ?? "")}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
+                  )
+                }
                 className="block w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
               >
                 <p className="text-sm">{c.text}</p>

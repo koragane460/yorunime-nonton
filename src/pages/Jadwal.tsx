@@ -229,7 +229,13 @@ function JadwalContent() {
             {(list as AiringItem[]).map((a) => (
               <button
                 key={`${a.id}-${a.episode}`}
-                onClick={() => navigate(user ? `/nonton?anime=${a.id}` : "/auth")}
+                onClick={() =>
+                  navigate(
+                    user
+                      ? `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`
+                      : "/auth",
+                  )
+                }
                 className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-amber-300/50"
               >
                 <img src={a.image} alt="" className="h-16 w-11 shrink-0 rounded-lg object-cover" />

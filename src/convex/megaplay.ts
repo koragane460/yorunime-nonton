@@ -94,7 +94,17 @@ async function resolveByTitle(
 ): Promise<Record<string, any> | { ok: false; reason: string }> {
   if (!title) return { ok: false as const, reason: "Episode belum tersedia" };
   const indo = await resolveIndo(title, ep).catch(() => []);
-  const sources = indo.map((s) => ({ label: s.label, url: s.url, type: s.type }));
+  // `baked` = server ini sudah punya subtitle Bahasa Indonesia sendiri (di dalam
+  // video atau di dalam player embed-nya), jadi player tidak perlu menggambar
+  // subtitle sendiri untuk server ini.
+  const sources = indo.map((s) => ({
+    label: s.label,
+    url: s.url,
+    type: s.type,
+    // Semua server di sini berasal dari penyedia subtitle Indonesia, jadi
+    // subtitle-nya sudah ada di dalam video atau di dalam player embed-nya.
+    baked: true,
+  }));
   if (sources.length === 0) {
     return { ok: false as const, reason: "Episode belum tersedia" };
   }
@@ -151,30 +161,32 @@ export const resolveEpisode = action({
       //   2) Embed Sub Indo  — kalau sumber Indonesia hanya punya player embed.
       //   3) HLS MegaPlay SUB — cadangan terakhir supaya episode tidak ditolak.
       // Player memakai daftar ini untuk otomatis pindah server saat error.
+      // `baked` dihitung per server, bukan per episode: semua server Indonesia
+      // sudah membawa subtitle-nya sendiri (di dalam video, atau di dalam
+      // player embed-nya), sedangkan MegaPlay tidak — di situ subtitle
+      // Indonesia hasil terjemahan kita yang dipakai.
       const sources: {
         label: string;
         url: string;
         type: "hls" | "mp4" | "embed";
+        baked: boolean;
       }[] = [
-        ...indoDirect.map((s) => ({ label: s.label, url: s.url, type: s.type })),
-        ...indoEmbed.map((s) => ({ label: s.label, url: s.url, type: s.type })),
+        ...indoDirect.map((s) => ({ label: s.label, url: s.url, type: s.type, baked: true })),
+        ...indoEmbed.map((s) => ({ label: s.label, url: s.url, type: s.type, baked: true })),
       ];
       if (sub) {
-        sources.push({ label: HLS_LABEL, url: sub.m3u8, type: "hls" });
+        sources.push({ label: HLS_LABEL, url: sub.m3u8, type: "hls", baked: false });
       }
 
       if (sources.length === 0) {
         return { ok: false as const, reason: "Episode belum tersedia" };
       }
 
-      // Kalau sumber yang dipakai adalah HLS Sub Indo (xtwap), subtitle
-      // Indonesia sudah menempel di dalam video. Track subtitle MegaPlay
-      // milik video lain, jadi jangan dikirim (biar tidak salah sinkron).
-      // Subtitle Indonesia "baked" hanya berlaku kalau yang dipakai sumber
-      // HLS/MP4 Indonesia. Kalau sumbernya player embed, subtitle tetap boleh
-      // ditambahkan dari track MegaPlay.
+      // Track subtitle MegaPlay selalu dikirim. Player cuma memakainya saat server
+      // yang diputar tidak punya subtitle sendiri, jadi tidak mungkin doabel —
+      // dan tetap jadi cadangan kalau terjemahan kita gagal dibuat.
       const usingIndoHls = sources[0]?.type === "hls" || sources[0]?.type === "mp4";
-      const allTracks: Track[] = usingIndoHls ? [] : (sub?.tracks ?? []);
+      const allTracks: Track[] = sub?.tracks ?? [];
       // Prioritas subtitle: Indonesia > English > track pertama.
       const isEn = (t: Track) =>
         /^en(|-|_)/i.test(t.label.trim()) || t.lang === "en";

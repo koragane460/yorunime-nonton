@@ -237,7 +237,9 @@ function WatchContent() {
   const [activeSub, setActiveSub] = useState<string>("");
   const [waiting, setWaiting] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
-  const [sources, setSources] = useState<{ label: string; url: string; type: string }[]>([]);
+  const [sources, setSources] = useState<
+    { label: string; url: string; type: string; baked?: boolean }[]
+  >([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
   const [sourceIdx, setSourceIdx] = useState(0);
   // Server yang sudah dicoba dan gagal untuk episode ini, supaya auto-failover
@@ -250,19 +252,29 @@ function WatchContent() {
   const [directErr, setDirectErr] = useState<string | null>(null);
   const [autoSubUrl, setAutoSubUrl] = useState("");
   const [autoSubLoading, setAutoSubLoading] = useState(false);
+  // Pesan singkat kalau subtitle Indonesia gagal dibuat (server subtitles
+  // aslinya yang dipakai, atau subtitledita lewat fallback).
+  const [autoSubError, setAutoSubError] = useState("");
+  // Asal subtitle otomatis: "indo" (track Indonesia asli), "auto" (diterjemahkan)
+  // atau "raw" (terjemahan gagal, teks masih bahasa aslinya).
+  const [autoSubSource, setAutoSubSource] = useState("");
+  // Tombol "Coba lagi" di menu subtitle menambah angka ini untuk memicu
+  // pembuatan ulang subtitle Indonesia.
+  const [subRetry, setSubRetry] = useState(0);
   // Subtitle digambar sendiri (bukan <track> bawaan browser) supaya gaya &
-  // lebar teks persis yang kita mau: kotak hitam 50% di belakang teks.
+  // lebar teks persis yang kita mau: teks putih dengan outline hitam tebal.
   const [autoVtt, setAutoVtt] = useState("");
   const [cues, setCues] = useState<Cue[]>([]);
   const [activeCue, setActiveCue] = useState<string>("");
   // Subtitle Indonesia native (kalau HLS MegaPlay menyediakan track ID)
   const idTrackLabel =
     (direct?.subTracks ?? []).find((t: any) => t.lang === "id")?.label ?? "";
-  // Kalau sumber Sub Indo (xtwap) yang dipakai, subtitle Bahasa Indonesia sudah
-  // menempel di dalam berkas video. Subtitle itu milik penyedia konten, bukan
-  // milik kita — jadi overlay subtitle kita dimatikan 100% (teks dan kotaknya
-  // sama sekali tidak muncul) supaya tidak	doabel/tumpang tindih.
-  const bakedSubs = !!direct?.bakedSubs;
+  // Subtitle Indonesia yang menempel di dalam berkas video hanya ada di server
+  // HLS/MP4 Sub Indo. Begitu user pindah ke server embed atau MegaPlay, teks itu
+  // hilang — jadi overlay subtitle kita harus hidup lagi, dihitung per server
+  // yang sedang diputar, bukan sekali per episode.
+  const currentSrc = sources[sourceIdx] ?? sources[0];
+  const bakedSubs = !!currentSrc?.baked;
   // Notifikasi kecepatan di dalam player (mis. "2× speed") seperti subtitle:
   // muncul sebentar di tengah atas lalu hilang sendiri.
   const [speedNotice, setSpeedNotice] = useState("");
@@ -480,16 +492,30 @@ function WatchContent() {
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
   // localStorage jadi tidak perlu diterjemahkan ulang.
-  // Kalau sumber sudah membawa subtitle-nya sendiri (bakedSubs), tidak ada yang
-  // perlu diunduh — subtitle animeindo yang ada di dalam video dipakai.
+  // Kalau server yang sedang diputar sudah membawa subtitle Indonesia sendiri
+  // (bakedSubs), tidak ada yang perlu diunduh. Begitu user pindah ke server lain
+  // (embed atau MegaPlay), subtitle Indonesia kita dimuat ulang untuk menimpa
+  // subtitle English milik server tersebut.
   useEffect(() => {
-    const mm = epParam?.match(/^(\d+)__ep(\d+)$/);
-    if (!mm || !direct?.ok || bakedSubs) {
+    if (!epParam || !direct?.ok || bakedSubs) {
       setAutoSubUrl("");
       setAutoSubLoading(false);
       return;
     }
-    const key = `yorunime-sub-indo:${mm[1]}:${mm[2]}`;
+    const mm = epParam.match(/^(\d+)__ep(\d+)$/);
+    // Episode tanpa MAL id (mis. Otakudesu) tidak punya sumber subtitle
+    // Inggris untuk diterjemahkan, jadi tidak ada yang bisa dimuat.
+    const malId = mm ? mm[1] : (/^\d+$/.test(animeId ?? "") ? animeId : "");
+    if (!malId) {
+      setAutoSubLoading(false);
+      return;
+    }
+    const epNo =
+      mm
+        ? Number(mm[2]) || 1
+        : (detailData?.episodeList ?? []).find((e: any) => e.id === epParam)
+            ?.number ?? 1;
+    const key = `yorunime-sub-indo:${malId}:${epNo}`;
     setAutoSubUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return "";
@@ -502,23 +528,40 @@ function WatchContent() {
       }
     })();
     setAutoVtt("");
+    setAutoSubError("");
+    setAutoSubSource("");
     if (cached && cached.includes("WEBVTT")) {
       setAutoVtt(cached);
       return;
     }
     let alive = true;
     setAutoSubLoading(true);
-    subtitleIndo({ malId: mm[1], ep: Number(mm[2]) || 1 })
+    subtitleIndo({ malId, ep: Number(epNo) || 1 })
       .then((r: any) => {
-        if (!alive || !r?.ok || !r.vtt) return;
+        if (!alive) return;
+        if (!r?.ok || !r.vtt) {
+          setAutoSubError(
+            r?.reason && r.reason !== "Subtitle tidak tersedia"
+              ? `Subtitle Indonesia gagal dibuat (${r.reason})`
+              : "Subtitle Indonesia belum tersedia untuk episode ini",
+          );
+          return;
+        }
         try {
           localStorage.setItem(key, r.vtt);
         } catch {
           /* storage penuh — subtitle tetap dipakai di session ini */
         }
         setAutoVtt(r.vtt);
+        setAutoSubSource(String(r.source ?? "auto"));
+        // Terjemahan gagal: teksnya masih bahasa aslinya. Tetap dipakai supaya
+        // tidak ada layar tanpa subtitle, tapi user diberi tahu + jalan coba lagi.
+        if (r.source === "raw")
+          setAutoSubError("Terjemahan subtitle gagal, dipakai subtitle asli");
       })
-      .catch(() => {})
+      .catch(() => {
+        if (alive) setAutoSubError("Subtitle Indonesia gagal dimuat");
+      })
       .finally(() => {
         if (alive) setAutoSubLoading(false);
       });
@@ -526,7 +569,7 @@ function WatchContent() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epParam, bakedSubs, !!direct?.ok]);
+  }, [epParam, animeId, bakedSubs, !!direct?.ok, subRetry]);
 
   const [detailData, setDetailData] = useState<any>(null);
 
@@ -1049,9 +1092,12 @@ function WatchContent() {
 
   const D = detailData;
   // Tombol CC muncul kalau ada track subtitle apa pun (termasuk subtitle
-  // Indonesia yang sedang dibuat otomatis).
+  // Indonesia yang sedang dibuat otomatis atau yang gagal dibuat).
   const hasSubMenu = !bakedSubs && (
-    (direct?.subTracks?.length ?? 0) > 0 || !!autoVtt || autoSubLoading
+    (direct?.subTracks?.length ?? 0) > 0 ||
+    !!autoVtt ||
+    autoSubLoading ||
+    !!autoSubError
   );
 
   return (
@@ -1203,8 +1249,8 @@ function WatchContent() {
               ))}
           </video>
         )}
-        {/* Subtitle digambar sendiri: kotak hitam 50% di belakang teks, teks
-            dibungkus rapat dan tidak melebar ke samping. */}
+        {/* Subtitle digambar sendiri: teks putih semi-bold dengan outline hitam
+            tebal, dibungkus rapat di tengah dan tidak melebar ke samping. */}
         {activeCue && !bakedSubs && (
           <div
             className={cn(
@@ -1214,13 +1260,19 @@ function WatchContent() {
               isFs ? "bottom-12" : "bottom-16 sm:bottom-20",
             )}
           >
-            {/* Gaya subtitle ala animeindo: teks putih semi-bold dengan outline
-                hitam tebal, tanpa kotak background di belakang teks. */}
             <p
               className={cn(
-                "max-w-[min(90%,42rem)] text-center font-semibold leading-snug text-white",
-                "[text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,0_2px_3px_rgba(0,0,0,0.9)]",
-                isFs ? "text-[15px] sm:text-[18px]" : "text-[13px] sm:text-[15px]",
+                "max-w-[min(92%,44rem)] whitespace-pre-line break-words text-center font-semibold leading-snug text-white",
+                "[text-shadow:-2px_-2px_0_#000,2px-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,0_2px_3px_rgba(0,0,0,0.9)]",
+                // Teks panjang otomatis dikecilkan supaya tetap satu blok rapi
+                // dan tidak menutupi gambar.
+                activeCue.length > 90
+                  ? isFs
+                    ? "text-[13px] sm:text-[15px]"
+                    : "text-[12px] sm:text-[13px]"
+                  : isFs
+                    ? "text-[15px] sm:text-[18px]"
+                    : "text-[13px] sm:text-[15px]",
               )}
             >
               {activeCue}
@@ -1470,6 +1522,7 @@ function WatchContent() {
                       animeTitle: D.title,
                       animeImage: D.image,
                       episodeNumber: currentEp?.number,
+                      episodeId: epParam ?? undefined,
                       streamUrl: streamUrl,
                       isEmbed: false,
                     });
@@ -1537,7 +1590,9 @@ function WatchContent() {
                         : "text-white/80 hover:bg-white/10",
                     )}
                   >
-                    {t.label}
+                    {/* Track non-Indonesia milik server, jadi diberi penanda
+                        supaya jelas bedanya dengan subtitle terjemahan kita. */}
+                    {t.lang === "id" ? t.label : `${t.label} (asli)`}
                     {t.lang === "id" && (
                       <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
                         ID
@@ -1545,7 +1600,9 @@ function WatchContent() {
                     )}
                   </button>
                 ))}
-                {/* Subtitle Indonesia otomatis (dari subtitle server) */}
+                {/* Subtitle Indonesia otomatis (diterjemahkan dari track
+                    English, jadi tetap muncul di server yang tidak punya
+                    subtitle Indonesia sendiri). */}
                 <button
                   onClick={() => autoVtt && pickSub(AUTO_SUB)}
                   disabled={!autoVtt}
@@ -1559,11 +1616,27 @@ function WatchContent() {
                 >
                   {autoSubLoading && !autoVtt
                     ? "Menerjemahkan subtitle…"
-                    : AUTO_SUB}
+                    : autoSubSource === "raw"
+                      ? "Subtitle asli (terjemahan gagal)"
+                      : AUTO_SUB}
                   <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
                     ID
                   </span>
                 </button>
+                {/* Gagal diterjemahkan? Beri tahu sekaligus jalan keluarannya. */}
+                {autoSubError && !autoSubLoading && (
+                  <div className="flex items-center gap-2 px-2 pt-1">
+                    <span className="min-w-0 flex-1 text-[10px] leading-tight text-amber-300/90">
+                      {autoSubError}
+                    </span>
+                    <button
+                      onClick={() => setSubRetry((n) => n + 1)}
+                      className="shrink-0 rounded bg-white/15 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-white/25"
+                    >
+                      Coba lagi
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1735,6 +1808,7 @@ function WatchContent() {
                   animeTitle: D.title,
                   animeImage: D.image,
                   episodeNumber: currentEp?.number,
+                  episodeId: epParam ?? undefined,
                   streamUrl,
                   isEmbed: sourceType === "embed",
                 });
@@ -1836,6 +1910,7 @@ function WatchContent() {
                 try {
                   await postComment({
                     animeId: `${animeId}__ep${epParam}`,
+                    animeTitle: D.title,
                     text,
                     replyToId: replyToId as never,
                   });
