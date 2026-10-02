@@ -91,9 +91,12 @@ const RESULT_TTL = 30 * 60_000;
 async function resolveByTitle(
   ep: number,
   title: string | undefined,
+  fast: boolean,
 ): Promise<Record<string, any> | { ok: false; reason: string }> {
   if (!title) return { ok: false as const, reason: "Episode belum tersedia" };
-  const indo = await resolveIndo(title, ep).catch(() => []);
+  const indo = await resolveIndo(title, ep, { max: fast ? 2 : 5 }).catch(
+    () => [],
+  );
   // `baked` = server ini sudah punya subtitle Bahasa Indonesia sendiri (di dalam
   // video atau di dalam player embed-nya), jadi player tidak perlu menggambar
   // subtitle sendiri untuk server ini.
@@ -128,12 +131,14 @@ export const resolveEpisode = action({
     malId: v.optional(v.string()),
     ep: v.number(),
     title: v.optional(v.string()),
+    /** Premium: resolusi jalan cepat (sumber indo dibatasi + MegaPlay paralel). */
+    fast: v.optional(v.boolean()),
   },
-  handler: async (_ctx, { malId, ep, title }) => {
+  handler: async (_ctx, { malId, ep, title, fast }) => {
     // Anime dari sumber non-MAL (mis. Otakudesu) tidak punya MAL id, jadi
     // MegaPlay tidak bisa dipakai. Hanya sumber subtitle Indonesia yang bisa.
     if (!malId || !/^\d+$/.test(malId)) {
-      return resolveByTitle(ep, title);
+      return resolveByTitle(ep, title, fast === true);
     }
     const key = `${malId}__ep${ep}`;
     const hit = resultCache.get(key);
@@ -146,15 +151,18 @@ export const resolveEpisode = action({
     };
 
     try {
-      // Sumber Indonesia dicek bersamaan dengan MegaPlay.
-      const indo: IndoSource[] = title
-        ? await resolveIndo(title, ep).catch(() => [])
-        : [];
+      // Sumber Indonesia dicek bersamaan dengan MegaPlay. Untuk member premium
+      // keduanya ditembakkan benar-benar paralel (tidak menunggu indo selesai
+      // dulu sebelum MegaPlay dimulai), jadi frame pertama muncul lebih cepat.
+      const subPromise = pickVariant(malId, ep, "sub").catch(() => null);
+      const indoPromise: Promise<IndoSource[]> = title
+        ? resolveIndo(title, ep, { max: fast ? 2 : 5 }).catch(() => [])
+        : Promise.resolve([]);
+      const [sub, indo] = await Promise.all([subPromise, indoPromise]);
       // HLS/MP4 Sub Indo selalu didahulukan: subtitle Indonesia sudah menempel di
       // video, jadi player kita sendiri bisa memainkannya.
       const indoDirect = indo.filter((s) => s.type === "hls" || s.type === "mp4");
       const indoEmbed = indo.filter((s) => s.type === "embed");
-      const sub = await pickVariant(malId, ep, "sub").catch(() => null);
 
       // Urutan sumber (semua server dikembalikan, bukan hanya satu):
       //   1) HLS/MP4 Sub Indo — subtitle Indonesia sudah menempel di video.

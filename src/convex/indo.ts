@@ -635,6 +635,12 @@ async function animeindo(title: string, ep: number): Promise<IndoSource[]> {
 export async function resolveIndo(
   title: string,
   ep: number,
+  /**
+   * `max` membatasi jumlah server yang dikumpulkan. Untuk member premium
+   * angkanya kecil (2) supaya resolver berhenti lebih awal dan episode
+   * terbuka jauh lebih cepat, tanpa mengubah urutan prioritas provider.
+   */
+  opts?: { max?: number },
 ): Promise<IndoSource[]> {
   const clean = String(title ?? "")
     .replace(/\([^)]*\)/g, " ")
@@ -668,7 +674,7 @@ export async function resolveIndo(
   // Urutan prioritas: 1) AnimeIndo  → episode paling lengkap.
   // 2) Anime-indo (xtwap) → HLS asli, diputar player kita sendiri.
   // 3) Samehadaku → Oploverz → Otakudesu (embed player pihak ketiga).
-  const MAX = 5;
+  const MAX = Math.max(1, Math.min(5, opts?.max ?? 5));
   const collected: IndoSource[] = [];
   const seen = new Set<string>();
   const push = (list: IndoSource[]) => {

@@ -902,9 +902,9 @@ function ClanDetail({
           }
         >
           <div className="relative p-4">
-            {/* Lapisan gelap penuh di atas foto background clan, supaya tidak
-                ada warna cerah yang bocor dari tepi. */}
-            <div className="yn-banner-veil" />
+            {/* Lapisan gelap total di atas foto background clan: warna cerah
+                cuma kelihatan ~40% sebagai bayangan, teks selalu kontras. */}
+            <div className="yn-banner-dim" />
             <div className="relative flex items-center gap-3">
               <Avatar src={c.avatarUrl} seed={c.name} className="size-14" />
               <div className="min-w-0 flex-1">
@@ -975,13 +975,15 @@ function ClanDetail({
         {isMember && (
           <>
             {/* Aksi: Claim + Donate — angka = Sacret yang bisa diambil, subteks = donate hari ini */}
-            <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4 text-center">
-              <Gem className="mx-auto size-7 text-violet-400" />
-              <p className="mt-1 text-xl font-black text-white">{formatK(c.claimAmount)}</p>
+            <div className="yn-card mt-4 p-4 text-center">
+              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/15">
+                <Gem className="size-6 text-violet-300" />
+              </span>
+              <p className="mt-2 font-mono text-2xl font-black text-white">{formatK(c.claimAmount)}</p>
               <p className="text-[11px] text-muted-foreground">
                 Sacret yang bisa diambil · {detail.todayDonationsTotal} Sacret didonate hari ini
               </p>
-              <div className="mt-2 space-y-2">
+              <div className="mt-3 space-y-2">
                 <button
                   disabled={claimedToday}
                   onClick={async () => {
@@ -992,13 +994,13 @@ function ClanDetail({
                       toast.error(e instanceof Error ? e.message : "Gagal");
                     }
                   }}
-                  className="w-full rounded-full bg-[oklch(0.86_0.16_90)] py-3 text-sm font-bold text-[oklch(0.18_0.04_70)] disabled:opacity-40"
+                  className="yn-btn yn-btn-gold w-full disabled:opacity-40"
                 >
                   {claimedToday ? "Sudah claim hari ini" : `Claim Sacret (${c.claimAmount})`}
                 </button>
                 <button
                   onClick={() => setDonateOpen(true)}
-                  className="w-full rounded-full border border-white/15 bg-white/5 py-3 text-sm font-bold text-white hover:bg-white/10"
+                  className="yn-btn yn-btn-ghost w-full"
                 >
                   Donate
                 </button>
@@ -1006,16 +1008,25 @@ function ClanDetail({
             </div>
 
             {canPanel && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="yn-action-row mt-3">
                 <button
                   onClick={() => setPanelOpen(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
+                  className="yn-btn yn-btn-ghost"
                 >
                   <Settings className="size-4" /> Panel {isLeader ? "Leader" : "Officer"}
                 </button>
                 <button
+                  onClick={() => {
+                    setTab("top");
+                    setTopScope("today");
+                  }}
+                  className="yn-btn yn-btn-ghost"
+                >
+                  <Gem className="size-4" /> Top Donate
+                </button>
+                <button
                   onClick={() => setPanelOpen(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-3 text-sm font-semibold hover:bg-white/10"
+                  className="yn-btn yn-btn-ghost"
                 >
                   <Inbox className="size-4" /> Request
                   <span className="rounded-full bg-white/15 px-1.5 font-mono text-[10px]">
@@ -1078,9 +1089,9 @@ function ClanDetail({
                 }
               >
                 <div className="relative p-3">
-                  {/* Lapisan gelap penuh di atas banner member, supaya tidak
-                      ada warna cerah yang menerawang dari tepi. */}
-                  <div className="yn-banner-veil" />
+                  {/* Lapisan gelap total di atas banner member: foto tinggal
+                      bayangan samar, warna cerah tidak menerawang lagi. */}
+                  <div className="yn-banner-dim" />
                   <div className="relative flex items-center gap-3">
                   <div className="flex flex-col items-center gap-1">
                     <Avatar src={m.image} seed={m.username} className="size-12" />
@@ -1425,25 +1436,39 @@ function LeaderPanel({
   const [bgUrl, setBgUrl] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [role, setRole] = useState<"officer" | "victro" | "hydler">("officer");
+  // Cari member di daftar kick/roles/transfer.
+  const [mSearch, setMSearch] = useState("");
 
   const members = detail?.members ?? [];
+  const needle = mSearch.trim().toLowerCase();
   void clanId;
 
+  // Fullscreen: panel jadi layar penuh sendiri, bukan popup kecil di atas
+  // halaman clan. Keluar hanya lewat tombol kembali di kiri atas.
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/80 p-3" onClick={onClose}>
-      <div
-        className="mx-auto max-w-md rounded-3xl border border-white/10 bg-card p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <p className="font-bold">Panel {isLeader ? "Leader" : "Officer"}</p>
-          <button onClick={onClose}>
-            <X className="size-4" />
+    <div className="screen-enter fixed inset-0 z-[60] overflow-y-auto bg-background">
+      <div className="mx-auto w-full max-w-md px-3 pb-24">
+        <div className="flex items-center gap-3 py-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300"
+          >
+            <ChevronLeft className="size-4" />
           </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-bold">
+              Panel {isLeader ? "Leader" : "Officer"}
+            </h1>
+            <p className="text-[11px] text-muted-foreground">
+              Atur background, role, dan member clan
+            </p>
+          </div>
         </div>
 
-        {/* Request join langsung tampil di atas — tidak perlu tab */}
-        <div className="mb-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+        {/* Kolom request join: kartu terpisah di paling atas — tidak menempel
+            dengan menu panel lagi. */}
+        <div className="yn-card p-3">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">
             Request Join ({requests.length})
           </p>
@@ -1452,7 +1477,7 @@ function LeaderPanel({
               <p className="py-4 text-center text-xs text-muted-foreground">Tidak ada request</p>
             )}
             {requests.map((r) => (
-              <div key={r.requestId} className="member-row flex items-center gap-2 p-2.5">
+              <div key={r.requestId} className="member-row flex items-center gap-2.5 p-2.5">
                 <Avatar src={r.image} seed={r.username} className="size-9" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{r.username}</p>
@@ -1460,13 +1485,14 @@ function LeaderPanel({
                 </div>
                 <button
                   onClick={() => void onRespond(r.requestId, true)}
-                  className="rounded-full bg-green-500/20 p-1.5 text-green-400"
+                  className="flex size-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 transition hover:bg-emerald-500/30"
+                  aria-label="Terima request"
                 >
                   <Check className="size-4" />
                 </button>
                 <button
                   onClick={() => void onRespond(r.requestId, false)}
-                  className="rounded-full bg-red-500/20 p-1.5 text-red-400"
+                  className="flex size-9 items-center justify-center rounded-full bg-red-500/20 text-red-400 transition hover:bg-red-500/30"
                   aria-label="Tolak request"
                 >
                   <X className="size-4" />
@@ -1476,29 +1502,36 @@ function LeaderPanel({
           </div>
         </div>
 
-        {/* Tab pill panel: Background / Roles / Kick / Transfer */}
-        <div className="tab-pill-track mb-3 flex-wrap">
-          {(
-            [
-              ["bg", "Background"],
-              ["roles", "Add roles"],
-              ["kick", "Kick"],
-              ["transfer", "Transfer Leader"],
-              ...(isLeader ? (["unroles", "UnRoles"] as const) : ([] as const)),
-            ] as const
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setSub(k as typeof sub)}
-              className={cn("rounded-full px-3 py-1.5 text-xs", sub === k && "tab-pill-active")}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Menu sub-panel: kartu kecil sama seperti tombol clan lainnya */}
+        <div className="yn-card mt-3 p-2">
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["bg", "Background"],
+                ["roles", "Add roles"],
+                ["kick", "Kick"],
+                ["transfer", "Transfer Leader"],
+                ...(isLeader ? (["unroles", "UnRoles"] as const) : ([] as const)),
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setSub(k as typeof sub)}
+                className={cn(
+                  "flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition",
+                  sub === k
+                    ? "border-violet-500/70 bg-violet-500/15 text-violet-100"
+                    : "border-white/10 bg-white/5 text-zinc-300 hover:border-violet-500/40",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {sub === "bg" && (
-          <div className="flex gap-2">
+          <div className="yn-card mt-3 flex gap-2 p-3">
             <input
               value={bgUrl}
               onChange={(e) => setBgUrl(e.target.value)}
@@ -1518,7 +1551,16 @@ function LeaderPanel({
         )}
 
         {(sub === "roles" || sub === "kick" || sub === "transfer" || sub === "unroles") && (
-          <div>
+          <div className="yn-card mt-3 p-3">
+            {/* Cari member dulu, baru pilih aksi */}
+            <div className="pill-search mb-2">
+              <Search className="size-4 shrink-0 text-muted-foreground" />
+              <input
+                value={mSearch}
+                onChange={(e) => setMSearch(e.target.value)}
+                placeholder="Cari member (nama atau ID)"
+              />
+            </div>
             {sub === "roles" && (
               <div className="mb-2 flex gap-1.5">
                 {(["officer", "victro", "hydler"] as const).map((r) => (
@@ -1555,9 +1597,15 @@ function LeaderPanel({
                 ))}
               </div>
             )}
-            <div className="max-h-64 space-y-1.5 overflow-y-auto">
+            <div className="thin-scroll max-h-[52vh] space-y-1.5 overflow-y-auto">
               {members
-                .filter((m: any) => m.role !== "leader")
+                .filter(
+                  (m: any) =>
+                    m.role !== "leader" &&
+                    (!needle ||
+                      String(m.username).toLowerCase().includes(needle) ||
+                      String(m.userId).toLowerCase().includes(needle)),
+                )
                 .map((m: any) => (
                   <div
                     key={m.userId}
@@ -1593,7 +1641,7 @@ function LeaderPanel({
                   setPicked(null);
                   onClose();
                 }}
-                className="mt-3 w-full rounded-full bg-[oklch(0.86_0.16_90)] py-3 text-sm font-bold text-[oklch(0.18_0.04_70)]"
+                className="yn-btn yn-btn-gold mt-3 w-full"
               >
                 {sub === "kick"
                   ? "Kick Sekarang"

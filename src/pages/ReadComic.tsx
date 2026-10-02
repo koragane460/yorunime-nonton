@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "r
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -79,6 +80,11 @@ export default function ReadComic() {
   const getPages = useAction(api.manga.pages);
   const getDetail = useAction(api.manga.detail);
   const recordRead = useMutation(api.comics.recordRead);
+  const { user } = useAuth();
+  // Kecepatan membaca tergantung premium: member premium gambarnya tampil
+  // hampir seketika, non-premium menunggu beberapa detik per chapter.
+  const isPremium = (user?.premiumUntil ?? 0) > Date.now();
+  const READ_DELAY_MS = isPremium ? 0 : 4000;
 
   const [images, setImages] = useState<string[]>([]);
   /** Chapter yang gambarnya sudah siap tampil — mencegah panel "chapter
@@ -102,6 +108,18 @@ export default function ReadComic() {
   const loading = readyKey !== currentKey;
   const total = images.length;
 
+  // Pintu waktu non-premium: setelah gambar siap, halaman tetap ditahan
+  // beberapa detik (premium langsung lewat). Hitungan mundur ditampilkan
+  // supaya jelas ini sengaja, bukan error.
+  const [holdUntil, setHoldUntil] = useState(0);
+  const [nowTick, setNowTick] = useState(Date.now());
+  const holding = holdUntil > 0 && nowTick < holdUntil;
+  useEffect(() => {
+    if (holdUntil <= 0) return;
+    const t = window.setInterval(() => setNowTick(Date.now()), 250);
+    return () => window.clearInterval(t);
+  }, [holdUntil > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Muat gambar chapter.
   useEffect(() => {
     let alive = true;
@@ -117,6 +135,9 @@ export default function ReadComic() {
         if (!alive) return;
         setImages(imgs);
         setReadyKey(cacheKey(slug, chNum));
+        // Premium: tampil sekarang juga. Non-premium: ditahan 4 detik.
+        setNowTick(Date.now());
+        setHoldUntil(READ_DELAY_MS > 0 ? Date.now() + READ_DELAY_MS : 0);
       })
       .catch(() => {
         if (!alive) return;
@@ -160,7 +181,7 @@ export default function ReadComic() {
 
   // Simpan ke history setiap halaman berganti.
   useEffect(() => {
-    if (loading || total === 0 || !detail) return;
+    if (loading || holding || total === 0 || !detail) return;
     void recordRead({
       slug,
       comicTitle: detail.title,
@@ -174,28 +195,22 @@ export default function ReadComic() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, chNum, total, loading, detail]);
 
-  // Efek "masuk chapter": chapter baru langsung tampil halaman 1, tapi dengan
-  // satu geser cepat (manga ke kiri, manhwa ke atas) supaya terasa Alive.
+  // Efek "masuk chapter": langsung teleport ke halaman 1 chapter berikutnya,
+  // tanpa animasi geser. Scroll container direset ke posisi nol supaya pembaca
+  // selalu mulai dari awal, bukan dari posisi scroll chapter sebelumnya.
   useEffect(() => {
-    if (loading || total === 0) return;
+    if (loading || holding || total === 0) return;
     const panel = panelRef.current;
     const stripEl = stripRef.current;
     if (strip) {
       if (!stripEl) return;
-      stripEl.scrollTop = stripEl.clientHeight * 1.2;
-      const t = window.setTimeout(() => {
-        stripEl.scrollTo({ top: 0, behavior: "smooth" });
-      }, 90);
-      return () => window.clearTimeout(t);
+      stripEl.scrollTop = 0;
+      return;
     }
     if (!panel) return;
-    panel.scrollLeft = panel.clientWidth * 1.2;
-    const t = window.setTimeout(() => {
-      panel.scrollTo({ left: 0, behavior: "smooth" });
-    }, 90);
-    return () => window.clearTimeout(t);
+    panel.scrollLeft = 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readyKey, strip]);
+  }, [readyKey, strip, holding]);
 
   // Ganti halaman: selalu scroll kontainer yang benar (panel atau strip).
   const goto = useCallback(
@@ -237,6 +252,16 @@ export default function ReadComic() {
       {loading ? (
         <div className="flex min-h-0 flex-1 items-center justify-center gap-2 text-sm text-zinc-400">
           <Loader2 className="size-4 animate-spin" /> Memuat chapter {chNum}…
+        </div>
+      ) : holding ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-sm text-zinc-400">
+          <Loader2 className="size-4 animate-spin" />
+          <p>Menyiapkan halaman… {Math.ceil((holdUntil - nowTick) / 1000)}s</p>
+          {!isPremium && (
+            <p className="text-[11px] text-zinc-500">
+              Member premium membuka halaman hampir seketika
+            </p>
+          )}
         </div>
       ) : total === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-zinc-400">

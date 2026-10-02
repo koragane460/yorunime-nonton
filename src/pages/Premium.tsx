@@ -5,15 +5,19 @@ import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import {
   Check,
   ChevronLeft,
+  Crown,
+  Gem,
   Loader2,
   QrCode,
   ShieldCheck,
+  Sparkles,
   Upload,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-type Plan = { id: string; label: string; days: number; price: number };
+type Plan = { id: string; label: string; days: number; price: number; sacret?: number };
 type Order = {
   orderId: string;
   priceIdr: number;
@@ -33,7 +37,10 @@ type History = {
 const PERKS = [
   "Tanpa iklan yang menyela di tengah nonton",
   "Kualitas 1080p, buffering lebih jarang",
+  "Memuat episode anime jauh lebih cepat dan tidak memakan waktu lama",
+  "Memuat gambar manga dan manhwa jauh lebih cepat tanpa harus menunggu lama",
   "Centang emas di samping namamu",
+  "Bonus Sacret setiap kali membeli paket",
   "Bisa kasih premium ke orang lain dan kumpulkan XP",
   "Kuis dan event khusus member premium",
 ];
@@ -154,16 +161,20 @@ export default function Premium() {
 
 function Hero() {
   return (
-    <header className="pop-enter border-b border-white/10 pb-4 pt-1">
+    <header className="pop-enter border-b border-white/10 pb-5 pt-1">
       <p className="font-mono text-[10px] tracking-[0.22em] text-zinc-500">
         YORUNIME
       </p>
-      <h1 className="mt-1.5 text-2xl font-extrabold leading-tight">
+      <h1 className="mt-1.5 flex items-center gap-2 text-2xl font-extrabold leading-tight">
         Premium
         <span className="text-gold">.</span>
+        <span className="flex size-8 items-center justify-center rounded-xl border border-gold/40 bg-gold/10">
+          <Crown className="size-4 text-gold" />
+        </span>
       </h1>
-      <p className="mt-1.5 max-w-[19rem] text-[13px] leading-6 text-zinc-400">
-        Nonton tanpa iklan, kualitas 1080p, dan centang emas di samping namamu.
+      <p className="mt-1.5 max-w-[20rem] text-[13px] leading-6 text-zinc-400">
+        Nonton tanpa iklan, kualitas 1080p, loading sat set, dan centang emas
+        di samping namamu.
       </p>
     </header>
   );
@@ -171,18 +182,18 @@ function Hero() {
 
 function HowTo() {
   return (
-    <section className="mt-5">
+    <section className="mt-6">
       <h2 className="text-[13px] font-bold text-gold">Cara beli</h2>
-      <ol className="mt-2 divide-y divide-white/10">
+      <div className="yn-card mt-2 divide-y divide-white/8 px-4">
         {HOW_IT_WORKS.map((step, i) => (
-          <li key={step} className="flex items-start gap-3 py-2">
-            <span className="mt-px w-4 shrink-0 font-mono text-[11px] text-zinc-500">
-              {String(i + 1).padStart(2, "0")}
+          <div key={step} className="flex items-start gap-3 py-3">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/10 font-mono text-[10px] font-bold text-gold">
+              {i + 1}
             </span>
             <span className="text-[13px] leading-6 text-zinc-300">{step}</span>
-          </li>
+          </div>
         ))}
-      </ol>
+      </div>
     </section>
   );
 }
@@ -280,28 +291,51 @@ function Plans() {
   };
 
   return (
-    <section className="mt-5">
+    <section className="mt-6">
       <h2 className="text-[13px] font-bold text-gold">Paket</h2>
-      <div className="mt-2 divide-y divide-white/10 border-y border-white/10">
+      <div className="mt-2 grid gap-2.5">
         {(plans ?? []).map((p) => (
-          <div key={p.id} className="flex items-center gap-3 py-2.5">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold leading-tight">
-                {p.label}
-              </p>
-              <p className="font-mono text-[10px] leading-tight text-zinc-500">
-                {p.days} hari
-              </p>
+          <div
+            key={p.id}
+            className="yn-card yn-card-hover relative overflow-hidden p-4"
+          >
+            {/* garis aksen tipis di tepi kiri */}
+            <span aria-hidden className="absolute inset-y-4 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold/70 to-gold/0" />
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10">
+                <Sparkles className="size-5 text-gold" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-extrabold leading-tight text-white">
+                  {p.label}
+                </p>
+                <p className="font-mono text-[10px] leading-tight text-zinc-500">
+                  {p.days} hari
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-mono text-[15px] font-bold text-gold">
+                  {p.price.toLocaleString("id-ID")}
+                </p>
+                {typeof p.sacret === "number" && p.sacret > 0 && (
+                  <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] font-bold text-violet-300">
+                    <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="shrink-0 font-mono text-[13px] font-bold text-gold">
-              {p.price.toLocaleString("id-ID")}
-            </p>
             <button
               disabled={busy !== null}
               onClick={() => void startOrder(p)}
-              className="min-h-10 shrink-0 rounded-lg bg-gold px-3 text-[11px] font-bold text-black transition hover:brightness-95 disabled:opacity-50"
+              className="yn-btn yn-btn-gold mt-3 w-full disabled:opacity-50"
             >
-              {busy === "order" ? "Menyiapkan…" : "Beli premium"}
+              {busy === "order" ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Menyiapkan…
+                </>
+              ) : (
+                "Beli premium"
+              )}
             </button>
           </div>
         ))}
@@ -443,7 +477,7 @@ function Checkout({
   const live = useQuery(api.payments.myOrder, { orderId: order.orderId });
   if (live?.status === "paid" && !verdict) {
     return (
-      <div className="border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+      <div className="yn-card border-emerald-500/30 p-4">
         <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
           <ShieldCheck className="size-4" /> Premium sudah aktif
         </p>
@@ -455,15 +489,15 @@ function Checkout({
   }
   return (
     <div className="space-y-4">
-      <div className="flex flex-col items-center gap-2">
+      <div className="yn-card flex flex-col items-center gap-2.5 p-5">
         {image ? (
           <img
             src={image}
             alt="QRIS YoruNime"
-            className="size-44 rounded-lg bg-white object-contain p-2"
+            className="size-48 rounded-xl bg-white p-2.5 shadow-lg shadow-black/40"
           />
         ) : (
-          <div className="flex size-44 items-center justify-center rounded-lg bg-black/40 text-xs text-zinc-400">
+          <div className="flex size-48 items-center justify-center rounded-xl bg-black/40 text-xs text-zinc-400">
             QRIS belum tersedia
           </div>
         )}
@@ -478,17 +512,17 @@ function Checkout({
         )}
       </div>
 
-      <div className="border-y border-white/10 py-3 text-center">
-        <p className="font-mono text-[10px] text-zinc-500">total transfer</p>
-        <p className="font-mono text-3xl font-bold text-gold">
-          {order.priceIdr.toLocaleString("id-ID")}
+      <div className="yn-card px-4 py-4 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">total transfer</p>
+        <p className="mt-0.5 font-mono text-3xl font-bold text-gold">
+          Rp {order.priceIdr.toLocaleString("id-ID")}
         </p>
         <p className="mt-0.5 text-[11px] text-zinc-400">
           {order.planLabel} · {order.days} hari
         </p>
       </div>
 
-      <div>
+      <div className="yn-card p-4">
         <p className="text-[13px] font-bold">Bukti transfer</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <button
@@ -521,7 +555,7 @@ function Checkout({
         )}
       </div>
 
-      <div>
+      <div className="yn-card p-4">
         <p className="text-[13px] font-bold">Keterangan transfer</p>
         <textarea
           value={note}
@@ -538,7 +572,7 @@ function Checkout({
       <button
         onClick={onSend}
         disabled={!proof || note.trim().length === 0 || busy !== null}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-gold text-sm font-bold text-black transition hover:brightness-95 disabled:opacity-40"
+        className="yn-btn yn-btn-gold w-full disabled:opacity-40"
       >
         {busy === "send" ? (
           <>
@@ -578,18 +612,24 @@ function Checkout({
 function Perks() {
   return (
     <section className="mt-6">
-      <h2 className="text-[13px] font-bold text-gold">Kegunaannya</h2>
-      <ul className="mt-2 space-y-1.5">
-        {PERKS.map((p) => (
-          <li
-            key={p}
-            className="flex items-start gap-2 text-[13px] leading-6 text-zinc-300"
-          >
-            <Check className="mt-1 size-3.5 shrink-0 text-emerald-400" />
-            {p}
-          </li>
-        ))}
-      </ul>
+      <h2 className="flex items-center gap-1.5 text-[13px] font-bold text-gold">
+        <Zap className="size-3.5" /> Kegunaannya
+      </h2>
+      <div className="yn-card mt-2 p-4">
+        <ul className="space-y-2.5">
+          {PERKS.map((p) => (
+            <li
+              key={p}
+              className="flex items-start gap-2.5 text-[13px] leading-6 text-zinc-300"
+            >
+              <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                <Check className="size-3 text-emerald-400" />
+              </span>
+              {p}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

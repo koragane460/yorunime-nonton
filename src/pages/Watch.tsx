@@ -119,6 +119,38 @@ const CUE_MIN = 1.1;
 /** Jeda sebelum subtitle hilang (detik), biar sempat dibaca. */
 const CUE_TAIL = 0.5;
 
+/**
+ * Bungkus teks subtitle jadi maksimal 2 baris pendek.
+ *  - Baris maksimal 5 kata.
+ *  - Kalau ada kata panjang (>= 11 huruf), potong sebelum kata itu supaya
+ *    barisnya seimbang, bukan satu baris panjang dan satu baris sisipan.
+ */
+function wrapCue(text: string): string {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= 5) return text;
+  // Titik potong ideal: separuh kata, tapi mundur kalau kata di posisi itu
+  // panjang (biar kata panjang pindah utuh ke baris berikutnya).
+  let cut = Math.ceil(words.length / 2);
+  const lineLen = (arr: string[]) => arr.join(" ").length;
+  for (let i = 0; i < 3; i++) {
+    const top = words.slice(0, cut);
+    const bottom = words.slice(cut);
+    // Kata pertama baris kedua panjang + baris atas sudah >= 28 karakter → naikkan cut.
+    if ((bottom[0]?.length ?? 0) >= 11 && lineLen(top) >= 24 && cut > 2) {
+      cut -= 1;
+      continue;
+    }
+    break;
+  }
+  const top = words.slice(0, cut);
+  const bottom = words.slice(cut);
+  // Kalau baris atas masih kepanjangan (> 28 karakter), pecah lagi di sekitar 5 kata.
+  if (lineLen(top) > 28 && top.length > 3) {
+    return [wrapCue(top.join(" ")), bottom.join(" ")].join("\n");
+  }
+  return `${top.join(" ")}\n${bottom.join(" ")}`;
+}
+
 /** Parse WebVTT jadi daftar cue untuk ditampilkan sendiri oleh player. */
 function parseVtt(text: string): Cue[] {
   const out: Cue[] = [];
@@ -138,8 +170,10 @@ function parseVtt(text: string): Cue[] {
     const e = tsToSec(b);
     if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) continue;
     // Timing subtitle animeindo: satu baris selalu punya waktu baca minimum dan
-    // tidak hilang tepat di akhir kalimat.
-    out.push({ s, e: Math.max(e, s + CUE_MIN) + CUE_TAIL, t: body });
+    // tidak hilang tepat di akhir kalimat. Teks dibungkus manual: maksimal 5
+    // kata per baris (atau ~28 karakter) supaya block subtitle pendek dan
+    // sisa kalimat turun ke baris kedua, bukan melebar ke samping.
+    out.push({ s, e: Math.max(e, s + CUE_MIN) + CUE_TAIL, t: wrapCue(body) });
   }
   return out;
 }
@@ -702,6 +736,8 @@ function WatchContent() {
       malId,
       ep: epNumber,
       title: detailData.title,
+      // Premium: jalur resolusi cepat (paralel + sumber dibatasi).
+      fast: isPremium,
     })
       .then((d: any) => {
         if (d?.ok) resolvedRef.current.set(key, d);
@@ -729,6 +765,7 @@ function WatchContent() {
         malId,
         ep: epNumber,
         title: detailData.title,
+        fast: isPremium,
       })
         .then((d: any) => {
           if (alive && d?.ok) resolvedRef.current.set(key, d);
@@ -1271,25 +1308,23 @@ function WatchContent() {
           <div
             className={cn(
               "pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4",
-              // Subtitle duduk rendah, dekat tepi bawah video seperti di
-              // animeindo: fullscreen sedikit lebih tinggi karena tombol di
-              // kanan bawah memakan space.
-              isFs ? "bottom-7" : "bottom-5 sm:bottom-6",
+              // Subtitle duduk sangat rendah, menempel tepi bawah video.
+              isFs ? "bottom-5" : "bottom-3 sm:bottom-4",
             )}
           >
             <p
               className={cn(
-                "max-w-[min(92%,44rem)] whitespace-pre-line break-words text-center font-semibold leading-snug text-white",
-                "[text-shadow:-2px_-2px_0_#000,2px-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000,1px_1px_0_#000,0_3px_6px_rgba(0,0,0,0.95)]",
+                "max-w-[min(88%,40rem)] whitespace-pre-line break-words text-center font-semibold leading-snug text-white",
+                "[text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000,1px_1px_0_#000,0_3px_6px_rgba(0,0,0,0.95)]",
                 // Teks panjang otomatis dikecilkan supaya tetap satu blok rapi
                 // dan tidak menutupi gambar.
                 activeCue.length > 90
                   ? isFs
-                    ? "text-[13px] sm:text-[15px]"
-                    : "text-[12px] sm:text-[13px]"
+                    ? "text-[11.5px] sm:text-[13px]"
+                    : "text-[10.5px] sm:text-[11.5px]"
                   : isFs
-                    ? "text-[15px] sm:text-[18px]"
-                    : "text-[13px] sm:text-[15px]",
+                    ? "text-[13px] sm:text-[15px]"
+                    : "text-[11.5px] sm:text-[13px]",
               )}
             >
               {activeCue}

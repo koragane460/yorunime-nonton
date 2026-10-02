@@ -16,12 +16,15 @@ import { action, internalMutation, internalQuery, mutation, query } from "./_gen
 import { internal } from "./_generated/api";
 import { staffGuard } from "./moderation";
 
-const PLANS: Record<string, { label: string; days: number; price: number }> = {
-  p1: { label: "1 Bulan", days: 30, price: 7000 },
-  p2: { label: "3 Bulan", days: 90, price: 30000 },
-  p3: { label: "1 Tahun", days: 365, price: 120000 },
-  p4: { label: "3 Tahun", days: 1095, price: 150000 },
-  p5: { label: "7 Tahun", days: 2555, price: 200000 },
+const PLANS: Record<
+  string,
+  { label: string; days: number; price: number; sacret: number }
+> = {
+  p1: { label: "1 Bulan", days: 30, price: 7000, sacret: 500 },
+  p2: { label: "3 Bulan", days: 90, price: 30000, sacret: 1350 },
+  p3: { label: "1 Tahun", days: 365, price: 120000, sacret: 4500 },
+  p4: { label: "3 Tahun", days: 1095, price: 150000, sacret: 8000 },
+  p5: { label: "7 Tahun", days: 2555, price: 200000, sacret: 21000 },
 };
 
 /** Lama logo merah tampil setelah akun di-tag developer. */
@@ -30,7 +33,13 @@ const DEV_TAG_DAYS = 7;
 export const premiumPlans = query({
   args: {},
   handler: async () =>
-    Object.entries(PLANS).map(([id, p]) => ({ id, ...p })),
+    Object.entries(PLANS).map(([id, p]) => ({
+      id,
+      label: p.label,
+      days: p.days,
+      price: p.price,
+      sacret: p.sacret,
+    })),
 });
 
 /** Fungsi bersama: tandai lunas, kirim premium, beri tahu user. */
@@ -53,11 +62,20 @@ async function grantPremium(
   const until = base + row.days * 86400000;
   if (owner) {
     await ctx.db.patch(row.userId, { premiumUntil: until });
+    // Bonus Sacret sesuai paket yang dibeli, langsung masuk ke saldo.
+    const plan = PLANS[row.planId];
+    const bonus = plan?.sacret ?? 0;
+    if (bonus > 0) {
+      await ctx.db.patch(row.userId, { diamonds: (owner.diamonds ?? 0) + bonus });
+    }
     await ctx.db.insert("notifications", {
       userId: row.userId,
       type: "premium",
       title: "Premium aktif",
-      body: `Pembayaran ${row.planLabel} sudah dikonfirmasi. Terima kasih!`,
+      body:
+        bonus > 0
+          ? `Pembayaran ${row.planLabel} sudah dikonfirmasi. Bonus ${bonus} Sacret masuk ke saldo. Terima kasih!`
+          : `Pembayaran ${row.planLabel} sudah dikonfirmasi. Terima kasih!`,
       createdAt: Date.now(),
     });
   }

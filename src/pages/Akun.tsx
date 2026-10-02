@@ -125,23 +125,22 @@ function AkunContent() {
       {/* Foto profil menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
         <div className="relative -mt-12 flex flex-col items-center">
-          {/* Tombol title: tepat di tengah atas foto profil, bentuk chip
-              kecil tanpa latar hitam bulat. */}
+          {/* Title: paling atas, kecil dan subtle tapi tetap kelihatan. */}
           <button
             onClick={() => setTitlesOpen((v) => !v)}
             aria-label="Buka title"
             aria-expanded={titlesOpen}
             className={cn(
-              "z-20 -mb-2 flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-bold transition",
+              "z-20 -mb-1.5 flex h-5 items-center gap-1 rounded-full border px-2 text-[9px] font-semibold tracking-wide transition",
               titlesOpen
-                ? "border-violet-400 bg-violet-500/25 text-violet-100"
-                : "border-white/20 bg-black/55 text-zinc-100 backdrop-blur-sm hover:border-violet-400",
+                ? "border-violet-400/70 bg-violet-500/20 text-violet-200"
+                : "border-white/10 bg-black/35 text-zinc-400 backdrop-blur-sm hover:border-violet-400/50 hover:text-zinc-200",
             )}
           >
-            <Crown className="size-3 text-[oklch(0.86_0.16_90)]" />
+            <Crown className="size-2.5 text-[oklch(0.86_0.16_90)]" />
             Title
             {titles.length > 0 && (
-              <span className="rounded-full bg-white/15 px-1 font-mono text-[9px]">
+              <span className="rounded-full bg-white/10 px-1 font-mono text-[8px]">
                 {titles.length}
               </span>
             )}

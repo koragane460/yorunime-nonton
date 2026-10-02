@@ -201,7 +201,6 @@ function AccountPanel({
                 )}
               </div>
             </div>
-            <ChevronRight className="size-5 shrink-0 text-zinc-400" />
           </div>
 
           {/* Bar level: kiri "Level n", kanan "1/12.000" */}
