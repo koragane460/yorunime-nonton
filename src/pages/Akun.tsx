@@ -4,7 +4,6 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { RequestButtons } from "@/components/RequestButtons";
 import { StaffPanel } from "@/components/StaffPanel";
 import { BlurBanner } from "@/components/BlurBanner";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
@@ -18,6 +17,7 @@ import {
 } from "@/components/lstream-ui";
 import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
+import { shrinkAvatar } from "@/lib/image";
 import {
   Bell,
   CircleAlert,
@@ -619,6 +619,8 @@ function SettingsScreen({
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
   const [name, setName] = useState(user?.username ?? "");
+  const [savingName, setSavingName] = useState(false);
+  const [busyPhoto, setBusyPhoto] = useState(false);
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
@@ -663,21 +665,34 @@ function SettingsScreen({
             </div>
           </div>
         </div>
-        <label className="mt-2.5 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-border py-2 text-[11px] text-muted-foreground">
-          Ganti photo profile
+        <label className="mt-2.5 flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border text-[12px] text-muted-foreground transition hover:border-foreground/40 hover:text-foreground">
+          {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
           <input
             type="file"
             accept="image/*"
             className="hidden"
+            disabled={busyPhoto}
             onChange={(e) => {
               const f = e.target.files?.[0];
+              e.target.value = "";
               if (!f) return;
-              const reader = new FileReader();
-              reader.onload = async () => {
-                await updateProfile({ image: String(reader.result) });
-                toast.success("Photo profile diubah");
-              };
-              reader.readAsDataURL(f);
+              setBusyPhoto(true);
+              void (async () => {
+                try {
+                  // Foto HP bisa berukuran 5 MB. Kalau dikirim mentah, dokumen
+                  // melebihi batas 1 MiB Convex dan server menolak. Jadi
+                  // dikecilkan dulu sebelum dikirim.
+                  const small = await shrinkAvatar(f);
+                  await updateProfile({ image: small });
+                  toast.success("Photo profile diubah");
+                } catch (err) {
+                  toast.error(
+                    err instanceof Error ? err.message : "Gagal mengganti photo",
+                  );
+                } finally {
+                  setBusyPhoto(false);
+                }
+              })();
             }}
           />
         </label>
@@ -685,21 +700,32 @@ function SettingsScreen({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-[13px]"
+            className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 text-[13px]"
             placeholder="Ubah nama"
+            maxLength={16}
           />
           <button
+            disabled={savingName || !name.trim() || name.trim() === user.username}
             onClick={async () => {
+              setSavingName(true);
               try {
-                await updateProfile({ username: name });
+                const clean = name.trim();
+                await updateProfile({ username: clean });
+                setName(clean);
                 toast.success("Nama diubah");
               } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Gagal");
+                toast.error(
+                  err instanceof Error
+                    ? err.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
+                    : "Gagal mengubah nama",
+                );
+              } finally {
+                setSavingName(false);
               }
             }}
-            className="shrink-0 rounded-lg bg-primary px-4 text-[13px] font-bold text-primary-foreground"
+            className="h-11 shrink-0 rounded-lg bg-primary px-5 text-[13px] font-bold text-primary-foreground disabled:opacity-40"
           >
-            OK
+            {savingName ? "..." : "OK"}
           </button>
         </div>
       </div>
@@ -1019,15 +1045,6 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
               {n.body && <p className="text-xs text-zinc-400">{n.body}</p>}
               <p className="mt-0.5 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
             </div>
-            {n.type === "friend_request" && n.refUserId && (
-              <RequestButtons
-                userId={n.refUserId as never}
-                onDone={(ok) =>
-                  ok ? toast.success("Request diterima") : toast.success("Request ditolak")
-                }
-                onError={(e) => toast.error(e)}
-              />
-            )}
           </div>
         ))}
         {notifs && notifs.length === 0 && (

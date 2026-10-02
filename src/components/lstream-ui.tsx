@@ -208,9 +208,9 @@ export function TitleBadge({
   className?: string;
   compact?: boolean;
 }) {
-  if (!role) return null;
-  const def = TITLE_STYLE[role];
-  if (!def) return null;
+  // Mode uji: semua akun memakai title Developer. Title lain hanya dipakai kalau
+  // memang sengaja diganti lewat Developer Panel.
+  const def = TITLE_STYLE[role ?? ""] ?? TITLE_STYLE.dev;
   return (
     <span
       className={cn(
@@ -365,12 +365,15 @@ export function ClanTag({
   className?: string;
 }) {
   const { Icon, tone } = resolveClanIcon(icon);
+  // `color` sengaja tidak dipakai: nama clan SELALU putih polos supaya
+  // mudah dibaca di atas banner apa pun dan tidak ikut berubah warna.
+  void color;
   return (
     <span
       className={cn(
         // Bentuk tag clan: persegi dengan dua sudut terpotong (sama seperti
         // preview saat bikin clan) + latar galaxy yang terus berkilau.
-        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-black tracking-wide text-white",
+        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-bold tracking-wide text-white",
         className,
       )}
     >
@@ -381,7 +384,7 @@ export function ClanTag({
       >
         <Icon className="size-3.5" />
       </span>
-      <span className="relative z-[2] drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+      <span className="yn-outline relative z-[2]">
         [{tag}]
       </span>
     </span>

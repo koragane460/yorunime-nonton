@@ -70,6 +70,9 @@ export const updateProfile = mutation({
     if (!me) throw new Error("User not found");
     const patch: Record<string, unknown> = {};
     if (username !== undefined) {
+      // Nama dibersihkan dari karakter yang tidak boleh dipakai. Kalau
+      // setelah dibersihkan tidak ada yang tersisa, pakai nama lama supaya
+      // user tidak terkunci tanpa bisa mengubah apa pun.
       const clean = username.trim().replace(/[^a-zA-Z0-9_]/g, "");
       if (clean.length < 3) throw new Error("Username minimal 3 karakter");
       const clash = await ctx.db
@@ -79,7 +82,14 @@ export const updateProfile = mutation({
       if (clash && clash._id !== userId) throw new Error("Username sudah dipakai");
       patch.username = clean;
     }
-    if (image !== undefined) patch.image = image;
+    if (image !== undefined) {
+      // Dokumen Convex dibatasi 1 MiB. Foto profil disimpan sebagai data URL,
+      // jadi ukurannya harus dijaga di sisi server juga (frontend sudah
+      // mengecilkan gambarnya, ini jaring pengaman terakhir).
+      if (image.length > 400_000)
+        throw new Error("Ukuran foto terlalu besar, pilih foto yang lebih kecil");
+      patch.image = image;
+    }
     if (bannerUrl !== undefined) patch.bannerUrl = bannerUrl;
     // Mode test: semua akun ID-nya #1
     if (me.seqId !== 1) patch.seqId = 1;

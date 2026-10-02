@@ -321,16 +321,14 @@ function WatchContent() {
   const [premiumTapHint, setPremiumTapHint] = useState(false);
 
   // ------------------------------------- gesture brightness & volume ----
-  // Seret ke atas di tengah-kiri = pencahayaan, seret ke atas di kanan = suara.
-  // Netral (50%) = tampilan & suara normal. Tarik penuh ke atas = maksimal
-  // (paling terang / paling keras), bukan sekadar "100% = biasa".
-  const BRIGHT_MIN = 0.25;
-  const BRIGHT_MAX = 2.6;
+  // Kecerahan = kecerahan LAYAR HP, bukan video.
+  // Bukan filter di elemen <video> (itu memaksa GPU menggambar ulang tiap
+  // frame dan bikin HP panas). Pakai lapisan hitam/putih di atas seluruh
+  // layar: tidak menyentuh decode video sama sekali.
+  // Geser hanya berlaku kalau jari mulai dari tombolnya, bukan dari mana saja.
   const VOL_MAX = 2; // 2x suara lewat Web Audio (volume HTML mentok di 1)
-  const brightnessToLevel = (b: number) =>
-    (b - BRIGHT_MIN) / (BRIGHT_MAX - BRIGHT_MIN);
-  const levelToBrightness = (l: number) =>
-    BRIGHT_MIN + l * (BRIGHT_MAX - BRIGHT_MIN);
+  const brightnessToLevel = (b: number) => b;
+  const levelToBrightness = (l: number) => l;
   /** 1 = volume normal, >1 = lebih keras dari maksimal bawaan. */
   const gainRef = useRef<number>(1);
   const audioRef = useRef<{
@@ -338,7 +336,9 @@ function WatchContent() {
     gain: GainNode;
   } | null>(null);
 
-  const [brightness, setBrightness] = useState(1);
+  // 0.5 = layar normal, di atas 0.5 layar dib terang (overlay putih), di bawah
+  // 0.5 layar digelapkan (overlay hitam).
+  const [brightness, setBrightness] = useState(0.5);
   const [volumeLevel, setVolumeLevel] = useState(0.5);
   const [gesture, setGesture] = useState<null | {
     kind: "brightness" | "volume";
@@ -442,6 +442,54 @@ function WatchContent() {
 
   // True kalau subtitle yang aktif versi Bahasa Indonesia.
   const [subTouched, setSubTouched] = useState(false);
+
+  /**
+   * Geser kecerahan/volume HANYA berlaku kalau jari mulai dari tombolnya.
+   * Menggeser permukaan video tidak mengubah apa pun, jadi tidak ada
+   * efek samping yang tidak diinginkan.
+   */
+  const startLevelDrag =
+    (kind: "brightness" | "volume") => (e: React.PointerEvent) => {
+      const startValue = kind === "brightness" ? brightness : volumeLevel;
+      gestureRef.current = {
+        kind,
+        startY: e.clientY,
+        startValue,
+        moved: false,
+      };
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    };
+  const moveLevelDrag = (e: React.PointerEvent) => {
+    const g = gestureRef.current;
+    if (!g) return;
+    const dy = g.startY - e.clientY;
+    if (!g.moved && Math.abs(dy) < 8) return;
+    g.moved = true;
+    // 160px geser = 100% perubahan. Jarak pendek supaya tidak perlu jauh
+    // sampai teratas di layar HP.
+    const next = Math.max(0, Math.min(1, g.startValue + dy / 160));
+    if (g.kind === "brightness") {
+      setBrightness(Math.round(levelToBrightness(next) * 100) / 100);
+    } else {
+      applyVolume(next);
+    }
+    setGesture({ kind: g.kind, value: next });
+  };
+  const endLevelDrag = (e: React.PointerEvent) => {
+    const g = gestureRef.current;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    endGesture(!!g?.moved);
+  };
+  /** Ketuk (tanpa geser) = naik satu tingkat. */
+  const bumpLevel = (kind: "brightness" | "volume") => () => {
+    const cur = kind === "brightness" ? brightness : volumeLevel;
+    const next = Math.max(0, Math.min(1, Math.round((cur + 0.1) * 10) / 10));
+    if (kind === "brightness") setBrightness(next);
+    else applyVolume(next);
+    setGesture({ kind, value: next });
+    if (gestureHideTimer.current) window.clearTimeout(gestureHideTimer.current);
+    gestureHideTimer.current = window.setTimeout(() => setGesture(null), 900);
+  };
 
   // Komentar dengan echo lokal: pesan langsung tampil sebelum server menyalinnya.
   const [pendingComments, setPendingComments] = useState<CommentT[]>([]);
@@ -1103,6 +1151,19 @@ function WatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?._id, isHost]);
 
+  // Host: tandai masih hidup. Kalau host menutup aplikasi atau koneksinya
+  // putus, tanda ini berhenti dan room otomatis dianggap bubar (hilang dari
+  // daftar, tidak muncul lagi).
+  const roomHeartbeat = useMutation(api.watchroom.heartbeat);
+  useEffect(() => {
+    if (!room || !isHost) return;
+    const beat = () => void roomHeartbeat({ roomId: room._id });
+    beat();
+    const t = setInterval(beat, 45_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?._id, isHost]);
+
   const episodeComments = useQuery(
     api.activities.listComments,
     epParam ? { animeId: `${animeId}__ep${epParam}`, sort: "terbaru" } : "skip",
@@ -1176,15 +1237,27 @@ function WatchContent() {
       <div
         className="relative w-full overflow-hidden bg-black"
         style={
+          // Di fullscreen kontainer ikut penuh layar HP, bukan cuma kotak
+          // 16:9. Video tetap object-contain (ada letterbox), tapi semua
+          // tombol dan HUD memakai lebar layar yang sedang dilihat user.
           isFs
-            ? {
-                aspectRatio: "16 / 9",
-                maxHeight: "100dvh",
-                width: "min(100%, calc(100dvh * 16 / 9))",
-              }
+            ? { width: "100%", height: "100dvh" }
             : { aspectRatio: "16 / 9" }
         }
       >
+        {/* Kecerahan layar: lapisan putih/hitam di atas segalanya.
+            Tidak menyentuh video, jadi HP tidak kerja lebih keras. */}
+        {brightness !== 0.5 && (
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-[100]"
+            style={{
+              background: brightness > 0.5 ? "#ffffff" : "#000000",
+              opacity: Math.abs(brightness - 0.5) * 1.4,
+            }}
+          />
+        )}
+
         {!streamUrl ? (
           <div
             className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black text-center"
@@ -1231,10 +1304,8 @@ function WatchContent() {
             ref={videoRef}
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
-            className="h-full w-full object-contain transition-[filter] duration-150"
-            style={
-              brightness === 1 ? undefined : { filter: `brightness(${brightness})` }
-            }
+            className="h-full w-full object-contain"
+            style={undefined}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -1351,71 +1422,33 @@ function WatchContent() {
           </div>
         )}
 
-        {/* Lapisan tap + gesture: sentuh singkat → kontrol tampil/sembunyi.
-            Seret ke atas di kiri = pencahayaan, di kanan = volume suara. */}
+        {/* Lapisan tap saja: sentuh singkat → kontrol tampil/sembunyi.
+            Geser kecerahan/volume TIDAK lagi berlaku di sini, supaya tidak
+            ada efek samping saat user cuma menggeser video. */}
         {sourceType !== "embed" && (isHost || !room) && (
           <div
             className="absolute inset-0 z-10 touch-none"
-            onPointerDown={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const leftHalf = e.clientX - rect.left < rect.width / 2;
-              const kind = leftHalf ? "brightness" : "volume";
-              const startValue =
-                kind === "brightness"
-                  ? brightnessToLevel(brightness)
-                  : volumeLevel;
-              gestureRef.current = {
-                kind,
-                startY: e.clientY,
-                startValue,
-                moved: false,
-              };
-              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              const g = gestureRef.current;
-              if (!g) return;
-              const dy = g.startY - e.clientY;
-              if (!g.moved && Math.abs(dy) < 10) return;
-              g.moved = true;
-              // 220px drag = 100% perubahan (0 = paling gelap/senyap, 1 = paling terang/keras).
-              const delta = dy / 220;
-              const next = Math.max(0, Math.min(1, g.startValue + delta));
-              if (g.kind === "brightness") {
-                setBrightness(Math.round(levelToBrightness(next) * 100) / 100);
-              } else {
-                applyVolume(next);
-              }
-              setGesture({ kind: g.kind, value: next });
-            }}
-            onPointerUp={(e) => {
-              const g = gestureRef.current;
-              (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-              if (g && !g.moved) tapVideo();
-              endGesture(!!g?.moved);
-            }}
-            onPointerCancel={() => endGesture(false)}
+            onPointerUp={() => tapVideo()}
           />
         )}
 
-        {/* HUD gesture: bilah terang di kiri, bilah suara di kanan */}
+        {/* HUD gesture: muncul hanya saat tombolnya sedang di geser. */}
         {gesture && (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
             <div
               className={cn(
-                "flex h-40 w-14 flex-col items-center justify-center gap-2 rounded-2xl border border-white/15 bg-black/55 backdrop-blur-md",
-                gesture.kind === "brightness" ? "left-6" : "right-6",
-                "absolute",
+                "absolute flex h-36 w-12 flex-col items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/70",
+                gesture.kind === "brightness" ? "left-4" : "right-4",
               )}
             >
               {gesture.kind === "brightness" ? (
-                <Sun className="size-5 text-amber-200" />
+                <Sun className="size-4 text-amber-200" />
               ) : (
-                <Volume2 className="size-5 text-emerald-200" />
+                <Volume2 className="size-4 text-emerald-200" />
               )}
-              <div className="relative h-24 w-1.5 overflow-hidden rounded-full bg-white/15">
+              <div className="relative h-20 w-1 overflow-hidden rounded-full bg-white/15">
                 <div
-                  className="absolute inset-x-0 bottom-0 rounded-full bg-gradient-to-t from-violet-500 to-fuchsia-400 transition-[height] duration-75"
+                  className="absolute inset-x-0 bottom-0 rounded-full bg-white transition-[height] duration-75"
                   style={{ height: `${Math.round(gesture.value * 100)}%` }}
                 />
               </div>
@@ -1879,6 +1912,32 @@ function WatchContent() {
           </div>
         )}
 
+        {/* Kecerahan layar & volume suara: tombolnya selalu terlihat, tidak
+            hanya muncul setelah digeser. Ketuk untuk naik satu tingkat,
+            geser ke atas/ke bawah dari tombolnya untuk atur halus. */}
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <LevelToolButton
+            icon={<Sun className="size-4" />}
+            label="Kecerahan"
+            value={brightness}
+            onPointerDown={startLevelDrag("brightness")}
+            onPointerMove={moveLevelDrag}
+            onPointerUp={endLevelDrag}
+            onPointerCancel={() => endGesture(false)}
+            onClick={bumpLevel("brightness")}
+          />
+          <LevelToolButton
+            icon={<Volume2 className="size-4" />}
+            label="Volume"
+            value={volumeLevel}
+            onPointerDown={startLevelDrag("volume")}
+            onPointerMove={moveLevelDrag}
+            onPointerUp={endLevelDrag}
+            onPointerCancel={() => endGesture(false)}
+            onClick={bumpLevel("volume")}
+          />
+        </div>
+
         {/* Garis pembatas sebelum diskusi */}
         <div className="my-3 h-px bg-white/15" />
 
@@ -2142,14 +2201,68 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[11px] font-medium transition",
+        "flex h-14 touch-none select-none flex-col items-center justify-center gap-1 rounded-lg border text-[11px] font-medium transition",
         disabled
           ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
-          : "border-border bg-card hover:border-violet-500/60",
+          : "border-border bg-card hover:border-foreground/40",
       )}
     >
       {icon}
       {label}
+    </button>
+  );
+}
+
+/**
+ * Tombol kecerahan layar / volume suara.
+ *
+ * Nilai selalu terlihat di dalam tombol, jadi user tidak perlu menebak.
+ * Geser hanya berlaku kalau jari mulai dari tombol ini.
+ */
+function LevelToolButton({
+  icon,
+  label,
+  value,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: (e: React.PointerEvent) => void;
+  onPointerCancel: () => void;
+  onClick: () => void;
+}) {
+  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  return (
+    <button
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onClick={onClick}
+      className="flex h-14 touch-none select-none flex-col items-center justify-center gap-0.5 rounded-lg border border-border bg-card px-2 transition hover:border-foreground/40"
+    >
+      <span className="flex items-center gap-1.5 text-[11px] font-medium">
+        {icon}
+        {label}
+      </span>
+      <span className="flex w-full items-center gap-1.5">
+        <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/15">
+          <span
+            className="block h-full rounded-full bg-foreground"
+            style={{ width: `${pct}%` }}
+          />
+        </span>
+        <span className="w-7 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+          {pct}%
+        </span>
+      </span>
     </button>
   );
 }

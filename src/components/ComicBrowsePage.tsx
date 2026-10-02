@@ -313,7 +313,7 @@ function ComicHero({
             Trending
           </span>
         </div>
-        <h1 className="mt-1.5 line-clamp-2 text-lg font-black leading-tight text-white drop-shadow">
+        <h1 className="mt-1.5 line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
           {cur.title}
         </h1>
         <p className="mt-0.5 text-[11px] text-zinc-300">

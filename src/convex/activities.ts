@@ -390,21 +390,33 @@ export const myFriendsComments = query({
     if (userId === null) return [];
     const me = await ctx.db.get(userId);
     if (!me) return [];
-    // Info page: hanya komentar dari developer/staff
+    // Info page: hanya komentar dari developer/staff.
+    //
+    // Sebelumnya tiap komentar memanggil ctx.db.get satu per satu (ratusan
+    // pembacaan berurutan) sehingga halaman Info lama sekali muncul. Sekarang
+    // daftar akun staff diambil sekali saja, lalu komentar disaring pakai
+    // Map di memori.
+    const staff = new Map<string, any>();
+    const users = await ctx.db.query("users").take(600);
+    for (const u of users) {
+      const isStaff =
+        u.role === "admin" ||
+        u.staffRole === "dev" ||
+        u.staffRole === "creator" ||
+        u.staffRole === "mod" ||
+        (u.seqId === 1 && !u.staffRole);
+      if (isStaff) staff.set(String(u._id), u);
+    }
+    if (staff.size === 0) return [];
     const rows = await ctx.db
       .query("animeComments")
       .order("desc")
-      .take(400);
+      .take(250);
     const out = [];
     for (const r of rows) {
       if (r.deleted) continue;
-      const u = await ctx.db.get(r.userId);
-      const isDev =
-        u?.role === "admin" ||
-        u?.staffRole === "dev" ||
-        u?.staffRole === "creator" ||
-        u?.staffRole === "mod";
-      if (!isDev) continue;
+      const u = staff.get(String(r.userId));
+      if (!u) continue;
       out.push({
         _id: r._id,
         animeId: r.animeId,

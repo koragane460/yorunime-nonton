@@ -851,6 +851,10 @@ function ClanDetail({
   const [donateOpen, setDonateOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  // Request yang sedang dipilih di baris Terima/Tolak.
+  const [pickedRequest, setPickedRequest] = useState<Id<"clanRequests"> | null>(
+    null,
+  );
   useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
 
   if (!detail) return null;
@@ -872,6 +876,25 @@ function ClanDetail({
   const rankAll = [...(detail.topDonateAll ?? [])].sort(
     (a: any, b: any) => b.donatedTotal - a.donatedTotal,
   );
+
+  // Pilih request pertama yang belum pernah dijawab supaya tombol langsung
+  // bisa dipakai begitu saja.
+  const pendingIds = detail.requests.map((r: any) => r.requestId as Id<"clanRequests">);
+  if (pickedRequest && !pendingIds.includes(pickedRequest)) {
+    setPickedRequest(pendingIds[0] ?? null);
+  } else if (!pickedRequest && pendingIds.length > 0) {
+    setPickedRequest(pendingIds[0]);
+  }
+
+  const answerRequest = async (accept: boolean) => {
+    if (!pickedRequest) return;
+    try {
+      await respond({ requestId: pickedRequest, accept });
+      toast.success(accept ? "Request diterima" : "Request ditolak");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menjawab request");
+    }
+  };
   const topDonate: any[] =
     topScope === "all"
       ? rankAll
@@ -943,7 +966,7 @@ function ClanDetail({
             </div>
             <p
               className={cn(
-                "mt-2 truncate text-2xl font-black text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_0_14px_rgba(0,0,0,0.6)]",
+                "mt-2 truncate text-2xl font-black text-white yn-outline",
                 c.color === "golden" && "clan-color-golden",
                 c.color === "galaxy" && "clan-color-galaxy",
                 c.color === "oren" && "text-orange-400",
@@ -957,26 +980,26 @@ function ClanDetail({
                 tanpa latar hitam supaya foto clan tetap terlihat jernih. */}
             <div className="mt-4 grid grid-cols-3 gap-2.5">
               <div className="rounded-2xl px-2 py-3 text-center">
-                <p className="text-lg font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                <p className="text-lg font-bold text-white yn-outline">
                   {c.level}
                 </p>
-                <p className="text-xs text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                <p className="text-xs text-white/85 yn-outline">
                   Level
                 </p>
               </div>
               <div className="rounded-2xl px-2 py-3 text-center">
-                <p className="text-lg font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                <p className="text-lg font-bold text-white yn-outline">
                   {formatK(c.diamonds)}
                 </p>
-                <p className="text-xs text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                <p className="text-xs text-white/85 yn-outline">
                   Total XP
                 </p>
               </div>
               <div className="rounded-2xl px-2 py-3 text-center">
-                <p className="text-lg font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                <p className="text-lg font-bold text-white yn-outline">
                   {c.memberCount}
                 </p>
-                <p className="text-xs text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                <p className="text-xs text-white/85 yn-outline">
                   Members
                 </p>
               </div>
@@ -1052,45 +1075,104 @@ function ClanDetail({
                 >
                   <Settings className="size-4" /> Panel {isLeader ? "Leader" : "Officer"}
                 </button>
-                <button
-                  onClick={() => {
-                    setTab("top");
-                    setTopScope("today");
-                  }}
-                  className="yn-btn yn-btn-ghost"
-                >
-                  <Gem className="size-4" /> Top Donate
-                </button>
-                <button
-                  onClick={() => setPanelOpen(true)}
-                  className="yn-btn yn-btn-ghost"
-                >
-                  <Inbox className="size-4" /> Request
-                  <span className="rounded-full bg-white/15 px-1.5 font-mono text-[10px]">
-                    {detail.requests.length}
-                  </span>
-                </button>
               </div>
             )}
 
           </>
         )}
 
-        {/* Tab: Member / Top Donate — terbuka juga untuk yang belum join */}
-        <div className="tab-pill-track mt-3">
-          <button
-            onClick={() => setTab("member")}
-            className={cn("tab-pill", tab === "member" && "tab-pill-active")}
-          >
-            Member ({c.memberCount})
-          </button>
-          <button
-            onClick={() => setTab("top")}
-            className={cn("tab-pill", tab === "top" && "tab-pill-active")}
-          >
-            Top Donate ({detail.todayDonators})
-          </button>
+        {/* Tab: Member di paling kiri, Top Donate di paling kanan. Keduanya
+            lebar sama dan garis putih di bawah menandai tab yang aktif. */}
+        <div className="mt-3 grid grid-cols-2 border-b border-white/20">
+          {(
+            [
+              ["member", "Member", c.memberCount],
+              ["top", "Top Donate", detail.todayDonators],
+            ] as const
+          ).map(([key, label, count]) => {
+            const active = tab === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className="relative flex h-11 items-center justify-center gap-1.5 text-sm font-semibold transition"
+              >
+                <span className={active ? "text-white" : "text-white/50"}>
+                  {label}
+                </span>
+                <span
+                  className={cn(
+                    "font-mono text-xs",
+                    active ? "text-white/70" : "text-white/35",
+                  )}
+                >
+                  ({count})
+                </span>
+                <span
+                  className={cn(
+                    "absolute inset-x-2 bottom-0 h-0.5 rounded-full transition",
+                    active ? "bg-white" : "bg-transparent",
+                  )}
+                />
+              </button>
+            );
+          })}
         </div>
+
+        {/* Request join berdiri sendiri, tidak digabung ke Panel Leader.
+            Dua tombol Terima/Tolak di bawah ini baru bisa dipakai kalau
+            memang ada request yang menunggu. */}
+        {canPanel && (
+          <div className="mt-3">
+            <div className="flex items-baseline justify-between">
+              <p className="text-xs font-semibold text-white/80">
+                Request join
+              </p>
+              <span className="font-mono text-[11px] text-white/45">
+                {detail.requests.length} menunggu
+              </span>
+            </div>
+            {detail.requests.length > 0 && (
+              <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                {detail.requests.map((r: any) => (
+                  <button
+                    key={r.requestId}
+                    onClick={() => setPickedRequest(r.requestId)}
+                    className={cn(
+                      "flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] transition",
+                      pickedRequest === r.requestId
+                        ? "border-white bg-white/15 text-white"
+                        : "border-white/15 text-white/60",
+                    )}
+                  >
+                    <Avatar
+                      src={r.image}
+                      seed={r.username}
+                      className="size-4"
+                    />
+                    {r.username}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                disabled={!pickedRequest}
+                onClick={() => void answerRequest(true)}
+                className="h-11 rounded-lg bg-white text-sm font-semibold text-black transition enabled:hover:bg-white/85 disabled:bg-white/10 disabled:text-white/30"
+              >
+                Terima
+              </button>
+              <button
+                disabled={!pickedRequest}
+                onClick={() => void answerRequest(false)}
+                className="h-11 rounded-lg border border-white/20 text-sm font-semibold text-white transition enabled:hover:bg-white/10 disabled:border-white/10 disabled:text-white/30"
+              >
+                Tolak
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Search rounded-full */}
         {tab === "member" && (
@@ -1132,7 +1214,7 @@ function ClanDetail({
                     <RoleBadge role={m.role} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_10px_rgba(0,0,0,0.7)]">
+                    <p className="truncate font-bold text-white yn-outline">
                       {m.username}
                     </p>
                     <div className="mt-1 flex items-center gap-1.5">
@@ -1145,7 +1227,7 @@ function ClanDetail({
                         Lv.{m.level ?? 1}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.95)]">
+                    <p className="mt-1 text-[11px] text-white/85 yn-outline">
                       Gabung {Math.max(0, Math.floor((Date.now() - m.joinedAt) / 86400000))} hari lalu
                     </p>
                   </div>
@@ -1282,17 +1364,6 @@ function ClanDetail({
           onBg={async (url) => {
             await setBackground({ url });
             toast.success("Background clan diubah");
-          }}
-          requests={detail.requests.map((r: any) => ({
-            requestId: r.requestId,
-            username: r.username,
-            image: r.image,
-            level: r.level ?? 1,
-            userId: r.userId,
-          }))}
-          onRespond={async (requestId, accept) => {
-            await respond({ requestId, accept });
-            toast.success(accept ? "Request diterima" : "Request ditolak");
           }}
         />
       )}
@@ -1448,8 +1519,6 @@ function LeaderPanel({
   onKick,
   onTransfer,
   onBg,
-  requests,
-  onRespond,
 }: {
   clanId: Id<"clans">;
   isLeader: boolean;
@@ -1458,14 +1527,6 @@ function LeaderPanel({
   onKick: (id: string) => Promise<void>;
   onTransfer: (id: string) => Promise<void>;
   onBg: (url: string) => Promise<void>;
-  requests: {
-    requestId: Id<"clanRequests">;
-    username: string;
-    image?: string;
-    level: number;
-    userId: string;
-  }[];
-  onRespond: (requestId: Id<"clanRequests">, accept: boolean) => Promise<void>;
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId });
   const [sub, setSub] = useState<"bg" | "roles" | "kick" | "transfer" | "unroles">("bg");
@@ -1502,44 +1563,8 @@ function LeaderPanel({
           </div>
         </div>
 
-        {/* Kolom request join: kartu terpisah di paling atas — tidak menempel
-            dengan menu panel lagi. */}
-        <div className="yn-card p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">
-            Request Join ({requests.length})
-          </p>
-          <div className="space-y-2">
-            {requests.length === 0 && (
-              <p className="py-4 text-center text-xs text-muted-foreground">Tidak ada request</p>
-            )}
-            {requests.map((r) => (
-              <div key={r.requestId} className="member-row flex items-center gap-2.5 p-2.5">
-                <Avatar src={r.image} seed={r.username} className="size-9" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{r.username}</p>
-                  <p className="text-[10px] text-muted-foreground">Level {r.level}</p>
-                </div>
-                <button
-                  onClick={() => void onRespond(r.requestId, true)}
-                  className="flex size-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 transition hover:bg-emerald-500/30"
-                  aria-label="Terima request"
-                >
-                  <Check className="size-4" />
-                </button>
-                <button
-                  onClick={() => void onRespond(r.requestId, false)}
-                  className="flex size-9 items-center justify-center rounded-full bg-red-500/20 text-red-400 transition hover:bg-red-500/30"
-                  aria-label="Tolak request"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Menu sub-panel: kartu kecil sama seperti tombol clan lainnya */}
-        <div className="yn-card mt-3 p-2">
+        <div className="yn-card p-2">
           <div className="grid grid-cols-2 gap-2">
             {(
               [

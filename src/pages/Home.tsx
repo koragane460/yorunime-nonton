@@ -14,6 +14,7 @@ import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import {
   Search,
+  Bell,
   ChevronLeft,
   ChevronRight,
   Check,
@@ -521,7 +522,7 @@ function HomeContent() {
                 className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
               >
                 <img src={f.animeImage ?? ""} alt="" className="aspect-[2/3] w-full object-cover" />
-                <Heart className="absolute right-1 top-1 size-4 fill-red-500 text-violet-400" />
+                <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
                 <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
                   {f.animeTitle}
                 </p>
@@ -1565,43 +1566,10 @@ function AnimeDetailScreen({
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
           </div>
 
-          {/* Header + fav mengambang (kanan atas) */}
+          {/* Header saja. Favorite tidak lagi di pojok kanan atas: sekarang
+              jadi tombol di baris yang sama dengan "Lanjut episode". */}
           <div className="absolute inset-x-0 top-0 z-10">
-            <DetailHeader
-              title="Detail Anime"
-              onClose={onClose}
-              fav={
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    aria-label="Favorite"
-                    className="rounded-full bg-black/50 p-2"
-                    onClick={async () => {
-                      if (!user) return;
-                      const r = await toggleFav({
-                        animeId,
-                        animeTitle: detail.title,
-                        animeImage: detail.image,
-                      });
-                      toast.success(
-                        r.favorited
-                          ? "Ditambahkan ke favorite"
-                          : "Dihapus dari favorite",
-                      );
-                    }}
-                  >
-                    <Heart
-                      className={cn(
-                        "size-5",
-                        isFav ? "fill-red-500 text-red-500" : "text-white",
-                      )}
-                    />
-                  </button>
-                  <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white">
-                    {favCount ?? 0} orang
-                  </span>
-                </div>
-              }
-            />
+            <DetailHeader title="Detail Anime" onClose={onClose} />
           </div>
 
           {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
@@ -1616,7 +1584,7 @@ function AnimeDetailScreen({
               <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white drop-shadow">
+              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
                 {detail.title}
               </h2>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -1649,28 +1617,64 @@ function AnimeDetailScreen({
         </div>
 
         <div className="px-3">
-          {/* Tombol Nonton DI ATAS sinopsis */}
-          <button
-            onClick={() =>
-              navigate(
-                `/nonton?anime=${animeId}${
-                  animeTitle ? `&judul=${encodeURIComponent(animeTitle)}` : ""
-                }`,
-              )
-            }
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
-          >
-            <Play className="size-4 fill-current" aria-hidden />
-            {progress && !progress.finished && progress.progressSec > 30
-              ? `Lanjutkan menonton episode ${progress.episode}`
-              : "Nonton"}
-          </button>
-          {progress && progress.durationSec > 0 && (
-            <p className="mt-1.5 text-center text-xs text-white/85">
-              Durasi nonton {fmtClock(progress.progressSec)} /{" "}
-              {fmtClock(progress.durationSec)}
-            </p>
-          )}
+          {/* Baris aksi: "Lanjut episode" lebar, "Favorite" kotak miring di
+              kanannya. Dua-duanya satu tinggi supaya rata di layar HP. */}
+          <div className="mt-4 flex items-stretch gap-2">
+            <SkewButton
+              variant="accent"
+              className="flex-1"
+              onClick={() =>
+                navigate(
+                  `/nonton?anime=${animeId}${
+                    animeTitle
+                      ? `&judul=${encodeURIComponent(animeTitle)}`
+                      : ""
+                  }`,
+                )
+              }
+            >
+              <Play className="size-4 fill-current" aria-hidden />
+              {progress && !progress.finished && progress.progressSec > 30
+                ? `Lanjut episode ${progress.episode}`
+                : "Lanjut episode"}
+            </SkewButton>
+            <SkewButton
+              variant="quiet"
+              aria-label="Favorite"
+              onClick={async () => {
+                if (!user) return;
+                const r = await toggleFav({
+                  animeId,
+                  animeTitle: detail.title,
+                  animeImage: detail.image,
+                });
+                toast.success(
+                  r.favorited
+                    ? "Ditambahkan ke favorite"
+                    : "Dihapus dari favorite",
+                );
+              }}
+            >
+              <Bell
+                className={cn(
+                  "size-4",
+                  isFav && "fill-current text-accent",
+                )}
+                aria-hidden
+              />
+              Favorite
+            </SkewButton>
+          </div>
+          <p className="mt-1.5 text-center text-[11px] text-white/55">
+            {favCount ?? 0} orang menandai ini
+            {progress && progress.durationSec > 0 && (
+              <>
+                {" · nonton "}
+                {fmtClock(progress.progressSec)} /{" "}
+                {fmtClock(progress.durationSec)}
+              </>
+            )}
+          </p>
 
           {/* Sinopsis — 5/6 paragraf dulu sebelum "baca selengkapnya" */}
           <SectionTitle>Sinopsis</SectionTitle>
@@ -1680,7 +1684,7 @@ function AnimeDetailScreen({
           {canExpandSynopsis && (
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
-              className="mt-1 text-xs font-medium text-white underline underline-offset-2"
+              className="mt-2 inline-flex h-8 items-center text-[13px] font-medium text-white/70 transition hover:text-white"
             >
               {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
             </button>
@@ -1802,27 +1806,70 @@ function AnimeDetailScreen({
   );
 }
 
+/**
+ * Tombol kotak miring (skew). Satu helper untuk semua baris aksi supaya
+ * tinggi, radius, dan kemiringannya selalu sama persis di layar HP.
+ * Kemiringan dipakai di elemen luar, isinya dikembalikan ke lurus supaya
+ * teks tidak ikut miring.
+ */
+export function SkewButton({
+  children,
+  onClick,
+  variant = "accent",
+  className,
+  disabled,
+  ...rest
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  variant?: "accent" | "quiet" | "plain";
+  className?: string;
+  disabled?: boolean;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "className">) {
+  return (
+    <button
+      {...rest}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "-skew-x-6 rounded-lg px-4 text-sm font-semibold transition",
+        "flex min-h-11 shrink-0 items-center justify-center gap-2",
+        variant === "accent" &&
+          "bg-accent text-accent-foreground hover:brightness-110",
+        variant === "quiet" &&
+          "border border-white/25 bg-black/60 text-white hover:bg-black/75",
+        variant === "plain" &&
+          "border border-border bg-card text-foreground hover:border-foreground/40",
+        disabled && "pointer-events-none opacity-40",
+        className,
+      )}
+    >
+      <span className="skew-x-6 inline-flex items-center gap-2 whitespace-nowrap">
+        {children}
+      </span>
+    </button>
+  );
+}
+
 function DetailHeader({
   title,
   onClose,
-  fav,
 }: {
   title: string;
   onClose: () => void;
-  fav?: ReactNode;
 }) {
   return (
-    <div className="relative z-10 flex items-center justify-between p-3">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onClose}
-          className="rounded-full bg-black/50 p-2 backdrop-blur transition hover:border-violet-500"
-        >
-          <ChevronLeft className="size-4" />
-        </button>
-        <h1 className="text-lg font-bold">{title}</h1>
-      </div>
-      {fav}
+    <div className="relative z-10 flex items-center gap-3 p-3">
+      <button
+        onClick={onClose}
+        aria-label="Kembali"
+        className="-ml-1 flex size-9 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+      >
+        <ChevronLeft className="size-5" />
+      </button>
+      <h1 className="text-base font-semibold tracking-tight text-white">
+        {title}
+      </h1>
     </div>
   );
 }

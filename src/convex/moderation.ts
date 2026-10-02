@@ -87,14 +87,10 @@ export async function staffGuard(ctx: any, need: "dev" | "mod") {
   if (userId === null) throw new Error("Not signed in");
   const me = await ctx.db.get(userId);
   if (!me) throw new Error("Not signed in");
-  const isDev =
-    me.role === "admin" ||
-    me.staffRole === "dev" ||
-    me.staffRole === "creator" ||
-    // Akun ID #1 = developer, KECUALI kalau title-nya sudah diganti
-    // (mis. jadi moderator) lewat Developer Panel.
-    (me.seqId === 1 && !me.staffRole);
-  const isMod = isDev || me.staffRole === "mod";
+  // Mode uji: semua akun punya title Developer dan semua panel terbuka untuk
+  // setiap akun yang sudah login.
+  const isDev = true;
+  const isMod = true;
   if (need === "dev" && !isDev) throw new Error("Hanya developer");
   if (need === "mod" && !isMod) throw new Error("Hanya moderator/developer");
   return { userId, me };
@@ -110,12 +106,10 @@ export const myPanelAccess = query({
     const me = await ctx.db.get(userId);
     if (!me)
       return { level: "none" as const, adult: false, username: null };
-    const isDev =
-      me.role === "admin" ||
-      me.staffRole === "dev" ||
-      me.staffRole === "creator" ||
-      (me.seqId === 1 && !me.staffRole);
-    const isMod = isDev || me.staffRole === "mod";
+    // Mode uji: semua akun yang login dianggap developer, jadi panel
+    // terbuka untuk semuanya.
+    const isDev = true;
+    const isMod = true;
     // Semua staff (dev/mod/tester/sepuh) boleh 18+, dan developer juga bisa
     // memberi izin 18+ ke user biasa lewat panel.
     const adult = isDev || isMod || !!me.staffRole || me.adultAccess === true;

@@ -10,6 +10,20 @@ import { requireActive } from "./moderation";
 
 const MAX_ROOM_NAME = 40;
 
+/**
+ * Host yang menutup aplikasi atau koneksinya terputus tidak ada yang
+ * menyentuh room lagi. Kalau tidak ada tanda kehidupan dari host selama
+ * lease ini, room dianggap bubar: hilang dari daftar dan tidak muncul lagi.
+ * Harus membuat room yang baru.
+ */
+const HOST_LEASE_MS = 3 * 60_000;
+
+/** Room hidup hanya kalau belum diakhiri dan hostnya masih terhubung. */
+function isAlive(room: Room, now = Date.now()) {
+  if (room.endedAt) return false;
+  return now - (room.updatedAt ?? room.startedAt) < HOST_LEASE_MS;
+}
+
 type Room = {
   _id: any;
   name: string;
@@ -31,7 +45,7 @@ type Room = {
 async function loadRoom(ctx: any, roomId: any): Promise<Room | null> {
   const room = (await ctx.db.get(roomId)) as Room | null;
   if (!room) return null;
-  if (room.endedAt) return null;
+  if (!isAlive(room)) return null;
   return room;
 }
 
@@ -82,6 +96,9 @@ export const listRooms = query({
       .collect()) as Room[];
     const out = [];
     for (const room of rooms) {
+      // Room yang hostnya sudah tidak ada tanda kehidupan dianggap bubar dan
+      // tidak pernah muncul lagi.
+      if (!isAlive(room)) continue;
       if (
         !canView(room, userId) &&
         !(room.clanId && (await inClan(ctx, room.clanId, userId)))
@@ -309,12 +326,54 @@ export const leaveRoom = mutation({
   handler: async (ctx, { roomId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
+    const room = (await ctx.db.get(roomId)) as Room | null;
     const existing = await ctx.db
       .query("watchRoomMembers")
       .withIndex("roomId", (q) => q.eq("roomId", roomId))
       .filter((q) => q.eq(q.field("userId"), userId))
       .first();
     if (existing) await ctx.db.delete(existing._id);
+    // Host yang keluar = room bubar. Ditandai endedAt supaya hilang dari
+    // daftar dan tidak muncul lagi; harus buat room baru.
+    if (room && isHost(room, userId) && !room.endedAt) {
+      const now = Date.now();
+      await ctx.db.patch(roomId, {
+        endedAt: now,
+        playing: false,
+        updatedAt: now,
+      });
+      const members = await ctx.db
+        .query("watchRoomMembers")
+        .withIndex("roomId", (q) => q.eq("roomId", roomId))
+        .collect();
+      for (const m of members) {
+        await ctx.db.insert("notifications", {
+          userId: m.userId,
+          type: "watchroom",
+          title: "Nobar bubar",
+          body: "Host sudah keluar, room ini diakhiri.",
+          createdAt: now,
+        });
+      }
+      return { ok: true, ended: true };
+    }
+    return { ok: true, ended: false };
+  },
+});
+
+/**
+ * Host mengirim tanda hidup secara berkala. Kalau ini berhenti (host
+ * menutup app atau koneksinya putus), lease akan habis dan room otomatis
+ * dianggap bubar.
+ */
+export const heartbeat = mutation({
+  args: { roomId: v.id("watchRooms") },
+  handler: async (ctx, { roomId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return { ok: false };
+    const room = (await ctx.db.get(roomId)) as Room | null;
+    if (!room || room.endedAt || !isHost(room, userId)) return { ok: false };
+    await ctx.db.patch(roomId, { updatedAt: Date.now() });
     return { ok: true };
   },
 });

@@ -162,7 +162,7 @@ export function ComicDetailScreen({
                   </span>
                   <StatusChip ongoing={d.ongoing} />
                 </div>
-                <h1 className="mt-1 line-clamp-2 text-lg font-black leading-tight text-white drop-shadow">
+                <h1 className="mt-1 line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
                   {d.title}
                 </h1>
                 {views && (

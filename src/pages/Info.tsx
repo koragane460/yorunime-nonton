@@ -9,6 +9,8 @@ import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
 import {
   Bell,
   BookOpen,
+  ChevronDown,
+  ChevronUp,
   Eye,
   EyeOff,
   Megaphone,
@@ -81,6 +83,8 @@ function NotifTab() {
     user ? {} : "skip",
   );
   const [composeOpen, setComposeOpen] = useState(false);
+  // Panel popup pengumenical hanya diambil datanya saat dibuka.
+  const [annOpen, setAnnOpen] = useState(false);
   const isDev = access?.level === "dev";
 
   return (
@@ -110,8 +114,28 @@ function NotifTab() {
         <BroadcastComposer onDone={() => setComposeOpen(false)} />
       )}
 
-      {/* Kontrol popup pengumuman yang muncul di atas semua halaman. */}
-      {isDev && <AnnouncementManager />}
+      {/* Kontrol popup pengumuman yang muncul di atas semua halaman.
+          Sengaja tidak dibuka langsung supaya halaman Info tidak lambat:
+          query daftar pengumuman baru jalan setelah panelnya diketuk. */}
+      {isDev && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+          <button
+            onClick={() => setAnnOpen((v) => !v)}
+            className="flex min-h-9 w-full items-center justify-between text-xs font-semibold"
+          >
+            <span className="flex items-center gap-1.5">
+              <Megaphone className="size-3.5 text-muted-foreground" />
+              Popup pengumuman
+            </span>
+            {annOpen ? (
+              <ChevronUp className="size-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="size-4 text-muted-foreground" />
+            )}
+          </button>
+          {annOpen && <AnnouncementManager />}
+        </div>
+      )}
 
       {(notifs ?? []).map((n) => (
         <div
@@ -282,10 +306,7 @@ function AnnouncementManager() {
   };
 
   return (
-    <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
-      <p className="flex items-center gap-1.5 text-xs font-semibold">
-        <Megaphone className="size-3.5 text-muted-foreground" /> Popup pengumuman
-      </p>
+    <div className="space-y-2 pt-2">
       <textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
