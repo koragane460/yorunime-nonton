@@ -120,10 +120,10 @@ function ErrorDialog({
               <AlertTriangle className="h-4 w-4 text-amber-300" />
             </div>
             <div>
-              <DialogTitle className="text-base">Runtime error</DialogTitle>
+              <DialogTitle className="text-base">Ada yang error</DialogTitle>
               <DialogDescription className="mt-1 text-zinc-400">
-                The preview stopped while rendering. Open the editor to fix the
-                issue, or close this message to keep browsing.
+                Aplikasinya nyangkut saat mau nampilin halaman ini. Tutup
+                dialog ini dulu, biasanya sudah bisa lanjut lagi.
               </DialogDescription>
             </div>
           </div>
@@ -131,7 +131,7 @@ function ErrorDialog({
 
         <div className="rounded-md border border-amber-400/20 bg-amber-400/5 px-3 py-2.5">
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-200/70">
-            Error message
+            Pesan error
           </div>
           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-200">
             {error.error}
@@ -145,8 +145,7 @@ function ErrorDialog({
                 type="button"
                 className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100"
               >
-                <ChevronDown className="h-3.5 w-3.5" />
-                Show technical details
+                <ChevronDown className="h-3.5 w-3.5" /> Detail teknis
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -159,12 +158,13 @@ function ErrorDialog({
 
         <DialogFooter className="gap-3 sm:items-center">
           <span className="text-xs text-zinc-500">
-            Your error details are also available in chat.
+            Detail errornya tersimpan di chat juga.
           </span>
           <a
             href={`https://freebuff.com/project/${import.meta.env.VITE_VLY_APP_ID}`}
             target="_blank"
             rel="noreferrer"
+            className="hidden"
           >
             <Button className="bg-zinc-100 text-zinc-900 hover:bg-white">
               <ExternalLink className="h-4 w-4" /> Open editor

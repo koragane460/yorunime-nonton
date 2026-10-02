@@ -119,7 +119,7 @@ export function ProfileSheet({
               </p>
               {profile.premium && <BlueCheck className="size-5" />}
               {profile.devTagged && <RedMark className="size-5" />}
-              <TitleBadge role={profile.staffRole} />
+              <TitleBadge role={profile.staffRole} seqId={profile.seqId} />
             </div>
             <p className="text-xs text-zinc-400">
               ID: {profile.seqId !== undefined ? `#${profile.seqId}` : "—"}

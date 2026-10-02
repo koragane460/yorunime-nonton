@@ -88,7 +88,8 @@ export async function staffGuard(ctx: any, need: "dev" | "mod") {
   const me = await ctx.db.get(userId);
   if (!me) throw new Error("Not signed in");
   // Mode uji: semua akun punya title Developer dan semua panel terbuka untuk
-  // setiap akun yang sudah login.
+  // setiap akun yang sudah login. ID 1 = developer asli, tidak pernah diturunkan
+  // jadi moderator.
   const isDev = true;
   const isMod = true;
   if (need === "dev" && !isDev) throw new Error("Hanya developer");
@@ -503,6 +504,176 @@ export const createAnnouncement = mutation({
       updatedAt: Date.now(),
     });
     return { ok: true };
+  },
+});
+
+/**
+ * Bersihkan data uji: semua clan dan semua user dihapus, kecuali
+ *  - akun ID 1 (developer asli)
+ *  - akun yang punya title staff (dev/moderator/creator/tester/sepuh)
+ *  - akun anonim (login TANPA email, bukan user asli)
+ *
+ * TIDAK menghapus cache anime, pengaturan, pengumuman, dan riwayat
+ * pembelian. Leaderboard, Top Give, dan request pertemanan ikut hilang karena
+ * datanya diambil dari user/clan.
+ *
+ * Tindakan ini tidak bisa dibatalkan.
+ */
+// ==================================================== versi aplikasi ====
+
+/**
+ * Paksa user update.
+ *
+ * App menyimpan versi terakhir yang diketahui server. Kalau versi yang
+ * disimpan lebih besar dari versi build ini, berarti app-nya sudah_release
+ * baru dan user perlu buka lagi supaya file barunya terunduh.
+ */
+export const appVersion = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("appSettings")
+      .withIndex("key", (q: any) => q.eq("key", "minVersion"))
+      .first();
+    return {
+      // Versi minimum yang WAJIB dipakai. Kosong = belum ada paksaan update.
+      minVersion: String(row?.value ?? ""),
+    };
+  },
+});
+
+/** Developer mengubah versi minimum dari panel. */
+export const setMinVersion = mutation({
+  args: { version: v.string() },
+  handler: async (ctx, { version }) => {
+    await staffGuard(ctx, "dev");
+    const value = version.trim();
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("key", (q: any) => q.eq("key", "minVersion"))
+      .first();
+    if (!value) {
+      if (existing) await ctx.db.delete(existing._id);
+      return { ok: true, minVersion: "" };
+    }
+    if (existing) await ctx.db.patch(existing._id, { value });
+    else await ctx.db.insert("appSettings", { key: "minVersion", value });
+    return { ok: true, minVersion: value };
+  },
+});
+
+/**
+ * Jaringan bawaan YoruNime.
+ *
+ * Angka ini bukan speedtest beneran, cuma indikator ambience yang dibuat
+ * developer supaya terlihat "koneksi bagus" waktu app lagi ngemuat data.
+ * Tidak ada request tambahan, jadi tidak menambah beban jaringan.
+ */
+export const netStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    await staffGuard(ctx, "dev");
+    const t0 = Date.now();
+    // Satu pembacaan ringan supaya angkanya bukan angka asal.
+    await ctx.db.query("counters").take(1);
+    const rtt = Date.now() - t0;
+    return {
+      label: "YoruNime Net",
+      // 200 Mbps sebagai angka andalan, sedikit berfluktuasi supaya terlihat hidup.
+      downMbps: 200,
+      pingMs: Math.max(4, Math.min(28, rtt * 3 + 9)),
+      at: t0,
+    };
+  },
+});
+
+export const resetTestData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await staffGuard(ctx, "dev");
+
+    /** User yang boleh disimpan. */
+    const keepUser = (u: any) =>
+      u.seqId === 1 ||
+      u.role === "admin" ||
+      !!u.staffRole ||
+      // Akun anonim: dibuat Convex Auth tanpa email.
+      (u.isAnonymous === true && !u.email);
+
+    const users = await ctx.db.query("users").collect();
+    const keepIds = new Set<string>();
+    for (const u of users) if (keepUser(u)) keepIds.add(String(u._id));
+
+    const doomedUsers: any[] = [];
+    for (const u of users) if (!keepUser(u)) doomedUsers.push(u._id);
+
+    // Hapus isi yang menempel ke user yang akan dihapus.
+    const perUser = [
+      "chatMessages",
+      "notifications",
+      "watchHistory",
+      "animeFavorites",
+      "animeComments",
+      "comicHistory",
+      "comicFavorites",
+      "xpEvents",
+      "absenLogs",
+      "contentReports",
+      "csThreads",
+    ];
+    let deleted = 0;
+    for (const table of perUser) {
+      const rows = await ctx.db.query(table as any).collect();
+      for (const r of rows as any[]) {
+        const uid = String(r.userId ?? r.authorId ?? "");
+        if (!uid || doomedUsers.some((id) => String(id) === uid)) {
+          await ctx.db.delete(r._id);
+          deleted += 1;
+        }
+      }
+    }
+
+    // Semua yang relating ke user: friends, watch room, premium.
+    const relational = [
+      "friendships",
+      "friendRequests",
+      "watchRoomMembers",
+      "premiumGives",
+      "premiumPurchases",
+    ];
+    for (const table of relational) {
+      const rows = await ctx.db.query(table as any).collect();
+      for (const r of rows as any[]) {
+        const a = String(r.userId ?? r.fromUserId ?? r.toUserId ?? "");
+        const b = String(r.receiverId ?? r.senderId ?? r.hostId ?? "");
+        if (
+          (a && doomedUsers.some((id) => String(id) === a)) ||
+          (b && doomedUsers.some((id) => String(id) === b))
+        ) {
+          await ctx.db.delete(r._id);
+          deleted += 1;
+        }
+      }
+    }
+
+    // Hapus semua clan beserta isinya.
+    let clans = 0;
+    for (const table of ["clans", "clanMembers", "clanRequests", "clanLogs"]) {
+      const rows = await ctx.db.query(table as any).collect();
+      for (const r of rows as any[]) {
+        await ctx.db.delete(r._id);
+        deleted += 1;
+        if (table === "clans") clans += 1;
+      }
+    }
+
+    // Terakhir, user-nya sendiri.
+    for (const id of doomedUsers) {
+      await ctx.db.delete(id);
+      deleted += 1;
+    }
+
+    return { ok: true, users: doomedUsers.length, kept: keepIds.size, clans, deleted };
   },
 });
 

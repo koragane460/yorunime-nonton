@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
-import { Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { useAuth } from "@/hooks/use-auth";import {
+  Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { CsBadge, CsScreen } from "@/components/CsDevScreens";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId } from "@/lib/lstream";
@@ -20,6 +20,7 @@ import {
   Gem,
   Headset,
   Infinity as InfinityIcon,
+  RefreshCw,
   Search,
   Shield,
   ShieldCheck,
@@ -77,6 +78,50 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
   /** User yang jadi target dialog ban/mute (harus bertahan setelah sheet ditutup). */
   const [target, setTarget] = useState<PanelUser | null>(null);
   const [dialog, setDialog] = useState<null | "ban" | "mute" | "clan">(null);
+  const resetData = useMutation(api.moderation.resetTestData);
+  const [wipeArmed, setWipeArmed] = useState(false);
+  const [wipeText, setWipeText] = useState("");
+  const [wiping, setWiping] = useState(false);
+
+  // Paksaan update.
+  const version = useQuery(api.moderation.appVersion, {});
+  const setMinVersion = useMutation(api.moderation.setMinVersion);
+  const [minVersionDraft, setMinVersionDraft] = useState("");
+  const [savingVersion, setSavingVersion] = useState(false);
+  const minVersion = version?.minVersion ?? "";
+
+  const saveVersion = async () => {
+    setSavingVersion(true);
+    try {
+      await setMinVersion({ version: minVersionDraft });
+      toast.success(
+        minVersionDraft.trim()
+          ? `User versi bawah ${minVersionDraft.trim()} akan diminta update`
+          : "Paksaan update dimatikan",
+      );
+      setMinVersionDraft("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan versi");
+    } finally {
+      setSavingVersion(false);
+    }
+  };
+
+  const doWipe = async () => {
+    setWiping(true);
+    try {
+      const r = await resetData({});
+      toast.success(
+        `${r.users} user & ${r.clans} clan dihapus, ${r.kept} disimpan`,
+      );
+      setWipeArmed(false);
+      setWipeText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal membersihkan");
+    } finally {
+      setWiping(false);
+    }
+  };
 
   if (level === "none") return null;
   const isDev = level === "dev";
@@ -117,6 +162,90 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
       )}
       {csOpen && <CsScreen onClose={() => setCsOpen(false)} />}
 
+      {/* Paksa update: begitu versi minimum di server naik, semua app yang
+          masih di bawah versi itu langsung diminta reload. */}
+      {isDev && (
+        <div className="mt-2.5 rounded-xl border border-border bg-background/60 p-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold">
+            <RefreshCw className="size-3.5 text-primary" />
+            Update aplikasi
+          </p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+            Naikin versi minimum = semua yang masih pakai app lama langsung
+            disuruh update pas buka app.
+          </p>
+          <div className="mt-2 flex gap-1.5">
+            <input
+              value={minVersionDraft}
+              onChange={(e) => setMinVersionDraft(e.target.value)}
+              placeholder="mis. 1.2.0"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-background/60 px-3 py-2 text-xs outline-none focus:border-foreground/50"
+            />
+            <button
+              disabled={savingVersion}
+              onClick={() => void saveVersion()}
+              className="h-10 shrink-0 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-40"
+            >
+              {savingVersion ? "..." : "Simpan"}
+            </button>
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">
+            {minVersion
+              ? `Minimal versi ${minVersion}. Yang di bawah itu kena update paksa.`
+              : "Belum ada paksaan update."}
+          </p>
+        </div>
+      )}
+
+      {/* Bersihkan semua user & clan. Tidak bisa dibatalkan, jadi dua kali
+          konfirmasi dulu (ketik kata kunci). */}
+      {isDev && (
+        <div className="mt-2.5 rounded-xl border border-red-500/30 bg-red-500/[0.04] p-2.5">
+          <p className="text-[11px] font-bold text-red-400">
+            Bersihin semua user &amp; clan
+          </p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+            Hapus semua akun dan clan. Yang tetap: ID 1, semua akun bertitle,
+            dan akun anonim. Nggak bisa dibalik.
+          </p>
+          {wipeArmed ? (
+            <div className="mt-2 space-y-1.5">
+              <input
+                value={wipeText}
+                onChange={(e) => setWipeText(e.target.value)}
+                placeholder="ketik HAPUS"
+                className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-xs outline-none focus:border-red-500/60"
+              />
+              <div className="flex gap-1.5">
+                <button
+                  disabled={wipeText.trim().toUpperCase() !== "HAPUS" || wiping}
+                  onClick={() => void doWipe()}
+                  className="h-10 flex-1 rounded-lg bg-red-600 text-xs font-bold text-white transition enabled:hover:bg-red-500 disabled:opacity-40"
+                >
+                  {wiping ? "Membersihkan…" : "Ya, hapus sekarang"}
+                </button>
+                <button
+                  onClick={() => {
+                    setWipeArmed(false);
+                    setWipeText("");
+                  }}
+                  className="h-10 rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setWipeArmed(true)}
+              className="mt-2 h-10 w-full rounded-lg border border-red-500/40 text-xs font-bold text-red-400 transition hover:bg-red-500/10"
+            >
+              Mulai bersihkan
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
         <Search className="size-3.5 shrink-0 text-muted-foreground" />
         <input
@@ -150,7 +279,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1">
                 <span className="truncate text-xs font-semibold">{u.username}</span>
-                <TitleBadge role={u.staffRole} compact />
+                <TitleBadge role={u.staffRole} seqId={u.seqId} compact />
                 {u.clanTag && (
                   <ClanTag
                     icon={DEFAULT_CLAN_ICON}

@@ -9,6 +9,7 @@ import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
+import { UpdateGate } from "./components/UpdateGate";
 
 // Lazy load route components for better code splitting
 const Welcome = lazy(() => import("./pages/Welcome.tsx"));
@@ -124,6 +125,7 @@ createRoot(document.getElementById("root")!).render(
         <VlyToolbar />
       </ToolbarErrorBoundary>
       <ConvexAuthProvider client={convex}>
+        <UpdateGate>
         <BrowserRouter>
           <ModerationProvider>
             <RouteSyncer />
@@ -229,6 +231,7 @@ createRoot(document.getElementById("root")!).render(
           </Suspense>
           </ModerationProvider>
         </BrowserRouter>
+        </UpdateGate>
         <Toaster />
       </ConvexAuthProvider>
     </RootErrorBoundary>

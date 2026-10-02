@@ -921,10 +921,60 @@ button:not([disabled]):active,
   background: #07070b;
   border-top: 1px solid rgb(255 255 255 / 0.09);
 }
+/*
+ * Navigasi bawah.
+ *
+ * Penanda halaman aktif sekarang berupa garis TIPIS di ATAS tombol, bukan di
+ * bawah, supaya tidak menempel dengan garis kartu di atasnya.
+ */
+/*
+ * Bentuk tombol sengaja TIDAK seragam.
+ *
+ * Kalau semua tombol berbentuk kotak rounded yang sama, tampilannya monoton
+ * dan user cepat bosan. Jadi ada beberapa siluet yang dipakai bergantian:
+ *   .yn-shape-sharp  → kotak tegas, sudut 6px (tombol serif/editorial)
+ *   .yn-shape-pill   → kapsul penuh (filter, chip, pilihan)
+ *   .yn-shape-cut    → satu sudut dipotong (tombol utama yang menonjol)
+ *   .yn-shape-soft   → rounded 14px (default)
+ * Pemakaiannya bukan aturan wajib, tapi jangan semua tombol pakai satu
+ * bentuk yang sama dalam satu layar.
+ */
+.yn-shape-sharp {
+  border-radius: 6px;
+}
+.yn-shape-pill {
+  border-radius: 999px;
+}
+.yn-shape-cut {
+  border-radius: 4px 14px 4px 14px;
+}
+.yn-shape-cut-2 {
+  border-radius: 14px 4px 14px 4px;
+}
+.yn-shape-soft {
+  border-radius: 14px;
+}
+
+/* Garis tipis di atas tombol nav (indikator halaman aktif). */
 .nav-item {
   transition:
     color 0.18s ease,
     background-color 0.18s ease;
+}
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 2px;
+  width: 0;
+  transform: translateX(-50%);
+  border-radius: 0 0 2px 2px;
+  background: var(--primary);
+  transition: width 0.2s ease;
+}
+.nav-item[aria-current="page"]::before {
+  width: 26px;
 }
 
 /* Subtitle video — gaya seperti player MegaPlay: teks putih, outline hitam,
@@ -936,8 +986,8 @@ button:not([disabled]):active,
 video::cue {
   background: transparent;
   color: #ffffff;
-  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-weight: 600;
   font-size: 1rem;
   line-height: 1.35;
   text-shadow:

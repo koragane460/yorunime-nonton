@@ -76,28 +76,20 @@ function ScrollHint({ dir }: { dir: "up" | "down" }) {
   );
 }
 
-/** Backdrop bintang. */
+/**
+ * Latar layar pemuatan.
+ *
+ * Dulu memakai titik-ditik twinkling seperti bintang; sekarang diganti satu
+ * sapuan cahaya tipis yang bergerak sangat lambat. Lebih tenang, tidak
+ * berantakan, dan tidak bikin layar berkedip yang bikin tidak nyaman.
+ */
 function Starfield() {
-  const stars = useRef(
-    Array.from({ length: 40 }, (_, i) => ({
-      id: i,
-      left: (i * 37 + 13) % 100,
-      top: (i * 53 + 29) % 100,
-      delay: (i % 10) * 0.4,
-      dur: 2.2 + (i % 5) * 0.5,
-    })),
-  );
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {stars.current.map((s) => (
-        <motion.span
-          key={s.id}
-          className="absolute size-0.5 rounded-full bg-foreground/60"
-          style={{ left: `${s.left}%`, top: `${s.top}%` }}
-          animate={{ opacity: [0.1, 0.8, 0.1] }}
-          transition={{ duration: s.dur, repeat: Infinity, delay: s.delay }}
-        />
-      ))}
+      {/* Sapuan cahaya diagonal, sangat samar. */}
+      <div className="absolute -inset-1/4 bg-[linear-gradient(115deg,transparent_38%,color-mix(in_oklch,var(--primary)_9%,transparent)_50%,transparent_62%)]" />
+      {/* Vignette halus supaya tepi tidak mencolok. */}
+      <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_0%,transparent_55%,rgb(0_0_0/0.45))]" />
     </div>
   );
 }
@@ -389,10 +381,12 @@ function WelcomeFlow() {
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]">
         <Starfield />
         <motion.h1
-          className="px-6 text-center text-4xl font-normal tracking-[0.14em] text-foreground"
-          initial={{ opacity: 0, scale: 0.82, filter: "blur(10px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          transition={{ duration: 0.85, ease: "easeOut" }}
+          // Serif besar dengan line-height rapat: kesan lebih tenang dan
+          // premium, bukan judul bergaya neon.
+          className="px-6 text-center font-[family-name:var(--font-display)] text-6xl leading-[0.95] tracking-[-0.02em] text-foreground"
+          initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
           YoruNime
         </motion.h1>
@@ -528,7 +522,7 @@ function WelcomeFlow() {
                   <ScrollHint dir="up" />
                   <button
                     onClick={() => setStage("rules")}
-                    className="mt-3 w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
+                    className="yn-shape-cut-2 mt-3 w-full bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
                   >
                     Lanjut
                   </button>

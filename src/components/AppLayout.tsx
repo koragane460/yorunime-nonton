@@ -193,7 +193,7 @@ function AccountPanel({
                   {name}
                 </p>
                 {premium && <BlueCheck />}
-                <TitleBadge role={staffRole} compact />
+                <TitleBadge role={staffRole} seqId={seqId} compact />
               </div>
               <p className="text-[11px] text-zinc-400">
                 ID: {displayId(seqId, id)}
@@ -647,6 +647,7 @@ function BottomNav() {
                 onPointerCancel={cancelHold}
                 onContextMenu={(e) => isHome && e.preventDefault()}
                 onClick={() => onClickItem(it.path)}
+                aria-current={active ? "page" : undefined}
                 className="nav-item relative flex flex-col items-center gap-0.5 py-2"
               >
                 <Icon

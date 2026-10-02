@@ -201,16 +201,21 @@ export function ShineBadge({
  */
 export function TitleBadge({
   role,
+  seqId,
   className,
   compact,
 }: {
   role?: string;
+  seqId?: number;
   className?: string;
   compact?: boolean;
 }) {
   // Mode uji: semua akun memakai title Developer. Title lain hanya dipakai kalau
   // memang sengaja diganti lewat Developer Panel.
-  const def = TITLE_STYLE[role ?? ""] ?? TITLE_STYLE.dev;
+  // ID 1 = akun asli developer, tidak pernah jadi moderator.
+  const def =
+    TITLE_STYLE[role === "mod" && seqId === 1 ? "dev" : (role ?? "")] ??
+    TITLE_STYLE.dev;
   return (
     <span
       className={cn(

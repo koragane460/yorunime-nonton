@@ -79,7 +79,7 @@ export function RequireAuth({
 
               <button
                 onClick={() => navigate(signInHref)}
-                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
+                className="yn-shape-cut mt-5 flex w-full items-center justify-center gap-1.5 bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
               >
                 Masuk ke YoruNime
                 <ArrowRight className="size-4" />

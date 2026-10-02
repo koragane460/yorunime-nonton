@@ -26,6 +26,7 @@ import {
   SkipForward,
   Sun,
   Volume2,
+  VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -336,9 +337,13 @@ function WatchContent() {
     gain: GainNode;
   } | null>(null);
 
-  // 0.5 = layar normal, di atas 0.5 layar dib terang (overlay putih), di bawah
-  // 0.5 layar digelapkan (overlay hitam).
+  // 0.5 = layar normal, di bawah 0.5 layar digelapkan (overlay hitam), di atas
+  // 0.5 layar dibuat lebih terang tanpa jadi lapisan putih penuh.
   const [brightness, setBrightness] = useState(0.5);
+  // Lapisan gelap hanya untuk sisi gelap. Sisi terang memakai opacity kecil
+  // saja supaya layar tidak terlihat ditutup cat putih.
+  const dimOpacity = brightness < 0.5 ? (0.5 - brightness) * 1.2 : 0;
+  const liftOpacity = brightness > 0.5 ? (brightness - 0.5) * 0.26 : 0;
   const [volumeLevel, setVolumeLevel] = useState(0.5);
   const [gesture, setGesture] = useState<null | {
     kind: "brightness" | "volume";
@@ -1245,17 +1250,26 @@ function WatchContent() {
             : { aspectRatio: "16 / 9" }
         }
       >
-        {/* Kecerahan layar: lapisan putih/hitam di atas segalanya.
-            Tidak menyentuh video, jadi HP tidak kerja lebih keras. */}
-        {brightness !== 0.5 && (
-          <div
-            aria-hidden
-            className="pointer-events-none fixed inset-0 z-[100]"
-            style={{
-              background: brightness > 0.5 ? "#ffffff" : "#000000",
-              opacity: Math.abs(brightness - 0.5) * 1.4,
-            }}
-          />
+        {/* Kecerahan layar: sisi gelap pakai lapisan hitam, sisi terang pakai
+            lapisan putih yang sangat tipis. Tidak menyentuh decode video, jadi
+            HP tidak kerja lebih keras. */}
+        {(dimOpacity > 0 || liftOpacity > 0) && (
+          <>
+            {dimOpacity > 0 && (
+              <div
+                aria-hidden
+                className="pointer-events-none fixed inset-0 z-[100] bg-black"
+                style={{ opacity: dimOpacity }}
+              />
+            )}
+            {liftOpacity > 0 && (
+              <div
+                aria-hidden
+                className="pointer-events-none fixed inset-0 z-[100] bg-white"
+                style={{ opacity: liftOpacity }}
+              />
+            )}
+          </>
         )}
 
         {!streamUrl ? (
@@ -1305,7 +1319,12 @@ function WatchContent() {
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
             className="h-full w-full object-contain"
-            style={undefined}
+            style={
+              // Video dapat sedikit kontras & saturasi supaya tidak terlihat
+              // Video dapat sedikit kontras & saturasi supaya tidak terlihat
+              //washed out. Filter ini ringan, tidak memicu dekode ulang frame.
+              { filter: "contrast(1.06) saturate(1.04)" }
+            }
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -1522,7 +1541,11 @@ function WatchContent() {
               <RotateCcw className="size-6 text-white" />
             </button>
             <button onClick={togglePlay} className="rounded-full bg-primary p-4">
-              {playing ? <Pause className="size-7 text-white" /> : <Play className="size-7 text-white" />}
+              {playing ? (
+                <Pause className="size-7 text-primary-foreground" />
+              ) : (
+                <Play className="size-7 text-primary-foreground" />
+              )}
             </button>
             <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
               <RotateCw className="size-6 text-white" />
@@ -1547,6 +1570,47 @@ function WatchContent() {
               )}
             >
               <SkipForward className="size-5 text-white" />
+            </button>
+            {/* Kecerahan layar & volume suara juga tersedia di fullscreen,
+                posisinya di samping tombol play supaya tidak perlu keluar dari
+                layar penuh dulu. */}
+            <button
+              onPointerDown={startLevelDrag("brightness")}
+              onPointerMove={moveLevelDrag}
+              onPointerUp={endLevelDrag}
+              onPointerCancel={() => endGesture(false)}
+              onClick={bumpLevel("brightness")}
+              aria-label="Kecerahan layar"
+              className="flex size-11 touch-none select-none flex-col items-center justify-center gap-0.5 rounded-lg bg-black/50 text-white"
+            >
+              <Sun className="size-4" />
+              <span className="w-7 overflow-hidden">
+                <span
+                  className="block h-0.5 rounded-full bg-white"
+                  style={{ width: `${Math.round(brightness * 100)}%` }}
+                />
+              </span>
+            </button>
+            <button
+              onPointerDown={startLevelDrag("volume")}
+              onPointerMove={moveLevelDrag}
+              onPointerUp={endLevelDrag}
+              onPointerCancel={() => endGesture(false)}
+              onClick={bumpLevel("volume")}
+              aria-label="Volume suara"
+              className="flex size-11 touch-none select-none flex-col items-center justify-center gap-0.5 rounded-lg bg-black/50 text-white"
+            >
+              {volumeLevel === 0 ? (
+                <VolumeX className="size-4" />
+              ) : (
+                <Volume2 className="size-4" />
+              )}
+              <span className="w-7 overflow-hidden">
+                <span
+                  className="block h-0.5 rounded-full bg-white"
+                  style={{ width: `${Math.round(volumeLevel * 100)}%` }}
+                />
+              </span>
             </button>
           </div>
           <div
