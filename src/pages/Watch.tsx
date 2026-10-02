@@ -114,6 +114,11 @@ const tsToSec = (s: string) => {
   return parts[0] ?? 0;
 };
 
+/** Durasi minimum satu baris subtitle (detik). */
+const CUE_MIN = 1.1;
+/** Jeda sebelum subtitle hilang (detik), biar sempat dibaca. */
+const CUE_TAIL = 0.5;
+
 /** Parse WebVTT jadi daftar cue untuk ditampilkan sendiri oleh player. */
 function parseVtt(text: string): Cue[] {
   const out: Cue[] = [];
@@ -129,7 +134,12 @@ function parseVtt(text: string): Cue[] {
     if (!body) continue;
     const [a, b] = timing.split("-->");
     if (!a || !b) continue;
-    out.push({ s: tsToSec(a), e: tsToSec(b), t: body });
+    const s = tsToSec(a);
+    const e = tsToSec(b);
+    if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) continue;
+    // Timing subtitle animeindo: satu baris selalu punya waktu baca minimum dan
+    // tidak hilang tepat di akhir kalimat.
+    out.push({ s, e: Math.max(e, s + CUE_MIN) + CUE_TAIL, t: body });
   }
   return out;
 }
@@ -479,15 +489,21 @@ function WatchContent() {
     };
   }, [activeSub, autoVtt, direct]);
 
-  // Cue yang sedang tampil mengikuti waktu playback.
+  // Cue yang sedang tampil mengikuti waktu playback. Pencarian dari belakang:
+  // begitu cue berikutnya mulai, yang lama langsung diganti — bukan menunggu
+  // cue lama benar-benar habis.
   useEffect(() => {
     if (cues.length === 0) {
       setActiveCue("");
       return;
     }
     const t = currentTime;
-    const hit = cues.find((c) => t >= c.s && t <= c.e);
-    setActiveCue(hit?.t ?? "");
+    let hit: Cue | null = null;
+    for (const c of cues) {
+      if (c.s <= t) hit = c;
+      else break;
+    }
+    setActiveCue(hit && t <= hit.e ? hit.t : "");
   }, [currentTime, cues]);
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
@@ -1255,15 +1271,16 @@ function WatchContent() {
           <div
             className={cn(
               "pointer-events-none absolute inset-x-0 z-20 flex justify-center px-4",
-              // Portrait: di atas bar kontrol. Fullscreen: sedikit lebih tinggi
-              // supaya tidak tertutup tombol di kanan bawah.
-              isFs ? "bottom-12" : "bottom-16 sm:bottom-20",
+              // Subtitle duduk rendah, dekat tepi bawah video seperti di
+              // animeindo: fullscreen sedikit lebih tinggi karena tombol di
+              // kanan bawah memakan space.
+              isFs ? "bottom-7" : "bottom-5 sm:bottom-6",
             )}
           >
             <p
               className={cn(
                 "max-w-[min(92%,44rem)] whitespace-pre-line break-words text-center font-semibold leading-snug text-white",
-                "[text-shadow:-2px_-2px_0_#000,2px-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,0_2px_3px_rgba(0,0,0,0.9)]",
+                "[text-shadow:-2px_-2px_0_#000,2px-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000,1px_1px_0_#000,0_3px_6px_rgba(0,0,0,0.95)]",
                 // Teks panjang otomatis dikecilkan supaya tetap satu blok rapi
                 // dan tidak menutupi gambar.
                 activeCue.length > 90
