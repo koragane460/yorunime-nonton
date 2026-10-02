@@ -85,13 +85,13 @@ export function NobarDock({
   );
 
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-violet-500/35 bg-card/60 shadow-lg shadow-black/40">
+    <div className="mt-4 overflow-hidden rounded-2xl border border-foreground/40 bg-card/60 shadow-lg shadow-black/40">
       {/* Kepala room */}
-      <div className="flex items-center gap-2.5 border-b border-violet-500/25 bg-violet-600/10 px-3 py-2.5">
-        <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-600/30">
-          <Radio className="size-4 text-violet-100" />
+      <div className="flex items-center gap-2.5 border-b border-border bg-white/[0.04] px-3 py-2.5">
+        <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/20">
+          <Radio className="size-4 text-primary" />
           {room.playing && (
-            <span className="absolute inset-0 animate-ping rounded-full bg-violet-500/40" />
+            <span className="absolute inset-0 animate-ping rounded-full bg-primary/40" />
           )}
         </span>
         <div className="min-w-0 flex-1">
@@ -121,14 +121,14 @@ export function NobarDock({
       </div>
 
       {/* Kontrol host — hanya host yang boleh menekan */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-violet-500/20 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-foreground/40 px-3 py-2">
         {isHost ? (
           <>
             <HostBtn onClick={onPrevEpisode} label="‹ Episode" icon={<SkipBack className="size-4" />} />
             <HostBtn onClick={onSeek.bind(null, -10)} label="−10s" />
             <button
               onClick={onTogglePlay}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg shadow-violet-600/30 active:scale-95"
+              className="flex h-10 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground active:scale-95"
               aria-label={room.playing ? "Jeda untuk semua" : "Lanjut untuk semua"}
             >
               {room.playing ? (
@@ -184,7 +184,7 @@ export function NobarDock({
       </div>
 
       {/* Tab: chat / orang */}
-      <div className="flex border-b border-violet-500/20 bg-violet-600/5">
+      <div className="flex border-b border-border bg-white/[0.03]">
         {(
           [
             ["chat", "Chat Nobar", MessageSquare],
@@ -197,7 +197,7 @@ export function NobarDock({
             className={cn(
               "flex-1 py-2 text-xs font-bold transition",
               tab === k
-                ? "bg-violet-600/20 text-violet-100"
+                ? "bg-primary/20 text-primary"
                 : "text-muted-foreground",
             )}
           >
@@ -248,7 +248,7 @@ export function NobarDock({
                 </div>
               </div>
               {m.userId === room.hostId && (
-                <span className="flex shrink-0 items-center gap-1 rounded-full border border-violet-400/50 bg-violet-500/10 px-2 py-0.5 text-[9px] font-bold text-violet-200">
+                <span className="flex shrink-0 items-center gap-1 rounded-full border border-foreground/50 bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
                   <PhoneOff className="size-2.5" /> Host
                 </span>
               )}
@@ -277,7 +277,7 @@ function HostBtn({
   return (
     <button
       onClick={onClick}
-      className="flex h-9 items-center gap-1 rounded-full border border-white/20 bg-black/40 px-3 text-[11px] font-bold text-white transition active:scale-95"
+      className="flex h-10 items-center gap-1 rounded-full border border-white/20 bg-black/40 px-3 text-[11px] font-bold text-white transition active:scale-95"
     >
       {icon}
       {label}

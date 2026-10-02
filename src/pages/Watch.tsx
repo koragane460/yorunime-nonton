@@ -1521,7 +1521,7 @@ function WatchContent() {
             <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-2">
               <RotateCcw className="size-6 text-white" />
             </button>
-            <button onClick={togglePlay} className="rounded-full bg-violet-600 p-4">
+            <button onClick={togglePlay} className="rounded-full bg-primary p-4">
               {playing ? <Pause className="size-7 text-white" /> : <Play className="size-7 text-white" />}
             </button>
             <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
@@ -1592,7 +1592,7 @@ function WatchContent() {
                     onClick={() => setSubOpen((v) => !v)}
                     className={cn(
                       "rounded px-2 py-1 text-[11px] font-bold",
-                      activeSub ? "bg-violet-600 text-white" : "bg-white/15",
+                      activeSub ? "bg-primary text-white" : "bg-white/15",
                     )}
                     aria-label="Pilih subtitle"
                   >
@@ -1645,7 +1645,7 @@ function WatchContent() {
                     }}
                     className={cn(
                       "rounded px-2.5 py-1 text-xs",
-                      speed === s ? "bg-violet-600 text-white" : "bg-white/10 text-white",
+                      speed === s ? "bg-primary text-white" : "bg-white/10 text-white",
                     )}
                   >
                     {s}x
@@ -1660,7 +1660,7 @@ function WatchContent() {
                   onClick={() => pickSub("")}
                   className={cn(
                     "block w-full rounded px-2 py-1 text-left text-xs",
-                    !activeSub ? "bg-violet-600 text-white" : "text-white/80 hover:bg-white/10",
+                    !activeSub ? "bg-primary text-white" : "text-white/80 hover:bg-white/10",
                   )}
                 >
                   Matikan subtitle
@@ -1672,7 +1672,7 @@ function WatchContent() {
                     className={cn(
                       "block w-full rounded px-2 py-1 text-left text-xs",
                       activeSub === t.label
-                        ? "bg-violet-600 text-white"
+                        ? "bg-primary text-white"
                         : "text-white/80 hover:bg-white/10",
                     )}
                   >
@@ -1695,7 +1695,7 @@ function WatchContent() {
                   className={cn(
                     "block w-full rounded px-2 py-1 text-left text-xs",
                     activeSub === AUTO_SUB
-                      ? "bg-violet-600 text-white"
+                      ? "bg-primary text-white"
                       : "text-white/80 hover:bg-white/10",
                     !autoVtt && "opacity-50",
                   )}
@@ -1797,10 +1797,10 @@ function WatchContent() {
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition",
                 i === sourceIdx
-                  ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                  ? "border-foreground/40 bg-primary/15 text-primary"
                   : deadServers.current.has(s.url)
                     ? "border-border text-muted-foreground/50 line-through"
-                    : "border-border text-muted-foreground hover:border-violet-500/60",
+                    : "border-border text-muted-foreground hover:border-foreground/40",
               )}
             >
               {s.label}
@@ -1829,7 +1829,7 @@ function WatchContent() {
             </p>
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
-              className="text-[11px] text-violet-300 underline"
+              className="text-[11px] text-primary underline"
             >
               {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
             </button>
@@ -1857,8 +1857,8 @@ function WatchContent() {
                   className={cn(
                     "rounded-md border py-2 text-xs font-semibold",
                     e.id === epParam
-                      ? "border-violet-500 bg-violet-500/20 text-red-200"
-                      : "border-border bg-secondary/40 text-foreground hover:border-violet-500/60",
+                      ? "border-foreground/40 bg-primary/20 text-red-200"
+                      : "border-border bg-secondary/40 text-foreground hover:border-foreground/40",
                   )}
                 >
                   {e.number}
@@ -2069,14 +2069,14 @@ function WatchContent() {
                       locked
                         ? "cursor-not-allowed border-amber-500/40 bg-amber-500/5"
                         : active
-                          ? "border-violet-500 bg-violet-500/15"
-                          : "border-border hover:border-violet-500/50",
+                          ? "border-foreground/40 bg-primary/15"
+                          : "border-border hover:border-foreground/40",
                     )}
                   >
                     <span
                       className={cn(
                         "w-14 text-sm font-bold",
-                        locked ? "text-amber-300" : active ? "text-violet-300" : "",
+                        locked ? "text-amber-300" : active ? "text-primary" : "",
                       )}
                     >
                       {q}
@@ -2092,7 +2092,7 @@ function WatchContent() {
                       </span>
                     )}
                     {active && !locked && (
-                      <span className="ml-auto text-[10px] font-bold text-violet-300">
+                      <span className="ml-auto text-[10px] font-bold text-primary">
                         dipakai
                       </span>
                     )}
@@ -2133,7 +2133,7 @@ function WatchContent() {
                 qualityDraft === quality ||
                 (qualityDraft === PREMIUM_QUALITY && !isPremium)
               }
-              className="flex-1 rounded-full bg-violet-600 py-2 text-xs font-bold text-white disabled:opacity-40"
+              className="flex-1 rounded-full bg-primary py-2 text-xs font-bold text-white disabled:opacity-40"
             >
               Simpan
             </button>
@@ -2153,8 +2153,8 @@ function WatchContent() {
                 className={cn(
                   "rounded-lg border px-4 py-2 text-sm transition",
                   speed === s
-                    ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                    : "border-border hover:border-violet-500/50",
+                    ? "border-foreground/40 bg-primary/15 text-primary"
+                    : "border-border hover:border-foreground/40",
                 )}
               >
                 {s}x
@@ -2173,7 +2173,7 @@ function WatchContent() {
                   toast.success(`Download dimulai (${q})`);
                   setDownloadOpen(false);
                 }}
-                className="rounded-lg border border-border px-4 py-2 text-sm transition hover:border-violet-500"
+                className="rounded-lg border border-border px-4 py-2 text-sm transition hover:border-foreground/40"
               >
                 {q}
               </button>

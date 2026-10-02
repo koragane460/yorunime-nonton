@@ -145,7 +145,7 @@ function BrowseRow({
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={busy || page >= 6}
-              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300 disabled:opacity-50"
+              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
             >
               {busy ? "Memuat…" : page >= 6 ? "Semua item sudah tampil" : "Muat lebih banyak"}
             </button>
@@ -282,10 +282,10 @@ function HomeContent() {
       {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-gradient-to-r from-violet-600/20 via-violet-600/5 to-transparent p-3.5 text-left transition hover:border-violet-500/60"
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-white/10 border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:border-foreground/40"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
-          <Sparkles className="size-6 text-violet-300" />
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+          <Sparkles className="size-6 text-primary" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">YoruNime</span>
@@ -330,7 +330,7 @@ function HomeContent() {
                   <div className="absolute inset-0 bg-hero-gradient" />
                 )}
                 <div className="relative w-full p-4">
-                  <span className="rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-black text-white">
+                  <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                     {a.status ?? "Ongoing"}
                   </span>
                   <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
@@ -340,7 +340,7 @@ function HomeContent() {
                   <div className="mt-2.5 flex gap-2">
                     <button
                       onClick={() => openAnime(a.id, a.title)}
-                      className="rounded-full bg-violet-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-violet-500"
+                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary"
                     >
                       Lihat detail
                     </button>
@@ -390,7 +390,7 @@ function HomeContent() {
       {/* 4) LEADERBOARD (gabung XP + Top Give Premium) */}
       <button
         onClick={() => setShowLeaderboard(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-violet-500/40"
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
       >
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 font-bold">
@@ -404,7 +404,7 @@ function HomeContent() {
       {/* 5) CHAT BARENG */}
       <button
         onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-violet-500/40"
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
       >
         <div className="flex items-center justify-between pb-2.5">
           <p className="flex items-center gap-2 font-bold">
@@ -438,7 +438,7 @@ function HomeContent() {
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-sm text-muted-foreground">Contoh: naruto, frieren…</span>
-          <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+          <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
             Cari
           </span>
         </button>
@@ -582,10 +582,10 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
     return (
       <button
         onClick={onOpen}
-        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-violet-500/40"
+        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
-          <Trophy className="size-5 text-violet-300" />
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+          <Trophy className="size-5 text-primary" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">Belum punya clan</span>
@@ -593,7 +593,7 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
             Buat clan dan kumpulkan XP bersama teman
           </span>
         </span>
-        <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">
+        <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
           Buat
         </span>
       </button>
@@ -606,7 +606,7 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       onClick={onOpen}
-      className="fade-enter mt-2.5 w-full overflow-hidden rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-violet-500/40"
+      className="fade-enter mt-2.5 w-full overflow-hidden rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
     >
       <div className="flex items-center gap-3">
         <img
@@ -634,7 +634,7 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
       <div className="my-2.5 h-px bg-white/10" />
       {last ? (
         <p className="truncate text-xs text-zinc-400">
-          <span className="font-semibold text-violet-300">{last.username}</span>:{" "}
+          <span className="font-semibold text-primary">{last.username}</span>:{" "}
           {last.text ?? (last.premiumGive ? "Give premium" : "[foto]")}
         </p>
       ) : (
@@ -675,7 +675,7 @@ function GlobalChatPreview() {
       <div className="flex items-center gap-2.5 text-[13px]">
         <Avatar src={m.image} seed={m.username} className="size-9" />
         <p className="truncate">
-          <span className="font-semibold text-violet-300">{m.username}</span>
+          <span className="font-semibold text-primary">{m.username}</span>
           {m.premium && <BlueCheck className="ml-1 inline size-3.5" />}
           <span className="text-muted-foreground"> : </span>
           <span className="text-zinc-300">
@@ -741,10 +741,10 @@ function PodiumCard({
       <p className="mt-1 w-full truncate text-center text-[11px] font-semibold leading-tight">
         {username ?? "user"}
       </p>
-      <p className="text-[10px] leading-tight text-violet-300">{xp.toLocaleString("id-ID")} XP</p>
+      <p className="text-[10px] leading-tight text-primary">{xp.toLocaleString("id-ID")} XP</p>
       <div
         className={cn(
-          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-violet-500/40 bg-gradient-to-t from-red-500/10 to-red-500/25 pt-1 text-lg font-black text-red-200",
+          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 bg-gradient-to-t from-red-500/10 to-red-500/25 pt-1 text-lg font-black text-red-200",
           height,
         )}
       >
@@ -1034,7 +1034,7 @@ function SearchScreen({
           )}
           <button
             onClick={() => void doSearch()}
-            className="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white"
+            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white"
           >
             Cari
           </button>
@@ -1081,7 +1081,7 @@ function SearchScreen({
                 setAdult(false);
                 setAdultUnlocked(false);
               }}
-              className="shrink-0 text-[10px] font-semibold text-violet-300 underline"
+              className="shrink-0 text-[10px] font-semibold text-primary underline"
             >
               reset
             </button>
@@ -1105,7 +1105,7 @@ function SearchScreen({
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs",
                   activeGenre === "all"
-                    ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                    ? "border-foreground/40 bg-primary/15 text-primary"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -1118,8 +1118,8 @@ function SearchScreen({
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs",
                     activeGenre === g.id
-                      ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                      : "border-border text-muted-foreground hover:border-violet-500/50",
+                      ? "border-foreground/40 bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:border-foreground/40",
                   )}
                 >
                   {g.name}
@@ -1231,7 +1231,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
               >
                 {t === "chat" ? "Chat" : "Teman"}
                 {tab === t && (
-                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500" />
+                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />
                 )}
               </button>
             ))}
@@ -1292,7 +1292,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   >
                     {t === "teman" ? "Teman" : "Request"}
                     {friendTab === t && (
-                      <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500" />
+                      <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />
                     )}
                   </button>
                 ))}
@@ -1310,7 +1310,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{f.username}</p>
                           <button
-                            className="text-xs text-violet-300 underline"
+                            className="text-xs text-primary underline"
                             onClick={() =>
                               setDmPeer({ id: f.userId as Id<"users">, name: f.username })
                             }
@@ -1418,7 +1418,7 @@ function DMScreen({
         <p className="font-semibold">{peer.name}</p>
         <button
           onClick={onAddFriend}
-          className="ml-auto rounded-full border border-violet-500/50 px-3 py-1 text-xs text-violet-300"
+          className="ml-auto rounded-full border border-foreground/40 px-3 py-1 text-xs text-primary"
         >
           + Teman
         </button>
@@ -1607,7 +1607,7 @@ function AnimeDetailScreen({
                     ? "bg-emerald-500/80 text-white"
                     : detail.status === "OVA" || detail.status === "Movie"
                       ? "bg-purple-500/80 text-white"
-                      : "bg-violet-600 text-white",
+                      : "bg-primary text-white",
                 )}
               >
                 {detail.status ?? "Ongoing"}
@@ -1720,7 +1720,7 @@ function AnimeDetailScreen({
                       onClick={() =>
                         setEpisodeOrder(episodeOrder === "first" ? "last" : "first")
                       }
-                      className="mb-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white/85 transition hover:border-violet-500/60"
+                      className="mb-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white/85 transition hover:border-foreground/40"
                     >
                       {episodeOrder === "first"
                         ? "Urutkan: Terlama ↓"
@@ -1743,7 +1743,7 @@ function AnimeDetailScreen({
                             className={cn(
                               "size-10 rounded-lg border text-sm font-semibold transition",
                               released
-                                ? "border-border bg-secondary/40 text-white hover:border-violet-500/60"
+                                ? "border-border bg-secondary/40 text-white hover:border-foreground/40"
                                 : "cursor-not-allowed border-white/5 bg-white/[0.03] text-white/25",
                             )}
                           >
@@ -1863,7 +1863,7 @@ function DetailHeader({
       <button
         onClick={onClose}
         aria-label="Kembali"
-        className="-ml-1 flex size-9 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+        className="-ml-1 flex size-10 items-center justify-center rounded-full text-white transition hover:bg-white/10"
       >
         <ChevronLeft className="size-5" />
       </button>

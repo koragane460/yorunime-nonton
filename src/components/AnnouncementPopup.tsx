@@ -80,7 +80,7 @@ export function AnnouncementPopup() {
         <button
           onClick={close}
           aria-label="Tutup pengumuman"
-          className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+          className="absolute right-2 top-2 flex size-10 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
         >
           <X className="size-4" />
         </button>

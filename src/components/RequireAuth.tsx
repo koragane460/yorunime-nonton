@@ -64,7 +64,7 @@ export function RequireAuth({
                 <img src={logo} alt="" className="size-7" />
               </span>
 
-              <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.28em] text-violet-300/80">
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.28em] text-primary/80">
                 YoruNime
               </p>
               <h1 className="mt-1.5 text-lg font-bold leading-tight">{title}</h1>
@@ -79,7 +79,7 @@ export function RequireAuth({
 
               <button
                 onClick={() => navigate(signInHref)}
-                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-violet-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500"
+                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
               >
                 Masuk ke YoruNime
                 <ArrowRight className="size-4" />

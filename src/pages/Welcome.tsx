@@ -92,7 +92,7 @@ function Starfield() {
       {stars.current.map((s) => (
         <motion.span
           key={s.id}
-          className="absolute size-0.5 rounded-full bg-violet-300/60"
+          className="absolute size-0.5 rounded-full bg-foreground/60"
           style={{ left: `${s.left}%`, top: `${s.top}%` }}
           animate={{ opacity: [0.1, 0.8, 0.1] }}
           transition={{ duration: s.dur, repeat: Infinity, delay: s.delay }}
@@ -389,7 +389,7 @@ function WelcomeFlow() {
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]">
         <Starfield />
         <motion.h1
-          className="bg-gradient-to-r from-violet-300 via-white to-violet-400 bg-clip-text px-6 text-center text-4xl font-black tracking-[0.2em] text-transparent"
+          className="px-6 text-center text-4xl font-normal tracking-[0.14em] text-foreground"
           initial={{ opacity: 0, scale: 0.82, filter: "blur(10px)" }}
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
           transition={{ duration: 0.85, ease: "easeOut" }}
@@ -422,8 +422,8 @@ function WelcomeFlow() {
             transition={{ delay: 0.9 }}
           >
             {dlState !== "done" ? (
-              <div className="rounded-2xl border border-violet-500/40 bg-card/90 p-4">
-                <p className="text-center text-xs font-semibold text-violet-300">
+              <div className="rounded-2xl border border-foreground/40 bg-card/90 p-4">
+                <p className="text-center text-xs font-semibold text-primary">
                   Update {UPDATE_VERSION} tersedia
                 </p>
                 {dlState === "downloading" && (
@@ -432,7 +432,7 @@ function WelcomeFlow() {
                 <button
                   onClick={startDownload}
                   disabled={dlState === "downloading"}
-                  className="mt-3 w-full rounded-full bg-violet-600 py-2.5 text-sm font-bold text-white transition hover:bg-violet-500 disabled:opacity-60"
+                  className="mt-3 w-full rounded-full bg-primary py-2.5 text-sm font-bold text-white transition hover:bg-primary disabled:opacity-60"
                 >
                   {dlState === "downloading"
                     ? `Mengunduh… ${dlPct}%`
@@ -490,7 +490,7 @@ function WelcomeFlow() {
               className="h-full overflow-y-auto overscroll-contain"
             >
               <div className="flex min-h-full flex-col px-5 py-10">
-                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-violet-400">
+                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
                   YoruNime
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold leading-tight">
@@ -517,7 +517,7 @@ function WelcomeFlow() {
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.05 }}
                     >
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
                         {i + 1}
                       </span>
                       <span>{t}</span>
@@ -528,7 +528,7 @@ function WelcomeFlow() {
                   <ScrollHint dir="up" />
                   <button
                     onClick={() => setStage("rules")}
-                    className="mt-3 w-full rounded-2xl bg-violet-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:bg-violet-500"
+                    className="mt-3 w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
                   >
                     Lanjut
                   </button>
@@ -562,7 +562,7 @@ function WelcomeFlow() {
               className="h-full overflow-y-auto overscroll-contain"
             >
               <div className="flex min-h-full flex-col px-5 py-10">
-                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-violet-400">
+                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
                   Wajib dibaca
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold leading-tight">
@@ -586,7 +586,7 @@ function WelcomeFlow() {
                       transition={{ delay: i * 0.05 }}
                     >
                       <p className="flex items-center gap-2 text-[13px] font-semibold">
-                        <span className="flex size-4 items-center justify-center rounded bg-violet-600/20 text-[9px] font-bold text-violet-400">
+                        <span className="flex size-4 items-center justify-center rounded bg-primary/20 text-[9px] font-bold text-primary">
                           {i + 1}
                         </span>
                         {title}
@@ -624,7 +624,7 @@ function WelcomeFlow() {
             <button
               aria-label="Akun yang pernah dipakai di perangkat ini"
               onClick={() => setDevicesOpen((v) => !v)}
-              className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300"
+              className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition hover:border-foreground/40 hover:text-primary"
             >
               <Info className="size-4" />
             </button>
@@ -663,7 +663,7 @@ function WelcomeFlow() {
                             {d.type === "google" ? (
                               <GoogleIcon />
                             ) : (
-                              <Mail className="size-3.5 text-violet-300" />
+                              <Mail className="size-3.5 text-primary" />
                             )}
                             {d.type === "google" ? "Google" : "Email"}
                           </p>
@@ -685,7 +685,7 @@ function WelcomeFlow() {
 
             <div className="flex min-h-full flex-col items-center justify-center px-7 py-12">
               <motion.div
-                className="flex size-16 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-[0_0_40px_-6px] shadow-violet-500/60"
+                className="flex size-16 items-center justify-center rounded-3xl bg-accent"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
@@ -710,7 +710,7 @@ function WelcomeFlow() {
                     className={
                       "flex-1 rounded-xl py-2 text-xs font-bold capitalize transition " +
                       (mode === m
-                        ? "bg-violet-600 text-white shadow"
+                        ? "bg-primary text-white shadow"
                         : "text-muted-foreground hover:text-foreground")
                     }
                   >
@@ -762,7 +762,7 @@ function WelcomeFlow() {
                       <Button
                         type="submit"
                         disabled={loggingIn}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                       >
                         {loggingIn ? (
                           <Loader2 className="size-4 animate-spin" />
@@ -801,7 +801,7 @@ function WelcomeFlow() {
                           <Button
                             type="submit"
                             disabled={regBusy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                           >
                             {regBusy ? (
                               <Loader2 className="size-4 animate-spin" />
@@ -840,7 +840,7 @@ function WelcomeFlow() {
                           <Button
                             type="submit"
                             disabled={regBusy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                           >
                             {regBusy ? (
                               <Loader2 className="size-4 animate-spin" />
@@ -886,7 +886,7 @@ function WelcomeFlow() {
                           <Button
                             type="submit"
                             disabled={regBusy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                           >
                             {regBusy ? (
                               <Loader2 className="size-4 animate-spin" />
@@ -928,7 +928,7 @@ function WelcomeFlow() {
               {/* ---- Opsi login tester ---- */}
               <button
                 onClick={() => setTesterOpen((v) => !v)}
-                className="flex items-center gap-2 text-xs font-semibold text-zinc-400 transition hover:text-violet-300"
+                className="flex items-center gap-2 text-xs font-semibold text-zinc-400 transition hover:text-primary"
               >
                 <Lock className="size-3.5" /> Tester login only
               </button>
@@ -963,7 +963,7 @@ function WelcomeFlow() {
                     <Button
                       type="submit"
                       disabled={loggingIn}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                     >
                       {loggingIn ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -1050,7 +1050,7 @@ function WelcomeFlow() {
                             pickGoogle(v);
                             setGoogleOther("");
                           }}
-                          className="mt-2 h-10 w-full rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                          className="mt-2 h-10 w-full rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                         >
                           Lanjutkan
                         </Button>
@@ -1113,7 +1113,7 @@ function WelcomeFlow() {
                       <Button
                         onClick={allowGoogle}
                         disabled={loggingIn}
-                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white hover:bg-violet-500"
+                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                       >
                         {loggingIn ? (
                           <Loader2 className="size-4 animate-spin" />
@@ -1162,7 +1162,7 @@ export default function Welcome() {
     <Suspense
       fallback={
         <div className="fixed inset-0 flex items-center justify-center bg-[#07060c]">
-          <Loader2 className="size-6 animate-spin text-violet-400" />
+          <Loader2 className="size-6 animate-spin text-primary" />
         </div>
       }
     >

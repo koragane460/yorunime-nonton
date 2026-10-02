@@ -150,14 +150,14 @@ function AccountPanel({
         <button
           aria-label="Pengaturan"
           onClick={() => goto("/akun?tab=settings")}
-          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
+          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
         >
           <Settings className="size-4" />
         </button>
         <button
           aria-label="Notifikasi"
           onClick={() => goto("/akun?tab=notif")}
-          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
+          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
         >
           <Bell className="size-4" />
         </button>
@@ -221,7 +221,7 @@ function AccountPanel({
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400"
+                className="h-full rounded-full bg-primary"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -389,7 +389,7 @@ export function MiniPlayerHost() {
 
   return (
     <div
-      className="fixed z-[60] touch-none overflow-hidden rounded-xl border border-violet-500/50 shadow-2xl"
+      className="fixed z-[60] touch-none overflow-hidden rounded-xl border border-foreground/40 shadow-2xl"
       style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -511,7 +511,7 @@ export function MiniPlayerHost() {
             </div>
           </div>
           <button
-            className="pointer-events-auto mx-auto flex size-9 items-center justify-center rounded-full bg-black/55 text-white"
+            className="pointer-events-auto mx-auto flex size-10 items-center justify-center rounded-full bg-black/55 text-white"
             aria-label={playing ? "Pause" : "Play"}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={toggle}
@@ -589,7 +589,7 @@ function BottomNav() {
             onClick={() => setSwitcher(false)}
           />
           <div className="pop-enter fixed inset-x-0 bottom-[68px] z-50 mx-auto w-full max-w-2xl px-6 lg:max-w-4xl">
-            <div className="overflow-hidden rounded-2xl border border-violet-500/40 bg-background/95 shadow-2xl backdrop-blur">
+            <div className="overflow-hidden rounded-2xl border border-foreground/40 bg-background/95 shadow-2xl backdrop-blur">
               <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ganti kategori
               </p>
@@ -611,12 +611,12 @@ function BottomNav() {
                       className={cn(
                         "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition",
                         active
-                          ? "border-violet-500 bg-violet-500/15"
-                          : "border-border hover:border-violet-500/60",
+                          ? "border-foreground/40 bg-primary/15"
+                          : "border-border hover:border-foreground/40",
                       )}
                     >
                       <span className="flex items-center gap-1.5 text-sm font-bold">
-                        <Icon className="size-4 text-violet-300" /> {label}
+                        <Icon className="size-4 text-primary" /> {label}
                       </span>
                       <span className="text-[10px] text-muted-foreground">{sub}</span>
                     </button>
@@ -650,7 +650,7 @@ function BottomNav() {
                 className="nav-item relative flex flex-col items-center gap-0.5 py-2"
               >
                 <Icon
-                  className={cn("size-[22px]", active ? "text-violet-400" : "text-zinc-500")}
+                  className={cn("size-[22px]", active ? "text-primary" : "text-zinc-500")}
                 />
                 <span
                   className={cn(

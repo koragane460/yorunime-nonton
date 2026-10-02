@@ -77,7 +77,7 @@ export function AnimeCard({
   return (
     <button
       onClick={onClick}
-      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-violet-500/60 hover:shadow-[0_0_18px_-4px] hover:shadow-violet-500/40"
+      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-foreground/40 hover:border-foreground/60"
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
         {image ? (
@@ -104,12 +104,12 @@ export function AnimeCard({
           {title.split(" ").slice(0, 2).join(" ")}
         </div>
         {rank !== undefined && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-violet-300">
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-primary">
             #{rank}
           </span>
         )}
         {isNew && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
             New
           </span>
         )}
@@ -344,7 +344,7 @@ export function ClanLevelBar({
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400 transition-all"
+          className="h-full rounded-full bg-primary transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>

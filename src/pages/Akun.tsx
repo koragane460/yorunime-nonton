@@ -133,8 +133,8 @@ function AkunContent() {
             className={cn(
               "flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-semibold tracking-wide transition",
               titlesOpen
-                ? "border-violet-400/70 bg-violet-500/25 text-violet-100"
-                : "border-white/15 bg-black/40 text-zinc-200 backdrop-blur-sm hover:border-violet-400/60 hover:text-white",
+                ? "border-foreground/70 bg-primary/25 text-primary"
+                : "border-white/15 bg-black/40 text-zinc-200 backdrop-blur-sm hover:border-foreground/60 hover:text-white",
             )}
           >
             <Crown className="size-3 text-[oklch(0.86_0.16_90)]" />
@@ -150,7 +150,7 @@ function AkunContent() {
           </button>
 
           {titlesOpen && (
-            <div className="pop-enter absolute left-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-violet-500/30 bg-neutral-950/95 shadow-2xl">
+            <div className="pop-enter absolute left-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-foreground/40 bg-neutral-950/95">
               <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
                 <span className="flex size-6 items-center justify-center rounded-md bg-[oklch(0.86_0.16_90)]/15">
                   <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
@@ -169,8 +169,9 @@ function AkunContent() {
                   Belum ada title. Gabung clan atau kumpulkan XP dulu.
                 </p>
               ) : (
-                <ul className="divide-y divide-white/8">
-                  {titles.map((t, i) => (
+                /* Semua title harus terlihat: daftar ini di-scroll, bukan dipotong. */
+                <ul className="thin-scroll max-h-[55dvh] divide-y divide-white/10 overflow-y-auto">
+                  {titles.map((t) => (
                     <li key={t.name} className="flex items-center gap-2.5 px-3 py-2.5">
                       {t.clan ? (
                         <ClanTag
@@ -179,14 +180,7 @@ function AkunContent() {
                           color={user.clanNameColor}
                         />
                       ) : (
-                        <span
-                          className={cn(
-                            "title-shine shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold text-white",
-                            i % 2 === 0
-                              ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black"
-                              : "bg-gradient-to-r from-violet-600 to-fuchsia-500",
-                          )}
-                        >
+                        <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[12px] font-bold text-primary-foreground">
                           {t.name}
                         </span>
                       )}
@@ -205,7 +199,7 @@ function AkunContent() {
         <button
           onClick={() => setSettingsOpen(true)}
           aria-label="Pengaturan"
-          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
+          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
         >
           <SettingsIcon className="size-[18px]" />
         </button>
@@ -269,7 +263,7 @@ function AkunContent() {
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400"
+              className="h-full rounded-full bg-primary"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -407,7 +401,7 @@ function AkunContent() {
               }
               className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
             >
-              <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />                <Heart className="size-4 fill-violet-400 text-violet-400" />
+              <img src={f.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />                <Heart className="size-4 fill-foreground text-primary" />
               <p className="min-w-0 flex-1 truncate text-sm font-semibold">{f.animeTitle}</p>
             </button>
           ))}
@@ -431,7 +425,7 @@ function AkunContent() {
                   className="h-14 w-10 rounded object-cover"
                   alt=""
                 />
-                <Heart className="size-4 fill-violet-400 text-violet-400" />
+                <Heart className="size-4 fill-foreground text-primary" />
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold">
                   {f.comicTitle}
                 </p>
@@ -475,7 +469,7 @@ function AkunContent() {
                 <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
                   <span>{timeAgo(c.createdAt)}</span>
                   <span className="flex items-center gap-0.5">
-                    <Heart className="size-3 text-violet-400" /> {c.likeCount}
+                    <Heart className="size-3 text-primary" /> {c.likeCount}
                   </span>
                 </p>
               </button>
@@ -548,7 +542,7 @@ function BadgesPopup({
                 key={t.name}
                 className={cn(
                   "flex items-center gap-3 rounded-xl border p-2.5",
-                  unlocked ? "border-violet-500/50 bg-secondary/40" : "border-border/60 opacity-60",
+                  unlocked ? "border-foreground/40 bg-secondary/40" : "border-border/60 opacity-60",
                 )}
               >
                 <span
@@ -594,7 +588,7 @@ function BadgesPopup({
         </div>
         <button
           onClick={onClose}
-          className="mt-3 w-full rounded-xl bg-violet-600 py-2 text-sm font-bold text-white"
+          className="mt-3 w-full rounded-xl bg-primary py-2 text-sm font-bold text-white"
         >
           Tutup
         </button>
@@ -763,7 +757,7 @@ function SettingsScreen({
                 }}
                 className={cn(
                   "min-w-0 flex-1 truncate rounded-lg border py-2 text-xs capitalize",
-                  theme === t ? "border-violet-500 text-violet-300" : "border-border",
+                  theme === t ? "border-foreground/40 text-primary" : "border-border",
                 )}
               >
                 {t === "dark" ? "Gelap" : t === "light" ? "Terang" : "Custom"}
@@ -786,7 +780,7 @@ function SettingsScreen({
                   quickSave({ customColor });
                   toast.success("Warna tersimpan");
                 }}
-                className="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white"
+                className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white"
               >
                 Simpan warna
               </button>
@@ -847,10 +841,10 @@ function SettingsScreen({
       <div className="space-y-2">
         <button
           onClick={onOpenCs}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition hover:border-violet-500/60"
+          className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/40"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
-            <Headset className="size-[18px] text-violet-300" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+            <Headset className="size-[18px] text-primary" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[13px] font-semibold">CS</span>
@@ -907,7 +901,7 @@ function ToggleRow({
         onClick={() => onToggle(!value)}
         className={cn(
           "relative h-6 w-11 rounded-full transition",
-          value ? "bg-violet-600" : "bg-zinc-600",
+          value ? "bg-primary" : "bg-zinc-600",
         )}
       >
         <span
@@ -949,7 +943,7 @@ function QualityRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === q ? "border-violet-500 text-violet-300" : "border-border",
+                value === q ? "border-foreground/40 text-primary" : "border-border",
               )}
             >
               {q}
@@ -989,7 +983,7 @@ function SpeedRow({
               }}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs",
-                value === s ? "border-violet-500 text-violet-300" : "border-border",
+                value === s ? "border-foreground/40 text-primary" : "border-border",
               )}
             >
               {s}x
@@ -1065,10 +1059,10 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
 function CsBotAvatar({ size = 36 }: { size?: number }) {
   return (
     <span
-      className="relative flex shrink-0 items-center justify-center rounded-full border border-violet-400/40 bg-violet-500/15"
+      className="relative flex shrink-0 items-center justify-center rounded-full border border-foreground/40 bg-primary/15"
       style={{ width: size, height: size }}
     >
-      <Headset className="text-violet-300" style={{ width: size * 0.5, height: size * 0.5 }} />
+      <Headset className="text-primary" style={{ width: size * 0.5, height: size * 0.5 }} />
     </span>
   );
 }
@@ -1169,7 +1163,7 @@ function CsChatScreen({ onClose }: { onClose: () => void }) {
             "flex items-end gap-2 rounded-2xl border px-3 py-2 transition",
             locked
               ? "border-white/10 bg-white/[0.04]"
-              : "border-border bg-card focus-within:border-violet-500/60",
+              : "border-border bg-card focus-within:border-foreground/40",
           )}
         >
           <textarea

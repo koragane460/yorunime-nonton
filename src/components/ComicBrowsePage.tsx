@@ -142,7 +142,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
         <button
           onClick={() => void doSearch()}
           disabled={searching}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
+          className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
         >
           {searching && <Loader2 className="size-3 animate-spin" />}
           Cari
@@ -244,7 +244,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
 
       <button
         onClick={() => navigate(kind === "manga" ? "/manhwa" : "/manga")}
-        className="fixed bottom-20 right-4 z-30 rounded-full border border-violet-500/50 bg-violet-600/90 px-4 py-2 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-violet-500"
+        className="fixed bottom-20 right-4 z-30 rounded-full border border-foreground/40 bg-primary/90 px-4 py-2 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-primary"
       >
         {kind === "manga" ? "Lihat Manhwa" : "Lihat Manga"}
       </button>

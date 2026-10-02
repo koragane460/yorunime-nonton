@@ -178,8 +178,8 @@ function JadwalContent() {
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-xs font-semibold transition",
                     tab === t.key
-                      ? "border-violet-500 bg-violet-500/15 text-violet-200"
-                      : "border-border text-muted-foreground hover:border-violet-500/50",
+                      ? "border-foreground/40 bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:border-foreground/40",
                   )}
                 >
                   <Icon className="size-4" />

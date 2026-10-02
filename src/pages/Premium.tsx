@@ -318,7 +318,7 @@ function Plans() {
                   {p.price.toLocaleString("id-ID")}
                 </p>
                 {typeof p.sacret === "number" && p.sacret > 0 && (
-                  <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] font-bold text-violet-300">
+                  <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] font-bold text-primary">
                     <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
                   </p>
                 )}

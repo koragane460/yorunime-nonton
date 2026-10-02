@@ -397,7 +397,7 @@ function ChapterSheet({
               <button
                 key={ch.url}
                 onClick={() => onPick(ch)}
-                className="rounded-lg border border-border bg-secondary/40 py-2 text-xs font-bold transition hover:border-violet-500"
+                className="rounded-lg border border-border bg-secondary/40 py-2 text-xs font-bold transition hover:border-foreground/40"
               >
                 {ch.number}
               </button>

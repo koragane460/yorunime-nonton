@@ -75,9 +75,9 @@ export function CommentsSection({
     <div>
       {/* Kolom + tombol kirim di atas */}
       {replyTo && (
-        <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-violet-500 bg-black/40 px-3 py-1.5 text-xs">
+        <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-foreground/40 bg-black/40 px-3 py-1.5 text-xs">
           <div className="min-w-0">
-            <p className="font-medium text-violet-300">{replyTo.username}</p>
+            <p className="font-medium text-primary">{replyTo.username}</p>
             <p className="truncate text-muted-foreground">{replyTo.text}</p>
           </div>
           <button onClick={() => setReplyTo(null)} aria-label="Batal reply">
@@ -86,7 +86,7 @@ export function CommentsSection({
         </div>
       )}
       {/* Kolom komentar: satu kotak full width (input + tombol di dalam) */}
-      <div className="flex w-full items-center gap-1 rounded-xl border border-border bg-background/60 px-3 py-1.5 focus-within:border-violet-500/70">
+      <div className="flex w-full items-center gap-1 rounded-xl border border-border bg-background/60 px-3 py-1.5 focus-within:border-foreground/40">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -98,7 +98,7 @@ export function CommentsSection({
         <button
           onClick={() => void send()}
           disabled={muted}
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500 disabled:opacity-50"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition hover:bg-primary disabled:opacity-50"
           aria-label="Kirim komentar"
         >
           <Send className="size-4" />
@@ -114,7 +114,7 @@ export function CommentsSection({
             className={cn(
               "rounded-full border px-3.5 py-1 text-xs font-semibold capitalize",
               sort === s
-                ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                ? "border-foreground/40 bg-primary/15 text-primary"
                 : "border-border text-muted-foreground",
             )}
           >
@@ -187,7 +187,7 @@ function CommentRow({ c, meId, onReply }: { c: CommentT; meId?: string; onReply:
       <div className="flex items-center gap-4 px-2.5 pb-2 text-[11px] text-muted-foreground">
         <button
           title="Suka"
-          className={cn("flex items-center gap-1", liked && "text-violet-400")}
+          className={cn("flex items-center gap-1", liked && "text-primary")}
           onClick={async () => {
             try {
               await like({ commentId: c._id as never });
@@ -196,10 +196,10 @@ function CommentRow({ c, meId, onReply }: { c: CommentT; meId?: string; onReply:
             }
           }}
         >
-          <Heart className={cn("size-3.5", liked && "fill-violet-400")} />
+          <Heart className={cn("size-3.5", liked && "fill-foreground")} />
           {c.likeCount ?? 0}
         </button>
-        <button aria-label="Reply" title="Reply" className="hover:text-violet-300" onClick={onReply}>
+        <button aria-label="Reply" title="Reply" className="hover:text-primary" onClick={onReply}>
           <Reply className="size-3.5" />
         </button>
         {mine && (

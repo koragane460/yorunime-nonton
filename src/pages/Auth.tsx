@@ -286,7 +286,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                   setIsRegister(false);
                 }}
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/50 bg-violet-600/15 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-600/25"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/25"
               >
                 <Mail className="size-4" /> Email &amp; Password
               </button>
@@ -338,7 +338,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                     type={showPass ? "text" : "password"}
                     placeholder="Minimal 8 karakter"
                     autoComplete={isRegister ? "new-password" : "current-password"}
-                    className="w-full rounded-xl border border-white/12 bg-black/30 px-3 py-2.5 pr-10 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-violet-500"
+                    className="w-full rounded-xl border border-white/12 bg-black/30 px-3 py-2.5 pr-10 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-foreground/40"
                   />
                   <button
                     type="button"
@@ -365,7 +365,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 text-sm font-bold text-white transition hover:bg-violet-500 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary disabled:opacity-50"
               >
                 {isLoading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -383,7 +383,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                     setIsRegister((v) => !v);
                     setError(null);
                   }}
-                  className="font-bold text-violet-300 underline-offset-2 hover:underline"
+                  className="font-bold text-primary underline-offset-2 hover:underline"
                 >
                   {isRegister ? "Masuk" : "Daftar"}
                 </button>
@@ -405,7 +405,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 type="button"
                 onClick={sendOtp}
                 disabled={isLoading}
-                className="w-full rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-bold text-zinc-200 transition hover:border-violet-500/60 disabled:opacity-50"
+                className="w-full rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-bold text-zinc-200 transition hover:border-foreground/40 disabled:opacity-50"
               >
                 Kirim kode 6 digit
               </button>
@@ -421,7 +421,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="submit"
                 disabled={isLoading || otp.trim().length !== 6}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 text-sm font-bold text-white transition hover:bg-violet-500 disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary disabled:opacity-40"
               >
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                 Verifikasi
@@ -493,7 +493,7 @@ function Field({
           "w-full rounded-xl border bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600",
           invalid
             ? "border-red-500/60"
-            : "border-white/12 focus:border-violet-500",
+            : "border-white/12 focus:border-foreground/40",
           center && "text-center text-lg tracking-[0.35em]",
         )}
       />

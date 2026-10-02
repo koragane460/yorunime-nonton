@@ -56,10 +56,10 @@ export function NobarBar({ onJoined }: { onJoined: (roomId: string) => void }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2.5 border-b border-border/60 bg-gradient-to-r from-violet-600/25 via-fuchsia-600/10 to-transparent px-3 py-2 text-left transition hover:from-violet-600/35"
+        className="flex w-full items-center gap-2.5 border-b border-border/60 bg-white/[0.04] px-3 py-2 text-left transition"
       >
-        <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-600/30">
-          <Radio className="size-4 text-violet-100" />
+        <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/30">
+          <Radio className="size-4 text-primary" />
           {live > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
               {live > 9 ? "9+" : live}
@@ -139,7 +139,7 @@ function RoomSheet({
       <div className="space-y-2">
         <Button
           onClick={onCreate}
-          className="w-full rounded-xl bg-violet-600 font-bold text-white hover:bg-violet-500"
+          className="w-full rounded-xl bg-primary font-bold text-white hover:bg-primary"
         >
           <Plus className="size-4" /> Bikin Room Baru
         </Button>
@@ -164,8 +164,8 @@ function RoomSheet({
                     className="size-16 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="flex size-16 items-center justify-center rounded-xl bg-violet-600/20">
-                    <Tv className="size-6 text-violet-300" />
+                  <div className="flex size-16 items-center justify-center rounded-xl bg-primary/20">
+                    <Tv className="size-6 text-primary" />
                   </div>
                 )}
                 {r.playing && (
@@ -205,7 +205,7 @@ function RoomSheet({
               <button
                 disabled={busy === r._id}
                 onClick={() => void doJoin(r)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-1.5 text-xs font-bold text-white disabled:opacity-50"
               >
                 {busy === r._id ? (
                   <Loader2 className="size-3 animate-spin" />
@@ -395,7 +395,7 @@ function CreateRoomSheet({
             />
           </div>
           {picked ? (
-            <div className="mt-2 flex items-center gap-2 rounded-xl border border-violet-500/50 bg-violet-500/10 p-2">
+            <div className="mt-2 flex items-center gap-2 rounded-xl border border-foreground/40 bg-primary/10 p-2">
               {picked.image && (
                 <img
                   src={picked.image}
@@ -425,7 +425,7 @@ function CreateRoomSheet({
                   <button
                     key={animeIdOf(a)}
                     onClick={() => void pickAnime(a)}
-                    className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-violet-500/50"
+                    className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-foreground/40"
                   >
                     {a.image && (
                       <img
@@ -452,7 +452,7 @@ function CreateRoomSheet({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Contoh: Nobar receh anime"
-            className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500"
+            className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
           />
         </div>
 
@@ -504,7 +504,7 @@ function CreateRoomSheet({
                 className={cn(
                   "min-w-0 flex-1 truncate rounded-xl border py-2 text-xs font-bold transition",
                   visibility === v
-                    ? "border-violet-500 bg-violet-500/15 text-violet-200"
+                    ? "border-foreground/40 bg-primary/15 text-primary"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -523,7 +523,7 @@ function CreateRoomSheet({
                       onClick={() =>
                         setPickedUsers((s) => s.filter((x) => x._id !== u._id))
                       }
-                      className="flex items-center gap-1 rounded-full border border-violet-500/50 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold"
+                      className="flex items-center gap-1 rounded-full border border-foreground/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold"
                     >
                       {u.username} <X className="size-3" />
                     </button>
@@ -550,7 +550,7 @@ function CreateRoomSheet({
                         );
                         setUQ("");
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-violet-500/50"
+                      className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-foreground/40"
                     >
                       <Avatar
                         src={u.image}
@@ -581,7 +581,7 @@ function CreateRoomSheet({
           <button
             disabled={busy}
             onClick={() => void submit()}
-            className="flex-1 rounded-xl bg-violet-600 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+            className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-white disabled:opacity-50"
           >
             {busy ? "Membuat…" : "Buat & Masuk"}
           </button>

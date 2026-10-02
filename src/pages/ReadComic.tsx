@@ -331,7 +331,7 @@ export default function ReadComic() {
                 {olderChapter && (
                   <button
                     onClick={() => goChapter(olderChapter.number)}
-                    className="rounded-full bg-violet-600 px-5 py-2.5 text-xs font-bold text-white"
+                    className="rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-white"
                   >
                     Lanjut Chapter {olderChapter.number}
                   </button>
@@ -387,7 +387,7 @@ export default function ReadComic() {
                 {olderChapter && (
                   <button
                     onClick={() => goChapter(olderChapter.number)}
-                    className="rounded-full bg-violet-600 px-5 py-2.5 text-xs font-bold text-white"
+                    className="rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-white"
                   >
                     Lanjut Chapter {olderChapter.number}
                   </button>
@@ -537,7 +537,7 @@ export default function ReadComic() {
             <div className="pointer-events-none pb-2">
               <button
                 onClick={() => goChapter(olderChapter.number)}
-                className="pointer-events-auto mx-auto flex items-center gap-2 rounded-full bg-violet-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg"
+                className="pointer-events-auto mx-auto flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-white shadow-lg"
               >
                 Lanjut Chapter {olderChapter.number}
               </button>
@@ -569,8 +569,8 @@ export default function ReadComic() {
                     className={cn(
                       "rounded-lg border py-2 text-xs font-bold transition",
                       c.number === chNum
-                        ? "border-violet-500 bg-violet-600 text-white"
-                        : "border-border bg-secondary/40 hover:border-violet-500",
+                        ? "border-foreground/40 bg-primary text-white"
+                        : "border-border bg-secondary/40 hover:border-foreground/40",
                     )}
                   >
                     {c.number}

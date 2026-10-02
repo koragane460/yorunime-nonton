@@ -140,7 +140,7 @@ export function ProfileSheet({
                   onClick={requestFriend}
                   disabled={sending}
                   aria-label="Tambah teman"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white transition hover:bg-violet-500 active:scale-95 disabled:opacity-50"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-110 active:scale-95 disabled:opacity-50"
                 >
                   {sending ? (
                     <Send className="size-4" />
@@ -161,7 +161,7 @@ export function ProfileSheet({
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/25">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -295,7 +295,7 @@ export function ProfileSheet({
                       className="h-14 w-10 rounded object-cover"
                       alt=""
                     />
-                    <Heart className="size-4 fill-violet-400 text-violet-400" />
+                    <Heart className="size-4 fill-foreground text-primary" />
                     <p className="min-w-0 flex-1 truncate text-sm font-semibold">
                       {f.animeTitle}
                     </p>
@@ -318,7 +318,7 @@ export function ProfileSheet({
                       className="h-14 w-10 rounded object-cover"
                       alt=""
                     />
-                    <Heart className="size-4 fill-violet-400 text-violet-400" />
+                    <Heart className="size-4 fill-foreground text-primary" />
                     <p className="min-w-0 flex-1 truncate text-sm font-semibold">
                       {f.comicTitle}
                     </p>
@@ -364,7 +364,7 @@ export function ProfileSheet({
                       <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
                         <span>{timeAgo(c.createdAt)}</span>
                         <span className="flex items-center gap-0.5">
-                          <Heart className="size-3 text-violet-400" /> {c.likeCount}
+                          <Heart className="size-3 text-primary" /> {c.likeCount}
                         </span>
                       </p>
                     </button>

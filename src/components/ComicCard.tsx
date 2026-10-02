@@ -67,7 +67,7 @@ export function ComicCard({
       onClick={() => onPick(item.slug)}
       className="group relative w-full text-left"
     >
-      <div className="relative overflow-hidden rounded-xl border border-border/60 transition group-hover:border-violet-500/70">
+      <div className="relative overflow-hidden rounded-xl border border-border/60 transition group-hover:border-foreground/40">
         <img
           src={item.image}
           alt=""
@@ -232,8 +232,8 @@ export function ComicBrowseRow({
             className={cn(
               "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
               status === k
-                ? "border-violet-500 bg-violet-500/15 text-violet-200"
-                : "border-border text-muted-foreground hover:border-violet-500/50",
+                ? "border-foreground/40 bg-primary/15 text-primary"
+                : "border-border text-muted-foreground hover:border-foreground/40",
             )}
           >
             {label}
@@ -255,7 +255,7 @@ export function ComicBrowseRow({
             <button
               onClick={() => void loadMore()}
               disabled={busy || page >= 8}
-              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300 disabled:opacity-50"
+              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
             >
               {busy ? "Memuat…" : page >= 8 ? "Semua item sudah tampil" : "Muat lebih banyak"}
             </button>

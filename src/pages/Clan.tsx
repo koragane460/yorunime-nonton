@@ -154,7 +154,7 @@ function NoClan({
           <button
             aria-label="Kembali"
             onClick={() => back("/home")}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-foreground/40 hover:text-primary"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -164,7 +164,7 @@ function NoClan({
         </div>
         <button
           onClick={() => setMode("buat")}
-          className="shrink-0 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500"
+          className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary"
         >
           + Buat Clan
         </button>
@@ -192,7 +192,7 @@ function NoClan({
                     <span className="inline-flex items-center gap-1">
                       <Users className="size-3" aria-hidden /> {c.memberCount} member
                     </span>
-                    <span className="inline-flex items-center gap-1 text-violet-300">
+                    <span className="inline-flex items-center gap-1 text-primary">
                       <Gem className="size-3" aria-hidden /> {c.diamonds} Sacret
                     </span>
                     <span className="inline-flex items-center gap-1">
@@ -215,7 +215,7 @@ function NoClan({
                     "flex size-10 shrink-0 items-center justify-center rounded-full transition active:scale-95",
                     myPending === c._id
                       ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                      : "bg-violet-600 text-white hover:bg-violet-500",
+                      : "bg-primary text-white hover:bg-primary",
                   )}
                 >
                   {myPending === c._id ? (
@@ -376,15 +376,15 @@ function CreateClan({
         </p>
 
         {/* ------------------------------------------------ Room Nobar ---- */}
-        <div className="mt-3 rounded-3xl border border-violet-500/30 bg-violet-500/5 p-4">
+        <div className="mt-3 rounded-3xl border border-foreground/40 bg-primary/5 p-4">
           <div className="flex items-center gap-2">
-            <Radio className="size-4 text-violet-300" />
+            <Radio className="size-4 text-primary" />
             <p className="flex-1 text-xs font-bold">Buat Room Nonton Bareng</p>
             <button
               onClick={() => setRoomOn((v) => !v)}
               className={cn(
                 "relative h-6 w-11 shrink-0 rounded-full transition",
-                roomOn ? "bg-violet-600" : "bg-zinc-700",
+                roomOn ? "bg-primary" : "bg-zinc-700",
               )}
               aria-label="Aktifkan room nobar"
             >
@@ -417,7 +417,7 @@ function CreateClan({
               </div>
 
               {roomAnime ? (
-                <div className="flex items-center gap-2 rounded-xl border border-violet-500/50 bg-violet-500/10 p-2">
+                <div className="flex items-center gap-2 rounded-xl border border-foreground/40 bg-primary/10 p-2">
                   {roomAnime.image && (
                     <img
                       src={roomAnime.image}
@@ -448,7 +448,7 @@ function CreateClan({
                           setRoomResults(null);
                           setRoomQ(a.title ?? "");
                         }}
-                        className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-violet-500/50"
+                        className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-foreground/40"
                       >
                         {a.image && (
                           <img
@@ -496,7 +496,7 @@ function CreateClan({
                       className={cn(
                         "min-w-0 flex-1 truncate rounded-xl border py-2 text-[11px] font-bold transition",
                         roomAccess === k
-                          ? "border-violet-500 bg-violet-500/15 text-violet-200"
+                          ? "border-foreground/40 bg-primary/15 text-primary"
                           : "border-border text-muted-foreground",
                       )}
                     >
@@ -516,7 +516,7 @@ function CreateClan({
                           onClick={() =>
                             setRoomPicked((s) => s.filter((x) => x._id !== u._id))
                           }
-                          className="flex items-center gap-1 rounded-full border border-violet-500/50 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold"
+                          className="flex items-center gap-1 rounded-full border border-foreground/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold"
                         >
                           {u.username} <X className="size-3" />
                         </button>
@@ -543,7 +543,7 @@ function CreateClan({
                             );
                             setUQ("");
                           }}
-                          className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-violet-500/50"
+                          className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-foreground/40"
                         >
                           <Avatar
                             src={u.image}
@@ -665,10 +665,10 @@ function JoinClan({ onBack }: { onBack: () => void }) {
         </div>
 
         {warn && (
-          <div className="mb-3 rounded-2xl border border-violet-500/40 bg-violet-500/10 p-3 text-xs">
+          <div className="mb-3 rounded-2xl border border-foreground/40 bg-primary/10 p-3 text-xs">
             <p>{warn}</p>
             <button
-              className="mt-1 font-semibold text-violet-300 underline"
+              className="mt-1 font-semibold text-primary underline"
               onClick={() => setWarn(null)}
             >
               tutup
@@ -696,7 +696,7 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                       <span className="inline-flex items-center gap-1">
                         <Users className="size-3" aria-hidden /> {c.memberCount} member
                       </span>
-                      <span className="inline-flex items-center gap-1 text-violet-300">
+                      <span className="inline-flex items-center gap-1 text-primary">
                         <Gem className="size-3" aria-hidden /> {c.diamonds} Sacret
                       </span>
                       <span className="inline-flex items-center gap-1">
@@ -931,7 +931,7 @@ function ClanDetail({
                   toast.error(e instanceof Error ? e.message : "Gagal");
                 }
               }}
-              className="ml-auto flex items-center gap-1 rounded-full border border-violet-500/50 px-3 py-1.5 text-xs text-red-400"
+              className="ml-auto flex items-center gap-1 rounded-full border border-foreground/40 px-3 py-1.5 text-xs text-red-400"
             >
               <LogOut className="size-3.5" /> Keluar Clan
             </button>
@@ -1036,8 +1036,8 @@ function ClanDetail({
           <>
             {/* Aksi: Claim + Donate — angka = Sacret yang bisa diambil, subteks = donate hari ini */}
             <div className="yn-card mt-4 p-4 text-center">
-              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/15">
-                <Gem className="size-6 text-violet-300" />
+              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-foreground/40 bg-primary/15">
+                <Gem className="size-6 text-primary" />
               </span>
               <p className="mt-2 font-mono text-2xl font-black text-white">{formatK(c.claimAmount)}</p>
               <p className="text-[11px] text-muted-foreground">
@@ -1232,7 +1232,7 @@ function ClanDetail({
                     </p>
                   </div>
                   <div className="diamond-chip">
-                    <Gem className="size-4 text-violet-400" />
+                    <Gem className="size-4 text-primary" />
                     <span className="text-sm font-bold text-white">
                       {formatK(m.donatedTotal)}
                     </span>
@@ -1445,7 +1445,7 @@ function DonateDialog({
   return (
     <Popup onClose={onClose} title="Donate Sacret">
       <div className="text-center">
-        <Gem className="mx-auto size-9 text-violet-400" />
+        <Gem className="mx-auto size-9 text-primary" />
         <p className="mt-1 text-xl font-black text-white">{amount}</p>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -1549,7 +1549,7 @@ function LeaderPanel({
           <button
             onClick={onClose}
             aria-label="Kembali"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-violet-500/60 hover:text-violet-300"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:border-foreground/40 hover:text-primary"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -1581,8 +1581,8 @@ function LeaderPanel({
                 className={cn(
                   "flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition",
                   sub === k
-                    ? "border-violet-500/70 bg-violet-500/15 text-violet-100"
-                    : "border-white/10 bg-white/5 text-zinc-300 hover:border-violet-500/40",
+                    ? "border-foreground/40 bg-primary/15 text-primary"
+                    : "border-white/10 bg-white/5 text-zinc-300 hover:border-foreground/40",
                 )}
               >
                 {label}

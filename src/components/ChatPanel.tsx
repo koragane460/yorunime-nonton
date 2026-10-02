@@ -115,7 +115,7 @@ function GivePremiumDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm border-violet-500/30">
+      <DialogContent className="max-w-sm border-foreground/40">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-400">
             <Crown className="size-5" /> Give Premium
@@ -132,8 +132,8 @@ function GivePremiumDialog({
                   className={cn(
                     "rounded-lg border px-3 py-1.5 text-sm transition",
                     days === d
-                      ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                      : "border-border text-muted-foreground hover:border-violet-500/50",
+                      ? "border-foreground/40 bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:border-foreground/40",
                   )}
                 >
                   {d} hari
@@ -151,8 +151,8 @@ function GivePremiumDialog({
                   className={cn(
                     "rounded-lg border px-3 py-1.5 text-sm transition",
                     receivers === r
-                      ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                      : "border-border text-muted-foreground hover:border-violet-500/50",
+                      ? "border-foreground/40 bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:border-foreground/40",
                   )}
                 >
                   {r} orang
@@ -193,7 +193,7 @@ function GivePremiumDialog({
               Pesan masih {50 - msgLen} karakter kurang — atau kosongkan saja.
             </p>
           )}
-          <div className="rounded-lg bg-violet-500/10 p-3 text-sm">
+          <div className="rounded-lg bg-primary/10 p-3 text-sm">
             <p>
               Biaya: <b>{cost} hari</b> premium kamu
             </p>
@@ -201,7 +201,7 @@ function GivePremiumDialog({
               ({GIVE_COST[days]} hari + {receiverCost(receivers)} hari untuk {receivers}{" "}
               penerima)
             </p>
-            <p className="mt-1 text-xs text-violet-300">XP yang kamu dapat: +{xp} XP</p>
+            <p className="mt-1 text-xs text-primary">XP yang kamu dapat: +{xp} XP</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
@@ -209,7 +209,7 @@ function GivePremiumDialog({
             </Button>
             <Button
               disabled={!msgOk}
-              className="flex-1 bg-violet-600 text-white hover:bg-violet-500"
+              className="flex-1 bg-primary text-primary-foreground hover:brightness-110"
               onClick={submit}
             >
               Kirim
@@ -326,7 +326,7 @@ function NsfwScanDialog({
 
   return (
     <Dialog open onOpenChange={() => {}}>
-      <DialogContent className="max-w-xs border-violet-500/30">
+      <DialogContent className="max-w-xs border-foreground/40">
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-2 text-center">
             <span className="flex size-10 items-center justify-center rounded-full bg-green-500/20 text-green-400">
@@ -372,7 +372,7 @@ function ReportDialog({
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xs border-violet-500/30">
+      <DialogContent className="max-w-xs border-foreground/40">
         <DialogHeader>
           <DialogTitle className="text-sm">Laporkan pesan</DialogTitle>
         </DialogHeader>
@@ -387,8 +387,8 @@ function ReportDialog({
               className={cn(
                 "w-full rounded-lg border px-3 py-2 text-left text-sm transition",
                 reason === r
-                  ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                  : "border-border hover:border-violet-500/50",
+                  ? "border-foreground/40 bg-primary/15 text-primary"
+                  : "border-border hover:border-foreground/40",
               )}
             >
               {r}
@@ -407,7 +407,7 @@ function ReportDialog({
               Batal
             </Button>
             <Button
-              className="flex-1 bg-violet-600 text-white hover:bg-violet-500"
+              className="flex-1 bg-primary text-primary-foreground hover:brightness-110"
               disabled={!reason}
               onClick={async () => {
                 try {
@@ -558,7 +558,7 @@ export function ChatPanel({
                     m.imageUrl && !m.text
                       ? "border-transparent bg-transparent p-0 shadow-none"
                       : give
-                        ? "border-violet-500/60 bg-violet-500/15"
+                        ? "border-foreground/40 bg-primary/15"
                         : mine
                           ? "bubble-mine"
                           : "bubble-other",
@@ -582,8 +582,8 @@ export function ChatPanel({
                     )}
                   </div>
                   {m.replyTo && (
-                    <div className="mt-1 rounded-lg border-l-2 border-violet-500/70 bg-black/25 px-2 py-1 text-xs">
-                      <p className="font-medium text-violet-300">{m.replyTo.username}</p>
+                    <div className="mt-1 rounded-lg border-l-2 border-foreground/40 bg-black/25 px-2 py-1 text-xs">
+                      <p className="font-medium text-primary">{m.replyTo.username}</p>
                       <p className="truncate text-muted-foreground">
                         {m.replyTo.text ?? (m.replyTo.premiumGiveId ? "Give premium" : "[foto]")}
                       </p>
@@ -633,7 +633,7 @@ export function ChatPanel({
                     aria-label="Reply"
                     title="Reply"
                     onClick={() => setReplyTo(m)}
-                    className="hover:text-violet-300"
+                    className="hover:text-primary"
                   >
                     <Reply className="size-3.5" />
                   </button>
@@ -661,9 +661,9 @@ export function ChatPanel({
       {/* reply preview + input */}
       <div className="border-t border-border/60 p-2">
         {replyTo && (
-          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-violet-500 bg-violet-500/10 px-3 py-1.5 text-xs">
+          <div className="mb-2 flex items-center justify-between rounded-lg border-l-2 border-foreground/40 bg-primary/10 px-3 py-1.5 text-xs">
             <div className="min-w-0">
-              <p className="font-medium text-violet-300">{replyTo.username}</p>
+              <p className="font-medium text-primary">{replyTo.username}</p>
               <p className="truncate text-muted-foreground">
                 {replyTo.text ?? (replyTo.premiumGive ? "Give premium" : "[foto]")}
               </p>
@@ -700,7 +700,7 @@ export function ChatPanel({
                 </button>
                 {!noPremium && (
                 <button
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-300 hover:bg-accent"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary hover:bg-accent"
                   onClick={() => {
                     setPlusOpen(false);
                     setGiveOpen(true);
@@ -723,7 +723,7 @@ export function ChatPanel({
           <Button
             size="icon"
             disabled={muted}
-            className="rounded-full bg-violet-600 text-white hover:bg-violet-500"
+            className="rounded-full bg-primary text-primary-foreground hover:brightness-110"
             onClick={submit}
           >
             <Send className="size-4" />
@@ -852,7 +852,7 @@ function ClaimButton({
             ? "bg-emerald-600 text-white hover:bg-emerald-600"
             : full
               ? "bg-zinc-500 text-white hover:bg-zinc-500"
-              : "bg-violet-600 text-white hover:bg-violet-500",
+              : "bg-primary text-primary-foreground hover:brightness-110",
         )}
         onClick={async () => {
           // Tutan: klik sekali langsung berubah jadi "Kamu sudah claim".

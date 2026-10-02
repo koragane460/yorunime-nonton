@@ -53,8 +53,8 @@ export function CsScreen({ onClose }: { onClose: () => void }) {
         >
           <ChevronLeft className="size-4" />
         </button>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
-          <Headset className="size-4 text-violet-300" />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+          <Headset className="size-4 text-primary" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold leading-tight">Customer Service</p>
@@ -244,7 +244,7 @@ function CsChatDev({
       </div>
 
       <div className="border-t border-white/10 p-3 pb-6">
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2 focus-within:border-violet-500/60">
+        <div className="flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2 focus-within:border-foreground/40">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

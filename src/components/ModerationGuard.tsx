@@ -184,7 +184,7 @@ function BlockPopup({
 
           <Button
             onClick={onAck}
-            className="mt-6 w-full rounded-full bg-violet-600 py-2.5 font-bold text-white hover:bg-violet-500"
+            className="mt-6 w-full rounded-full bg-primary py-2.5 font-bold text-white hover:bg-primary"
           >
             Mengerti
           </Button>

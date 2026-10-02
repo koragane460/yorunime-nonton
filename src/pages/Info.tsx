@@ -165,7 +165,7 @@ function NotifTab() {
         <button
           key={c._id}
           onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
-          className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-violet-500/50"
+          className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
         >
           {c.bannerUrl && (
             <div
@@ -238,19 +238,19 @@ function BroadcastComposer({ onDone }: { onDone: () => void }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Title pesan"
-        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500/70"
+        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
       />
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder="Isi pesan untuk semua user"
         rows={4}
-        className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500/70"
+        className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
       />
       <Button
         onClick={() => void submit()}
         disabled={busy}
-        className="w-full rounded-full bg-violet-600 font-bold text-white hover:bg-violet-500"
+        className="w-full rounded-full bg-primary font-bold text-white hover:bg-primary"
       >
         <Send className="size-4" /> {busy ? "Mengirim…" : "Kirim"}
       </Button>
@@ -313,7 +313,7 @@ function AnnouncementManager() {
         placeholder="Pesan yang muncul di atas halaman semua user"
         rows={3}
         maxLength={400}
-        className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500/70"
+        className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
       />
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] text-muted-foreground">
@@ -322,7 +322,7 @@ function AnnouncementManager() {
         <Button
           onClick={() => void submit()}
           disabled={busy || !message.trim()}
-          className="h-9 rounded-full bg-violet-600 px-4 font-bold text-white hover:bg-violet-500"
+          className="h-9 rounded-full bg-primary px-4 font-bold text-white hover:bg-primary"
         >
           <Send className="size-3.5" /> {busy ? "Mengirim…" : "Kirim"}
         </Button>
@@ -408,7 +408,7 @@ function LanjutTab() {
                   `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
                 )
               }
-              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
+              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
             >
               <img
                 src={c.comicImage ?? ""}
@@ -420,12 +420,12 @@ function LanjutTab() {
                 <p className="text-xs text-muted-foreground">
                   {c.chapterLabel ?? `Chapter ${c.chapter}`}
                 </p>
-                <p className="text-[11px] text-violet-300">
+                <p className="text-[11px] text-primary">
                   Lanjut dari halaman{" "}
                   {Math.min((c.page ?? 0) + 1, c.totalPages ?? 0)}
                 </p>
               </div>
-              <BookOpen className="size-5 shrink-0 text-violet-400" />
+              <BookOpen className="size-5 shrink-0 text-primary" />
             </button>
           );
         }
@@ -442,7 +442,7 @@ function LanjutTab() {
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
               )
             }
-            className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
+            className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
           >
             <img
               src={h.animeImage ?? ""}
@@ -459,16 +459,16 @@ function LanjutTab() {
               <div className="mt-1 flex items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
                   <div
-                    className="h-full rounded-full bg-violet-500"
+                    className="h-full rounded-full bg-primary"
                     style={{ width: `${dur > 0 ? pct : 0}%` }}
                   />
                 </div>
-                <span className="shrink-0 text-[10px] font-semibold text-violet-300">
+                <span className="shrink-0 text-[10px] font-semibold text-primary">
                   {dur > 0 ? `${fmtTime(pos)} / ${fmtTime(dur)}` : fmtTime(pos)}
                 </span>
               </div>
             </div>
-            <PlayCircle className="size-5 shrink-0 text-violet-400" />
+            <PlayCircle className="size-5 shrink-0 text-primary" />
           </button>
         );
       })}

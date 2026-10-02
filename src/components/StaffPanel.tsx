@@ -106,10 +106,10 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
       {isDev && (
         <button
           onClick={() => setCsOpen(true)}
-          className="mt-2.5 flex w-full items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/5 px-3 py-2.5 text-left transition hover:border-violet-400"
+          className="mt-2.5 flex w-full items-center gap-2 rounded-xl border border-foreground/40 bg-primary/5 px-3 py-2.5 text-left transition hover:border-foreground"
         >
-          <Headset className="size-4 shrink-0 text-violet-300" />
-          <span className="min-w-0 flex-1 text-xs font-bold text-violet-200">
+          <Headset className="size-4 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 text-xs font-bold text-primary">
             Customer Service
           </span>
           <CsBadge />
@@ -143,7 +143,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
                 ? "border-red-500/50 bg-red-500/10"
                 : u.muted
                   ? "border-amber-500/50 bg-amber-500/10"
-                  : "border-border/70 bg-secondary/30 hover:border-violet-500/50",
+                  : "border-border/70 bg-secondary/30 hover:border-foreground/40",
             )}
           >
             <Avatar src={u.image} seed={u.username} className="size-9" />
@@ -802,7 +802,7 @@ function UserActions({
                       "rounded-full border px-3 py-1.5 text-xs font-bold transition",
                       active
                         ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
-                        : "border-border text-muted-foreground hover:border-violet-500",
+                        : "border-border text-muted-foreground hover:border-foreground/40",
                     )}
                   >
                     {active ? (
@@ -1006,7 +1006,7 @@ function ModerationDialog({
                   ? "Contoh: Destruction of public property, language abuse…"
                   : "Contoh: Spam chat, kirim link berlebihan…"
               }
-              className="mt-1 w-full resize-none rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500"
+              className="mt-1 w-full resize-none rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
             />
           </div>
 
@@ -1020,7 +1020,7 @@ function ModerationDialog({
                 className={cn(
                   "flex-1 rounded-xl border py-2 text-xs font-bold transition",
                   !permanent
-                    ? "border-violet-500 bg-violet-500/15 text-violet-200"
+                    ? "border-foreground/40 bg-primary/15 text-primary"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -1047,7 +1047,7 @@ function ModerationDialog({
                 min={1}
                 value={value}
                 onChange={(e) => setValue(Math.max(1, Number(e.target.value) || 1))}
-                className="w-20 rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500"
+                className="w-20 rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
               />
               <div className="flex flex-1 flex-wrap gap-1.5">
                 {UNITS.map(([u, label]) => (
@@ -1057,7 +1057,7 @@ function ModerationDialog({
                     className={cn(
                       "rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
                       unit === u
-                        ? "border-violet-500 bg-violet-500/15 text-violet-200"
+                        ? "border-foreground/40 bg-primary/15 text-primary"
                         : "border-border text-muted-foreground",
                     )}
                   >
@@ -1176,7 +1176,7 @@ function ClanPremiumDialog({
                 min={1}
                 value={value}
                 onChange={(e) => setValue(Math.max(1, Number(e.target.value) || 1))}
-                className="w-20 rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500"
+                className="w-20 rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
               />
               <div className="flex flex-1 flex-wrap gap-1.5">
                 {UNITS.map(([u, label]) => (
@@ -1205,7 +1205,7 @@ function ClanPremiumDialog({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Contoh: Rp 150.000"
-              className="mt-1 w-full rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500"
+              className="mt-1 w-full rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
             />
           </div>
 
