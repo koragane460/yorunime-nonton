@@ -1,33 +1,46 @@
-import { BadgeCheck, Flag, Star } from "lucide-react";
+import {
+  BadgeCheck,
+  Crown,
+  Flame,
+  FlaskConical,
+  Gem,
+  Palette,
+  Shield,
+  Star,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { badgeForLevel, avatarFallback } from "@/lib/lstream";
-import { clanPixelIconUrl } from "@/lib/clanIcons";
+import { resolveClanIcon } from "@/lib/clanIcons";
 
 /** Gaya title staff: dev merah, moderator biru, tester emas, sepuh kuning. */
-const TITLE_STYLE: Record<string, { label: string; icon: string; cls: string }> = {
+const TITLE_STYLE: Record<
+  string,
+  { label: string; Icon: LucideIcon; cls: string }
+> = {
   dev: {
     label: "Developer",
-    icon: "\u{1F525}",
+    Icon: Flame,
     cls: "bg-gradient-to-r from-red-700 via-red-500 to-rose-600",
   },
   creator: {
     label: "Creator",
-    icon: "\u{1F3A8}",
+    Icon: Palette,
     cls: "bg-gradient-to-r from-red-700 via-red-500 to-rose-600",
   },
   mod: {
     label: "Moderator",
-    icon: "\u{1F6E1}",
+    Icon: Shield,
     cls: "bg-gradient-to-r from-blue-700 via-blue-500 to-sky-600",
   },
   tester: {
     label: "Tester",
-    icon: "\u{1F9EA}",
+    Icon: FlaskConical,
     cls: "bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-500",
   },
   sepuh: {
     label: "Sepuh",
-    icon: "\u{1F451}",
+    Icon: Crown,
     cls: "bg-gradient-to-r from-yellow-600 via-yellow-400 to-amber-500",
   },
 };
@@ -206,7 +219,9 @@ export function TitleBadge({
         className,
       )}
     >
-      <span aria-hidden>{def.icon}</span>
+      <span className="inline-flex size-3 items-center justify-center">
+        <def.Icon className="size-3" aria-hidden />
+      </span>
       {def.label}
     </span>
   );
@@ -241,6 +256,7 @@ export function RedMark({ className }: { className?: string }) {
 /** Badge level: ikon tier + angka level (tanpa tulisan tier). */
 export function LevelBadge({ level, className }: { level: number; className?: string }) {
   const b = badgeForLevel(level);
+  const Icon = b.icon;
   return (
     <span
       className={cn(
@@ -249,7 +265,7 @@ export function LevelBadge({ level, className }: { level: number; className?: st
         className,
       )}
     >
-      <span aria-hidden>{b.icon}</span> Lv.{level}
+      <Icon className="size-3" aria-hidden /> Lv.{level}
     </span>
   );
 }
@@ -322,7 +338,7 @@ export function ClanLevelBar({
           Level <b className="text-foreground">{level}</b> / 200
         </span>
         <span>
-          {progress} / {cost} 💎
+          {progress} / {cost} <Gem className="inline size-3 -translate-y-px" aria-hidden />
         </span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">
@@ -347,7 +363,7 @@ export function ClanTag({
   color?: string;
   className?: string;
 }) {
-  const pixel = clanPixelIconUrl(icon);
+  const { Icon, tone } = resolveClanIcon(icon);
   return (
     <span
       className={cn(
@@ -357,15 +373,13 @@ export function ClanTag({
         className,
       )}
     >
-      {pixel ? (
-        <img
-          src={pixel}
-          alt=""
-          className="relative z-[2] size-3.5 shrink-0 rounded-[2px] [image-rendering:pixelated]"
-        />
-      ) : (
-        <span className="relative z-[2] leading-none">{icon}</span>
-      )}
+      <span
+        className="relative z-[2] inline-flex size-3.5 shrink-0 items-center justify-center"
+        style={{ color: tone }}
+        aria-hidden
+      >
+        <Icon className="size-3.5" />
+      </span>
       <span className="relative z-[2] drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
         [{tag}]
       </span>

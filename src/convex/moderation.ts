@@ -467,3 +467,65 @@ export const titlesOf = internalQuery({
     return map;
   },
 });
+
+// ====================================================== pengumuman popup ====
+/**
+ * Pengumuman yang tampil sebagai kotak popup saat user membuka website.
+ * Hanya pesan aktif yang dikirim ke publik; developer bisa membuat,
+ * menonaktifkan, dan menghapus lewat StaffPanel.
+ */
+export const activeAnnouncements = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("announcements")
+      .order("desc")
+      .take(20);
+    return rows
+      .filter((r) => r.active)
+      .map((r) => ({ _id: r._id, message: r.message, createdAt: r.createdAt }));
+  },
+});
+
+/** Semua pengumuman (termasuk nonaktif) — khusus developer. */
+export const allAnnouncements = query({
+  args: {},
+  handler: async (ctx) => {
+    await staffGuard(ctx, "dev");
+    return await ctx.db.query("announcements").order("desc").take(50);
+  },
+});
+
+export const createAnnouncement = mutation({
+  args: { message: v.string() },
+  handler: async (ctx, { message }) => {
+    await staffGuard(ctx, "dev");
+    const text = message.trim();
+    if (!text) throw new Error("Pesan kosong");
+    await ctx.db.insert("announcements", {
+      message: text,
+      active: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
+export const setAnnouncementActive = mutation({
+  args: { id: v.id("announcements"), active: v.boolean() },
+  handler: async (ctx, { id, active }) => {
+    await staffGuard(ctx, "dev");
+    await ctx.db.patch(id, { active, updatedAt: Date.now() });
+    return { ok: true };
+  },
+});
+
+export const deleteAnnouncement = mutation({
+  args: { id: v.id("announcements") },
+  handler: async (ctx, { id }) => {
+    await staffGuard(ctx, "dev");
+    await ctx.db.delete(id);
+    return { ok: true };
+  },
+});

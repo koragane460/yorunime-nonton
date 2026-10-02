@@ -14,6 +14,7 @@ import {
 } from "@/components/lstream-ui";
 import {
   ChevronLeft,
+  Clock,
   Gem,
   Inbox,
   Info,
@@ -21,17 +22,36 @@ import {
   Radio,
   Search,
   Settings,
+  Users,
   X,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CLAN_PIXEL_ICONS, clanPixelIconUrl, DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import {
+  PICKABLE_CLAN_ICONS,
+  resolveClanIcon,
+  DEFAULT_CLAN_ICON,
+} from "@/lib/clanIcons";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
-// Logo tag clan = gambar pixel (bukan emoji), semua sama ukuran & gaya.
-const TAG_ICONS = CLAN_PIXEL_ICONS.map((i) => i.key);
+// Logo tag clan = ikon lucide (bukan emoji), semua sama ukuran & gaya.
+const TAG_ICONS = PICKABLE_CLAN_ICONS.map((i) => i.key);
 const DONATE_PRESETS = [100, 200, 300, 500, 700, 1000];
+
+/** Preview ikon logo clan (pakai registry lucide, aman untuk key lama). */
+function PreviewIcon({ iconKey }: { iconKey: string }) {
+  const { Icon, tone } = resolveClanIcon(iconKey);
+  return (
+    <span
+      className="inline-flex size-6 shrink-0 items-center justify-center"
+      style={{ color: tone }}
+      aria-hidden
+    >
+      <Icon className="size-5" />
+    </span>
+  );
+}
 const ROLE_INFO = `Info Roles
 1. Leader : leader mempunyai akses penuh dalam mengatur peraturan clan apapun itu
 2. Officer : Officer membantu leader seperti kick member, accept request, dan lainnya
@@ -169,9 +189,15 @@ function NoClan({
                   <p className="truncate font-bold">{c.name}</p>
                   <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />
                   <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
-                    <span>👥 {c.memberCount} member</span>
-                    <span className="text-violet-300">💎 {c.diamonds} Sacret</span>
-                    <span>🕰 {c.ageDays} hari</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="size-3" aria-hidden /> {c.memberCount} member
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-violet-300">
+                      <Gem className="size-3" aria-hidden /> {c.diamonds} Sacret
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="size-3" aria-hidden /> {c.ageDays} hari
+                    </span>
                   </div>
                 </div>
                 <button
@@ -305,36 +331,31 @@ function CreateClan({
         </div>
 
         <div className="mt-3 rounded-3xl border border-white/10 bg-card p-4">
-          <p className="mb-2 text-xs text-muted-foreground">Logo tag clan (pixel)</p>
+          <p className="mb-2 text-xs text-muted-foreground">Logo tag clan</p>
           <div className="grid grid-cols-5 gap-2">
-            {CLAN_PIXEL_ICONS.map((ic) => (
-              <button
-                key={ic.key}
-                type="button"
-                aria-label={ic.name}
-                title={ic.name}
-                onClick={() => setIcon(ic.key)}
-                className={cn(
-                  "flex aspect-square items-center justify-center overflow-hidden rounded-xl border p-1.5 transition",
-                  icon === ic.key
-                    ? "border-[oklch(0.86_0.16_90)] bg-[oklch(0.86_0.16_90)]/15"
-                    : "border-border hover:border-[oklch(0.86_0.16_90)]/50",
-                )}
-              >
-                <img
-                  src={clanPixelIconUrl(ic.key) ?? ""}
-                  alt={ic.name}
-                  className="size-full rounded-md object-cover [image-rendering:pixelated]"
-                />
-              </button>
-            ))}
+            {PICKABLE_CLAN_ICONS.map((ic) => {
+              const Logo = ic.Icon;
+              return (
+                <button
+                  key={ic.key}
+                  type="button"
+                  aria-label={ic.name}
+                  title={ic.name}
+                  onClick={() => setIcon(ic.key)}
+                  className={cn(
+                    "flex aspect-square items-center justify-center overflow-hidden rounded-xl border p-1.5 transition",
+                    icon === ic.key
+                      ? "border-[oklch(0.86_0.16_90)] bg-[oklch(0.86_0.16_90)]/15"
+                      : "border-border hover:border-[oklch(0.86_0.16_90)]/50",
+                  )}
+                >
+                  <Logo className="size-full" style={{ color: ic.tone }} aria-hidden />
+                </button>
+              );
+            })}
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <img
-              src={clanPixelIconUrl(icon) ?? ""}
-              alt="Logo"
-              className="size-6 shrink-0 rounded-md [image-rendering:pixelated]"
-            />
+            <PreviewIcon iconKey={icon} />
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -672,9 +693,15 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{c.name}</p>
                   <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />                    <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
-                      <span>👥 {c.memberCount} member</span>
-                      <span className="text-violet-300">💎 {c.diamonds} Sacret</span>
-                      <span>🕰 {c.ageDays} hari</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="size-3" aria-hidden /> {c.memberCount} member
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-violet-300">
+                        <Gem className="size-3" aria-hidden /> {c.diamonds} Sacret
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="size-3" aria-hidden /> {c.ageDays} hari
+                      </span>
                     </div>
                 </div>
                 <button
@@ -902,9 +929,6 @@ function ClanDetail({
           }
         >
           <div className="relative p-4">
-            {/* Lapisan gelap total di atas foto background clan: warna cerah
-                cuma kelihatan ~40% sebagai bayangan, teks selalu kontras. */}
-            <div className="yn-banner-dim" />
             <div className="relative flex items-center gap-3">
               <Avatar src={c.avatarUrl} seed={c.name} className="size-14" />
               <div className="min-w-0 flex-1">
@@ -919,7 +943,7 @@ function ClanDetail({
             </div>
             <p
               className={cn(
-                "mt-2 truncate text-2xl font-black",
+                "mt-2 truncate text-2xl font-black text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_0_14px_rgba(0,0,0,0.6)]",
                 c.color === "golden" && "clan-color-golden",
                 c.color === "galaxy" && "clan-color-galaxy",
                 c.color === "oren" && "text-orange-400",
@@ -929,19 +953,32 @@ function ClanDetail({
               {c.name}
             </p>
 
-            {/* Stat: Level / Total XP / Members */}
+            {/* Stat: Level / Total XP / Members — teks putih dengan shadow,
+                tanpa latar hitam supaya foto clan tetap terlihat jernih. */}
             <div className="mt-4 grid grid-cols-3 gap-2.5">
-              <div className="rounded-2xl bg-black/30 px-2 py-3 text-center">
-                <p className="text-lg font-bold text-white">{c.level}</p>
-                <p className="text-xs text-indigo-100/70">Level</p>
+              <div className="rounded-2xl px-2 py-3 text-center">
+                <p className="text-lg font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                  {c.level}
+                </p>
+                <p className="text-xs text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                  Level
+                </p>
               </div>
-              <div className="rounded-2xl bg-black/30 px-2 py-3 text-center">
-                <p className="text-lg font-bold text-white">{formatK(c.diamonds)}</p>
-                <p className="text-xs text-indigo-100/70">Total XP</p>
+              <div className="rounded-2xl px-2 py-3 text-center">
+                <p className="text-lg font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                  {formatK(c.diamonds)}
+                </p>
+                <p className="text-xs text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                  Total XP
+                </p>
               </div>
-              <div className="rounded-2xl bg-black/30 px-2 py-3 text-center">
-                <p className="text-lg font-bold text-white">{c.memberCount}</p>
-                <p className="text-xs text-indigo-100/70">Members</p>
+              <div className="rounded-2xl px-2 py-3 text-center">
+                <p className="text-lg font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                  {c.memberCount}
+                </p>
+                <p className="text-xs text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">
+                  Members
+                </p>
               </div>
             </div>
 
@@ -1089,16 +1126,15 @@ function ClanDetail({
                 }
               >
                 <div className="relative p-3">
-                  {/* Lapisan gelap total di atas banner member: foto tinggal
-                      bayangan samar, warna cerah tidak menerawang lagi. */}
-                  <div className="yn-banner-dim" />
                   <div className="relative flex items-center gap-3">
                   <div className="flex flex-col items-center gap-1">
                     <Avatar src={m.image} seed={m.username} className="size-12" />
                     <RoleBadge role={m.role} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-indigo-50">{m.username}</p>
+                    <p className="truncate font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_10px_rgba(0,0,0,0.7)]">
+                      {m.username}
+                    </p>
                     <div className="mt-1 flex items-center gap-1.5">
                       <ClanTag
                         icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
@@ -1109,7 +1145,7 @@ function ClanDetail({
                         Lv.{m.level ?? 1}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-indigo-200/60">
+                    <p className="mt-1 text-[11px] text-white/85 [text-shadow:0_1px_3px_rgba(0,0,0,0.95)]">
                       Gabung {Math.max(0, Math.floor((Date.now() - m.joinedAt) / 86400000))} hari lalu
                     </p>
                   </div>

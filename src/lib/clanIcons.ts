@@ -1,47 +1,100 @@
 /**
- * Logo tag clan versi pixel.
+ * Logo tag clan versi ikon lucide.
  *
- * Emoji terlalu "modern" dan ukurannya tidak konsisten antar perangkat, jadi
- * diganti gambar pixel asli (DiceBear Pixel Art) supaya semua logo clan punya
- * bentuk & ukuran yang sama persis di HP mana pun.
+ * Dulu memakai gambar pixel (DiceBear); sekarang semua logo berupa ikon vektor
+ * lucide supaya tajam di layar mana pun dan ukurannya konsisten.
  *
- * Nilai yang disimpan di database adalah key (mis. "pix-angel"), bukan URL,
- * supaya warnanya bisa menyesuaikan tema dan tidak hardcode warna.
+ * Nilai yang disimpan di database adalah key (mis. "ic-rose" atau key pixel lama
+ * seperti "pix-angel"), bukan URL, supaya aman kalau registry berubah.
  */
+import {
+  Anchor,
+  Cherry,
+  Droplet,
+  Feather,
+  Flame,
+  Leaf,
+  Medal,
+  Rose,
+  Shield,
+  Skull,
+  Snowflake,
+  Star,
+  Sun,
+  Swords,
+  Zap,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-export type ClanPixelIcon = {
+export type ClanIconDef = {
   key: string;
-  seed: string;
-  /** warna latar, hex tanpa '#' */
-  bg: string;
   name: string;
+  Icon: LucideIcon;
+  /** warna ikon, hex */
+  tone: string;
+  /** true = tampil di picker saat bikin clan */
+  pick?: boolean;
 };
 
-export const CLAN_PIXEL_ICONS: ClanPixelIcon[] = [
-  { key: "pix-angel", seed: "angel", bg: "1b2a4a", name: "Malaikat" },
-  { key: "pix-fire", seed: "fire", bg: "3b1a12", name: "Api" },
-  { key: "pix-bolt", seed: "bolt", bg: "2f2a12", name: "Petir" },
-  { key: "pix-clover", seed: "clover", bg: "12301c", name: "Clover" },
-  { key: "pix-star", seed: "star", bg: "241a35", name: "Bintang" },
-  { key: "pix-bow", seed: "bow", bg: "33241a", name: "Busur" },
-  { key: "pix-skull", seed: "skull", bg: "2a2a2e", name: "Tengkorak" },
-  { key: "pix-drop", seed: "drop", bg: "122733", name: "Tetesan" },
-  { key: "pix-snow", seed: "snow", bg: "1b2f3a", name: "Salju" },
-  { key: "pix-sun", seed: "sun", bg: "3a2a10", name: "Matahari" },
+export const CLAN_ICONS: ClanIconDef[] = [
+  { key: "ic-rose", name: "Mawar", Icon: Rose, tone: "#fb7185", pick: true },
+  { key: "ic-snow", name: "Salju", Icon: Snowflake, tone: "#7dd3fc", pick: true },
+  { key: "ic-clover", name: "Clover", Icon: Leaf, tone: "#4ade80", pick: true },
+  { key: "ic-wing", name: "Sayap", Icon: Feather, tone: "#e2e8f0", pick: true },
+  { key: "ic-tomato", name: "Tomat", Icon: Cherry, tone: "#f87171", pick: true },
+  { key: "ic-swords", name: "Pedang", Icon: Swords, tone: "#cbd5e1", pick: true },
+  { key: "ic-shield", name: "Perisai", Icon: Shield, tone: "#93c5fd", pick: true },
+  { key: "ic-anchor", name: "Jangkar", Icon: Anchor, tone: "#67e8f9", pick: true },
+  { key: "ic-gold", name: "Medali Emas", Icon: Medal, tone: "#facc15", pick: true },
+  { key: "ic-silver", name: "Medali Perak", Icon: Medal, tone: "#e2e8f0", pick: true },
+  { key: "ic-bronze", name: "Medali Perunggu", Icon: Medal, tone: "#f59e0b", pick: true },
+  { key: "ic-flame", name: "Api", Icon: Flame, tone: "#fb923c", pick: true },
+  { key: "ic-zap", name: "Petir", Icon: Zap, tone: "#fde047", pick: true },
+  // key lama (era pixel) — tetap bisa dirender, tidak muncul di picker
+  { key: "ic-star", name: "Bintang", Icon: Star, tone: "#fde047" },
+  { key: "ic-skull", name: "Tengkorak", Icon: Skull, tone: "#cbd5e1" },
+  { key: "ic-drop", name: "Tetesan", Icon: Droplet, tone: "#38bdf8" },
+  { key: "ic-sun", name: "Matahari", Icon: Sun, tone: "#fbbf24" },
 ];
 
-const byKey = new Map(CLAN_PIXEL_ICONS.map((i) => [i.key, i]));
+const byKey = new Map(CLAN_ICONS.map((i) => [i.key, i]));
 
-/** True kalau `icon` adalah key logo pixel (bukan emoji lama). */
-export const isPixelIcon = (icon?: string) => !!icon && byKey.has(icon);
+/** Key pixel lama dipetakan ke ikon lucide terdekat supaya data lama tetap tampil. */
+const LEGACY_KEY: Record<string, string> = {
+  "pix-angel": "ic-wing",
+  "pix-fire": "ic-flame",
+  "pix-bolt": "ic-zap",
+  "pix-clover": "ic-clover",
+  "pix-star": "ic-star",
+  "pix-bow": "ic-swords",
+  "pix-skull": "ic-skull",
+  "pix-drop": "ic-drop",
+  "pix-snow": "ic-snow",
+  "pix-sun": "ic-sun",
+};
 
-/** URL gambar logo pixel; kalau bukan key pixel, null (dipakai sebagai emoji). */
-export function clanPixelIconUrl(icon?: string): string | null {
-  if (!icon) return null;
-  const it = byKey.get(icon);
-  if (!it) return null;
-  return `https://api.dicebear.com/9.x/pixel-art/svg?seed=${it.seed}&backgroundColor=${it.bg}&pixelSize=4`;
+/** Opsi logo yang ditampilkan di form bikin clan. */
+export const PICKABLE_CLAN_ICONS = CLAN_ICONS.filter((i) => i.pick);
+
+/**
+ * Resolve key logo clan → ikon lucide + warnanya.
+ * Key lama (pix-*) dan key tak dikenal tetap aman (fallback ke ikon default).
+ */
+export function resolveClanIcon(icon?: string): {
+  Icon: LucideIcon;
+  tone: string;
+  name: string;
+} {
+  const hit =
+    (icon && byKey.get(icon)) ||
+    (icon && LEGACY_KEY[icon] && byKey.get(LEGACY_KEY[icon])) ||
+    byKey.get(DEFAULT_CLAN_ICON)!;
+  return { Icon: hit.Icon, tone: hit.tone, name: hit.name };
 }
 
-/** Ikon default kalau clan belum punya logo pixel. */
-export const DEFAULT_CLAN_ICON = CLAN_PIXEL_ICONS[0].key;
+/** True kalau `icon` dikenal registry logo clan. */
+export const isClanIcon = (icon?: string) =>
+  !!icon && (byKey.has(icon) || !!LEGACY_KEY[icon]);
+
+/** Ikon default kalau clan belum punya logo. */
+export const DEFAULT_CLAN_ICON = "ic-wing";

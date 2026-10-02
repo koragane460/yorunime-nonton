@@ -270,6 +270,14 @@ const schema = defineSchema(
       deleted: v.optional(v.boolean()),
     }).index("animeId_created", ["animeId", "createdAt"]),
 
+    /** Pengumuman yang muncul sebagai popup saat user masuk website. */
+    announcements: defineTable({
+      message: v.string(),
+      active: v.boolean(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }),
+
     animeFavorites: defineTable({
       userId: v.id("users"),
       animeId: v.string(),

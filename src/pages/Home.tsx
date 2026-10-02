@@ -27,6 +27,8 @@ import {
   ChevronUp,
   Sparkles,
   Lock,
+  MessageSquare,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -398,7 +400,9 @@ function HomeContent() {
         className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-violet-500/40"
       >
         <div className="flex items-center justify-between pb-2.5">
-          <p className="flex items-center gap-2 font-bold">💬 Chat bareng</p>
+          <p className="flex items-center gap-2 font-bold">
+            <MessageSquare className="size-5" aria-hidden /> Chat bareng
+          </p>
           <span className="text-xs text-muted-foreground">buka ›</span>
         </div>
         {/* Garis pembatas di bawah judul (sebelum dipencet) */}
@@ -661,14 +665,20 @@ function GlobalChatPreview() {
   const m = visible[idx % visible.length] as any;
   return (
     <div className="fog-card mt-2 h-14 overflow-hidden">
-      <div className="flex items-center gap-2 text-xs">
-        <Avatar src={m.image} seed={m.username} className="size-7" />
+      <div className="flex items-center gap-2.5 text-[13px]">
+        <Avatar src={m.image} seed={m.username} className="size-9" />
         <p className="truncate">
           <span className="font-semibold text-violet-300">{m.username}</span>
           {m.premium && <BlueCheck className="ml-1 inline size-3.5" />}
           <span className="text-muted-foreground"> : </span>
           <span className="text-zinc-300">
-            {m.premiumGive ? "🎁 give premium" : m.text ?? "[foto]"}
+            {m.premiumGive ? (
+              <span className="inline-flex items-center gap-1">
+                <Gift className="size-3.5" aria-hidden /> give premium
+              </span>
+            ) : (
+              m.text ?? "[foto]"
+            )}
           </span>
         </p>
       </div>
@@ -1657,7 +1667,9 @@ function AnimeDetailScreen({
                       {s.title}
                     </p>
                     {s.score ? (
-                      <p className="text-[10px] text-amber-400">★ {s.score}</p>
+                      <p className="flex items-center gap-1 text-[10px] text-amber-400">
+                        <Star className="size-3 fill-current" aria-hidden /> {s.score}
+                      </p>
                     ) : null}
                   </button>
                 ))}

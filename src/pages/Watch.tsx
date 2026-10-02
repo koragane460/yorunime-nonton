@@ -120,35 +120,24 @@ const CUE_MIN = 1.1;
 const CUE_TAIL = 0.5;
 
 /**
- * Bungkus teks subtitle jadi maksimal 2 baris pendek.
- *  - Baris maksimal 5 kata.
- *  - Kalau ada kata panjang (>= 11 huruf), potong sebelum kata itu supaya
- *    barisnya seimbang, bukan satu baris panjang dan satu baris sisipan.
+ * Bungkus teks subtitle jadi baris-baris pendek: maksimal 6 kata per baris.
+ * Kalau satu baris kepanjangan (> 28 karakter), kata terakhir dipindah ke
+ * baris berikutnya supaya tampilannya lurus rapi, bukan melebar ke samping.
  */
 function wrapCue(text: string): string {
   const words = text.split(/\s+/).filter(Boolean);
-  if (words.length <= 5) return text;
-  // Titik potong ideal: separuh kata, tapi mundur kalau kata di posisi itu
-  // panjang (biar kata panjang pindah utuh ke baris berikutnya).
-  let cut = Math.ceil(words.length / 2);
-  const lineLen = (arr: string[]) => arr.join(" ").length;
-  for (let i = 0; i < 3; i++) {
-    const top = words.slice(0, cut);
-    const bottom = words.slice(cut);
-    // Kata pertama baris kedua panjang + baris atas sudah >= 28 karakter → naikkan cut.
-    if ((bottom[0]?.length ?? 0) >= 11 && lineLen(top) >= 24 && cut > 2) {
-      cut -= 1;
-      continue;
+  if (words.length <= 6) return text;
+  const lines: string[] = [];
+  let i = 0;
+  while (i < words.length) {
+    let take = Math.min(6, words.length - i);
+    while (take > 3 && words.slice(i, i + take).join(" ").length > 28) {
+      take -= 1;
     }
-    break;
+    lines.push(words.slice(i, i + take).join(" "));
+    i += take;
   }
-  const top = words.slice(0, cut);
-  const bottom = words.slice(cut);
-  // Kalau baris atas masih kepanjangan (> 28 karakter), pecah lagi di sekitar 5 kata.
-  if (lineLen(top) > 28 && top.length > 3) {
-    return [wrapCue(top.join(" ")), bottom.join(" ")].join("\n");
-  }
-  return `${top.join(" ")}\n${bottom.join(" ")}`;
+  return lines.join("\n");
 }
 
 /** Parse WebVTT jadi daftar cue untuk ditampilkan sendiri oleh player. */
@@ -169,10 +158,8 @@ function parseVtt(text: string): Cue[] {
     const s = tsToSec(a);
     const e = tsToSec(b);
     if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) continue;
-    // Timing subtitle animeindo: satu baris selalu punya waktu baca minimum dan
-    // tidak hilang tepat di akhir kalimat. Teks dibungkus manual: maksimal 5
-    // kata per baris (atau ~28 karakter) supaya block subtitle pendek dan
-    // sisa kalimat turun ke baris kedua, bukan melebar ke samping.
+    // Teks dibungkus manual: maksimal 6 kata per baris (maks ~28 karakter)
+    // supaya subtitle tersusun lurus rapi, sisanya turun ke baris berikutnya.
     out.push({ s, e: Math.max(e, s + CUE_MIN) + CUE_TAIL, t: wrapCue(body) });
   }
   return out;
@@ -1315,7 +1302,9 @@ function WatchContent() {
             <p
               className={cn(
                 "max-w-[min(88%,40rem)] whitespace-pre-line break-words text-center font-semibold leading-snug text-white",
-                "[text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000,-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000,1px_1px_0_#000,0_3px_6px_rgba(0,0,0,0.95)]",
+                // Outline tipis & rapi: 4 garis 1px saja + bayangan lembut
+                // (bukan outline dobel tebal yang terlihat berantakan).
+                "[text-shadow:-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000,1px_1px_0_#000,0_2px_5px_rgba(0,0,0,0.9)]",
                 // Teks panjang otomatis dikecilkan supaya tetap satu blok rapi
                 // dan tidak menutupi gambar.
                 activeCue.length > 90

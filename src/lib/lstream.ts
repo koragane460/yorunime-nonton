@@ -2,6 +2,16 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
+import {
+  Crown,
+  Diamond,
+  Flame,
+  Gem,
+  Logs,
+  Medal,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 /** Tanggal "baru saja / x menit lalu / ..." */
 export function timeAgo(ts: number) {
@@ -34,30 +44,36 @@ export const DAYS_EN = [
   "sunday",
 ];
 
-/** Badge level user (Bronze..Grandmaster) — nama tier + ikonnya. */
+/** Badge level user (Bronze..Grandmaster) — nama tier + ikon lucide-nya. */
 export function badgeForLevel(level: number) {
   if (level >= 5000)
-    return { name: "Grandmaster", icon: "👑", cls: "bg-gradient-to-r from-red-600 via-fuchsia-600 to-slate-200" };
+    return { name: "Grandmaster", icon: Crown, cls: "bg-gradient-to-r from-red-600 via-fuchsia-600 to-slate-200" };
   if (level >= 1001)
-    return { name: "Master", icon: "🔮", cls: "bg-gradient-to-r from-red-700 to-red-400" };
+    return { name: "Master", icon: Sparkles, cls: "bg-gradient-to-r from-red-700 to-red-400" };
   if (level >= 500)
-    return { name: "Emerald", icon: "💎", cls: "bg-gradient-to-r from-emerald-500 to-emerald-700" };
+    return { name: "Emerald", icon: Gem, cls: "bg-gradient-to-r from-emerald-500 to-emerald-700" };
   if (level >= 100)
-    return { name: "Diamond", icon: "🔷", cls: "bg-gradient-to-r from-cyan-300 to-sky-500" };
+    return { name: "Diamond", icon: Diamond, cls: "bg-gradient-to-r from-cyan-300 to-sky-500" };
   if (level >= 50)
-    return { name: "Silver", icon: "🪙", cls: "bg-gradient-to-r from-slate-300 to-slate-500" };
-  return { name: "Bronze", icon: "🪵", cls: "bg-gradient-to-r from-amber-700 to-amber-900" };
+    return { name: "Silver", icon: Medal, cls: "bg-gradient-to-r from-slate-300 to-slate-500" };
+  return { name: "Bronze", icon: Logs, cls: "bg-gradient-to-r from-amber-700 to-amber-900" };
 }
 
 /** Daftar tier badge + level minimum dapatnya (untuk popup daftar badge). */
-export const LEVEL_BADGE_TIERS = [
-  { name: "Bronze", icon: "🪵", minLevel: 1, cls: "from-amber-700 to-amber-900", fx: "badge-shine" },
-  { name: "Silver", icon: "🪙", minLevel: 50, cls: "from-slate-300 to-slate-500", fx: "badge-shine animate-pulse" },
-  { name: "Diamond", icon: "🔷", minLevel: 100, cls: "from-cyan-300 to-sky-500", fx: "badge-shine shadow-[0_0_14px_2px] shadow-cyan-400/50" },
-  { name: "Emerald", icon: "💎", minLevel: 500, cls: "from-emerald-500 to-emerald-700", fx: "badge-shine animate-pulse shadow-[0_0_16px_3px] shadow-emerald-400/50" },
-  { name: "Master", icon: "🔮", minLevel: 1001, cls: "from-red-700 to-red-400", fx: "badge-shine shadow-[0_0_18px_4px] shadow-red-500/50" },
-  { name: "Grandmaster", icon: "👑", minLevel: 5000, cls: "from-red-600 via-fuchsia-600 to-slate-200", fx: "badge-shine animate-pulse shadow-[0_0_22px_5px] shadow-fuchsia-500/60" },
-] as const;
+export const LEVEL_BADGE_TIERS: {
+  name: string;
+  icon: LucideIcon;
+  minLevel: number;
+  cls: string;
+  fx: string;
+}[] = [
+  { name: "Bronze", icon: Logs, minLevel: 1, cls: "from-amber-700 to-amber-900", fx: "badge-shine" },
+  { name: "Silver", icon: Medal, minLevel: 50, cls: "from-slate-300 to-slate-500", fx: "badge-shine animate-pulse" },
+  { name: "Diamond", icon: Diamond, minLevel: 100, cls: "from-cyan-300 to-sky-500", fx: "badge-shine shadow-[0_0_14px_2px] shadow-cyan-400/50" },
+  { name: "Emerald", icon: Gem, minLevel: 500, cls: "from-emerald-500 to-emerald-700", fx: "badge-shine animate-pulse shadow-[0_0_16px_3px] shadow-emerald-400/50" },
+  { name: "Master", icon: Sparkles, minLevel: 1001, cls: "from-red-700 to-red-400", fx: "badge-shine shadow-[0_0_18px_4px] shadow-red-500/50" },
+  { name: "Grandmaster", icon: Crown, minLevel: 5000, cls: "from-red-600 via-fuchsia-600 to-slate-200", fx: "badge-shine animate-pulse shadow-[0_0_22px_5px] shadow-fuchsia-500/60" },
+];
 
 /** Warna username random yang stabil per username (palet vivid, tetap kebaca di dark). */
 export function usernameColor(username?: string) {

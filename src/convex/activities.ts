@@ -210,6 +210,18 @@ export const myFavorites = query({
   },
 });
 
+/** Jumlah user yang memfavoritkan satu anime — tampil real-time di detail. */
+export const favoriteCount = query({
+  args: { animeId: v.string() },
+  handler: async (ctx, { animeId }) => {
+    const rows = await ctx.db
+      .query("animeFavorites")
+      .filter((q) => q.eq(q.field("animeId"), animeId))
+      .take(9999);
+    return rows.length;
+  },
+});
+
 export const isFavorite = query({
   args: { animeId: v.string() },
   handler: async (ctx, { animeId }) => {
