@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,10 +9,13 @@ import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
 import {
   Bell,
   BookOpen,
+  Eye,
+  EyeOff,
   Megaphone,
   PlayCircle,
   Plus,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -106,6 +109,9 @@ function NotifTab() {
       {composeOpen && isDev && (
         <BroadcastComposer onDone={() => setComposeOpen(false)} />
       )}
+
+      {/* Kontrol popup pengumuman yang muncul di atas semua halaman. */}
+      {isDev && <AnnouncementManager />}
 
       {(notifs ?? []).map((n) => (
         <div
@@ -229,8 +235,122 @@ function BroadcastComposer({ onDone }: { onDone: () => void }) {
 }
 
 /**
- * Lanjutkan: anime yang belum dituntaskan. Kalau sudah nonton lebih dari 20
- * menit, dianggap selesai dan tidak muncul di sini.
+ * Kelola popup pengumuman: buat pesan baru, matikan/ hidupkan, atau hapus.
+ * Pesan aktif akan muncul sebagai kotak kecil di atas halaman untuk semua
+ * user yang belum melihatnya.
+ */
+function AnnouncementManager() {
+  const rows = useQuery(api.moderation.allAnnouncements, {});
+  const create = useMutation(api.moderation.createAnnouncement);
+  const setActive = useMutation(api.moderation.setAnnouncementActive);
+  const remove = useMutation(api.moderation.deleteAnnouncement);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!message.trim()) {
+      toast.error("Pesan wajib diisi");
+      return;
+    }
+    setBusy(true);
+    try {
+      await create({ message: message.trim() });
+      setMessage("");
+      toast.success("Pengumuman dikirim");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = async (id: any, active: boolean) => {
+    try {
+      await setActive({ id, active: !active });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengubah status");
+    }
+  };
+
+  const destroy = async (id: any) => {
+    try {
+      await remove({ id });
+      toast.success("Pengumuman dihapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+      <p className="flex items-center gap-1.5 text-xs font-semibold">
+        <Megaphone className="size-3.5 text-muted-foreground" /> Popup pengumuman
+      </p>
+      <textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Pesan yang muncul di atas halaman semua user"
+        rows={3}
+        maxLength={400}
+        className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-violet-500/70"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] text-muted-foreground">
+          {message.length}/400
+        </span>
+        <Button
+          onClick={() => void submit()}
+          disabled={busy || !message.trim()}
+          className="h-9 rounded-full bg-violet-600 px-4 font-bold text-white hover:bg-violet-500"
+        >
+          <Send className="size-3.5" /> {busy ? "Mengirim…" : "Kirim"}
+        </Button>
+      </div>
+      {(rows ?? []).map((a: any) => (
+        <div
+          key={a._id}
+          className="flex items-start gap-2 rounded-lg border border-border/70 bg-background/50 p-2"
+        >
+          <p className="min-w-0 flex-1 whitespace-pre-line text-[13px] leading-snug text-zinc-200">
+            {a.message}
+          </p>
+          <button
+            onClick={() => void toggle(a._id, a.active)}
+            aria-label={a.active ? "Matikan pengumuman" : "Aktifkan pengumuman"}
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-lg border transition",
+              a.active
+                ? "border-emerald-500/60 text-emerald-400"
+                : "border-white/15 text-white/40",
+            )}
+          >
+            {a.active ? (
+              <Eye className="size-4" />
+            ) : (
+              <EyeOff className="size-4" />
+            )}
+          </button>
+          <button
+            onClick={() => void destroy(a._id)}
+            aria-label="Hapus pengumuman"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-red-500/40 text-red-400 transition hover:bg-red-500/10"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      ))}
+      {rows && rows.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Belum ada pengumuman popup
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Lanjutkan: anime + manga/manhwa digabung jadi satu daftar, diurutkan dari
+ * yang paling baru ditonton dibaca (tidak ada prioritas ke komik atau anime).
  */
 function LanjutTab() {
   const { user } = useAuth();
@@ -238,44 +358,64 @@ function LanjutTab() {
   const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
   const comicRows = useQuery(api.comics.continueReading, user ? {} : "skip");
 
+  const merged = useMemo(() => {
+    const anime = (rows ?? []).map((h: any) => ({
+      key: `a-${h._id}`,
+      at: h.updatedAt ?? 0,
+      data: h,
+      type: "anime" as const,
+    }));
+    const comic = (comicRows ?? []).map((c: any) => ({
+      key: `c-${c._id}`,
+      at: c.updatedAt ?? 0,
+      data: c,
+      type: "comic" as const,
+    }));
+    return [...anime, ...comic].sort((a, b) => b.at - a.at);
+  }, [rows, comicRows]);
+
   return (
     <div className="space-y-2 pt-3">
-      {(comicRows ?? []).map((c: any) => (
-        <button
-          key={c._id}
-          onClick={() =>
-            navigate(
-              `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
-            )
-          }
-          className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
-        >
-          <img
-            src={c.comicImage ?? ""}
-            alt=""
-            className="h-16 w-11 shrink-0 rounded-lg object-cover"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{c.comicTitle}</p>
-            <p className="text-xs text-muted-foreground">
-              {c.chapterLabel ?? `Chapter ${c.chapter}`}
-            </p>
-            <p className="text-[11px] text-violet-300">
-              Lanjut dari halaman {Math.min((c.page ?? 0) + 1, c.totalPages ?? 0)}
-            </p>
-          </div>
-          <BookOpen className="size-5 shrink-0 text-violet-400" />
-        </button>
-      ))}
-
-      {(rows ?? []).map((h: any) => {
+      {merged.map((item) => {
+        if (item.type === "comic") {
+          const c: any = item.data;
+          return (
+            <button
+              key={item.key}
+              onClick={() =>
+                navigate(
+                  `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
+                )
+              }
+              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-violet-500/50"
+            >
+              <img
+                src={c.comicImage ?? ""}
+                alt=""
+                className="h-16 w-11 shrink-0 rounded-lg object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{c.comicTitle}</p>
+                <p className="text-xs text-muted-foreground">
+                  {c.chapterLabel ?? `Chapter ${c.chapter}`}
+                </p>
+                <p className="text-[11px] text-violet-300">
+                  Lanjut dari halaman{" "}
+                  {Math.min((c.page ?? 0) + 1, c.totalPages ?? 0)}
+                </p>
+              </div>
+              <BookOpen className="size-5 shrink-0 text-violet-400" />
+            </button>
+          );
+        }
+        const h: any = item.data;
         const epId = `${h.animeId}__ep${h.episode}`;
         const pos = Math.max(0, h.progressSec ?? 0);
         const dur = h.durationSec ?? 0;
         const pct = dur > 0 ? Math.min(100, Math.round((pos / dur) * 100)) : 0;
         return (
           <button
-            key={h._id}
+            key={item.key}
             onClick={() =>
               navigate(
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
@@ -311,7 +451,7 @@ function LanjutTab() {
           </button>
         );
       })}
-      {rows && rows.length === 0 && (comicRows ?? []).length === 0 && (
+      {merged.length === 0 && (
         <p className="py-10 text-center text-xs text-muted-foreground">
           Belum ada anime atau komik yang belum selesai
         </p>

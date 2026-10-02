@@ -126,6 +126,8 @@ export type EpisodeItem = {
   title: string;
   duration?: string;
   aired?: string;
+  /** false = episode belum rilis (dipakai buat disable di UI) */
+  released?: boolean;
 };
 
 export type AnimeDetail = AnimeCard & {
@@ -204,6 +206,7 @@ async function jikanDetail(id: string): Promise<AnimeDetail> {
       number: e.mal_id ?? i + 1,
       title: e.title ?? `Episode ${e.mal_id ?? i + 1}`,
       aired: e.aired ?? undefined,
+      released: true,
       duration: "24 menit",
     }));
   } catch {
@@ -340,6 +343,7 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
       id: `${malId}__ep${i}`,
       number: i,
       title: `Episode ${i}`,
+      released: true,
       duration: m.duration ? `${m.duration} menit` : undefined,
     });
   }
@@ -476,6 +480,7 @@ async function otakuDetail(id: string): Promise<AnimeDetail> {
       number: num,
       title,
       aired: e.uploadedOn ?? e.releaseDate ?? undefined,
+      released: true,
       duration: d.duration ?? "24 menit",
     };
   });
@@ -492,6 +497,9 @@ async function otakuDetail(id: string): Promise<AnimeDetail> {
           id: `${id}__ep${i + 1}`,
           number: i + 1,
           title: `Episode ${i + 1}`,
+          // Sisipan ini belum tayang (anime ongoing, contoh 25 episode tapi baru
+          // 14 yang rilis) — UI harus men|gray-kan dan men-disable.
+          released: false,
           duration: d.duration ?? "24 menit",
         }));
   const year = Number(String(d.aired ?? "").match(/\b(19|20)\d{2}\b/)?.[0]);

@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Crown,
+  Flag,
   Flame,
   FlaskConical,
   Gem,

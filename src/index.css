@@ -257,21 +257,25 @@
   );
 }
 
-/* Lapisan gelap TOTAL untuk banner clan & banner member: foto hanya terlihat
-   seperti bayangan samar (~40% opacity efektif), warna cerah tidak menerawang
-   lagi dan teks di atasnya selalu kontras. */
-.yn-banner-dim {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      180deg,
-      rgb(5 5 14 / 0.78) 0%,
-      rgb(5 5 14 / 0.86) 55%,
-      rgb(5 5 14 / 0.94) 100%
-    );
+/* ====== Mode Anti lag (Pengaturan) ====== */
+/* Mematikan animasi, transisi, backdrop-blur, dan glow supaya HP lama/low-end
+   tetap lancar. Aktif lewat tombol "Anti lag" di halaman Pengaturan. */
+html.antilag *,
+html.antilag *::before,
+html.antilag *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html.antilag .fog-card,
+html.antilag .yn-avatar-ring,
+html.antilag .badge-shine,
+html.antilag .yn-banner-box::after {
+  filter: none !important;
 }
 
 /* ====== Kartu & tombol gaya baru (rounded, tinta, aksen halus) ====== */

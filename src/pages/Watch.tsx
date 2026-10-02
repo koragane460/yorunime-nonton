@@ -663,17 +663,25 @@ function WatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, epParam]);
 
-  // Ambil server streaming. Menunggu detail selesai supaya judul anime bisa
-  // dipakai mencari sumber subtitle Indonesia. Backend mengembalikan tepat satu
-  // server: "Direct HLS · SUB".
+  // Detail anime sudah siap (dipakai sebagai sumber nomor episode & judul).
+  const detailReady = !!detailData && !detailData.error;
+
+  // Ambil server streaming. Backend mengembalikan tepat satu server:
+  // "Direct HLS · SUB".
+  //
+  // Kecepatan: kalau id episode sudah berbentuk "<malId>__ep<no>" (semua anime
+  // dari AniList/Jikan) server langsung dicari tanpa menunggu detail anime
+  // selesai, karena MAL id dan nomor episodenya sudah ada di URL. Detail hanya
+  // ditunggu untuk anime tanpa MAL id, karena nomor episodenya ada di sana.
   useEffect(() => {
-    if (!epParam || !detailData || detailData.error) return;
+    if (!epParam) return;
+    const mm = epParam.match(/^(\d+)__ep(\d+)$/);
+    if (!mm && !detailReady) return;
     // Dua bentuk id episode:
     //  - "<malId>__ep<no>" untuk anime dari AniList/Jikan (MAL id).
     //  - id episode bebas (mis. Otakudesu) untuk anime tanpa MAL id. Nomor
     //    episodenya diambil dari daftar detail, dan backend hanya memakai
     //    sumber subtitle Indonesia karena MegaPlay butuh MAL id.
-    const mm = epParam.match(/^(\d+)__ep(\d+)$/);
     const epNumber = mm ? Number(mm[2]) || 1 : (currentEp?.number ?? 1);
     const malId = mm ? mm[1] : (/^\d+$/.test(animeId) ? animeId : undefined);
     const key = `${malId ?? animeId}__ep${epNumber}`;
@@ -722,7 +730,8 @@ function WatchContent() {
     resolveDirect({
       malId,
       ep: epNumber,
-      title: detailData.title,
+      // Judul dari URL (kalau ada), kalau tidak pakai judul dari detail anime.
+      title: params.get("judul") ?? (detailReady ? detailData.title : ""),
       // Premium: jalur resolusi cepat (paralel + sumber dibatasi).
       fast: isPremium,
     })
@@ -732,7 +741,7 @@ function WatchContent() {
       })
       .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailData, epParam]);
+  }, [detailReady, epParam]);
 
   // Pramuat episode di sekitar episode aktif (sebelum & sesudah) di
   // latar belakang: saat user menekan episode lain, URL-nya sudah siap sehingga
@@ -948,69 +957,67 @@ function WatchContent() {
     return () => clearTimeout(t);
   }, [playing, controlsOn]);
 
-  // Fullscreen: begitu user masuk, tetap fullscreen walau browser/HP keluar
-  // sendiri (mis. saat_orientation berubah atau tombol sistem ditekan).
-  const wantFs = useRef(false);
+  // Status layar penuh. Beberapa browser (terutama Safari iOS) memakai
+  // prefix `webkit` dan elemen yang/fullscreen-nya bukan playerRef, jadi
+  // cukup dicek "ada elemen fullscreen atau tidak", bukan elemen apa.
+  const fullscreenElement = () =>
+    (document.fullscreenElement ??
+      (document as any).webkitFullscreenElement ??
+      null) as Element | null;
+
   // Perpindahan masuk/keluar layar penuh mengubah ukuran & rasio kotak video,
   // dan beberapa browser (Chrome di Android) deems ulang dekode frame sehingga
   // event `waiting` sempat menyala. Kalau spinner langsung ditampilkan, user
   // mengira videonya buffering padahal masih diputar. Jadi ada jeda singkat
   // tanpa spinner setiap kali status layar penuh berubah.
   const [fsSettle, setFsSettle] = useState(false);
+  // Prefix dipakai hanya di sini supaya logika keluar layar penuh tetap sama
+  // di browser yang hanya mendukung API lama.
   useEffect(() => {
-    const onFsChange = () => {
-      const fs = document.fullscreenElement === playerRef.current;
-      setIsFs(fs);
+    const settle = () => {
+      setIsFs(!!fullscreenElement());
       setControlsOn(true);
       // Simpan posisi sekarang supaya playback tidak mundur saat browser
-      // Reads ulang dekode frame setelah ukuran layar berubah.
+      // membaca ulang dekode frame setelah ukuran layar berubah.
       resumeAtRef.current = videoRef.current?.currentTime ?? 0;
       setFsSettle(true);
       window.setTimeout(() => {
         setFsSettle(false);
         setWaiting(false);
       }, 900);
-      if (fs) {
-        wantFs.current = true;
-        return;
-      }
-      if (!wantFs.current) return;
-      // KeBeen keluar dari fullscreen padahal user masih menonton → masuk lagi.
-      wantFs.current = false;
-      const el = playerRef.current;
-      if (!el) return;
-      window.setTimeout(() => {
-        if (document.fullscreenElement === playerRef.current) return;
-        const req = el.requestFullscreen ?? (el as any).webkitRequestFullscreen;
-        try {
-          const p = req?.call(el);
-          if (p && typeof (p as Promise<void>).catch === "function") {
-            (p as Promise<void>).catch(() => {
-              /* user sudah keluar sendiri, biarkan */
-            });
-          }
-        } catch {
-          /* abaikan */
-        }
-      }, 120);
     };
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("fullscreenchange", settle);
+    document.addEventListener("webkitfullscreenchange", settle);
+    // Safari iOS: video punya layar penuh sendiri yang tidak pernah menyentuh
+    // document.fullscreenElement, jadi status UI diambil dari event ini.
+    const onNativeFs = (e: Event) => {
+      setIsFs(e.type === "webkitbeginfullscreen");
+      setControlsOn(true);
+    };
+    document.addEventListener("webkitbeginfullscreen", onNativeFs);
+    document.addEventListener("webkitendfullscreen", onNativeFs);
+    return () => {
+      document.removeEventListener("fullscreenchange", settle);
+      document.removeEventListener("webkitfullscreenchange", settle);
+      document.removeEventListener("webkitbeginfullscreen", onNativeFs);
+      document.removeEventListener("webkitendfullscreen", onNativeFs);
+    };
   }, []);
 
   const toggleFullscreen = async () => {
     const el = playerRef.current;
     if (!el) return;
-    const req = el.requestFullscreen ?? (el as any).webkitRequestFullscreen;
+    const req =
+      el.requestFullscreen ??
+      (el as any).webkitRequestFullscreen ??
+      (el as any).webkitEnterFullscreen;
     try {
-      if (document.fullscreenElement) {
-        // Tetap fullscreen: tombol dipake untuk memastikan player fullscreen,
-        // bukan untuk memunculkan navbar.
-        wantFs.current = true;
-        await document.exitFullscreen();
+      // Kalau sedang fullscreen (elemen mana pun), tombol ini mengeluarkan
+      // player supaya navbar dan tombol lain kembali terlihat.
+      if (fullscreenElement()) {
+        await exitFullscreen();
         return;
       }
-      wantFs.current = true;
       if (req) await req.call(el);
       try {
         await (screen.orientation as any)?.lock?.("landscape");
@@ -1022,16 +1029,21 @@ function WatchContent() {
     }
   };
 
-  /** Keluar fullscreen dengan sengaja (tombol "keluar layar penuh"). */
+  /** Keluar layar penuh dengan sengaja (tombol "keluar layar penuh"). */
   const exitFullscreen = async () => {
-    wantFs.current = false;
+    // Status langsung dimatikan supaya navbar muncul seketika, tanpa menunggu
+    // event fullscreenchange yang kadang tidak datang di browser lama.
+    setIsFs(false);
     try {
-      await document.exitFullscreen();
-      try {
-        await (screen.orientation as any)?.lock?.("portrait");
-      } catch {
-        /* abaikan */
-      }
+      const exit =
+        document.exitFullscreen ?? (document as any).webkitExitFullscreen;
+      if (fullscreenElement() && exit) await exit.call(document);
+    } catch {
+      /* abaikan */
+    }
+    try {
+      await (screen.orientation as any)?.unlock?.();
+      await (screen.orientation as any)?.lock?.("portrait");
     } catch {
       /* abaikan */
     }

@@ -18,7 +18,17 @@ import {
 } from "@/components/lstream-ui";
 import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
-import { Lock } from "lucide-react";
+import {
+  Bell,
+  CircleAlert,
+  CornerUpRight,
+  Flag,
+  Lock,
+  Shield,
+  ShieldAlert,
+  User,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -37,6 +47,10 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getAntiLag,
+  setAntiLag as setAntiLagPref,
+} from "@/lib/antilag";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -94,9 +108,9 @@ function AkunContent() {
   // Title hanya muncul kalau datanya memang ada, tidak ada title karangan.
   const xpRank = (xpBoard ?? []).findIndex((r) => r.userId === user._id);
   const giveRank = (giveBoard ?? []).findIndex((r) => r.userId === user._id);
-  const titles: { name: string; note: string }[] = [];
+  const titles: { name: string; note: string; clan?: boolean }[] = [];
   if (user.clanTag)
-    titles.push({ name: `Anggota ${user.clanTag}`, note: "Title clan" });
+    titles.push({ name: user.clanTag, note: "Title clan", clan: true });
   if (xpRank >= 0)
     titles.push({ name: "Puncak XP", note: `Peringkat #${xpRank + 1}` });
   if (giveRank >= 0)
@@ -108,52 +122,35 @@ function AkunContent() {
   return (
     <div className="relative">
       {/* Banner full-bleed. Wrapper-nya memotong overflow supaya tidak ada
-          elemen yang keluar dari lebar layar (ruang hitam di kanan). */}
-      <div className="yn-banner-box -mx-4 md:-mx-6">
+          elemen yang keluar dari lebar layar (ruang hitam di kanan). */}        <div className="yn-banner-box -mx-4 md:-mx-6">
         <BlurBanner src={user.bannerUrl ?? user.image} className="h-52 w-full" />
-        {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
-        <div aria-hidden className="yn-banner-fade" />
-        <button
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Pengaturan"
-          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
-        >
-          <SettingsIcon className="size-[18px]" />
-        </button>
-      </div>
-
-      {/* Foto profil menutupi banner, tepat di tengah layar */}
-      <div className="w-full px-3">
-        <div className="relative -mt-12 flex flex-col items-center">
-          {/* Title: paling atas, kecil dan subtle tapi tetap kelihatan. */}
+        {/* Title: paling atas, di dalam banner foto profil */}
+        <div className="absolute left-3 top-3 z-20 flex flex-col items-start">
           <button
             onClick={() => setTitlesOpen((v) => !v)}
             aria-label="Buka title"
             aria-expanded={titlesOpen}
             className={cn(
-              "z-20 -mb-1.5 flex h-5 items-center gap-1 rounded-full border px-2 text-[9px] font-semibold tracking-wide transition",
+              "flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-semibold tracking-wide transition",
               titlesOpen
-                ? "border-violet-400/70 bg-violet-500/20 text-violet-200"
-                : "border-white/10 bg-black/35 text-zinc-400 backdrop-blur-sm hover:border-violet-400/50 hover:text-zinc-200",
+                ? "border-violet-400/70 bg-violet-500/25 text-violet-100"
+                : "border-white/15 bg-black/40 text-zinc-200 backdrop-blur-sm hover:border-violet-400/60 hover:text-white",
             )}
           >
-            <Crown className="size-2.5 text-[oklch(0.86_0.16_90)]" />
+            <Crown className="size-3 text-[oklch(0.86_0.16_90)]" />
             Title
             {titles.length > 0 && (
-              <span className="rounded-full bg-white/10 px-1 font-mono text-[8px]">
+              <span className="rounded-full bg-white/15 px-1 font-mono text-[9px]">
                 {titles.length}
               </span>
             )}
             <ChevronDown
-              className={cn(
-                "size-3 transition",
-                titlesOpen && "rotate-180",
-              )}
+              className={cn("size-3.5 transition", titlesOpen && "rotate-180")}
             />
           </button>
 
           {titlesOpen && (
-            <div className="pop-enter absolute left-1/2 top-full z-30 mt-1 w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 overflow-hidden rounded-2xl border border-violet-500/30 bg-neutral-950/95 shadow-2xl">
+            <div className="pop-enter absolute left-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-violet-500/30 bg-neutral-950/95 shadow-2xl">
               <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
                 <span className="flex size-6 items-center justify-center rounded-md bg-[oklch(0.86_0.16_90)]/15">
                   <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
@@ -175,16 +172,24 @@ function AkunContent() {
                 <ul className="divide-y divide-white/8">
                   {titles.map((t, i) => (
                     <li key={t.name} className="flex items-center gap-2.5 px-3 py-2.5">
-                      <span
-                        className={cn(
-                          "title-shine shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold text-white",
-                          i % 2 === 0
-                            ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black"
-                            : "bg-gradient-to-r from-violet-600 to-fuchsia-500",
-                        )}
-                      >
-                        {t.name}
-                      </span>
+                      {t.clan ? (
+                        <ClanTag
+                          icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                          tag={t.name}
+                          color={user.clanNameColor}
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            "title-shine shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold text-white",
+                            i % 2 === 0
+                              ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black"
+                              : "bg-gradient-to-r from-violet-600 to-fuchsia-500",
+                          )}
+                        >
+                          {t.name}
+                        </span>
+                      )}
                       <span className="ml-auto text-right font-mono text-[10px] text-zinc-400">
                         {t.note}
                       </span>
@@ -194,7 +199,21 @@ function AkunContent() {
               )}
             </div>
           )}
+        </div>
+        {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
+        <div aria-hidden className="yn-banner-fade" />
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Pengaturan"
+          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-violet-400"
+        >
+          <SettingsIcon className="size-[18px]" />
+        </button>
+      </div>
 
+      {/* Foto profil menutupi banner, tepat di tengah layar */}
+      <div className="w-full px-3">
+        <div className="relative -mt-12 flex flex-col items-center">
           {/* Cincin gradient berdenyut di sekeliling avatar */}
           <div className="yn-avatar-ring">
             <div className="rounded-full bg-background p-[2px]">
@@ -258,7 +277,7 @@ function AkunContent() {
 
         <div className="my-3 h-px bg-white/25" />
 
-        {/* 💎 + hari premium */}
+        {/* Sacret + hari premium */}
         <div className="flex items-center gap-4 text-xs">
           <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
             <Gem className="size-3.5" /> {(user.diamonds ?? 0).toLocaleString("id-ID")}
@@ -539,7 +558,11 @@ function BadgesPopup({
                     unlocked ? t.fx : "grayscale",
                   )}
                 >
-                  {unlocked ? t.icon : <Lock className="size-4 text-white/80" />}
+                  {unlocked ? (
+                    <t.icon className="size-5" />
+                  ) : (
+                    <Lock className="size-4 text-white/80" />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{t.name}</p>
@@ -553,7 +576,17 @@ function BadgesPopup({
                     unlocked ? "text-emerald-400" : "text-zinc-500",
                   )}
                 >
-                  {unlocked ? "✓ Didapat" : "🔒 Terkunci"}
+                  <span className="inline-flex items-center gap-1">
+                    {unlocked ? (
+                      <>
+                        <Check className="size-3" aria-hidden /> Didapat
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="size-3" aria-hidden /> Terkunci
+                      </>
+                    )}
+                  </span>
                 </span>
               </div>
             );
@@ -589,6 +622,8 @@ function SettingsScreen({
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
+  // Anti lag: status lokal (tidak perlu server), langsung diterapkan ke <html>.
+  const [antiLag, setAntiLagState] = useState(() => getAntiLag());
   // Panel hanya untuk developer (#1 / title dev) & moderator.
   const access = useQuery(api.moderation.myPanelAccess, {});
   const panelLevel: "dev" | "mod" | "none" =
@@ -671,6 +706,16 @@ function SettingsScreen({
 
       <BlockTitle>Pengaturan</BlockTitle>
       <div className="space-y-2">
+        <ToggleRow
+          label="Anti lag"
+          desc="Matikan animasi, blur, dan efek berat biar lancar"
+          value={antiLag}
+          onToggle={(v) => {
+            setAntiLagState(v);
+            setAntiLagPref(v);
+            toast.success(v ? "Anti lag aktif" : "Anti lag dimatikan");
+          }}
+        />
         <ToggleRow
           label="Auto tolak request pertemanan"
           desc="Pilih auto tolak atau auto terima"
@@ -940,16 +985,16 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
-  const icons: Record<string, string> = {
-    update: "🔔",
-    reply: "↗",
-    like: "❤️",
-    friend_chat: "💬",
-    friend_request: "👤",
-    request_rejected: "❗",
-    clan: "🛡",
-    moderation: "⚠",
-    report: "🚩",
+  const icons: Record<string, LucideIcon> = {
+    update: Bell,
+    reply: CornerUpRight,
+    like: Heart,
+    friend_chat: MessageSquare,
+    friend_request: User,
+    request_rejected: CircleAlert,
+    clan: Shield,
+    moderation: ShieldAlert,
+    report: Flag,
   };
   return (
     <FullScreen title="Notifikasi" onClose={onClose}>
@@ -959,11 +1004,14 @@ function NotifScreen({ onClose }: { onClose: () => void }) {
             key={n._id}
             className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3"
           >
-            <span className="flex size-8 shrink-0 items-center justify-center text-xl">
+            <span className="flex size-8 shrink-0 items-center justify-center">
               {n.type === "friend_chat" && n.refImage ? (
                 <Avatar src={n.refImage} className="size-8" />
               ) : (
-                icons[n.type] ?? "🔔"
+                (() => {
+                  const NotifIcon = icons[n.type] ?? Bell;
+                  return <NotifIcon className="size-4 text-muted-foreground" />;
+                })()
               )}
             </span>
             <div className="min-w-0 flex-1">

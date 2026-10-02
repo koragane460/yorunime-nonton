@@ -677,11 +677,18 @@ export async function resolveIndo(
   const MAX = Math.max(1, Math.min(5, opts?.max ?? 5));
   const collected: IndoSource[] = [];
   const seen = new Set<string>();
+  // Server direct (HLS/MP4) selalu diutamakan: subtitle Indonesia-nya sudah
+  // menempel di video, jadi player kita sendiri yang EVERYTHING-nya kendali.
+  // Embed iframe pihak ketiga hanya dipakai kalau benar-benar tidak ada satu
+  // pun server direct, supaya episode tidak jadi gagal ditonton.
+  let directFound = 0;
   const push = (list: IndoSource[]) => {
     for (const s of list) {
       if (collected.length >= MAX) return;
       if (!s?.url || seen.has(s.url)) continue;
+      if (s.type === "embed" && directFound > 0) continue;
       seen.add(s.url);
+      if (s.type !== "embed") directFound += 1;
       collected.push(s);
     }
   };

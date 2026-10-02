@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Play, Crown, Trophy, MessagesSquare, CalendarDays, Gem } from "lucide-react";
+import { Play, Clapperboard, Crown, Trophy, MessagesSquare, CalendarDays, Gem } from "lucide-react";
 
 const FEATURES = [
   {
@@ -70,7 +70,10 @@ export default function Landing() {
           animate={{ y: 0, opacity: 1 }}
           className="mx-auto mb-3 w-fit rounded-full border border-amber-300/40 px-3 py-1 text-xs text-amber-200"
         >
-          🎬 Nonton anime sub Indonesia + sosial game XP
+          <span className="inline-flex items-center gap-1.5">
+            <Clapperboard className="size-3.5" aria-hidden /> Nonton anime sub Indonesia +
+            sosial game XP
+          </span>
         </motion.p>
         <motion.h1
           initial={{ y: 16, opacity: 0 }}

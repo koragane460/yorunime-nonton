@@ -25,6 +25,8 @@ import {
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { displayId, usernameColor } from "@/lib/lstream";
+import { AnnouncementPopup } from "@/components/AnnouncementPopup";
+import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -43,6 +45,11 @@ export function AppLayout({
   useEffect(() => {
     if (user) void ensure();
   }, [user, ensure]);
+
+  // Mode Anti lag dari Pengaturan: berlaku di seluruh halaman.
+  useEffect(() => {
+    applyAntiLag(getAntiLag());
+  }, []);
 
   const isAuth = location.pathname.startsWith("/auth");
   if (isAuth) return <>{children}</>;
@@ -91,6 +98,7 @@ export function AppLayout({
       <BottomNav />
       <MiniPlayerHost />
       <OverlayScrollLock />
+      <AnnouncementPopup />
     </div>
   );
 }

@@ -100,7 +100,11 @@ async function resolveByTitle(
   // `baked` = server ini sudah punya subtitle Bahasa Indonesia sendiri (di dalam
   // video atau di dalam player embed-nya), jadi player tidak perlu menggambar
   // subtitle sendiri untuk server ini.
-  const sources = indo.map((s) => ({
+  // Server direct (HLS/MP4) selalu diutamakan karena subtitle Indonesia-nya
+  // menempel di video dan player kita sendiri yang mengendalikan subtitle.
+  // Embed hanya dipakai kalau tidak ada satu pun server direct.
+  const directIndo = indo.filter((s) => s.type === "hls" || s.type === "mp4");
+  const sources = (directIndo.length > 0 ? directIndo : indo).map((s) => ({
     label: s.label,
     url: s.url,
     type: s.type,
@@ -162,7 +166,10 @@ export const resolveEpisode = action({
       // HLS/MP4 Sub Indo selalu didahulukan: subtitle Indonesia sudah menempel di
       // video, jadi player kita sendiri bisa memainkannya.
       const indoDirect = indo.filter((s) => s.type === "hls" || s.type === "mp4");
-      const indoEmbed = indo.filter((s) => s.type === "embed");
+      const indoEmbed =
+        indoDirect.length === 0
+          ? indo.filter((s) => s.type === "embed")
+          : [];
 
       // Urutan sumber (semua server dikembalikan, bukan hanya satu):
       //   1) HLS/MP4 Sub Indo — subtitle Indonesia sudah menempel di video.

@@ -166,18 +166,21 @@ async function translateCues(
   return { cues: out, translated: okCount > 0 };
 }
 
-/** Track paling masuk akal untuk dijadikan subtitle Indonesia. */
-function pickTrack(tracks: any[]) {
+/**
+ * Urutan track yang paling masuk akal untuk dijadikan subtitle Indonesia:
+ * Indonesia dulu, lalu English, lalu track lain.
+ */
+function rankTracks(tracks: any[]) {
   const label = (t: any) => String(t?.label ?? "");
   const isIndo = (t: any) => /indonesia|indonesian|\bids?\b/i.test(label(t));
   const isEn = (t: any) => /^en\b|english/i.test(label(t));
-  return (
-    tracks.find((t) => isIndo(t) && t?.file) ??
-    tracks.find((t) => t?.default && isEn(t)) ??
-    tracks.find((t) => isEn(t) && t?.file) ??
-    tracks.find((t) => t?.file) ??
-    null
-  );
+  const usable = tracks.filter((t: any) => !!t?.file);
+  return [
+    ...usable.filter((t: any) => isIndo(t)),
+    ...usable.filter((t: any) => !isIndo(t) && !!t?.default && isEn(t)),
+    ...usable.filter((t: any) => !isIndo(t) && !t?.default && isEn(t)),
+    ...usable.filter((t: any) => !isIndo(t) && !isEn(t)),
+  ];
 }
 
 /**
@@ -214,12 +217,24 @@ export const subtitleIndo = action({
           break;
         }
       }
-      const pick = pickTrack(tracks);
-      if (!pick?.file) return { ok: false as const, reason: "Subtitle tidak tersedia" };
+      const ranked = rankTracks(tracks);
+      if (ranked.length === 0)
+        return { ok: false as const, reason: "Subtitle tidak tersedia" };
 
-      const raw = await fetchText(String(pick.file));
-      const cues = parseVtt(raw);
-      if (cues.length === 0)
+      // Setiap track dicoba satu per satu. Track pertama kadang file-nya rusak
+      // atau formatnya tidak terbaca. Daripada langsung menyerah, lanjut ke
+      // track berikutnya supaya user tetap dapat subtitle.
+      let pick: any = null;
+      let cues: Cue[] = [];
+      for (const cand of ranked.slice(0, 4)) {
+        const raw = await fetchText(String(cand.file)).catch(() => "");
+        cues = parseVtt(raw);
+        if (cues.length > 0) {
+          pick = cand;
+          break;
+        }
+      }
+      if (!pick)
         return { ok: false as const, reason: "Subtitle tidak bisa dibaca" };
 
       const label = String(pick.label ?? "");

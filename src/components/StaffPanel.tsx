@@ -805,7 +805,14 @@ function UserActions({
                         : "border-border text-muted-foreground hover:border-violet-500",
                     )}
                   >
-                    {active ? `✓ ${label.slice(1)} (lepas)` : label}
+                    {active ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Check className="size-3.5" aria-hidden />
+                        {label.slice(1)} (lepas)
+                      </span>
+                    ) : (
+                      label
+                    )}
                   </button>
                 );
               })}

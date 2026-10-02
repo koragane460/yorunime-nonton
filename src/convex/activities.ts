@@ -222,6 +222,34 @@ export const favoriteCount = query({
   },
 });
 
+/**
+ * Progres nonton terakhir untuk satu anime — dipakai tombol "Lanjutkan
+ * menonton episode N" + durasi "00/00" di halaman detail anime.
+ */
+export const animeProgress = query({
+  args: { animeId: v.string() },
+  handler: async (ctx, { animeId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+    const rows = await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_updated", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(50);
+    const hit = rows.find((r) => r.animeId === animeId);
+    if (!hit) return null;
+    const progressSec = Math.max(0, Math.round(hit.progressSec ?? 0));
+    const durationSec = Math.max(0, Math.round(hit.durationSec ?? 0));
+    return {
+      episode: hit.episode,
+      progressSec,
+      durationSec,
+      // Sudah dituntaskan kalau posisinya sudah di menit terakhir.
+      finished: durationSec > 0 && progressSec >= durationSec * 0.92,
+    };
+  },
+});
+
 export const isFavorite = query({
   args: { animeId: v.string() },
   handler: async (ctx, { animeId }) => {

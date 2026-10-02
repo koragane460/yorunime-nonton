@@ -238,7 +238,7 @@ export const createClan = mutation({
     if (!me) throw new ConvexError("User not found");
     if (!me.unlimitedSacret && (me.diamonds ?? 0) < CREATE_COST)
       throw new ConvexError(
-        `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} 💎 — butuh ${CREATE_COST} 💎 buat bikin clan (donasi ke clan lain / beli premium untuk nambah)`,
+        `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} — butuh ${CREATE_COST} buat bikin clan (donasi ke clan lain / beli premium untuk nambah)`,
       );
     const cleanTag = tag.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (cleanTag.length < 3 || cleanTag.length > 4)

@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Crown, ImagePlus, MoreVertical, Plus, Reply, Send, Trash2, VolumeX, X } from "lucide-react";
+import { Check, Crown, ImagePlus, MoreVertical, Plus, Reply, Send, Trash2, VolumeX, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -330,7 +330,7 @@ function NsfwScanDialog({
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-2 text-center">
             <span className="flex size-10 items-center justify-center rounded-full bg-green-500/20 text-green-400">
-              ✓
+              <Check className="size-5" />
             </span>
             <span className="text-sm font-medium">{NSFW_STEPS[step]}…</span>
           </DialogTitle>

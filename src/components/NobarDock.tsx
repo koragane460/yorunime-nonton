@@ -7,7 +7,9 @@ import {
   Globe,
   LogOut,
   MessageSquare,
+  Pause,
   PhoneOff,
+  Play,
   Radio,
   ShieldCheck,
   SkipBack,
@@ -129,7 +131,11 @@ export function NobarDock({
               className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg shadow-violet-600/30 active:scale-95"
               aria-label={room.playing ? "Jeda untuk semua" : "Lanjut untuk semua"}
             >
-              {room.playing ? <span className="text-sm">❚❚</span> : <span className="text-sm">▶</span>}
+              {room.playing ? (
+                <Pause className="size-4" />
+              ) : (
+                <Play className="size-4" />
+              )}
             </button>
             <HostBtn onClick={onSeek.bind(null, 10)} label="+10s" />
             <HostBtn onClick={onNextEpisode} label="Episode ›" icon={<SkipForward className="size-4" />} />

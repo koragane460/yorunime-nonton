@@ -28,6 +28,7 @@ import {
   Sparkles,
   Lock,
   MessageSquare,
+  Play,
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -263,12 +264,17 @@ function HomeContent() {
       const host = el.closest(".yn-app-bg") as HTMLElement | null;
       if (!host) return;
       const bottom = el.getBoundingClientRect().bottom + window.scrollY;
-      host.style.setProperty("--yn-tint-end", `${Math.max(320, Math.round(bottom))}px`);
+      // Warna ungu sengaja dibuat lebih panjang dari jangkar SEARCH supaya
+      // gradasinya masih keruh sampai bawah pencerahan anime.
+      host.style.setProperty(
+        "--yn-tint-end",
+        `${Math.max(360, Math.round(bottom + 380))}px`,
+      );
     };
     paint();
     window.addEventListener("resize", paint);
     return () => window.removeEventListener("resize", paint);
-  }, [heroList.length, todayAiring.length]);
+  }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
 
   return (
     <div className="pb-8">
@@ -1435,6 +1441,36 @@ function DMScreen({
 
 // ------------------------------------------------------- detail screen ----
 
+/** Format detik → "12:34" (dipakai untuk durasi nonton). */
+function fmtClock(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const d = s % 60;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  const dd = String(d).padStart(2, "0");
+  return `${h > 0 ? `${h}:` : ""}${mm}:${dd}`;
+}
+
+/**
+ * Sinopsis sebelum diklik "baca selengkapnya": tetap tampil sekitar 5/6
+ * isinya (paragraf pertama, atau potongan 70% kalau cuma satu paragraf).
+ */
+function synopsisPreview(text: string, open: boolean) {
+  if (open) return text;
+  const paras = text
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (paras.length > 5) return paras.slice(0, 5).join("\n\n");
+  if (paras.length > 1)
+    return paras.slice(0, Math.max(1, paras.length - 1)).join("\n\n");
+  const cut = Math.floor(text.length * 0.7);
+  if (cut < 200) return text;
+  const sp = text.lastIndexOf(" ", cut);
+  return `${(sp > 120 ? text.slice(0, sp) : text.slice(0, cut)).trimEnd()}…`;
+}
+
 function AnimeDetailScreen({
   animeId,
   animeTitle,
@@ -1452,11 +1488,17 @@ function AnimeDetailScreen({
   const getDetail = useAction(api.anime.animeDetail);
   const getSimilar = useAction(api.anime.animeSimilar);
   const isFav = useQuery(api.activities.isFavorite, user ? { animeId } : "skip");
+  const favCount = useQuery(api.activities.favoriteCount, { animeId });
+  const progress = useQuery(
+    api.activities.animeProgress,
+    user ? { animeId } : "skip",
+  );
   const toggleFav = useMutation(api.activities.toggleFavorite);
   const [detail, setDetail] = useState<any>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [episodeOrder, setEpisodeOrder] = useState<"first" | "last">("first");
   const [allEpisodes, setAllEpisodes] = useState(false);
+  const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
 
   useEffect(() => {
@@ -1497,6 +1539,12 @@ function AnimeDetailScreen({
   // (60 per halaman) supaya HP tidak berat.
   const PAGE = 60;
   const shownEps = allEpisodes ? eps : eps.slice(0, PAGE);
+  const releasedCount = eps.filter((e: any) => e.released !== false).length;
+  // Sinopsis: sebelum diklik "baca selengkapnya" tetap tampil ~5/6 paragraf.
+  const synopsisText: string =
+    detail.synopsisId ?? detail.synopsis ?? "Sinopsis belum tersedia.";
+  const synopsisBody = synopsisPreview(synopsisText, synopsisOpen);
+  const canExpandSynopsis = synopsisBody !== synopsisText;
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -1517,24 +1565,43 @@ function AnimeDetailScreen({
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
           </div>
 
-          {/* Header + fav mengambang */}
+          {/* Header + fav mengambang (kanan atas) */}
           <div className="absolute inset-x-0 top-0 z-10">
-            <DetailHeader title="Detail Anime" onClose={onClose} fav={
-              <button
-                className="rounded-full bg-black/50 p-2"
-                onClick={async () => {
-                  if (!user) return;
-                  const r = await toggleFav({
-                    animeId,
-                    animeTitle: detail.title,
-                    animeImage: detail.image,
-                  });
-                  toast.success(r.favorited ? "Ditambahkan ke favorite ❤️" : "Dihapus dari favorite");
-                }}
-              >
-                <Heart className={cn("size-5", isFav ? "fill-red-500 text-violet-400" : "text-white")} />
-              </button>
-            } />
+            <DetailHeader
+              title="Detail Anime"
+              onClose={onClose}
+              fav={
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    aria-label="Favorite"
+                    className="rounded-full bg-black/50 p-2"
+                    onClick={async () => {
+                      if (!user) return;
+                      const r = await toggleFav({
+                        animeId,
+                        animeTitle: detail.title,
+                        animeImage: detail.image,
+                      });
+                      toast.success(
+                        r.favorited
+                          ? "Ditambahkan ke favorite"
+                          : "Dihapus dari favorite",
+                      );
+                    }}
+                  >
+                    <Heart
+                      className={cn(
+                        "size-5",
+                        isFav ? "fill-red-500 text-red-500" : "text-white",
+                      )}
+                    />
+                  </button>
+                  <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    {favCount ?? 0} orang
+                  </span>
+                </div>
+              }
+            />
           </div>
 
           {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
@@ -1582,18 +1649,7 @@ function AnimeDetailScreen({
         </div>
 
         <div className="px-3">
-          {/* Sinopsis dulu (baca selengkapnya), BARU tombol Nonton */}
-          <SectionTitle>Sinopsis</SectionTitle>
-          <p className={cn("text-sm leading-6 text-zinc-300", !synopsisOpen && "line-clamp-3")}>
-            {detail.synopsisId ?? detail.synopsis ?? "Sinopsis belum tersedia."}
-          </p>
-          <button
-            onClick={() => setSynopsisOpen((v) => !v)}
-            className="mt-1 text-xs font-medium text-violet-300 underline"
-          >
-            {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
-          </button>
-
+          {/* Tombol Nonton DI ATAS sinopsis */}
           <button
             onClick={() =>
               navigate(
@@ -1602,60 +1658,122 @@ function AnimeDetailScreen({
                 }`,
               )
             }
-            className="mt-4 w-full rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 py-3 font-bold text-white transition hover:bg-violet-500"
           >
-            ▶ Nonton
+            <Play className="size-4 fill-current" aria-hidden />
+            {progress && !progress.finished && progress.progressSec > 30
+              ? `Lanjutkan menonton episode ${progress.episode}`
+              : "Nonton"}
           </button>
-
-          {/* Episode grid + jumlah di kanan atas */}
-          <div className="mb-1 mt-5 flex items-center justify-between">
-            <h2 className="text-lg font-bold">Episode</h2>
-            <span className="text-xs text-muted-foreground">{eps.length} episode</span>
-          </div>
-          <button
-            onClick={() => setEpisodeOrder(episodeOrder === "first" ? "last" : "first")}
-            className="mb-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-violet-500/60"
-          >
-            {episodeOrder === "first" ? "Urutkan: Terlama ↓" : "Urutkan: Terbaru ↑"}
-          </button>
-          {eps.length === 0 ? (
-            <p className="py-4 text-center text-xs text-muted-foreground">
-              {detail.status === "Upcoming"
-                ? "Belum tayang — nantikan jadwal rilisnya"
-                : "Daftar episode belum tersedia"}
+          {progress && progress.durationSec > 0 && (
+            <p className="mt-1.5 text-center text-xs text-white/85">
+              Durasi nonton {fmtClock(progress.progressSec)} /{" "}
+              {fmtClock(progress.durationSec)}
             </p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {shownEps.map((e: any) => (
-                <button
-                  key={e.id}
-                  onClick={() => navigate(`/nonton?anime=${animeId}&ep=${e.id}`)}
-                  className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-foreground transition hover:border-violet-500/60"
-                >
-                  {e.number}
-                </button>
-              ))}
-            </div>
           )}
-          {eps.length > PAGE && (
+
+          {/* Sinopsis — 5/6 paragraf dulu sebelum "baca selengkapnya" */}
+          <SectionTitle>Sinopsis</SectionTitle>
+          <p className="whitespace-pre-line text-sm leading-6 text-white">
+            {synopsisBody}
+          </p>
+          {canExpandSynopsis && (
             <button
-              onClick={() => setAllEpisodes((v) => !v)}
-              className="mt-2 w-full rounded-lg border border-border py-2 text-xs"
+              onClick={() => setSynopsisOpen((v) => !v)}
+              className="mt-1 text-xs font-medium text-white underline underline-offset-2"
             >
-              {allEpisodes ? "Tampilkan lebih sedikit" : `Tampilkan semua ${eps.length} episode`}
+              {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
             </button>
           )}
 
-          {/* Yang serupa — anime yang mirip dengan ini */}
+          {/* Episode — bisa dibuka & ditutup */}
+          <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
+            <button
+              onClick={() => setEpisodeOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left"
+            >
+              <h2 className="text-base font-bold text-white">Episode</h2>
+              <span className="flex items-center gap-1.5 text-xs text-white/80">
+                {releasedCount} dari {eps.length} tayang
+                {episodeOpen ? (
+                  <ChevronUp className="size-4" aria-hidden />
+                ) : (
+                  <ChevronDown className="size-4" aria-hidden />
+                )}
+              </span>
+            </button>
+            {episodeOpen && (
+              <div className="px-3 pb-3">
+                {eps.length === 0 ? (
+                  <p className="py-4 text-center text-xs text-white/70">
+                    {detail.status === "Upcoming"
+                      ? "Belum tayang — nantikan jadwal rilisnya"
+                      : "Daftar episode belum tersedia"}
+                  </p>
+                ) : (
+                  <>
+                    <button
+                      onClick={() =>
+                        setEpisodeOrder(episodeOrder === "first" ? "last" : "first")
+                      }
+                      className="mb-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white/85 transition hover:border-violet-500/60"
+                    >
+                      {episodeOrder === "first"
+                        ? "Urutkan: Terlama ↓"
+                        : "Urutkan: Terbaru ↑"}
+                    </button>
+                    <div className="flex flex-wrap gap-1.5">
+                      {shownEps.map((e: any) => {
+                        const released = e.released !== false;
+                        return (
+                          <button
+                            key={e.id}
+                            disabled={!released}
+                            onClick={() =>
+                              navigate(
+                                `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
+                                  animeTitle ?? detail.title ?? "",
+                                )}`,
+                              )
+                            }
+                            className={cn(
+                              "size-10 rounded-lg border text-sm font-semibold transition",
+                              released
+                                ? "border-border bg-secondary/40 text-white hover:border-violet-500/60"
+                                : "cursor-not-allowed border-white/5 bg-white/[0.03] text-white/25",
+                            )}
+                          >
+                            {e.number}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {eps.length > PAGE && (
+                      <button
+                        onClick={() => setAllEpisodes((v) => !v)}
+                        className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs text-white/85"
+                      >
+                        {allEpisodes
+                          ? "Tampilkan lebih sedikit"
+                          : `Tampilkan semua ${eps.length} episode`}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Yang serupa — 2 baris kartu (atas + bawah), geser ke kanan */}
           {similar.length > 0 && (
             <div className="mt-6">
-              <h2 className="mb-2 text-lg font-bold">Yang serupa</h2>
-              <div className="thin-scroll -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
+              <h2 className="mb-2 text-lg font-bold text-white">Yang serupa</h2>
+              <div className="thin-scroll -mx-1 grid auto-cols-[104px] grid-flow-col grid-rows-2 gap-x-2.5 gap-y-3 overflow-x-auto px-1 pb-1">
                 {similar.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => onPick(s.id, s.title)}
-                    className="w-24 shrink-0 text-left"
+                    className="w-full text-left"
                   >
                     <img
                       src={s.image}
@@ -1663,11 +1781,11 @@ function AnimeDetailScreen({
                       className="aspect-[2/3] w-full rounded-lg object-cover"
                       loading="lazy"
                     />
-                    <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
+                    <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-white">
                       {s.title}
                     </p>
                     {s.score ? (
-                      <p className="flex items-center gap-1 text-[10px] text-amber-400">
+                      <p className="flex items-center gap-1 text-[10px] text-white/80">
                         <Star className="size-3 fill-current" aria-hidden /> {s.score}
                       </p>
                     ) : null}
