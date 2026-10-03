@@ -305,7 +305,6 @@ function WatchContent() {
   const [direct, setDirect] = useState<any>(null);
   // Alasan stream tidak tersedia (mis. judul upcoming belum tayang)
   const [directErr, setDirectErr] = useState<string | null>(null);
-  const [autoSubUrl, setAutoSubUrl] = useState("");
   const [autoSubLoading, setAutoSubLoading] = useState(false);
   // Pesan singkat kalau subtitle Indonesia gagal dibuat (server subtitles
   // aslinya yang dipakai, atau subtitledita lewat fallback).
@@ -552,14 +551,6 @@ function WatchContent() {
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
     endGesture();
   };
-  /** Ketuk (tanpa geser) = naik satu tingkat. */
-  const bumpLevel = (kind: "brightness" | "volume") => () => {
-    const cur = kind === "brightness" ? brightness : volumeLevel;
-    const next = Math.max(0, Math.min(1, Math.round((cur + 0.1) * 10) / 10));
-    if (kind === "brightness") setBrightness(next);
-    else applyVolume(next);
-  };
-
   // Komentar dengan echo lokal: pesan langsung tampil sebelum server menyalinnya.
   const [pendingComments, setPendingComments] = useState<CommentT[]>([]);
   // Komentar yang baru saja dihapus user — dikeluarkan dari daftar seketika.
@@ -588,10 +579,13 @@ function WatchContent() {
       setActiveSub(idTrackLabel);
       return;
     }
+    // Kalau track Indonesia server tidak ada, subtitle yang dipakai adalah
+    // terjemahan otomatis milik YoruNime. Tidak ada fallback ke track
+    // bahasa lain: memutar subtitle Inggris/ Mandarin di aplikasi ini
+    // tidak pernah diinginkan. Effect ini akan berjalan lagi begitu
+    // terjemahan selesai dibuat (`autoVtt` terisi).
     if (autoVtt) setActiveSub(AUTO_SUB);
-    else if (direct?.subtitle?.url)
-      setActiveSub(direct.subtitle.label ?? "Subtitle");
-  }, [idTrackLabel, autoVtt, direct, subTouched, bakedSubs]);
+  }, [idTrackLabel, autoVtt, subTouched, bakedSubs]);
 
   // Ambil isi subtitle terpilih (dari server atau dari track otomatis) lalu
   // simpan sebagai cue untuk digambar sendiri oleh player.
@@ -654,7 +648,6 @@ function WatchContent() {
   // subtitle English milik server tersebut.
   useEffect(() => {
     if (!epParam || !direct?.ok || bakedSubs) {
-      setAutoSubUrl("");
       setAutoSubLoading(false);
       return;
     }
@@ -672,10 +665,6 @@ function WatchContent() {
         : (detailData?.episodeList ?? []).find((e: any) => e.id === epParam)
             ?.number ?? 1;
     const key = `yorunime-sub-indo:${malId}:${epNo}`;
-    setAutoSubUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return "";
-    });
     const cached = (() => {
       try {
         return localStorage.getItem(key);
@@ -870,7 +859,7 @@ function WatchContent() {
     const targets = [epList[epIndex - 1], epList[epIndex + 1]].filter(Boolean);
     if (targets.length === 0) return;
     let alive = true;
-    const jobs = targets.map((next: any) => {
+    targets.forEach((next: any) => {
       const mm = next?.id?.match?.(/^(\d+)__ep(\d+)$/);
       const epNumber = mm ? Number(mm[2]) || 1 : (next?.number ?? 1);
       const malId = mm ? mm[1] : (/^\d+$/.test(animeId) ? animeId : undefined);
@@ -1496,17 +1485,13 @@ function WatchContent() {
             playsInline
             controls={false}
           >
-            {direct?.subtitle?.url && (
-              <track
-                kind="subtitles"
-                src={direct.subtitle.url}
-                srcLang={direct.subtitle.lang ?? "id"}
-                label={direct.subtitle.label ?? "Subtitle"}
-              />
-            )}
-            {/* Track subtitle lain (Indonesia & lainnya) — bisa diganti dari menu CC */}
+            {/* Hanya track Bahasa Indonesia yang dimasukkan ke elemen <video>.
+                Track bahasa lain milik server sengaja TIDAK di-mount sama
+                sekali: browser akan mengunduh file subtitle itu meskipun
+                tidak pernah ditampilkan, dan dia tetap bisa terbaca kalau
+                `mode`-nya berubah jadi "showing" di jalur lain. */}
             {(direct?.subTracks ?? [])
-              .filter((t: any) => t.url !== direct?.subtitle?.url)
+              .filter((t: any) => t.lang === "id")
               .map((t: any) => (
                 <track
                   key={t.url}
@@ -1876,27 +1861,29 @@ function WatchContent() {
                 >
                   Matikan subtitle
                 </button>
-                {(direct?.subTracks ?? []).map((t: any) => (
-                  <button
-                    key={t.url}
-                    onClick={() => pickSub(t.label)}
-                    className={cn(
-                      "block w-full rounded px-2 py-1 text-left text-xs",
-                      activeSub === t.label
-                        ? "bg-primary text-white"
-                        : "text-white/80 hover:bg-white/10",
-                    )}
-                  >
-                    {/* Track non-Indonesia milik server, jadi diberi penanda
-                        supaya jelas bedanya dengan subtitle terjemahan kita. */}
-                    {t.lang === "id" ? t.label : `${t.label} (asli)`}
-                    {t.lang === "id" && (
+                {(direct?.subTracks ?? [])
+                  // Hanya Bahasa Indonesia yang ditampilkan. Track bahasa
+                  // lain milik server sengaja disembunyikan: nonton di
+                  // YoruNime selalu Indonesia, jadi menawarkannya cuma
+                  // menambah pilihan yang tidak pernah dipakai.
+                  .filter((t: any) => t.lang === "id")
+                  .map((t: any) => (
+                    <button
+                      key={t.url}
+                      onClick={() => pickSub(t.label)}
+                      className={cn(
+                        "block w-full rounded px-2 py-1 text-left text-xs",
+                        activeSub === t.label
+                          ? "bg-primary text-white"
+                          : "text-white/80 hover:bg-white/10",
+                      )}
+                    >
+                      {t.label}
                       <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
                         ID
                       </span>
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  ))}
                 {/* Subtitle Indonesia otomatis (diterjemahkan dari track
                     English, jadi tetap muncul di server yang tidak punya
                     subtitle Indonesia sendiri). */}
