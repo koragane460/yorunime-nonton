@@ -725,6 +725,93 @@ export const animeTrendingToday = action({
   },
 });
 
+/**
+ * Katalog Donghua.
+ *
+ * AniList punya format `DONGHUA` sebagai field tersendiri, jadi daftar ini
+ * benar-benar terpisah dari anime: judul, gambar, dan genre-nya milik
+ * donghua. Di Home modul ini tampil dengan judul section sendiri supaya
+ * tidak tercampur dengan deretan anime.
+ *
+ * Fallback: kalau AniList sedang tidak mengembalikan apa-apa, daftar
+ * statis dipakai supaya barisnya tidak kosong sama sekali.
+ */
+export const donghuaList = action({
+  args: {
+    page: v.optional(v.number()),
+    // Hanya dua urutan yang dipakai UI: populer dan terbaru.
+    sort: v.optional(v.union(v.literal("POPULARITY_DESC"), v.literal("START_DATE_DESC"))),
+  },
+  handler: async (runCtx, { page = 1, sort = "POPULARITY_DESC" }) => {
+    const r = await aniList("donghua", LIST_TTL, runCtx, "format:DONGHUA", page, 24, sort);
+    if (r && r.length > 0) return r;
+    return fbList(FALLBACK_TOP, LIMIT);
+  },
+});
+
+/**
+ * Rekomendasi "Untuk kamu" berdasarkan selo rasa user.
+ *
+ * Berbeda dari `animeForYou` (yang murni urutan dari AniList), ini memakai
+ * data user: `genres` berisi genre yang paling sering ditonton user (diambil
+ * client dari `activities.genreTaste`) dan `exclude` berisi anime yang sudah
+ * ada di riwayat, supaya rekomendasi tidak berputar mengulang judul yang sama.
+ *
+ * Genre dikirim dari client karena aksi ini tidak punya akses ke query
+ * `activities`; logika pengumpul genre tetap hidup di `genreTaste` yang hanya
+ * membaca data yang sudah tersimpan.
+ */
+export const animeRecommended = action({
+  args: {
+    genres: v.optional(v.array(v.string())),
+    exclude: v.optional(v.array(v.string())),
+  },
+  handler: async (runCtx, { genres, exclude }) => {
+    const seen = new Set((exclude ?? []).filter(Boolean));
+    const wanted = (genres ?? [])
+      .map((g) => g.trim().toUpperCase())
+      .filter((g) => g.length > 1 && g.length < 30 && /^[A-Z ]+$/.test(g))
+      .slice(0, 5);
+    if (wanted.length === 0) {
+      // Belum ada sinyal selera → pakai anime yang sedang rilis saja.
+      return (
+        (await aniList("reco-cold", LIST_TTL, runCtx, "status:RELEASING", 1, 14)) ?? []
+      );
+    }
+
+    const out: AnimeCard[] = [];
+    for (const g of wanted) {
+      if (out.length >= 12) break;
+      const rows = await aniList(
+        "reco-genre",
+        LIST_TTL,
+        runCtx,
+        `genre_in:[${g}],status:RELEASING,isAdult:false`,
+        1,
+        12,
+        "POPULARITY_DESC",
+      );
+      for (const c of rows ?? []) {
+        if (out.length >= 12) break;
+        if (seen.has(c.id)) continue;
+        seen.add(c.id);
+        out.push(c);
+      }
+    }
+    if (out.length >= 6) return out;
+
+    // Cadangan: anime yang sedang populer, dan yang belum pernah ditonton.
+    const pop =
+      (await aniList("reco-fallback", LIST_TTL, runCtx, "status:RELEASING", 1, 20)) ?? [];
+    for (const c of pop) {
+      if (out.length >= 14) break;
+      if (seen.has(c.id)) continue;
+      out.push(c);
+    }
+    return out;
+  },
+});
+
 export const animeForYou = action({
   args: { seed: v.optional(v.number()) },
   handler: async (runCtx, { seed = 0 }) => {
@@ -954,8 +1041,12 @@ export const animeDetail = action({
     source: v.optional(v.string()),
     title: v.optional(v.string()),
   },
-  handler: async (runCtx, { id, source, title }) =>
-    cached(runCtx, `detail:${source ?? "auto"}:${id}:${title ?? ""}`, DETAIL_TTL, async () => {
+  handler: async (runCtx, { id, source, title }) => {
+    const detail = (await cached(
+      runCtx,
+      `detail:${source ?? "auto"}:${id}:${title ?? ""}`,
+      DETAIL_TTL,
+      async () => {
       const raw = String(id ?? "").trim();
       const isMalId = /^\d+$/.test(raw);
       const malId = isMalId ? raw : raw.replace(/\D/g, "");
@@ -1042,7 +1133,21 @@ export const animeDetail = action({
         totalEpisodes: eps.length,
         episodeList: eps,
       } as AnimeDetail;
-    }),
+      },
+    )) as AnimeDetail;
+
+    // Cache genre terpisah dengan kunci pendek & stabil. Query `genreTaste`
+    // (activities.ts) membacanya dari dalam query — query Convex tidak boleh
+    // fetch ke luar, jadi genres harus sudah tersimpan di sini lebih dulu.
+    const genres = Array.isArray(detail?.genres) ? detail!.genres : [];
+    if (genres.length > 0) {
+      await runCtx.runMutation(internal.anime.cacheSet, {
+        endpoint: `genres:${id}`,
+        payload: { genres },
+      });
+    }
+    return detail;
+  },
 });
 
 /**

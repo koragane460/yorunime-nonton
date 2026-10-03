@@ -192,6 +192,41 @@ const schema = defineSchema(
       // (sebelumnya satu request pending = blokir semua request berikutnya).
       .index("from_to_status", ["fromUserId", "toUserId", "status"]),
 
+    /**
+     * Antrean unduhan episode. Dipakai layar "Download" di Home: user melihat
+     * file apa saja yang sudah terunduh, bisa memutar ulang secara offline,
+     * dan bisa memindahkan filenya ke perangkat (unduh ke penyimpanan HP).
+     *
+     * `status`: "queued" | "downloading" | "done" | "failed"
+     * `localKey`: kunci blob di IndexedDB browser — file videonya sendiri
+     * disimpan di perangkat user, bukan di server.
+     */
+    downloads: defineTable({
+      userId: v.id("users"),
+      animeId: v.string(),
+      animeTitle: v.string(),
+      animeImage: v.optional(v.string()),
+      episode: v.number(),
+      episodeId: v.optional(v.string()),
+      quality: v.string(),
+      url: v.string(),
+      bytes: v.optional(v.number()),
+      status: v.union(
+        v.literal("queued"),
+        v.literal("downloading"),
+        v.literal("done"),
+        v.literal("failed"),
+      ),
+      progress: v.optional(v.number()),
+      /** Kunci blob offline di IndexedDB; kosong = belum selesai diunduh. */
+      localKey: v.optional(v.string()),
+      error: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("userId_created", ["userId", "createdAt"])
+      .index("userId_status", ["userId", "status"]),
+
     // ---------------------------------------------------- nonton bareng ----
     watchRooms: defineTable({
       name: v.string(),

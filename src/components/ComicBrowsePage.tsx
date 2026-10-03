@@ -11,6 +11,8 @@ import {
   type ComicItem,
 } from "@/components/ComicCard";
 import { ComicDetailScreen } from "@/components/ComicDetailScreen";
+import { ContinueReadingCard } from "@/components/ContinueReadingCard";
+import { PremiumOnlyChip } from "@/components/PremiumOnlyGate";
 import { ChevronLeft, ChevronRight, Heart, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,8 +101,32 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
     setResults([]);
   };
 
+  // User tanpa Premium tetap boleh melihat seluruh katalog (dan tombol ganti
+  // kategori tetap aktif) — hanya pembacaannya yang terkunci.
+  const isPremium = (user?.premiumUntil ?? 0) > Date.now();
+
   return (
     <div className="pb-24">
+      {/* Baris penanda Premium: TIDAK memblokir apa pun. Tombol ganti
+          kategori dan kotak pencarian tetap aktif; hanya tag kecil ini yang
+          memberi tahu bahwa bacaannya perlu Premium. */}
+      {!isPremium && (
+        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card/60 px-3 py-2">
+          <PremiumOnlyChip />
+          <p className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+            Katalog tetap bisa dilihat, baca chapter perlu Premium
+          </p>
+          <button
+            onClick={() => navigate("/premium")}
+            className="shrink-0 rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-white"
+          >
+            Buka
+          </button>
+        </div>
+      )}
+
+      {/* Lanjutkan baca — vertikal, beda dari "Lanjutkan nonton" di Home. */}
+      <ContinueReadingCard />
       {/* Hero — bersih seperti Home: poster potret penuh, teks di bawah */}
       <ComicHero
         kind={kind}

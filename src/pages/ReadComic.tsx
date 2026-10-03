@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -245,6 +246,33 @@ export default function ReadComic() {
   };
 
   const atEnd = total > 0 && index >= total - 1;
+
+  // Manga & manhwa = konten Premium. Reader ini juga dipagari supaya URL
+  // /baca/... yang diketik langsung (atau dibuka dari cache browser) tidak
+  // melewati gate di halaman detail.
+  if (!isPremium) {
+    return (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-[#07070b] p-6">
+        <div className="relative w-full max-w-md">
+          <PremiumOnlyGate label="Premium Only" />
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => navigate(kind === "manga" ? "/manga" : "/manhwa")}
+              className="flex-1 rounded-full border border-white/20 py-2.5 text-xs font-semibold text-white"
+            >
+              {kind === "manga" ? "Lihat Manhwa" : "Lihat Manga"}
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="flex-1 rounded-full border border-white/20 py-2.5 text-xs font-semibold text-white"
+            >
+              Kembali
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("fixed inset-0 z-[70] flex flex-col", dark ? "bg-black" : "bg-zinc-100")}>

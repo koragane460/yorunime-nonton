@@ -75,6 +75,11 @@ function availableQualities(hls: Hls | null): number[] {
  * TIDAK lebih besar dari target (kalau tidak ada, ambil yang terdekat), lalu
  * mengunci `currentLevel` supaya hls.js tidak mengabaikannya.
  */
+function highestAvailable(hls: Hls | null): number {
+  if (!hls) return 0;
+  return availableQualities(hls).reduce((a, b) => (b > a ? b : a), 0);
+}
+
 function applyLevel(hls: Hls | null, quality: string) {
   if (!hls) return;
   const target = parseInt(quality, 10);
@@ -271,6 +276,9 @@ function WatchContent() {
   const [qualityDraft, setQualityDraft] = useState<string | null>(null);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  // Antrean unduhan disimpan di Convex (daftarnya), sementara file videonya
+  // sendiri disimpan di IndexedDB perangkat — lihat src/lib/offline-store.ts.
+  const enqueueDownload = useMutation(api.downloads.enqueue);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [recorded, setRecorded] = useState(false);
@@ -343,7 +351,6 @@ function WatchContent() {
   // layar: tidak menyentuh decode video sama sekali.
   // Geser hanya berlaku kalau jari mulai dari tombolnya, bukan dari mana saja.
   const VOL_MAX = 2; // 2x suara lewat Web Audio (volume HTML mentok di 1)
-  const brightnessToLevel = (b: number) => b;
   const levelToBrightness = (l: number) => l;
   /** 1 = volume normal, >1 = lebih keras dari maksimal bawaan. */
   const gainRef = useRef<number>(1);
@@ -384,18 +391,48 @@ function WatchContent() {
   ]
     .filter(Boolean)
     .join(" ");
+  /**
+   * Tombol HD.lywood DULU hanya menyalakan filter CSS (unsharp mask) — itu
+   * hanya night's sharpening, tidak menambah detail sama sekali, jadi video
+   * yang benar-benar buram tetap buram dan tombolnya terasa tidak berfungsi.
+   * Sekarang tombol ini benar-benar mengganti LEVEL HLS ke resolusi
+   * tertinggi yang tersedia di stream (dibatasi 1080p untuk Premium, 720p
+   * untuk akun biasa sesuai aturan yang sudah ada di app). Filter CSS tetap
+   * dipakai sebagai penyempurnaan, bukan satu-satunya effector.
+   */
+  const toggleHd = useCallback(() => {
+    setHdBoost((v) => {
+      const next = !v;
+      const hls = hlsRef.current;
+      if (hls) {
+        if (next) {
+          const top = highestAvailable(hls);
+          // Akun non-Premium tetap tertahan di 720p sesuai aturan app.
+          const cap = (user?.premiumUntil ?? 0) > Date.now() ? 1080 : 720;
+          if (top > 0) {
+            const want = Math.min(top, cap);
+            applyLevel(hls, `${want}p`);
+            // Level terkunci: hls.js tidak boleh otomatis turun lagi.
+            hls.currentLevel = (hls.levels ?? []).findIndex(
+              (l) => levelHeight(l as never) === want,
+            );
+          }
+        } else {
+          applyLevel(hls, quality);
+        }
+      }
+      return next;
+    });
+  }, [quality, user?.premiumUntil]);
+
   const [volumeLevel, setVolumeLevel] = useState(0.5);
-  const [gesture, setGesture] = useState<null | {
-    kind: "brightness" | "volume";
-    value: number;
-  }>(null);
   const gestureRef = useRef<{
     kind: "brightness" | "volume";
     startX: number;
     startValue: number;
     moved: boolean;
   } | null>(null);
-  const gestureHideTimer = useRef<number | null>(null);
+  
 
   // Pindah episode = elemen <video> baru. AudioContext lama masih terpasang
   // ke elemen yang sudah dibuang, jadi harus dilepas; kalau tidak, suara
@@ -415,15 +452,8 @@ function WatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epParam]);
 
-  const endGesture = (wasDrag: boolean) => {
+  const endGesture = () => {
     gestureRef.current = null;
-    if (gestureHideTimer.current) window.clearTimeout(gestureHideTimer.current);
-    if (wasDrag) {
-      // HUD tetap sebentar supaya user tahu hasilnya, lalu menghilang.
-      gestureHideTimer.current = window.setTimeout(() => setGesture(null), 650);
-    } else {
-      setGesture(null);
-    }
   };
 
   /**
@@ -517,12 +547,10 @@ function WatchContent() {
     } else {
       applyVolume(next);
     }
-    setGesture({ kind: g.kind, value: next });
   };
   const endLevelDrag = (e: React.PointerEvent) => {
-    const g = gestureRef.current;
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-    endGesture(!!g?.moved);
+    endGesture();
   };
   /** Ketuk (tanpa geser) = naik satu tingkat. */
   const bumpLevel = (kind: "brightness" | "volume") => () => {
@@ -530,9 +558,6 @@ function WatchContent() {
     const next = Math.max(0, Math.min(1, Math.round((cur + 0.1) * 10) / 10));
     if (kind === "brightness") setBrightness(next);
     else applyVolume(next);
-    setGesture({ kind, value: next });
-    if (gestureHideTimer.current) window.clearTimeout(gestureHideTimer.current);
-    gestureHideTimer.current = window.setTimeout(() => setGesture(null), 900);
   };
 
   // Komentar dengan echo lokal: pesan langsung tampil sebelum server menyalinnya.
@@ -879,11 +904,21 @@ function WatchContent() {
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        backBufferLength: 30,
-        maxBufferLength: 20,
-        maxMaxBufferLength: 60,
+        backBufferLength: 60,
+        // Buffer lebih dalam = buffering lebih jarang. Nilai sebelumnya
+        // (20/60) sering kehabisan di tengah episode dan video berhenti
+        // sesaat, padahal jaringan sebenarnya masih bagus.
+        maxBufferLength: 45,
+        maxMaxBufferLength: 120,
+        maxBufferSize: 80 * 1000 * 1000,
+        // Fragmen berikutnya langsung diunduh begitu mungkin — mengurangi
+        // jeda saat seek atau saat buffer habis.
         startFragPrefetch: true,
-        abrEwmaDefaultEstimate: 2_000_000,
+        // Tebakan bandwidth yang terlalu rendah membuat hls.js turun ke
+        // level rendah lalu naik perlahan lagi (gambar buram + buffering).
+        abrEwmaDefaultEstimate: 4_000_000,
+        abrEwmaFastLive: 3.0,
+        abrEwmaSlowLive: 9.0,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
@@ -928,6 +963,8 @@ function WatchContent() {
   const isPremiumNow = (user?.premiumUntil ?? 0) > Date.now();
   useEffect(() => {
     if (!hlsRef.current) return;
+    // HD aktif = pilihan user yang menang, jangan ditimpa aturan otomatis.
+    if (hdBoost) return;
     const wanted =
       isFs && isPremiumNow
         ? PREMIUM_QUALITY
@@ -937,7 +974,7 @@ function WatchContent() {
             ? "720p"
             : quality;
     applyLevel(hlsRef.current, wanted);
-  }, [quality, isFs, isPremiumNow]);
+  }, [quality, isFs, isPremiumNow, hdBoost]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -1106,6 +1143,42 @@ function WatchContent() {
       document.removeEventListener("webkitendfullscreen", onNativeFs);
     };
   }, []);
+
+  // Room Nobar harus FULLSCREEN begitu dibuka, bukan panel di atas halaman
+  // detail anime. Permintaan Fullscreen Element hanya boleh datang dari
+  // interaksi user; perpindahan di sini terjadi lewat klik "Gabung" (bukan
+  // render async), sehingga request-nya masih di dalam jangkauan interaksi
+  // tersebut dan browser mengizinkannya.
+  const autoFsTried = useRef(false);
+  useEffect(() => {
+    if (!roomId || autoFsTried.current) return;
+    if (fullscreenElement()) {
+      autoFsTried.current = true;
+      setIsFs(true);
+      return;
+    }
+    autoFsTried.current = true;
+    const el = playerRef.current;
+    if (!el) return;
+    const req =
+      el.requestFullscreen ??
+      (el as any).webkitRequestFullscreen ??
+      (el as any).webkitEnterFullscreen;
+    if (!req) return;
+    void Promise.resolve(req.call(el))
+      .then(() => {
+        setIsFs(true);
+        try {
+          void (screen.orientation as any)?.lock?.("landscape");
+        } catch {
+          /* tidak didukung */
+        }
+      })
+      .catch(() => {
+        // Browser menolak (butuh interaksi user). Player tetap tampil di
+        // halaman penuh — user bisa menekan tombol layar penuh sendiri.
+      });
+  }, [roomId]);
 
   const toggleFullscreen = async () => {
     const el = playerRef.current;
@@ -1505,32 +1578,9 @@ function WatchContent() {
           />
         )}
 
-        {/* HUD gesture: muncul hanya saat tombolnya sedang di geser. */}
-        {gesture && (
-          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-            <div
-              className={cn(
-                "absolute flex h-36 w-12 flex-col items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/70",
-                gesture.kind === "brightness" ? "left-4" : "right-4",
-              )}
-            >
-              {gesture.kind === "brightness" ? (
-                <Sun className="size-4 text-amber-200" />
-              ) : (
-                <Volume2 className="size-4 text-emerald-200" />
-              )}
-              <div className="relative h-20 w-1 overflow-hidden rounded-full bg-white/15">
-                <div
-                  className="absolute inset-x-0 bottom-0 rounded-full bg-white transition-[height] duration-75"
-                  style={{ height: `${Math.round(gesture.value * 100)}%` }}
-                />
-              </div>
-              <span className="text-[10px] font-bold text-white">
-                {Math.round(gesture.value * 100)}%
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Tidak ada HUD gesture sama sekali: nilai kecerahan & volume sudah
+            terbaca langsung dari slider di bar kontrol, jadi overlay melayang
+            di atas video hanya menambah clutter. */}
 
         {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
         {isFs && (
@@ -1539,10 +1589,11 @@ function WatchContent() {
                 gembok adalah satu-satunya UI yang kelihatan. */}
             {!uiLocked && (
               <>
-                {/* Perapian gambar: aktifkan waktu gambar burem terasa lebih
-                    tajam. Hanya tampil di layar penuh (landscape). */}
+                {/* Perjelas gambar: naikkan level HLS ke resolusi tertinggi yang
+                    tersedia (1080p khusus Premium) + pengasahan halus.
+                    Hanya tampil di layar penuh (landscape). */}
                 <button
-                  onClick={() => setHdBoost((v) => !v)}
+                  onClick={toggleHd}
                   aria-pressed={hdBoost}
                   aria-label="Perjelas gambar"
                   className={cn(
@@ -1696,7 +1747,7 @@ function WatchContent() {
                   onPointerDown={startLevelDrag("brightness")}
                   onPointerMove={moveLevelDrag}
                   onPointerUp={endLevelDrag}
-                  onPointerCancel={() => endGesture(false)}
+                  onPointerCancel={() => endGesture()}
                 />
                 <LevelSlider
                   icon={
@@ -1711,7 +1762,7 @@ function WatchContent() {
                   onPointerDown={startLevelDrag("volume")}
                   onPointerMove={moveLevelDrag}
                   onPointerUp={endLevelDrag}
-                  onPointerCancel={() => endGesture(false)}
+                  onPointerCancel={() => endGesture()}
                 />
               </div>
             )}
@@ -1766,7 +1817,7 @@ function WatchContent() {
                     setMiniPlayer({
                       animeId,
                       animeTitle: D.title,
-                      animeImage: D.image,
+                      animeImage: D.image ?? undefined,
                       episodeNumber: currentEp?.number,
                       episodeId: epParam ?? undefined,
                       streamUrl: streamUrl,
@@ -2054,7 +2105,7 @@ function WatchContent() {
                 setMiniPlayer({
                   animeId,
                   animeTitle: D.title,
-                  animeImage: D.image,
+                  animeImage: D.image ?? undefined,
                   episodeNumber: currentEp?.number,
                   episodeId: epParam ?? undefined,
                   streamUrl,
@@ -2310,19 +2361,66 @@ function WatchContent() {
       )}
       {downloadOpen && (
         <Popup onClose={() => setDownloadOpen(false)} title="Unduh">
+          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+            Episode ini akan masuk ke daftar Download di Home dan bisa ditonton
+            offline. Kualitas 1080p hanya untuk akun Premium.
+          </p>
           <div className="flex flex-wrap gap-2">
-            {QUALITIES.slice(2).map((q) => (
-              <button
-                key={q}
-                onClick={() => {
-                  toast.success(`Download dimulai (${q})`);
-                  setDownloadOpen(false);
-                }}
-                className="rounded-lg border border-border px-4 py-2 text-sm transition hover:border-foreground/40"
-              >
-                {q}
-              </button>
-            ))}
+            {QUALITIES.slice(2).map((q) => {
+              const locked = q === PREMIUM_QUALITY && !isPremiumNow;
+              return (
+                <button
+                  key={q}
+                  disabled={locked || !streamUrl}
+                  onClick={() => {
+                    if (!currentEp) return;
+                    // Server HLS (m3u8) tidak bisa disimpan sebagai satu file
+                    // video oleh browser — yang bisa disimpan adalah MP4
+                    // langsung. Jadi antrean hanya dibuat untuk MP4; untuk HLS
+                    // user diberi tahu dengan jelas, bukan janji palsu.
+                    if (sourceType === "hls") {
+                      toast.error(
+                        "Server ini menyediakan stream HLS yang tidak bisa disimpan offline. Coba server lain.",
+                      );
+                      return;
+                    }
+                    if (sourceType === "embed") {
+                      toast.error(
+                        "Server embed tidak bisa diunduh. Pilih server HLS/MP4.",
+                      );
+                      return;
+                    }
+                    void enqueueDownload({
+                      animeId,
+                      animeTitle: D.title,
+                      animeImage: D.image ?? undefined,
+                      episode: currentEp.number,
+                      episodeId: epParam ?? undefined,
+                      quality: q,
+                      url: streamUrl,
+                    })
+                      .then(() => {
+                        toast.success(`Masuk antrean unduhan (${q})`);
+                        setDownloadOpen(false);
+                      })
+                      .catch((e: unknown) =>
+                        toast.error(
+                          e instanceof Error ? e.message : "Gagal membuat unduhan",
+                        ),
+                      );
+                  }}
+                  className={cn(
+                    "rounded-lg border px-4 py-2 text-sm transition",
+                    locked
+                      ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
+                      : "border-border hover:border-foreground/40",
+                  )}
+                >
+                  {q}
+                  {locked && <Lock className="ml-1 inline size-3" />}
+                </button>
+              );
+            })}
           </div>
         </Popup>
       )}

@@ -13,6 +13,13 @@ import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import {
+  DownloadsPanel,
+  ForYouPanel,
+  HomeTopButtons,
+  MostWatchedPanel,
+  type TopPanel,
+} from "@/components/HomeTopButtons";
+import {
   Search,
   Bell,
   ChevronLeft,
@@ -167,6 +174,7 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
+  const [topPanel, setTopPanel] = useState<TopPanel>(null);
   const [updateFirst, setUpdateFirst] = useState(true);
   // Jangkar tombol pencarian: tinggi warna ungu pada latar-global diukur dari
   // sini, lalu disimpan sebagai --yn-tint-end supaya warna berhenti tepat di
@@ -178,11 +186,15 @@ function HomeContent() {
   const today = useAction(api.anime.animeTrendingToday);
   const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
+  // Donghua berdiri sendiri: katalog AniList memisahkan format DONGHUA dari
+  // anime, jadi section-nya pun perlu terpisah (judul + label sendiri).
+  const donghua = useAction(api.anime.donghuaList);
 
   const [heroList, setHeroList] = useState<AnimeCardT[]>([]);
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
   const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
+  const [donghuaList, setDonghuaList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
@@ -196,7 +208,8 @@ function HomeContent() {
       today({}),
       forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
-    ]).then(([rHero, rTop, rToday, rForYou, rGenres]) => {
+      donghua({ page: 1 }),
+    ]).then(([rHero, rTop, rToday, rForYou, rGenres, rDonghua]) => {
       if (!alive) return;
       if (rHero.status === "fulfilled") setHeroList((rHero.value as AnimeCardT[]) ?? []);
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
@@ -204,6 +217,8 @@ function HomeContent() {
       if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
       if (rGenres.status === "fulfilled")
         setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
+      if (rDonghua.status === "fulfilled")
+        setDonghuaList((rDonghua.value as AnimeCardT[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -279,6 +294,13 @@ function HomeContent() {
 
   return (
     <div className="pb-8">
+      {/* 0) TIGA TOMBOL ATAS — Download / Paling sering / Untuk kamu.
+          Ikon saja (label ada di aria-label + title), jadi baris ini tetap
+          ramping dan tidak mengambil ruang dari konten. */}
+      <div className="fade-enter mt-4 flex justify-end">
+        <HomeTopButtons onOpen={setTopPanel} />
+      </div>
+
       {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
         onClick={() => navigate("/premium")}
@@ -437,7 +459,9 @@ function HomeContent() {
         className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
-          <span className="flex-1 text-sm text-muted-foreground">Contoh: naruto, frieren…</span>
+          <span className="flex-1 text-sm text-muted-foreground">
+            contoh: ayanokoji adalah aku
+          </span>
           <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
             Cari
           </span>
@@ -494,6 +518,45 @@ function HomeContent() {
         </>
       )}
 
+      {/* 6b) DONGHUA — bareng anime, tapi section sendiri: format DONGHUA di
+          AniList bukan anime, jadi judul & labelnya dibedakan supaya tidak
+          tercampur. Subtitle tetap bahasa Indonesia (lihat Watch.tsx:
+          track Indonesia selalu dipilih otomatis). */}
+      {donghuaList.length > 0 && (
+        <>
+          <div className="mt-6 flex items-baseline justify-between">
+            <h2 className="text-lg font-bold tracking-tight">Donghua</h2>
+            <span className="text-[11px] text-muted-foreground">
+              subtitle Indonesia
+            </span>
+          </div>
+          <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
+            {donghuaList.slice(0, 14).map((d) => (
+              <button
+                key={d.id}
+                onClick={() => openAnime(d.id, d.title)}
+                className="w-28 shrink-0 text-left"
+              >
+                <div className="relative">
+                  <AnimeCard
+                    title={d.title}
+                    image={d.image}
+                    imageOnly
+                    onClick={() => openAnime(d.id, d.title)}
+                  />
+                  <span className="absolute left-1.5 top-1.5 rounded bg-violet-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+                    Donghua
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
+                  {d.title}
+                </p>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* 6c) KATEGORI LENGKAP: Movie / OVA / Special / Upcoming / Season ini */}
       <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
       <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
@@ -534,6 +597,15 @@ function HomeContent() {
 
       {/* Screens */}
       {showLeaderboard && <LeaderboardScreen onClose={() => setShowLeaderboard(false)} />}
+      {topPanel === "downloads" && (
+        <DownloadsPanel onClose={() => setTopPanel(null)} />
+      )}
+      {topPanel === "most" && (
+        <MostWatchedPanel onClose={() => setTopPanel(null)} />
+      )}
+      {topPanel === "foryou" && (
+        <ForYouPanel onClose={() => setTopPanel(null)} />
+      )}
       {showSearch && (
         <SearchScreen
           initialGenre={searchGenre}
@@ -1019,7 +1091,7 @@ function SearchScreen({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder="Contoh: naruto, frieren…"
+            placeholder="contoh: ayanokoji adalah aku"
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {query && (

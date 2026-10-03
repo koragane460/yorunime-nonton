@@ -178,6 +178,21 @@
     max-width: 100%;
     overflow-x: clip;
   }
+  /* Scrollbar halaman disembunyikan. Sidebar abu-abu milik browser di tepi
+     kanan itu yang pernah terlihat di halaman nonton — jelek dan mirip
+     elemen yang tidak sengaja. Halaman tetap bisa di-scroll, cuma gagangnya
+     yang tidak digambar. Scrollable yang memang butuh gagang opted-in lewat
+     kelas `thin-scroll`. */
+  html {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
     cursor: pointer;

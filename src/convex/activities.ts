@@ -1,14 +1,9 @@
 // YoruNime — history, komentar anime (like/reply/populer), favorite, notifikasi.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { addXpInternal } from "./xp";
 import { requireActive } from "./moderation";
-
-function dayString() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // ------------------------------------------------------------ komentar ----
 
@@ -129,6 +124,133 @@ export const continueWatching = query({
         durationSec: r.durationSec,
         updatedAt: r.updatedAt,
       }));
+  },
+});
+
+/**
+ * "Paling sering" — anime yang paling sering ditonton user, lengkap dengan
+ * total menitnya. Dipakai layar "Paling sering" di Home.
+ *
+ * Dihitung dari SELURUH riwayat (bukan 30 baris terbaru) supaya angka
+ * "menit" benar-benar mencerminkan kebiasaan, bukan cuma episode yang kebetulan
+ * terakhir dibuka.
+ */
+export const mostWatched = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 12 }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const rows = await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_updated", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(300);
+
+    // Satu baris per anime: episode yang berbeda digabung, lalu diurutkan
+    // dari total menit DESC.
+    const byAnime = new Map<
+      string,
+      {
+        animeId: string;
+        animeTitle: string;
+        animeImage?: string;
+        minutesWatched: number;
+        episodes: number;
+        lastEpisode: number;
+        lastUpdated: number;
+      }
+    >();
+    for (const r of rows) {
+      const cur = byAnime.get(r.animeId);
+      if (cur) {
+        cur.minutesWatched += r.minutesWatched ?? 0;
+        cur.episodes += 1;
+        cur.lastEpisode = Math.max(cur.lastEpisode, r.episode);
+        cur.lastUpdated = Math.max(cur.lastUpdated, r.updatedAt);
+        if (!cur.animeImage && r.animeImage) cur.animeImage = r.animeImage;
+      } else {
+        byAnime.set(r.animeId, {
+          animeId: r.animeId,
+          animeTitle: r.animeTitle,
+          animeImage: r.animeImage,
+          minutesWatched: r.minutesWatched ?? 0,
+          episodes: 1,
+          lastEpisode: r.episode,
+          lastUpdated: r.updatedAt,
+        });
+      }
+    }
+    return [...byAnime.values()]
+      .sort((a, b) => b.minutesWatched - a.minutesWatched || b.lastUpdated - a.lastUpdated)
+      .slice(0, limit);
+  },
+});
+
+/**
+ * Selera genre user — dasar layar "Untuk kamu".
+ *
+ * Dihitung dari anime yang sering ditonton DAN yang di-favoritkan, lalu
+ * dipotong ke genre yang benar-benar sering muncul. Genre dengan sampel
+ * terlalu sedikit dibuang supaya rekonstruksi tidak berisi tebakan.
+ */
+export const genreTaste = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    const empty = { sampledCount: 0, genres: [], topAnime: [] };
+    if (userId === null) return empty;
+    const [history, favs] = await Promise.all([
+      ctx.db
+        .query("watchHistory")
+        .withIndex("userId_updated", (q) => q.eq("userId", userId))
+        .order("desc")
+        .take(120),
+      ctx.db
+        .query("animeFavorites")
+        .withIndex("userId_created", (q) => q.eq("userId", userId))
+        .order("desc")
+        .take(60),
+    ]);
+
+    // Genre disimpan di cache `genres:<animeId>` oleh aksi animeDetail
+    // (lihat anime.ts) supaya query ini tidak perlu memanggil AniList/Jikan
+    // dari dalam query — query Convex memang tidak boleh fetch keluar.
+    const cacheKey = (animeId: string) => `genres:${animeId}`;
+    const ids = [
+      ...new Set([...history.map((h) => h.animeId), ...favs.map((f) => f.animeId)]),
+    ].slice(0, 60);
+
+    const weights = new Map<string, number>();
+    const sampled = new Set<string>();
+    for (const animeId of ids) {
+      const row = await ctx.db
+        .query("animeCache")
+        .withIndex("endpoint", (q) => q.eq("endpoint", cacheKey(animeId)))
+        .first();
+      const payload = row?.payload as { genres?: string[] } | undefined;
+      const genres = Array.isArray(payload?.genres) ? payload!.genres! : [];
+      if (genres.length === 0) continue;
+      sampled.add(animeId);
+      // Anime yang sering ditonton bobotnya lebih besar daripada yang cuma
+      // masuk favorite.
+      const watched = history.find((h) => h.animeId === animeId);
+      const faved = favs.find((f) => f.animeId === animeId);
+      const w = (watched ? Math.min(3, 1 + (watched.minutesWatched ?? 0) / 120) : 0) + (faved ? 1.5 : 0);
+      if (w <= 0) continue;
+      for (const gname of genres) {
+        weights.set(gname, (weights.get(gname) ?? 0) + w);
+      }
+    }
+
+    return {
+      sampledCount: sampled.size,
+      genres: [...weights.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([name, score]) => ({ name, score })),
+      // Anime yang jadi rujukan utama user — dipakai untuk "serupa dengan ini".
+      topAnime: ids.slice(0, 8),
+    };
   },
 });
 

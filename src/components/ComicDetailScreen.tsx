@@ -5,9 +5,10 @@ import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { StatusChip, formatViews } from "@/components/ComicCard";
+import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BookOpen, ChevronLeft, Eye, Heart, List, X } from "lucide-react";
+import { BookOpen, ChevronLeft, Eye, Heart, List, Lock, X } from "lucide-react";
 
 type Chapter = {
   number: number;
@@ -16,6 +17,8 @@ type Chapter = {
   date?: string;
   dateMs?: number;
 };
+
+const LABEL_KIND = { manga: "Manga", manhwa: "Manhwa" } as const;
 
 type Detail = {
   slug: string;
@@ -68,6 +71,9 @@ export function ComicDetailScreen({
   const [asc, setAsc] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [showChapters, setShowChapters] = useState(false);
+  // Layer "Premium Only" muncul kalau user tanpa Premium mencoba membaca.
+  const [showGate, setShowGate] = useState(false);
+  const isPremium = (user?.premiumUntil ?? 0) > Date.now();
 
   useEffect(() => {
     let alive = true;
@@ -97,11 +103,28 @@ export function ComicDetailScreen({
   const views = formatViews(d?.views);
 
   const read = (ch: Chapter) => {
+    // Manga & manhwa = konten Premium. Tanpa Premium user tetap boleh
+    // melihat semua judul & chapter (dan tombol kategori tetap aktif),
+    // tapi tidak bisa membuka halamannya untuk dibaca.
+    if (!isPremium) {
+      setShowGate(true);
+      return;
+    }
     navigate(`/baca/${encodeURIComponent(d!.slug)}/${ch.number}?jenis=${d!.kind}`);
   };
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
+      {/* Layer "Premium Only" — munculDIATAS konten, tapi pointer-nya cuma
+          memblokir area konten. Area tombol kembali / tutup / ganti kategori
+          tetap di atas layer ini (z-60) sehingga tidak ikut terkunci. */}
+      {showGate && !isPremium && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowGate(false)}
+          aria-hidden
+        />
+      )}
       <div className="pb-24">
         {/* Banner — manga memakai potret memanjang, manhua banner lebar webtoon */}
         <div className="relative">
@@ -256,6 +279,7 @@ export function ComicDetailScreen({
                 >
                   <BookOpen className="size-4" />
                   Baca {d.latest ? d.latest.label : ""}
+                  {!isPremium && <Lock className="size-3.5" />}
                 </button>
                 {d.first && d.first !== d.latest && (
                   <button
@@ -272,6 +296,58 @@ export function ComicDetailScreen({
               </div>
 
               {/* Chapter — manga: baris, manhwa: grid pill */}
+              {!isPremium && (
+                <div className="relative mt-5">
+                  {/* Daftar chapter tetap terlihat (agar user tahu isi apa
+                      yang terkunci), tapi diberi pita miring Premium Only dan
+                      tidak bisa diketuk. */}
+                  <div className="pointer-events-none select-none opacity-40 blur-[1.5px]">
+                    <div className="mb-1 flex items-center justify-between">
+                      <h2 className="text-base font-bold">Chapter</h2>
+                      <span className="text-[11px] text-muted-foreground">
+                        {d.chapterCount} chapter
+                      </span>
+                    </div>
+                    <div
+                      className={cn(
+                        "max-h-56 overflow-hidden rounded-xl border border-white/10",
+                        isManga ? "divide-y divide-white/8" : "p-2",
+                      )}
+                    >
+                      {(asc ? [...d.chapters].reverse() : d.chapters)
+                        .slice(0, 8)
+                        .map((ch) => (
+                          <div
+                            key={ch.url}
+                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                          >
+                            <span
+                              className={cn(
+                                "w-9 shrink-0 rounded-md py-1 text-center text-xs font-black",
+                                isManga
+                                  ? "bg-sky-600/20 text-sky-200"
+                                  : "bg-fuchsia-600/20 text-fuchsia-200",
+                              )}
+                            >
+                              {ch.number}
+                            </span>
+                            <span className="truncate text-xs">
+                              {ch.label}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                  <PremiumOnlyGate className="bottom-0 top-auto h-full" />
+                  <button
+                    onClick={() => setShowGate(true)}
+                    aria-label={`Buka daftar chapter ${LABEL_KIND[kind]} (Premium)`}
+                    className="absolute inset-0 z-30 cursor-pointer"
+                  />
+                </div>
+              )}
+              {isPremium && (
+                <>
               <div className="mb-1 mt-5 flex items-center justify-between">
                 <h2 className="text-base font-bold">Chapter</h2>
                 <span className="text-[11px] text-muted-foreground">
@@ -341,6 +417,9 @@ export function ComicDetailScreen({
                   {showAll ? "Tampilkan lebih sedikit" : `Tampilkan semua (${chapters.length})`}
                 </button>
               )}
+              </>
+
+              )}
 
               <p className="mt-4 text-[11px] leading-5 text-muted-foreground">
                 {d.ongoing
@@ -369,6 +448,27 @@ export function ComicDetailScreen({
       >
         <List className="size-3.5" /> Daftar Chapter
       </button>
+
+      {/* Gate modal: muncul saat user tanpa Premium menekan tombol baca /
+          chapter. Isinya pita miring Premium Only + tombol menuju halaman
+          Premium, dan tetap bisa ditutup (tombol "Nanti saja"). */}
+      {showGate && !isPremium && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden p-6">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowGate(false)}
+          />
+          <div className="relative w-full max-w-md">
+            <PremiumOnlyGate />
+            <button
+              onClick={() => setShowGate(false)}
+              className="mt-4 w-full rounded-full border border-border py-2.5 text-xs font-semibold text-muted-foreground"
+            >
+              Nanti saja
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

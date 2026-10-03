@@ -693,25 +693,36 @@ export async function resolveIndo(
     }
   };
 
-  for (const q of variants) {
-    push(await animeindo(q, ep).catch(() => []));
-    if (collected.length >= 2) break;
-  }
-  for (const q of variants) {
-    push(await xtwapHls(q, ep).catch(() => []));
-    if (collected.length >= 4) break;
-  }
-  for (const q of variants) {
-    push(await samehadaku(q, ep).catch(() => []));
-    if (collected.length >= MAX) break;
-  }
-  for (const q of variants) {
-    push(await oploverz(q, ep).catch(() => []));
-    if (collected.length >= MAX) break;
-  }
-  for (const q of variants) {
-    push(await otakudesu(q, ep).catch(() => []));
-    if (collected.length >= MAX) break;
-  }
+  // Semua keluarga provider ditembakkan SEKALIGUS (paralel), lalu hasilnya
+  // digabung dengan urutan prioritas yang sama seperti sebelumnya. Sebelumnya
+  // tiap provider menunggu provider sebelumnya selesai — itu yang bikin episode
+  // dibuka lama sekali, karena total waktunya jadi jumlah semua request.
+  // Urutan (1) AnimeIndo → (2) Anime-indo/xtwap → (3) Samehadaku → (4) Oploverz
+  // → (5) Otakudesu.
+  const collectFrom = async (
+    fn: (title: string, ep: number) => Promise<IndoSource[]>,
+    stopAt: number,
+  ) => {
+    const lists: IndoSource[][] = [];
+    for (const q of variants) {
+      if (lists.length >= stopAt) break;
+      lists.push(await fn(q, ep).catch(() => []));
+    }
+    return lists;
+  };
+
+  const [animeindoLists, xtwapLists, sankaLists, oploverzLists, otakudesuLists] =
+    await Promise.all([
+      collectFrom(animeindo, 2),
+      collectFrom(xtwapHls, 2),
+      collectFrom(samehadaku, 1),
+      collectFrom(oploverz, 1),
+      collectFrom(otakudesu, 1),
+    ]);
+
+  // Gabung sesuai prioritas. Setiap keluarga hanya dipakai selama kuota
+  // server direct + embed-nya belum penuh.
+  for (const lists of [animeindoLists, xtwapLists, sankaLists, oploverzLists, otakudesuLists])
+    for (const list of lists) push(list);
   return collected;
 }

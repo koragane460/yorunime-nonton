@@ -217,7 +217,10 @@ function WelcomeFlow() {
         return;
       }
       setStage("notice");
-    }, 1800);
+      // Splash ditahan lebih lama (3,2 detik vs 1,8): halaman notice/login
+      // butuh render besar di HP lama, dan tanpa jeda cukup Splash-nya
+      // berkedip sebentar lalu langsung hilang.
+    }, 3200);
     return () => clearTimeout(t);
   }, [stage, updatePending, reopened, isAuthenticated, navigate]);
 
@@ -383,21 +386,29 @@ function WelcomeFlow() {
         <motion.img
           src="/logo-source.jpg"
           alt="YoruNime"
-          className="mb-6 size-24 rounded-3xl object-cover"
+          className="mb-8 size-28 rounded-[2rem] object-cover"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         />
         <motion.h1
-          // Serif besar dengan line-height rapat: kesan lebih tenang dan
-          // premium, bukan judul bergaya neon.
-          className="px-6 text-center font-[family-name:var(--font-display)] text-6xl leading-[0.95] tracking-[-0.02em] text-foreground"
-          initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+          // Wordmark penuh: memakai lebar layar (text-8xl → text-[22vw] di HP
+          // kecil) supaya YoruNime jadi elemen dominan layar, bukan sekadar
+          // judul di atas logo.
+          className="w-full px-4 text-center font-[family-name:var(--font-display)] text-[clamp(3.5rem,18vw,9rem)] font-black leading-[0.85] tracking-[-0.045em] text-foreground"
+          initial={{ opacity: 0, y: 10, filter: "blur(14px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
         >
           YoruNime
         </motion.h1>
+        <motion.div
+          aria-hidden
+          className="mt-5 h-px w-40 bg-gradient-to-r from-transparent via-primary to-transparent"
+          initial={{ opacity: 0, scaleX: 0.2 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ delay: 0.5, duration: 0.7 }}
+        />
         <motion.p
           className="mt-2 text-xs text-muted-foreground"
           initial={{ opacity: 0 }}
