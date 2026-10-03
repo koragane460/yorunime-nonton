@@ -395,7 +395,7 @@ function WelcomeFlow() {
           // Wordmark penuh: memakai lebar layar (text-8xl → text-[22vw] di HP
           // kecil) supaya YoruNime jadi elemen dominan layar, bukan sekadar
           // judul di atas logo.
-          className="w-full px-4 text-center font-[family-name:var(--font-display)] text-[clamp(3.5rem,18vw,9rem)] font-black leading-[0.85] tracking-[-0.045em] text-foreground"
+          className="w-full px-4 text-center font-[family-name:var(--font-display)] text-[clamp(2.25rem,10vw,4.5rem)] font-black leading-[0.9] tracking-[-0.03em] text-foreground"
           initial={{ opacity: 0, y: 10, filter: "blur(14px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.9, ease: "easeOut" }}
@@ -539,12 +539,10 @@ function WelcomeFlow() {
                 </ol>
                 <div className="mt-auto pt-8">
                   <ScrollHint dir="up" />
-                  <button
-                    onClick={() => setStage("rules")}
-                    className="yn-shape-cut-2 mt-3 w-full bg-primary py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110"
-                  >
-                    Lanjut
-                  </button>
+                  {/* Tombol "Lanjut" dihapus di layar pertama: setelah membaca slide
+                      lalu gulir ke bawah sudah cukup. Scroll tetap
+                      memindahkan tahap berikutnya (lihat onScroll pada
+                      wrapper di atas), jadi tidak ada jalan buntu. */}
                   {/* Ruang kosong di bawah supaya slide selalu bisa di-scroll
                       walau isinya lebih pendek dari layar. */}
                   <div className="h-32 shrink-0" aria-hidden />

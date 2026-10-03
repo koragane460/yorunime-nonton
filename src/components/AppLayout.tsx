@@ -26,6 +26,13 @@ import { cn } from "@/lib/utils";
 import { displayId, usernameColor } from "@/lib/lstream";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 import { NotifButton } from "@/components/NotifButton";
+import {
+  DownloadsPanel,
+  ForYouPanel,
+  HomeTopButtons,
+  MostWatchedPanel,
+  type TopPanel,
+} from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
@@ -41,6 +48,19 @@ export function AppLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const ensure = useMutation(api.account.ensureUser);
+  // Download / Paling sering / Untuk kamu — panel layar penuh yang dibuka
+  // dari tombol di kartu akun (bukan dari Home).
+  const [topPanel, setTopPanel] = useState<TopPanel>(null);
+
+  // Panel layar penuh menutup dengan tombol back / ketukan tepi.
+  useEffect(() => {
+    if (!topPanel) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTopPanel(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [topPanel]);
 
   useEffect(() => {
     if (user) void ensure();
@@ -84,6 +104,7 @@ export function AppLayout({
               Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
             )}
             diamonds={user.diamonds ?? 0}
+            onOpenTopPanel={setTopPanel}
           />
         </div>
       )}
@@ -98,6 +119,15 @@ export function AppLayout({
       <BottomNav />
       <AppFooter />
       <MiniPlayerHost />
+
+      {/* Layar penuh untuk tiga tombol aksi di kartu akun. */}
+      {topPanel === "downloads" && (
+        <DownloadsPanel onClose={() => setTopPanel(null)} />
+      )}
+      {topPanel === "most" && (
+        <MostWatchedPanel onClose={() => setTopPanel(null)} />
+      )}
+      {topPanel === "foryou" && <ForYouPanel onClose={() => setTopPanel(null)} />}
       <OverlayScrollLock />
       <AnnouncementPopup />
     </div>
@@ -122,8 +152,10 @@ function AccountPanel({
   premium,
   premiumDays,
   diamonds,
+  onOpenTopPanel,
 }: {
   onOpen: () => void;
+  onOpenTopPanel: (p: Exclude<TopPanel, null>) => void;
   name: string;
   seqId?: number;
   id: string;
@@ -156,6 +188,13 @@ function AccountPanel({
           <Settings className="size-4" />
         </button>
         <NotifButton />
+      </div>
+
+      {/* Tiga tombol aksi (Download / Paling sering / Untuk kamu).
+          Diletakkan DI BAWAH baris Pengaturan + Notifikasi, di pojok
+          kanan, supaya tidak berebut ruang dengan dua tombol itu. */}
+      <div className="absolute right-2.5 top-14 z-10">
+        <HomeTopButtons onOpen={onOpenTopPanel} />
       </div>
       <button onClick={onOpen} className="block w-full text-left"
         style={

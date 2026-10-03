@@ -241,6 +241,9 @@ export const getPublicProfile = query({
       hideOnline: u.hideOnline,
       clanTag: clan?.tag,
       clanTagIcon: clan?.tagIcon,
+      // Level clan menentukan warna nama clan di tag (lihat clanTextClass
+      // di lstream-ui.tsx): biru muda / hijau muda / ungu / emas.
+      clanLevel: clan?.level ?? 0,
       clanNameColor: u.clanNameColor,
       watchCount: history.length,
       commentCount: comments.length,

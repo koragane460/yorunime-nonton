@@ -357,28 +357,46 @@ export function ClanLevelBar({
   );
 }
 
-/** Tag clan: background galaxy silau sesuai warna clan. */
+/** Tag clan: background galaxy silau sesuai warna clan. *//**
+ * Warna nama clan berdasarkan level clannya:
+ *   1–24   biru muda
+ *   25–99  hijau muda
+ *   100–149 ungu
+ *   150–200 emas
+ *
+ * Semua warna terang sudah dipilih kontras terhadap latar gelap tag, jadi
+ * tetap terbaca di atas banner apa pun.
+ */
+function clanTextClass(level?: number) {
+  const n = Number(level ?? 0);
+  if (n >= 150) return "clan-tier-gold";
+  if (n >= 100) return "clan-tier-purple";
+  if (n >= 25) return "clan-tier-green";
+  return "clan-tier-blue";
+}
+
 export function ClanTag({
   icon,
   tag,
   color,
+  level,
   className,
 }: {
   icon: string;
   tag: string;
   color?: string;
+  /** Level clan — menentukan warna & animasi silau nama clan. */
+  level?: number;
   className?: string;
 }) {
   const { Icon, tone } = resolveClanIcon(icon);
-  // `color` sengaja tidak dipakai: nama clan SELALU putih polos supaya
-  // mudah dibaca di atas banner apa pun dan tidak ikut berubah warna.
   void color;
   return (
     <span
       className={cn(
         // Bentuk tag clan: persegi dengan dua sudut terpotong (sama seperti
         // preview saat bikin clan) + latar galaxy yang terus berkilau.
-        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-bold tracking-wide text-white",
+        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-bold tracking-wide",
         className,
       )}
     >
@@ -389,7 +407,9 @@ export function ClanTag({
       >
         <Icon className="size-3.5" />
       </span>
-      <span className="yn-outline relative z-[2]">
+      {/* Nama clan: warna per level + silau yang bergerak seperti title
+          staff. Garis samping geraknya dibuat lewat pseudo-element di CSS. */}
+      <span className={cn("clan-shine relative z-[2]", clanTextClass(level))}>
         [{tag}]
       </span>
     </span>

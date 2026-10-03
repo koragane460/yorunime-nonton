@@ -39,48 +39,87 @@ import { toast } from "sonner";
 
 export type TopPanel = "downloads" | "most" | "foryou" | null;
 
-export function HomeTopButtons({ onOpen }: { onOpen: (p: Exclude<TopPanel, null>) => void }) {
+/**
+ * Tiga tombol aksi yang menempel di pojok kanan kartu akun, sebelah
+ * Pengaturan dan Notifikasi (lihat AccountPanel di AppLayout).
+ *
+ * Bentuknya pill-teks, bukan lingkaran ikon: ikon saja terlalu ambigu dan
+ * sering tidak terlihat kalau menyatu dengan dua tombol lain yang sudah ada
+ * di sana. Label pendek + ikon selalu tampil.
+ */
+export function HomeTopButtons({
+  onOpen,
+}: {
+  onOpen: (p: Exclude<TopPanel, null>) => void;
+}) {
   const stats = useQuery(api.downloads.downloadStats, "skip");
+  const watched = useQuery(api.activities.mostWatched, "skip");
+  // "Paling sering" baru bermakna kalau sudah ada cukup riwayat. Kalau belum,
+  // panelnya akan kosong dan hanya menampilkan pesan "belum ada riwayat".
+  const enough = (watched ?? []).length >= MOST_MIN_TITLES;
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1">
       <TopIconButton
         label="Download"
-        badge={stats && stats.done > 0 ? stats.done : undefined}
         onClick={() => onOpen("downloads")}
+        badge={stats && stats.done > 0 ? stats.done : undefined}
       >
-        <Download className="size-5" />
+        <Download className="size-3.5" />
       </TopIconButton>
-      <TopIconButton label="Paling sering" onClick={() => onOpen("most")}>
-        <Flame className="size-5" />
+      <TopIconButton
+        label="Paling sering"
+        onClick={() => onOpen("most")}
+        dim={!enough}
+        title={enough ? "Paling sering" : `Paling sering (butuh ${MOST_MIN_TITLES} judul ditonton)`}
+      >
+        <Flame className="size-3.5" />
       </TopIconButton>
       <TopIconButton label="Untuk kamu" onClick={() => onOpen("foryou")}>
-        <Sparkles className="size-5" />
+        <Sparkles className="size-3.5" />
       </TopIconButton>
     </div>
   );
 }
 
+/**
+ * Minimal judul berbeda yang harus sudah ditonton sebelum "Paling sering"
+ * ditampilkan. Tanpa ambang ini, buka dengan riwayat kosong hanya berisi
+ * layar kosong — lebih baik belum muncul sama sekali.
+ */
+export const MOST_MIN_TITLES = 20;
+
 function TopIconButton({
   label,
+  title,
   onClick,
   badge,
+  dim,
   children,
 }: {
   label: string;
+  title?: string;
   onClick: () => void;
   badge?: number;
+  dim?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      title={label}
-      aria-label={label}
-      className="relative flex size-10 items-center justify-center rounded-full border border-border bg-card/80 text-foreground transition hover:border-primary/60 hover:text-primary active:scale-95"
+      title={title ?? label}
+      aria-label={title ?? label}
+      className={cn(
+        "relative inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap backdrop-blur-sm transition active:scale-95",
+        dim
+          ? "border-white/12 bg-black/35 text-white/55"
+          : "border-white/18 bg-black/55 text-white hover:border-primary/70 hover:bg-black/70 hover:text-primary",
+      )}
     >
       {children}
+      <span className="leading-none">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
+        <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -571,6 +610,9 @@ export function MostWatchedPanel({ onClose }: { onClose: () => void }) {
   const topGenre = taste?.genres?.[0]?.name;
   const totalMinutes = items.reduce((a, b) => a + (b.minutesWatched ?? 0), 0);
   const maxMinutes = Math.max(1, ...items.map((i) => i.minutesWatched ?? 0));
+  // Belum cukup riwayat → layar ini tidak muncul sama sekali (tombolnya
+  // juga sudah diredupkan di HomeTopButtons).
+  if (items.length < MOST_MIN_TITLES) return null;
 
   const go = (r: MostRow) =>
     navigate(

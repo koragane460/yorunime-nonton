@@ -12,13 +12,8 @@ import { ProfileSheet } from "@/components/ProfileSheet";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
-import {
-  DownloadsPanel,
-  ForYouPanel,
-  HomeTopButtons,
-  MostWatchedPanel,
-  type TopPanel,
-} from "@/components/HomeTopButtons";
+import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind } from "@/components/CatalogRows";
+
 import {
   Search,
   Bell,
@@ -50,6 +45,8 @@ type AnimeCardT = {
   score?: number;
   status?: string;
   synopsis?: string;
+  /** Format dari AniList ("TV", "MOVIE", "DONGHUA", …). */
+  type?: string;
 };
 
 /** Cegah error satu useQuery membunuh seluruh halaman. */
@@ -108,6 +105,42 @@ function GridSkeleton({ count = 10 }: { count?: number }) {
 }
 
 /** Baris katalog lengkap (50 item/halaman) + tombol "muat lebih banyak". */
+/**
+ * Judul section + "Lihat selengkapnya" di kanan (tanpa background).
+ * Teksnya hanya muncul kalau memang ada sisa item, supaya tidak menawarkan
+ * sesuatu yang tidak ada.
+ */
+function SectionRow({
+  title,
+  count,
+  shown = 12,
+  onMore,
+  children,
+}: {
+  title: string;
+  count: number;
+  shown?: number;
+  onMore: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        {count > shown && (
+          <button
+            onClick={onMore}
+            className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Lihat selengkapnya
+          </button>
+        )}
+      </div>
+      {children}
+    </>
+  );
+}
+
 function BrowseRow({
   kind,
   title,
@@ -174,7 +207,12 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
-  const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
+  const [catalog, setCatalog] = useState<{
+    kind: CatalogKind;
+    title: string;
+    items: CatalogCard[];
+  } | null>(null);
   const [updateFirst, setUpdateFirst] = useState(true);
   // Jangkar tombol pencarian: tinggi warna ungu pada latar-global diukur dari
   // sini, lalu disimpan sebagai --yn-tint-end supaya warna berhenti tepat di
@@ -186,15 +224,11 @@ function HomeContent() {
   const today = useAction(api.anime.animeTrendingToday);
   const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
-  // Donghua berdiri sendiri: katalog AniList memisahkan format DONGHUA dari
-  // anime, jadi section-nya pun perlu terpisah (judul + label sendiri).
-  const donghua = useAction(api.anime.donghuaList);
 
   const [heroList, setHeroList] = useState<AnimeCardT[]>([]);
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
   const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
-  const [donghuaList, setDonghuaList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
@@ -208,8 +242,7 @@ function HomeContent() {
       today({}),
       forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
-      donghua({ page: 1 }),
-    ]).then(([rHero, rTop, rToday, rForYou, rGenres, rDonghua]) => {
+    ]).then(([rHero, rTop, rToday, rForYou, rGenres]) => {
       if (!alive) return;
       if (rHero.status === "fulfilled") setHeroList((rHero.value as AnimeCardT[]) ?? []);
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
@@ -217,8 +250,6 @@ function HomeContent() {
       if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
       if (rGenres.status === "fulfilled")
         setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
-      if (rDonghua.status === "fulfilled")
-        setDonghuaList((rDonghua.value as AnimeCardT[]) ?? []);
       setLoading(false);
     });
     return () => {
@@ -231,10 +262,14 @@ function HomeContent() {
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
+  const donghuaNews = useAction(api.anime.donghuaAiringSchedule);
   const [todayAiring, setTodayAiring] = useState<
     { id: string; title: string; image: string; episode: number; timeLabel: string }[]
   >([]);
   const [newsLoading, setNewsLoading] = useState(true);
+  const [donghuaAiring, setDonghuaAiring] = useState<
+    { id: string; title: string; image: string; episode: number; airingAt: number }[]
+  >([]);
   useEffect(() => {
     let alive = true;
     setNewsLoading(true);
@@ -253,6 +288,54 @@ function HomeContent() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Donghua ikut masuk "Update News": daftar digabung dengan anime, dengan
+  // label kecil supaya user tahu mana animasi China.
+  useEffect(() => {
+    let alive = true;
+    donghuaNews({})
+      .then((r: unknown) => {
+        if (!alive) return;
+        const list = (r ?? []) as {
+          id: string;
+          title: string;
+          image: string;
+          nextAiringEpisode?: { episode?: number; airingAt?: number };
+        }[];
+        setDonghuaAiring(
+          list
+            .filter((d) => d?.nextAiringEpisode?.airingAt)
+            .map((d) => ({
+              id: String(d.id),
+              title: String(d.title ?? ""),
+              image: String(d.image ?? ""),
+              episode: Number(d.nextAiringEpisode?.episode ?? 0) || 0,
+              airingAt: Number(d.nextAiringEpisode?.airingAt ?? 0),
+            })),
+        );
+      })
+      .catch(() => {
+        if (alive) setDonghuaAiring([]);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Satu daftar untuk Update News: anime dulu, lalu donghua.
+  const updateNews = useMemo(
+    () => [
+      ...todayAiring.map((a) => ({ ...a, isDonghua: false as const })),
+      ...donghuaAiring.map((d) => ({
+        ...d,
+        timeLabel: new Date(d.airingAt).toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        isDonghua: true as const,
+      })),
+    ],
+    [todayAiring, donghuaAiring],
+  );
   const favQuery = useQuery(api.activities.myFavorites, user ? {} : "skip");
 
   // Auto-rotate hero
@@ -294,13 +377,6 @@ function HomeContent() {
 
   return (
     <div className="pb-8">
-      {/* 0) TIGA TOMBOL ATAS — Download / Paling sering / Untuk kamu.
-          Ikon saja (label ada di aria-label + title), jadi baris ini tetap
-          ramping dan tidak mengambil ruang dari konten. */}
-      <div className="fade-enter mt-4 flex justify-end">
-        <HomeTopButtons onOpen={setTopPanel} />
-      </div>
-
       {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
         onClick={() => navigate("/premium")}
@@ -450,7 +526,7 @@ function HomeContent() {
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
       <div ref={searchAnchor}>
-        <SectionTitle>Cari Anime</SectionTitle>
+        <SectionTitle>Cari anime &amp; donghua</SectionTitle>
         <button
           onClick={() => {
             setSearchGenre(null);
@@ -472,7 +548,7 @@ function HomeContent() {
       {updateFirst && (
         <>
           <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight">Anime Update News</h2>
+            <h2 className="text-lg font-bold tracking-tight">Update News</h2>
             <span className="text-[11px] text-muted-foreground">rilis hari ini</span>
           </div>
           {newsLoading ? (
@@ -481,15 +557,15 @@ function HomeContent() {
                 <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
               ))}
             </div>
-          ) : todayAiring.length === 0 ? (
+          ) : updateNews.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Tidak ada episode baru hari ini.
             </p>
           ) : (
             <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
-              {todayAiring.map((a) => (
+              {updateNews.map((a) => (
                 <button
-                  key={`${a.id}-${a.episode}`}
+                  key={`${a.isDonghua ? "dh" : "an"}-${a.id}-${a.episode}`}
                   onClick={() => openAnime(a.id, a.title)}
                   className="w-28 shrink-0 text-left"
                 >
@@ -500,9 +576,21 @@ function HomeContent() {
                       imageOnly
                       onClick={() => openAnime(a.id, a.title)}
                     />
-                    <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold text-primary-foreground">
+                    <span
+                      className={cn(
+                        "absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold",
+                        a.isDonghua
+                          ? "bg-violet-600 text-white"
+                          : "bg-primary text-primary-foreground",
+                      )}
+                    >
                       Ep {a.episode}
                     </span>
+                    {a.isDonghua && (
+                      <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
+                        Donghua
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                     {a.title}
@@ -518,61 +606,96 @@ function HomeContent() {
         </>
       )}
 
-      {/* 6b) DONGHUA — bareng anime, tapi section sendiri: format DONGHUA di
-          AniList bukan anime, jadi judul & labelnya dibedakan supaya tidak
-          tercampur. Subtitle tetap bahasa Indonesia (lihat Watch.tsx:
-          track Indonesia selalu dipilih otomatis). */}
-      {donghuaList.length > 0 && (
-        <>
-          <div className="mt-6 flex items-baseline justify-between">
-            <h2 className="text-lg font-bold tracking-tight">Donghua</h2>
-            <span className="text-[11px] text-muted-foreground">
-              subtitle Indonesia
-            </span>
-          </div>
-          <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
-            {donghuaList.slice(0, 14).map((d) => (
-              <button
-                key={d.id}
-                onClick={() => openAnime(d.id, d.title)}
-                className="w-28 shrink-0 text-left"
-              >
-                <div className="relative">
-                  <AnimeCard
-                    title={d.title}
-                    image={d.image}
-                    imageOnly
-                    onClick={() => openAnime(d.id, d.title)}
-                  />
-                  <span className="absolute left-1.5 top-1.5 rounded bg-violet-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
-                    Donghua
-                  </span>
-                </div>
-                <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
-                  {d.title}
-                </p>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
       {/* 6c) KATEGORI LENGKAP: Movie / OVA / Special / Upcoming / Season ini */}
       <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
       <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
       <BrowseRow kind="ova" title="OVA &amp; ONA" onPick={openAnime} />
-      <BrowseRow kind="special" title="Special" onPick={openAnime} />
+      {/* Slot "Special" diganti Donghua: dua baris geser ke kanan (10 atas +
+          10 bawah) + "Lihat selengkapnya" yang membuka layar penuh. */}
+      <CardCarousel
+        kind="donghua"
+        title="Donghua"
+        subtitle="subtitle Indonesia"
+        onPick={openAnime}
+      />
       <BrowseRow kind="upcoming" title="Segera Rilis (Upcoming)" onPick={openAnime} />
 
-      {/* 7) ANIME-ANIME */}
-      <SectionTitle>Top Anime</SectionTitle>
-      {loading ? <GridSkeleton /> : <AnimeGrid items={topList.slice(0, 10)} onPick={openAnime} ranked newIds={new Set()} />}
+      {/* 7) ANIME-ANIME — tiap baris dibatasi 12 kartu; sisanya ada di
+          "Lihat selengkapnya" yang membuka layar penuh berisi daftar
+          lengkap + kolom pencarian + tombol kembali. */}
+      <SectionRow
+        title="Top Anime"
+        count={topList.length}
+        onMore={() =>
+          setCatalog({
+            kind: "popular",
+            title: "Top Anime",
+            items: topList as unknown as CatalogCard[],
+          })
+        }
+      >
+        {loading ? (
+          <GridSkeleton count={12} />
+        ) : (
+          <AnimeGrid
+            items={topList.slice(0, 12)}
+            onPick={openAnime}
+            ranked
+            newIds={new Set()}
+          />
+        )}
+      </SectionRow>
 
-      <SectionTitle>Top Anime Hari Ini</SectionTitle>
-      {loading ? <GridSkeleton /> : <AnimeGrid items={todayList.slice(0, 10)} onPick={openAnime} ranked newIds={new Set()} />}
+      <SectionRow
+        title="Top Anime Hari Ini"
+        count={todayList.length}
+        onMore={() =>
+          setCatalog({
+            kind: "popular",
+            title: "Top Anime Hari Ini",
+            items: todayList as unknown as CatalogCard[],
+          })
+        }
+      >
+        {loading ? (
+          <GridSkeleton count={12} />
+        ) : (
+          <AnimeGrid
+            items={todayList.slice(0, 12)}
+            onPick={openAnime}
+            ranked
+            newIds={new Set()}
+          />
+        )}
+      </SectionRow>
 
-      <SectionTitle>Untuk Kamu</SectionTitle>
-      {loading ? <GridSkeleton count={12} /> : <AnimeGrid items={foryouList.slice(0, 12)} onPick={openAnime} newIds={new Set()} />}
+      <SectionRow
+        title="Untuk Kamu"
+        count={foryouList.length}
+        onMore={() =>
+          setCatalog({
+            kind: "popular",
+            title: "Untuk Kamu",
+            items: foryouList as unknown as CatalogCard[],
+          })
+        }
+      >
+        {loading ? (
+          <GridSkeleton count={12} />
+        ) : (
+          <AnimeGrid items={foryouList.slice(0, 12)} onPick={openAnime} newIds={new Set()} />
+        )}
+      </SectionRow>
+
+      {catalog && (
+        <CatalogScreen
+          kind={catalog.kind}
+          title={catalog.title}
+          items={catalog.items}
+          onClose={() => setCatalog(null)}
+          onPick={openAnime}
+        />
+      )}
 
       {favQuery && favQuery.length > 0 && (
         <>
@@ -597,15 +720,6 @@ function HomeContent() {
 
       {/* Screens */}
       {showLeaderboard && <LeaderboardScreen onClose={() => setShowLeaderboard(false)} />}
-      {topPanel === "downloads" && (
-        <DownloadsPanel onClose={() => setTopPanel(null)} />
-      )}
-      {topPanel === "most" && (
-        <MostWatchedPanel onClose={() => setTopPanel(null)} />
-      )}
-      {topPanel === "foryou" && (
-        <ForYouPanel onClose={() => setTopPanel(null)} />
-      )}
       {showSearch && (
         <SearchScreen
           initialGenre={searchGenre}
@@ -989,6 +1103,7 @@ function SearchScreen({
 }) {
   useHideNavOnMount();
   const searchAnime = useAction(api.anime.animeSearch);
+  const searchDonghua = useAction(api.anime.donghuaSearch);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadAll = useAction(api.anime.animeTop);
   const [query, setQuery] = useState("");
@@ -1058,8 +1173,24 @@ function SearchScreen({
     }
     setSearching(true);
     try {
-      const r = (await searchAnime({ q: query, adult })) as AnimeCardT[];
-      setResults(r ?? []);
+      // Pencarian mencakup anime DAN donghua: dua katalog AniList diambil
+      // bersamaan lalu digabung, donghua tidak diprioritaskan tapi tetap
+      // ikut tampil kalau ada yang cocok.
+      const animeP: Promise<AnimeCardT[]> = searchAnime({ q: query, adult })
+        .then((r: unknown) => (r ?? []) as AnimeCardT[])
+        .catch(() => [] as AnimeCardT[]);
+      const donghuaP: Promise<AnimeCardT[]> = searchDonghua({ q: query })
+        .then((r: unknown) => (r ?? []) as AnimeCardT[])
+        .catch(() => [] as AnimeCardT[]);
+      const [animeRes, donghuaRes] = await Promise.all([animeP, donghuaP]);
+      const seen = new Set<string>();
+      const merged: AnimeCardT[] = [];
+      for (const c of [...(animeRes ?? []), ...(donghuaRes ?? [])]) {
+        if (!c?.id || seen.has(c.id)) continue;
+        seen.add(c.id);
+        merged.push({ ...c, type: c.type });
+      }
+      setResults(merged);
     } catch {
       setResults([]);
     }
@@ -1385,7 +1516,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{f.username}</p>
                           <button
-                            className="text-xs text-primary underline"
+                            className="text-xs font-semibold text-primary"
                             onClick={() =>
                               setDmPeer({ id: f.userId as Id<"users">, name: f.username })
                             }

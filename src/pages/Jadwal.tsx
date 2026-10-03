@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { BookOpen, ChevronDown, ChevronUp, Clock, PanelsTopLeft, Tv } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Clock, PanelsTopLeft, Sparkles, Tv } from "lucide-react";
 
 const DAYS_ID = [
   "Minggu",
@@ -42,7 +42,7 @@ type ComicSlot = {
   time: string;
 };
 
-type Tab = "anime" | "manga" | "manhwa";
+type Tab = "anime" | "manga" | "manhwa" | "donghua";
 
 export default function Jadwal() {
   return (
@@ -57,10 +57,12 @@ function JadwalContent() {
   const { user } = useAuth();
   const schedule = useAction(api.anime.animeAiringSchedule);
   const comicSchedule = useAction(api.manga.schedule);
+  const donghuaSchedule = useAction(api.anime.donghuaAiringSchedule);
   const [tab, setTab] = useState<Tab>("anime");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sched, setSched] = useState<Record<string, AiringItem[]>>({});
   const [comics, setComics] = useState<Record<string, Record<string, ComicSlot[]>>>({});
+  const [donghuaSched, setDonghuaSched] = useState<Record<string, AiringItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [comicLoading, setComicLoading] = useState(false);
   const todayIdx = new Date().getDay();
@@ -79,7 +81,7 @@ function JadwalContent() {
     if (tab === "anime" || comics[tab]) return;
     let alive = true;
     setComicLoading(true);
-    comicSchedule({ kind: tab })
+    comicSchedule({ kind: tab as "manga" | "manhwa" })
       .then((r: any) => {
         if (!alive) return;
         const list = (r ?? []) as Omit<ComicSlot, "day" | "time">[];
@@ -110,6 +112,33 @@ function JadwalContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  // Donghua dimuat saat tabnya dibuka, lalu disusun per hari seperti anime.
+  useEffect(() => {
+    if (tab !== "donghua") return;
+    let alive = true;
+    setComicLoading(true);
+    donghuaSchedule({})
+      .then((r: unknown) => {
+        if (!alive) return;
+        const list = (r ?? []) as AiringItem[];
+        const byDay: Record<string, AiringItem[]> = {};
+        for (const a of list) {
+          const d = new Date(a.airingAt);
+          const key = DAYS_ID[d.getDay()];
+          (byDay[key] ??= []).push(a);
+        }
+        for (const k of Object.keys(byDay))
+          byDay[k].sort((x, y) => x.airingAt - y.airingAt);
+        setDonghuaSched(byDay);
+      })
+      .catch(() => {})
+      .finally(() => alive && setComicLoading(false));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
   // Hitung mundur tiap 30 detik.
   const [, force] = useState(0);
   useEffect(() => {
@@ -121,6 +150,10 @@ function JadwalContent() {
     () => Object.values(sched).reduce((s, v) => s + v.length, 0),
     [sched],
   );
+  const donghuaTotal = Object.values(donghuaSched).reduce(
+    (s, v) => s + (v?.length ?? 0),
+    0,
+  );
   const comicCounts: Record<string, number> = {};
   for (const t of ["manga", "manhwa"] as const) {
     comicCounts[t] = Object.values(comics[t] ?? {}).reduce((s, v) => s + (v?.length ?? 0), 0);
@@ -130,11 +163,17 @@ function JadwalContent() {
     { key: "anime", label: "Anime", icon: Tv, count: animeTotal },
     { key: "manga", label: "Manga", icon: BookOpen, count: comicCounts.manga },
     { key: "manhwa", label: "Manhwa", icon: PanelsTopLeft, count: comicCounts.manhwa },
+    // Donghua di sebelah kanan Manhwa, jadi total 4 pilihan jadwal.
+    { key: "donghua", label: "Donghua", icon: Sparkles, count: donghuaTotal },
   ];
   const active = tabs.find((t) => t.key === tab) ?? tabs[0];
   const ActiveIcon = active.icon;
   const list =
-    tab === "anime" ? (sched[DAYS_ID[day]] ?? []) : (comics[tab]?.[DAYS_ID[day]] ?? []);
+    tab === "anime"
+      ? (sched[DAYS_ID[day]] ?? [])
+      : tab === "donghua"
+        ? (donghuaSched[DAYS_ID[day]] ?? [])
+        : (comics[tab]?.[DAYS_ID[day]] ?? []);
   const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
 
   return (
@@ -156,7 +195,9 @@ function JadwalContent() {
               ? "border-amber-300/60 bg-amber-300/10"
               : tab === "manga"
                 ? "border-sky-500/60 bg-sky-500/10"
-                : "border-fuchsia-500/60 bg-fuchsia-500/10",
+                : tab === "manhwa"
+                  ? "border-fuchsia-500/60 bg-fuchsia-500/10"
+                  : "border-violet-500/60 bg-violet-500/10",
           )}
         >
           <ActiveIcon className="size-4" />
@@ -165,7 +206,7 @@ function JadwalContent() {
           {pickerOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
         </button>
         {pickerOpen && (
-          <div className="pop-enter mt-1.5 grid grid-cols-3 gap-1.5">
+          <div className="pop-enter mt-1.5 grid grid-cols-4 gap-1.5">
             {tabs.map((t) => {
               const Icon = t.icon;
               return (
@@ -176,13 +217,15 @@ function JadwalContent() {
                     setPickerOpen(false);
                   }}
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-xs font-semibold transition",
+                    // Empat tombol dalam satu baris → padding & font
+                    // dikecilkan supaya tidak memenuhi layar.
+                    "flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[11px] font-semibold transition",
                     tab === t.key
                       ? "border-foreground/40 bg-primary/15 text-primary"
                       : "border-border text-muted-foreground hover:border-foreground/40",
                   )}
                 >
-                  <Icon className="size-4" />
+                  <Icon className="size-3.5" />
                   {t.label}
                 </button>
               );
@@ -194,7 +237,11 @@ function JadwalContent() {
       <div className="thin-scroll mb-3 flex gap-1.5 overflow-x-auto pb-1">
         {DAYS_ID.map((d, i) => {
           const count =
-            tab === "anime" ? (sched[d] ?? []).length : (comics[tab]?.[d] ?? []).length;
+            tab === "anime"
+              ? (sched[d] ?? []).length
+              : tab === "donghua"
+                ? (donghuaSched[d] ?? []).length
+                : (comics[tab]?.[d] ?? []).length;
           return (
             <button
               key={d}
@@ -213,16 +260,17 @@ function JadwalContent() {
         })}
       </div>
 
-      {tab === "anime" ? (
+      {tab === "anime" || tab === "donghua" ? (
         loading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Memuat jadwal…</p>
-        ) : animeTotal === 0 ? (
+        ) : (tab === "anime" ? animeTotal : donghuaTotal) === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             Belum ada jadwal rilis yang tersedia
           </p>
         ) : list.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            Tidak ada anime yang tayang hari {DAYS_ID[day]}
+            Tidak ada {tab === "donghua" ? "donghua" : "anime"} yang tayang hari{" "}
+            {DAYS_ID[day]}
           </p>
         ) : (
           <div className="space-y-2">

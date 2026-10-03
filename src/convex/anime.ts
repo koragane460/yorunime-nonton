@@ -743,9 +743,89 @@ export const donghuaList = action({
     sort: v.optional(v.union(v.literal("POPULARITY_DESC"), v.literal("START_DATE_DESC"))),
   },
   handler: async (runCtx, { page = 1, sort = "POPULARITY_DESC" }) => {
+    // PENTING: jangan pernah fallback ke daftar anime di sini. `aniList`
+    // jatuh ke sumber lain (Otakudesu) kalau AniList kosong, dan sumber itu
+    // hanya punya anime — hasilnya deretan judul anime berlabel "Donghua".
+    // Kalau memang tidak ada donghua, lebih baik kosong daripada salah label.
     const r = await aniList("donghua", LIST_TTL, runCtx, "format:DONGHUA", page, 24, sort);
-    if (r && r.length > 0) return r;
-    return fbList(FALLBACK_TOP, LIMIT);
+    if (!r || r.length === 0) return [];
+    // Second guard: buang apa pun yang jelas bukan donghua (label anime dari
+    // sumber cadangan), hanya menyisakan yang benar-benar berformat donghua.
+    return r.filter((c) => !/^(TV|Movie|OVA|ONA|Special)$/i.test(String(c.type ?? "")));
+  },
+});
+
+/**
+ * Jadwal rilis DONGHUA untuk tab Jadwal.
+ *
+ *-structure sama dengan `animeAiringSchedule` (AniList memberi
+ * `nextAiringEpisode.airingAt`), tapi disaring `format:DONGHUA` supaya anime
+ * tidak ikut masuk. Kalau AniList tidak punya jadwal donghua, hasilnya kosong
+ * — bukan diisi anime.
+ */
+export const donghuaAiringSchedule = action({
+  args: {},
+  handler: async (runCtx) =>
+    cached(
+      runCtx,
+      "donghua:today-airing",
+      30 * 60 * 1000,
+      async () => {
+        const query = `query ($page:Int){
+          Page(page:$page, perPage:50){
+            media(type:ANIME, format:DONGHUA, sort:POPULARITY_DESC, isAdult:false){
+              ${ANILIST_FIELDS}
+              nextAiringEpisode { airingAt episode timeUntilAiring }
+            }
+          }
+        }`;
+        try {
+          const d = await aniGraphql(query, { page: 1 });
+          const list = (Array.isArray(d?.Page?.media) ? d.Page.media : [])
+            .filter((m: any) => m?.idMal && m?.nextAiringEpisode?.airingAt)
+            .map((m: any) => anilistCard(m))
+            .filter(Boolean);
+          return list;
+        } catch {
+          return [];
+        }
+      },
+    ),
+});
+
+/**
+ * Pencarian DONGHUA saja.
+ *
+ * Dipakai bersama `animeSearch` dari layar "Cari anime & donghua" supaya
+ * satu kolom pencarian bisa mencari keduanya. Sengaja memakai filter
+ * `format:DONGHUA` yang eksplisit: tanpa itu, pencarian akan mengembalikan
+ * anime biasa dan users terribly salah label.
+ */
+export const donghuaSearch = action({
+  args: { q: v.string(), page: v.optional(v.number()) },
+  handler: async (runCtx, { q, page = 1 }) => {
+    const query = q.trim();
+    if (query.length === 0) return [];
+    const p = Math.max(1, Math.min(6, Math.round(page)));
+    return cached(
+      runCtx,
+      `donghua-search:${p}:${query.toLowerCase()}`,
+      6 * 60 * 60 * 1000,
+      async () => {
+        try {
+          const d = await aniGraphql(
+            `query($s:String,$p:Int){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:false, format:DONGHUA){ ${ANILIST_FIELDS} } } }`,
+            { s: query, p },
+          );
+          const list = (Array.isArray(d?.Page?.media) ? d.Page.media : [])
+            .filter((m: any) => m?.idMal)
+            .map(anilistCard);
+          return list;
+        } catch {
+          return [];
+        }
+      },
+    );
   },
 });
 
@@ -961,6 +1041,8 @@ const BROWSE_WHERE = {
   movie: "format:MOVIE",
   ova: "format_in:[OVA,ONA]",
   special: "format:SPECIAL",
+  // Donghua menggantikan Special di deretan kategori Home.
+  donghua: "format:DONGHUA",
   upcoming: "status:NOT_YET_RELEASED",
   popular: "",
 } as const;
@@ -978,6 +1060,7 @@ export const animeBrowse = action({
       v.literal("movie"),
       v.literal("ova"),
       v.literal("special"),
+      v.literal("donghua"),
       v.literal("season"),
       v.literal("upcoming"),
       v.literal("popular"),
@@ -1004,6 +1087,9 @@ export const animeBrowse = action({
         }
         const where = BROWSE_WHERE[kind as keyof typeof BROWSE_WHERE];
         const d = await aniGraphql(browseQuery(p, where));
+        // Donghua: TIDAK ada fallback statis (lihat catatan di `donghuaList`).
+        // Kalau AniList tidak mengembalikan apa-apa, hasilnya kosong — itu
+        // lebih jujur daripada menampilkan judul anime berlabel "Donghua".
         return only(d?.Page?.media);
       } catch {
         if (kind === "season") return fbList(FALLBACK_SEASON, 12);

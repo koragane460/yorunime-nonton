@@ -1,5 +1,4 @@
 import { Avatar } from "@/components/lstream-ui";
-import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,6 @@ import {
   Loader2,
   LogOut,
   Play,
-  Plus,
   Radio,
   Search,
   ShieldCheck,
@@ -135,15 +133,36 @@ function RoomSheet({
   };
 
   return (
-    <Sheet onClose={onClose} title="Nonton Bareng">
-      <div className="space-y-2">
-        <Button
-          onClick={onCreate}
-          className="w-full rounded-xl bg-primary font-bold text-white hover:bg-primary"
+    // Layar penuh, bukan panel dari bawah: daftar room memenuhi layar dan
+    // punya tombol "Buat" sendiri di pojok kanan.
+    <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-background">
+      <header className="flex items-center gap-3 border-b border-border px-3 py-3">
+        <button
+          onClick={onClose}
+          aria-label="Kembali"
+          className="flex size-9 items-center justify-center rounded-full border border-border"
         >
-          <Plus className="size-4" /> Bikin Room Baru
-        </Button>
+          <ChevronLeft className="size-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-bold tracking-tight">
+            Nonton Bareng
+          </h1>
+          <p className="text-[11px] text-muted-foreground">
+            {rooms.length > 0
+              ? `${rooms.length} room lagi jalan`
+              : "Belum ada room aktif"}
+          </p>
+        </div>
+        <button
+          onClick={onCreate}
+          className="shrink-0 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white"
+        >
+          Buat
+        </button>
+      </header>
 
+      <div className="thin-scroll min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
         {rooms.length === 0 && (
           <p className="py-8 text-center text-xs text-muted-foreground">
             Belum ada room aktif. Kamu bisa jadi host pertama.
@@ -233,7 +252,7 @@ function RoomSheet({
           </div>
         ))}
       </div>
-    </Sheet>
+    </div>
   );
 }
 
@@ -282,10 +301,14 @@ function CreateRoomSheet({
 }) {
   const create = useMutation(api.watchroom.createRoom);
   const searchAnime = useAction(api.anime.animeSearch);
+  const searchDonghua = useAction(api.anime.donghuaSearch);
   const detail = useAction(api.anime.animeDetail);
 
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
+  // Kolom pencarian anime untuk sementara disembunyikan sampai tombol "Cari" ditekan,
+  // supaya panel buat room tidak langsung penuh dengan isian.
+  const [searchOpen, setSearchOpen] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
   const [picked, setPicked] = useState<any>(null);
   const [episodes, setEpisodes] = useState<any[] | null>(null);
@@ -308,8 +331,13 @@ function CreateRoomSheet({
     let alive = true;
     const t = setTimeout(async () => {
       try {
-        const r = (await searchAnime({ q: q.trim() })) as any[];
-        if (alive) setResults(r ?? []);
+        // Cari anime dulu; kalau tidak ada yang cocok, coba donghua — satu
+        // kolom untuk keduanya, sama seperti di Home.
+        let r = ((await searchAnime({ q: q.trim() })) as any[]) ?? [];
+        if (r.length === 0) {
+          r = ((await searchDonghua({ q: q.trim() })) as any[]) ?? [];
+        }
+        if (alive) setResults(r);
       } catch {
         if (alive) setResults([]);
       }
@@ -318,7 +346,7 @@ function CreateRoomSheet({
       alive = false;
       clearTimeout(t);
     };
-  }, [q, searchAnime]);
+  }, [q, searchAnime, searchDonghua]);
 
   const animeIdOf = (a: any) =>
     String(a?.id ?? a?.malId ?? a?.animeId ?? a?.anilistId ?? "");
@@ -382,18 +410,42 @@ function CreateRoomSheet({
     <Sheet title="Bikin Room" onClose={onClose}>
       <div className="space-y-3">
         <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Cari anime
-          </label>
-          <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
-            <Search className="size-3.5 shrink-0 text-muted-foreground" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Judul anime…"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-            />
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Anime yang ditonton
+            </label>
+            {/* Tombol "Cari" membuka kolom pencarian. Kolomnya disembunyikan
+                sampai diminta supaya panel buat room tidak terasa penuh. */}
+            {!searchOpen && (
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/60 hover:text-primary"
+              >
+                <Search className="size-3" /> Cari
+              </button>
+            )}
           </div>
+          {searchOpen && (
+            <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
+              <Search className="size-3.5 shrink-0 text-muted-foreground" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Judul anime atau donghua…"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+              />
+              <button
+                onClick={() => {
+                  setSearchOpen(false);
+                  setQ("");
+                  setResults(null);
+                }}
+                aria-label="Tutup pencarian"
+              >
+                <X className="size-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          )}
           {picked ? (
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-foreground/40 bg-primary/10 p-2">
               {picked.image && (

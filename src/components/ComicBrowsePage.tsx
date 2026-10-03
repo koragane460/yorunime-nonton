@@ -13,7 +13,7 @@ import {
 import { ComicDetailScreen } from "@/components/ComicDetailScreen";
 import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import { PremiumOnlyChip } from "@/components/PremiumOnlyGate";
-import { ChevronLeft, ChevronRight, Heart, Loader2, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Loader2, Lock, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ComicKind = "manga" | "manhwa";
@@ -268,11 +268,20 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
         </>
       )}
 
+      {/* Tombol ganti kategori. Selalu bisa diketuk (termasuk tanpa Premium),
+          dan ikut membawa tag "Premium Only" supaya jelas halaman ini
+          konten Premium tanpa harus ditekan dulu untuk mengetahui. */}
       <button
         onClick={() => navigate(kind === "manga" ? "/manhwa" : "/manga")}
-        className="fixed bottom-20 right-4 z-30 rounded-full border border-foreground/40 bg-primary/90 px-4 py-2 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-primary"
+        className="fixed bottom-20 right-4 z-30 flex items-center gap-1.5 rounded-full border border-foreground/40 bg-primary/90 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-primary"
       >
         {kind === "manga" ? "Lihat Manhwa" : "Lihat Manga"}
+        {!isPremium && (
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-black/45 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider">
+            <Lock className="size-2.5" />
+            Premium
+          </span>
+        )}
       </button>
 
       {pick && (

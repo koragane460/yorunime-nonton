@@ -570,6 +570,72 @@ html.antilag .yn-banner-box::after {
     0 0 0 1px rgb(124 58 237 / 0.35);
 }
 
+/* Nama clan: warna per level + efek silau. */
+.clan-tier-blue {
+  color: #93c5fd;
+}
+.clan-tier-green {
+  color: #86efac;
+}
+.clan-tier-purple {
+  color: #c4b5fd;
+}
+.clan-tier-gold {
+  color: #fcd34d;
+}
+
+/*
+ * Silau nama clan: garis cahaya bergerak melewati tulisan, sama seperti
+ * title developer/moderator. `background-clip: text` membuat gradasinya
+ * ikut bergerak; pseudo-element di bawahnya memberi garis samping yang
+ * bergerak (kilau tepi).
+ */
+.clan-shine {
+  background-image: linear-gradient(
+    100deg,
+    currentColor 0%,
+    currentColor 38%,
+    #ffffff 50%,
+    currentColor 62%,
+    currentColor 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: clan-shine-sweep 3.6s linear infinite;
+}
+
+@keyframes clan-shine-sweep {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+/* Garis kilau di samping tulisan nama clan. */
+.clan-shine::after {
+  content: "";
+  position: absolute;
+  inset: -1px -3px;
+  border-radius: 4px;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgb(255 255 255 / 0) 40%,
+    rgb(255 255 255 / 0.28) 50%,
+    rgb(255 255 255 / 0) 60%,
+    transparent 100%
+  );
+  background-size: 240% 100%;
+  -webkit-mask-image: linear-gradient(#000, #000);
+  mask-image: linear-gradient(#000, #000);
+  animation: clan-shine-sweep 3.6s linear infinite;
+  pointer-events: none;
+}
+
 /*
  * Outline hitam untuk tulisan putih di atas foto atau banner.
  *

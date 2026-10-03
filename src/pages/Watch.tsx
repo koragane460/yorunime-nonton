@@ -2029,7 +2029,7 @@ function WatchContent() {
             </p>
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
-              className="text-[11px] text-primary underline"
+              className="text-[11px] font-semibold text-primary"
             >
               {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
             </button>
