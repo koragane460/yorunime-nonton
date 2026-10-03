@@ -556,6 +556,69 @@ export const newest = action({
   },
 });
 
+/**
+ * Katalog cadangan dari SankaVollereii (endpoint /comic/unlimited).
+ *
+ * Dipakai HANYA kalau sumber utama (komiku.org) tidak mengirim apa pun, agar
+ * tab Manga tidak kosong total saat situs asal sedang lambat atau memblokir.
+ * Bentuk slug-nya tetap komiku (`/manga/<slug>/`) supaya halaman detail dan
+ * pembaca tidak perlu tahu asal datanya.
+ *
+ * BATAS YANG NYATA: endpoint ini hanya memuat komik komiku yang berpath
+ * `/manga/` — dicek langsung, 511 dari 511 entri. Parameter `?type=manhwa`
+ * diabaikan server (jawabannya identik dengan `?type=all`). Jadi fallback ini
+ * TIDAK bisa rescuing tab Manhwa; untuk manhwa, `kind === "manhwa"` selalu
+ * mengembalikan array kosong dan sumber utama tetap satu-satunya sumber.
+ */
+async function sankaCatalogFallback(kind: ComicKind): Promise<ComicListItem[]> {
+  try {
+    const res = await fetch("https://www.sankavollerei.web.id/comic/unlimited", {
+      headers: {
+        "User-Agent": UA,
+        Accept: "application/json, text/plain, */*",
+        Referer: "https://www.sankavollerei.web.id/",
+      },
+      signal: AbortSignal.timeout(25_000),
+    });
+    if (!res.ok) return [];
+    const j = (await res.json()) as Record<string, any>;
+    const rows: any[] = Array.isArray(j?.comics) ? j.comics : [];
+    return rows
+      .map((x: any) => {
+        const title = String(x?.title ?? "")
+          .replace(/\\n/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const link = String(x?.link ?? "");
+        const slug = link.split("?")[0].replace(/\/+$/, "").split("/").pop() ?? "";
+        if (!title || !slug) return null;
+        const status = String(x?.status ?? "Ongoing");
+        const itemKind: ComicKind =
+          /\/manhwa\//i.test(link) || /webtoon/i.test(status) ? "manhwa" : "manga";
+        const rawGenre = x?.genre;
+        const genres = Array.isArray(rawGenre)
+          ? rawGenre.map((g: unknown) => String(g ?? "").trim()).filter(Boolean)
+          : rawGenre
+            ? [String(rawGenre).trim()]
+            : [];
+        return {
+          slug,
+          title,
+          image: String(x?.image ?? ""),
+          kind: itemKind,
+          ongoing: !/tamat|end|completed/i.test(status),
+          status,
+          genres: genres.slice(0, 4),
+          latestChapter: String(x?.chapter ?? "").trim() || undefined,
+        } as ComicListItem;
+      })
+      .filter((c): c is ComicListItem => !!c && c.kind === kind)
+      .slice(0, 40);
+  } catch {
+    return [];
+  }
+}
+
 /** Katalog per jenis, paginasi ala "daftar komik". */
 export const browse = action({
   args: {
@@ -573,7 +636,12 @@ export const browse = action({
         const html = await fetchHtml(url);
         if (!html) return null;
         const parsed = parseCatalog(html).filter((c) => c.kind === kind);
-        return parsed.length > 0 ? parsed : parseCatalog(html);
+        if (parsed.length > 0) return parsed;
+        const loose = parseCatalog(html);
+        if (loose.length > 0) return loose;
+        // Sumber utama gagal / kosong → pakai katalog cadangan Sanka.
+        const backup = await sankaCatalogFallback(kind);
+        return backup.length > 0 ? backup : null;
       },
     );
     const items = list ?? [];

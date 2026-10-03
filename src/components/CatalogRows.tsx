@@ -4,6 +4,13 @@ import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, Loader2, Search, X } from "lucide-react";
 
+/**
+ * Asal data kartu. "sanka" berarti id-nya slug SankaVollereii (donghua),
+ * BUKAN id AniList — layar detail harus memakai sumber yang berbeda supaya
+ * judul donghua tidak tertukar dengan judul anime.
+ */
+export type PickSource = "anilist" | "sanka";
+
 export type CardT = {
   id: string;
   title: string;
@@ -43,7 +50,7 @@ export function CardCarousel({
   kind: CatalogKind;
   title: string;
   subtitle?: string;
-  onPick: (id: string, title?: string) => void;
+  onPick: (id: string, title?: string, source?: PickSource) => void;
 }) {
   // Donghua diambil dari SankaVollereii (src/convex/sanka.ts), bukan dari
   // animeBrowse — katalognya terpisah dan subtitle-nya sudah Indonesia.
@@ -120,7 +127,9 @@ export function CardCarousel({
                 {row.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => onPick(c.id, c.title)}
+                    onClick={() =>
+                      onPick(c.id, c.title, kind === "donghua" ? "sanka" : "anilist")
+                    }
                     className="group w-28 shrink-0 text-left"
                   >
                     <div className="relative overflow-hidden rounded-xl border border-border/60">
@@ -174,7 +183,7 @@ export function CatalogScreen({
   title: string;
   items: CardT[];
   onClose: () => void;
-  onPick: (id: string, title?: string) => void;
+  onPick: (id: string, title?: string, source?: PickSource) => void;
 }) {
   const browse = useAction(api.anime.animeBrowse);
   const searchAnime = useAction(api.anime.animeSearch);
@@ -318,7 +327,7 @@ export function CatalogScreen({
                 key={c.id}
                 onClick={() => {
                   onClose();
-                  onPick(c.id, c.title);
+                  onPick(c.id, c.title, kind === "donghua" ? "sanka" : "anilist");
                 }}
                 className="group text-left"
               >

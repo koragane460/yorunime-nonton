@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
@@ -19,7 +19,10 @@ import {
   X,
   BookOpen,
   PanelsTopLeft,
-  
+  Bookmark,
+  Flame,
+  PlayCircle,
+  Sparkles,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
@@ -27,9 +30,10 @@ import { displayId, usernameColor } from "@/lib/lstream";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 import { NotifButton } from "@/components/NotifButton";
 import {
-  DownloadsPanel,
+  ContinuePanel,
+  FavoritesPanel,
   ForYouPanel,
-  HomeTopButtons,
+  MOST_MIN_TITLES,
   MostWatchedPanel,
   type TopPanel,
 } from "@/components/HomeTopButtons";
@@ -48,19 +52,24 @@ export function AppLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const ensure = useMutation(api.account.ensureUser);
-  // Download / Paling sering / Untuk kamu — panel layar penuh yang dibuka
-  // dari tombol di kartu akun (bukan dari Home).
-  const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  // Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
+  // Paling sering, Untuk kamu).
+  //
+  // State-nya sengaja ADA DI SINA, bukan di BottomNav: masing-masing panel
+  // memanggil useHideNavOnMount() yang menyalakan flag overlay, dan
+  // BottomNav memanggil `if (overlay) return null`. Kalau panel dirender di
+  // dalam BottomNav, panel yang baru dibuka akan langsung membuat
+  // BottomNav (dan dirinya sendiri) unmount.
+  const [navPanel, setNavPanel] = useState<TopPanel>(null);
 
-  // Panel layar penuh menutup dengan tombol back / ketukan tepi.
   useEffect(() => {
-    if (!topPanel) return;
+    if (!navPanel) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setTopPanel(null);
+      if (e.key === "Escape") setNavPanel(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [topPanel]);
+  }, [navPanel]);
 
   useEffect(() => {
     if (user) void ensure();
@@ -105,7 +114,6 @@ export function AppLayout({
               Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
             )}
             diamonds={user.diamonds ?? 0}
-            onOpenTopPanel={setTopPanel}
           />
         </div>
       )}
@@ -117,18 +125,17 @@ export function AppLayout({
       >
         <div className="px-4 md:px-6">{children}</div>
       </div>
-      <BottomNav />
+      <BottomNav onOpenPanel={setNavPanel} />
       <AppFooter />
       <MiniPlayerHost />
 
-      {/* Layar penuh untuk tiga tombol aksi di kartu akun. */}
-      {topPanel === "downloads" && (
-        <DownloadsPanel onClose={() => setTopPanel(null)} />
-      )}
-      {topPanel === "most" && (
-        <MostWatchedPanel onClose={() => setTopPanel(null)} />
-      )}
-      {topPanel === "foryou" && <ForYouPanel onClose={() => setTopPanel(null)} />}
+      {/* Layar penuh dari tombol navigasi. Dirender di luar BottomNav supaya
+          tidak ikut hilang saat panel menyalakan flag overlay. */}
+      {navPanel === "favorites" && <FavoritesPanel onClose={() => setNavPanel(null)} />}
+      {navPanel === "continue" && <ContinuePanel onClose={() => setNavPanel(null)} />}
+      {navPanel === "most" && <MostWatchedPanel onClose={() => setNavPanel(null)} />}
+      {navPanel === "foryou" && <ForYouPanel onClose={() => setNavPanel(null)} />}
+
       <OverlayScrollLock />
       <AnnouncementPopup />
     </div>
@@ -154,10 +161,8 @@ function AccountPanel({
   premium,
   premiumDays,
   diamonds,
-  onOpenTopPanel,
 }: {
   onOpen: () => void;
-  onOpenTopPanel: (p: Exclude<TopPanel, null>) => void;
   name: string;
   seqId?: number;
   id: string;
@@ -193,12 +198,6 @@ function AccountPanel({
         <NotifButton />
       </div>
 
-      {/* Tiga tombol aksi (Download / Paling sering / Untuk kamu).
-          Diletakkan DI BAWAH baris Pengaturan + Notifikasi, di pojok
-          kanan, supaya tidak berebut ruang dengan dua tombol itu. */}
-      <div className="absolute right-2.5 top-14 z-10">
-        <HomeTopButtons onOpen={onOpenTopPanel} />
-      </div>
       <button onClick={onOpen} className="block w-full text-left"
         style={
           bannerUrl
@@ -600,7 +599,11 @@ function AppFooter() {
   );
 }
 
-function BottomNav() {
+function BottomNav({
+  onOpenPanel,
+}: {
+  onOpenPanel: (p: Exclude<TopPanel, null>) => void;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const overlay = useAppOverlayOpen();
@@ -608,22 +611,10 @@ function BottomNav() {
   const [switcher, setSwitcher] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
-  // Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
-  // Paling sering, Untuk kamu).
-  const [navPanel, setNavPanel] = useState<TopPanel>(null);
   const watched = useQuery(api.activities.mostWatched, "skip");
   // "Paling sering" baru bermakna setelah ada cukup riwayat; sebelum itu
   // ikonnya diredupkan dan panelnya tidak pernah dibuka.
   const enoughWatched = (watched ?? []).length >= MOST_MIN_TITLES;
-
-  useEffect(() => {
-    if (!navPanel) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setNavPanel(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [navPanel]);
 
   useEffect(() => {
     return () => {
@@ -736,7 +727,8 @@ function BottomNav() {
           </div>
         </>
       )}
-      {/* Navbar full width. Angka kolom ikut melebar di desktop. */}
+      {/* Navbar full width: 8 tombol (Home, Jadwal, Info, Favorit,
+          Lanjutkan nonton, Paling sering, Untuk kamu, Akun). */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
         <div className="mx-auto grid w-full grid-cols-8 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
@@ -756,9 +748,11 @@ function BottomNav() {
                 onPointerCancel={cancelHold}
                 onContextMenu={(e) => isHome && e.preventDefault()}
                 onClick={() => {
-                  // Tombol panel tidak punya rute: dia membuka layar penuh.
+                  // Tombol panel tidak punya rute: dia membuka layar penuh
+                  // yang dirender AppLayout (bukan di sini — lihat catatan
+                  // pada state navPanel).
                   if (it.panel) {
-                    setNavPanel(it.panel);
+                    onOpenPanel(it.panel);
                     return;
                   }
                   onClickItem(it.path);
@@ -774,7 +768,9 @@ function BottomNav() {
               >
                 <Icon
                   className={cn(
-                    "size-[22px]",
+                    // 8 kolom: ikon dikecilkan supaya tetap muat di HP sempit
+                    // tanpa saling bertindih.
+                    "size-[19px] md:size-[22px]",
                     active
                       ? "text-primary"
                       : it.dim
@@ -787,6 +783,10 @@ function BottomNav() {
           })}
         </div>
       </nav>
+
+      {/* Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
+          Paling sering, Untuk kamu). Dimount di sini supaya tombolnya bisa
+          hidup di halaman mana pun, bukan cuma Home. */}
     </>
   );
 }

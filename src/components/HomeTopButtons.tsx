@@ -888,7 +888,13 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
                 </p>
               </button>
               <button
-                onClick={() => void remove({ animeId: f.animeId })}
+                onClick={() =>
+                  void remove({
+                    animeId: f.animeId,
+                    animeTitle: f.animeTitle,
+                    animeImage: f.animeImage,
+                  })
+                }
                 aria-label={`Hapus ${f.animeTitle} dari favorit`}
                 title="Hapus dari favorit"
                 className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-red-500/60 hover:text-red-400"
@@ -923,9 +929,21 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
+  const stats = useQuery(api.downloads.downloadStats, "skip");
+  const [showDownloads, setShowDownloads] = useState(false);
   const items = ((rows ?? []) as unknown as ContRow[])
     .slice()
     .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  // Download tidak lagi jadi tombol navigasi sendiri supaya baris nav tidak
+  // terlalu padat; ia dijangkau lewat tombol di header layar ini.
+  if (showDownloads) {
+    return (
+      <DownloadsPanel
+        onClose={() => (items.length ? setShowDownloads(false) : onClose())}
+      />
+    );
+  }
 
   return (
     <PanelShell
@@ -936,6 +954,21 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
           : "Anime & donghua yang kamu tinggalkan"
       }
       onClose={onClose}
+      footer={
+        <button
+          onClick={() => setShowDownloads(true)}
+          aria-label="Download"
+          title="Download"
+          className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/60 hover:text-primary"
+        >
+          <Download className="size-4" />
+          {stats && stats.done > 0 && (
+            <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
+              {stats.done > 99 ? "99+" : stats.done}
+            </span>
+          )}
+        </button>
+      }
     >
       {items.length === 0 ? (
         <EmptyState

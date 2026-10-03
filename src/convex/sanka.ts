@@ -248,13 +248,22 @@ export const detail = action({
             .filter(Boolean)
         : [];
 
-      const eps = Array.isArray(d.episode)
-        ? d.episode.map((e: any) => ({
-            number: Number(e?.episode ?? e?.number ?? 0) || 0,
-            title: String(e?.title ?? e?.name ?? ""),
-            url: String(e?.href ?? e?.slug ?? ""),
-          }))
-        : [];
+      // Kunci daftar episode di API adalah `episodes_list` (nama field
+      // `episode` tidak pernah dipakai). Karena itu daftar ini pernah kosong
+      // padahal API mengirimkannya.
+      const rawEps = Array.isArray(d.episodes_list)
+        ? d.episodes_list
+        : Array.isArray(d.episode)
+          ? d.episode
+          : [];
+      const eps = rawEps.map((e: any) => ({
+        number:
+          Number(e?.episode_number ?? e?.number ?? e?.episode ?? 0) || 0,
+        title: String(e?.episode ?? e?.title ?? e?.name ?? ""),
+        // `slug` dipakai sebagai identitas episode: endpoint stream-nya
+        // `/anime/:source/episode/:slug`.
+        url: String(e?.slug ?? e?.href ?? ""),
+      }));
 
       // Respon kosong (cuma judul) dianggap gagal supaya mencoba source lain.
       if (!synopsis && eps.length === 0 && genres.length === 0) continue;
@@ -274,5 +283,62 @@ export const detail = action({
       };
     }
     return { error: "Detail tidak ditemukan" };
+  },
+});
+/**
+ * Stream satu episode donghua.
+ *
+ * Endpoint: GET /anime/:source/episode/:slug  → daftar server embed.
+ *
+ * Semua server dari API ini adalah player embed yang subtitle Bahasa
+ *Indonesianya sudah menempel di video, jadi `baked: true` — player tidak
+ * perlu menggambar subtitle sendiri dan tidak akan menimpa subtitle aslinya.
+ * Bentuk dikembalikan sengaja sama dengan `megaplay.resolveEpisode` supaya
+ * halaman Nonton tidak perlu tahu asal bedanya.
+ */
+export const resolveEpisode = action({
+  args: { slug: v.string(), source: v.optional(v.string()) },
+  handler: async (_ctx, { slug, source }) => {
+    const epSlug = String(slug ?? "").trim();
+    if (!epSlug) {
+      return { ok: false as const, reason: "Episode belum tersedia" };
+    }
+    // Source dari parameter kalau ada; kalau tidak, coba donghua dulu lalu
+    // sisanya — persis urutan yang dipakai `detail`.
+    const order = source
+      ? [source, ...DONGHUA_SOURCES.filter((s) => s !== source)]
+      : [...DONGHUA_SOURCES, ...ANIME_SOURCES];
+
+    for (const src of order) {
+      const j = await sankaGet(
+        `/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
+        20_000,
+      );
+      const list = j?.streaming?.servers;
+      if (!Array.isArray(list) || list.length === 0) continue;
+      const sources = list
+        .map((s: any) => ({
+          label: String(s?.name ?? src),
+          url: String(s?.url ?? ""),
+          type: "embed" as const,
+          baked: true,
+        }))
+        .filter((s: { url: string }) => s.url.length > 0);
+      if (sources.length === 0) continue;
+      return {
+        ok: true as const,
+        sources,
+        subtitle: null,
+        subtitles: [] as { label: string; url: string }[],
+        subTracks: [] as unknown[],
+        hasIndonesian: true,
+        bakedSubs: true,
+        intro: null,
+        outro: null,
+        megaM3u8: null,
+        megaRef: null,
+      };
+    }
+    return { ok: false as const, reason: "Episode belum tersedia" };
   },
 });

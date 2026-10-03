@@ -35,6 +35,7 @@ type DonghuaRow = {
   image: string;
   status?: string;
   episode?: number;
+  estimated?: boolean;
 };
 
 type ComicSlot = {
@@ -172,7 +173,7 @@ function JadwalContent() {
     tab === "anime"
       ? (sched[DAYS_ID[day]] ?? [])
       : tab === "donghua"
-        ? []
+        ? donghuaRunning
         : (comics[tab]?.[DAYS_ID[day]] ?? []);
   const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
 
@@ -182,7 +183,9 @@ function JadwalContent() {
       <p className="mb-3 text-[11px] text-muted-foreground">
         {tab === "anime"
           ? "Jam tayang dalam waktu lokal kamu — dari jadwal tayang resmi AniList"
-          : "Proyeksi chapter berikutnya dari rata-rata jarak rilis chapter terakhir"}
+          : tab === "donghua"
+            ? "Donghua yang sedang jalan dari sumber subtitle Indonesia (SankaVollereii)"
+            : "Proyeksi chapter berikutnya dari rata-rata jarak rilis chapter terakhir"}
       </p>
 
       {/* Switcher: anime di atas, pilihan manga & manhwa muncul saat diklik */}
@@ -234,14 +237,18 @@ function JadwalContent() {
         )}
       </div>
 
-      <div className="thin-scroll mb-3 flex gap-1.5 overflow-x-auto pb-1">
+      <div
+        className={cn(
+          "thin-scroll mb-3 gap-1.5 overflow-x-auto pb-1",
+          // Donghua tidak punya jadwal per hari, jadi picker disembunyikan.
+          tab === "donghua" ? "hidden" : "flex",
+        )}
+      >
         {DAYS_ID.map((d, i) => {
           const count =
             tab === "anime"
               ? (sched[d] ?? []).length
-              : tab === "donghua"
-                ? donghuaRunning.length
-                : (comics[tab]?.[d] ?? []).length;
+              : (comics[tab]?.[d] ?? []).length;
           return (
             <button
               key={d}
@@ -260,17 +267,61 @@ function JadwalContent() {
         })}
       </div>
 
-      {tab === "anime" || tab === "donghua" ? (
+      {tab === "donghua" ? (
+        comicLoading ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">Memuat donghua…</p>
+        ) : donghuaRunning.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            Belum ada donghua yang bisa dimuat dari sumber Indonesia
+          </p>
+        ) : (
+          // SankaVollereii tidak punya jadwal airing per hari, jadi hari/week
+          // picker disembunyikan untuk tab ini. Menampilkan jam tayang yang
+          // tidak dimiliki API akan menampilkan angka yang salah.
+          <div className="space-y-2">
+            {donghuaRunning.map((d) => (
+              <button
+                key={d.id}
+                onClick={() =>
+                  navigate(
+                    user
+                      ? `/nonton?anime=${encodeURIComponent(d.id)}&judul=${encodeURIComponent(d.title ?? "")}&donghua=1`
+                      : "/auth",
+                  )
+                }
+                className="flex w-full items-center gap-3 rounded-xl border border-violet-500/40 bg-secondary/30 p-2.5 text-left transition hover:border-violet-400/70"
+              >
+                {d.image ? (
+                  <img
+                    src={d.image}
+                    alt=""
+                    className="h-16 w-11 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="h-16 w-11 shrink-0 rounded-lg bg-black/40" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{d.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {d.episode ? `Sampai episode ${d.episode}` : "Sedang jalan"}
+                    {d.status ? ` • ${d.status}` : ""}
+                  </p>
+                </div>
+                <Sparkles className="size-5 shrink-0 text-violet-400/80" />
+              </button>
+            ))}
+          </div>
+        )
+      ) : tab === "anime" ? (
         loading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Memuat jadwal…</p>
-        ) : (tab === "anime" ? animeTotal : donghuaTotal) === 0 ? (
+        ) : animeTotal === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             Belum ada jadwal rilis yang tersedia
           </p>
         ) : list.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            Tidak ada {tab === "donghua" ? "donghua" : "anime"} yang tayang hari{" "}
-            {DAYS_ID[day]}
+            Tidak ada anime yang tayang hari {DAYS_ID[day]}
           </p>
         ) : (
           <div className="space-y-2">

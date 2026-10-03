@@ -955,11 +955,14 @@ const seasonQuery = (page: number, s: string, y: number) =>
  */
 export const animeBrowse = action({
   args: {
+    // "donghua" sengaja TIDAK ada di sini. Katalog ini milik AniList, jadi
+    // kind donghua di sini hanya bisa mengembalikan judul anime — persis bug
+    // "kartu donghua tapi titled anime". Donghua dilayani SankaVollereii lewat
+    // src/convex/sanka.ts.
     kind: v.union(
       v.literal("movie"),
       v.literal("ova"),
       v.literal("special"),
-      v.literal("donghua"),
       v.literal("season"),
       v.literal("upcoming"),
       v.literal("popular"),

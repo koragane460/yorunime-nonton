@@ -246,6 +246,14 @@ function WatchContent() {
   const detail = useAction(api.anime.animeDetail);
   // Resolver tunggal: backend hanya mengembalikan satu server "Direct HLS · SUB"
   const resolveDirect = useAction(api.megaplay.resolveEpisode);
+  // Donghua memakai server sendiri (SankaVollereii), bukan MegaPlay: slug-nya
+  // bukan MAL id, jadi resolveEpisode biasa tidak akan menemukan apa pun.
+  const resolveDonghua = useAction(api.sanka.resolveEpisode);
+  const sankaDetail = useAction(api.sanka.detail);
+  // Halaman ini dipakai untuk dua sumber: anime (AniList/Jikan) dan donghua
+  // (SankaVollereii). Penandanya ada di URL, jadi tidak perlu tebakan dari
+  // bentuk id — yang bisa sama-sama berupa slug.
+  const isDonghua = params.get("donghua") === "1";
   // Subtitle Indonesia otomatis: subtitle English diterjemahkan di backend
   // lalu dipasang sebagai track di player ini.
   const subtitleIndo = useAction(api.subtitle.subtitleIndo);
@@ -754,22 +762,59 @@ function WatchContent() {
   }, [sources]);
 
   useEffect(() => {
-    if (animeId) {
-      detail({ id: animeId, title: params.get("judul") ?? undefined })
+    if (!animeId) return;
+    // Donghua: slug-nya milik SankaVollereii, bukan AniList/Jikan, jadi detail
+    // anime biasa tidak akan menemukan apa pun. Daftar episodenya diambil dari
+    // Sanka lalu dipetakan ke bentuk yang sama dengan detail anime, sehingga
+    // seluruh UI episode (indeks, berikutnya/ sebelumnya, numbering) tetap
+    // bekerja tanpa jalur kode kedua.
+    if (isDonghua) {
+      sankaDetail({ slug: animeId, preferDonghua: true })
         .then((d: any) => {
-          setDetailData(d);
-          // Tanpa parameter episode → langsung buka episode 1.
-          if (!epParam) {
-            const first = d?.episodeList?.[0]?.id;
-            if (first) {
-              navigate(`/nonton?anime=${animeId}&ep=${first}`, { replace: true });
-            }
+          if (d?.error) {
+            setDetailData({ error: true });
+            return;
+          }
+          const list = (d?.episodes ?? [])
+            .slice()
+            .sort((a: any, b: any) => a.number - b.number)
+            .map((e: any) => ({
+              id: `sanka__${e.url}__ep${e.number || 1}`,
+              number: e.number || 1,
+              title: e.title ?? "",
+            }));
+          setDetailData({
+            title: d?.title ?? "",
+            image: d?.cover ?? d?.poster ?? "",
+            synopsis: d?.synopsis ?? "",
+            genres: d?.genres ?? [],
+            rating: d?.rating,
+            status: d?.status,
+            episodeList: list,
+          });
+          if (!epParam && list[0]) {
+            navigate(`/nonton?anime=${animeId}&ep=${list[0].id}&donghua=1`, {
+              replace: true,
+            });
           }
         })
         .catch(() => setDetailData({ error: true }));
+      return;
     }
+    detail({ id: animeId, title: params.get("judul") ?? undefined })
+      .then((d: any) => {
+        setDetailData(d);
+        // Tanpa parameter episode → langsung buka episode 1.
+        if (!epParam) {
+          const first = d?.episodeList?.[0]?.id;
+          if (first) {
+            navigate(`/nonton?anime=${animeId}&ep=${first}`, { replace: true });
+          }
+        }
+      })
+      .catch(() => setDetailData({ error: true }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animeId, epParam]);
+  }, [animeId, epParam, isDonghua]);
 
   // Detail anime sudah siap (dipakai sebagai sumber nomor episode & judul).
   const detailReady = !!detailData && !detailData.error;
@@ -783,6 +828,44 @@ function WatchContent() {
   // ditunggu untuk anime tanpa MAL id, karena nomor episodenya ada di sana.
   useEffect(() => {
     if (!epParam) return;
+    // Episode donghua: id-nya "sanka__<slug_episode>__ep<no>". Ditangani
+    // sebelum logika anime karena slug-nya bukan MAL id sama sekali.
+    const sk = epParam.match(/^sanka__(.+)__ep(\d+)$/);
+    if (sk) {
+      const skKey = `sanka__${sk[1]}`;
+      const applySanka = (d: any) => {
+        if (!d?.ok) {
+          setDirectErr(d?.reason ?? "Episode belum tersedia");
+          return;
+        }
+        setDirectErr(null);
+        setDirect(d);
+        setSubTouched(false);
+        setSources(d.sources);
+        setSourceType("embed");
+        setSourceIdx(0);
+      };
+      lastEpRef.current = epParam;
+      deadServers.current = new Set();
+      setSources([]);
+      setDirect(null);
+      setDirectErr(null);
+      setCurrentTime(0);
+      setDuration(0);
+      setCues([]);
+      const cachedSanka = resolvedRef.current.get(skKey);
+      if (cachedSanka) {
+        applySanka(cachedSanka);
+        return;
+      }
+      resolveDonghua({ slug: sk[1] })
+        .then((d: any) => {
+          if (d?.ok) resolvedRef.current.set(skKey, d);
+          applySanka(d);
+        })
+        .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
+      return;
+    }
     const mm = epParam.match(/^(\d+)__ep(\d+)$/);
     if (!mm && !detailReady) return;
     // Dua bentuk id episode:

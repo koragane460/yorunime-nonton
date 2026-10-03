@@ -12,7 +12,7 @@ import { ProfileSheet } from "@/components/ProfileSheet";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
-import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind } from "@/components/CatalogRows";
+import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 
 import {
   Search,
@@ -349,9 +349,17 @@ function HomeContent() {
   // berupa slug, jadi tanpa judul backend tidak bisa menemukan sinopsis,
   // studio, rating, dan jumlah episodenya.
   const [pickTitle, setPickTitle] = useState<string | undefined>(undefined);
-  const openAnime = (id: string, title?: string) => {
+  // Kartu donghua (slug Sanka) dan kartu anime (id AniList) butuh layar
+  // detail yang berbeda; kalau dicampur, judul donghua tertukar dengan anime.
+  const [pickSource, setPickSource] = useState<CatalogPickSource>("anilist");
+  const openAnime = (
+    id: string,
+    title?: string,
+    source: CatalogPickSource = "anilist",
+  ) => {
     setPickId(id);
     setPickTitle(title);
+    setPickSource(source);
   };
 
   // Ukur posisi tombol pencarian lalu tulis ke --yn-tint-end pada elemen latar.
@@ -728,7 +736,21 @@ function HomeContent() {
         />
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
-      {pickId && (
+      {pickId && pickSource === "sanka" && (
+        <DonghuaDetailScreen
+          slug={pickId}
+          onClose={() => {
+            setPickId(null);
+            setPickTitle(undefined);
+          }}
+          onPlay={(slug, ep, title) =>
+            navigate(
+              `/nonton?anime=${encodeURIComponent(slug)}&ep=${encodeURIComponent(`sanka__${slug}__ep${ep}`)}&judul=${encodeURIComponent(title)}&donghua=1`,
+            )
+          }
+        />
+      )}
+      {pickId && pickSource === "anilist" && (
         <AnimeDetailScreen
           animeId={pickId}
           animeTitle={pickTitle}
@@ -739,6 +761,7 @@ function HomeContent() {
           onPick={(id, title) => {
             setPickId(id);
             setPickTitle(title);
+            setPickSource("anilist");
           }}
         />
       )}
@@ -2098,6 +2121,208 @@ function DetailHeader({
       <h1 className="text-base font-semibold tracking-tight text-white">
         {title}
       </h1>
+    </div>
+  );
+}
+
+// ------------------------------------------------ detail donghua --------
+
+type SankaDetailShape = {
+  title: string;
+  alterTitle?: string;
+  poster?: string;
+  cover?: string;
+  rating?: string;
+  status?: string;
+  type?: string;
+  synopsis: string;
+  genres: string[];
+  episodes: { number: number; title: string; url: string }[];
+  source: string;
+};
+
+/**
+ * Layar detail untuk kartu donghua.
+ *
+ * Sengaja TERPISA dari AnimeDetailScreen: kartu donghua memakai slug
+ * SankaVollereii, sedangkan AnimeDetailScreen mencari lewat AniList/Jikan.
+ * Kalau slug-nya dikirim ke sana, judul yang muncul adalah judul anime lain
+ * yang kebetulan mirip — persis bug "kartu donghua tapi titled anime".
+ */
+function DonghuaDetailScreen({
+  slug,
+  onClose,
+  onPlay,
+}: {
+  slug: string;
+  onClose: () => void;
+  onPlay: (slug: string, ep: number, title: string) => void;
+}) {
+  useHideNavOnMount();
+  const getDetail = useAction(api.sanka.detail);
+  const [detail, setDetail] = useState<SankaDetailShape | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [synopsisOpen, setSynopsisOpen] = useState(false);
+  const [allEpisodes, setAllEpisodes] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setDetail(null);
+    setFailed(false);
+    getDetail({ slug, preferDonghua: true })
+      .then((r: unknown) => {
+        if (!alive) return;
+        if (r && typeof r === "object" && "error" in (r as object)) setFailed(true);
+        else setDetail(r as SankaDetailShape);
+      })
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [slug, getDetail]);
+
+  const eps = useMemo(() => {
+    const all = [...(detail?.episodes ?? [])].sort((a, b) => a.number - b.number);
+    return allEpisodes ? all : all.slice(0, 60);
+  }, [detail, allEpisodes]);
+
+  if (failed) {
+    return (
+      <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
+        <div className="w-full p-3">
+          <DetailHeader title="Detail Donghua" onClose={onClose} />
+          <p className="py-16 text-center text-sm text-muted-foreground">
+            Donghua tidak ditemukan
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
+        <div className="w-full p-3">
+          <DetailHeader title="Detail Donghua" onClose={onClose} />
+          <div className="skeleton h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  const banner = detail.cover ?? detail.poster ?? "";
+  const synopsisBody = synopsisPreview(detail.synopsis, synopsisOpen);
+  const canExpand = synopsisBody !== detail.synopsis;
+  const total = detail.episodes.length;
+
+  return (
+    <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
+      <div className="w-full pb-24">
+        <div className="relative">
+          <div
+            className="h-64 w-full shrink-0 bg-cover bg-center"
+            style={
+              banner
+                ? {
+                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, var(--background) 96%), linear-gradient(90deg, rgba(0,0,0,.5), transparent 55%), url(${banner})`,
+                  }
+                : undefined
+            }
+          >
+            {!banner && <div className="h-full w-full bg-hero-gradient" />}
+          </div>
+          <div className="absolute inset-x-0 top-0 z-10">
+            <DetailHeader title="Detail Donghua" onClose={onClose} />
+          </div>
+          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
+            {detail.poster ? (
+              <img
+                src={detail.poster}
+                alt=""
+                className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg object-cover shadow-xl"
+              />
+            ) : (
+              <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
+            )}
+            <div className="min-w-0 flex-1 self-end pb-1">
+              <h2 className="yn-outline text-xl font-black leading-tight">
+                {detail.title}
+              </h2>
+              {detail.genres.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {detail.genres.slice(0, 3).map((g) => (
+                    <span
+                      key={g}
+                      className="rounded-full border border-white/25 bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white/90"
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="mt-1.5 text-[11px] font-medium text-white/85">
+                {detail.rating ? `★ ${detail.rating}` : "Rating belum ada"}
+                {detail.status ? ` • ${detail.status}` : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-3">
+          <SectionTitle>Sinopsis</SectionTitle>
+          <p className="whitespace-pre-line text-sm leading-6 text-white">
+            {synopsisBody}
+          </p>
+          {canExpand && (
+            <button
+              onClick={() => setSynopsisOpen((v) => !v)}
+              className="mt-2 inline-flex h-8 items-center text-[13px] font-medium text-white/70 transition hover:text-white"
+            >
+              {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
+            </button>
+          )}
+
+          <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
+            <div className="flex items-center justify-between gap-2 px-3 py-3">
+              <h2 className="text-base font-bold text-white">Episode</h2>
+              <span className="text-xs text-white/80">
+                {total > 0 ? `${total} episode` : "Belum ada"}
+              </span>
+            </div>
+            <div className="px-3 pb-3">
+              {eps.length === 0 ? (
+                <p className="py-4 text-center text-xs text-white/70">
+                  Daftar episode belum tersedia
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {eps.map((e) => (
+                      <button
+                        key={e.number || e.url}
+                        onClick={() => onPlay(slug, e.number || 1, detail.title)}
+                        className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40"
+                      >
+                        {e.number}
+                      </button>
+                    ))}
+                  </div>
+                  {total > 60 && (
+                    <button
+                      onClick={() => setAllEpisodes((v) => !v)}
+                      className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs text-white/85"
+                    >
+                      {allEpisodes
+                        ? "Tampilkan lebih sedikit"
+                        : `Tampilkan semua ${total} episode`}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
