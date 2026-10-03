@@ -763,7 +763,7 @@ function ClanChat({
 }) {
   const { user } = useAuth();
   useHideNavOnMount();
-  const { messages: msgs, sendFast } = useFastChat(
+  const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
     { kind: "clan", clanId, limit: 60 },
     { kind: "clan", clanId },
     user,
@@ -796,7 +796,7 @@ function ClanChat({
         )}
       </div>
       <div className="flex min-h-0 w-full flex-1 flex-col pb-2">
-        {msgs && user ? (
+        {msgs && !chatLoading && user ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
             <ChatPanel
               kind="clan"
@@ -804,6 +804,7 @@ function ClanChat({
               messages={msgs}
               meId={user._id}
               onSend={(p) => sendFast(p)}
+              onDeleteLocal={dropLocal}
             />
           </div>
         ) : (

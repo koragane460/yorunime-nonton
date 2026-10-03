@@ -272,8 +272,11 @@ function CommentRow({
       style={{ borderRadius: "4px" }}
     >
       {c.bannerUrl && (
+        // Banner profil ditarik ke dalam (tidak menyentuh tepi kartu) dan
+        // diberi sudut membulat supaya tidak terlihat seperti gambar yang
+        // dipaksa melebar penuh.
         <div
-          className="h-8 w-full bg-cover bg-center opacity-70"
+          className="mx-2 mt-2 h-8 rounded-md bg-cover bg-center opacity-70"
           style={{ backgroundImage: `url(${c.bannerUrl})` }}
         />
       )}

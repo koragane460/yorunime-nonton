@@ -1190,7 +1190,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<"chat" | "teman">("chat");
   const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
-  const { messages: msgs, sendFast } = useFastChat(
+  const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
     { kind: "global", limit: 60 },
     { kind: "global" },
     user,
@@ -1200,7 +1200,12 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const sendReq = useMutation(api.friends.sendFriendRequest);
   const [dmPeer, setDmPeer] = useState<{ id: Id<"users">; name: string } | null>(null);
   // Chat pribadi juga pakai echo lokal supaya pesan langsung nempel di layar.
-  const { messages: dmMsgs, sendFast: sendDmFast } = useFastChat(
+  const {
+    messages: dmMsgs,
+    sendFast: sendDmFast,
+    dropLocal: dropDmLocal,
+    loading: dmLoading,
+  } = useFastChat(
     dmPeer ? { kind: "dm", peerId: dmPeer.id, limit: 100 } : "skip",
     { kind: "dm", peerId: dmPeer?.id as Id<"users"> },
     user,
@@ -1249,7 +1254,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   navigate(`/nonton?room=${roomId}`);
                 }}
               />
-              {msgs && user ? (
+              {msgs && !chatLoading && user ? (
                 <ChatPanel
                   kind="global"
                   messages={msgs as unknown as ChatMsg[]}
@@ -1260,6 +1265,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                     // tampil di layar sebelum server menyalinnya.
                     await sendFast(p);
                   }}
+                  onDeleteLocal={dropLocal}
                 />
               ) : (
                 <div className="space-y-2.5 p-3">
@@ -1368,12 +1374,14 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         <DMScreen
           peer={dmPeer}
           msgs={(dmMsgs ?? []) as unknown as ChatMsg[]}
+          loading={dmLoading}
           meId={meId}
           onBack={() => setDmPeer(null)}
           onOpenProfile={(id) => setProfileId(id)}
           onSend={async (p) => {
             await sendDmFast(p);
           }}
+          onDeleteLocal={dropDmLocal}
           onAddFriend={async () => {
             try {
               await sendReq({ toUserId: dmPeer.id });
@@ -1398,14 +1406,18 @@ function DMScreen({
   onSend,
   onAddFriend,
   onOpenProfile,
+  onDeleteLocal,
+  loading,
 }: {
   peer: { id: Id<"users">; name: string };
   msgs: ChatMsg[];
+  loading?: boolean;
   meId: string;
   onBack: () => void;
   onSend: (p: any) => Promise<void>;
   onAddFriend: () => void;
   onOpenProfile: (id: Id<"users">) => void;
+  onDeleteLocal?: (id: string) => Promise<void> | void;
 }) {
   useHideNavOnMount();
   return (
@@ -1424,16 +1436,31 @@ function DMScreen({
         </button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
-        <ChatPanel
-          key={peer.id}
-          kind="dm"
-          peerId={peer.id}
-          messages={msgs}
-          meId={meId}
-          onOpenProfile={onOpenProfile}
-          onSend={onSend}
-          noPremium
-        />
+        {loading ? (
+          <div className="space-y-2.5 p-3">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="msg-skeleton size-9 rounded-full" />
+                <div
+                  className="msg-skeleton h-10 rounded-lg"
+                  style={{ width: `${50 + ((i * 19) % 36)}%` }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ChatPanel
+            key={peer.id}
+            kind="dm"
+            peerId={peer.id}
+            messages={msgs}
+            meId={meId}
+            onOpenProfile={onOpenProfile}
+            onSend={onSend}
+            onDeleteLocal={onDeleteLocal}
+            noPremium
+          />
+        )}
       </div>
     </div>
   );

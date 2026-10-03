@@ -78,7 +78,7 @@ export function NobarDock({
 }) {
   const [tab, setTab] = useState<"chat" | "orang">("chat");
   const { user } = useAuth();
-  const { messages: msgs, sendFast } = useFastChat(
+  const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
     { kind: "room", roomId: room._id, limit: 60 },
     { kind: "room", roomId: room._id },
     user,
@@ -210,7 +210,7 @@ export function NobarDock({
 
       {tab === "chat" ? (
         <div className="flex h-[38vh] min-h-52 flex-col overflow-hidden bg-card/40 sm:h-[320px]">
-          {msgs ? (
+          {!chatLoading && msgs ? (
             <ChatPanel
               kind="room"
               roomId={room._id}
@@ -219,6 +219,7 @@ export function NobarDock({
               messages={msgs}
               meId={meId ?? ""}
               onSend={(p) => sendFast(p)}
+              onDeleteLocal={dropLocal}
             />
           ) : (
             <p className="py-10 text-center text-xs text-muted-foreground">

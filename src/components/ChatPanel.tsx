@@ -445,6 +445,7 @@ export function ChatPanel({
   compact,
   onOpenProfile,
   noPremium,
+  onDeleteLocal,
 }: {
   kind: string;
   clanId?: Id<"clans">;
@@ -469,6 +470,8 @@ export function ChatPanel({
   onOpenProfile?: (id: Id<"users">) => void;
   /** Room nobar: tombol give premium disembunyikan. */
   noPremium?: boolean;
+  /** Hapus pesan yang masih berbentuk echo lokal (dipasang useFastChat). */
+  onDeleteLocal?: (id: string) => Promise<void> | void;
 }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
@@ -481,6 +484,9 @@ export function ChatPanel({
   const [reportMsg, setReportMsg] = useState<ChatMsg | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Cegah tap dobel (Enter lalu ketuk, atau ketuk dua kali) mengirim isi yang
+  // sama dua kali — tanpa kunci yang menelan pesan berikutnya diam-diam.
+  const lastSent = useRef({ text: "", at: 0 });
   const nsfwReport = useMutation(api.chat.nsfwReport);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const { muted } = useModeration();
@@ -497,11 +503,11 @@ export function ChatPanel({
     }) => {
       // Kutipan reply ditampilkan langsung di bubble lokal, supaya pesan yang
       // barusan dikirim tidak pernah muncul tanpa konteks balasannya.
+      // Id "local-" (echo yang belum di-ack) tetap dikirim: useFastChat yang
+      // menukarnya dengan id asli, jadi reply tidak pernah jadi komentar
+      // biasa hanya karena targetnya pesan yang baru saja dikirim.
       const target = replyTo;
-      const replyToId =
-        target && !String(target._id).startsWith("local-")
-          ? target._id
-          : undefined;
+      const replyToId = target ? target._id : undefined;
       const quoted = target
         ? {
             _id: target._id,
@@ -527,10 +533,18 @@ export function ChatPanel({
     }
     if (!text.trim()) return;
     const t = text;
+    // Kirim dua kali dalam <800ms dengan teks identik hampir pasti ketukan
+    // dobel, bukan pesan baru.
+    const now = Date.now();
+    if (lastSent.current.text === t && now - lastSent.current.at < 800) return;
+    lastSent.current = { text: t, at: now };
     setText("");
     try {
       await send({ text: t });
     } catch (e) {
+      // Kegagalan: kembalikan teks DAN buka lagi penjaga ketukan dobel,
+      // supaya kirim ulang yang segera setelahnya tidak diblokir diam-diam.
+      lastSent.current = { text: "", at: 0 };
       setText(t);
       toast.error(e instanceof Error ? e.message : "Gagal kirim");
     }
@@ -604,11 +618,11 @@ export function ChatPanel({
                     )}
                   </div>
                   {m.replyTo && (
-                    // Tanpa garis di kiri: kutipan cuma kotak tipis yang
-                    // lebih rapi dan tidak memakan tempat.
-                    <div className="mt-1 rounded-md bg-black/30 px-2 py-1 text-xs">
+                    // Kutipan balas: kotak tipis yang tetap lapang, teks
+                    // sumber ditampilkan sampai 3 baris supaya jelas.
+                    <div className="mt-1 rounded-md bg-black/30 px-2.5 py-1.5 text-xs">
                       <p className="font-medium text-primary">{m.replyTo.username}</p>
-                      <p className="truncate text-muted-foreground">
+                      <p className="line-clamp-3 text-muted-foreground">
                         {m.replyTo.text ?? (m.replyTo.premiumGiveId ? "Give premium" : "[foto]")}
                       </p>
                     </div>
@@ -662,7 +676,7 @@ export function ChatPanel({
                     <Reply className="size-3.5" />
                   </button>
                   {mine ? (
-                    <DeleteButton messageId={m._id} />
+                    <DeleteButton messageId={m._id} onDeleteLocal={onDeleteLocal} />
                   ) : (
                     /* Tombol ":" di pojok pesan → popup lapor */
                     <button
@@ -685,14 +699,21 @@ export function ChatPanel({
       {/* reply preview + input */}
       <div className="border-t border-border/60 p-2">
         {replyTo && (
-          <div className="mb-2 flex items-center justify-between rounded-md bg-primary/10 px-3 py-1.5 text-xs">
-            <div className="min-w-0">
-              <p className="font-medium text-primary">{replyTo.username}</p>
-              <p className="truncate text-muted-foreground">
+          <div className="mb-2 flex items-start gap-2 rounded-lg bg-primary/12 px-3 py-2.5">
+            <Reply className="mt-0.5 size-4 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-primary">
+                Membalas {replyTo.username}
+              </p>
+              <p className="line-clamp-4 text-[13px] leading-snug text-muted-foreground">
                 {replyTo.text ?? (replyTo.premiumGive ? "Give premium" : "[foto]")}
               </p>
             </div>
-            <button onClick={() => setReplyTo(null)}>
+            <button
+              onClick={() => setReplyTo(null)}
+              aria-label="Batalkan balasan"
+              className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-black/20 hover:text-foreground"
+            >
               <X className="size-4" />
             </button>
           </div>
@@ -903,18 +924,45 @@ function ClaimButton({
   );
 }
 
-function DeleteButton({ messageId }: { messageId: Id<"chatMessages"> }) {
+function DeleteButton({
+  messageId,
+  onDeleteLocal,
+}: {
+  messageId: Id<"chatMessages">;
+  onDeleteLocal?: (id: string) => Promise<void> | void;
+}) {
   const del = useMutation(api.chat.deleteMessage);
+  const [busy, setBusy] = useState(false);
   return (
     <button
       aria-label="Hapus pesan"
       title="Hapus"
-      className="hover:text-red-400"
+      disabled={busy}
+      className="hover:text-red-400 disabled:opacity-40"
       onClick={async () => {
+        const id = String(messageId);
+        // Pesan yang masih echo lokal tidak ada di server; buang lewat hook.
+        if (id.startsWith("local-")) {
+          if (!onDeleteLocal) return;
+          setBusy(true);
+          try {
+            await onDeleteLocal(id);
+            toast.success("Pesan dihapus");
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Gagal menghapus pesan");
+          } finally {
+            setBusy(false);
+          }
+          return;
+        }
+        setBusy(true);
         try {
           await del({ messageId });
-        } catch {
-          /* noop */
+        } catch (e) {
+          // Dulu errornya ditelan, jadi tombol terasa tidak berfungsi.
+          toast.error(e instanceof Error ? e.message : "Gagal menghapus pesan");
+        } finally {
+          setBusy(false);
         }
       }}
     >

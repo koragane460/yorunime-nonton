@@ -14,6 +14,7 @@ import {
   Download,
   Gauge,
   Loader2,
+  Lock,
   Maximize,
   Minimize,
   Pause,
@@ -274,6 +275,9 @@ function WatchContent() {
   const [duration, setDuration] = useState(0);
   const [recorded, setRecorded] = useState(false);
   const [controlsOn, setControlsOn] = useState(true);
+  // Kunci UI layar penuh: saat aktif semua kontrol disembunyikan dan hanya
+  // tombol gembok (latar putih) yang tetap kelihatan. Tekan lagi = buka.
+  const [uiLocked, setUiLocked] = useState(false);
   const [scrub, setScrub] = useState<number | null>(null);
   const [isFs, setIsFs] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
@@ -364,13 +368,19 @@ function WatchContent() {
   const liftAmount = brightness > 0.5 ? (brightness - 0.5) * 2 : 0;
   /** Toggle "HD" — hanya tampil di layar penuh lanskap. */
   const [hdBoost, setHdBoost] = useState(false);
+  /**
+   * Filter video. Naikkan kecerahan (lift) memang boleh mengubah kontras dan
+   * saturasi — itu memang efek "lebih terang". Tombol HD dipisah penuh:
+   * HANYA ketajaman lewat filter SVG (feConvolveMatrix / unsharp mask),
+   * tanpa menyentuh warna, saturasi, atau kecerahan gambar.
+   */
   const videoFilter = [
-    `contrast(${(1.06 + liftAmount * 0.18 + (hdBoost ? 0.16 : 0)).toFixed(3)})`,
-    `saturate(${(1.04 + liftAmount * 0.22 + (hdBoost ? 0.2 : 0)).toFixed(3)})`,
+    `contrast(${(1.06 + liftAmount * 0.18).toFixed(3)})`,
+    `saturate(${(1.04 + liftAmount * 0.22).toFixed(3)})`,
     // Naikkan kecerahan sedikit tanpa menutupi gambar dengan cat putih.
     liftAmount > 0 ? `brightness(${(1 + liftAmount * 0.24).toFixed(3)})` : "",
-    // Ketajaman: tekanan lokal di tepi, membuat gambar burem terasa lebih tajam.
-    hdBoost ? "drop-shadow(0 0 0.6px rgba(255,255,255,0.35))" : "",
+    // HD = ketajaman murni, bukan koreksi warna.
+    hdBoost ? "url(#yn-sharpen)" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1029,7 +1039,11 @@ function WatchContent() {
   // Kontrol video: tap untuk tampil/sembunyi, auto-hide 3 detik saat diputar.
   // Timer hanya bergantung pada [playing, controlsOn] (bukan currentTime),
   // jadi tidak terus dibatalkan oleh update waktu video.
-  const tapVideo = () => setControlsOn((v) => !v);
+  const tapVideo = () => {
+    // Sedang terkunci: tap video tidak menghidupkan kontrol apa pun.
+    if (uiLocked) return;
+    setControlsOn((v) => !v);
+  };
 
   useEffect(() => {
     if (!playing) {
@@ -1059,7 +1073,10 @@ function WatchContent() {
   // di browser yang hanya mendukung API lama.
   useEffect(() => {
     const settle = () => {
-      setIsFs(!!fullscreenElement());
+      const fsNow = !!fullscreenElement();
+      setIsFs(fsNow);
+      // Keluar layar penuh = kunci UI otomatis dilepas.
+      if (!fsNow) setUiLocked(false);
       setControlsOn(true);
       // Simpan posisi sekarang supaya playback tidak mundur saat browser
       // membaca ulang dekode frame setelah ukuran layar berubah.
@@ -1075,7 +1092,9 @@ function WatchContent() {
     // Safari iOS: video punya layar penuh sendiri yang tidak pernah menyentuh
     // document.fullscreenElement, jadi status UI diambil dari event ini.
     const onNativeFs = (e: Event) => {
-      setIsFs(e.type === "webkitbeginfullscreen");
+      const fsNow = e.type === "webkitbeginfullscreen";
+      setIsFs(fsNow);
+      if (!fsNow) setUiLocked(false);
       setControlsOn(true);
     };
     document.addEventListener("webkitbeginfullscreen", onNativeFs);
@@ -1295,6 +1314,19 @@ function WatchContent() {
           />
         )}
 
+        {/* Filter ketajaman untuk tombol HD: unsharp mask lewat matriks 3x3.
+            Kernel jumlahnya 1.0 jadi kecerahan rata-rata tidak berubah —
+            yang berbeda cuma tepi detail, tidak ada koreksi warna sama sekali. */}
+        <svg aria-hidden className="pointer-events-none absolute h-0 w-0">
+          <filter id="yn-sharpen" colorInterpolationFilters="sRGB">
+            <feConvolveMatrix
+              order="3"
+              preserveAlpha="true"
+              kernelMatrix="0 -0.2 0 -0.2 1.8 -0.2 0 -0.2 0"
+            />
+          </filter>
+        </svg>
+
         {!streamUrl ? (
           <div
             className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black text-center"
@@ -1499,33 +1531,60 @@ function WatchContent() {
         {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
         {isFs && (
           <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
-            {/* Perapian gambar: aktifkan waktu gambar burem terasa lebih tajam.
-                Hanya tampil di layar penuh (landscape). */}
+            {/* Selama terkunci, HD & tombol keluar ikut disembunyikan:
+                gembok adalah satu-satunya UI yang kelihatan. */}
+            {!uiLocked && (
+              <>
+                {/* Perapian gambar: aktifkan waktu gambar burem terasa lebih
+                    tajam. Hanya tampil di layar penuh (landscape). */}
+                <button
+                  onClick={() => setHdBoost((v) => !v)}
+                  aria-pressed={hdBoost}
+                  aria-label="Perjelas gambar"
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs font-bold",
+                    hdBoost
+                      ? "bg-white text-black"
+                      : "bg-black/55 text-white backdrop-blur",
+                  )}
+                >
+                  HD
+                </button>
+                <button
+                  onClick={exitFullscreen}
+                  className="rounded-full bg-black/55 p-2"
+                  aria-label="Keluar layar penuh"
+                >
+                  <Minimize className="size-5 text-white" />
+                </button>
+              </>
+            )}
+            {/* Kunci kontrol: tekan sekali → semua UI hilang, tombol jadi
+                latar putih; tekan lagi → semuanya kembali seperti semula. */}
             <button
-              onClick={() => setHdBoost((v) => !v)}
-              aria-pressed={hdBoost}
-              aria-label="Perjelas gambar"
+              onClick={() => {
+                const next = !uiLocked;
+                // Kunci → kontrol langsung disembunyikan; buka kunci →
+                // semua kontrol langsung tampil kembali seperti semula.
+                setUiLocked(next);
+                setControlsOn(!next);
+              }}
+              aria-pressed={uiLocked}
+              aria-label={uiLocked ? "Buka kunci kontrol" : "Kunci kontrol"}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-bold",
-                hdBoost
+                "rounded-full p-2 transition",
+                uiLocked
                   ? "bg-white text-black"
                   : "bg-black/55 text-white backdrop-blur",
               )}
             >
-              HD
-            </button>
-            <button
-              onClick={exitFullscreen}
-              className="rounded-full bg-black/55 p-2"
-              aria-label="Keluar layar penuh"
-            >
-              <Minimize className="size-5 text-white" />
+              <Lock className="size-5" />
             </button>
           </div>
         )}
 
         {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
-        {controlsOn && sourceType !== "embed" && (isHost || !room) && (
+        {controlsOn && !uiLocked && sourceType !== "embed" && (isHost || !room) && (
         <div
           className={cn(
             "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
@@ -1851,8 +1910,10 @@ function WatchContent() {
           </>
         )}
 
-        {/* Lewati intro (kalau MegaPlay memberi timing intro) */}
-        {direct?.intro?.start !== undefined &&
+        {/* Lewati intro (kalau MegaPlay memberi timing intro) — ikut
+            disembunyikan saat UI dikunci. */}
+        {!uiLocked &&
+          direct?.intro?.start !== undefined &&
           currentTime >= Number(direct.intro.start) &&
           currentTime < Number(direct.intro.end) && (
             <button
