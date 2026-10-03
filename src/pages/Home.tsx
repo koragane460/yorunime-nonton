@@ -262,7 +262,7 @@ function HomeContent() {
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
-  const donghuaNews = useAction(api.anime.donghuaAiringSchedule);
+  const donghuaNews = useAction(api.sanka.donghuaScheduleCards);
   const [todayAiring, setTodayAiring] = useState<
     { id: string; title: string; image: string; episode: number; timeLabel: string }[]
   >([]);
@@ -1104,7 +1104,7 @@ function SearchScreen({
 }) {
   useHideNavOnMount();
   const searchAnime = useAction(api.anime.animeSearch);
-  const searchDonghua = useAction(api.anime.donghuaSearch);
+  const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadAll = useAction(api.anime.animeTop);
   const [query, setQuery] = useState("");

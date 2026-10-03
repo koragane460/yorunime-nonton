@@ -29,6 +29,14 @@ type AiringItem = {
   score?: number;
 };
 
+type DonghuaRow = {
+  id: string;
+  title: string;
+  image: string;
+  status?: string;
+  episode?: number;
+};
+
 type ComicSlot = {
   slug: string;
   title: string;
@@ -57,12 +65,12 @@ function JadwalContent() {
   const { user } = useAuth();
   const schedule = useAction(api.anime.animeAiringSchedule);
   const comicSchedule = useAction(api.manga.schedule);
-  const donghuaSchedule = useAction(api.anime.donghuaAiringSchedule);
+  const donghuaSchedule = useAction(api.sanka.donghuaScheduleCards);
   const [tab, setTab] = useState<Tab>("anime");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sched, setSched] = useState<Record<string, AiringItem[]>>({});
   const [comics, setComics] = useState<Record<string, Record<string, ComicSlot[]>>>({});
-  const [donghuaSched, setDonghuaSched] = useState<Record<string, AiringItem[]>>({});
+  const [donghuaRunning, setDonghuaRunning] = useState<DonghuaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [comicLoading, setComicLoading] = useState(false);
   const todayIdx = new Date().getDay();
@@ -120,16 +128,11 @@ function JadwalContent() {
     donghuaSchedule({})
       .then((r: unknown) => {
         if (!alive) return;
-        const list = (r ?? []) as AiringItem[];
-        const byDay: Record<string, AiringItem[]> = {};
-        for (const a of list) {
-          const d = new Date(a.airingAt);
-          const key = DAYS_ID[d.getDay()];
-          (byDay[key] ??= []).push(a);
-        }
-        for (const k of Object.keys(byDay))
-          byDay[k].sort((x, y) => x.airingAt - y.airingAt);
-        setDonghuaSched(byDay);
+        // Sanka tidak memberi jadwal airing per hari, jadi TIDAK dikarang
+        // tanggal. Semua donghua yang sedang jalan dikelompokkan di bawah
+        // sebagai daftar berjalan, bukan per hari.
+        const list = (r ?? []) as DonghuaRow[];
+        setDonghuaRunning(list);
       })
       .catch(() => {})
       .finally(() => alive && setComicLoading(false));
@@ -150,10 +153,7 @@ function JadwalContent() {
     () => Object.values(sched).reduce((s, v) => s + v.length, 0),
     [sched],
   );
-  const donghuaTotal = Object.values(donghuaSched).reduce(
-    (s, v) => s + (v?.length ?? 0),
-    0,
-  );
+  const donghuaTotal = donghuaRunning.length;
   const comicCounts: Record<string, number> = {};
   for (const t of ["manga", "manhwa"] as const) {
     comicCounts[t] = Object.values(comics[t] ?? {}).reduce((s, v) => s + (v?.length ?? 0), 0);
@@ -172,7 +172,7 @@ function JadwalContent() {
     tab === "anime"
       ? (sched[DAYS_ID[day]] ?? [])
       : tab === "donghua"
-        ? (donghuaSched[DAYS_ID[day]] ?? [])
+        ? []
         : (comics[tab]?.[DAYS_ID[day]] ?? []);
   const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
 
@@ -240,7 +240,7 @@ function JadwalContent() {
             tab === "anime"
               ? (sched[d] ?? []).length
               : tab === "donghua"
-                ? (donghuaSched[d] ?? []).length
+                ? donghuaRunning.length
                 : (comics[tab]?.[d] ?? []).length;
           return (
             <button

@@ -608,6 +608,22 @@ function BottomNav() {
   const [switcher, setSwitcher] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
+  // Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
+  // Paling sering, Untuk kamu).
+  const [navPanel, setNavPanel] = useState<TopPanel>(null);
+  const watched = useQuery(api.activities.mostWatched, "skip");
+  // "Paling sering" baru bermakna setelah ada cukup riwayat; sebelum itu
+  // ikonnya diredupkan dan panelnya tidak pernah dibuka.
+  const enoughWatched = (watched ?? []).length >= MOST_MIN_TITLES;
+
+  useEffect(() => {
+    if (!navPanel) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavPanel(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navPanel]);
 
   useEffect(() => {
     return () => {
@@ -621,10 +637,29 @@ function BottomNav() {
   }, [location.pathname]);
 
   if (overlay) return null;
-  const items: { path: string; label: string; icon: ComponentType<{ className?: string }> }[] = [
+  const items: {
+    path: string;
+    label: string;
+    icon: ComponentType<{ className?: string }>;
+    panel?: Exclude<TopPanel, null>;
+    dim?: boolean;
+  }[] = [
     { path: "/home", label: "Home", icon: Home },
     { path: "/jadwal", label: "Jadwal", icon: CalendarDays },
     { path: "/info", label: "Info", icon: Info },
+    // Favorit: tombol TAMBAHAN di sebelah kanan Info. Ikon bookmark kotak,
+    // bukan love/hat — ini penanda "disimpan", bukan "disukai".
+    { path: "", label: "Favorit", icon: Bookmark, panel: "favorites" },
+    // Tiga tombol ini sebelumnya menempel di Home; sekarang pindah ke navigasi.
+    { path: "", label: "Lanjutkan nonton", icon: PlayCircle, panel: "continue" },
+    {
+      path: "",
+      label: "Paling sering",
+      icon: Flame,
+      panel: "most",
+      dim: !enoughWatched,
+    },
+    { path: "", label: "Untuk kamu", icon: Sparkles, panel: "foryou" },
     { path: "/akun", label: "Akun", icon: UserRound },
   ];
 
@@ -703,31 +738,49 @@ function BottomNav() {
       )}
       {/* Navbar full width. Angka kolom ikut melebar di desktop. */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
-        <div className="mx-auto grid w-full grid-cols-4 md:max-w-2xl lg:max-w-4xl">
+        <div className="mx-auto grid w-full grid-cols-8 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
             const base = it.path.split("?")[0];
             const active =
               base === "/home"
                 ? location.pathname === "/home" || location.pathname === "/"
-                : location.pathname.startsWith(base);
+                : base !== "" && location.pathname.startsWith(base);
             const isHome = base === "/home";
             const Icon = it.icon;
             return (
               <button
-                key={it.path}
+                key={it.path || `panel-${it.label}`}
                 onPointerDown={() => (isHome ? startHold(it.path) : undefined)}
                 onPointerUp={cancelHold}
                 onPointerLeave={cancelHold}
                 onPointerCancel={cancelHold}
                 onContextMenu={(e) => isHome && e.preventDefault()}
-                onClick={() => onClickItem(it.path)}
+                onClick={() => {
+                  // Tombol panel tidak punya rute: dia membuka layar penuh.
+                  if (it.panel) {
+                    setNavPanel(it.panel);
+                    return;
+                  }
+                  onClickItem(it.path);
+                }}
                 aria-current={active ? "page" : undefined}
                 aria-label={it.label}
-                title={it.label}
+                title={
+                  it.dim
+                    ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
+                    : it.label
+                }
                 className="nav-item relative flex flex-col items-center justify-center py-2.5"
               >
                 <Icon
-                  className={cn("size-[22px]", active ? "text-primary" : "text-zinc-500")}
+                  className={cn(
+                    "size-[22px]",
+                    active
+                      ? "text-primary"
+                      : it.dim
+                        ? "text-zinc-700"
+                        : "text-zinc-500",
+                  )}
                 />
               </button>
             );

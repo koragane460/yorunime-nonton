@@ -15,6 +15,7 @@ import {
 } from "@/lib/offline-store";
 import {
   AlertCircle,
+  Bookmark,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -37,50 +38,13 @@ import { toast } from "sonner";
  *  label yang tetap terbaca lewat aria-label / tooltip.
  * ====================================================================== */
 
-export type TopPanel = "downloads" | "most" | "foryou" | null;
-
-/**
- * Tiga tombol aksi yang menempel di pojok kanan kartu akun, sebelah
- * Pengaturan dan Notifikasi (lihat AccountPanel di AppLayout).
- *
- * Bentuknya pill-teks, bukan lingkaran ikon: ikon saja terlalu ambigu dan
- * sering tidak terlihat kalau menyatu dengan dua tombol lain yang sudah ada
- * di sana. Label pendek + ikon selalu tampil.
- */
-export function HomeTopButtons({
-  onOpen,
-}: {
-  onOpen: (p: Exclude<TopPanel, null>) => void;
-}) {
-  const stats = useQuery(api.downloads.downloadStats, "skip");
-  const watched = useQuery(api.activities.mostWatched, "skip");
-  // "Paling sering" baru bermakna kalau sudah ada cukup riwayat. Kalau belum,
-  // panelnya akan kosong dan hanya menampilkan pesan "belum ada riwayat".
-  const enough = (watched ?? []).length >= MOST_MIN_TITLES;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      <TopIconButton
-        label="Download"
-        onClick={() => onOpen("downloads")}
-        badge={stats && stats.done > 0 ? stats.done : undefined}
-      >
-        <Download className="size-3.5" />
-      </TopIconButton>
-      <TopIconButton
-        label="Paling sering"
-        onClick={() => onOpen("most")}
-        dim={!enough}
-        title={enough ? "Paling sering" : `Paling sering (butuh ${MOST_MIN_TITLES} judul ditonton)`}
-      >
-        <Flame className="size-3.5" />
-      </TopIconButton>
-      <TopIconButton label="Untuk kamu" onClick={() => onOpen("foryou")}>
-        <Sparkles className="size-3.5" />
-      </TopIconButton>
-    </div>
-  );
-}
+export type TopPanel =
+  | "downloads"
+  | "most"
+  | "foryou"
+  | "favorites"
+  | "continue"
+  | null;
 
 /**
  * Minimal judul berbeda yang harus sudah ditonton sebelum "Paling sering"
@@ -88,44 +52,6 @@ export function HomeTopButtons({
  * layar kosong — lebih baik belum muncul sama sekali.
  */
 export const MOST_MIN_TITLES = 20;
-
-function TopIconButton({
-  label,
-  title,
-  onClick,
-  badge,
-  dim,
-  children,
-}: {
-  label: string;
-  title?: string;
-  onClick: () => void;
-  badge?: number;
-  dim?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title ?? label}
-      aria-label={title ?? label}
-      className={cn(
-        "relative inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap backdrop-blur-sm transition active:scale-95",
-        dim
-          ? "border-white/12 bg-black/35 text-white/55"
-          : "border-white/18 bg-black/55 text-white hover:border-primary/70 hover:bg-black/70 hover:text-primary",
-      )}
-    >
-      {children}
-      <span className="leading-none">{label}</span>
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
-    </button>
-  );
-}
 
 /* ------------------------------------------------------------- shell ---- */
 
@@ -893,6 +819,181 @@ function MiniPick({ card }: { card: RecoCard }) {
         {card.title}
       </p>
     </button>
+  );
+}
+
+/* ========================================================= FAVORIT ===== */
+
+type FavRow = {
+  _id: string;
+  animeId: string;
+  animeTitle: string;
+  animeImage?: string;
+  createdAt: number;
+};
+
+/** Daftar judul yang ditandai favorit — dibuka dari tombol di navigasi. */
+export function FavoritesPanel({ onClose }: { onClose: () => void }) {
+  useHideNavOnMount();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const rows = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const remove = useMutation(api.activities.toggleFavorite);
+  const items = ((rows ?? []) as unknown as FavRow[])
+    .slice()
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  return (
+    <PanelShell
+      title="Favorit"
+      subtitle={
+        items.length
+          ? `${items.length} judul tersimpan`
+          : "Judul yang kamu tandai favorit"
+      }
+      onClose={onClose}
+    >
+      {items.length === 0 ? (
+        <EmptyState
+          icon={<Bookmark className="size-6" />}
+          title="Belum ada favorit"
+          body="Buka halaman detail anime atau donghua, lalu tekan ikon bookmark untuk menyimpannya di sini."
+        />
+      ) : (
+        <div className="space-y-2">
+          {items.map((f) => (
+            <div
+              key={f._id}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card/50 p-2.5"
+            >
+              <button
+                onClick={() =>
+                  navigate(
+                    `/nonton?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`,
+                  )
+                }
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
+                  {f.animeImage && (
+                    <img
+                      src={f.animeImage}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                </div>
+                <p className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                  {f.animeTitle}
+                </p>
+              </button>
+              <button
+                onClick={() => void remove({ animeId: f.animeId })}
+                aria-label={`Hapus ${f.animeTitle} dari favorit`}
+                title="Hapus dari favorit"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-red-500/60 hover:text-red-400"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </PanelShell>
+  );
+}
+
+/* ================================================ LANJUTKAN NONTON ===== */
+
+type ContRow = {
+  _id: string;
+  animeId: string;
+  animeTitle: string;
+  animeImage?: string;
+  episode: number;
+  minutesWatched: number;
+  progressSec: number;
+  durationSec?: number;
+  updatedAt: number;
+};
+
+/** Judul yang masih setengah ditonton — tombol "Lanjutkan nonton" di nav. */
+export function ContinuePanel({ onClose }: { onClose: () => void }) {
+  useHideNavOnMount();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
+  const items = ((rows ?? []) as unknown as ContRow[])
+    .slice()
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  return (
+    <PanelShell
+      title="Lanjutkan nonton"
+      subtitle={
+        items.length
+          ? `${items.length} judul belum selesai`
+          : "Anime & donghua yang kamu tinggalkan"
+      }
+      onClose={onClose}
+    >
+      {items.length === 0 ? (
+        <EmptyState
+          icon={<PlayCircle className="size-6" />}
+          title="Tidak ada yang lagi jalan"
+          body="Mulai nonton apa pun, lalu judulnya akan muncul di sini lengkap dengan posisi tontonan terakhir."
+        />
+      ) : (
+        <div className="space-y-2">
+          {items.map((c) => {
+            const pct =
+              c.durationSec && c.durationSec > 0
+                ? Math.min(100, Math.round((c.progressSec / c.durationSec) * 100))
+                : 0;
+            return (
+              <button
+                key={c._id}
+                onClick={() =>
+                  navigate(
+                    `/nonton?anime=${encodeURIComponent(c.animeId)}&ep=${encodeURIComponent(`${c.animeId}__ep${c.episode}`)}&judul=${encodeURIComponent(c.animeTitle)}`,
+                  )
+                }
+                className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card/50 p-2.5 text-left transition hover:border-primary/50"
+              >
+                <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
+                  {c.animeImage && (
+                    <img
+                      src={c.animeImage}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                    <PlayCircle className="size-6 text-white/90" />
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold leading-tight">
+                    {c.animeTitle}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Episode {c.episode}
+                    {pct > 0 ? ` · ${pct}% selesai` : ""}
+                  </p>
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/15">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </PanelShell>
   );
 }
 

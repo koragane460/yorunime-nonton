@@ -45,7 +45,10 @@ export function CardCarousel({
   subtitle?: string;
   onPick: (id: string, title?: string) => void;
 }) {
+  // Donghua diambil dari SankaVollereii (src/convex/sanka.ts), bukan dari
+  // animeBrowse — katalognya terpisah dan subtitle-nya sudah Indonesia.
   const browse = useAction(api.anime.animeBrowse);
+  const donghua = useAction(api.sanka.donghuaLatestCards);
   const [items, setItems] = useState<CardT[]>([]);
   const [busy, setBusy] = useState(true);
   const [openAll, setOpenAll] = useState(false);
@@ -53,7 +56,9 @@ export function CardCarousel({
   useEffect(() => {
     let alive = true;
     setBusy(true);
-    browse({ kind, page: 1 })
+    const req =
+      kind === "donghua" ? donghua({ limit: 24 }) : browse({ kind, page: 1 });
+    req
       .then((r: unknown) => {
         if (alive) setItems((r ?? []) as CardT[]);
       })
@@ -64,7 +69,7 @@ export function CardCarousel({
     return () => {
       alive = false;
     };
-  }, [kind, browse]);
+  }, [kind, browse, donghua]);
 
   const top = items.slice(0, PER_ROW);
   const bottom = items.slice(PER_ROW, CAROUSEL_COUNT);
@@ -173,6 +178,8 @@ export function CatalogScreen({
 }) {
   const browse = useAction(api.anime.animeBrowse);
   const searchAnime = useAction(api.anime.animeSearch);
+  const donghuaLatest = useAction(api.sanka.donghuaLatestCards);
+  const donghuaSearch = useAction(api.sanka.donghuaSearchCards);
   const [q, setQ] = useState("");
   const [all, setAll] = useState<CardT[]>(seed);
   const [loading, setLoading] = useState(seed.length === 0);
@@ -185,7 +192,12 @@ export function CatalogScreen({
     let alive = true;
     const pages = [2, 3, 4];
     const fetches: Promise<CardT[]>[] = pages.map((p) =>
-      browse({ kind, page: p }).then((r: unknown) => (r ?? []) as CardT[]).catch(() => [] as CardT[]),
+      (kind === "donghua"
+        ? donghuaLatest({ limit: 24 * p })
+        : browse({ kind, page: p })
+      )
+        .then((r: unknown) => (r ?? []) as CardT[])
+        .catch(() => [] as CardT[]),
     );
     void Promise.all(fetches).then((chunks) => {
       if (!alive) return;
@@ -202,7 +214,7 @@ export function CatalogScreen({
     return () => {
       alive = false;
     };
-  }, [kind, browse, seed]);
+  }, [kind, browse, donghuaLatest, seed]);
 
   // Pencarian: untuk donghua, kueri+donghua; untuk anime, animeSearch biasa.
   const doSearch = async () => {
@@ -213,16 +225,14 @@ export function CatalogScreen({
     }
     setSearching(true);
     try {
+      // Donghua dicari lewat SankaVollereii (katalog terpisah, subtitle
+      // Indonesia). Menyaring daftar lokal saja akan salah, karena daftar
+      // lokal cuma halaman pertama.
       const r =
         kind === "donghua"
-          ? await browse({ kind: "donghua", page: 1 })
+          ? await donghuaSearch({ q: term, limit: 40 })
           : await searchAnime({ q: term, page: 1 });
-      let list = (r ?? []) as CardT[];
-      if (kind === "donghua") {
-        const needle = term.toLowerCase();
-        list = list.filter((c) => c.title.toLowerCase().includes(needle));
-      }
-      setResults(list);
+      setResults(((r ?? []) as CardT[]).filter((c) => c?.id));
     } catch {
       setResults([]);
     } finally {
@@ -259,7 +269,11 @@ export function CatalogScreen({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder={`Cari ${title.toLowerCase()}… contoh: ayanokoji`}
+            placeholder={
+              kind === "donghua"
+                ? "Cari donghua… contoh: battle through"
+                : "Cari anime… contoh: ayanokoji"
+            }
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {q && (
