@@ -140,12 +140,12 @@ export function ProfileSheet({
                   onClick={requestFriend}
                   disabled={sending}
                   aria-label="Tambah teman"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-110 active:scale-95 disabled:opacity-50"
                 >
                   {sending ? (
-                    <Send className="size-4" />
+                    <Send className="size-3.5" />
                   ) : (
-                    <Plus className="size-5" strokeWidth={3} />
+                    <Plus className="size-4" strokeWidth={3} />
                   )}
                 </button>
               )}

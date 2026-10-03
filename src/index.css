@@ -922,6 +922,23 @@ button:not([disabled]):active,
   background: #07070b;
   border-top: 1px solid rgb(255 255 255 / 0.09);
 }
+
+/*
+ * Footer hitam paling bawah.
+ *
+ * Dipakai supaya konten tidak pernah mentok tepat di tepi layar — khususnya
+ * saat aplikasi dibuka lewat "add to home screen" (display: standalone),
+ * yang membuat aplikasi terlihat seperti terpotong.
+ *
+ * Warnanya sama persis dengan navbar (#07070b) dan sengaja TANPA padding
+ * bawah: navbar-nya fixed di tepi layar, sehingga footer ini menyatu jadi satu
+ * blok hitam yang menutup sampai tepi layar. Kalau diberi padding tambahan,
+ * setiap halaman akan mendapat ruang kosong yang tidak terpakai.
+ */
+.app-footer {
+  background: #07070b;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
 /*
  * Navigasi bawah.
  *

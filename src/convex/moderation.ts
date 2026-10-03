@@ -336,6 +336,28 @@ export const myNotifications = query({
 });
 
 /**
+ * Jumlah notifikasi yang belum dibaca — dipakai lonceng merah di tombol Notif.
+ *
+ * Query terpisah (bukan dari myNotifications) supaya lonceng di mana saja
+ * bisa menampilkan angka tanpa menarik isi notifikasi yang tidak perlu dibuka.
+ */
+export const myUnreadCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return 0;
+    const rows = await ctx.db
+      .query("notifications")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(50);
+    let unread = 0;
+    for (const n of rows) if (!n.read) unread += 1;
+    return unread;
+  },
+});
+
+/**
  * Bersihkan notifikasi sendiri.
  *
  * Aturan: yang tampil cuma 20 terbaru. Sisanya dibuang, tapi hanya kalau

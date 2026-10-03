@@ -1,13 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
-import { Avatar, BlueCheck, ShineBadge } from "@/components/lstream-ui";
-import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
 import {
-  Bell,
   BookOpen,
   ChevronDown,
   ChevronUp,
@@ -24,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type Tab = "notif" | "lanjut";
+type Tab = "lanjut";
 
 export default function Info() {
   return (
@@ -35,184 +32,97 @@ export default function Info() {
 }
 
 function InfoContent() {
-  const [tab, setTab] = useState<Tab>("notif");
+  const [tab, setTab] = useState<Tab>("lanjut");
 
   return (
     <div className="pb-6">
-      {/* Dua tombol dengan garis bawah di bawahnya */}
+      {/* Pemberitahuan tidak lagi tampil di sini — semuanya sudah pindah ke
+          area Notif (tombol lonceng di banner akun). Sisa halaman ini khusus
+          "Lanjutkan" agar isinya tidak terasa kosong. */}
       <div className="flex border-b border-white/15">
-        {(
-          [
-            ["notif", "Pemberitahuan", Bell],
-            ["lanjut", "Lanjutkan", PlayCircle],
-          ] as const
-        ).map(([k, label, Icon]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={cn(
-              "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-3 text-sm font-semibold transition",
-              tab === k ? "text-foreground" : "text-muted-foreground",
-            )}
-          >
-            <Icon className="size-4" />
-            {label}
-            {tab === k && (
-              <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-white/90" />
-            )}
-          </button>
-        ))}
+        {([["lanjut", "Lanjutkan", PlayCircle]] as const).map(
+          ([k, label, Icon]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={cn(
+                "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-3 text-sm font-semibold transition",
+                tab === k ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+              {label}
+              {tab === k && (
+                <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-white/90" />
+              )}
+            </button>
+          ),
+        )}
       </div>
 
-      {tab === "notif" ? <NotifTab /> : <LanjutTab />}
+      {tab === "lanjut" ? <LanjutTab /> : null}
+      <DevTools />
     </div>
   );
 }
 
-/** Pemberitahuan: broadcast developer, notifikasi sistem, dan komentar teman. */
-function NotifTab() {
+/**
+ * Alat developer: kirim pesan massal + kelola popup pengumuman.
+ *
+ * Isi notifikasi yang dikirim dari sini sudah otomatis muncul di area Notif
+ * (tombol lonceng di banner akun), jadi halaman ini tidak perlu menampilkan
+ * daftar notifikasi lagi — hanya alat untuk mengirimnya.
+ */
+function DevTools() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const friendComments = useQuery(
-    api.activities.myFriendsComments,
-    user ? {} : "skip",
-  );
   const access = useQuery(api.moderation.myPanelAccess, user ? {} : "skip");
-  const notifs = useQuery(
-    api.moderation.myNotifications,
-    user ? {} : "skip",
-  );
   const [composeOpen, setComposeOpen] = useState(false);
-  // Panel popup pengumuman hanya diambil datanya saat dibuka.
+  // Query daftar pengumuman baru jalan setelah panelnya diketuk, supaya
+  // halaman Info tidak lambat saat dibuka.
   const [annOpen, setAnnOpen] = useState(false);
   const isDev = access?.level === "dev";
 
-  // Tandai semua sudah dibaca + buang notifikasi lawas (lebih dari 20, dan
-  // hanya yang sudah berumur 10 menit atau sudah dibaca).
-  const markRead = useMutation(api.activities.markNotificationsRead);
-  const prune = useMutation(api.moderation.pruneMyNotifications);
-  useEffect(() => {
-    if (!user) return;
-    void markRead({}).catch(() => {});
-    void prune({}).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!notifs]);
+  if (!isDev) return null;
 
   return (
-    <div className="space-y-2.5 pt-3">
-      {/* Tombol + khusus developer: kirim pesan ke semua user */}
-      {isDev && (
-        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-          <p className="flex items-center gap-1.5 text-xs font-semibold">
-            <Megaphone className="size-3.5 text-muted-foreground" /> Broadcast
-          </p>
-          <button
-            onClick={() => setComposeOpen((v) => !v)}
-            className={cn(
-              "flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold transition",
-              composeOpen
-                ? "border border-white/15 text-muted-foreground"
-                : "bg-primary text-primary-foreground",
-            )}
-          >
-            {composeOpen ? <X className="size-3.5" /> : <Plus className="size-4" />}
-            {composeOpen ? "Batal" : "Kirim"}
-          </button>
-        </div>
-      )}
-
-      {composeOpen && isDev && (
-        <BroadcastComposer onDone={() => setComposeOpen(false)} />
-      )}
-
-      {/* Kontrol popup pengumuman yang muncul di atas semua halaman.
-          Sengaja tidak dibuka langsung supaya halaman Info tidak lambat:
-          query daftar pengumuman baru jalan setelah panelnya diketuk. */}
-      {isDev && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-          <button
-            onClick={() => setAnnOpen((v) => !v)}
-            className="flex min-h-9 w-full items-center justify-between text-xs font-semibold"
-          >
-            <span className="flex items-center gap-1.5">
-              <Megaphone className="size-3.5 text-muted-foreground" />
-              Popup pengumuman
-            </span>
-            {annOpen ? (
-              <ChevronUp className="size-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="size-4 text-muted-foreground" />
-            )}
-          </button>
-          {annOpen && <AnnouncementManager />}
-        </div>
-      )}
-
-      {(notifs ?? []).map((n) => (
-        <div
-          key={n._id}
-          className="flex gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5"
-        >
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
-            <Bell className="size-4 text-muted-foreground" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-xs font-bold">{n.title}</p>
-              <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
-                {timeAgo(n.createdAt)}
-              </span>
-            </div>
-            {n.body && (
-              <p className="mt-0.5 text-[13px] leading-snug text-zinc-300">
-                {n.body}
-              </p>
-            )}
-          </div>
-        </div>
-      ))}
-
-      {(friendComments ?? []).map((c: any) => (
-        <button
-          key={c._id}
-          onClick={() => navigate(`/?pilih=${c.animeId.split("__")[0]}`)}
-          className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
-        >
-          {c.bannerUrl && (
-            <div
-              className="h-7 w-full bg-cover bg-center opacity-70"
-              style={{ backgroundImage: `url(${c.bannerUrl})` }}
-            />
-          )}
-          <div className="flex gap-2.5 p-2.5">
-            <Avatar src={c.image} seed={c.username} className="size-8" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <p className="truncate text-xs font-bold">{c.username}</p>
-                {c.premium && <BlueCheck className="size-3.5" />}
-                {c.staffRole && STAFF_BADGE[c.staffRole] && (
-                  <ShineBadge
-                    label={STAFF_BADGE[c.staffRole].name}
-                    gradient={STAFF_BADGE[c.staffRole].cls}
-                  />
-                )}
-                <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                  {timeAgo(c.createdAt)}
-                </span>
-              </div>
-              <p className="line-clamp-2 text-sm text-zinc-300">{c.text}</p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">
-                {c.likeCount ?? 0} suka
-              </p>
-            </div>
-          </div>
-        </button>
-      ))}
-      {friendComments && friendComments.length === 0 && (notifs ?? []).length === 0 && (
-        <p className="py-10 text-center text-xs text-muted-foreground">
-          Belum ada pemberitahuan dari developer atau teman
+    <div className="space-y-2 pt-3">
+      <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+        <p className="flex items-center gap-1.5 text-xs font-semibold">
+          <Megaphone className="size-3.5 text-muted-foreground" /> Broadcast
         </p>
-      )}
+        <button
+          onClick={() => setComposeOpen((v) => !v)}
+          className={cn(
+            "flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold transition",
+            composeOpen
+              ? "border border-white/15 text-muted-foreground"
+              : "bg-primary text-primary-foreground",
+          )}
+        >
+          {composeOpen ? <X className="size-3.5" /> : <Plus className="size-4" />}
+          {composeOpen ? "Batal" : "Kirim"}
+        </button>
+      </div>
+
+      {composeOpen && <BroadcastComposer onDone={() => setComposeOpen(false)} />}
+
+      <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+        <button
+          onClick={() => setAnnOpen((v) => !v)}
+          className="flex min-h-9 w-full items-center justify-between text-xs font-semibold"
+        >
+          <span className="flex items-center gap-1.5">
+            <Megaphone className="size-3.5 text-muted-foreground" />
+            Popup pengumuman
+          </span>
+          {annOpen ? (
+            <ChevronUp className="size-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-4 text-muted-foreground" />
+          )}
+        </button>
+        {annOpen && <AnnouncementManager />}
+      </div>
     </div>
   );
 }
@@ -453,7 +363,7 @@ function LanjutTab() {
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
               )
             }
-            className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
+            className="flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
           >
             <img
               src={h.animeImage ?? ""}
@@ -461,25 +371,21 @@ function LanjutTab() {
               className="h-16 w-11 shrink-0 rounded-lg object-cover"
             />
             <div className="min-w-0 flex-1">
+              {/* Garis merah tipis di atas judul, penanda progres yang
+                  sedang berjalan. */}
+              <div className="mb-1 h-[3px] w-full overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="h-full rounded-full bg-red-500"
+                  style={{ width: `${dur > 0 ? pct : 0}%` }}
+                />
+              </div>
               <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
               <p className="text-xs text-muted-foreground">
-                Episode {h.episode}
-                {dur > 0 ? ` · durasi ${fmtTime(dur)}` : ""}
+                Lanjutkan episode {h.episode} · Menit{" "}
+                {dur > 0 ? `${fmtMinutes(pos)}/${fmtMinutes(dur)}` : "00/00"}
               </p>
-              {/* Posisi terakhir + durasi episode, jadi jelas sudah berapa lama */}
-              <div className="mt-1 flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${dur > 0 ? pct : 0}%` }}
-                  />
-                </div>
-                <span className="shrink-0 text-[10px] font-semibold text-primary">
-                  {dur > 0 ? `${fmtTime(pos)} / ${fmtTime(dur)}` : fmtTime(pos)}
-                </span>
-              </div>
             </div>
-            <PlayCircle className="size-5 shrink-0 text-primary" />
+            <PlayCircle className="size-5 shrink-0 self-center text-primary" />
           </button>
         );
       })}
@@ -492,11 +398,8 @@ function LanjutTab() {
   );
 }
 
-function fmtTime(sec: number) {
-  const s = Math.max(0, Math.floor(sec));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const r = s % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
-  return `${m}:${String(r).padStart(2, "0")}`;
+/** Menit yang sudah ditonton, selalu dua digit: "Menit 07/24". */
+function fmtMinutes(sec: number) {
+  const m = Math.floor(Math.max(0, sec) / 60);
+  return String(m).padStart(2, "0");
 }

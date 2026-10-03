@@ -9,7 +9,6 @@ import {
   CalendarDays,
   UserRound,
   Info,
-  Bell,
   ChevronRight,
   Crown,
   Gem,
@@ -26,6 +25,7 @@ import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { displayId, usernameColor } from "@/lib/lstream";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
+import { NotifButton } from "@/components/NotifButton";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
@@ -96,6 +96,7 @@ export function AppLayout({
         <div className="px-4 md:px-6">{children}</div>
       </div>
       <BottomNav />
+      <AppFooter />
       <MiniPlayerHost />
       <OverlayScrollLock />
       <AnnouncementPopup />
@@ -154,13 +155,7 @@ function AccountPanel({
         >
           <Settings className="size-4" />
         </button>
-        <button
-          aria-label="Notifikasi"
-          onClick={() => goto("/akun?tab=notif")}
-          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-        >
-          <Bell className="size-4" />
-        </button>
+        <NotifButton />
       </div>
       <button onClick={onOpen} className="block w-full text-left"
         style={
@@ -542,6 +537,26 @@ export function MiniPlayerHost() {
 
 // ------------------------------------------------------ bottom nav ----
 
+/**
+ * Footer hitam di paling bawah.
+ *
+ * Saat aplikasi dibuka lewat "add to home screen" (display: standalone),
+ * konten bisa mentok sampai tepi layar dan aplikasi terlihat seperti
+ * terpotong di tengah-tengah. Strip hitam full-width di bawah ini memberi
+ * batas bawah yang jelas, seperti kebanyakan aplikasi streaming lainnya.
+ */
+function AppFooter() {
+  const overlay = useAppOverlayOpen();
+  if (overlay) return null;
+  return (
+    <footer className="app-footer w-full shrink-0">
+      <p className="py-3 text-center text-[10px] font-medium tracking-wide text-zinc-600">
+        YoruNime — nonton tanpa batas
+      </p>
+    </footer>
+  );
+}
+
 function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -664,19 +679,13 @@ function BottomNav() {
                 onContextMenu={(e) => isHome && e.preventDefault()}
                 onClick={() => onClickItem(it.path)}
                 aria-current={active ? "page" : undefined}
-                className="nav-item relative flex flex-col items-center gap-0.5 py-2"
+                aria-label={it.label}
+                title={it.label}
+                className="nav-item relative flex flex-col items-center justify-center py-2.5"
               >
                 <Icon
                   className={cn("size-[22px]", active ? "text-primary" : "text-zinc-500")}
                 />
-                <span
-                  className={cn(
-                    "text-[10px] font-medium",
-                    active ? "text-foreground" : "text-zinc-500",
-                  )}
-                >
-                  {it.label}
-                </span>
               </button>
             );
           })}

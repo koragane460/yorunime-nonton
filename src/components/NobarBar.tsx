@@ -451,7 +451,7 @@ function CreateRoomSheet({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Contoh: Nobar receh anime"
+            placeholder="contoh: ayanokoji adalah aku"
             className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm outline-none focus:border-foreground/40"
           />
         </div>

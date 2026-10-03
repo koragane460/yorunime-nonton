@@ -2,14 +2,26 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { addXpInternal } from "./xp";
 import { requireActive } from "./moderation";
 
 const TEXT_MAX = 2000;
 
+/**
+ * Cek banned/muted.
+ *
+ * formerly `ctx.runQuery(internal.moderation.isBlockedInternal, {})` — nested
+ * query itu memanggil satu fungsi Convex penuh (plus parse JWT kedua) di setiap
+ * pembacaan chat, padahal datanya cuma satu `ctx.db.get`. Di inlinekan supaya
+ * opening chat global tidak menambah satu round-trip yang tidak perlu.
+ */
 async function blocked(ctx: any) {
-  return await ctx.runQuery(internal.moderation.isBlockedInternal, {});
+  const userId = await getAuthUserId(ctx);
+  if (userId === null) return false;
+  const me = await ctx.db.get(userId);
+  if (!me) return false;
+  const now = Date.now();
+  return (me.bannedUntil ?? 0) > now || (me.mutedUntil ?? 0) > now;
 }
 
 function dmKey(a: string, b: string) {

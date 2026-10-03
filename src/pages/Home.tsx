@@ -1254,31 +1254,28 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   navigate(`/nonton?room=${roomId}`);
                 }}
               />
-              {msgs && !chatLoading && user ? (
-                <ChatPanel
-                  kind="global"
-                  messages={msgs as unknown as ChatMsg[]}
-                  meId={meId}
-                  onOpenProfile={(id) => setProfileId(id)}
-                  onSend={async (p) => {
-                    // Echo lokal sudah ditangani useFastChat: pesan langsung
-                    // tampil di layar sebelum server menyalinnya.
-                    await sendFast(p);
-                  }}
-                  onDeleteLocal={dropLocal}
-                />
-              ) : (
-                <div className="space-y-2.5 p-3">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="msg-skeleton size-9 shrink-0 rounded-full" />
-                      <div
-                        className="msg-skeleton h-10 rounded-lg"
-                        style={{ width: `${50 + ((i * 19) % 36)}%` }}
-                      />
-                    </div>
-                  ))}
-                </div>
+              {/* Chat global dirender LANGSUNG begitu layar dibuka, tanpa menunggu
+                  riwayat dari server. Duluymenunggu query selesai dulu baru
+                  menampilkan panel — jadi kalau server lambat, user cuma bisa
+                  menatap skeleton dan tidak bisa ngetik sama sekali.
+                  useFastChat sudah menampilkan echo lokal begitu dikirim, jadi
+                  mengetik sebelum riwayat tiba pun aman. */}
+              <ChatPanel
+                kind="global"
+                messages={(msgs ?? []) as unknown as ChatMsg[]}
+                meId={meId}
+                onOpenProfile={(id) => setProfileId(id)}
+                onSend={async (p) => {
+                  // Echo lokal sudah ditangani useFastChat: pesan langsung
+                  // tampil di layar sebelum server menyalinnya.
+                  await sendFast(p);
+                }}
+                onDeleteLocal={dropLocal}
+              />
+              {chatLoading && (
+                <p className="shrink-0 px-3 pb-1 text-center text-[10px] text-muted-foreground">
+                  Memuat riwayat chat…
+                </p>
               )}
             </div>
           )}

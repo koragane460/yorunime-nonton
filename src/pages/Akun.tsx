@@ -36,6 +36,7 @@ import {
   Crown,
   Gem,
   Heart,
+  Bookmark,
   Headset,
   History as HistoryIcon,
   LogOut,
@@ -298,7 +299,7 @@ function AkunContent() {
           [
             ["history", "History", <HistoryIcon key="h" className="size-3.5" />],
             ["komen", "Komen", <MessageSquare key="k" className="size-3.5" />],
-            ["favorite", "Favorite", <Heart key="f" className="size-3.5" />],
+            ["favorite", "Favorite", <Bookmark key="f" className="size-3.5" />],
           ] as const
         ).map(([k, label, icon]) => (
           <button
@@ -744,14 +745,6 @@ function SettingsScreen({
             toast.success(v ? "Anti lag aktif" : "Anti lag dimatikan");
           }}
         />
-        <ToggleRow
-          label="Auto tolak request pertemanan"
-          desc="Pilih auto tolak atau auto terima"
-          value={user.autoRejectFriend ?? false}
-          onToggle={(v) => {
-            quickSave({ autoRejectFriend: v, autoRejectFriendAction: "reject" });
-          }}
-        />
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[13px] font-medium">Tema</p>
           <div className="mt-2 flex min-w-0 gap-2">
@@ -808,15 +801,6 @@ function SettingsScreen({
           value={user.defaultSpeed ?? 1}
           onPick={(s) => {
             quickSave({ defaultSpeed: s });
-          }}
-        />
-
-        <ToggleRow
-          label="Matikan online status"
-          desc="Status kamu akan offline selamanya"
-          value={user.hideOnline ?? false}
-          onToggle={(v) => {
-            quickSave({ hideOnline: v });
           }}
         />
 
