@@ -16,6 +16,11 @@ export function levelCost(level: number) {
   return BASE_LEVEL_COST + (level - 1) * COST_STEP;
 }
 
+/** Tag clan: huruf besar A-Z dan angka saja, panjangnya 3-4 karakter. */
+export function cleanClanTag(tag: string) {
+  return tag.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 export function claimAmountForLevel(level: number) {
   return BASE_CLAIM + Math.max(0, level - 1) * CLAIM_PER_LEVEL;
 }
@@ -240,7 +245,7 @@ export const createClan = mutation({
       throw new ConvexError(
         `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} — butuh ${CREATE_COST} buat bikin clan (donasi ke clan lain / beli premium untuk nambah)`,
       );
-    const cleanTag = tag.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const cleanTag = cleanClanTag(tag);
     if (cleanTag.length < 3 || cleanTag.length > 4)
       throw new ConvexError("Tag clan 3-4 huruf");
     if (name.trim().length < 3) throw new ConvexError("Nama clan minimal 3 karakter");

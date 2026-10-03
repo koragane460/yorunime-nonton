@@ -11,14 +11,10 @@ import {
 import logo from "@/assets/logo.svg";
 import { ArrowRight, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolveRedirectAfterAuth } from "@/lib/authRedirect";
 
 interface AuthProps {
   redirectAfterAuth?: string;
-}
-
-function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/home") {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) return returnTo;
-  return fallback;
 }
 
 function GoogleIcon() {

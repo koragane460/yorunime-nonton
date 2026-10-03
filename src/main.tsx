@@ -1,5 +1,4 @@
 import '@vly-ai/integrations';
-import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ModerationProvider } from "@/components/ModerationGuard";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
@@ -246,7 +245,6 @@ createRoot(document.getElementById("root")!).render(
           </ModerationProvider>
         </BrowserRouter>
         </UpdateGate>
-        <Toaster />
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>,

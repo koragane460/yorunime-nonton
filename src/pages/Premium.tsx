@@ -16,7 +16,6 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 type Plan = { id: string; label: string; days: number; price: number; sacret?: number };
 type Order = {
@@ -239,6 +238,8 @@ function Plans() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"order" | "proof" | "send" | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  // Toast bawah sudah dihapus permanen, jadi galat pembayaran tampil inline.
+  const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const ready = config?.ready === true;
@@ -246,9 +247,10 @@ function Plans() {
 
   const startOrder = async (plan: Plan) => {
     if (!ready) {
-      toast.error("QRIS belum siap, coba lagi nanti");
+      setErr("QRIS belum siap, coba lagi nanti");
       return;
     }
+    setErr("");
     setBusy("order");
     setVerdict(null);
     setProof(null);
@@ -257,12 +259,13 @@ function Plans() {
     try {
       setOrder(await createOrder({ planId: plan.id }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal membuat pesanan");
+      setErr(e instanceof Error ? e.message : "Gagal membuat pesanan");
     }
     setBusy(null);
   };
 
   const pickProof = async (file: File) => {
+    setErr("");
     setBusy("proof");
     try {
       const blob = await shrink(file);
@@ -281,17 +284,17 @@ function Plans() {
       const { storageId } = (await res.json()) as { storageId: string };
       setProof({ storageId, hash: hashBytes(buf) });
       setPreview(URL.createObjectURL(blob));
-      toast.success("Bukti diterima, isi keterangan lalu kirim");
     } catch (e) {
       setProof(null);
       setPreview(null);
-      toast.error(e instanceof Error ? e.message : "Gagal memproses bukti");
+      setErr(e instanceof Error ? e.message : "Gagal memproses bukti");
     }
     setBusy(null);
   };
 
   const send = async () => {
     if (!order || !proof || !note.trim()) return;
+    setErr("");
     setBusy("send");
     try {
       await attachProof({
@@ -302,12 +305,8 @@ function Plans() {
       });
       const r = (await analyze({ orderId: order.orderId })) as Verdict;
       setVerdict(r);
-      if (r.verdict === "verified") toast.success("Pembayaran terverifikasi, premium aktif");
-      else if (r.verdict === "rejected") toast.error("Bukti ditolak");
-      else if (r.emailed) toast.success("Bukti diterima, developer sudah diberi tahu");
-      else toast.info("Bukti sedang diperiksa developer");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal mengirim bukti");
+      setErr(e instanceof Error ? e.message : "Gagal mengirim bukti");
     }
     setBusy(null);
   };
@@ -367,6 +366,11 @@ function Plans() {
           Pembayaran sedang disiapkan developer. Cek lagi nanti.
         </p>
       )}
+      {err && !order && (
+        <p className="mt-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-[12px] font-semibold text-red-200">
+          {err}
+        </p>
+      )}
       <input
         ref={fileRef}
         type="file"
@@ -393,9 +397,11 @@ function Plans() {
           onPick={() => fileRef.current?.click()}
           onSend={() => void send()}
           verdict={verdict}
+          err={err}
           onClose={() => {
             setOrder(null);
             setVerdict(null);
+            setErr("");
           }}
         />
       )}
@@ -417,6 +423,7 @@ function CheckoutOverlay({
   onPick,
   onSend,
   verdict,
+  err,
   onClose,
 }: {
   order: Order;
@@ -431,6 +438,8 @@ function CheckoutOverlay({
   onPick: () => void;
   onSend: () => void;
   verdict: Verdict | null;
+  /** Galat inline (toast bawah sudah dihapus permanen). */
+  err: string;
   onClose: () => void;
 }) {
   useHideNavOnMount(); // navbar disembunyikan selama layar bayar terbuka
@@ -463,6 +472,7 @@ function CheckoutOverlay({
           onPick={onPick}
           onSend={onSend}
           verdict={verdict}
+          err={err}
         />
       </div>
     </div>
@@ -482,6 +492,7 @@ function Checkout({
   onPick,
   onSend,
   verdict,
+  err,
 }: {
   order: Order;
   image: string;
@@ -495,6 +506,7 @@ function Checkout({
   onPick: () => void;
   onSend: () => void;
   verdict: Verdict | null;
+  err: string;
 }) {
   const live = useQuery(api.payments.myOrder, { orderId: order.orderId });
   if (live?.status === "paid" && !verdict) {
@@ -590,6 +602,12 @@ function Checkout({
           Wajib diisi. Ini yang dicocokkan dengan bukti transfer.
         </p>
       </div>
+
+      {err && (
+        <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-[12px] font-semibold text-red-200">
+          {err}
+        </p>
+      )}
 
       <button
         onClick={onSend}

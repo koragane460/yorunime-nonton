@@ -73,34 +73,60 @@ export const listMessages = query({
         .take(limit);
     }
     rows = rows.filter((r: any) => !r.deleted);
-    const users = new Map<string, any>();
-    const gives = new Map<string, any>();
-    const out = [];
-    for (const r of rows.reverse()) {
-      let u = users.get(r.userId);
-      if (!u) {
-        u = await ctx.db.get(r.userId);
-        users.set(r.userId, u);
-      }
-      let give = null;
-      if (r.premiumGiveId) {
-        give = gives.get(r.premiumGiveId) ?? (await ctx.db.get(r.premiumGiveId));
-        gives.set(r.premiumGiveId, give);
-      }
-      let replyTo = null;
-      if (r.replyToId) {
-        const rm = await ctx.db.get(r.replyToId);
-        if (rm && !rm.deleted) {
-          const ru = await ctx.db.get(rm.userId);
-          replyTo = {
-            _id: rm._id,
-            username: ru?.username ?? "?",
-            text: rm.text ?? undefined,
-            premiumGiveId: rm.premiumGiveId ?? undefined,
-          };
-        }
-      }
-      out.push({
+    // Semua data pendukung (user, give, reply) diambil SEKALIGUS di depan,
+    // bukan satu per satu di dalam loop. Versi lama melakukan `await ctx.db.get`
+    // tiap baris sehingga 80 pesan bisa memicu ratusan round-trip berurutan —
+    // itulah penyebab chat lama loading lama.
+    const ordered: any[] = rows.slice().reverse();
+    const uniq = <T,>(xs: T[]) => [...new Set(xs)];
+    const userIds = uniq(ordered.map((r) => r.userId));
+    const giveIds = uniq(
+      ordered.map((r) => r.premiumGiveId).filter((x): x is string => !!x),
+    );
+    const replyIds = uniq(
+      ordered.map((r) => r.replyToId).filter((x): x is string => !!x),
+    );
+    const [userDocs, giveDocs, replyDocs] = await Promise.all([
+      Promise.all(userIds.map((id) => ctx.db.get(id as never))),
+      Promise.all(giveIds.map((id) => ctx.db.get(id as never))),
+      Promise.all(replyIds.map((id) => ctx.db.get(id as never))),
+    ]);
+    const users = new Map<string, any>(userIds.map((id, i) => [id, userDocs[i]]));
+    const gives = new Map<string, any>(giveIds.map((id, i) => [id, giveDocs[i]]));
+
+    // Balasan butuh data user si pembalas — sekali lagi, batch per id unik.
+    const replyRows = replyDocs.filter((m: any) => m && !m.deleted) as any[];
+    const replyUserIds = uniq(replyRows.map((m) => m.userId));
+    const replyUserDocs = await Promise.all(
+      replyUserIds.map((id) => ctx.db.get(id as never)),
+    );
+    const replyUsers = new Map<string, any>(
+      replyUserIds.map((id, i) => [id, replyUserDocs[i]]),
+    );
+    const replyById = new Map<string, any>();
+    for (const rm of replyRows) {
+      const ru = replyUsers.get(rm.userId);
+      replyById.set(rm._id, {
+        _id: rm._id,
+        username: ru?.username ?? "?",
+        text: rm.text ?? undefined,
+        premiumGiveId: rm.premiumGiveId ?? undefined,
+      });
+    }
+
+    // URL foto dari storage juga diambil paralel.
+    const withPhoto = ordered.filter((r) => r.imageStorageId);
+    const photoUrls = await Promise.all(
+      withPhoto.map((r) => ctx.storage.getUrl(r.imageStorageId)),
+    );
+    const photoByUrl = new Map<string, string | null>(
+      withPhoto.map((r, i) => [r._id as string, photoUrls[i]]),
+    );
+
+    const out = ordered.map((r) => {
+      const u = users.get(r.userId);
+      const give = r.premiumGiveId ? gives.get(r.premiumGiveId) : null;
+      return {
         _id: r._id,
         kind: r.kind,
         userId: r.userId,
@@ -114,7 +140,7 @@ export const listMessages = query({
         staffRole: u?.staffRole,
         text: r.text,
         imageUrl: r.imageStorageId
-          ? ((await ctx.storage.getUrl(r.imageStorageId)) ?? r.imageUrl)
+          ? (photoByUrl.get(r._id) ?? r.imageUrl)
           : r.imageUrl,
         premiumGive: give
           ? {
@@ -125,10 +151,10 @@ export const listMessages = query({
               claimedBy: give.claimedBy,
             }
           : undefined,
-        replyTo,
+        replyTo: r.replyToId ? (replyById.get(r.replyToId) ?? null) : null,
         createdAt: r.createdAt,
-      });
-    }
+      };
+    });
     return out;
   },
 });

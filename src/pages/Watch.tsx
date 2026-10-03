@@ -1298,8 +1298,12 @@ function WatchContent() {
           // Di fullscreen kontainer ikut penuh layar HP, bukan cuma kotak
           // 16:9. Video tetap object-contain (ada letterbox), tapi semua
           // tombol dan HUD memakai lebar layar yang sedang dilihat user.
+          // Tingginya `100%` (bukan `100dvh`): di layar penuh, `dvh` bisa
+          // lebih tinggi dari layar sungguhan (Android pasca-rotasi), sehingga
+          // kontainer jadi lebih tinggi dari layar dan tombol HD/keluar di
+          // atas serta baris waktu di bawah ikut terpotong.
           isFs
-            ? { width: "100%", height: "100dvh" }
+            ? { width: "100%", height: "100%" }
             : { aspectRatio: "16 / 9" }
         }
       >
@@ -1584,7 +1588,14 @@ function WatchContent() {
         )}
 
         {/* Overlay controls — di fullscreen tata letaknya menyesuaikan landscape */}
-        {controlsOn && !uiLocked && sourceType !== "embed" && (isHost || !room) && (
+        {/* Kontrol hanya digambar kalau stream sudah ada: saat masih memuat,
+            layar cukup poster + spinner tanpa tombol/seek bar/slider yang
+            saling menumpuk. */}
+        {controlsOn &&
+          !uiLocked &&
+          sourceType !== "embed" &&
+          !!streamUrl &&
+          (isHost || !room) && (
         <div
           className={cn(
             "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
@@ -1673,10 +1684,10 @@ function WatchContent() {
               isFs ? "px-2 pb-1" : "px-3 pb-3",
             )}
           >
-            {/* Kecerahan & volume: hanya di layar penuh, posisi tetap di atas
-                seek bar supaya mudah dijangkau dengan ibu jari. Geser ke
-                kanan untuk naik, ke kiri untuk turun. */}
-            {isFs && (
+            {/* Kecerahan & volume: hanya di layar penuh dan hanya setelah
+                metadata video siap (durasi terisi), posisi tetap di atas
+                seek bar supaya mudah dijangkau dengan ibu jari. */}
+            {isFs && duration > 0 && (
               <div className="grid grid-cols-2 gap-3 pb-1">
                 <LevelSlider
                   icon={<Sun className="size-4" />}

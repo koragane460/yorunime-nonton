@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { useHideNavOnMount, useHideNavWhile } from "@/components/AppLayout";
@@ -19,7 +19,6 @@ import {
   Inbox,
   Info,
   LogOut,
-  Radio,
   Search,
   Settings,
   Users,
@@ -27,6 +26,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { shrinkAvatar } from "@/lib/image";
 import {
   PICKABLE_CLAN_ICONS,
   resolveClanIcon,
@@ -252,48 +252,17 @@ function CreateClan({
   onCancel: () => void;
 }) {
   const create = useMutation(api.clans.createClan);
-  const createRoom = useMutation(api.watchroom.createRoom);
   const [icon, setIcon] = useState(TAG_ICONS[0]);
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [avatar, setAvatar] = useState("");
   const [busy, setBusy] = useState(false);
-  // Room nonton bareng untuk clan (opsional).
-  const [roomOn, setRoomOn] = useState(false);
-  const [roomName, setRoomName] = useState("");
-  const [roomQ, setRoomQ] = useState("");
-  const [roomResults, setRoomResults] = useState<any[] | null>(null);
-  const [roomAnime, setRoomAnime] = useState<any>(null);
-  const [roomEp, setRoomEp] = useState("1");
-  const [roomAccess, setRoomAccess] = useState<"clan" | "selected">("clan");
-  const [roomPicked, setRoomPicked] = useState<any[]>([]);
-  const [uQ, setUQ] = useState("");
-  const searchAnime = useAction(api.anime.animeSearch);
-  const userResults = useQuery(
-    api.watchroom.searchUsers,
-    uQ.trim().length > 0 ? { q: uQ } : "skip",
-  );
+  // Toast bawah sudah dihapus permanen, jadi error diketik langsung di form.
+  const [err, setErr] = useState("");
   useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
 
-  useEffect(() => {
-    if (roomQ.trim().length < 2) {
-      setRoomResults(null);
-      return;
-    }
-    let alive = true;
-    const t = setTimeout(async () => {
-      try {
-        const r = (await searchAnime({ q: roomQ.trim() })) as any[];
-        if (alive) setRoomResults(r ?? []);
-      } catch {
-        if (alive) setRoomResults([]);
-      }
-    }, 400);
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [roomQ, searchAnime]);
+  /** Tag divaluasi sama seperti di server (hanya A-Z & 0-9, 3-4 karakter). */
+  const cleanTag = tag.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background p-3">
@@ -319,12 +288,17 @@ function CreateClan({
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
-                const reader = new FileReader();
-                reader.onload = () => setAvatar(String(reader.result));
-                reader.readAsDataURL(f);
+                setErr("");
+                try {
+                  // Dikecilkan dulu: foto HP asli bisa beberapa MB dan Convex
+                  // hanya menerima dokumen 1MB — itu sebabnya dulu "Server Error".
+                  setAvatar(await shrinkAvatar(f));
+                } catch {
+                  setErr("Foto profil gagal dibaca. Coba foto lain.");
+                }
               }}
             />
           </label>
@@ -375,196 +349,11 @@ function CreateClan({
           Membuat clan butuh <b className="text-[oklch(0.86_0.16_90)]">1000 Sacret</b>
         </p>
 
-        {/* ------------------------------------------------ Room Nobar ---- */}
-        <div className="mt-3 rounded-3xl border border-foreground/40 bg-primary/5 p-4">
-          <div className="flex items-center gap-2">
-            <Radio className="size-4 text-primary" />
-            <p className="flex-1 text-xs font-bold">Buat Room Nonton Bareng</p>
-            <button
-              onClick={() => setRoomOn((v) => !v)}
-              className={cn(
-                "relative h-6 w-11 shrink-0 rounded-full transition",
-                roomOn ? "bg-primary" : "bg-zinc-700",
-              )}
-              aria-label="Aktifkan room nobar"
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 size-5 rounded-full bg-white transition-all",
-                  roomOn ? "left-[22px]" : "left-0.5",
-                )}
-              />
-            </button>
-          </div>
-
-          {roomOn && (
-            <div className="fade-enter mt-3 space-y-2.5">
-              <input
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                placeholder="Nama room (mis. Nobar clan malam ini)"
-                className="w-full rounded-xl border border-input bg-background/60 px-3 py-2 text-sm"
-              />
-
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
-                <Search className="size-3.5 shrink-0 text-muted-foreground" />
-                <input
-                  value={roomQ}
-                  onChange={(e) => setRoomQ(e.target.value)}
-                  placeholder="Cari anime buat nobar…"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                />
-              </div>
-
-              {roomAnime ? (
-                <div className="flex items-center gap-2 rounded-xl border border-foreground/40 bg-primary/10 p-2">
-                  {roomAnime.image && (
-                    <img
-                      src={roomAnime.image}
-                      alt=""
-                      className="size-11 rounded-lg object-cover"
-                    />
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                    {roomAnime.title}
-                  </span>
-                  <button onClick={() => setRoomAnime(null)} className="p-1">
-                    <X className="size-4" />
-                  </button>
-                </div>
-              ) : (
-                roomResults && (
-                  <div className="thin-scroll max-h-40 space-y-1 overflow-y-auto">
-                    {roomResults.length === 0 && (
-                      <p className="py-2 text-center text-[11px] text-muted-foreground">
-                        Anime tidak ditemukan
-                      </p>
-                    )}
-                    {roomResults.map((a: any) => (
-                      <button
-                        key={String(a.id ?? a.malId ?? a.animeId)}
-                        onClick={() => {
-                          setRoomAnime(a);
-                          setRoomResults(null);
-                          setRoomQ(a.title ?? "");
-                        }}
-                        className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-foreground/40"
-                      >
-                        {a.image && (
-                          <img
-                            src={a.image}
-                            alt=""
-                            className="size-8 rounded-md object-cover"
-                          />
-                        )}
-                        <span className="min-w-0 flex-1 truncate text-xs">
-                          {a.title}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )
-              )}
-
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Episode
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  value={roomEp}
-                  onChange={(e) => setRoomEp(e.target.value)}
-                  className="w-20 rounded-lg border border-input bg-background/60 px-2 py-1.5 text-sm"
-                />
-              </div>
-
-              <div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Siapa yang boleh masuk
-                </span>
-                <div className="mt-1 flex gap-1.5">
-                  {(
-                    [
-                      ["clan", "Semua member clan (auto masuk)"],
-                      ["selected", "User tertentu"],
-                    ] as const
-                  ).map(([k, label]) => (
-                    <button
-                      key={k}
-                      onClick={() => setRoomAccess(k)}
-                      className={cn(
-                        "min-w-0 flex-1 truncate rounded-xl border py-2 text-[11px] font-bold transition",
-                        roomAccess === k
-                          ? "border-foreground/40 bg-primary/15 text-primary"
-                          : "border-border text-muted-foreground",
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {roomAccess === "selected" && (
-                <div className="fade-enter space-y-1.5">
-                  {roomPicked.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {roomPicked.map((u) => (
-                        <button
-                          key={u._id}
-                          onClick={() =>
-                            setRoomPicked((s) => s.filter((x) => x._id !== u._id))
-                          }
-                          className="flex items-center gap-1 rounded-full border border-foreground/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold"
-                        >
-                          {u.username} <X className="size-3" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2">
-                    <Search className="size-3.5 shrink-0 text-muted-foreground" />
-                    <input
-                      value={uQ}
-                      onChange={(e) => setUQ(e.target.value)}
-                      placeholder="Cari username atau ID (#1)…"
-                      className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                    />
-                  </div>
-                  {Array.isArray(userResults) && userResults.length > 0 && (
-                    <div className="thin-scroll max-h-32 space-y-1 overflow-y-auto">
-                      {userResults.map((u: any) => (
-                        <button
-                          key={u._id}
-                          onClick={() => {
-                            setRoomPicked((s) =>
-                              s.some((x) => x._id === u._id) ? s : [...s, u],
-                            );
-                            setUQ("");
-                          }}
-                          className="flex w-full items-center gap-2 rounded-lg border border-border/60 p-1.5 text-left hover:border-foreground/40"
-                        >
-                          <Avatar
-                            src={u.image}
-                            seed={u.username}
-                            className="size-7"
-                          />
-                          <span className="min-w-0 flex-1 truncate text-xs">
-                            {u.username}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            #{u.seqId ?? "?"}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {err && (
+          <p className="mt-3 rounded-xl border border-red-400/40 bg-red-400/10 px-3 py-2 text-xs font-semibold text-red-300">
+            {err}
+          </p>
+        )}
 
         <div className="mt-3 flex gap-2">
           <button
@@ -574,41 +363,20 @@ function CreateClan({
             Cancel
           </button>
           <button
-            disabled={busy || !name.trim() || tag.length < 3 || !avatar}
+            disabled={busy || !name.trim() || cleanTag.length < 3 || cleanTag.length > 4 || !avatar}
             onClick={async () => {
+              setErr("");
               setBusy(true);
               try {
-                const r = await create({ name, tag, tagIcon: icon, avatarUrl: avatar });
-                toast.success("Clan dibuat! Membuka chat clan…");
-                // Room nobar untuk clan (kalau diisi)
-                if (roomOn && roomAnime) {
-                  const animeId = String(
-                    roomAnime.id ?? roomAnime.malId ?? roomAnime.animeId ?? "",
-                  );
-                  if (animeId) {
-                    try {
-                      await createRoom({
-                        name: roomName.trim() || `${name} Nobar`,
-                        animeId,
-                        animeTitle: roomAnime.title,
-                        animeImage: roomAnime.image,
-                        episode: Math.max(1, Math.floor(Number(roomEp) || 1)),
-                        visibility: roomAccess === "clan" ? "all" : "selected",
-                        allowedUserIds: roomPicked.map((u) => u._id),
-                        clanId: r.clanId,
-                      });
-                    } catch (e) {
-                      toast.error(
-                        e instanceof Error
-                          ? `Room gagal: ${e.message}`
-                          : "Room gagal dibuat",
-                      );
-                    }
-                  }
-                }
+                const r = await create({
+                  name,
+                  tag: cleanTag,
+                  tagIcon: icon,
+                  avatarUrl: avatar,
+                });
                 onCreated(r.clanId); // App auto-switch ke chat clan
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Gagal");
+                setErr(e instanceof Error ? e.message : "Clan gagal dibuat");
                 setBusy(false);
               }
             }}

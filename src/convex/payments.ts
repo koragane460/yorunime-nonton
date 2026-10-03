@@ -16,7 +16,8 @@ import { action, internalMutation, internalQuery, mutation, query } from "./_gen
 import { internal } from "./_generated/api";
 import { staffGuard } from "./moderation";
 
-const PLANS: Record<
+/** Daftar paket premium — diekspor supaya bisa diuji di tests/payment.test.ts */
+export const PLANS: Record<
   string,
   { label: string; days: number; price: number; sacret: number }
 > = {

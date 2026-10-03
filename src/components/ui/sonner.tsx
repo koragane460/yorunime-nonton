@@ -1,38 +1,16 @@
-import {
-  CircleCheckIcon,
-  InfoIcon,
-  Loader2Icon,
-  OctagonXIcon,
-  TriangleAlertIcon,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
-
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
-  return (
-    <Sonner
-      theme={theme as ToasterProps["theme"]}
-      className="toaster group"
-      icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
-      }}
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
-      {...props}
-    />
-  )
-}
+/**
+ * Toaster bawah DIMATIKAN PERMANEN.
+ *
+ * Notifikasi sonner (berhasil / gagal / error) selalu muncul di paling bawah
+ * layar dan menutupi kontrol player serta chat, jadi diminta hilang total.
+ * Komponen ini sengaja hanya me-render null.
+ *
+ * Panggilan `toast.*` di tempat lain dibiarkan tanpa efek visual; alur yang
+ * butuh umpan balik (buat clan, pembelian premium, pengaturan akun) sudah
+ * memakai pesan inline di dalam halamannya masing-masing.
+ *
+ * Jangan kembalikan <Sonner /> atau elemen lain di sini.
+ */
+const Toaster = () => null
 
 export { Toaster }

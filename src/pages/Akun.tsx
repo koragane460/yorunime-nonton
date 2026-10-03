@@ -620,6 +620,8 @@ function SettingsScreen({
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
   // Anti lag: status lokal (tidak perlu server), langsung diterapkan ke <html>.
   const [antiLag, setAntiLagState] = useState(() => getAntiLag());
+  // Toast bawah sudah dihapus permanen, jadi galat pengaturan tampil inline.
+  const [err, setErr] = useState("");
   // Panel hanya untuk developer (#1 / title dev) & moderator.
   const access = useQuery(api.moderation.myPanelAccess, {});
   const panelLevel: "dev" | "mod" | "none" =
@@ -630,8 +632,9 @@ function SettingsScreen({
 
   // Simpan tanpa nunggu server (fire & forget) → UI terasa instan
   const quickSave = (args: Record<string, unknown>) => {
+    setErr("");
     void update(args).catch((e) =>
-      toast.error(e instanceof Error ? e.message : "Gagal menyimpan"),
+      setErr(e instanceof Error ? e.message : "Gagal menyimpan"),
     );
   };
 
@@ -678,10 +681,10 @@ function SettingsScreen({
                   // dikecilkan dulu sebelum dikirim.
                   const small = await shrinkAvatar(f);
                   await updateProfile({ image: small });
-                  toast.success("Photo profile diubah");
-                } catch (err) {
-                  toast.error(
-                    err instanceof Error ? err.message : "Gagal mengganti photo",
+                  setErr("");
+                } catch (err2) {
+                  setErr(
+                    err2 instanceof Error ? err2.message : "Gagal mengganti photo",
                   );
                 } finally {
                   setBusyPhoto(false);
@@ -702,15 +705,15 @@ function SettingsScreen({
             disabled={savingName || !name.trim() || name.trim() === user.username}
             onClick={async () => {
               setSavingName(true);
+              setErr("");
               try {
                 const clean = name.trim();
                 await updateProfile({ username: clean });
                 setName(clean);
-                toast.success("Nama diubah");
-              } catch (err) {
-                toast.error(
-                  err instanceof Error
-                    ? err.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
+              } catch (err2) {
+                setErr(
+                  err2 instanceof Error
+                    ? err2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
                     : "Gagal mengubah nama",
                 );
               } finally {
@@ -722,6 +725,11 @@ function SettingsScreen({
             {savingName ? "..." : "OK"}
           </button>
         </div>
+        {err && (
+          <p className="mt-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-[12px] font-semibold text-red-200">
+            {err}
+          </p>
+        )}
       </div>
 
       <BlockTitle>Pengaturan</BlockTitle>
