@@ -286,7 +286,12 @@ export const createClan = mutation({
       lastDonateDay: dayString(),
       joinedAt: Date.now(),
     });
-    await ctx.db.patch(userId, { clanTag: cleanTag, clanTagIcon: tagIcon, clanNameColor: "" });
+    await ctx.db.patch(userId, {
+      clanTag: cleanTag,
+      clanTagIcon: tagIcon,
+      clanNameColor: "",
+      clanLevel: 1,
+    });
     return { clanId };
   },
 });
@@ -394,6 +399,9 @@ export const respondRequest = mutation({
             clanTag: clan.tag,
             clanTagIcon: clan.tagIcon,
             clanNameColor: "",
+            // Disalin ke user supaya warna nama clan di chat/komentar bisa
+            // ditentukan tanpa query tabel clans tiap pesan.
+            clanLevel: clan.level ?? 1,
           });
       }
     }
@@ -542,6 +550,7 @@ export const kickMember = mutation({
       clanTag: undefined,
       clanTagIcon: undefined,
       clanNameColor: undefined,
+      clanLevel: undefined,
     });
     return { ok: true };
   },
@@ -587,6 +596,7 @@ export const leaveClan = mutation({
       clanTag: undefined,
       clanTagIcon: undefined,
       clanNameColor: undefined,
+      clanLevel: undefined,
     });
     return { ok: true };
   },

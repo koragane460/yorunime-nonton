@@ -98,6 +98,7 @@ export function AppLayout({
             clanTag={user.clanTag}
             clanTagIcon={user.clanTagIcon}
             clanColor={user.clanNameColor}
+            clanLevel={(user as unknown as { clanLevel?: number }).clanLevel ?? 0}
             premium={(user.premiumUntil ?? 0) > Date.now()}
             premiumDays={Math.max(
               0,
@@ -149,6 +150,7 @@ function AccountPanel({
   clanTag,
   clanTagIcon,
   clanColor,
+  clanLevel,
   premium,
   premiumDays,
   diamonds,
@@ -167,6 +169,7 @@ function AccountPanel({
   clanTag?: string;
   clanTagIcon?: string;
   clanColor?: string;
+  clanLevel?: number;
   premium: boolean;
   premiumDays: number;
   diamonds: number;
@@ -238,6 +241,7 @@ function AccountPanel({
                   <ClanTag
                     icon={clanTagIcon ?? DEFAULT_CLAN_ICON}
                     tag={clanTag}
+                    level={clanLevel}
                     className="scale-90 px-1.5 py-0 text-[9px]"
                   />
                 )}

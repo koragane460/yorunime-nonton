@@ -132,6 +132,7 @@ export function ProfileSheet({
                   icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}
                   tag={profile.clanTag}
                   color={profile.clanNameColor}
+                  level={profile.clanLevel}
                 />
               )}
               {!isMe && (

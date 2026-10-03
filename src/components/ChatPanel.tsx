@@ -31,6 +31,8 @@ export type ChatMsg = {
   staffRole?: string;
   clanTag?: string;
   clanTagIcon?: string;
+  /** Level clan — menentukan warna nama clan di tag. */
+  clanLevel?: number;
   clanNameColor?: string;
   text?: string;
   imageUrl?: string;
@@ -613,6 +615,7 @@ export function ChatPanel({
                         icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
                         tag={m.clanTag}
                         color={m.clanNameColor}
+                        level={m.clanLevel}
                         className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
                       />
                     )}

@@ -43,6 +43,8 @@ export type RoomMember = {
   image?: string;
   clanTag?: string;
   clanTagIcon?: string;
+  /** Level clan — menentukan warna nama clan di tag. */
+  clanLevel?: number;
   staffRole?: string;
   joinedAt: number;
 };
@@ -243,6 +245,7 @@ export function NobarDock({
                     <ClanTag
                       icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
                       tag={m.clanTag}
+                      level={m.clanLevel}
                       className="scale-90 px-1.5 py-0 text-[9px]"
                     />
                   )}

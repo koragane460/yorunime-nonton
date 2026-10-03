@@ -75,6 +75,13 @@ const schema = defineSchema(
       clanTag: v.optional(v.string()),
       clanTagIcon: v.optional(v.string()),
       clanNameColor: v.optional(v.string()),
+      /**
+       * Level clan, disalin ke user saat joins. Dipakai untuk warna nama
+       * clan di tag (lihat clanTextClass di lstream-ui.tsx). Disimpan di user
+       * supaya chat & komentar bisa mewarnainya tanpa query tabel clans
+       * untuk tiap pesan.
+       */
+      clanLevel: v.optional(v.number()),
     })
       // Index WAJIB sama dengan bawaan Convex Auth (authTables.users),
       // kalau tidak, login (anonim/email/Google) akan error

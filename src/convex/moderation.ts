@@ -147,6 +147,7 @@ export const panelUsers = query({
         level: u.level ?? 1,
         clanTag: u.clanTag,
         clanNameColor: u.clanNameColor,
+        clanLevel: u.clanLevel,
         banned: (u.bannedUntil ?? 0) > now,
         bannedPermanent: (u.bannedUntil ?? 0) >= PERMANENT,
         bannedUntil: u.bannedUntil ?? 0,

@@ -187,7 +187,7 @@ function NoClan({
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{c.name}</p>
-                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />
+                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} level={c.level} className="mt-0.5" />
                   <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       <Users className="size-3" aria-hidden /> {c.memberCount} member
@@ -460,7 +460,8 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{c.name}</p>
-                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} className="mt-0.5" />                    <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
+                  <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} level={c.level} className="mt-0.5" />
+                    <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Users className="size-3" aria-hidden /> {c.memberCount} member
                       </span>
@@ -549,7 +550,7 @@ function ClanChat({
           aria-label="Detail clan"
           className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card p-2 text-left"
         >
-          <ClanTag icon={c?.tagIcon ?? DEFAULT_CLAN_ICON} tag={c?.tag ?? "—"} color={c?.color} />
+          <ClanTag icon={c?.tagIcon ?? DEFAULT_CLAN_ICON} tag={c?.tag ?? "—"} color={c?.color} level={c?.level} />
           <span className="min-w-0 flex-1 truncate font-bold">{c?.name ?? "Clan"}</span>
           <span className="text-muted-foreground">›</span>
         </button>
@@ -724,7 +725,7 @@ function ClanDetail({
             <div className="relative flex items-center gap-3">
               <Avatar src={c.avatarUrl} seed={c.name} className="size-14" />
               <div className="min-w-0 flex-1">
-                <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} />
+                <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} level={c.level} />
               </div>
               <button
                 onClick={() => setInfoOpen(true)}
@@ -991,6 +992,7 @@ function ClanDetail({
                         icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
                         tag={c.tag}
                         color={c.color}
+                        level={c.level}
                       />
                       <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 text-[10px] font-bold text-black">
                         Lv.{m.level ?? 1}

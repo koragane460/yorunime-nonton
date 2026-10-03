@@ -249,6 +249,7 @@ function AkunContent() {
                 icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
                 tag={user.clanTag}
                 color={user.clanNameColor}
+                level={(user as unknown as { clanLevel?: number }).clanLevel}
               />
             )}
           </div>

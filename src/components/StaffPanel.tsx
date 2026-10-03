@@ -45,6 +45,8 @@ type PanelUser = {
   level: number;
   clanTag?: string;
   clanNameColor?: string;
+  /** Level clan — menentukan warna nama clan di tag. */
+  clanLevel?: number;
   banned: boolean;
   bannedPermanent: boolean;
   bannedUntil: number;
@@ -285,6 +287,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
                     icon={DEFAULT_CLAN_ICON}
                     tag={u.clanTag}
                     color={u.clanNameColor}
+                    level={u.clanLevel}
                     className="scale-90 px-1 py-0 text-[9px]"
                   />
                 )}

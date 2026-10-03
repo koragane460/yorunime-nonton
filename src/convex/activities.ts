@@ -420,6 +420,7 @@ export const listComments = query({
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,
+        clanLevel: u?.clanLevel,
         text: r.text,
         likes: r.likes ?? [],
         likeCount: (r.likes ?? []).length,

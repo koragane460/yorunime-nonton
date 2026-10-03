@@ -19,6 +19,8 @@ export type CommentT = {
   staffRole?: string;
   clanTag?: string;
   clanTagIcon?: string;
+  /** Level clan — menentukan warna nama clan di tag. */
+  clanLevel?: number;
   clanNameColor?: string;
   text: string;
   likes?: string[];
@@ -291,6 +293,7 @@ function CommentRow({
               <ClanTag
                 icon={c.clanTagIcon ?? DEFAULT_CLAN_ICON}
                 tag={c.clanTag}
+                level={c.clanLevel}
                 className="ml-1 scale-90 px-1.5 py-0 text-[9px]"
               />
             )}

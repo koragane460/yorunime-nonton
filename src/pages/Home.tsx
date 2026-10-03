@@ -807,6 +807,7 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
               icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
               tag={c.tag}
               color={c.color}
+              level={c.level}
               className="px-1.5 py-0 text-[9px]"
             />
           </div>
