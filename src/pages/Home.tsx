@@ -743,9 +743,12 @@ function HomeContent() {
             setPickId(null);
             setPickTitle(undefined);
           }}
-          onPlay={(slug, ep, title) =>
+          onPickDonghua={(next) => openAnime(next, undefined, "sanka")}
+          onPlay={(epSlug, ep, title) =>
             navigate(
-              `/nonton?anime=${encodeURIComponent(slug)}&ep=${encodeURIComponent(`sanka__${slug}__ep${ep}`)}&judul=${encodeURIComponent(title)}&donghua=1`,
+              // `anime` = slug SERI (dipakai Watch untuk memuat detail &
+              // daftar episode), `ep` = slug EPISODE (dipakai untuk stream).
+              `/nonton?anime=${encodeURIComponent(pickId)}&ep=${encodeURIComponent(`sanka__${epSlug}__ep${ep}`)}&judul=${encodeURIComponent(title)}&donghua=1`,
             )
           }
         />
@@ -2135,11 +2138,16 @@ type SankaDetailShape = {
   rating?: string;
   status?: string;
   type?: string;
+  studio?: string;
   synopsis: string;
   genres: string[];
   episodes: { number: number; title: string; url: string }[];
+  related: { id: string; title: string; image: string }[];
   source: string;
 };
+
+/** Episode yang langsung terlihat di detail; sisanya lewat "Lihat semua". */
+const DONGHUA_EP_PREVIEW = 10;
 
 /**
  * Layar detail untuk kartu donghua.
@@ -2153,10 +2161,13 @@ function DonghuaDetailScreen({
   slug,
   onClose,
   onPlay,
+  onPickDonghua,
 }: {
   slug: string;
   onClose: () => void;
-  onPlay: (slug: string, ep: number, title: string) => void;
+  onPlay: (epSlug: string, ep: number, title: string) => void;
+  /** Buka donghua lain dari baris "Yang serupa". */
+  onPickDonghua?: (slug: string) => void;
 }) {
   useHideNavOnMount();
   const getDetail = useAction(api.sanka.detail);
@@ -2183,8 +2194,14 @@ function DonghuaDetailScreen({
 
   const eps = useMemo(() => {
     const all = [...(detail?.episodes ?? [])].sort((a, b) => a.number - b.number);
-    return allEpisodes ? all : all.slice(0, 60);
+    return allEpisodes ? all : all.slice(0, DONGHUA_EP_PREVIEW);
   }, [detail, allEpisodes]);
+
+  // Sinopsis dipotong 5 baris; sisa teksnya ada di tombol "Baca selengkapnya".
+  const synopsisLines = useMemo(
+    () => (detail?.synopsis ?? "").split(/\n+/).map((s) => s.trim()).filter(Boolean),
+    [detail?.synopsis],
+  );
 
   if (failed) {
     return (
@@ -2211,8 +2228,15 @@ function DonghuaDetailScreen({
   }
 
   const banner = detail.cover ?? detail.poster ?? "";
-  const synopsisBody = synopsisPreview(detail.synopsis, synopsisOpen);
-  const canExpand = synopsisBody !== detail.synopsis;
+  //-preview sinopsis dibatasi 5 baris; kalau teksnya cuma satu paragraf
+  // panjang, 5 baris itu dijaga dengan pemotongan per karakter.
+  const shownParas = synopsisOpen ? synopsisLines : synopsisLines.slice(0, 5);
+  const hiddenParas = Math.max(0, synopsisLines.length - 5);
+  const canExpand = hiddenParas > 0 || synopsisLines.join(" ").length > 420;
+  const truncated =
+    !synopsisOpen &&
+    synopsisLines.length <= 5 &&
+    synopsisLines.join(" ").length > 420;
   const total = detail.episodes.length;
 
   return (
@@ -2270,8 +2294,13 @@ function DonghuaDetailScreen({
 
         <div className="px-3">
           <SectionTitle>Sinopsis</SectionTitle>
-          <p className="whitespace-pre-line text-sm leading-6 text-white">
-            {synopsisBody}
+          <p
+            className="whitespace-pre-line text-sm leading-6 text-white"
+            style={
+              truncated ? { maxHeight: "9rem", overflow: "hidden" } : undefined
+            }
+          >
+            {shownParas.join("\n\n")}
           </p>
           {canExpand && (
             <button
@@ -2300,27 +2329,59 @@ function DonghuaDetailScreen({
                     {eps.map((e) => (
                       <button
                         key={e.number || e.url}
-                        onClick={() => onPlay(slug, e.number || 1, detail.title)}
+                        onClick={() => onPlay(e.url, e.number || 1, detail.title)}
                         className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40"
                       >
                         {e.number}
                       </button>
                     ))}
                   </div>
-                  {total > 60 && (
+                  {total > DONGHUA_EP_PREVIEW && (
                     <button
                       onClick={() => setAllEpisodes((v) => !v)}
                       className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs text-white/85"
                     >
                       {allEpisodes
                         ? "Tampilkan lebih sedikit"
-                        : `Tampilkan semua ${total} episode`}
+                        : `Lihat semua ${total} episode`}
                     </button>
                   )}
                 </>
               )}
             </div>
           </div>
+
+          {/* "Yang serupa" — rekomendasi dari API donghua, jadialways
+              donghua juga (never tercampur anime). */}
+          {detail.related.length > 0 && (
+            <div className="mt-6">
+              <SectionTitle>Yang serupa</SectionTitle>
+              <div className="-mx-3 flex gap-2.5 overflow-x-auto px-3 pb-1 thin-scroll">
+                {detail.related.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => onPickDonghua?.(r.id)}
+                    className="group w-24 shrink-0 text-left"
+                  >
+                    <div className="overflow-hidden rounded-xl border border-border/60">
+                      {r.image ? (
+                        <img
+                          src={r.image}
+                          alt=""
+                          className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="aspect-[2/3] w-full bg-secondary/40" />
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
+                      {r.title}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

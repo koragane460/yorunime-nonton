@@ -35,6 +35,13 @@ import { NobarDock } from "@/components/NobarDock";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const QUALITIES = ["144p", "240p", "360p", "480p", "720p", "1080p"];
+
+/**
+ * Jumlah episode yang langsung tampil di grid. Series panjang (ratusan
+ * episode) membuat halaman jadi terpotret jauh sebelum user sampai ke
+ * player, jadi sisanya disembunyikan di balik "Lihat semua".
+ */
+const EP_PREVIEW = 10;
 /** 1080p hanya untuk akun premium. */
 const PREMIUM_QUALITY = "1080p";
 /** Penjelasan singkat tiap kualitas — ditampilkan di bawah pilihannya. */
@@ -725,6 +732,8 @@ function WatchContent() {
   }, [epParam, animeId, bakedSubs, !!direct?.ok, subRetry]);
 
   const [detailData, setDetailData] = useState<any>(null);
+  // Episode yang langsung tampil di grid; sisanya lewat "Lihat semua".
+  const [epAllOpen, setEpAllOpen] = useState(false);
 
   const epList = detailData?.episodeList ?? [];
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
@@ -790,6 +799,7 @@ function WatchContent() {
             genres: d?.genres ?? [],
             rating: d?.rating,
             status: d?.status,
+            source: d?.source,
             episodeList: list,
           });
           if (!epParam && list[0]) {
@@ -858,7 +868,7 @@ function WatchContent() {
         applySanka(cachedSanka);
         return;
       }
-      resolveDonghua({ slug: sk[1] })
+      resolveDonghua({ slug: sk[1], source: detailData?.source })
         .then((d: any) => {
           if (d?.ok) resolvedRef.current.set(skKey, d);
           applySanka(d);
@@ -2127,7 +2137,9 @@ function WatchContent() {
               <span className="text-xs text-muted-foreground">{epList.length} episode</span>
             </div>
             <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
-              {(epList ?? []).map((e: any) => (
+              {(epList ?? [])
+                .slice(0, epAllOpen ? epList.length : EP_PREVIEW)
+                .map((e: any) => (
                 <button
                   key={e.id}
                   onClick={() => {
@@ -2148,6 +2160,18 @@ function WatchContent() {
                 </button>
               ))}
             </div>
+            {/* Episode panjang disembunyikan di balik tombol supaya grid tidak
+                jadiCombo panjang yang harus di-scroll jauh sebelum player. */}
+            {epList.length > EP_PREVIEW && (
+              <button
+                onClick={() => setEpAllOpen((v) => !v)}
+                className="mt-2 w-full rounded-lg border border-border py-2 text-xs font-medium text-foreground"
+              >
+                {epAllOpen
+                  ? "Tampilkan lebih sedikit"
+                  : `Lihat semua ${epList.length} episode`}
+              </button>
+            )}
           </>
         )}
 

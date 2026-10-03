@@ -5,15 +5,26 @@
 //   GET /anime/:source/home          → daftar terbaru
 //   GET /anime/:source/search/:query → pencarian judul
 //   GET /anime/:source/detail/:slug  → detail + sinopsis + genre + episode
+//   GET /anime/:source/episode/:slug → daftar server embed
 //
 // CATATAN PENTING soal gate "Plana AI Detector":
 // Endpoint tertentu membalas 403 dengan `{"status":"Plana AI Detector"}`
-// kalau diakses tanpa header browser. Sebagian source (samehadaku,
-// animeindo, kuramanime, zoronime) memang memblokir seperti itu; sisanya
-// (donghua, donghub, anoboy, oploverz, nimegami, winbu) tetap hidup. Jadi
-// setiap request selalu mengirim User-Agent + Referer, dan pemanggil mencoba
-// source satu per satu sampai ada yang menjawab — bukan bergantung pada satu
-// sumber saja.
+// kalau diakses tanpa header browser. Sebagian source (otakudesu,
+// kuramanime, animeindo) memang memblokir seperti itu; sisanya tetap hidup.
+// Jadi setiap request selalu mengirim User-Agent + Referer, dan pemanggil
+// mencoba source satu per satu sampai ada yang menjawab.
+//
+// SUMBER DONGHUA: `donghub` dipakai LEBIH DULU daripada `donghua`.
+// Alasannya nyata, bukan selera:
+//  1. `donghua` menyimpan katalog per-EPISODE, jadi judul di detail jadi
+//     "Judul Episode 08 Subtitle Indonesia" dan sinopsisnya kosong.
+//  2. `donghua` tidak pernah mengisi `episode_number` (selalu null), sehingga
+//     nomor episodenya harus ditebak dari teks judul.
+//  3. Server video `donghua` semuanya berlabel [ADS] (RPMShare, Earnvids,
+//     Abyss, StreamHG) —_player iframe berat dan penuh iklan.
+// `donghub` memakai slug PER-SERIES ("beyond-times-gaze"), `episode` berisi
+// nomor asli ("42"), dan server utamanya Dailymotion yang jauh lebih ringan.
+// `donghua` tetap dipakai sebagai cadangan kalau donghub tidak punya judulnya.
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 
@@ -48,7 +59,7 @@ async function sankaGet(
     });
     if (!res.ok) return null;
     const j = (await res.json()) as Record<string, unknown>;
-    // Gate anti-bot Sometimes balas status 200 dengan field status berisi
+    // Gate anti-bot kadang balas status 200 dengan field status berisi
     // "Plana AI Detector", jadi harus diperiksa di body, bukan cuma HTTP.
     if (typeof j?.status === "string" && /detector/i.test(j.status)) return null;
     return j as Record<string, any>;
@@ -67,24 +78,85 @@ export type SankaAnime = {
   current_episode?: string | number;
 };
 
+/**
+ * Bersihkan judul dari "nama seri\t\t\tnama episode" yang dipakai donghub.
+ * API menyatukan keduanya dengan beberapa tab; yang dibutuhkan user adalah nama
+ * serinya saja supaya kartu tidak menulis "Judul Episode 08 Subtitle Indonesia".
+ */
+function cleanTitle(raw: unknown): string {
+  const first = String(raw ?? "").split("\t")[0];
+  return first.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Buang ekor "Episode 08 Subtitle Indonesia" dari judul supaya yang tampil
+ * adalah nama serinya.
+ */
+function stripEpisodeSuffix(title: string): string {
+  return title
+    .replace(/\s*[-–]?\s*episode\s*\d+\s*(subtitle\s*indonesia)?\s*$/i, "")
+    .trim();
+}
+
+/**
+ * Slug seri dari slug per-episode.
+ *
+ * Pola yang muncul di data nyata:
+ *   "x-episode-42-subtitle-indonesia"  → "x"
+ *   "x-episode-42"                    → "x"
+ *   "x"                               → "x"  (tidak diubah)
+ */
+function seriesSlug(slug: string): string {
+  const cut = slug.replace(/-episode-\d+.*$/i, "");
+  return cut.length > 0 ? cut : slug;
+}
+
 function toCard(x: any): SankaAnime | null {
-  const title = String(x?.title ?? "").trim();
+  const rawTitle = cleanTitle(x?.title);
   const slug = String(x?.slug ?? "").trim();
-  if (!title || !slug) return null;
+  if (!slug) return null;
+  // `episode` di donghub bernilai "42" (string) atau "Ongoing"; kalau tidak
+  // ada, nomornya diambil dari teks judul. Kalau pun keduanya tidak memberi
+  // nomor, slug-nya tetap dinormalkan ke slug seri: kartu tanpa nomor pun
+  // harus membuka detail seri utuh, bukan satu episode.
+  const epRaw = x?.current_episode ?? x?.episode;
+  const epNum = parseEpisodeNumber(epRaw) || parseEpisodeNumber(rawTitle);
+  const title = stripEpisodeSuffix(rawTitle) || rawTitle;
   return {
     title,
-    slug,
+    slug: seriesSlug(slug),
     poster: x.poster ? String(x.poster) : undefined,
-    status: x.status ? String(x.status) : undefined,
+    status: x.status && x.status !== "Unknown" ? String(x.status) : undefined,
     type: x.type ? String(x.type) : undefined,
     rating: x.rating,
-    current_episode: x.current_episode,
+    current_episode: epNum > 0 ? epNum : undefined,
   };
+}
+
+/**
+ * Nomor episode dari berbagai bentuk nilai: 7, "7", "Ep 08", "Episode 08
+ * Subtitle Indonesia", atau null. Semua sumber punya setidaknya salah satu
+ * bentuk ini — tidak ada yang bisa_andalkan `episode_number` saja karena
+ * `donghua` selalu mengisinya dengan null.
+ */
+function parseEpisodeNumber(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return Math.trunc(raw);
+  const m = String(raw ?? "").match(/(\d+)/);
+  const n = m ? Number(m[1]) : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
 /** Ambil list dari respons apa pun bentuknya (tiap source beda struktur). */
 function pickList(j: Record<string, any> | null): any[] {
   if (!j) return [];
+  // donghub membungkus daftar di `data.{slider,popular,latest}`.
+  const d = j.data;
+  if (d && typeof d === "object" && !Array.isArray(d)) {
+    for (const key of ["latest", "popular", "slider"]) {
+      const val = d[key];
+      if (Array.isArray(val) && val.length > 0) return val;
+    }
+  }
   for (const key of [
     "anime_list",
     "latest_release",
@@ -104,12 +176,27 @@ function pickList(j: Record<string, any> | null): any[] {
   return [];
 }
 
-/** Source yang stabil dipakai pertama, lalu dicoba satu per satu. */
-const DONGHUA_SOURCES = ["donghua", "donghub"] as const;
+/**
+ * Urutan sumber donghua: `donghub` (lengkap & server ringan) lebih dulu,
+ * `donghua` (per-episode, penuh iklan) sebagai cadangan.
+ */
+const DONGHUA_SOURCES = ["donghub", "donghua"] as const;
+/**
+ * Urutan sumber anime. `samehadaku` tidak dipakai di sini untuk streaming —
+ * episodenya dipanggil lewat `indo.ts` yang sudah punya judul Indonesia.
+ */
 const ANIME_SOURCES = ["oploverz", "anoboy", "nimegami", "winbu"] as const;
 
-async function fetchLatest(source: string, limit: number) {
-  const j = await sankaGet(`/anime/${source}/home`);
+/** Halaman yang diambil per sumber; cukup untuk 2 baris + layar "selengkapnya". */
+const PAGE_STEP = 24;
+
+async function fetchLatestPage(
+  source: string,
+  limit: number,
+  page: number,
+): Promise<SankaAnime[]> {
+  const qs = page > 1 ? `?page=${page}` : "";
+  const j = await sankaGet(`/anime/${source}/home${qs}`);
   const list = pickList(j).map(toCard).filter(Boolean) as SankaAnime[];
   return list.slice(0, Math.max(1, Math.min(40, limit)));
 }
@@ -117,16 +204,34 @@ async function fetchLatest(source: string, limit: number) {
 async function fetchSearch(source: string, q: string, limit: number) {
   const query = q.trim();
   if (query.length < 2) return [];
-  const j = await sankaGet(`/anime/${source}/search/${encodeURIComponent(query)}`);
+  const j = await sankaGet(
+    `/anime/${source}/search/${encodeURIComponent(query)}`,
+  );
   const list = pickList(j).map(toCard).filter(Boolean) as SankaAnime[];
   return list.slice(0, Math.max(1, Math.min(40, limit)));
 }
 
-/** Daftar donghua terbaru; mencoba tiap source sampai ada yang hidup. */
+/**
+ * Ambil daftar donghua dari beberapa halaman sekaligus, lalu buang duplikat
+ * (donghub memuat episode yang sama sebagai kartu berbeda). Halaman diambil
+ * paralel supaya "lihat selengkapnya" tidak menambah satu detik per halaman.
+ */
 async function donghuaLatestInternal(limit: number): Promise<SankaAnime[]> {
+  const pagesWanted = Math.max(1, Math.ceil(limit / PAGE_STEP));
   for (const src of DONGHUA_SOURCES) {
-    const list = await fetchLatest(src, limit);
-    if (list.length > 0) return list;
+    const pages = await Promise.all(
+      Array.from({ length: pagesWanted }, (_, i) =>
+        fetchLatestPage(src, PAGE_STEP, i + 1).catch(() => []),
+      ),
+    );
+    const seen = new Set<string>();
+    const out: SankaAnime[] = [];
+    for (const c of pages.flat()) {
+      if (!c?.slug || seen.has(c.slug)) continue;
+      seen.add(c.slug);
+      out.push(c);
+    }
+    if (out.length > 0) return out.slice(0, Math.max(1, Math.min(120, limit)));
   }
   return [];
 }
@@ -152,11 +257,7 @@ async function donghuaSearchInternal(
 
 /** Peta satu item Sanka → bentuk yang dipakai kartu di UI. */
 function uiCard(x: SankaAnime) {
-  const epRaw = x.current_episode;
-  const epNum =
-    typeof epRaw === "number"
-      ? epRaw
-      : Number(String(epRaw ?? "").match(/(\d+)/)?.[1] ?? 0) || 0;
+  const epNum = parseEpisodeNumber(x.current_episode);
   return {
     id: x.slug,
     title: x.title,
@@ -211,12 +312,58 @@ export type SankaDetail = {
   rating?: string;
   status?: string;
   type?: string;
+  studio?: string;
   synopsis: string;
   genres: string[];
   episodes: { number: number; title: string; url: string }[];
+  /** Judul lain dari API yang recommendsJudul serupa (donghua). */
+  related: { id: string; title: string; image: string }[];
   /** Source tempat detail ini diambil (dipakai lagi saat ambil episode). */
   source: string;
 };
+
+function genresOf(list: unknown): string[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((g: any) => (typeof g === "string" ? g : String(g?.name ?? g?.title ?? "")))
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Normalisasi satu entri episode dari berbagai bentuk sumber.
+ * Prioritas: `episode_number` (kalau ada) → `episode` → nomor di judul →
+ * nomor di slug. `donghua` selalu null di `episode_number`, dan `donghub`
+ * menyimpan nomornya sebagai string dua digit ("07"), jadi keduanya wajib
+ * ditangani.
+ */
+function mapEpisode(e: any): { number: number; title: string; url: string } {
+  const rawTitle = cleanTitle(e?.episode ?? e?.title ?? e?.name ?? "");
+  const fromField = parseEpisodeNumber(e?.episode_number ?? e?.number);
+  const fromLabel = parseEpisodeNumber(e?.episode ?? e?.number);
+  const fromTitle = parseEpisodeNumber(rawTitle);
+  const slug = String(e?.slug ?? e?.episodeId ?? e?.href ?? "")
+    .split("/")
+    .filter(Boolean)
+    .pop();
+  const fromSlug = parseEpisodeNumber(slug);
+  const number = fromField || fromLabel || fromTitle || fromSlug || 0;
+  return {
+    number,
+    // Judul episode diringkas supaya tidak mengulang nama seri yang sudah
+    // tampil di atas: yang tersisa "Episode 08".
+    title: shortEpisodeTitle(rawTitle, number),
+    url: String(e?.slug ?? e?.href ?? ""),
+  };
+}
+
+/** "Judul Seri Episode 08 Subtitle Indonesia" → "Episode 08". */
+function shortEpisodeTitle(raw: string, number: number): string {
+  const stripped = raw.replace(/\s*subtitle\s*indonesia\s*$/i, "").trim();
+  const m = stripped.match(/episode\s*\d+\s*$/i) ?? stripped.match(/\bep\.?\s*\d+\s*$/i);
+  if (m) return m[0].replace(/\s+/g, " ").trim();
+  return stripped || (number > 0 ? `Episode ${number}` : "");
+}
 
 /** Detail satu judul; donghua dicoba lebih dulu kalau diminta. */
 export const detail = action({
@@ -232,8 +379,17 @@ export const detail = action({
       : [...ANIME_SOURCES, ...DONGHUA_SOURCES];
 
     for (const src of order) {
-      const d = await sankaGet(`/anime/${src}/detail/${encodeURIComponent(s)}`);
-      if (!d) continue;
+      const raw = await sankaGet(
+        `/anime/${src}/detail/${encodeURIComponent(s)}`,
+      );
+      if (!raw) continue;
+      // donghub membungkus semuanya di `data`; donghua/anoboy tidak.
+      const d: Record<string, any> =
+        raw.data && typeof raw.data === "object" && !Array.isArray(raw.data)
+          ? raw.data
+          : raw;
+      const info: Record<string, any> =
+        d.info && typeof d.info === "object" ? d.info : {};
 
       // Sinopsis bisa string atau objek {text}; ambil yang terbaca.
       let synopsis = "";
@@ -242,57 +398,70 @@ export const detail = action({
       else if (rawSyn && typeof rawSyn === "object")
         synopsis = String(rawSyn.text ?? rawSyn.synopsis ?? "");
 
-      const genres = Array.isArray(d.genres)
-        ? d.genres
-            .map((g: any) => (typeof g === "string" ? g : String(g?.name ?? "")))
-            .filter(Boolean)
-        : [];
+      const genres = genresOf(d.genres ?? d.genreList);
 
-      // Kunci daftar episode di API adalah `episodes_list` (nama field
-      // `episode` tidak pernah dipakai). Karena itu daftar ini pernah kosong
-      // padahal API mengirimkannya.
-      const rawEps = Array.isArray(d.episodes_list)
-        ? d.episodes_list
-        : Array.isArray(d.episode)
-          ? d.episode
-          : [];
-      const eps = rawEps.map((e: any) => ({
-        number:
-          Number(e?.episode_number ?? e?.number ?? e?.episode ?? 0) || 0,
-        title: String(e?.episode ?? e?.title ?? e?.name ?? ""),
-        // `slug` dipakai sebagai identitas episode: endpoint stream-nya
-        // `/anime/:source/episode/:slug`.
-        url: String(e?.slug ?? e?.href ?? ""),
-      }));
-
-      // Respon kosong (cuma judul) dianggap gagal supaya mencoba source lain.
+      // Kunci daftar episode berbeda per sumber:
+      //   donghub → `episodes` (per-seri, lengkap)
+      //   donghua → `episodes_list` (per-episode, `episode_number` null)
+      const rawEps: any[] = Array.isArray(d.episodes)
+        ? d.episodes
+        : Array.isArray(d.episodes_list)
+          ? d.episodes_list
+          : Array.isArray(d.episode)
+            ? d.episode
+            : [];
+      const eps = rawEps.map(mapEpisode).filter((e) => e.url.length > 0);
+      // Nomor episode boleh 0 kalau sumber memang tidak memberi nomor, tapi
+      // daftar tetap boleh kosong — itu yang membuat mencoba source lain.
       if (!synopsis && eps.length === 0 && genres.length === 0) continue;
 
+      const related = (Array.isArray(d.recommendations)
+        ? d.recommendations
+        : []
+      )
+        .map((r: any) => ({
+          id: String(r?.slug ?? ""),
+          title: stripEpisodeSuffix(cleanTitle(r?.title)),
+          image: r?.poster ? String(r.poster) : "",
+        }))
+        .filter((r: { id: string; title: string }) => r.id && r.title);
+
+      const title =
+        stripEpisodeSuffix(cleanTitle(d.title)) || cleanTitle(d.title) || s;
+      const ratingRaw = d.rating ?? info.rating;
       return {
-        title: String(d.title ?? s),
+        title,
         alterTitle: d.alter_title ? String(d.alter_title) : undefined,
         poster: d.poster ? String(d.poster) : undefined,
         cover: d.cover ? String(d.cover) : undefined,
-        rating: d.rating != null ? String(d.rating) : undefined,
-        status: d.status ? String(d.status) : undefined,
-        type: d.type ? String(d.type) : undefined,
+        rating: ratingRaw != null ? String(ratingRaw) : undefined,
+        status: (d.status ?? info.status)
+          ? String(d.status ?? info.status)
+          : undefined,
+        type: (d.type ?? info.type) ? String(d.type ?? info.type) : undefined,
+        studio: d.studio ? String(d.studio) : undefined,
         synopsis,
         genres,
         episodes: eps,
+        related,
         source: src,
       };
     }
     return { error: "Detail tidak ditemukan" };
   },
 });
+
 /**
  * Stream satu episode donghua.
  *
- * Endpoint: GET /anime/:source/episode/:slug  → daftar server embed.
+ * Endpoint: GET /anime/:source/episode/:slug  → daftar server.
+ * Bentuk yang dipakai dua sumber berbeda, jadi keduanya dinormalisasi:
+ *   donghub → `data.streams[]`  (server, url)
+ *   donghua → `streaming.servers[]` (name, url)
  *
- * Semua server dari API ini adalah player embed yang subtitle Bahasa
- *Indonesianya sudah menempel di video, jadi `baked: true` — player tidak
- * perlu menggambar subtitle sendiri dan tidak akan menimpa subtitle aslinya.
+ * Server berlabel [ADS] diturunkan ke urutan terakhir: player iframe-nya
+ * berat dan penuh iklan, jadi hanya dipakai kalau tidak ada pilihan lain.
+ *
  * Bentuk dikembalikan sengaja sama dengan `megaplay.resolveEpisode` supaya
  * halaman Nonton tidak perlu tahu asal bedanya.
  */
@@ -314,17 +483,27 @@ export const resolveEpisode = action({
         `/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
         20_000,
       );
-      const list = j?.streaming?.servers;
-      if (!Array.isArray(list) || list.length === 0) continue;
-      const sources = list
+      const rawList: any[] = Array.isArray(j?.data?.streams)
+        ? j.data.streams
+        : Array.isArray(j?.streaming?.servers)
+          ? j.streaming.servers
+          : [];
+      if (rawList.length === 0) continue;
+      const all = rawList
         .map((s: any) => ({
-          label: String(s?.name ?? src),
+          label: String(s?.server ?? s?.name ?? src),
           url: String(s?.url ?? ""),
           type: "embed" as const,
           baked: true,
+          ads: /\[ads\]|\bads\b/i.test(String(s?.server ?? s?.name ?? "")),
         }))
         .filter((s: { url: string }) => s.url.length > 0);
-      if (sources.length === 0) continue;
+      if (all.length === 0) continue;
+      // Tanpa iklan dulu; kalau tidak ada, semua server tetap dipakai.
+      const clean = all.filter((s) => !s.ads);
+      const sources = (clean.length > 0 ? clean : all).map(
+        ({ label, url, type, baked }) => ({ label, url, type, baked }),
+      );
       return {
         ok: true as const,
         sources,

@@ -30,11 +30,8 @@ import { displayId, usernameColor } from "@/lib/lstream";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 import { NotifButton } from "@/components/NotifButton";
 import {
-  ContinuePanel,
   FavoritesPanel,
-  ForYouPanel,
   MOST_MIN_TITLES,
-  MostWatchedPanel,
   type TopPanel,
 } from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
@@ -123,18 +120,20 @@ export function AppLayout({
         key={location.pathname}
         className="screen-enter w-full flex-1 md:mx-auto md:max-w-2xl lg:max-w-4xl"
       >
-        <div className="px-4 md:px-6">{children}</div>
+        <div className="px-4 md:px-6">
+          {/* Layar Favorit dipanggil sebagai halaman biasa, bukan fixed
+              fullscreen, supaya baris navigasi bawah tetap terlihat dan
+              tombol Favorit bisa ditandai aktif. */}
+          {navPanel === "favorites" ? (
+            <FavoritesPanel onClose={() => setNavPanel(null)} />
+          ) : (
+            children
+          )}
+        </div>
       </div>
-      <BottomNav onOpenPanel={setNavPanel} />
+      <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
       <AppFooter />
       <MiniPlayerHost />
-
-      {/* Layar penuh dari tombol navigasi. Dirender di luar BottomNav supaya
-          tidak ikut hilang saat panel menyalakan flag overlay. */}
-      {navPanel === "favorites" && <FavoritesPanel onClose={() => setNavPanel(null)} />}
-      {navPanel === "continue" && <ContinuePanel onClose={() => setNavPanel(null)} />}
-      {navPanel === "most" && <MostWatchedPanel onClose={() => setNavPanel(null)} />}
-      {navPanel === "foryou" && <ForYouPanel onClose={() => setNavPanel(null)} />}
 
       <OverlayScrollLock />
       <AnnouncementPopup />
@@ -600,8 +599,10 @@ function AppFooter() {
 }
 
 function BottomNav({
+  navPanel,
   onOpenPanel,
 }: {
+  navPanel: TopPanel;
   onOpenPanel: (p: Exclude<TopPanel, null>) => void;
 }) {
   const navigate = useNavigate();
@@ -611,11 +612,6 @@ function BottomNav({
   const [switcher, setSwitcher] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
-  const watched = useQuery(api.activities.mostWatched, "skip");
-  // "Paling sering" baru bermakna setelah ada cukup riwayat; sebelum itu
-  // ikonnya diredupkan dan panelnya tidak pernah dibuka.
-  const enoughWatched = (watched ?? []).length >= MOST_MIN_TITLES;
-
   useEffect(() => {
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -638,19 +634,11 @@ function BottomNav({
     { path: "/home", label: "Home", icon: Home },
     { path: "/jadwal", label: "Jadwal", icon: CalendarDays },
     { path: "/info", label: "Info", icon: Info },
-    // Favorit: tombol TAMBAHAN di sebelah kanan Info. Ikon bookmark kotak,
-    // bukan love/hat — ini penanda "disimpan", bukan "disukai".
+    // Favorit: tombol Ke-4. Membuka layar Favorit (bukan fullscreen), dan di
+    // paling atas layar itu ada tiga tombol Download / Paling sering /
+    // Untuk kamu. Ikon bookmark kotak, bukan love/hat — ini penanda
+    // "disimpan", bukan "disukai".
     { path: "", label: "Favorit", icon: Bookmark, panel: "favorites" },
-    // Tiga tombol ini sebelumnya menempel di Home; sekarang pindah ke navigasi.
-    { path: "", label: "Lanjutkan nonton", icon: PlayCircle, panel: "continue" },
-    {
-      path: "",
-      label: "Paling sering",
-      icon: Flame,
-      panel: "most",
-      dim: !enoughWatched,
-    },
-    { path: "", label: "Untuk kamu", icon: Sparkles, panel: "foryou" },
     { path: "/akun", label: "Akun", icon: UserRound },
   ];
 
@@ -727,14 +715,16 @@ function BottomNav({
           </div>
         </>
       )}
-      {/* Navbar full width: 8 tombol (Home, Jadwal, Info, Favorit,
-          Lanjutkan nonton, Paling sering, Untuk kamu, Akun). */}
+      {/* Navbar full width: 5 tombol (Home, Jadwal, Info, Favorit, Akun). */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
-        <div className="mx-auto grid w-full grid-cols-8 md:max-w-2xl lg:max-w-4xl">
+        <div className="mx-auto grid w-full grid-cols-5 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
             const base = it.path.split("?")[0];
-            const active =
-              base === "/home"
+            // Panel "favorites" tidak punya rute: aktif selama layarnya
+            // terbuka, supaya tombolnya terlihat terpilih.
+            const active = it.panel
+              ? navPanel === it.panel
+              : base === "/home"
                 ? location.pathname === "/home" || location.pathname === "/"
                 : base !== "" && location.pathname.startsWith(base);
             const isHome = base === "/home";
@@ -768,9 +758,9 @@ function BottomNav({
               >
                 <Icon
                   className={cn(
-                    // 8 kolom: ikon dikecilkan supaya tetap muat di HP sempit
-                    // tanpa saling bertindih.
-                    "size-[19px] md:size-[22px]",
+                    // 5 kolom: ikon boleh sedikit lebih besar supaya mudah
+                    // ditekan di HP.
+                    "size-[21px] md:size-[24px]",
                     active
                       ? "text-primary"
                       : it.dim
@@ -784,10 +774,7 @@ function BottomNav({
         </div>
       </nav>
 
-      {/* Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
-          Paling sering, Untuk kamu). Dimount di sini supaya tombolnya bisa
-          hidup di halaman mana pun, bukan cuma Home. */}
-    </>
+      </>
   );
 }
 

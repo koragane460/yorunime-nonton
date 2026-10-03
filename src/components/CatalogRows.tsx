@@ -31,10 +31,14 @@ export type CatalogKind =
 
 /** Jumlah kartu per baris di carousel. */
 const PER_ROW = 10;
-/** Jumlah baris yang tampil di Home sebelum dibuka lewat "Lihat selengkapnya". */
-const ROWS = 2;
-/** Berapa banyak yang benar-benar ditampilkan: 10 atas + 10 bawah. */
-export const CAROUSEL_COUNT = PER_ROW * ROWS;
+/**
+ * Berapa banyak yang benar-benar ditampilkan di Home. Tiga baris (30 kartu)
+ * supaya katalog terasa penuh, sementara sisanya tetap ada di layar
+ * "Lihat selengkapnya".
+ */
+export const CAROUSEL_COUNT = PER_ROW * 3;
+/** Total yang diminta dari backend untuk baris + layar selengkapnya. */
+const FETCH_COUNT = 120;
 
 /* ====================================================================== *
  *  Deretan kartu geser-ke-kanan: 10 di atas, 10 di bawah.
@@ -64,7 +68,9 @@ export function CardCarousel({
     let alive = true;
     setBusy(true);
     const req =
-      kind === "donghua" ? donghua({ limit: 24 }) : browse({ kind, page: 1 });
+      kind === "donghua"
+        ? donghua({ limit: FETCH_COUNT })
+        : browse({ kind, page: 1 });
     req
       .then((r: unknown) => {
         if (alive) setItems((r ?? []) as CardT[]);
@@ -78,8 +84,14 @@ export function CardCarousel({
     };
   }, [kind, browse, donghua]);
 
-  const top = items.slice(0, PER_ROW);
-  const bottom = items.slice(PER_ROW, CAROUSEL_COUNT);
+  const rows = useMemo(() => {
+    const out: CardT[][] = [];
+    for (let i = 0; i < items.length && out.length < CAROUSEL_COUNT / PER_ROW; i++) {
+      const row = items.slice(i * PER_ROW, (i + 1) * PER_ROW);
+      if (row.length > 0) out.push(row);
+    }
+    return out;
+  }, [items]);
 
   return (
     <>
@@ -103,7 +115,7 @@ export function CardCarousel({
 
       {busy ? (
         <div className="space-y-2.5">
-          {[0, 1].map((r) => (
+          {[0, 1, 2].map((r) => (
             <div key={r} className="thin-scroll flex gap-2.5 overflow-hidden">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="w-28 shrink-0">
@@ -121,7 +133,7 @@ export function CardCarousel({
         </p>
       ) : (
         <div className="space-y-2.5">
-          {[top, bottom].map((row, ri) =>
+          {rows.map((row, ri) =>
             row.length === 0 ? null : (
               <div key={ri} className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
                 {row.map((c) => (
@@ -187,7 +199,6 @@ export function CatalogScreen({
 }) {
   const browse = useAction(api.anime.animeBrowse);
   const searchAnime = useAction(api.anime.animeSearch);
-  const donghuaLatest = useAction(api.sanka.donghuaLatestCards);
   const donghuaSearch = useAction(api.sanka.donghuaSearchCards);
   const [q, setQ] = useState("");
   const [all, setAll] = useState<CardT[]>(seed);
@@ -196,15 +207,20 @@ export function CatalogScreen({
   const [searching, setSearching] = useState(false);
 
   // Muat beberapa halaman supaya "daftar lengkap" benar-benar punya isi.
-  // Halaman 1 sudah gegeben lewat `seed`.
+  // Halaman 1 sudah diberikan lewat `seed`.
   useEffect(() => {
     let alive = true;
+    // Untuk donghua, satu panggilan backend sudah mengambil banyak halaman
+    // sekaligus (lihat `donghuaLatestInternal`), jadi tidak perlu fetch
+    // tambahan di sini — cukup pakai `seed` apa adanya.
+    if (kind === "donghua") {
+      setAll(seed);
+      setLoading(false);
+      return;
+    }
     const pages = [2, 3, 4];
     const fetches: Promise<CardT[]>[] = pages.map((p) =>
-      (kind === "donghua"
-        ? donghuaLatest({ limit: 24 * p })
-        : browse({ kind, page: p })
-      )
+      browse({ kind, page: p })
         .then((r: unknown) => (r ?? []) as CardT[])
         .catch(() => [] as CardT[]),
     );
@@ -223,7 +239,7 @@ export function CatalogScreen({
     return () => {
       alive = false;
     };
-  }, [kind, browse, donghuaLatest, seed]);
+  }, [kind, browse, seed]);
 
   // Pencarian: untuk donghua, kueri+donghua; untuk anime, animeSearch biasa.
   const doSearch = async () => {

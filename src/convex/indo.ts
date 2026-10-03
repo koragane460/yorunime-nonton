@@ -464,12 +464,18 @@ async function oploverz(title: string, ep: number): Promise<IndoSource[]> {
 // sengaja dibuat toleran (mencoba banyak pola). Kalau tidak ada file yang bisa
 // diambil, halaman episode-nya sendiri dikembalikan sebagai embed supaya tetap
 // bisa ditonton di dalam player.
+/**
+ * Mirror AnimeIndo, diurut dari yang paling sehat.
+ *
+ * `animeindo.site` DIHAPUS: koneksi tidak pernah selesai (timeout 15 detik di
+ * setiap request) sehingga satu episode bisa saja menggantung puluhan detik
+ * hanya karena mirror itu. `animeindo.top` cuma redirect, jadi ada di akhir.
+ */
 const INDO_HOSTS = [
   "https://animeindo.me",
+  "https://animeindo.fun",
   "https://animeindo.tv",
   "https://animeindo.id",
-  "https://animeindo.fun",
-  "https://animeindo.site",
   "https://animeindo.top",
 ];
 
@@ -486,7 +492,8 @@ async function indoHtml(
     try {
       const res = await fetch(`${host}${path}`, {
         headers: INDO_HEADERS,
-        signal: AbortSignal.timeout(12_000),
+        signal: AbortSignal.timeout(6_000),
+        redirect: "follow",
       });
       if (!res.ok) continue;
       const body = await res.text();
@@ -671,14 +678,14 @@ export async function resolveIndo(
 
   // Semua varian dan semua provider dicoba. Hasilnya digabung supaya ada
   // beberapa server untuk satu episode (cadangan kalau ada yang error).
-  // Urutan prioritas: 1) AnimeIndo  → episode paling lengkap.
-  // 2) Anime-indo (xtwap) → HLS asli, diputar player kita sendiri.
-  // 3) Samehadaku → Oploverz → Otakudesu (embed player pihak ketiga).
+  //
+  // Urutan prioritas: 1) Anime-indo (xtwap) → HLS asli, diputar player kita
+  // sendiri. 2) Samehadaku → 3) Oploverz → 4) Otakudesu → 5) AnimeIndo.
   const MAX = Math.max(1, Math.min(5, opts?.max ?? 5));
   const collected: IndoSource[] = [];
   const seen = new Set<string>();
   // Server direct (HLS/MP4) selalu diutamakan: subtitle Indonesia-nya sudah
-  // menempel di video, jadi player kita sendiri yang EVERYTHING-nya kendali.
+  // menempel di video, jadi player kita sendiri yang SEMUA-nya kendali.
   // Embed iframe pihak ketiga hanya dipakai kalau benar-benar tidak ada satu
   // pun server direct, supaya episode tidak jadi gagal ditonton.
   let directFound = 0;
@@ -693,12 +700,20 @@ export async function resolveIndo(
     }
   };
 
-  // Semua keluarga provider ditembakkan SEKALIGUS (paralel), lalu hasilnya
-  // digabung dengan urutan prioritas yang sama seperti sebelumnya. Sebelumnya
-  // tiap provider menunggu provider sebelumnya selesai — itu yang bikin episode
-  // dibuka lama sekali, karena total waktunya jadi jumlah semua request.
-  // Urutan (1) AnimeIndo → (2) Anime-indo/xtwap → (3) Samehadaku → (4) Oploverz
-  // → (5) Otakudesu.
+  /**
+   * Semua provider ditembakkan SEKALIGUS, dan halaman ini kembali begitu
+   * kuota terpenuhi — bukan menunggu provider paling lambat.
+   *
+   * Ini perbaikan terbesar untuk waktu muat. Sebelumnya `Promise.all`
+   * menunggu kelima provider sampai selesai, dan provider yang paling lambat
+   * (AnimeIndo: 3 request HTML berurutan x beberapa mirror) ikut menentukan
+   * waktu episode terbuka. Terbukur satu episode memakan waktu 41 detik
+   * walau server direct-nya sudah ketemu dalam 4 detik.
+   *
+   * Sekarang begitu jumlah server yang dibutuhkan sudah terkumpul, hasilnya
+   * langsung dikembalikan. Provider yang lambat tetap jalan di latar dan
+   * hanya dipakai kalau-kuota belum terpenuhi.
+   */
   const collectFrom = async (
     fn: (title: string, ep: number) => Promise<IndoSource[]>,
     stopAt: number,
@@ -708,21 +723,77 @@ export async function resolveIndo(
       if (lists.length >= stopAt) break;
       lists.push(await fn(q, ep).catch(() => []));
     }
-    return lists;
+    return lists;};
+
+  /**
+   * Batas keras waktu pencarian server. Setelahnya apa pun yang sudah terkumpul
+   * dikembalikan, karena lebih baik user memulai nonton dari server yang ada
+   * daripada menunggu provider yang lambat.
+   */
+  const RESOLVE_DEADLINE_MS = 12_000;
+  /**
+   * Jeda tambahan setelah server direct pertama ditemukan.
+   *
+   * Satu server saja cukup untuk mulai nonton, tapi halaman Nonton memakai
+   * daftar server untuk otomatis pindah kalau yang pertama mati. Kalau resolver
+   * langsung berhenti di server pertama, cadangan itu hilang. Jeda singkat ini
+   * memberi provider lain waktu cukup menyumbang alternatif tanpa lagi menahan
+   * episode selama puluhan detik.
+   */
+  const GRACE_MS = 2_500;
+
+  let settled = false;
+  let graceTimer: ReturnType<typeof setTimeout> | null = null;
+  let resolveDone: (v: IndoSource[]) => void = () => {};
+  const done = new Promise<IndoSource[]>((r) => {
+    resolveDone = r;
+  });
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    if (graceTimer) clearTimeout(graceTimer);
+    resolveDone([...collected]);
   };
+  const maybeDone = () => {
+    // Kuota penuh: tidak perlu menunggu apa pun lagi.
+    if (collected.length >= MAX) return finish();
+    if (directFound >= 1) {
+      // Server direct sudah ada. Beri jeda singkat agar cadangan terkumpul,
+      // lalu selesai tanpa menunggu provider lambat.
+      if (!graceTimer && !settled)
+        graceTimer = setTimeout(finish, GRACE_MS);
+    }
+  };
+  // Pengaman: setelah batas waktu, kembalikan hasil terbaik yang terkumpul
+  // supaya tidak menggantung walau semua provider lambat.
+  const bail = setTimeout(finish, RESOLVE_DEADLINE_MS);
+  done.finally(() => clearTimeout(bail));
 
-  const [animeindoLists, xtwapLists, sankaLists, oploverzLists, otakudesuLists] =
-    await Promise.all([
-      collectFrom(animeindo, 2),
-      collectFrom(xtwapHls, 2),
-      collectFrom(samehadaku, 1),
-      collectFrom(oploverz, 1),
-      collectFrom(otakudesu, 1),
-    ]);
+  const harvest =
+    (p: Promise<IndoSource[][]>) =>
+    () =>
+      p.then(
+        (lists) => {
+          for (const l of lists) push(l);
+          maybeDone();
+        },
+        () => {},
+      );
 
-  // Gabung sesuai prioritas. Setiap keluarga hanya dipakai selama kuota
-  // server direct + embed-nya belum penuh.
-  for (const lists of [animeindoLists, xtwapLists, sankaLists, oploverzLists, otakudesuLists])
-    for (const list of lists) push(list);
+  // Prioritas: xtwap (direct HLS) dulu, baru embed yang ringan. AnimeIndo
+  // paling akhir karena paling lambat.
+  const families = [
+    harvest(collectFrom(xtwapHls, 2)),
+    harvest(collectFrom(samehadaku, 1)),
+    harvest(collectFrom(oploverz, 1)),
+    harvest(collectFrom(otakudesu, 1)),
+    harvest(collectFrom(animeindo, 1)),
+  ];
+
+  // Semua keluarga tetap ditunggu sebagai jaring pengaman: kalau tidak ada
+  // provider yang memenuhi kuota, hasil terbaik yang terkumpul dikembalikan.
+  void Promise.all(families.map((f) => f())).then(finish, finish);
+
+  return done;
   return collected;
 }

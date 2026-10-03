@@ -46,6 +46,28 @@ const TITLE_STYLE: Record<
   },
 };
 
+/**
+ * Resolusi title dari (role, seqId) dalam satu tempat.
+ *
+ * Ini dipisah dari komponen supaya Home, Akun, Chat, dan CommentsPasti
+ * menampilkan title yang sama untuk user yang sama. Sebelumnya tiap layar
+ * memanggil TitleBadge dengan argumen berbeda — beberapa tidak mengirim
+ * seqId — sehingga akun yang sama terlihat "Developer" di Home tapi
+ * "Moderator" di Akun.
+ *
+ * Aturannya: ID 1 adalah akun asli developer, jadi walau role-nya "mod"
+ * title-nya tetap Developer. Role kosong/unknown jatuh ke Developer.
+ */
+export function titleStyleOf(role?: string, seqId?: number) {
+  const key = role === "mod" && seqId === 1 ? "dev" : (role ?? "");
+  return TITLE_STYLE[key] ?? TITLE_STYLE.dev;
+}
+
+/** Sama seperti titleStyleOf, khusus warna tier clan. */
+export function clanTierClass(level?: number) {
+  return clanTextClass(level);
+}
+
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="mb-2 mt-5 text-[15px] font-bold">{children}</h2>
@@ -210,12 +232,7 @@ export function TitleBadge({
   className?: string;
   compact?: boolean;
 }) {
-  // Mode uji: semua akun memakai title Developer. Title lain hanya dipakai kalau
-  // memang sengaja diganti lewat Developer Panel.
-  // ID 1 = akun asli developer, tidak pernah jadi moderator.
-  const def =
-    TITLE_STYLE[role === "mod" && seqId === 1 ? "dev" : (role ?? "")] ??
-    TITLE_STYLE.dev;
+  const def = titleStyleOf(role, seqId);
   return (
     <span
       className={cn(

@@ -834,25 +834,105 @@ type FavRow = {
 
 /** Daftar judul yang ditandai favorit — dibuka dari tombol di navigasi. */
 export function FavoritesPanel({ onClose }: { onClose: () => void }) {
-  useHideNavOnMount();
   const navigate = useNavigate();
   const { user } = useAuth();
   const rows = useQuery(api.activities.myFavorites, user ? {} : "skip");
   const remove = useMutation(api.activities.toggleFavorite);
+  const stats = useQuery(api.downloads.downloadStats, user ? {} : "skip");
+  const watched = useQuery(api.activities.mostWatched, user ? { limit: 20 } : "skip");
+  const [sub, setSub] = useState<Exclude<TopPanel, null> | null>(null);
   const items = ((rows ?? []) as unknown as FavRow[])
     .slice()
     .sort((a, b) => b.createdAt - a.createdAt);
 
+  // Layar penuh yang dibuka dari tiga tombol di paling atas.
+  if (sub === "downloads") return <DownloadsPanel onClose={() => setSub(null)} />;
+  if (sub === "most") return <MostWatchedPanel onClose={() => setSub(null)} />;
+  if (sub === "foryou") return <ForYouPanel onClose={() => setSub(null)} />;
+
+  const dlCount = stats?.done ?? 0;
+  // "Paling sering" butuh riwayat cukup; sebelum itu tombolnya dinonaktifkan
+  // supaya tidak membuka layar kosong.
+  const mostReady = ((watched ?? []) as unknown[]).length >= MOST_MIN_TITLES;
+
+  const topButtons = [
+    {
+      key: "downloads" as const,
+      label: "Download",
+      Icon: Download,
+      badge: dlCount > 0 ? (dlCount > 99 ? "99+" : String(dlCount)) : null,
+      disabled: false,
+    },
+    {
+      key: "most" as const,
+      label: "Paling sering",
+      Icon: Flame,
+      badge: null,
+      disabled: !mostReady,
+    },
+    {
+      key: "foryou" as const,
+      label: "Untuk kamu",
+      Icon: Sparkles,
+      badge: null,
+      disabled: false,
+    },
+  ];
+
   return (
-    <PanelShell
-      title="Favorit"
-      subtitle={
-        items.length
-          ? `${items.length} judul tersimpan`
-          : "Judul yang kamu tandai favorit"
-      }
-      onClose={onClose}
-    >
+    <div className="screen-enter pb-24">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/95 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-bold tracking-tight">Favorit</h1>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {items.length
+                ? `${items.length} judul tersimpan`
+                : "Judul yang kamu tandai favorit"}
+            </p>
+          </div>
+        </div>
+
+        {/* Tiga tombol di paling atas layar ini: Download / Paling sering /
+            Untuk kamu — jadi baris navigasi tetap 5 tombol. */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {topButtons.map(({ key, label, Icon, badge, disabled }) => (
+            <button
+              key={key}
+              onClick={() => !disabled && setSub(key)}
+              disabled={disabled}
+              title={disabled ? `Butuh ${MOST_MIN_TITLES} judul ditonton` : label}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 transition",
+                disabled
+                  ? "border-border opacity-40"
+                  : "border-border hover:border-foreground/40",
+              )}
+            >
+              <span className="relative">
+                <Icon className="size-5" />
+                {badge && (
+                  <span className="absolute -right-2 -top-1.5 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
+                    {badge}
+                  </span>
+                )}
+              </span>
+              <span className="text-center text-[10px] font-semibold leading-tight">
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div className="pt-3">
       {items.length === 0 ? (
         <EmptyState
           icon={<Bookmark className="size-6" />}
@@ -905,7 +985,8 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       )}
-    </PanelShell>
+      </div>
+    </div>
   );
 }
 

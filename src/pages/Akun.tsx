@@ -179,6 +179,7 @@ function AkunContent() {
                           icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
                           tag={t.name}
                           color={user.clanNameColor}
+                          level={(user as unknown as { clanLevel?: number }).clanLevel}
                         />
                       ) : (
                         <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[12px] font-bold text-primary-foreground">
@@ -235,7 +236,7 @@ function AkunContent() {
             </p>
             {premium && <BlueCheck className="size-5 shrink-0" />}
             {(user.devTagUntil ?? 0) > Date.now() && <RedMark className="size-5" />}
-            <TitleBadge role={user.staffRole} />
+            <TitleBadge role={user.staffRole} seqId={user.seqId} />
             <span className="shrink-0 font-mono text-[11px] text-zinc-500">
               {displayId(user.seqId, user._id)}
             </span>
