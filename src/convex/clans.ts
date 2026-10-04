@@ -605,6 +605,23 @@ export const leaveClan = mutation({
   },
 });
 
+/**
+ * Simpan deskripsi clan. Hanya leader (atau officer) yang boleh mengubah.
+ * Teks dibersihkan dari spasi berlebih dan dipotong 300 karakter supaya
+ * kartu clan di daftar tidak memanjang berlebihan.
+ */
+export const setDescription = mutation({
+  args: { text: v.string() },
+  handler: async (ctx, { text }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const res = await leaderGuard(ctx, userId, ["leader"]);
+    const clean = text.replace(/\s+/g, " ").trim().slice(0, 300);
+    await ctx.db.patch(res.clan._id, { description: clean || undefined });
+    return { ok: true };
+  },
+});
+
 export const setBackground = mutation({
   args: { url: v.string() },
   handler: async (ctx, { url }) => {
@@ -613,5 +630,74 @@ export const setBackground = mutation({
     const res = await leaderGuard(ctx, userId, ["leader", "officer"]);
     await ctx.db.patch(res.clan._id, { backgroundUrl: url.trim() || undefined });
     return { ok: true };
+  },
+});
+
+/**
+ * Isi clan contoh (dummy) supaya daftar clan tidak kosong saat dipakai
+ * mencoba tampilan: podium top 1-3, daftar peringkat, dan deskripsi clan.
+ *
+ * Hanya untuk developer/moderator (dijaga di bawah) supaya tidak bisa
+ * dipakai user biasa. Aman dipanggil berulang: nama clan contoh yang sudah
+ * ada dilewati, bukan dibuat dobel.
+ */
+const DUMMY_CLANS = [
+  { name: "YoruNime", tag: "YRNM", icon: "⚡", level: 200, diamonds: 490502, desc: "Clan pencinta anime nocturnal. Aktif tiap malam, rank naik tiap donate." },
+  { name: "Kagayaki Order", tag: "KAGY", icon: "🌙", level: 163, diamonds: 328400, desc: "Kebanggaran fans shounen isekai. Saling bagi source episode." },
+  { name: "Strawberry Panic", tag: "STRA", icon: "🍓", level: 121, diamonds: 187250, desc: "Clan yang suka slice of life dan musik pop. Ramai di sore hari." },
+  { name: "Blade Legion", tag: "BLDE", icon: "🗡️", level: 96, diamonds: 142900, desc: "Pencinta action & isekai combat. Latihan daily bareng." },
+  { name: "Moonlit Archive", tag: "MOON", icon: "📚", level: 74, diamonds: 98400, desc: "Simpanan info anime, OST, dan meme lama di sini." },
+  { name: "Crimson Fang", tag: "CRIM", icon: "🔥", level: 58, diamonds: 76100, desc: "Weekly raid bareng, join kapan aja." },
+  { name: "Silent Echo", tag: "SILO", icon: "🫧", level: 41, diamonds: 52900, desc: "Tempat santai buat spoiler episode yang baru tayang." },
+  { name: "Neon Sakura", tag: "NEON", icon: "🌸", level: 33, diamonds: 41800, desc: "Anime slice of life & studio Ghibli." },
+  { name: "Zero Void", tag: "ZERO", icon: "🕳️", level: 27, diamonds: 33600, desc: "Experimental watch bareng, spoiler on." },
+  { name: "Paper Crane", tag: "CRNE", icon: "🕊️", level: 19, diamonds: 26400, desc: "Baru naik level, mohon bantu vote." },
+  { name: "Amber Fox", tag: "AMBR", icon: "🦊", level: 12, diamonds: 18900, desc: "KoleksiOST Lawas dan Opening pendek." },
+  { name: "Drift Wave", tag: "DRFT", icon: "🌊", level: 8, diamonds: 12300, desc: "Baru dibuat, mohon dibimbing senior." },
+];
+
+export const seedDummyClans = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new ConvexError("Belum masuk");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new ConvexError("User tidak ada");
+    const isDev =
+      me.role === "admin" ||
+      me.staffRole === "dev" ||
+      me.staffRole === "creator" ||
+      me.staffRole === "mod";
+    if (!isDev) throw new ConvexError("Hanya developer");
+
+    const existing = await ctx.db.query("clans").collect();
+    const haveTag = new Set(existing.map((c) => c.tag));
+    let made = 0;
+    for (const d of DUMMY_CLANS) {
+      if (haveTag.has(d.tag)) continue;
+      const clanId = await ctx.db.insert("clans", {
+        name: d.name,
+        tag: d.tag,
+        tagIcon: d.icon,
+        avatarUrl: "",
+        description: d.desc,
+        leaderId: userId,
+        diamonds: d.diamonds,
+        level: d.level,
+        levelProgress: 0,
+        createdAt: Date.now() - Math.floor(Math.random() * 120) * 86400000,
+      });
+      await ctx.db.insert("clanMembers", {
+        clanId,
+        userId,
+        role: "leader",
+        donatedTotal: 0,
+        donatedToday: 0,
+        lastDonateDay: "",
+        joinedAt: Date.now(),
+      });
+      made += 1;
+    }
+    return { made };
   },
 });

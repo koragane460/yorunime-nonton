@@ -37,61 +37,162 @@ function ClanPodium({
   onOpen: (id: Id<"clans">) => void;
   onRequest: (id: Id<"clans">) => void;
 }) {
-  // Urutan visual podium: 2 · 1 · 3 (yang di tengah tinggi).
-  const order = [clans[1], clans[0], clans[2]].filter(Boolean);
   return (
-    <div className="grid grid-cols-3 gap-6 px-2">
-      {order.map((c: any) => {
-        const rank = clans.findIndex((x: any) => x._id === c._id) + 1;
+    <div className="space-y-3 px-3">
+      {clans.map((c: any, i: number) => {
+        const rank = i + 1;
+        // Top 2 jadi kebalik: kotak banner panjangnya di KIRI, sedangkan
+        // top 1 dan top 3 di kanan.
+        const panelLeft = rank === 2;
         return (
-          <ClanRankWings key={c._id} rank={rank} className="min-w-0">
-            <button
-              onClick={() => onOpen(c._id as Id<"clans">)}
-              className="member-row flex w-full flex-col items-center gap-1 px-1.5 py-3 text-center transition hover:border-[oklch(0.86_0.16_90)]/40"
-            >
-              <span
+          <ClanRankWings key={c._id} rank={rank}>
+            <div className="member-row flex items-stretch overflow-hidden">
+              {panelLeft && (
+                <ClanBannerPanel
+                  c={c}
+                  rank={rank}
+                  first
+                  onOpen={onOpen}
+                />
+              )}
+              {/* Kartu utama: avatar + nama + tag + tombol Join */}
+              <button
+                onClick={() => onOpen(c._id as Id<"clans">)}
                 className={cn(
-                  "text-[13px] font-black leading-none",
-                  rankColor(rank),
+                  "flex min-w-0 flex-1 flex-col items-center gap-1.5 p-3 transition hover:bg-white/5",
+                  panelLeft ? "order-2" : "order-1",
                 )}
               >
-                {rank}
-              </span>
-              <Avatar src={c.avatarUrl} seed={c.name} className="size-12 shrink-0" />
-              <p
-                className={cn(
-                  "w-full truncate px-0.5 text-[13px] font-bold leading-tight",
-                  clanNameClass(c.level),
-                )}
-              >
-                {c.name}
-              </p>
-              <p className="text-[10px] leading-tight text-primary">
-                {formatK(c.diamonds)}
-              </p>
-              <span className="text-[10px] text-muted-foreground">
-                {c.memberCount} member
-              </span>
-              <span
-                role="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRequest(c._id as Id<"clans">);
-                }}
-                className={cn(
-                  "mt-1 w-full rounded-xl py-1.5 text-[11px] font-bold transition",
-                  myPending === c._id
-                    ? "bg-emerald-600 text-white"
-                    : "bg-primary text-white hover:brightness-110",
-                )}
-              >
-                {myPending === c._id ? "Terkirim" : "Join"}
-              </span>
-            </button>
+                <span
+                  className={cn(
+                    "text-base font-black leading-none",
+                    rankColor(rank),
+                  )}
+                >
+                  {rank}
+                </span>
+                <Avatar src={c.avatarUrl} seed={c.name} className="size-16 shrink-0" />
+                <p
+                  className={cn(
+                    "w-full truncate px-0.5 text-sm font-bold leading-tight",
+                    clanNameClass(c.level),
+                  )}
+                >
+                  {c.name}
+                </p>
+                <ClanTag
+                  icon={c.tagIcon}
+                  tag={c.tag}
+                  color={c.color}
+                  level={c.level}
+                  className="px-1.5 py-0 text-[10px]"
+                />
+                <p className="text-[10px] leading-tight text-primary">
+                  {formatK(c.diamonds)} Sacret
+                </p>
+                <span
+                  role="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRequest(c._id as Id<"clans">);
+                  }}
+                  className={cn(
+                    "mt-1 w-full rounded-xl py-2 text-xs font-bold transition",
+                    myPending === c._id
+                      ? "bg-emerald-600 text-white"
+                      : "bg-primary text-white hover:brightness-110",
+                  )}
+                >
+                  {myPending === c._id ? "Terkirim" : "Join"}
+                </span>
+              </button>
+              {!panelLeft && (
+                <ClanBannerPanel
+                  c={c}
+                  rank={rank}
+                  onOpen={onOpen}
+                />
+              )}
+            </div>
           </ClanRankWings>
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Kotak lurus memanjang di samping kartu clan: banner clan di atas, lalu
+ * nama, tag, stats (Sacret / member / umur), dan deskripsi clan. Dipakai
+ * untuk top 1-3 baik di tab "Semua" maupun "Top clan".
+ */
+function ClanBannerPanel({
+  c,
+  rank,
+  first,
+  onOpen,
+}: {
+  c: any;
+  rank: number;
+  /** true = kotak banner diletakkan di KIRI (dipakai top 2). */
+  first?: boolean;
+  onOpen: (id: Id<"clans">) => void;
+}) {
+  const banner = c.backgroundUrl || c.avatarUrl;
+  void rank;
+  return (
+    <button
+      onClick={() => onOpen(c._id as Id<"clans">)}
+      className={cn(
+        "flex w-[45%] max-w-[190px] shrink-0 flex-col items-stretch overflow-hidden text-left",
+        first ? "order-1" : "order-3",
+      )}
+    >
+      {banner ? (
+        <img
+          src={banner}
+          alt=""
+          className="h-24 w-full shrink-0 object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="h-24 w-full shrink-0 bg-white/5" />
+      )}
+      <div className="min-w-0 flex-1 px-2.5 py-2">
+        <p
+          className={cn(
+            "truncate text-[13px] font-bold leading-tight",
+            clanNameClass(c.level),
+          )}
+        >
+          {c.name}
+        </p>
+        <ClanTag
+          icon={c.tagIcon}
+          tag={c.tag}
+          color={c.color}
+          level={c.level}
+          className="mt-0.5 px-1.5 py-0 text-[9px]"
+        />
+        {/* Stats ditaruh DI BAWAH banner. */}
+        <div className="mt-1.5 space-y-0.5 text-[10px] leading-tight text-muted-foreground">
+          <p className="inline-flex items-center gap-1">
+            <Gem className="size-3" aria-hidden /> {formatK(c.diamonds)} Sacret
+          </p>
+          <p className="inline-flex items-center gap-1">
+            <Users className="size-3" aria-hidden /> {c.memberCount} member
+          </p>
+          <p className="inline-flex items-center gap-1">
+            <Clock className="size-3" aria-hidden /> {c.ageDays} hari
+          </p>
+        </div>
+        {c.description && (
+          <p className="mt-1.5 line-clamp-4 rounded-lg bg-white/20 p-1.5 text-[10px] leading-snug text-white/85">
+            {c.description}
+          </p>
+        )}
+      </div>
+    </button>
   );
 }
 
@@ -239,6 +340,13 @@ function NoClan({
   const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
   // Pesan galat ringan (mis. request join ditolak server).
   const [warn, setWarn] = useState<string | null>(null);
+  // Tombol isi clan contoh — hanya untuk developer/moderator.
+  const seedDummy = useMutation(api.clans.seedDummyClans);
+  const panelAccess = useQuery(
+    api.moderation.myPanelAccess,
+    user ? {} : "skip",
+  );
+  const isDev = panelAccess?.level === "dev";
   const back = useNavigate();
   // Daftar clan = layar fullscreen (navbar bawah & mini player disembunyikan)
   useHideNavOnMount();
@@ -291,17 +399,47 @@ function NoClan({
         </button>
       </div>
 
-      {/* Dua tombol: Semua / Top clan */}
-      <div className="tab-pill-track mt-3">
-        {(["semua", "best"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn("tab-pill", tab === t && "tab-pill-active")}
-          >
-            {t === "semua" ? "Semua" : "Top clan"}
-          </button>
-        ))}
+      {isDev && (
+        <button
+          onClick={async () => {
+            try {
+              const r = await seedDummy({});
+              toast.success(`${r.made} clan contoh ditambahkan`);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Gagal menambah clan contoh");
+            }
+          }}
+          className="mt-2 w-full rounded-xl border border-dashed border-white/20 px-3 py-2 text-[11px] font-bold text-white/60 transition hover:border-white/40 hover:text-white"
+        >
+          + Isi clan contoh (dev)
+        </button>
+      )}
+
+      {/* Dua tombol besar tanpa kotak: "Semua" paling kiri, "Top clan" paling
+          kanan. Yang aktif ditandai garis putih di bawah teksnya. */}
+      <div className="mt-3 flex items-center justify-between border-b border-white/10">
+        {(["semua", "best"] as const).map((t) => {
+          const active = tab === t;
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              aria-selected={active}
+              className={cn(
+                "relative px-1 pb-2.5 pt-1 text-base font-bold transition",
+                active ? "text-white" : "text-muted-foreground",
+              )}
+            >
+              {t === "semua" ? "Semua" : "Top clan"}
+              <span
+                className={cn(
+                  "absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-white transition-opacity",
+                  active ? "opacity-100" : "opacity-0",
+                )}
+              />
+            </button>
+          );
+        })}
       </div>
 
       {/* Kolom cari clan: nama clan ATAU tag clan. */}
@@ -882,6 +1020,7 @@ function ClanDetail({
   const kick = useMutation(api.clans.kickMember);
   const transfer = useMutation(api.clans.transferLeader);
   const setBackground = useMutation(api.clans.setBackground);
+  const setDescription = useMutation(api.clans.setDescription);
   const respond = useMutation(api.clans.respondRequest);
   const [tab, setTab] = useState<"member" | "top">("member");
   const [topScope, setTopScope] = useState<"today" | "all">("today");
@@ -1012,6 +1151,12 @@ function ClanDetail({
             >
               {c.name}
             </p>
+            {/* Deskripsi clan: kotak abu-abu transparan 50% di bawah nama. */}
+            {c.description && (
+              <p className="mt-2 rounded-2xl bg-white/20 p-3 text-[13px] leading-relaxed text-white/90 backdrop-blur-[2px]">
+                {c.description}
+              </p>
+            )}
 
             {/* Stat: Level / Total XP / Members — teks putih dengan shadow,
                 tanpa latar hitam supaya foto clan tetap terlihat jernih. */}
@@ -1407,6 +1552,10 @@ function ClanDetail({
             await setBackground({ url });
             toast.success("Background clan diubah");
           }}
+          onDesc={async (text) => {
+            await setDescription({ text });
+            toast.success("Deskripsi clan disimpan");
+          }}
         />
       )}
     </div>
@@ -1561,6 +1710,7 @@ function LeaderPanel({
   onKick,
   onTransfer,
   onBg,
+  onDesc,
 }: {
   clanId: Id<"clans">;
   isLeader: boolean;
@@ -1569,10 +1719,13 @@ function LeaderPanel({
   onKick: (id: string) => Promise<void>;
   onTransfer: (id: string) => Promise<void>;
   onBg: (url: string) => Promise<void>;
+  onDesc: (text: string) => Promise<void>;
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId });
-  const [sub, setSub] = useState<"bg" | "roles" | "kick" | "transfer" | "unroles">("bg");
+  const [sub, setSub] = useState<"bg" | "desc" | "roles" | "kick" | "transfer" | "unroles">("bg");
   const [bgUrl, setBgUrl] = useState("");
+  // Isi awal textarea mengikuti deskripsi clan yang sudah tersimpan.
+  const [descText, setDescText] = useState(detail?.clan?.description ?? "");
   const [picked, setPicked] = useState<string | null>(null);
   const [role, setRole] = useState<"officer" | "victro" | "hydler">("officer");
   // Cari member di daftar kick/roles/transfer.
@@ -1611,6 +1764,7 @@ function LeaderPanel({
             {(
               [
                 ["bg", "Background"],
+                ...(isLeader ? (["desc", "Add deskripsi"] as const) : ([] as const)),
                 ["roles", "Add roles"],
                 ["kick", "Kick"],
                 ["transfer", "Transfer Leader"],
@@ -1650,6 +1804,38 @@ function LeaderPanel({
             >
               OK
             </button>
+          </div>
+        )}
+
+        {/* Deskripsi clan — hanya leader. Teksnya tampil di panel clan
+            detail dan di kartutop 1-3 pada daftar clan. */}
+        {sub === "desc" && (
+          <div className="yn-card mt-3 p-3">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Deskripsi singkat clan (maks 300 karakter). Tampil di bawah nama
+              clan pada panel detail.
+            </p>
+            <textarea
+              value={descText}
+              onChange={(e) => setDescText(e.target.value.slice(0, 300))}
+              rows={4}
+              placeholder="Ceritakan clan kamu…"
+              className="w-full resize-none rounded-xl border border-input bg-background/60 px-3 py-2 text-sm"
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">
+                {descText.length}/300
+              </span>
+              <button
+                onClick={async () => {
+                  await onDesc(descText);
+                  onClose();
+                }}
+                className="rounded-full bg-[oklch(0.86_0.16_90)] px-4 py-2 text-sm font-bold text-[oklch(0.18_0.04_70)]"
+              >
+                Simpan
+              </button>
+            </div>
           </div>
         )}
 

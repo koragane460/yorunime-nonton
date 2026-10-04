@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
+import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { RequestButtons } from "@/components/RequestButtons";
@@ -850,7 +850,9 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-bold">{c.name}</p>
+            {/* Nama clan ikut warna LEVEL-nya, sama seperti yang tampil di
+                chat dan di panel clan — bukan putih polos. */}
+            <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
             <ClanTag
               icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
               tag={c.tag}
