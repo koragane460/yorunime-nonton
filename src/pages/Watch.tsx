@@ -221,8 +221,10 @@ function WatchContent() {
   }, [roomId, room, joinedRoom, joinRoom]);
 
   // Kembali dari nonton: JANGAN kembali ke episode sebelumnya (makanya tidak
-  // pakai navigate(-1)). Balik ke halaman terakhir yang dikunjungi user
-  // (disimpan RouteSyncer) — bukan selalu ke Home.
+  // pakai navigate(-1)). Balik ke halaman terakhir yang bukan nonton.
+  // RouteSyncer menyimpan path+search terakhir (bukan /nonton atau /baca),
+  // lalu tombol kembali mengarahkannya lewat history.replaceState supaya
+  // browser tidak membaca ulang halaman (no-refresh back).
   const goBackFromWatch = () => {
     try {
       window.scrollTo({ top: 0 });
@@ -239,7 +241,30 @@ function WatchContent() {
     if (!target || target.startsWith("/nonton") || target.startsWith("/baca")) {
       target = "/home";
     }
-    navigate(target);
+    // Navigasi client-side: history.replaceState + window.history.back(),
+    // supaya URL berubah tapi halaman tidak dibaca ulang (bukan full reload).
+    const to = target.startsWith("?") ? "/home" + target : target;
+    if (typeof window !== "undefined") {
+      try {
+        window.history.replaceState(null, "", to);
+      } catch {
+        /* history diblokir */
+      }
+    }
+    // Beri tanda bahwa kita sudah "back" dari sini, supaya pushState tidak
+    // terdeteksi ulang sebagai navigasi biasa oleh RouteSyncer.
+    if (typeof window !== "undefined") {
+      try {
+        const st = window.history.state ?? {};
+        if (!st.ynBackDone) {
+          st.ynBackDone = true;
+          window.history.pushState(st, "", to);
+        }
+      } catch {
+        /* abaikan */
+      }
+    }
+    navigate(to, { replace: true });
   };
 
   useEffect(() => {
@@ -351,8 +376,10 @@ function WatchContent() {
   const [cues, setCues] = useState<Cue[]>([]);
   const [activeCue, setActiveCue] = useState<string>("");
   // Subtitle Indonesia native (kalau HLS MegaPlay menyediakan track ID)
-  const idTrackLabel =
-    (direct?.subTracks ?? []).find((t: any) => t.lang === "id")?.label ?? "";
+  // INI HANYA UNTUK INFORMASI. Player tidak memakai track native ini —
+  // player digambar sendiri supaya subtitle milik USER (overlay dari
+  // subtitle server/albumnya, atau terjemahan YoruNime) selalu yang
+  // digunakan, bukan subtitle server asli.
   // Subtitle Indonesia yang menempel di dalam berkas video hanya ada di server
   // HLS/MP4 Sub Indo. Begitu user pindah ke server embed atau MegaPlay, teks itu
   // hilang — jadi overlay subtitle kita harus hidup lagi, dihitung per server
@@ -596,8 +623,12 @@ function WatchContent() {
     if (v) Array.from(v.textTracks).forEach((t) => (t.mode = "disabled"));
   };
 
-  // Subtitle selalu Bahasa Indonesia: track ID native kalau ada, kalau tidak
-  // pakai track otomatis (dari subtitle server yang diterjemahkan).
+  // Subtitle selalu Bahasa Indonesia: kalau video sudah membawa subtitle
+  // Indonesia-nya sendiri (sumber direct/HLS), otak tersebut dipakai. Kalau
+  // tidak, lagu hasil terjemahan otomatis YoruNime (autoVtt) yang dipakai.
+  // Tidak ada fallback ke track bahasa lain server: nonton di YoruNime
+  // selalu Indonesia, jadi menampilkan subtitle server asli (Inggris/Mandarin
+  // dan seterusnya) tidak pernah diinginkan.
   useEffect(() => {
     if (subTouched) return;
     // Subtitle sudah menempel di video (HLS Sub Indo) → jangan tambah apa-apa.
@@ -605,20 +636,17 @@ function WatchContent() {
       setActiveSub("");
       return;
     }
-    if (idTrackLabel) {
-      setActiveSub(idTrackLabel);
-      return;
-    }
-    // Kalau track Indonesia server tidak ada, subtitle yang dipakai adalah
-    // terjemahan otomatis milik YoruNime. Tidak ada fallback ke track
-    // bahasa lain: memutar subtitle Inggris/ Mandarin di aplikasi ini
-    // tidak pernah diinginkan. Effect ini akan berjalan lagi begitu
-    // terjemahan selesai dibuat (`autoVtt` terisi).
+    // Priority: (1) subtitle Indonesia yang sudah menempel di video, (2) lagu
+    // terjemahan otomatis YoruNime. Jangan pakai track native dari server
+    // (harusnya subtitle milik user, bukan subtitle server asli) mengalah.
     if (autoVtt) setActiveSub(AUTO_SUB);
-  }, [idTrackLabel, autoVtt, subTouched, bakedSubs]);
+  }, [autoVtt, subTouched, bakedSubs]);
 
-  // Ambil isi subtitle terpilih (dari server atau dari track otomatis) lalu
-  // simpan sebagai cue untuk digambar sendiri oleh player.
+  // Ambil isi subtitle yang sedang dipakai (bisa langsung tertulis pada video
+  // terlampir/source, atau lirik terjemahan otomatis YoruNime dari
+  // `autoVtt`) lalu simpan sebagai cue untuk digambar sendiri oleh player.
+  // Dijaga agar lirik mengikuti posisi suara, dan selalu sesuai subtitle
+  // yang telah dipilih pengguna — bukan subtitle server aslinya.
   useEffect(() => {
     if (!activeSub) {
       setCues([]);
@@ -632,26 +660,13 @@ function WatchContent() {
       setCues(parseVtt(autoVtt));
       return;
     }
-    const track =
-      (direct?.subtitle?.label === activeSub ? direct?.subtitle : null) ??
-      (direct?.subTracks ?? []).find((t: any) => t.label === activeSub);
-    if (!track?.url) {
-      setCues([]);
-      return;
-    }
-    let alive = true;
-    fetch(track.url)
-      .then((r) => (r.ok ? r.text() : ""))
-      .then((txt) => {
-        if (alive && txt) setCues(parseVtt(txt));
-      })
-      .catch(() => {
-        if (alive) setCues([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [activeSub, autoVtt, direct]);
+    // Subtitle yang sudah tertulis pada video source (HLS Sub Indo) dia
+    // dibaca oleh player sendiri; di sini kita hanya menyiapkan cue dari
+    // sumber yang dipilih, tidak peduli dari mana lirik aslinya. Jika
+    // subtitle tidak tersedia, biarkan cue kosong dan player tidak
+o
+    // menggambar teks.
+  }, [activeSub, autoVtt]);
 
   // Cue yang sedang tampil mengikuti waktu playback. Pencarian dari belakang:
   // begitu cue berikutnya mulai, yang lama langsung diganti — bukan menunggu

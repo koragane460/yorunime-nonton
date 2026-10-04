@@ -104,8 +104,9 @@ function RouteSyncer() {
     );
   }, [location.pathname]);
 
-  // Ingat halaman terakhir yang BUKAN halaman nonton. Dipakai tombol "kembali"
-  // di player supaya balik ke tempat user datang, bukan selalu ke Home.
+  // Ingat halaman terakhir yang BUKAN halaman nonton / pembaca. Dipakai
+  // tombol "kembali" di player supaya balik ke tempat user datang, bukan
+  // selalu ke Home. Path yang disimpan adalah sesungguhnya, termasuk query.
   useEffect(() => {
     if (location.pathname === "/nonton" || location.pathname === "/baca") return;
     try {
@@ -121,7 +122,12 @@ function RouteSyncer() {
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data?.type === "navigate") {
-        if (event.data.direction === "back") window.history.back();
+        if (event.data.direction === "back") {
+          // Balik lewat history.back() dari dalam halaman. Supaya URL/breadcrumb
+          // halaman tampil seperti yang seharusnya (tidak ke /nonton) — karena
+          // RouteSyncer sudah menulis yn-return-to adalah halaman yang benar.
+          window.history.back();
+        }
         if (event.data.direction === "forward") window.history.forward();
       }
     }
