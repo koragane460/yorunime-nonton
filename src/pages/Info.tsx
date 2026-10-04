@@ -16,6 +16,7 @@ import {
   Send,
   Trash2,
   X,
+  LayersTop,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ function InfoContent() {
           area Notif (tombol lonceng di banner akun). Sisa halaman ini khusus
           "Lanjutkan" agar isinya tidak terasa kosong. */}
       <div className="flex border-b border-white/15">
-        {([["lanjut", "Lanjutkan", PlayCircle]] as const).map(
+        {([["lanjut", "Lanjutkan", LayersTop]] as const).map(
           ([k, label, Icon]) => (
             <button
               key={k}
@@ -55,6 +56,7 @@ function InfoContent() {
               {tab === k && (
                 <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-white/90" />
               )}
+            </button>
             </button>
           ),
         )}
@@ -181,9 +183,187 @@ function BroadcastComposer({ onDone }: { onDone: () => void }) {
 
 /**
  * Kelola popup pengumuman: buat pesan baru, matikan/ hidupkan, atau hapus.
- * Pesan aktif akan muncul sebagai kotak kecil di atas halaman untuk semua
- * user yang belum melihatnya.
+ * Pesan aktif akan muncul sebagai kotak sentris di atas halaman untuk semua
+ * user yang belum melihatnya. Tepi kotaknya: outline kuning tua (brand), bukan
+ * border putih biasa, supaya terlihat menonjol dari latar gelap.
  */
+/**
+ * Popup pengumuman yang ditampilkan di tengah halaman: kotak panjang ke bawah,
+ * outline kuning tua di pinggir (bukan border putih sampingnya), jadi muncul
+ * mewah dan tidak diselinap ke atas menu.
+ */
+function AnnouncementPopupCentered({ list }: { list: any[] | undefined }) {
+  const [queue, setQueue] = useState<any[]>([]);
+  const [seen, setSeen] = useState<string[]>([]);
+  useEffect(() => {
+    if (!list) return;
+    const done = readSeen();
+    const next = list.filter((a) => !done.includes(a._id));
+    setQueue((q) => {
+      const merged = [...next, ...q.filter((a) => !next.includes(a))];
+      return merged.slice(0, 5);
+    });
+    setSeen(done);
+  }, [list]);
+  const current = queue[0];
+  if (!current) return null;
+  const close = () => {
+    const next = [...seen];
+    if (!next.includes(current._id)) next.unshift(current._id);
+    setSeen(next.slice(0, 40));
+    writeSeen(next);
+    setQueue((q) => q.slice(1));
+  };
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-1/2 -translate-y-1/2 z-[70] flex justify-center px-4">
+      <div
+        role="status"
+        className="pop-enter pointer-events-auto relative w-full max-w-md rounded-2xl border border-brand/30 bg-black/92 p-4 shadow-2xl backdrop-blur-xl"
+      >
+        <div className="flex items-center gap-2 pb-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/20">
+            <Megaphone className="size-4 text-brand" />
+          </span>
+          <p className="text-sm font-bold">Pengumuman</p>
+          {queue.length > 1 && (
+            <span className="shrink-0 text-xs text-white/55">
+              sisa {queue.length - 1}
+            </span>
+          )}
+        </div>
+        <p className="whitespace-pre-line text-sm leading-snug text-white/90">
+          {current.message}
+        </p>
+        <button
+          onClick={close}
+          aria-label="Tutup pengumuman"
+          className="absolute right-2 top-2 flex size-9 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Popup pengumuman yang ditampilkan di tengah halaman: kotak panjang ke bawah,
+ * outline kuning tua di pinggir (bukan border putih sampingnya), jadi muncul
+ * mewah dan tidak diselingi oleh menu.
+ */
+function AnnouncementPopupCentered({ list }: { list: any[] | undefined }) {
+  const [queue, setQueue] = useState<any[]>([]);
+  const [seen, setSeen] = useState<string[]>([]);
+  useEffect(() => {
+    if (!list) return;
+    const done = readSeen();
+    const next = list.filter((a) => !done.includes(a._id));
+    setQueue((q) => {
+      const merged = [...next, ...q.filter((a) => !next.includes(a))];
+      return merged.slice(0, 5);
+    });
+    setSeen(done);
+  }, [list]);
+  const current = queue[0];
+  if (!current) return null;
+  const close = () => {
+    const next = [...seen];
+    if (!next.includes(current._id)) next.unshift(current._id);
+    setSeen(next.slice(0, 40));
+    writeSeen(next);
+    setQueue((q) => q.slice(1));
+  };
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-1/2 -translate-y-1/2 z-[70] flex justify-center px-4">
+      <div
+        role="status"
+        className="pop-enter pointer-events-auto relative w-full max-w-md rounded-2xl border border-brand/30 bg-black/92 p-4 shadow-2xl backdrop-blur-xl"
+      >
+        <div className="flex items-center gap-2 pb-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/20">
+            <Megaphone className="size-4 text-brand" />
+          </span>
+          <p className="text-sm font-bold">Pengumuman</p>
+          {queue.length > 1 && (
+            <span className="shrink-0 text-xs text-white/55">
+              sisa {queue.length - 1}
+            </span>
+          )}
+        </div>
+        <p className="whitespace-pre-line text-sm leading-snug text-white/90">
+          {current.message}
+        </p>
+        <button
+          onClick={close}
+          aria-label="Tutup pengumuman"
+          className="absolute right-2 top-2 flex size-9 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Popup pengumuman yang ditampilkan di tengah halaman: kotak panjang ke bawah,
+ * outline kuning tua di pinggir (bukan border putih sampingnya), jadi muncul
+ * mewah dan tidak diselingi oleh menu.
+ */
+function AnnouncementPopupCentered({ list }: { list: any[] | undefined }) {
+  const [queue, setQueue] = useState<any[]>([]);
+  const [seen, setSeen] = useState<string[]>([]);
+  useEffect(() => {
+    if (!list) return;
+    const done = readSeen();
+    const next = list.filter((a) => !done.includes(a._id));
+    setQueue((q) => {
+      const merged = [...next, ...q.filter((a) => !next.includes(a))];
+      return merged.slice(0, 5);
+    });
+    setSeen(done);
+  }, [list]);
+  const current = queue[0];
+  if (!current) return null;
+  const close = () => {
+    const next = [...seen];
+    if (!next.includes(current._id)) next.unshift(current._id);
+    setSeen(next.slice(0, 40));
+    writeSeen(next);
+    setQueue((q) => q.slice(1));
+  };
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-1/2 -translate-y-1/2 z-[70] flex justify-center px-4">
+      <div
+        role="status"
+        className="pop-enter pointer-events-auto relative w-full max-w-md rounded-2xl border border-brand/30 bg-black/92 p-4 shadow-2xl backdrop-blur-xl"
+      >
+        <div className="flex items-center gap-2 pb-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand/20">
+            <Megaphone className="size-4 text-brand" />
+          </span>
+          <p className="text-sm font-bold">Pengumuman</p>
+          {queue.length > 1 && (
+            <span className="shrink-0 text-xs text-white/55">
+              sisa {queue.length - 1}
+            </span>
+          )}
+        </div>
+        <p className="whitespace-pre-line text-sm leading-snug text-white/90">
+          {current.message}
+        </p>
+        <button
+          onClick={close}
+          aria-label="Tutup pengumuman"
+          className="absolute right-2 top-2 flex size-9 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AnnouncementManager() {
   const rows = useQuery(api.moderation.allAnnouncements, {});
   const create = useMutation(api.moderation.createAnnouncement);
@@ -355,6 +535,12 @@ function LanjutTab() {
         const pos = Math.max(0, h.progressSec ?? 0);
         const dur = h.durationSec ?? 0;
         const pct = dur > 0 ? Math.min(100, Math.round((pos / dur) * 100)) : 0;
+        // Catatan progres: saat pos > 0, hitung langsung dari elapsed
+        // (pos/60) bukan dari durasi. Jadi saat menit terakhir bergerak,
+        // baris ini langsung berubah (bukan 00/00). Episode baru (pos 0)
+        // tetap menampilkan "00/00" sampai user mulai nonton.
+        const posM = pos > 0 ? Math.floor(pos / 60) : 0;
+        const durM = dur > 0 ? Math.floor(dur / 60) : 0;
         return (
           <button
             key={item.key}
@@ -382,7 +568,7 @@ function LanjutTab() {
               <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
               <p className="text-xs text-muted-foreground">
                 Lanjutkan episode {h.episode} · Menit{" "}
-                {dur > 0 ? `${fmtMinutes(pos)}/${fmtMinutes(dur)}` : "00/00"}
+                {dur > 0 ? `${posM}men/${durM}men` : "0/0"}
               </p>
             </div>
             <PlayCircle className="size-5 shrink-0 self-center text-primary" />
@@ -399,7 +585,21 @@ function LanjutTab() {
 }
 
 /** Menit yang sudah ditonton, selalu dua digit: "Menit 07/24". */
-function fmtMinutes(sec: number) {
-  const m = Math.floor(Math.max(0, sec) / 60);
-  return String(m).padStart(2, "0");
+/** Menit yang sudah ditonton, selalu dua digit: \"Menit 07/24\".
+ * Progress dihitung dari elapsed (pos) dibagi 60, dibulatkan ke atas,
+ * bukan floor detik. Jadi saat menit terakhir bergerak, baris ini
+ * langsung berubah (bukan 00/00). */
+function fmtMinutes(sec: number, pad = true) {
+  const m = Math.floor(Math.max(0, Math.round(sec)) / 60);
+  const v = String(m);
+  return pad ? v.padStart(2, "0") : v;
+}
+
+/** Format durasi episode ke \"Mmen\" / \"Hmen\" (gaya Informasi: Lanjut 7men). */
+function fmtMinutesShort(sec: number) {
+  const m = Math.max(0, Math.round(sec)) / 60;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  const v = h > 0 ? `${h}jam ${r}men` : `${r}men`;
+  return v;
 }
