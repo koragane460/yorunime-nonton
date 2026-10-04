@@ -770,12 +770,12 @@ export function ForYouPanel({
               bukan sekadar grid generic. */}
           <div className="mb-5 grid grid-cols-2 gap-3">
             {grid.slice(0, 2).map((c, i) => (
-              <HeroPick key={c.id} card={c} rank={i} />
+              <HeroPick key={c.id} card={c} rank={i} onClose={onClose} />
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5">
             {grid.slice(2).map((c) => (
-              <MiniPick key={c.id} card={c} />
+              <MiniPick key={c.id} card={c} onClose={onClose} />
             ))}
           </div>
         </>
@@ -788,15 +788,24 @@ export function ForYouPanel({
   );
 }
 
-function HeroPick({ card, rank }: { card: RecoCard; rank: number }) {
+function HeroPick({
+  card,
+  rank,
+  onClose,
+}: {
+  card: RecoCard;
+  rank: number;
+  onClose: () => void;
+}) {
   const navigate = useNavigate();
   return (
     <button
-      onClick={() =>
-        navigate(
-          `/nonton?anime=${encodeURIComponent(card.id)}&judul=${encodeURIComponent(card.title)}`,
-        )
-      }
+      onClick={() => {
+        // Kartu rekomendasi membuka DETAIL anime, bukan langsung memutar
+        // episode: user baru memutuskan mau nonton apa dari sana.
+        navigate(`/home?pilih=${encodeURIComponent(card.id)}`);
+        onClose();
+      }}
       className="group relative aspect-[3/4] overflow-hidden rounded-3xl border border-border text-left"
     >
       <img
@@ -822,15 +831,14 @@ function HeroPick({ card, rank }: { card: RecoCard; rank: number }) {
   );
 }
 
-function MiniPick({ card }: { card: RecoCard }) {
+function MiniPick({ card, onClose }: { card: RecoCard; onClose: () => void }) {
   const navigate = useNavigate();
   return (
     <button
-      onClick={() =>
-        navigate(
-          `/nonton?anime=${encodeURIComponent(card.id)}&judul=${encodeURIComponent(card.title)}`,
-        )
-      }
+      onClick={() => {
+        navigate(`/home?pilih=${encodeURIComponent(card.id)}`);
+        onClose();
+      }}
       className="group text-left"
     >
       <div className="relative overflow-hidden rounded-xl border border-border/60">

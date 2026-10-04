@@ -108,9 +108,9 @@ function NotifSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[85dvh] overflow-y-auto border-white/15 bg-background/95 pb-6 backdrop-blur"
+        className="inset-0 top-0 h-dvh max-h-none w-full max-w-none gap-0 overflow-y-auto rounded-none border-0 bg-background/97 pb-6 backdrop-blur md:mx-auto md:max-w-2xl"
       >
-        <SheetHeader className="px-4">
+        <SheetHeader className="sticky top-0 z-10 border-b border-white/10 bg-background/95 px-4 py-3 backdrop-blur">
           <SheetTitle className="flex items-center gap-2 text-base">
             <Bell className="size-4 text-primary" /> Notifikasi
           </SheetTitle>
@@ -121,20 +121,29 @@ function NotifSheet({
             Belum ada notifikasi
           </p>
         ) : (
-          <div className="space-y-2 px-4">
+          <div className="space-y-2 px-4 pt-3">
             {list.map((n: any, i: number) => (
               <div
                 key={n._id}
                 className={cn(
-                  "flex gap-2.5 rounded-xl border p-2.5",
-                  i === 0
-                    ? "border-primary/50 bg-primary/10"
-                    : "border-white/10 bg-white/[0.03]",
+                  "flex gap-2.5 border p-2.5",
+                  n.type === "premiumClaim"
+                    ? "border-amber-500/40 bg-amber-500/[0.07]"
+                    : i === 0
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-white/10 bg-white/[0.03]",
                 )}
               >
+                {n.type === "premiumClaim" && n.refUserId ? (
+                  <Avatar
+                    src={n.refImage}
+                    seed={n.refUsername ?? n.refUserId}
+                    className="mt-0.5 size-8 shrink-0"
+                  />
+                ) : (
                 <span
                   className={cn(
-                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    "mt-0.5 flex size-8 shrink-0 items-center justify-center",
                     i === 0 ? "bg-primary/20" : "bg-white/[0.06]",
                   )}
                 >
@@ -144,6 +153,7 @@ function NotifSheet({
                     <Megaphone className="size-4 text-muted-foreground" />
                   )}
                 </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-xs font-bold">{n.title}</p>
@@ -177,7 +187,7 @@ function NotifSheet({
                       onOpenChange(false);
                       navigate(`/?pilih=${c.animeId.split("__")[0]}`);
                     }}
-                    className="block w-full overflow-hidden rounded-lg border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
+                    className="block w-full overflow-hidden border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
                   >
                     {c.bannerUrl && (
                       <div

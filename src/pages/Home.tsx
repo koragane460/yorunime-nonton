@@ -1650,7 +1650,16 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         />
       )}
 
-      {profileId && <ProfileSheet userId={profileId} onClose={() => setProfileId(null)} />}
+      {profileId && (
+        <ProfileSheet
+          userId={profileId}
+          onClose={() => setProfileId(null)}
+          onChat={(peer) => {
+            setDmPeer(peer);
+            setProfileId(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -1906,7 +1915,7 @@ function AnimeDetailScreen({
           <div className="mt-4 flex items-stretch gap-2">
             <SkewButton
               variant="accent"
-              className="flex-1"
+              className="flex-1 bg-sky-700 text-white hover:bg-sky-600"
               onClick={() =>
                 navigate(
                   `/nonton?anime=${animeId}${
@@ -1949,15 +1958,16 @@ function AnimeDetailScreen({
               Favorite
             </SkewButton>
           </div>
-          <p className="mt-1.5 text-center text-[11px] text-white/55">
-            {favCount ?? 0} orang menandai ini
-            {progress && progress.durationSec > 0 && (
-              <>
-                {" · nonton "}
-                {fmtClock(progress.progressSec)} /{" "}
-                {fmtClock(progress.durationSec)}
-              </>
-            )}
+          {/* Baris di bawah tombol: posisi tontonan dalam menit, lalu
+              jumlah orang yang mem-favoritkan (format ringkas). */}
+          {progress && progress.durationSec > 0 && (
+            <p className="mt-1.5 text-center text-[11px] text-white/60">
+              Lanjut menit {Math.floor(progress.progressSec / 60)}/
+              {Math.floor(progress.durationSec / 60)}
+            </p>
+          )}
+          <p className="mt-1 text-center text-[11px] text-white/55">
+            {fmtFavoritCount(favCount ?? 0)}
           </p>
 
           {/* Sinopsis — 5/6 paragraf dulu sebelum "baca selengkapnya" */}
@@ -2096,6 +2106,26 @@ function AnimeDetailScreen({
  * Kemiringan dipakai di elemen luar, isinya dikembalikan ke lurus supaya
  * teks tidak ikut miring.
  */
+/**
+ * Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
+ * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999
+ * dibulatkan ke puluhan/ratusan; ribuan pakai satuan k dengan satu desimal
+ * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan.
+ */
+function fmtFavoritCount(n: number): string {
+  const v = Math.max(0, Math.floor(n));
+  if (v === 0) return "Belum ada Favorite";
+  if (v < 10) return `${v} Favorit`;
+  if (v < 100) return `${Math.floor(v / 10) * 10}+`;
+  if (v < 1000) return `${Math.floor(v / 100) * 100}+`;
+  const k = v / 1000;
+  if (k < 10) {
+    const one = Math.round(k * 10) / 10;
+    return `${one.toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return `${Math.floor(k)}k`;
+}
+
 export function SkewButton({
   children,
   onClick,

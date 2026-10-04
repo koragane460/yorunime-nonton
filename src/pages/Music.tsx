@@ -460,21 +460,28 @@ function PlayerView({
                   <Loader2 className="size-9 animate-spin" />
                 </div>
               )}
+              {/* Lirik muncul DI ATAS poster, bukan di bawahnya. */}
+              {showLyrics && (
+                <div className="absolute inset-0 z-10 flex flex-col bg-black/85 backdrop-blur-sm">
+                  <LyricsPane
+                    cover={t.cover}
+                    artist={t.artist}
+                    track={t.title}
+                    position={p.position}
+                    playing={p.playing}
+                    onClose={() => setShowLyrics(false)}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
           <div className="mx-auto mt-5 w-full max-w-sm">
-            {/* Alih-alih album, bisa tampilkan lirik yang mengikuti lagu. */}
-            {showLyrics ? (
-              <LyricsPane
-                artist={t.artist}
-                track={t.title}
-                position={p.position}
-                playing={p.playing}
-                onClose={() => setShowLyrics(false)}
-              />
-            ) : (
+            {/* Kontrol player tetap di bawah; hanya blok judul + pembuat yang
+                disembunyikan saat lirik terbuka, karena keduanya sudah
+                tampil di dalam panel lirik (dengan poster kecil). */}
             <>
+              {!showLyrics && (
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-xl font-bold tracking-tight">
@@ -499,6 +506,7 @@ function PlayerView({
                 <Heart className={cn("size-5", p.liked && "fill-current")} />
               </button>
             </div>
+              )}
 
             {p.error && (
               <p className="mt-2 rounded-xl bg-red-500/15 px-3 py-2 text-[11px] text-red-200">
@@ -610,7 +618,6 @@ function PlayerView({
               </span>
             </div>
             </>
-            )}
           </div>
 
           {/* Antrean */}
@@ -688,12 +695,14 @@ function toTrack(r: LikedRow): MusicTrack {
  * di tengah layar.
  */
 function LyricsPane({
+  cover,
   artist,
   track,
   position,
   playing,
   onClose,
 }: {
+  cover?: string;
   artist: string;
   track: string;
   position: number;
@@ -747,22 +756,40 @@ function LyricsPane({
   }, [activeIdx, playing, lines]);
 
   return (
-    <div className="rounded-2xl bg-white/[0.06] ring-1 ring-white/12">
-      <div className="flex items-center justify-between px-3 py-2">
-        <p className="flex items-center gap-1.5 text-[11px] font-bold text-white/80">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+        <p className="flex shrink-0 items-center gap-1.5 text-[11px] font-bold text-white/80">
           <Mic2 className="size-3.5" /> Lirik
         </p>
         <button
           onClick={onClose}
           aria-label="Tutup lirik"
-          className="text-[11px] text-white/60 underline"
+          className="ml-auto shrink-0 text-[11px] text-white/60 underline"
         >
           Tutup
         </button>
       </div>
+      {/* Poster kecil + judul + pembuat di dalam panel lirik. */}
+      <div className="flex items-center gap-2.5 px-3 py-2">
+        {cover ? (
+          <img
+            src={cover}
+            alt=""
+            className="size-11 shrink-0 rounded-md object-cover ring-1 ring-white/20"
+          />
+        ) : (
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-white/10">
+            <Disc3 className="size-5 text-white/40" />
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-bold text-white">{track}</p>
+          <p className="truncate text-[11px] text-white/60">{artist}</p>
+        </div>
+      </div>
       <div
         ref={scrollRef}
-        className="thin-scroll max-h-72 overflow-y-auto px-3 pb-3"
+        className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-3"
       >
         {busy ? (
           <div className="flex items-center gap-2 py-6 text-xs text-white/60">

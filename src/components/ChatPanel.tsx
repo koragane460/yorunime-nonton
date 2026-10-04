@@ -596,7 +596,7 @@ export function ChatPanel({
                     m.imageUrl && !m.text
                       ? "border-transparent bg-transparent p-0 shadow-none"
                       : give
-                        ? "border-foreground/40 bg-primary/15"
+                        ? "bubble-give"
                         : mine
                           ? "bubble-mine"
                           : "bubble-other",
@@ -623,8 +623,8 @@ export function ChatPanel({
                   {m.replyTo && (
                     // Kutipan balas: kotak tipis yang tetap lapang, teks
                     // sumber ditampilkan sampai 3 baris supaya jelas.
-                    <div className="mt-1 rounded-md bg-black/30 px-2.5 py-1.5 text-xs">
-                      <p className="font-medium text-primary">{m.replyTo.username}</p>
+                    <div className="bubble-reply mt-1 rounded-md px-2.5 py-1.5 text-xs">
+                      <p className="font-medium text-foreground/90">{m.replyTo.username}</p>
                       <p className="line-clamp-3 text-muted-foreground">
                         {m.replyTo.text ?? (m.replyTo.premiumGiveId ? "Give premium" : "[foto]")}
                       </p>
@@ -632,7 +632,7 @@ export function ChatPanel({
                   )}
                   {give ? (
                     <div className="mt-1 min-w-48 text-center">
-                      <Crown className="mx-auto size-6 text-red-400" />
+                      <Crown className="mx-auto size-6 text-amber-400" />
                       <p className="mt-1 text-sm font-bold">{give.days} Hari premium</p>
                       <p className="text-xs text-muted-foreground">
                         {give.days} hari premium untuk {give.slots} orang
@@ -642,7 +642,7 @@ export function ChatPanel({
                           {give.message}
                         </p>
                       )}
-                      <ClaimButton give={give} meId={meId} />
+                      <ClaimButton give={give} meId={meId} owner={mine} />
                     </div>
                   ) : (
                     <>
@@ -766,7 +766,7 @@ export function ChatPanel({
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
             placeholder={muted ? "Kamu sedang dimute…" : "Tulis pesan…"}
             disabled={muted}
-            className="flex-1 rounded-full disabled:opacity-50"
+            className="flex-1 rounded-full focus-visible:border-white/20 focus-visible:ring-0 disabled:opacity-50"
           />
           <Button
             size="icon"
@@ -873,9 +873,13 @@ export function ChatPanel({
 function ClaimButton({
   give,
   meId,
+  owner,
 }: {
   give: NonNullable<ChatMsg["premiumGive"]>;
   meId: string;
+  /** true kalau give ini dibuat oleh user yang sedang melihat — pengirim
+      hanya boleh melihat, tidak boleh claim (server juga menolak). */
+  owner: boolean;
 }) {
   const claim = useMutation(api.chat.claimGive);
   // Optimistik: begitu diklik, tulisannya langsung berubah tanpa menunggu server.
@@ -888,9 +892,16 @@ function ClaimButton({
     <div className="mt-2">
       {/* Berapa slot yang sudah terpakai — jadi jelas berapa yang tersisa. */}
       <p className="text-[10px] text-muted-foreground">
-        {mine ? taken + 1 : taken}/{give.slots} orang sudah claim
+        {taken}/{give.slots} orang sudah claim
         {!full && ` · sisa ${give.slots - taken}`}
       </p>
+      {owner ? (
+        // Pengirim give: tombolnya mati total (bukan sekadar disabled keabu),
+        // supaya jelas dia hanya bisa melihat.
+        <div className="mt-1 w-full shrink-0 rounded-md border border-white/12 bg-white/[0.05] px-2 py-1.5 text-center text-[11px] font-semibold text-white/60">
+          Hanya bisa dilihat
+        </div>
+      ) : (
       <Button
         size="sm"
         disabled={claimed || full || busy}
@@ -923,6 +934,7 @@ function ClaimButton({
             ? "Slot habis"
             : `Claim ${give.days} hari`}
       </Button>
+      )}
     </div>
   );
 }

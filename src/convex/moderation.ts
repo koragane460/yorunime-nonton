@@ -322,17 +322,42 @@ export const myNotifications = query({
       .query("notifications")
       .withIndex("userId_created", (q) => q.eq("userId", userId))
       .collect();
-    return rows
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, limit)
-      .map((n) => ({
+    const out: {
+      _id: string;
+      type: string;
+      title: string;
+      body: string;
+      read: boolean;
+      createdAt: number;
+      refUserId?: string;
+      refUsername?: string;
+      refImage?: string;
+    }[] = [];
+    for (const n of rows.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)) {
+      let refUserId: string | undefined;
+      let refUsername: string | undefined;
+      let refImage: string | undefined;
+      if (n.refUserId) {
+        refUserId = n.refUserId as unknown as string;
+        const ref = await ctx.db.get(n.refUserId);
+        if (ref) {
+          refUsername = ref.username ?? undefined;
+          refImage = ref.image ?? undefined;
+        }
+      }
+      out.push({
         _id: n._id,
         type: n.type,
         title: n.title,
         body: n.body ?? "",
         read: !!n.read,
         createdAt: n.createdAt,
-      }));
+        refUserId,
+        refUsername,
+        refImage,
+      });
+    }
+    return out;
   },
 });
 

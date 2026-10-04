@@ -58,14 +58,14 @@ export function AnnouncementPopup() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[70] flex justify-center px-4 pt-3">
+    <div className="pointer-events-none fixed inset-x-0 top-1/2 z-[70] flex -translate-y-1/2 justify-center px-4">
       <div
         role="status"
-        className="pop-enter pointer-events-auto relative w-full max-w-md rounded-2xl border border-white/15 bg-black/90 p-3 pr-11 shadow-xl"
+        className="pop-enter pointer-events-auto relative w-full max-w-md border-2 border-brand/40 bg-black/95 p-4 pr-12 shadow-2xl backdrop-blur-xl"
       >
         <div className="flex items-center gap-2">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/10">
-            <Megaphone className="size-4 text-white" />
+          <span className="flex size-7 shrink-0 items-center justify-center bg-brand/20">
+            <Megaphone className="size-4 text-brand" />
           </span>
           <p className="text-[13px] font-bold">Pengumuman</p>
           {queue.length > 1 && (
@@ -74,13 +74,13 @@ export function AnnouncementPopup() {
             </span>
           )}
         </div>
-        <p className="mt-1.5 whitespace-pre-line text-[13px] leading-snug text-white/90">
+        <p className="mt-2 whitespace-pre-line text-[13px] leading-snug text-white/90">
           {current.message}
         </p>
         <button
           onClick={close}
           aria-label="Tutup pengumuman"
-          className="absolute right-2 top-2 flex size-10 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+          className="absolute right-2 top-2 flex size-10 items-center justify-center text-white/70 transition hover:bg-white/10 hover:text-white"
         >
           <X className="size-4" />
         </button>

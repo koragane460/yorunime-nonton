@@ -385,6 +385,48 @@ function shortEpisodeTitle(raw: string, number: number): string {
   return stripped || (number > 0 ? `Episode ${number}` : "");
 }
 
+/**
+ * Lengkapi episode yang hilang supaya daftar dimulai dari episode 1.
+ *
+ * Sumber donghua hanya mengembalikan jendela episode TERBARU (mis. 68-75),
+ * sehingga daftar yang tampil lokal dimulai di angka 70an. Dari satu slug
+ * yang pola typename-"episode-N" bisa ditebak slug episode lain, jadi
+ * episode 1..min-1 disisipkan dengan slug hasil tebakan itu. Kalau polanya
+ * tidak bisa dibaca, daftar dibiarkan apa adanya (tidak dikarang asal).
+ */
+function fillMissingEpisodes(
+  eps: { number: number; title: string; url: string }[],
+): { number: number; title: string; url: string }[] {
+  if (eps.length === 0) return eps;
+  const sorted = [...eps].sort((a, b) => a.number - b.number);
+  const first = sorted[0].number;
+  if (!Number.isFinite(first) || first <= 1) return sorted;
+
+  // Cari pola slug dari episode mana pun: "judul-seri-episode-42-subtitle-indonesia"
+  let pattern: { prefix: string; suffix: string } | null = null;
+  for (const e of sorted) {
+    const m = e.url.match(/^(.*?-episode-)(\d+)(.*)$/i);
+    if (m) {
+      pattern = { prefix: m[1], suffix: m[3] };
+      break;
+    }
+  }
+  if (!pattern) return sorted;
+
+  const have = new Set(sorted.map((e) => e.number));
+  const filled = [
+    ...sorted,
+    ...Array.from({ length: first - 1 }, (_, i) => i + 1)
+      .filter((n) => !have.has(n))
+      .map((n) => ({
+        number: n,
+        title: `Episode ${n}`,
+        url: `${pattern!.prefix}${n}${pattern!.suffix}`,
+      })),
+  ];
+  return filled.sort((a, b) => a.number - b.number);
+}
+
 /** Detail satu judul; donghua dicoba lebih dulu kalau diminta. */
 export const detail = action({
   args: { slug: v.string(), preferDonghua: v.optional(v.boolean()) },
@@ -430,7 +472,9 @@ export const detail = action({
           : Array.isArray(d.episode)
             ? d.episode
             : [];
-      const eps = rawEps.map(mapEpisode).filter((e) => e.url.length > 0);
+      const eps = fillMissingEpisodes(
+        rawEps.map(mapEpisode).filter((e) => e.url.length > 0),
+      );
       // Nomor episode boleh 0 kalau sumber memang tidak memberi nomor, tapi
       // daftar tetap boleh kosong — itu yang membuat mencoba source lain.
       if (!synopsis && eps.length === 0 && genres.length === 0) continue;
@@ -472,6 +516,81 @@ export const detail = action({
 });
 
 /**
+ * Cari satu episode di DailyMotion dan ambil URL HLS-nya.
+ *
+ * Dipakai lebih dulu untuk donghua: kalau ada, playback memakai file m3u8
+ * (HLS) yang diputar player bawaan aplikasi sendiri, bukan iframe server
+ * penuh iklan. Kalau DailyMotion tidak punya / tidak bisa dibaca, pemanggil
+ * falls back ke server Sanka seperti biasa.
+ */
+async function dailymotionHls(title: string): Promise<{
+  label: string;
+  url: string;
+  type: "hls";
+  baked: boolean;
+  ads: boolean;
+} | null> {
+  const q = String(title ?? "")
+    .replace(/episode\s*\d+/gi, "")
+    .replace(/subtitle\s*indonesia/gi, "")
+    .trim();
+  if (!q) return null;
+  try {
+    const u = `https://api.dailymotion.com/videos?search=${encodeURIComponent(
+      q,
+    )}&limit=5&fields=id,title`;
+    const res = await fetch(u, {
+      headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const list = (await res.json()) as { list?: { id: string; title?: string }[] };
+    const items = (list?.list ?? []).filter((v) => v?.id);
+    if (items.length === 0) return null;
+
+    for (const v of items) {
+      const meta = await fetch(
+        `https://www.dailymotion.com/player/metadata/video/${v.id}`,
+        {
+          headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
+          signal: AbortSignal.timeout(8000),
+        },
+      ).catch(() => null);
+      if (!meta || !meta.ok) continue;
+      const j: any = await meta.json().catch(() => null);
+      const qualities: any[] = Array.isArray(j?.qualities) ? j.qualities : [];
+      // Prioritas paling tinggi dulu: pilih sesuai urutan di bawah.
+      const wanted = [
+        "2160",
+        "1440",
+        "1080",
+        "720",
+        "480",
+        "380",
+        "240",
+        "auto",
+      ];
+      for (const w of wanted) {
+        const qy = qualities.find((x) => String(x?.quality) === w);
+        const m3u8 = qy?.type === "application/x-mpegURL" && qy?.url;
+        if (m3u8) {
+          return {
+            label: `DailyMotion ${w === "auto" ? "auto" : `${w}p`}`,
+            url: String(m3u8),
+            type: "hls" as const,
+            baked: false,
+            ads: false,
+          };
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Stream satu episode donghua.
  *
  * Endpoint: GET /anime/:source/episode/:slug  → daftar server.
@@ -491,6 +610,35 @@ export const resolveEpisode = action({
     const epSlug = String(slug ?? "").trim();
     if (!epSlug) {
       return { ok: false as const, reason: "Episode belum tersedia" };
+    }
+
+    // Prioritas 1: DailyMotion (HLS, diputar player sendiri). Judul episode
+    // diambil dari slug-nya ("judul-seri-episode-12-subtitle-indonesia").
+    const fromDm = await dailymotionHls(
+      epSlug
+        .replace(/-episode-\d+.*$/i, "")
+        .replace(/-/g, " ")
+        .trim(),
+    );
+    if (fromDm) {
+      return {
+        ok: true as const,
+        sources: [
+          {
+            label: fromDm.label,
+            url: fromDm.url,
+            type: "hls" as const,
+            baked: false,
+          },
+        ],
+        subtitle: null,
+        subtitles: [] as { label: string; url: string }[],
+        subTracks: [] as unknown[],
+        hasIndonesian: false,
+        bakedSubs: false,
+        intro: null,
+        outro: null,
+      };
     }
     // Source dari parameter kalau ada; kalau tidak, coba donghua dulu lalu
     // sisanya — persis urutan yang dipakai `detail`.

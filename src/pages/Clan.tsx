@@ -8,6 +8,17 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
 import { ClanRankWings } from "@/components/ClanRankWings";
+
+/**
+ * Warna nomor peringkat di daftar Top clan: 1 emas, 2 perak, 3 perunggu,
+ * sisanya netral supaya angka 1-100 tetap terbaca tanpa warna berlebihan.
+ */
+function rankColor(rank: number): string {
+  if (rank === 1) return "text-amber-300";
+  if (rank === 2) return "text-slate-300";
+  if (rank === 3) return "text-orange-300";
+  return "text-white/60";
+}
 import { clanNameClass } from "@/components/lstream-ui";
 import {
   Avatar,
@@ -173,7 +184,9 @@ function NoClan({
       </div>
 
       {/* List clan langsung tampil di atas — bisa dilihat & join tanpa buka layar lain */}
-      <div className="mt-3 space-y-2">
+      {/* Sisakan ruang kiri-kanan supaya sayap clan 1-3 (yang menjorok keluar
+          dari kartu) tidak terdorong keluar layar dan jadi tidak kelihatan. */}
+      <div className="mt-3 space-y-2 px-10">
           {(clans ?? []).length === 0 && (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Belum ada clan. Jadilah yang pertama!
@@ -397,13 +410,24 @@ function CreateClan({
 
 function JoinClan({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<"semua" | "best">("semua");
+  const [q, setQ] = useState("");
   const clans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
 
-  const sorted =
-    tab === "best" ? [...(clans ?? [])].sort((a: any, b: any) => b.diamonds - a.diamonds) : clans ?? [];
+  // "Semua": semua clan, tiga teratas tetap di paling atas. "Top clan":
+  // peringkat 1-100 berdasarkan diamond, dengan nomornya.
+  const ranked = [...(clans ?? [])].sort(
+    (a: any, b: any) => (b.diamonds ?? 0) - (a.diamonds ?? 0),
+  );
+  const sorted = tab === "best" ? ranked.slice(0, 100) : ranked;
+  const needle = q.trim().toLowerCase();
+  const visible = needle
+    ? sorted.filter((c: any) =>
+        `${c.name ?? ""} ${c.tag ?? ""}`.toLowerCase().includes(needle),
+      )
+    : sorted;
 
   if (detailId)
     return (
@@ -430,10 +454,33 @@ function JoinClan({ onBack }: { onBack: () => void }) {
               onClick={() => setTab(t)}
               className={cn("tab-pill", tab === t && "tab-pill-active")}
             >
-              {t === "semua" ? "Semua" : "Best Clan"}
+              {t === "semua" ? "Semua" : "Top clan"}
             </button>
           ))}
         </div>
+
+        {/* Kolom cari clan (nama atau tag), hanya di tab Semua. */}
+        {tab === "semua" && (
+          <div className="mb-3 flex items-center gap-2 border border-white/15 bg-white/[0.04] px-3 py-2">
+            <Search className="size-4 shrink-0 text-white/45" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari clan: nama atau tag clan"
+              aria-label="Cari clan"
+              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+            />
+            {q && (
+              <button
+                onClick={() => setQ("")}
+                aria-label="Bersihkan pencarian"
+                className="shrink-0 text-white/50 hover:text-white"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {warn && (
           <div className="mb-3 rounded-2xl border border-foreground/40 bg-primary/10 p-3 text-xs">
@@ -453,13 +500,23 @@ function JoinClan({ onBack }: { onBack: () => void }) {
               Belum ada clan. Jadilah yang pertama!
             </p>
           )}
-          {sorted.map((c: any) => (
+          {visible.map((c: any, i: number) => (
             <div
               key={c._id}
               className="member-row cursor-pointer p-3 transition hover:border-[oklch(0.86_0.16_90)]/40"
               onClick={() => setDetailId(c._id as Id<"clans">)}
             >
               <div className="flex items-center gap-3">
+                {tab === "best" && (
+                  <span
+                    className={cn(
+                      "w-6 shrink-0 text-center text-sm font-black",
+                      rankColor(i + 1),
+                    )}
+                  >
+                    {i + 1}
+                  </span>
+                )}
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
                 <div className="min-w-0 flex-1">
                   <p className={cn("truncate font-bold", clanNameClass(c.level))}>{c.name}</p>
@@ -609,6 +666,9 @@ function ClanDetail({
   viewerNotMember?: boolean;
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId });
+  // Peringkat clan ini di daftar global (diamond tertinggi = #1), supaya
+  // warna nama di detail sama dengan warnanya di daftar clan.
+  const allClans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   const donate = useMutation(api.clans.donate);
   const claim = useMutation(api.clans.claimDaily);
@@ -683,6 +743,10 @@ function ClanDetail({
   const t1 = topDonate[0];
   const t2 = topDonate[1];
   const t3 = topDonate[2];
+  // Peringkat global clan ini: 1 emas, 2 perak, 3 perunggu, lainnya putih.
+  const clanRank = [...(allClans ?? [])]
+    .sort((a: any, b: any) => (b.diamonds ?? 0) - (a.diamonds ?? 0))
+    .findIndex((x: any) => x._id === clanId) + 1;
   void viewerNotMember;
 
   return (
@@ -740,10 +804,11 @@ function ClanDetail({
             <p
               className={cn(
                 "mt-2 truncate text-2xl font-black text-white yn-outline",
-                c.color === "golden" && "clan-color-golden",
-                c.color === "galaxy" && "clan-color-galaxy",
-                c.color === "oren" && "text-orange-400",
-                c.color === "merah" && "text-red-400",
+                // Warna mengikuti peringkat global clan: 1 emas, 2 perak,
+                // 3 perunggu, 4 ke atas tetap putih.
+                clanRank === 1 && "clan-color-golden",
+                clanRank === 2 && "clan-color-silver",
+                clanRank === 3 && "text-orange-300",
               )}
             >
               {c.name}
@@ -1020,19 +1085,23 @@ function ClanDetail({
 
         {tab === "top" && (
           <div className="mt-3">
-            <div className="tab-pill-track w-fit">
-              <button
-                onClick={() => setTopScope("today")}
-                className={cn("tab-pill", topScope === "today" && "tab-pill-active")}
-              >
-                Hari ini
-              </button>
-              <button
-                onClick={() => setTopScope("all")}
-                className={cn("tab-pill", topScope === "all" && "tab-pill-active")}
-              >
-                Sepanjang masa
-              </button>
+            {/* Pil "Hari ini / Sepanjang masa" di tengah dan backing-nya
+                kecil, bukan selebar layar. */}
+            <div className="flex justify-center">
+              <div className="tab-pill-track w-fit gap-0.5 bg-black/20 py-0.5">
+                <button
+                  onClick={() => setTopScope("today")}
+                  className={cn("tab-pill px-2.5 py-1 text-[11px]", topScope === "today" && "tab-pill-active")}
+                >
+                  Hari ini
+                </button>
+                <button
+                  onClick={() => setTopScope("all")}
+                  className={cn("tab-pill px-2.5 py-1 text-[11px]", topScope === "all" && "tab-pill-active")}
+                >
+                  Sepanjang masa
+                </button>
+              </div>
             </div>
             <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-card px-3 py-2.5">
               <div>

@@ -246,10 +246,10 @@
 @keyframes reply-blink {
   0%,
   100% {
-    box-shadow: 0 0 0 0 oklch(0.68 0.13 55 / 0%);
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0%);
   }
   50% {
-    box-shadow: 0 0 0 3px oklch(0.68 0.13 55 / 55%);
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 28%);
   }
 }
 .reply-blink {
@@ -750,6 +750,15 @@ html.antilag .yn-banner-box::after {
   color: transparent;
   animation: galaxy-shift 3s linear infinite;
 }
+/* Perak: dipakai untuk clan peringkat 2 (kalau hierarchy warna ikut peringkat). */
+.clan-color-silver {
+  background: linear-gradient(90deg, #f8fafc, #cbd5e1, #ffffff, #cbd5e1);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: galaxy-shift 3.5s linear infinite;
+}
 
 /* Scrollbar tipis */
 .thin-scroll::-webkit-scrollbar {
@@ -989,8 +998,21 @@ button:not([disabled]):active,
 }
 
 .bubble-mine {
-  background: #08080c;
-  border: 1px solid oklch(0.32 0.05 295 / 55%);
+  /* Bukan hitam pekat: abu-abu gelap supaya pesan milik sendiri
+     kelihatan beda dari bubble orang lain tanpa menyilaukan. */
+  background: oklch(0.22 0.008 285);
+  border: 1px solid oklch(0.34 0.012 285 / 55%);
+}
+/* Bubble "give premium": warna sama dengan pesan biasa (abu-abu gelap),
+   tanpa biru dan tanpa outline biru. Yang berwarna cuma tombolnya. */
+.bubble-give {
+  background: oklch(0.2 0.008 285);
+  border: 1px solid oklch(0.34 0.02 285 / 45%);
+}
+/* Kutipan pesan yang dibalas: lebih TERANG dari bubble induknya, bukan
+   lebih gelap, supaya isi kutipan jelas terbaca. */
+.bubble-reply {
+  background: oklch(0.3 0.01 285 / 70%);
 }
 /* Bubble pesan orang lain */
 .bubble-other {
@@ -1115,9 +1137,10 @@ video::cue {
 .yn-wing {
   position: absolute;
   top: 50%;
-  /* Besar: sebelumnya 34x78, sekarang hampir dua kali lipat. */
-  width: 72px;
-  height: 132px;
+  /* Sayap dibuat lebih pendek dan lebih dekat ke kartu supaya tetap terlihat
+     di layar HP: overhang-nya harus muat di ruang kosong di samping kartu. */
+  width: 46px;
+  height: 112px;
   /* Pangkal sayap sebagai pusat rotasi supaya gerakannya seperti membuka,
       bukan seperti bendera dikibaskan. */
   transform-origin: center center;
@@ -1128,14 +1151,14 @@ video::cue {
 
 .yn-wing-left {
   /* Sayap kiri: pangkal menempel tepi kiri kartu, helai menyapu ke kiri. */
-  left: -62px;
+  left: -24px;
   transform: translateY(-50%);
   animation: wing-open-l 0.95s cubic-bezier(0.22, 1, 0.36, 1) both,
     wing-sway-l 4s ease-in-out 0.95s infinite;
 }
 
 .yn-wing-right {
-  right: -62px;
+  right: -24px;
   transform: translateY(-50%);
   animation: wing-open-r 0.95s cubic-bezier(0.22, 1, 0.36, 1) both,
     wing-sway-r 4s ease-in-out 0.95s infinite;

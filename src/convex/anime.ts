@@ -149,7 +149,13 @@ function jikanStatus(a: any): string {
   if (t === "OVA" || t === "ONA" || t === "Special") return "OVA";
   if (t === "Movie") return "Movie";
   if (a.status === "Currently Airing") return "Ongoing";
-  if (a.status === "Not yet aired") return "Upcoming";
+  if (a.status === "Not yet aired") {
+    // Sumber sering menahan "Not yet aired" padahal tanggal tayang pertama
+    // sudah lewat; kalau begitu sebenarnya sudah tayang.
+    const from = Date.parse(String(a.aired?.from ?? ""));
+    if (!Number.isNaN(from) && from <= Date.now()) return "Ongoing";
+    return "Upcoming";
+  }
   return "Completed";
 }
 
@@ -247,8 +253,8 @@ const ANILIST_FIELDS = `
   genres
   isAdult
   studios(isMain: true) { nodes { name } }
-  description(asHtml: false)
-  nextAiringEpisode { episode }
+  nextAiringEpisode { episode airingAt timeUntilAiring }
+  startDate { year month day }
 `;
 
 async function aniGraphql(
@@ -271,6 +277,46 @@ async function aniGraphql(
   return j?.data;
 }
 
+/**
+ * Tanggal tayang pertama dari AniList (year/month/day) sebagai milidetik.
+ * Bulan ke-0 = Januari, jadi harus di +1. Tanggal tanpa tanggal lengkap
+ * tidak dipakai (year < 1900 dianggap belum jelas).
+ */
+function anilistStartAt(m: any): number | undefined {
+  const d = m?.startDate;
+  if (!d || !d.year || d.year < 1900) return undefined;
+  const month = Number(d.month ?? 1) - 1;
+  const day = Number(d.day ?? 1);
+  if (month < 0 || month > 11 || day < 1 || day > 31) return undefined;
+  return new Date(Date.UTC(d.year, month, day)).getTime();
+}
+
+/**
+ * Status yang ditampilkan ke user.
+ *
+ * AniList sering menahan `status: NOT_YET_RELEASED` walaupun jam tayang
+ * pertama sudah lewat (cache mereka jarang diperbarui). Kalau tanggal mulai
+ * sudah lewat dari sekarang, judul itu sebenarnya sudah tayang, jadi
+ * ditampilkan sebagai "Ongoing" supaya tidak menggantung di kategori
+ * Segera Rilis selamanya.
+ */
+function anilistDisplayStatus(m: any): string | undefined {
+  if (m?.status === "RELEASING") return "Ongoing";
+  if (m?.status === "FINISHED") return "Completed";
+  if (m?.status === "NOT_YET_RELEASED") {
+    const start = anilistStartAt(m);
+    // Tanggal mulai sudah lewat = sudah rilis.
+    if (start !== undefined && start <= Date.now()) return "Ongoing";
+    // Belum ada tanggal, tapi jadwal tayang berikutnya sudah diumumkan dan
+    // waktunya sudah lewat = juga sudah rilis.
+    const airing = m?.nextAiringEpisode?.airingAt;
+    if (typeof airing === "number" && airing > 0 && airing <= Date.now())
+      return "Ongoing";
+    return "Upcoming";
+  }
+  return undefined;
+}
+
 function anilistCard(m: any): AnimeCard {
   return {
     source: "anilist",
@@ -281,14 +327,7 @@ function anilistCard(m: any): AnimeCard {
     score: m?.averageScore ? Number((m.averageScore / 10).toFixed(2)) : undefined,
     episodes: m?.episodes ?? undefined,
     type: m?.format ?? undefined,
-    status:
-      m?.status === "RELEASING"
-        ? "Ongoing"
-        : m?.status === "FINISHED"
-          ? "Completed"
-          : m?.status === "NOT_YET_RELEASED"
-            ? "Upcoming"
-            : undefined,
+    status: anilistDisplayStatus(m),
     synopsis:
       (m?.description ?? "")
         .replace(/<[^>]+>/g, " ")

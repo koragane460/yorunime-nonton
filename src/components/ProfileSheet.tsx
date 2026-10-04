@@ -11,8 +11,8 @@ import {
   History as HistoryIcon,
   Heart,
   LogIn,
-  Plus,
   Send,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { xpForLevel } from "@/lib/level";
@@ -31,14 +31,22 @@ type Tab = "komen" | "history" | "favorite";
 export function ProfileSheet({
   userId,
   onClose,
+  onChat,
 }: {
   userId: Id<"users">;
   onClose: () => void;
+  /** Dipanggil saat tombol Chat ditekan. Kalau tidak diberikan, tombol
+      Chat disembunyikan saja (tidak bisa membuka chat dari layar ini). */
+  onChat?: (peer: { id: Id<"users">; name: string }) => void;
 }) {
   const { user: me } = useAuth();
   const navigate = useNavigate();
   const profile = useQuery(api.account.getPublicProfile, { userId });
   const addFriend = useMutation(api.friends.sendFriendRequest);
+  const friendStatus = useQuery(
+    api.friends.statusWith,
+    me && me._id !== userId ? { toUserId: userId } : "skip",
+  );
   // PENTING: yang ditampilkan adalah data user yang sedang dibuka, bukan
   // data akun yang sedang dipakai (dulu selalu pakai akun sendiri).
   const history = useQuery(api.activities.historyOf, { userId });
@@ -107,25 +115,24 @@ export function ProfileSheet({
 
           <div className="-mt-1 px-4 text-center">
             {/* Urutan: username -> ID -> level badge + tag clan */}
-            <div className="flex items-center justify-center gap-1.5">
-              <p
-                key={profile.username}
-                className={cn(
-                  "text-lg font-black",
-                  usernameColor(profile.username),
-                )}
-              >
-                {profile.username ?? "user"}
-              </p>
-              {profile.premium && <BlueCheck className="size-5" />}
-              {profile.devTagged && <RedMark className="size-5" />}
-              <TitleBadge role={profile.staffRole} seqId={profile.seqId} />
+            <div className="flex items-center justify-center gap-1.5"><p
+              key={profile.username}
+              className={cn(
+                "text-base font-black",
+                usernameColor(profile.username),
+              )}
+            >
+              {profile.username ?? "user"}
+            </p>
+            {profile.premium && <BlueCheck className="size-4" />}
+            {profile.devTagged && <RedMark className="size-4" />}
+            <TitleBadge role={profile.staffRole} seqId={profile.seqId} compact />
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-[11px] text-zinc-400">
               ID: {profile.seqId !== undefined ? `#${profile.seqId}` : "—"}
             </p>
 
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[11px]">
               <LevelBadge level={profile.level} />
               {profile.clanTag && (
                 <ClanTag
@@ -133,24 +140,61 @@ export function ProfileSheet({
                   tag={profile.clanTag}
                   color={profile.clanNameColor}
                   level={profile.clanLevel}
+                  className="px-1.5 py-0 text-[9px]"
                 />
               )}
-              {!isMe && (
+            </div>
+
+            {/* Dua tombol kotak panjangsidebelah: kiri Add Friend (ikon
+                orang + teks), kanan Chat (ikon + teks). Add Friend memakai
+                warna kotak pesan chat (abu-abu gelap); Chat kuning tua dan
+                baru bisa ditekan kalau sudah berteman. */}
+            {!isMe && (
+              <div className="mx-auto mt-3 grid max-w-sm grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={requestFriend}
-                  disabled={sending}
-                  aria-label="Tambah teman"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+                  disabled={sending || friendStatus === "friend" || friendStatus === "pending"}
+                  className={cn(
+                    "flex items-center justify-center gap-2 border border-white/10 bg-white/[0.07] px-3 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]",
+                    (friendStatus === "friend" || friendStatus === "pending") &&
+                      "opacity-50",
+                  )}
                 >
                   {sending ? (
-                    <Send className="size-3.5" />
+                    <Send className="size-4 shrink-0" />
                   ) : (
-                    <Plus className="size-4" strokeWidth={3} />
+                    <UserPlus className="size-4 shrink-0" />
                   )}
+                  {friendStatus === "friend"
+                    ? "Teman"
+                    : friendStatus === "pending"
+                      ? "Terkirim"
+                      : "Add Friend"}
                 </button>
-              )}
-            </div>
+                {onChat && (
+                  <button
+                    type="button"
+                    disabled={friendStatus !== "friend"}
+                    onClick={() =>
+                      onChat({
+                        id: userId,
+                        name: profile.username ?? "user",
+                      })
+                    }
+                    className={cn(
+                      "flex items-center justify-center gap-2 border px-3 py-2.5 text-[13px] font-bold transition active:scale-[0.98]",
+                      friendStatus === "friend"
+                        ? "border-amber-500/50 bg-amber-600 text-white hover:bg-amber-500"
+                        : "cursor-not-allowed border-white/10 bg-white/[0.04] text-white/35",
+                    )}
+                  >
+                    <MessageSquare className="size-4 shrink-0" />
+                    Chat
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Bar level: kiri Level n, kanan 1/12.000 */}
             <div className="mx-auto mt-3 max-w-sm">
@@ -348,9 +392,12 @@ export function ProfileSheet({
                   Belum ada komentar
                 </p>
               )}
-              {tab === "komen" && (
-                <div className="thin-scroll max-h-[50vh] overflow-y-auto">
-                  {(profile.myComments ?? []).map((c: any) => (
+              {/* Tidak ada kotak scroll sendiri: daftar komentar ikut
+                  gulir dengan halaman, sama seperti tab History. Kalau
+                  dibungkus max-h + overflow, komentarnya terkurung di
+                  kotak dan halaman tidak bisa lanjut ke bawah. */}
+              {tab === "komen" &&
+                (profile.myComments ?? []).map((c: any) => (
                     <button
                       key={c._id}
                       onClick={() => {
@@ -370,8 +417,6 @@ export function ProfileSheet({
                       </p>
                     </button>
                   ))}
-                </div>
-              )}
             </div>
 
             {profile.premium === false && (

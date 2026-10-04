@@ -403,6 +403,15 @@ export const claimGive = mutation({
       claimedAt: Date.now(),
       expired: claimedBy.length >= give.slots,
     });
+    // Kabari pemberi give: siapa yang claim dan berapa hari yang diambil.
+    await ctx.db.insert("notifications", {
+      userId: give.fromUserId,
+      type: "premiumClaim",
+      title: "Claim Premium Dari Kamu",
+      body: `${me.username ?? "Seseorang"} telah claim ${give.days} hari premium darimu`,
+      refUserId: userId,
+      createdAt: Date.now(),
+    });
     return { claimed: claimedBy.length, slots: give.slots };
   },
 });

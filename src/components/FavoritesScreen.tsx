@@ -8,7 +8,7 @@
 // Daftar favorit yang sebenarnya tetap hidup di panel akun dan di tiap
 // halaman detail, jadi tidak ada yang berubah soal penyimpanan favorit.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, Download, Flame, Sparkles } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -30,6 +30,14 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
 
   // Default-nya Download: tab itu selalu punya isi.
   const [tab, setTab] = useState<Tab>("downloads");
+  // Referensi area isi: ketika tombol tab yang sedang aktif ditekan lagi,
+  // daftar yang sudah terlihat Sometimes sudah berada jauh di bawah. Menekan
+  // ulang tombol yang sama harus selalu memberi umpan balik, jadi isinya
+  // dikembalikan ke atas.
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    bodyRef.current?.scrollIntoView({ block: "start" });
+  }, [tab]);
 
   const dlCount = stats?.done ?? 0;
   // "Paling sering" baru aktif setelah riwayat cukup; sebelum itu tombolnya
@@ -49,7 +57,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="screen-enter pb-24">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10">
         <div className="flex items-center gap-3 pt-3">
           <button
             onClick={onClose}
@@ -70,21 +78,29 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
 
         {/* Tiga tab di paling atas. Tab aktif diberi garis putih di bawah;
             klik hanya menukar isi di bawah, tidak membuka layar baru. */}
-        <div className="mt-2 flex items-stretch gap-1 overflow-x-auto">
+        {/* Tiga tombol rata-rata: tiap kolom sama lebar, jarak antar tombol
+            dibuat lega. Tidak ada kotak hitam di belakang — highlight-nya
+            hanya garis bawah + warna teks. */}
+        <div className="mt-1 grid grid-cols-3 items-stretch gap-3 px-1">
           {tabs.map(({ key, label, Icon, badge }) => {
             const disabled = key === "most" && !mostReady;
             const active = tab === key;
             return (
               <button
                 key={key}
-                onClick={() => setTab(key)}
+                onClick={() => {
+                  setTab(key);
+                  // Tab aktif yang ditekan ulang harus tetap memberi
+                  // umpan balik: kembalikan isi ke atas, jangan diam.
+                  bodyRef.current?.scrollIntoView({ block: "start" });
+                }}
                 disabled={disabled}
                 aria-selected={active}
                 title={
                   disabled ? `Butuh ${MOST_MIN_TITLES} judul ditonton` : label
                 }
                 className={cn(
-                  "relative flex shrink-0 flex-col items-center gap-1 px-3.5 pb-2 pt-2.5 transition",
+                  "relative flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 pb-2 pt-2.5 transition",
                   disabled && "opacity-40",
                   active ? "text-white" : "text-muted-foreground",
                 )}
@@ -103,7 +119,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
                 {/* Garis penanda tab aktif. */}
                 <span
                   className={cn(
-                    "absolute inset-x-1.5 bottom-0 h-0.5 rounded-full bg-white transition-opacity",
+                    "absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-white transition-opacity",
                     active ? "opacity-100" : "opacity-0",
                   )}
                 />
@@ -113,7 +129,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
         </div>
       </header>
 
-      <div className="pt-3">
+      <div ref={bodyRef} className="pt-3">
         {/* Ketiganya dirender inline, jadi tidak ada layar fullscreen. */}
         {tab === "downloads" && (
           <DownloadsPanel inline onClose={onClose} />

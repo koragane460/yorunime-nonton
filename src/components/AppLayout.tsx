@@ -637,7 +637,7 @@ function BottomNav({
   const items: {
     path: string;
     label: string;
-    icon: ComponentType<{ className?: string }>;
+    icon: ComponentType<{ className?: string; strokeWidth?: number }>;
     panel?: Exclude<TopPanel, null>;
     dim?: boolean;
   }[] = [
@@ -767,10 +767,12 @@ function BottomNav({
                 className="nav-item relative flex flex-col items-center justify-center py-3.5"
               >
                 <Icon
+                  strokeWidth={1.75}
                   className={cn(
                     // 5 kolom: ikon dibuat besar supaya jelas dan mudah
-                    // ditekan di HP. Dulu 21px, sekarang 27px.
-                    "size-[27px] md:size-[31px]",
+                    // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.75)
+                    // supaya tidak terlihat tebel dan berat.
+                    "size-[25px] md:size-[28px]",
                     active
                       ? "text-primary"
                       : it.dim

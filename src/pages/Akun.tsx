@@ -150,13 +150,15 @@ function AkunContent() {
             />
           </button>
 
+          {/* Kotak popup ikut kecil: lebarnya mengikuti isi (bukan 20rem fix),
+              judul + barisnya juga diperkecil supaya tidak terlalu besar. */}
           {titlesOpen && (
-            <div className="pop-enter absolute left-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-foreground/40 bg-neutral-950/95">
+            <div className="pop-enter absolute left-0 top-full z-30 mt-2 w-max max-w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-foreground/40 bg-neutral-950/95">
               <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
                 <span className="flex size-6 items-center justify-center rounded-md bg-[oklch(0.86_0.16_90)]/15">
                   <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
                 </span>
-                <p className="text-[12px] font-bold">Title kamu</p>
+                <p className="text-[11px] font-bold">Title kamu</p>
                 <button
                   onClick={() => setTitlesOpen(false)}
                   aria-label="Tutup title"
@@ -171,18 +173,19 @@ function AkunContent() {
                 </p>
               ) : (
                 /* Semua title harus terlihat: daftar ini di-scroll, bukan dipotong. */
-                <ul className="thin-scroll max-h-[55dvh] divide-y divide-white/10 overflow-y-auto">
+                <ul className="thin-scroll max-h-[45dvh] divide-y divide-white/10 overflow-y-auto">
                   {titles.map((t) => (
-                    <li key={t.name} className="flex items-center gap-2.5 px-3 py-2.5">
+                    <li key={t.name} className="flex items-center gap-2 px-2.5 py-2">
                       {t.clan ? (
                         <ClanTag
                           icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
                           tag={t.name}
                           color={user.clanNameColor}
                           level={stats?.clanLevel}
+                          className="px-1.5 py-0 text-[10px]"
                         />
                       ) : (
-                        <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[12px] font-bold text-primary-foreground">
+                        <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
                           {t.name}
                         </span>
                       )}

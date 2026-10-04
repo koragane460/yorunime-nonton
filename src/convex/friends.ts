@@ -61,6 +61,42 @@ export const listRequests = query({
   },
 });
 
+/**
+ * Status pertemanan aku dengan satu user — dipakai detail akun untuk
+ * menentukan tombol mana yang aktif (Add Friend / Chat).
+ */
+export const statusWith = query({
+  args: { toUserId: v.id("users") },
+  handler: async (ctx, { toUserId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return "none" as const;
+    if (userId === toUserId) return "self" as const;
+    const asA = await ctx.db
+      .query("friendships")
+      .withIndex("userA", (q) => q.eq("userA", userId))
+      .collect();
+    const asB = await ctx.db
+      .query("friendships")
+      .withIndex("userB", (q) => q.eq("userB", userId))
+      .collect();
+    const friends = [...asA, ...asB].some(
+      (f) =>
+        (f.userA === userId && f.userB === toUserId) ||
+        (f.userB === userId && f.userA === toUserId),
+    );
+    if (friends) return "friend" as const;
+    const outgoing = await ctx.db
+      .query("friendRequests")
+      .withIndex("toUserId_status", (q) =>
+        q.eq("toUserId", toUserId).eq("status", "pending"),
+      )
+      .collect();
+    if (outgoing.some((r) => r.fromUserId === userId))
+      return "pending" as const;
+    return "none" as const;
+  },
+});
+
 export const sendFriendRequest = mutation({
   args: { toUserId: v.id("users") },
   handler: async (ctx, { toUserId }) => {
