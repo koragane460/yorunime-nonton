@@ -19,12 +19,23 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useAction } from "convex/react";
 import { useLocation } from "react-router";
+import { api } from "@/convex/_generated/api";
 import {
   nextIndex,
   randomOtherIndex,
   type RepeatMode,
 } from "@/lib/musicQueue";
+import {
+  ensureYouTubePlayer,
+  youtubeIsPlaying,
+  youtubeMuted,
+  youtubeSeek,
+  youtubeTime,
+  youtubeToggle,
+  youtubeVolume,
+} from "@/lib/youtubeAudio";
 import type { MusicTrack } from "@/convex/music";
 
 // Tipe RepeatMode diambil dari `@/lib/musicQueue` supaya player dan tesnya
@@ -180,27 +191,89 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   const track = index >= 0 ? queue[index] ?? null : null;
 
+  // Sumber audio yang sedang aktif. "youtube" = lagu penuh via pemutar
+  // YouTube (UI tetap milik YoruNime), "direct" = pratinjau 30 detik dari
+  // elemen <audio>. YouTube dicoba dulu karena lagunya utuh.
+  const [source, setSource] = useState<"youtube" | "direct" | "none">("none");
+  const ytFind = useAction(api.music.youtubeFind);
+
+  /** Muat lagu lewat YouTube; kembalikan false kalau tidak ketemu. */
+  const tryYouTube = useCallback(
+    async (t: MusicTrack): Promise<boolean> => {
+      const q = `${t.artist} ${t.title}`.trim();
+      if (q.length < 2) return false;
+      let videoId: string | null = null;
+      try {
+        const r = (await ytFind({ q })) as { videoId: string | null };
+        videoId = r?.videoId ?? null;
+      } catch {
+        return false;
+      }
+      if (!videoId) return false;
+      const ok = await ensureYouTubePlayer(videoId, {
+        onPlay: () => {
+          setPlaying(true);
+          setLoading(false);
+        },
+        onPause: () => setPlaying(false),
+        onEnded: () => {
+          // Sama seperti elemen <audio>: lanjut ke lagu berikutnya.
+          queueEndRef.current?.();
+        },
+        onReady: () => {
+          setPlaying(true);
+          setLoading(false);
+        },
+        onDuration: (sec) => setDuration(sec),
+      }, muted);
+      return ok;
+    },
+    [ytFind, muted],
+  );
+
   // Muat (dan mulai) satu lagu pada elemen audio. Data antrean boleh
   // diberikan eksplisit supaya bisa dipakai juga saat antrean baru belum
   // selesai di-render.
-  const loadInto = useCallback((i: number, from?: MusicTrack[]) => {
-    const a = audioRef.current;
-    const t = (from ?? queue)[i];
-    if (!a || !t) return;
-    setError(null);
-    setLoading(true);
-    setPosition(0);
-    setDuration(t.durationSec || 0);
-    if (a.src !== t.audioUrl) {
-      a.src = t.audioUrl;
-      a.currentTime = 0;
-    }
-    void a.play().catch(() => {
-      // Browser memblokir autoplay; UI akan ikut menunjukkan status dijeda.
-      setPlaying(false);
-      setLoading(false);
-    });
-  }, [queue]);
+  const loadInto = useCallback(
+    (i: number, from?: MusicTrack[]) => {
+      const a = audioRef.current;
+      const t = (from ?? queue)[i];
+      if (!t) return;
+      setError(null);
+      setLoading(true);
+      setPosition(0);
+      setDuration(t.durationSec || 0);
+
+      // YouTube dulu: lagu penuh. Kalau tidak dapat videonya, jatuh ke
+      // pratinjau 30 detik dari iTunes supaya tetap ada suara.
+      void tryYouTube(t)
+        .then((ok) => {
+          if (ok) {
+            setSource("youtube");
+            // Hentikan elemen audio supaya tidak dobel bersuara.
+            a?.pause();
+            return;
+          }
+          if (!a) return;
+          setSource("direct");
+          if (a.src !== t.audioUrl) {
+            a.src = t.audioUrl;
+            a.currentTime = 0;
+          }
+          void a.play().catch(() => {
+            // Browser memblokir autoplay; UI akan ikut menunjukkan status dijeda.
+            setPlaying(false);
+            setLoading(false);
+          });
+        })
+        .catch(() => {
+          setPlaying(false);
+          setLoading(false);
+        });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queue, tryYouTube],
+  );
 
   // Muat (dan mulai) lagu pada indeks tertentu dari antrean saat ini.
   const load = useCallback((i: number) => loadInto(i), [loadInto]);
@@ -271,32 +344,61 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     [queue.length, load],
   );
 
+  // Kontrol dikirim ke sumber yang sedang aktif. YouTube tidak punya event
+  // timeupdate seperti <audio>, jadi posisinya diambil lewat polling.
+  useEffect(() => {
+    if (source !== "youtube") return;
+    const t = window.setInterval(() => {
+      const { now, total } = youtubeTime();
+      if (now > 0) setPosition(now);
+      if (total > 0) setDuration(total);
+    }, 500);
+    return () => window.clearInterval(t);
+  }, [source]);
+
   const toggle = useCallback(() => {
+    if (source === "youtube") {
+      youtubeToggle();
+      return;
+    }
     const a = audioRef.current;
     if (!a || !a.src) return;
     if (a.paused) void a.play().catch(() => {});
     else a.pause();
-  }, []);
+  }, [source]);
 
-  const seek = useCallback((sec: number) => {
-    const a = audioRef.current;
-    if (!a) return;
-    const max = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : sec;
-    a.currentTime = Math.min(Math.max(0, sec), max);
-    setPosition(a.currentTime);
-  }, []);
+  const seek = useCallback(
+    (sec: number) => {
+      if (source === "youtube") {
+        youtubeSeek(sec);
+        setPosition(sec);
+        return;
+      }
+      const a = audioRef.current;
+      if (!a) return;
+      const max = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : sec;
+      a.currentTime = Math.min(Math.max(0, sec), max);
+      setPosition(a.currentTime);
+    },
+    [source],
+  );
 
-  const changeVolume = useCallback((v: number) => {
-    const next = Math.min(1, Math.max(0, v));
-    setVolume(next);
-    if (audioRef.current) audioRef.current.volume = next;
-    try {
-      localStorage.setItem(VOL_KEY, String(next));
-    } catch {}
-  }, []);
+  const changeVolume = useCallback(
+    (v: number) => {
+      const next = Math.min(1, Math.max(0, v));
+      setVolume(next);
+      youtubeVolume(next);
+      if (audioRef.current) audioRef.current.volume = next;
+      try {
+        localStorage.setItem(VOL_KEY, String(next));
+      } catch {}
+    },
+    [],
+  );
 
   const toggleMute = useCallback(() => {
     setMuted((m) => {
+      youtubeMuted(!m);
       if (audioRef.current) audioRef.current.muted = !m;
       return !m;
     });
@@ -366,17 +468,27 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const resumeAfterVideo = useRef(false);
   useEffect(() => {
     const a = audioRef.current;
-    if (!a) return;
-    if (location.pathname.startsWith("/nonton")) {
-      if (!a.paused) {
+    const onWatch = location.pathname.startsWith("/nonton");
+
+    // YouTube dan elemen <audio> dijeda sama-sama, supaya lagu yang diputar
+    // penuh juga berhenti saat masuk layar nonton. Dulu hanya <audio> yang
+    // dijeda, jadi lagu YouTube terus bunyi di bawah video.
+    if (onWatch) {
+      const ytActive = source === "youtube" && youtubeIsPlaying();
+      const audioActive = !!a && !a.paused;
+      if (ytActive || audioActive) {
         resumeAfterVideo.current = true;
-        a.pause();
+        if (ytActive) youtubeToggle();
+        if (audioActive) a?.pause();
       }
-    } else if (resumeAfterVideo.current) {
-      resumeAfterVideo.current = false;
-      void a.play().catch(() => {});
+      return;
     }
-  }, [location.pathname]);
+    if (resumeAfterVideo.current) {
+      resumeAfterVideo.current = false;
+      if (source === "youtube") youtubeToggle();
+      else void a?.play().catch(() => {});
+    }
+  }, [location.pathname, source]);
 
   const value = useMemo<MusicCtx>(
     () => ({

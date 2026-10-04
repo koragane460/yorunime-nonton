@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtTime, useMusicPlayer } from "@/components/MusicPlayer";
+import { cached, putCache } from "@/lib/musicCache";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import type { MusicTrack } from "@/convex/music";
 
@@ -89,11 +90,19 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
       })
       .catch(() => {});
     const jobs = sectionRows.map(async (s) => {
+      // Cache di memori: layar Musik sering dibuka-tutup, dan katalog itu
+      // praktis statis. Tanpa cache, 8 baris diambil ulang setiap kali layar
+      // dibuka sehingga selalu terlihat "Memuat katalog...".
+      const key = `sec:${s.id}`;
+      const hit = cached<MusicTrack[]>(key);
+      if (hit) return [s.id, hit] as const;
       try {
         const r = (await loadSection({ section: s.id, limit: 12 })) as {
           tracks: MusicTrack[];
         };
-        return [s.id, r.tracks ?? []] as const;
+        const tracks = r.tracks ?? [];
+        putCache(key, tracks);
+        return [s.id, tracks] as const;
       } catch {
         return [s.id, [] as MusicTrack[]] as const;
       }

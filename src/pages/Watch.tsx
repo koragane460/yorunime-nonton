@@ -875,6 +875,9 @@ function WatchContent() {
       };
       lastEpRef.current = epParam;
       deadServers.current = new Set();
+      // Sama seperti anime: hitungan dimulai sejak memuat, bukan setelah siap.
+      setNowTick(Date.now());
+      setHoldUntil(WATCH_DELAY_MS > 0 ? Date.now() + WATCH_DELAY_MS : 0);
       setSources([]);
       setDirect(null);
       setDirectErr(null);
@@ -934,6 +937,13 @@ function WatchContent() {
     }
     lastEpRef.current = epParam;
     deadServers.current = new Set();
+    // Hitungan mundur dimulai SEKARANG (saat mulai memuat), bukan setelah
+    // selesai. Dulu hitungannya baru jalan setelah URL siap, sehingga user
+    // masih melihat "Memuat episode..." dulu - itu yang membuat terasa lama.
+    // Kalau memuat selesai lebih cepat dari hitungan, video tetap menunggu
+    // hitungan habis; kalau lebih lambat, hitungan terus tampil sampai siap.
+    setNowTick(Date.now());
+    setHoldUntil(WATCH_DELAY_MS > 0 ? Date.now() + WATCH_DELAY_MS : 0);
     setSources([]);
     setDirect(null);
     setDirectErr(null);
@@ -1540,9 +1550,11 @@ function WatchContent() {
               )}
             </div>
           </div>
-        ) : videoHolding ? (
-          // Hitungan mundur gaya pembaca komik: video sudah dimuat, tapi
-          // ditahan beberapa detik dulu. Premium langsung lewat.
+        ) : videoHolding || !streamUrl ? (
+          // Hitungan mundur gaya pembaca komik. Tampil sejak mulai memuat
+          // sampai hitungan habis, jadi tidak ada lagi fase "Memuat episode..."
+          // yang terasa seperti macet. Kalau memuatnya lebih lambat dari
+          // hitungan, angka berhenti di 0 sampai video siap.
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-black text-center">
             {D.image && (
               <div
@@ -1588,11 +1600,11 @@ function WatchContent() {
                   />
                 </svg>
                 <span className="text-2xl font-black text-white">
-                  {Math.ceil((holdUntil - nowTick) / 1000)}
+                  {videoHolding ? Math.ceil((holdUntil - nowTick) / 1000) : ""}
                 </span>
               </div>
               <p className="mt-3 text-xs font-semibold text-white">
-                Menyiapkan video...
+                {videoHolding ? "Menyiapkan video..." : "Memuat episode..."}
               </p>
               {!isPremiumUser && (
                 <p className="mt-1 text-[11px] text-white/55">

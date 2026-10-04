@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
 import { ClanRankWings } from "@/components/ClanRankWings";
+import { clanNameClass } from "@/components/lstream-ui";
 import {
   Avatar,
   ClanLevelBar,
@@ -187,7 +188,7 @@ function NoClan({
               <div className="flex items-center gap-3">
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{c.name}</p>
+                  <p className={cn("truncate font-bold", clanNameClass(c.level))}>{c.name}</p>
                   <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} level={c.level} className="mt-0.5" />
                   <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
@@ -461,7 +462,7 @@ function JoinClan({ onBack }: { onBack: () => void }) {
               <div className="flex items-center gap-3">
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{c.name}</p>
+                  <p className={cn("truncate font-bold", clanNameClass(c.level))}>{c.name}</p>
                   <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} level={c.level} className="mt-0.5" />
                     <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
@@ -553,7 +554,7 @@ function ClanChat({
           className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card p-2 text-left"
         >
           <ClanTag icon={c?.tagIcon ?? DEFAULT_CLAN_ICON} tag={c?.tag ?? "—"} color={c?.color} level={c?.level} />
-          <span className="min-w-0 flex-1 truncate font-bold">{c?.name ?? "Clan"}</span>
+          <span className={cn("min-w-0 flex-1 truncate font-bold", clanNameClass(c?.level))}>{c?.name ?? "Clan"}</span>
           <span className="text-muted-foreground">›</span>
         </button>
         {(isLeader || isOfficer) && (

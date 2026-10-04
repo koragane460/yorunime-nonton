@@ -403,6 +403,18 @@ export function clanTextClass(level?: number) {
   return "clan-tier-blue";
 }
 
+/**
+ * Kelas warna untuk NAMA clan (bukan tag).
+ *
+ * Aturan yang diminta: NAMA clan berwarna sesuai level, tapi TAG-nya
+ * (teks [YRNM] di dalam kotak) selalu PUTIH untuk semua clan. Dua fungsi
+ * ini dulu satu-satunya dan tag ikut ke-pink/kuning, padahal yang harus
+ * berwarna cuma namanya.
+ */
+export function clanNameClass(level?: number) {
+  return clanTextClass(level);
+}
+
 export function ClanTag({
   icon,
   tag,
@@ -435,11 +447,9 @@ export function ClanTag({
       >
         <Icon className="size-3.5" />
       </span>
-      {/* Nama clan: warna per level + silau yang bergerak seperti title
-          staff. Garis samping geraknya dibuat lewat pseudo-element di CSS. */}
-      <span className={cn("clan-shine relative z-[2]", clanTextClass(level))}>
-        [{tag}]
-      </span>
+      {/* Tag clan (teks [TAG]) selalu PUTIH untuk semua clan. Warna per level
+          dipakai di NAMA clan (lihat clanNameClass), bukan di sini. */}
+      <span className="relative z-[2] text-white">[{tag}]</span>
     </span>
   );
 }

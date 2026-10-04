@@ -295,3 +295,55 @@ export const musicSections = action({
   args: {},
   handler: async () => SECTIONS.map(({ id, label }) => ({ id, label })),
 });
+
+/**
+ * Cari satu video YouTube untuk sebuah lagu.
+ *
+ * Kenapa YouTube: lagu dari iTunes hanya potongan 30 detik. YouTube memutar
+ * lagu PENUH dan pemutar resminya (IFrame Player API) bisa dikontrol lewat
+ * JavaScript tanpa API key, jadi UI player YoruNime tetap milik sendiri.
+ *
+ * Cara ambil videonya: halaman hasil pencarian YouTube berisi daftar video
+ * beserta videoId di dalam JSON-nya. Kita ambil videoId non-trailer yang
+ * paling relevan. Ini scraping ringan, bukan YouTube Data API, jadi tidak
+ * butuh kunci apa pun. Kalau YouTube mengubah bentuk HTML-nya, fungsi ini
+ * aman gagal (mengembalikan null) dan player jatuh ke pratinjau iTunes.
+ */
+export const youtubeFind = action({
+  args: { q: v.string() },
+  handler: async (_ctx, args) => {
+    const q = args.q.trim();
+    if (q.length < 2) return { videoId: null };
+
+    // sp=EgIQAQ%3D%3D adalah filter "Video" saja (bukan playlist/channel).
+    // Dulu saya menulisnya %253D (doobel encode), jadi nilainya salah dan
+    // filter tidak diterapkan. Hasil pencarian tetap keluar karena kita
+    // mengambil videoId, tapi kualitasnya tidak terjaga.
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%3D%3D`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": UA,
+          "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return { videoId: null };
+      const html = await res.text();
+
+      // videoId valid: 11 karakter huruf/angka/-. Ambil berurutan dan buang
+      // duplikat, lalu pilih yang pertama (YouTube mengurutkan dari yang
+      // paling relevan untuk kueri ini).
+      const ids: string[] = [];
+      const re = /"videoId":"([A-Za-z0-9_-]{11})"/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(html)) !== null) {
+        if (!ids.includes(m[1])) ids.push(m[1]);
+        if (ids.length >= 6) break;
+      }
+      return { videoId: ids[0] ?? null };
+    } catch {
+      return { videoId: null };
+    }
+  },
+});

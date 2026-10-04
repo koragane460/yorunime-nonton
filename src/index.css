@@ -1100,10 +1100,13 @@ video::cue {
 /*
  * Sayap clan peringkat 1-3 di daftar clan.
  *
- * Semua warna diambil dari variabel --wing-* yang di-set per peringkat di
- * ClanRankWings.tsx, jadi satu CSS ini dipakai tiga-tiganya. Sayapnya
- * diletakkan DI LUAR tepi kartu (left/right negatif) supaya terlihat
- * seperti sayap yang terbuka dari dalam kartu, bukan stiker di depannya.
+ * Posisi sayap: DI BELAKANG kartu dan menjorok keluar. Kartu dirender di
+ * atasnya (z-10), jadi sayap hanya terlihat di bagian yang menjorok keluar
+ * dari tepi kartu.
+ *
+ * Warna diambil dari variabel --wing-* yang di-set per peringkat oleh
+ * ClanRankWings.tsx (1 emas, 2 perak, 3 perunggu). Satu CSS ini dipakai
+ * tiga-tiganya.
  */
 .yn-wing-host {
   isolation: isolate;
@@ -1112,86 +1115,133 @@ video::cue {
 .yn-wing {
   position: absolute;
   top: 50%;
-  width: 34px;
-  height: 78px;
-  /* Pusat rotasi di pangkal sayap supaya gerakannya seperti terbuka,
-      bukan seperti bendera yang dikibaskan. */
+  /* Besar: sebelumnya 34x78, sekarang hampir dua kali lipat. */
+  width: 72px;
+  height: 132px;
+  /* Pangkal sayap sebagai pusat rotasi supaya gerakannya seperti membuka,
+      bukan seperti bendera dikibaskan. */
   transform-origin: center center;
-  transform: translateY(-50%) scale(var(--wing-scale, 1));
-  filter: drop-shadow(0 0 6px var(--wing-glow));
+  filter: drop-shadow(0 0 10px var(--wing-glow));
   pointer-events: none;
   z-index: 0;
 }
 
 .yn-wing-left {
-  left: -17px;
-  animation: wing-open-l 0.9s cubic-bezier(0.22, 1, 0.36, 1) both,
-    wing-sway 3.6s ease-in-out 0.9s infinite;
+  /* Sayap kiri: pangkal menempel tepi kiri kartu, helai menyapu ke kiri. */
+  left: -62px;
+  transform: translateY(-50%);
+  animation: wing-open-l 0.95s cubic-bezier(0.22, 1, 0.36, 1) both,
+    wing-sway-l 4s ease-in-out 0.95s infinite;
 }
 
 .yn-wing-right {
-  right: -17px;
-  animation: wing-open-r 0.9s cubic-bezier(0.22, 1, 0.36, 1) both,
-    wing-sway 3.6s ease-in-out 0.9s infinite reverse;
+  right: -62px;
+  transform: translateY(-50%);
+  animation: wing-open-r 0.95s cubic-bezier(0.22, 1, 0.36, 1) both,
+    wing-sway-r 4s ease-in-out 0.95s infinite;
 }
 
-/* Terbuka: dari menutup (menempel di kartu, hampir tak terlihat) ke
-   terbuka penuh. Scale-X membuat efek "membuka" tanpa mengubah tinggi. */
+/* Animasi TERBUKA: dari menutup (tipis, menempel kartu, transparan) ke
+   terbuka penuh. Sayap kiri membuka ke arah kiri, kanan ke arah kanan. */
 @keyframes wing-open-l {
   from {
     opacity: 0;
-    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(0.1)
-      rotate(14deg);
+    transform: translateY(-50%) scaleX(0.12) rotate(18deg);
   }
   to {
     opacity: 1;
-    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(1)
-      rotate(0deg);
+    transform: translateY(-50%) scaleX(1) rotate(0deg);
   }
 }
 
 @keyframes wing-open-r {
   from {
     opacity: 0;
-    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(0.1)
-      rotate(-14deg);
+    transform: translateY(-50%) scaleX(0.12) rotate(-18deg);
   }
   to {
     opacity: 1;
-    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(1)
-      rotate(0deg);
+    transform: translateY(-50%) scaleX(1) rotate(0deg);
   }
 }
 
-/* Goyang halus setelah terbuka: amplitudo kecil supaya elegan, bukan ramai. */
-@keyframes wing-sway {
+/* Goyang halus setelah terbuka. Amplitudo kecil supaya elegan. */
+@keyframes wing-sway-l {
   0%,
   100% {
-    transform: translateY(-50%) scale(var(--wing-scale, 1)) rotate(-4deg);
+    transform: translateY(-50%) rotate(-3.5deg);
   }
   50% {
-    transform: translateY(-50%) scale(var(--wing-scale, 1)) rotate(4deg);
+    transform: translateY(-50%) rotate(3.5deg);
   }
 }
 
-.yn-wing-glow {
+@keyframes wing-sway-r {
+  0%,
+  100% {
+    transform: translateY(-50%) rotate(3.5deg);
+  }
+  50% {
+    transform: translateY(-50%) rotate(-3.5deg);
+  }
+}
+
+/*
+ * Trail tepi kartu: garis cahaya yang berjalan mengelilingi tepi kotak,
+ * warnanya mengikuti peringkat. Dibuat dengan conic-gradient yang berputar,
+ * lalu dibatasi hanya pada cincin tepi memakai mask (padding-box vs
+ * border-box) sehingga bagian dalam kartu tidak ikut berwarna.
+ */
+@property --trail-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.yn-wing-trail {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: 0 0 22px var(--wing-glow);
-  opacity: 0.55;
+  inset: -2px;
+  /* Radiusnya disamakan dengan .member-row (1.25rem) supaya trail mengikuti
+      sudut kartu, bukan jadi ring persegi di sekeliling kartu yang rounded. */
+  border-radius: 1.25rem;
   pointer-events: none;
-  z-index: 0;
+  z-index: 10;
+  background: conic-gradient(
+    from var(--trail-angle),
+    transparent 0deg,
+    transparent 250deg,
+    color-mix(in srgb, var(--trail-color) 45%, transparent) 300deg,
+    var(--trail-color) 350deg,
+    transparent 360deg
+  );
+  /* Cincin 2px saja: bagian tengah dimask sehingga kartu tetap terlihat. */
+  padding: 2px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: trail-spin 3.2s linear infinite;
+}
+
+@keyframes trail-spin {
+  to {
+    --trail-angle: 360deg;
+  }
 }
 
 /* Hormati preferensi pengguna yang mematikan animasi. */
 @media (prefers-reduced-motion: reduce) {
   .yn-wing,
-  .yn-wing-glow {
+  .yn-wing-trail {
     animation: none;
     opacity: 1;
   }
   .yn-wing {
-    transform: translateY(-50%) scale(var(--wing-scale, 1));
+    transform: translateY(-50%);
+  }
+  .yn-wing-trail {
+    background: none;
+    box-shadow: 0 0 0 2px var(--trail-color);
   }
 }
