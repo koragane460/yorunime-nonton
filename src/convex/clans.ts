@@ -535,6 +535,48 @@ export const setRole = mutation({
   },
 });
 
+/**
+ * Lepas satu role tertentu (un-officer / un-victro / un-hydler).
+ *
+ * Bedanya dengan `setRole(... "member")`: aksi ini hanya berhasil kalau
+ * member yang dipilih memang sedang memegang role itu, jadi leader tidak
+ * bisa mencabut role yang memang tidak ada dan tidak diam-diam menimpa
+ * role lain. Member yang hasilnya `member` biasa, bukan dihapus dari clan.
+ */
+export const removeRole = mutation({
+  args: {
+    targetId: v.id("users"),
+    role: v.union(
+      v.literal("officer"),
+      v.literal("victro"),
+      v.literal("hydler"),
+    ),
+  },
+  handler: async (ctx, { targetId, role }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const res = await leaderGuard(ctx, userId, ["leader"]);
+    if (targetId === res.clan.leaderId)
+      throw new Error("Tidak bisa lepas role leader");
+    const target = await ctx.db
+      .query("clanMembers")
+      .withIndex("userId", (q) => q.eq("userId", targetId))
+      .first();
+    if (!target || target.clanId !== res.clan._id)
+      throw new Error("Bukan member clan ini");
+    if (target.role !== role)
+      throw new Error(`Member ini bukan ${role}`);
+    await ctx.db.patch(target._id, { role: "member" });
+    await ctx.db.insert("notifications", {
+      userId: targetId,
+      type: "clan",
+      title: `Role ${role} clan kamu dicabut`,
+      createdAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
 export const kickMember = mutation({
   args: { targetId: v.id("users") },
   handler: async (ctx, { targetId }) => {

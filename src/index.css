@@ -639,18 +639,18 @@ html.antilag .yn-banner-box::after {
 /*
  * Outline hitam untuk tulisan putih di atas foto atau banner.
  *
- * Bukan drop shadow yang blur: empat offset 1px membuat tepi huruf tegas
- * dan tipis, jadi tidak terlihat buram. Warna teks tetap putih polos apa pun
- * warnanya.
+ * Versi tipis: satu garis tepi 0.6px per arah plus satu bayangan sangat
+ * rapat. Empat offset 1px + blur 2px dulu membuat huruf kecil (label Level,
+ * Total XP, Members) terlihat seperti Corpombol, jadi ukurannya dikecilkan.
+ * `color` TIDAK dipaksa putih di sini supaya kelas warna clan
+ * (clan-tier-gold dan friends) tidak ditimpa.
  */
 .yn-outline {
-  color: #fff;
   text-shadow:
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000,
-    0 0 2px rgb(0 0 0 / 0.5);
+    -0.6px 0 0 rgb(0 0 0 / 0.85),
+    0.6px 0 0 rgb(0 0 0 / 0.85),
+    0 -0.6px 0 rgb(0 0 0 / 0.85),
+    0 0.6px 0 rgb(0 0 0 / 0.85);
 }
 
 /* Bintang statis. Tidak berkedip: kilatan light adalah salah satu penyebab

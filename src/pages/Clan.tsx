@@ -174,6 +174,12 @@ function ClanBannerPanel({
           level={c.level}
           className="mt-0.5 px-1.5 py-0 text-[9px]"
         />
+        {/* Deskripsi: kotak abu-abu 50% yang lurus, DI ATAS stats. */}
+        {c.description && (
+          <p className="mt-1.5 line-clamp-4 bg-neutral-500/50 px-1.5 py-1 text-[10px] italic leading-snug text-white">
+            {c.description}
+          </p>
+        )}
         {/* Stats ditaruh DI BAWAH banner. */}
         <div className="mt-1.5 space-y-0.5 text-[10px] leading-tight text-muted-foreground">
           <p className="inline-flex items-center gap-1">
@@ -186,11 +192,6 @@ function ClanBannerPanel({
             <Clock className="size-3" aria-hidden /> {c.ageDays} hari
           </p>
         </div>
-        {c.description && (
-          <p className="mt-1.5 line-clamp-4 rounded-lg bg-white/20 p-1.5 text-[10px] leading-snug text-white/85">
-            {c.description}
-          </p>
-        )}
       </div>
     </button>
   );
@@ -1017,6 +1018,7 @@ function ClanDetail({
   const claim = useMutation(api.clans.claimDaily);
   const leave = useMutation(api.clans.leaveClan);
   const setRole = useMutation(api.clans.setRole);
+  const removeRole = useMutation(api.clans.removeRole);
   const kick = useMutation(api.clans.kickMember);
   const transfer = useMutation(api.clans.transferLeader);
   const setBackground = useMutation(api.clans.setBackground);
@@ -1151,16 +1153,20 @@ function ClanDetail({
             >
               {c.name}
             </p>
-            {/* Deskripsi clan: kotak abu-abu transparan 50% di bawah nama. */}
+            {/* Deskripsi clan: kotak abu-abu 50% yang melebar penuh, tepat
+                DI ATAS baris stats. Kotak dibuat lurus (tanpa rounded) dan
+                teksnya miring kemiringan supaya berbeda dari nama clan. */}
             {c.description && (
-              <p className="mt-2 rounded-2xl bg-white/20 p-3 text-[13px] leading-relaxed text-white/90 backdrop-blur-[2px]">
-                {c.description}
-              </p>
+              <div className="mt-3 w-full bg-neutral-500/50 px-2.5 py-1.5">
+                <p className="w-full text-center text-[12px] font-medium italic leading-snug text-white">
+                  {c.description}
+                </p>
+              </div>
             )}
 
-            {/* Stat: Level / Total XP / Members — teks putih dengan shadow,
+            {/* Stat: Level / Total XP / Members — teks putih dengan outline tipis,
                 tanpa latar hitam supaya foto clan tetap terlihat jernih. */}
-            <div className="mt-4 grid grid-cols-3 gap-2.5">
+            <div className="mt-3 grid grid-cols-3 gap-2.5">
               <div className="rounded-2xl px-2 py-3 text-center">
                 <p className="text-lg font-bold text-white yn-outline">
                   {c.level}
@@ -1540,6 +1546,13 @@ function ClanDetail({
             await setRole({ targetId: targetId as Id<"users">, role });
             toast.success("Role diterapkan");
           }}
+          onRemoveRole={async (targetId, role) => {
+            await removeRole({
+              targetId: targetId as Id<"users">,
+              role,
+            });
+            toast.success(`Role ${role} dicabut`);
+          }}
           onKick={async (targetId) => {
             await kick({ targetId: targetId as Id<"users"> });
             toast.success("Member dikick");
@@ -1702,11 +1715,19 @@ function Popup({
 
 // -------------------------------------------------------- leader panel ----
 
+/** Panel "Un-X" → role yang dicabut di panel tersebut. */
+const UN_ROLE: Record<string, "officer" | "victro" | "hydler" | undefined> = {
+  unofficer: "officer",
+  unvictro: "victro",
+  unhydler: "hydler",
+};
+
 function LeaderPanel({
   clanId,
   isLeader,
   onClose,
   onSetRole,
+  onRemoveRole,
   onKick,
   onTransfer,
   onBg,
@@ -1716,13 +1737,17 @@ function LeaderPanel({
   isLeader: boolean;
   onClose: () => void;
   onSetRole: (id: string, role: "officer" | "victro" | "hydler" | "member") => Promise<void>;
+  onRemoveRole: (
+    id: string,
+    role: "officer" | "victro" | "hydler",
+  ) => Promise<void>;
   onKick: (id: string) => Promise<void>;
   onTransfer: (id: string) => Promise<void>;
   onBg: (url: string) => Promise<void>;
   onDesc: (text: string) => Promise<void>;
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId });
-  const [sub, setSub] = useState<"bg" | "desc" | "roles" | "kick" | "transfer" | "unroles">("bg");
+  const [sub, setSub] = useState<"bg" | "desc" | "roles" | "kick" | "transfer" | "unroles" | "unofficer" | "unvictro" | "unhydler">("bg");
   const [bgUrl, setBgUrl] = useState("");
   // Isi awal textarea mengikuti deskripsi clan yang sudah tersimpan.
   const [descText, setDescText] = useState(detail?.clan?.description ?? "");
@@ -1768,7 +1793,16 @@ function LeaderPanel({
                 ["roles", "Add roles"],
                 ["kick", "Kick"],
                 ["transfer", "Transfer Leader"],
-                ...(isLeader ? (["unroles", "UnRoles"] as const) : ([] as const)),
+                // Pencabutan role satu per satu PLUS "UnRoles" yang membebaskan
+                // member dari role apa pun yang sedang dipegang.
+                ...(isLeader
+                  ? ([
+                      ["unroles", "UnRoles"],
+                      ["unofficer", "Un-Officer"],
+                      ["unvictro", "Un-Victro"],
+                      ["unhydler", "Un-Hydler"],
+                    ] as const)
+                  : ([] as const)),
               ] as const
             ).map(([k, label]) => (
               <button
@@ -1839,8 +1873,25 @@ function LeaderPanel({
           </div>
         )}
 
-        {(sub === "roles" || sub === "kick" || sub === "transfer" || sub === "unroles") && (
+        {(sub === "roles" ||
+          sub === "kick" ||
+          sub === "transfer" ||
+          sub === "unroles" ||
+          sub === "unofficer" ||
+          sub === "unvictro" ||
+          sub === "unhydler") && (
           <div className="yn-card mt-3 p-3">
+            {/* Panel Un-X hanya menampilkan member yang benar-benar memegang
+                role itu, jadi leader tidak perlu menebak siapa. */}
+            {UN_ROLE[sub] && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                Member yang sedang jadi{" "}
+                <span className="font-bold capitalize text-foreground">
+                  {UN_ROLE[sub]}
+                </span>
+                . Pilih salah satu untuk mencabut role-nya.
+              </p>
+            )}
             {/* Cari member dulu, baru pilih aksi */}
             <div className="pill-search mb-2">
               <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -1868,29 +1919,15 @@ function LeaderPanel({
                 ))}
               </div>
             )}
-            {sub === "unroles" && (
-              <div className="mb-2 flex gap-1.5">
-                {(["victro", "officer", "hydler"] as const).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRole(r)}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs capitalize",
-                      role === r
-                        ? "border-[oklch(0.86_0.16_90)] text-[oklch(0.86_0.16_90)]"
-                        : "border-border text-muted-foreground",
-                    )}
-                  >
-                    Un{r}
-                  </button>
-                ))}
-              </div>
-            )}
             <div className="thin-scroll max-h-[52vh] space-y-1.5 overflow-y-auto">
               {members
                 .filter(
                   (m: any) =>
                     m.role !== "leader" &&
+                    // Panel Un-X difilter sesuai role yang dicabut; panel
+                    // UnRoles (umum) bebas downgrade role apa pun.
+                    (!UN_ROLE[sub] ||
+                      String(m.role ?? "").toLowerCase() === UN_ROLE[sub]) &&
                     (!needle ||
                       String(m.username).toLowerCase().includes(needle) ||
                       String(m.userId).toLowerCase().includes(needle)),
@@ -1913,15 +1950,12 @@ function LeaderPanel({
             {picked && (
               <button
                 onClick={async () => {
-                  if (sub === "roles" || sub === "unroles") {
-                    const target = members.find((m: any) => m.userId === picked);
-                    if (target) {
-                      const finalRole =
-                        sub === "unroles"
-                          ? "member"
-                          : role;
-                      await onSetRole(picked, finalRole);
-                    }
+                  if (sub === "roles") {
+                    await onSetRole(picked, role);
+                  } else if (UN_ROLE[sub]) {
+                    await onRemoveRole(picked, UN_ROLE[sub]);
+                  } else if (sub === "unroles") {
+                    await onSetRole(picked, "member");
                   } else if (sub === "kick") {
                     await onKick(picked);
                   } else if (sub === "transfer") {
@@ -1936,9 +1970,11 @@ function LeaderPanel({
                   ? "Kick Sekarang"
                   : sub === "transfer"
                     ? "OK — Transfer"
-                    : sub === "unroles"
-                      ? "Kembalikan jadi Member"
-                      : "Terapkan"}
+                    : UN_ROLE[sub]
+                      ? `Un-${UN_ROLE[sub]} Sekarang`
+                      : sub === "unroles"
+                        ? "Kembalikan jadi Member"
+                        : "Terapkan"}
               </button>
             )}
           </div>

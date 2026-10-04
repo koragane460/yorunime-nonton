@@ -269,7 +269,7 @@ const [showMusic, setShowMusic] = useState(false);
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
-  const donghuaNews = useAction(api.sanka.donghuaScheduleCards);
+  const donghuaNews = useAction(api.sanka.donghuaWeeklySchedule);
   const [todayAiring, setTodayAiring] = useState<
     { id: string; title: string; image: string; episode: number; timeLabel: string }[]
   >([]);
@@ -296,28 +296,30 @@ const [showMusic, setShowMusic] = useState(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Donghua ikut masuk "Update News": daftar digabung dengan anime, dengan
-  // label kecil supaya user tahu mana animasi China.
+  // label kecil supaya user tahu mana animasi China. Sumbernya jadwal resmi
+  // per hari (Sanka), jadi isinya sama persis dengan tab Donghua di Jadwal.
   useEffect(() => {
     let alive = true;
-    donghuaNews({})
-      .then((r: unknown) => {
+    const todayName = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][
+      new Date().getDay()
+    ];
+    donghuaNews({ day: todayName })
+      .then((r: any) => {
         if (!alive) return;
-        const list = (r ?? []) as {
+        const list = (r?.byDay?.[todayName] ?? []) as {
           id: string;
           title: string;
           image: string;
-          nextAiringEpisode?: { episode?: number; airingAt?: number };
+          episode?: number;
         }[];
         setDonghuaAiring(
-          list
-            .filter((d) => d?.nextAiringEpisode?.airingAt)
-            .map((d) => ({
-              id: String(d.id),
-              title: String(d.title ?? ""),
-              image: String(d.image ?? ""),
-              episode: Number(d.nextAiringEpisode?.episode ?? 0) || 0,
-              airingAt: Number(d.nextAiringEpisode?.airingAt ?? 0),
-            })),
+          list.map((d) => ({
+            id: String(d.id),
+            title: String(d.title ?? ""),
+            image: String(d.image ?? ""),
+            episode: Number(d.episode ?? 0) || 0,
+            airingAt: 0,
+          })),
         );
       })
       .catch(() => {
@@ -334,10 +336,9 @@ const [showMusic, setShowMusic] = useState(false);
       ...todayAiring.map((a) => ({ ...a, isDonghua: false as const })),
       ...donghuaAiring.map((d) => ({
         ...d,
-        timeLabel: new Date(d.airingAt).toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        // Sangka tidak punya jam tayang per hari, jadi yang ditulis honestly
+        // hanya hari rilisnya — bukan angka jam yang dikarang.
+        timeLabel: "Rilis hari ini",
         isDonghua: true as const,
       })),
     ],
@@ -581,7 +582,9 @@ const [showMusic, setShowMusic] = useState(false);
               {updateNews.map((a) => (
                 <button
                   key={`${a.isDonghua ? "dh" : "an"}-${a.id}-${a.episode}`}
-                  onClick={() => openAnime(a.id, a.title)}
+                  onClick={() =>
+                    openAnime(a.id, a.title, a.isDonghua ? "sanka" : "anilist")
+                  }
                   className="w-28 shrink-0 text-left"
                 >
                   <div className="relative">
@@ -589,7 +592,9 @@ const [showMusic, setShowMusic] = useState(false);
                       title={a.title}
                       image={a.image}
                       imageOnly
-                      onClick={() => openAnime(a.id, a.title)}
+                      onClick={() =>
+                        openAnime(a.id, a.title, a.isDonghua ? "sanka" : "anilist")
+                      }
                     />
                     <span
                       className={cn(
@@ -2332,7 +2337,7 @@ function DonghuaDetailScreen({
               <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
             )}
             <div className="min-w-0 flex-1 self-end pb-1">
-              <h2 className="yn-outline text-xl font-black leading-tight">
+              <h2 className="yn-outline text-xl font-black leading-tight text-white">
                 {detail.title}
               </h2>
               {detail.genres.length > 0 && (

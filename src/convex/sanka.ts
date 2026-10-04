@@ -324,6 +324,106 @@ export const donghuaScheduleCards = action({
   },
 });
 
+/**
+ * Jadwal donghua PER HARI dari sumber resmi Sanka (`/anime/donghua/schedule`).
+ *
+ * Endpoint `donghuaScheduleCards` di atas hanya mengembalikan daftar yang
+ * sedang update (tanpa hari), jadi tab Jadwal tidak bisa mengelompokkannya per
+ * hari. Endpoint jadwal resmi mengembalikan `{ day, donghua_list: [{ title,
+ * slug }] }` — slug-nya seri (bukan per-episode), jadi aman dibuka di
+ * halaman nonton.
+ *
+ * Poster tidak ada di endpoint ini. Supaya tidak memanggil `/detail` untuk
+ * tiap judul (puluhan request, batas 30/menit), poster diambil dari satu
+ * request `/donghub/home` lalu dicocokkan lewat slug; judul yang tidak ada di
+ * sana tetap tampil tanpa poster, bukan dikarang.
+ */
+const DAY_NORMALIZE: Record<string, string> = {
+  minggu: "Minggu",
+  senin: "Senin",
+  selasa: "Selasa",
+  rabu: "Rabu",
+  kamis: "Kamis",
+  "jum'at": "Jumat",
+  jumat: "Jumat",
+  sabtu: "Sabtu",
+};
+
+export const donghuaWeeklySchedule = action({
+  args: { day: v.optional(v.string()) },
+  handler: async (_ctx, { day }) => {
+    const j = await sankaGet("/anime/donghua/schedule");
+    const rows = Array.isArray(j?.schedule) ? (j.schedule as any[]) : [];
+
+    // Satu request untuk peta slug → poster/episode/status.
+    const hub = await sankaGet("/anime/donghub/home");
+    const meta = new Map<string, SankaAnime>();
+    const hubData =
+      hub?.data && typeof hub.data === "object" ? (hub.data as any) : null;
+    for (const list of [hubData?.latest, hubData?.popular, hubData?.slider]) {
+      if (!Array.isArray(list)) continue;
+      for (const raw of list) {
+        const card = toCard(raw);
+        if (card && !meta.has(card.slug)) meta.set(card.slug, card);
+      }
+    }
+
+    const byDay: Record<string, ReturnType<typeof uiCard>[]> = {};
+    const acak: ReturnType<typeof uiCard>[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const raw = DAY_NORMALIZE[String(row?.day ?? "").trim().toLowerCase()];
+      const list = Array.isArray(row?.donghua_list) ? row.donghua_list : [];
+      for (const item of list) {
+        const slug = seriesSlug(String(item?.slug ?? "").trim());
+        if (!slug || seen.has(slug)) continue;
+        seen.add(slug);
+        // Judul di endpoint jadwal sering diawali prefix "[SVIP] " yang tidak
+        // perlu ikut tampil di kartu.
+        const title = stripEpisodeSuffix(cleanTitle(item?.title))
+          .replace(/^\s*\[\s*svip\s*\]\s*/i, "")
+          .trim();
+        const card = uiCard(meta.get(slug) ?? { title, slug });
+        if (!raw) {
+          // `Acak` = tidak punya hari tetap; tetap ditampilkan, tapi di
+          // kelompok sendiri supaya tidak diklaim sebagai jadwal hari tertentu.
+          acak.push(card);
+        } else {
+          (byDay[raw] ??= []).push(card);
+        }
+      }
+    }
+
+    // Poster hanya diambil untuk satu hari yang sedang dibuka: satu request
+    // detail per judul (maks 7), jadi tetap di bawah batas 30 request/menit
+    // dan tidak membanjiri API setiap jadwal mingguan dimuat.
+    const wanted = day ? byDay[DAY_NORMALIZE[day.trim().toLowerCase()]] : undefined;
+    if (wanted && wanted.length > 0) {
+      await Promise.all(
+        wanted.map(async (card) => {
+          if (card.image) return;
+          for (const src of DONGHUA_SOURCES) {
+            const raw = await sankaGet(
+              `/anime/${src}/detail/${encodeURIComponent(card.id)}`,
+              10_000,
+            );
+            const d: Record<string, any> =
+              raw?.data && typeof raw.data === "object" && !Array.isArray(raw.data)
+                ? (raw.data as Record<string, any>)
+                : (raw ?? {});
+            const poster = proxyImage(d.poster);
+            if (poster) {
+              card.image = poster;
+              return;
+            }
+          }
+        }),
+      );
+    }
+    return { byDay, acak };
+  },
+});
+
 export type SankaDetail = {
   title: string;
   alterTitle?: string;

@@ -65,21 +65,59 @@ function JadwalContent() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const schedule = useAction(api.anime.animeAiringSchedule);
+  const todayAiring = useAction(api.anime.animeTodayAiring);
   const comicSchedule = useAction(api.manga.schedule);
-  const donghuaSchedule = useAction(api.sanka.donghuaScheduleCards);
+  const donghuaSchedule = useAction(api.sanka.donghuaWeeklySchedule);
   const [tab, setTab] = useState<Tab>("anime");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sched, setSched] = useState<Record<string, AiringItem[]>>({});
   const [comics, setComics] = useState<Record<string, Record<string, ComicSlot[]>>>({});
-  const [donghuaRunning, setDonghuaRunning] = useState<DonghuaRow[]>([]);
+  const [donghuaByDay, setDonghuaByDay] = useState<Record<string, DonghuaRow[]>>({});
+  const [donghuaAcak, setDonghuaAcak] = useState<DonghuaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [comicLoading, setComicLoading] = useState(false);
   const todayIdx = new Date().getDay();
   const [day, setDay] = useState(todayIdx);
 
   useEffect(() => {
-    schedule({})
-      .then((r: any) => setSched((r as any) ?? {}))
+    // Jadwal mingguan AniList (lengkap per hari) digabung dengan daftar
+    // "Update News" hari ini. Keduanya dari sumber yang sama, tapi
+    // `animeTodayAiring` memakai airingSchedules sehingga sudut-sudut yang
+    // tidak masuk 3 halaman paling populer tetap ikut terlihat — tanpa ini
+    // ada judul yang tayang hari ini tapi tidak muncul di Jadwal.
+    Promise.allSettled([schedule({}), todayAiring({ limit: 60 })]).then(
+      ([weekRes, todayRes]) => {
+        const base = (weekRes.status === "fulfilled" ? weekRes.value : {}) ?? {};
+        const out: Record<string, AiringItem[]> = {};
+        for (const k of Object.keys(base)) {
+          out[k] = [...(((base as Record<string, AiringItem[]>)[k] ?? []))];
+        }
+        if (todayRes.status === "fulfilled" && Array.isArray(todayRes.value)) {
+          const todayKey = DAYS_ID[todayIdx];
+          const bucket = (out[todayKey] ??= []);
+          const have = new Set(
+            bucket.map((a) => `${a.id}-${a.episode}`),
+          );
+          for (const t of todayRes.value as any[]) {
+            const key = `${t.id}-${t.episode}`;
+            if (have.has(key)) continue;
+            have.add(key);
+            bucket.push({
+              id: String(t.id ?? ""),
+              title: String(t.title ?? ""),
+              image: String(t.image ?? ""),
+              episode: Number(t.episode ?? 0),
+              airingAt: Number(t.airingAt ?? 0),
+              day: todayKey,
+              time: String(t.timeLabel ?? "").replace(/\s*[A-Z]{2,4}$/, ""),
+              score: t.score,
+            });
+          }
+          bucket.sort((a, b) => a.airingAt - b.airingAt);
+        }
+        setSched(out);
+      },
+    )
       .catch(() => setSched({}))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,19 +159,18 @@ function JadwalContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // Donghua dimuat saat tabnya dibuka, lalu disusun per hari seperti anime.
+  // Donghua dimuat saat tabnya dibuka. Sekarang memakai jadwal resmi per hari
+  // (`/anime/donghua/schedule`), bukan daftar "sedang jalan" tanpa hari.
+  // `day` ikut dikirim supaya poster hari itu saja yang melengkapi.
   useEffect(() => {
     if (tab !== "donghua") return;
     let alive = true;
     setComicLoading(true);
-    donghuaSchedule({})
-      .then((r: unknown) => {
+    donghuaSchedule({ day: DAYS_ID[day] })
+      .then((r: any) => {
         if (!alive) return;
-        // Sanka tidak memberi jadwal airing per hari, jadi TIDAK dikarang
-        // tanggal. Semua donghua yang sedang jalan dikelompokkan di bawah
-        // sebagai daftar berjalan, bukan per hari.
-        const list = (r ?? []) as DonghuaRow[];
-        setDonghuaRunning(list);
+        setDonghuaByDay(r?.byDay ?? {});
+        setDonghuaAcak(r?.acak ?? []);
       })
       .catch(() => {})
       .finally(() => alive && setComicLoading(false));
@@ -141,7 +178,7 @@ function JadwalContent() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, day]);
 
   // Hitung mundur tiap 30 detik.
   const [, force] = useState(0);
@@ -154,7 +191,12 @@ function JadwalContent() {
     () => Object.values(sched).reduce((s, v) => s + v.length, 0),
     [sched],
   );
-  const donghuaTotal = donghuaRunning.length;
+  const donghuaTotal = useMemo(
+    () =>
+      Object.values(donghuaByDay).reduce((s, v) => s + v.length, 0) +
+      donghuaAcak.length,
+    [donghuaByDay, donghuaAcak],
+  );
   const comicCounts: Record<string, number> = {};
   for (const t of ["manga", "manhwa"] as const) {
     comicCounts[t] = Object.values(comics[t] ?? {}).reduce((s, v) => s + (v?.length ?? 0), 0);
@@ -173,7 +215,7 @@ function JadwalContent() {
     tab === "anime"
       ? (sched[DAYS_ID[day]] ?? [])
       : tab === "donghua"
-        ? donghuaRunning
+        ? (donghuaByDay[DAYS_ID[day]] ?? [])
         : (comics[tab]?.[DAYS_ID[day]] ?? []);
   const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
 
@@ -184,7 +226,7 @@ function JadwalContent() {
         {tab === "anime"
           ? "Jam tayang dalam waktu lokal kamu — dari jadwal tayang resmi AniList"
           : tab === "donghua"
-            ? "Donghua yang sedang jalan dari sumber subtitle Indonesia (SankaVollereii)"
+            ? "Jadwal rilis donghua per hari dari sumber subtitle Indonesia (SankaVollerei)"
             : "Proyeksi chapter berikutnya dari rata-rata jarak rilis chapter terakhir"}
       </p>
 
@@ -237,18 +279,14 @@ function JadwalContent() {
         )}
       </div>
 
-      <div
-        className={cn(
-          "thin-scroll mb-3 gap-1.5 overflow-x-auto pb-1",
-          // Donghua tidak punya jadwal per hari, jadi picker disembunyikan.
-          tab === "donghua" ? "hidden" : "flex",
-        )}
-      >
+      <div className="thin-scroll mb-3 flex gap-1.5 overflow-x-auto pb-1">
         {DAYS_ID.map((d, i) => {
           const count =
             tab === "anime"
               ? (sched[d] ?? []).length
-              : (comics[tab]?.[d] ?? []).length;
+              : tab === "donghua"
+                ? (donghuaByDay[d] ?? []).length
+                : (comics[tab]?.[d] ?? []).length;
           return (
             <button
               key={d}
@@ -270,45 +308,19 @@ function JadwalContent() {
       {tab === "donghua" ? (
         comicLoading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Memuat donghua…</p>
-        ) : donghuaRunning.length === 0 ? (
+        ) : (list as DonghuaRow[]).length === 0 && donghuaAcak.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada donghua yang bisa dimuat dari sumber Indonesia
+            Belum ada donghua untuk {DAYS_ID[day]}
           </p>
         ) : (
-          // SankaVollereii tidak punya jadwal airing per hari, jadi hari/week
-          // picker disembunyikan untuk tab ini. Menampilkan jam tayang yang
-          // tidak dimiliki API akan menampilkan angka yang salah.
           <div className="space-y-2">
-            {donghuaRunning.map((d) => (
-              <button
-                key={d.id}
-                onClick={() =>
-                  navigate(
-                    user
-                      ? `/nonton?anime=${encodeURIComponent(d.id)}&judul=${encodeURIComponent(d.title ?? "")}&donghua=1`
-                      : "/auth",
-                  )
-                }
-                className="flex w-full items-center gap-3 rounded-xl border border-violet-500/40 bg-secondary/30 p-2.5 text-left transition hover:border-violet-400/70"
-              >
-                {d.image ? (
-                  <img
-                    src={d.image}
-                    alt=""
-                    className="h-16 w-11 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="h-16 w-11 shrink-0 rounded-lg bg-black/40" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{d.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {d.episode ? `Sampai episode ${d.episode}` : "Sedang jalan"}
-                    {d.status ? ` • ${d.status}` : ""}
-                  </p>
-                </div>
-                <Sparkles className="size-5 shrink-0 text-violet-400/80" />
-              </button>
+            {(list as DonghuaRow[]).map((d) => (
+              <DonghuaCard key={d.id} row={d} dayLabel={DAYS_ID[day]} />
+            ))}
+            {/* Judul tanpa hari tetap tetap ditampilkan supaya tidak ada
+                donghua yang hilang dari Jadwal. */}
+            {donghuaAcak.map((d) => (
+              <DonghuaCard key={`acak-${d.id}`} row={d} dayLabel="Tanpa hari" />
             ))}
           </div>
         )
@@ -390,9 +402,50 @@ function JadwalContent() {
       <p className="mt-4 text-center text-[10px] text-muted-foreground">
         {tab === "anime"
           ? "Sumber: AniList"
-          : "Estimasi, bukan jadwal resmi — chapter bisa saja terlambat."}
+          : tab === "donghua"
+            ? "Sumber: SankaVollerei"
+            : "Estimasi, bukan jadwal resmi — chapter bisa saja terlambat."}
       </p>
     </div>
+  );
+}
+
+/** Satu baris jadwal donghua; dipisah supaya daftar hari dan daftar
+    "tanpa hari" punya tampilan yang sama. */
+function DonghuaCard({ row, dayLabel }: { row: DonghuaRow; dayLabel: string }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  return (
+    <button
+      onClick={() =>
+        navigate(
+          user
+            ? `/nonton?anime=${encodeURIComponent(row.id)}&judul=${encodeURIComponent(row.title ?? "")}&donghua=1`
+            : "/auth",
+        )
+      }
+      className="flex w-full items-center gap-3 rounded-xl border border-violet-500/40 bg-secondary/30 p-2.5 text-left transition hover:border-violet-400/70"
+    >
+      {row.image ? (
+        <img
+          src={row.image}
+          alt=""
+          className="h-16 w-11 shrink-0 rounded-lg object-cover"
+        />
+      ) : (
+        <div className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-black/40">
+          <Sparkles className="size-4 text-violet-400/70" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{row.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {row.episode ? `Sampai episode ${row.episode}` : dayLabel}
+          {row.status ? ` • ${row.status}` : ""}
+        </p>
+      </div>
+      <Sparkles className="size-5 shrink-0 text-violet-400/80" />
+    </button>
   );
 }
 

@@ -1332,7 +1332,10 @@ export function airingLabel(airingAtMs: number): string {
 export const animeTodayAiring = action({
   args: { limit: v.optional(v.number()) },
   handler: async (runCtx, { limit }) =>
-    cached(runCtx, "anime:today-airing", 30 * 60 * 1000, async () => {
+    // Key cache ikut limit: Home meminta 14, Jadwal meminta 60. Kalau key-nya
+    // sama, layar pertama yang cached (=14) dipakai juga untuk Jadwal sehingga
+    // judul yang tayang hari ini tapi tidak muncul di sana.
+    cached(runCtx, `anime:today-airing:${limit ?? 12}`, 30 * 60 * 1000, async () => {
       // AniList punya airing schedule resmi per hari; itu sumber paling
       // akurat untuk "anime yang episodenya benar-benar keluar hari ini".
       const z = userZone();
