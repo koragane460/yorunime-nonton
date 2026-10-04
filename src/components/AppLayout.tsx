@@ -73,6 +73,16 @@ export function AppLayout({
     return () => window.removeEventListener("keydown", onKey);
   }, [navPanel]);
 
+  // Ganti rute (mis. tekan Jadwal / Info saat layar Favorit terbuka) → layar
+  // panel ikut tertutup. Dulu panelnya diam saja, jadi tombol navigasi lain
+  // terasa tidak berfungsi dan user harus menekan tombol Kembali dulu.
+  useEffect(() => {
+    setNavPanel(null);
+    // `search` ikut masuk supaya panel juga tertutup saat rute yang sama
+    // diganti query-nya (mis. kartu "Untuk kamu" yang membuka detail).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
+
   useEffect(() => {
     if (user) void ensure();
   }, [user, ensure]);
@@ -613,7 +623,8 @@ function BottomNav({
   onOpenPanel,
 }: {
   navPanel: TopPanel;
-  onOpenPanel: (p: Exclude<TopPanel, null>) => void;
+  /** null = tutup panel yang sedang terbuka (tekan tombolnya dua kali). */
+  onOpenPanel: (p: TopPanel) => void;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -734,9 +745,15 @@ function BottomNav({
             // terbuka, supaya tombolnya terlihat terpilih.
             const active = it.panel
               ? navPanel === it.panel
-              : base === "/home"
-                ? location.pathname === "/home" || location.pathname === "/"
-                : base !== "" && location.pathname.startsWith(base);
+              : // Garis penanda aktif: cuma SATU tombol yang boleh
+                // menampilkan garis. Selama layar panel terbuka, tombol
+                // rute dianggap tidak aktif — kalau tidak, Favorit dan
+                // (mis.) Home sama-sama menampilkan garisnya.
+                navPanel
+                ? false
+                : base === "/home"
+                  ? location.pathname === "/home" || location.pathname === "/"
+                  : base !== "" && location.pathname.startsWith(base);
             const isHome = base === "/home";
             const Icon = it.icon;
             return (
@@ -752,7 +769,9 @@ function BottomNav({
                   // yang dirender AppLayout (bukan di sini — lihat catatan
                   // pada state navPanel).
                   if (it.panel) {
-                    onOpenPanel(it.panel);
+                    // Tekan lagi sambil masih terbuka → tutup (pengganti
+                    // tombol Kembali yang sudah dihapus dari layar Favorit).
+                    onOpenPanel(navPanel === it.panel ? null : it.panel);
                     return;
                   }
                   onClickItem(it.path);

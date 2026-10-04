@@ -557,9 +557,25 @@ export function MostWatchedPanel({
   const topGenre = taste?.genres?.[0]?.name;
   const totalMinutes = items.reduce((a, b) => a + (b.minutesWatched ?? 0), 0);
   const maxMinutes = Math.max(1, ...items.map((i) => i.minutesWatched ?? 0));
-  // Belum cukup riwayat → layar ini tidak muncul sama sekali (tombolnya
-  // juga sudah diredupkan di HomeTopButtons).
-  if (items.length < MOST_MIN_TITLES) return null;
+  // Riwayat belum cukup → tetap buka layar ini dengan pesan, bukan layar
+  // kosong. Tombol tabnya sengaja tidak pernah dimatikan supaya semua tab
+  // di layar Koleksi selalu berfungsi saat dipencet.
+  if (items.length < MOST_MIN_TITLES) {
+    return (
+      <PanelShell
+        title="Paling sering"
+        subtitle="Statistik tontonan kamu"
+        onClose={onClose}
+        inline={inline}
+      >
+        <EmptyState
+          icon={<Flame className="size-6" />}
+          title="Belum cukup riwayat tontonan"
+          body={`Tonton dulu minimal ${MOST_MIN_TITLES} judul berbeda. Setelah itu statistik genre, menit, dan judul paling sering kamu tonton akan muncul di sini.`}
+        />
+      </PanelShell>
+    );
+  }
 
   const go = (r: MostRow) =>
     navigate(

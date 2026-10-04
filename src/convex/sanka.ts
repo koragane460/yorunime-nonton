@@ -386,48 +386,13 @@ function shortEpisodeTitle(raw: string, number: number): string {
 }
 
 /**
- * Lengkapi episode yang hilang supaya daftar dimulai dari episode 1.
+ * Detail satu judul; donghua dicoba lebih dulu kalau diminta.
  *
- * Sumber donghua hanya mengembalikan jendela episode TERBARU (mis. 68-75),
- * sehingga daftar yang tampil lokal dimulai di angka 70an. Dari satu slug
- * yang pola typename-"episode-N" bisa ditebak slug episode lain, jadi
- * episode 1..min-1 disisipkan dengan slug hasil tebakan itu. Kalau polanya
- * tidak bisa dibaca, daftar dibiarkan apa adanya (tidak dikarang asal).
+ * Catatan: episode lama sengaja TIDAK ditambah-tambah. Sumber donghua
+ * hanya mengembalikan jendela episode terbaru, tapi slugs di luar jendela
+ * itu tidak bisa dipastikan — kalau dikarang, halaman nonton berhenti di
+ * "episode tidak ada" / judul jadi Untitled. Lebih baik daftar apa adanya.
  */
-function fillMissingEpisodes(
-  eps: { number: number; title: string; url: string }[],
-): { number: number; title: string; url: string }[] {
-  if (eps.length === 0) return eps;
-  const sorted = [...eps].sort((a, b) => a.number - b.number);
-  const first = sorted[0].number;
-  if (!Number.isFinite(first) || first <= 1) return sorted;
-
-  // Cari pola slug dari episode mana pun: "judul-seri-episode-42-subtitle-indonesia"
-  let pattern: { prefix: string; suffix: string } | null = null;
-  for (const e of sorted) {
-    const m = e.url.match(/^(.*?-episode-)(\d+)(.*)$/i);
-    if (m) {
-      pattern = { prefix: m[1], suffix: m[3] };
-      break;
-    }
-  }
-  if (!pattern) return sorted;
-
-  const have = new Set(sorted.map((e) => e.number));
-  const filled = [
-    ...sorted,
-    ...Array.from({ length: first - 1 }, (_, i) => i + 1)
-      .filter((n) => !have.has(n))
-      .map((n) => ({
-        number: n,
-        title: `Episode ${n}`,
-        url: `${pattern!.prefix}${n}${pattern!.suffix}`,
-      })),
-  ];
-  return filled.sort((a, b) => a.number - b.number);
-}
-
-/** Detail satu judul; donghua dicoba lebih dulu kalau diminta. */
 export const detail = action({
   args: { slug: v.string(), preferDonghua: v.optional(v.boolean()) },
   handler: async (
@@ -472,9 +437,7 @@ export const detail = action({
           : Array.isArray(d.episode)
             ? d.episode
             : [];
-      const eps = fillMissingEpisodes(
-        rawEps.map(mapEpisode).filter((e) => e.url.length > 0),
-      );
+      const eps = rawEps.map(mapEpisode).filter((e) => e.url.length > 0);
       // Nomor episode boleh 0 kalau sumber memang tidak memberi nomor, tapi
       // daftar tetap boleh kosong — itu yang membuat mencoba source lain.
       if (!synopsis && eps.length === 0 && genres.length === 0) continue;

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import {
   Bell,
   CheckCheck,
+  ChevronLeft,
   Megaphone,
   MessageSquare,
   Sparkles,
@@ -110,7 +111,14 @@ function NotifSheet({
         side="bottom"
         className="inset-0 top-0 h-dvh max-h-none w-full max-w-none gap-0 overflow-y-auto rounded-none border-0 bg-background/97 pb-6 backdrop-blur md:mx-auto md:max-w-2xl"
       >
-        <SheetHeader className="sticky top-0 z-10 border-b border-white/10 bg-background/95 px-4 py-3 backdrop-blur">
+        <SheetHeader className="sticky top-0 z-10 flex-row items-center gap-3 border-b border-white/10 bg-background/95 px-3 py-3 backdrop-blur">
+          <button
+            onClick={() => onOpenChange(false)}
+            aria-label="Kembali"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/20 text-white/80 transition hover:border-white/45 hover:text-white"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
           <SheetTitle className="flex items-center gap-2 text-base">
             <Bell className="size-4 text-primary" /> Notifikasi
           </SheetTitle>
@@ -126,12 +134,12 @@ function NotifSheet({
               <div
                 key={n._id}
                 className={cn(
-                  "flex gap-2.5 border p-2.5",
+                  "flex gap-2.5 rounded-2xl border p-3",
                   n.type === "premiumClaim"
                     ? "border-amber-500/40 bg-amber-500/[0.07]"
                     : i === 0
                       ? "border-primary/50 bg-primary/10"
-                      : "border-white/10 bg-white/[0.03]",
+                      : "border-white/10 bg-white/[0.05]",
                 )}
               >
                 {n.type === "premiumClaim" && n.refUserId ? (
@@ -143,7 +151,7 @@ function NotifSheet({
                 ) : (
                 <span
                   className={cn(
-                    "mt-0.5 flex size-8 shrink-0 items-center justify-center",
+                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl",
                     i === 0 ? "bg-primary/20" : "bg-white/[0.06]",
                   )}
                 >
@@ -187,7 +195,7 @@ function NotifSheet({
                       onOpenChange(false);
                       navigate(`/?pilih=${c.animeId.split("__")[0]}`);
                     }}
-                    className="block w-full overflow-hidden border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
+                    className="block w-full overflow-hidden rounded-2xl border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
                   >
                     {c.bannerUrl && (
                       <div

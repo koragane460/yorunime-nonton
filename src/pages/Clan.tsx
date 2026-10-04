@@ -13,6 +13,88 @@ import { ClanRankWings } from "@/components/ClanRankWings";
  * Warna nomor peringkat di daftar Top clan: 1 emas, 2 perak, 3 perunggu,
  * sisanya netral supaya angka 1-100 tetap terbaca tanpa warna berlebihan.
  */
+/**
+ * Hash acak tapi deterministik dari id — dipakai untuk mengacak urutan clan
+ * di tab "Semua" tanpa membuat daftar berkedip tiap render.
+ */
+function hashId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+/** Peringkat 1-3 selalu tampil sebagai podium. */
+function ClanPodium({
+  clans,
+  myPending,
+  onOpen,
+  onRequest,
+}: {
+  clans: any[];
+  myPending?: string | null;
+  onOpen: (id: Id<"clans">) => void;
+  onRequest: (id: Id<"clans">) => void;
+}) {
+  // Urutan visual podium: 2 · 1 · 3 (yang di tengah tinggi).
+  const order = [clans[1], clans[0], clans[2]].filter(Boolean);
+  return (
+    <div className="grid grid-cols-3 gap-6 px-2">
+      {order.map((c: any) => {
+        const rank = clans.findIndex((x: any) => x._id === c._id) + 1;
+        return (
+          <ClanRankWings key={c._id} rank={rank} className="min-w-0">
+            <button
+              onClick={() => onOpen(c._id as Id<"clans">)}
+              className="member-row flex w-full flex-col items-center gap-1 px-1.5 py-3 text-center transition hover:border-[oklch(0.86_0.16_90)]/40"
+            >
+              <span
+                className={cn(
+                  "text-[13px] font-black leading-none",
+                  rankColor(rank),
+                )}
+              >
+                {rank}
+              </span>
+              <Avatar src={c.avatarUrl} seed={c.name} className="size-12 shrink-0" />
+              <p
+                className={cn(
+                  "w-full truncate px-0.5 text-[13px] font-bold leading-tight",
+                  clanNameClass(c.level),
+                )}
+              >
+                {c.name}
+              </p>
+              <p className="text-[10px] leading-tight text-primary">
+                {formatK(c.diamonds)}
+              </p>
+              <span className="text-[10px] text-muted-foreground">
+                {c.memberCount} member
+              </span>
+              <span
+                role="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequest(c._id as Id<"clans">);
+                }}
+                className={cn(
+                  "mt-1 w-full rounded-xl py-1.5 text-[11px] font-bold transition",
+                  myPending === c._id
+                    ? "bg-emerald-600 text-white"
+                    : "bg-primary text-white hover:brightness-110",
+                )}
+              >
+                {myPending === c._id ? "Terkirim" : "Join"}
+              </span>
+            </button>
+          </ClanRankWings>
+        );
+      })}
+    </div>
+  );
+}
+
 function rankColor(rank: number): string {
   if (rank === 1) return "text-amber-300";
   if (rank === 2) return "text-slate-300";
@@ -143,6 +225,10 @@ function NoClan({
   const [mode, setMode] = useState<"none" | "buat" | "gabung">(
     initialCreate ? "buat" : "none",
   );
+  // Dua tombol di paling atas: Semua (podium 1-3 + sisanya acak) dan
+  // Top clan (peringkat 1-100 menurut Sacret).
+  const [tab, setTab] = useState<"semua" | "best">("semua");
+  const [q, setQ] = useState("");
   const clans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   // Clan yang sedang kita-request → tombolnya jadi centang hijau.
@@ -151,11 +237,33 @@ function NoClan({
     user ? {} : "skip",
   );
   const [detailId, setDetailId] = useState<Id<"clans"> | null>(null);
+  // Pesan galat ringan (mis. request join ditolak server).
+  const [warn, setWarn] = useState<string | null>(null);
   const back = useNavigate();
   // Daftar clan = layar fullscreen (navbar bawah & mini player disembunyikan)
   useHideNavOnMount();
   // Lihat clan dari list = fullscreen juga (navbar & mini player hilang)
   useHideNavWhile(detailId !== null);
+
+  // Peringkat global: Sacret terbanyak = #1.
+  const ranked = [...(clans ?? [])].sort(
+    (a: any, b: any) => (b.diamonds ?? 0) - (a.diamonds ?? 0),
+  );
+  const podium = ranked.slice(0, 3);
+  // "Acak" tapi STABIL: urutannya ditentukan dari hash id, jadi tidak
+  // berubah tiap render (tidak berkedip saat ada update data kecil).
+  const rest = ranked
+    .slice(3)
+    .slice()
+    .sort((a: any, b: any) => hashId(a._id) - hashId(b._id));
+  const needle = q.trim().toLowerCase();
+  // Saat mencari, cari di SEMUA clan (termasuk top 3) dan podium disembunyikan.
+  const pool = needle ? ranked : rest;
+  const filtered = needle
+    ? pool.filter((c: any) =>
+        `${c.name ?? ""} ${c.tag ?? ""}`.toLowerCase().includes(needle),
+      )
+    : pool;
 
   if (detailId)
     return <ClanDetail clanId={detailId} onBack={() => setDetailId(null)} viewerNotMember />;
@@ -183,27 +291,124 @@ function NoClan({
         </button>
       </div>
 
-      {/* List clan langsung tampil di atas — bisa dilihat & join tanpa buka layar lain */}
-      {/* Sisakan ruang kiri-kanan supaya sayap clan 1-3 (yang menjorok keluar
-          dari kartu) tidak terdorong keluar layar dan jadi tidak kelihatan. */}
-      <div className="mt-3 space-y-2 px-10">
-          {(clans ?? []).length === 0 && (
+      {/* Dua tombol: Semua / Top clan */}
+      <div className="tab-pill-track mt-3">
+        {(["semua", "best"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn("tab-pill", tab === t && "tab-pill-active")}
+          >
+            {t === "semua" ? "Semua" : "Top clan"}
+          </button>
+        ))}
+      </div>
+
+      {/* Kolom cari clan: nama clan ATAU tag clan. */}
+      <div className="mt-3 flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 focus-within:border-primary/50">
+        <Search className="size-4 shrink-0 text-white/45" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Cari clan: nama atau tag clan"
+          aria-label="Cari clan"
+          className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+        />
+        {q && (
+          <button
+            onClick={() => setQ("")}
+            aria-label="Bersihkan pencarian"
+            className="shrink-0 text-white/50 hover:text-white"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Pesan galat (mis. server menolak request join). */}
+      {warn && (
+        <div className="mt-3 rounded-2xl border border-foreground/40 bg-primary/10 p-3 text-xs">
+          <p>{warn}</p>
+          <button
+            className="mt-1 font-semibold text-primary underline"
+            onClick={() => setWarn(null)}
+          >
+            tutup
+          </button>
+        </div>
+      )}
+
+      {/* Papan peringkat top 1-3: sayap + warna medali ada di sini, jadi
+          daftar di bawahnya boleh LEBAR penuh (tombol Join jadi lega dan
+          tidak menutupi isi kartu lain). */}
+      {!needle && podium.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            {tab === "best" ? "Podium top clan" : "Tiga teratas"}
+          </p>
+          <ClanPodium
+            clans={podium}
+            myPending={myPending}
+            onOpen={setDetailId}
+            onRequest={async (id: any) => {
+              try {
+                const r = await requestJoin({ clanId: id });
+                toast.success(r.requested ? "Request terkirim" : "Request dibatalkan");
+              } catch (err) {
+                setDetailId(id);
+                setWarn(
+                  err instanceof Error ? err.message : "Buka detail clan untuk request join",
+                );
+              }
+            }}
+          />
+        </div>
+      )}
+
+      <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+        {needle
+          ? `Hasil pencarian (${filtered.length})`
+          : tab === "best"
+            ? `Peringkat 4 ke bawah (${filtered.length})`
+            : `Clan lainnya (${filtered.length}) — urutan acak`}
+      </p>
+
+      {/* List clan: LEBAR penuh (tanpa ruang kosong kiri-kanan, karena
+          sayapnya sudah ada di podium). */}
+      <div className="space-y-2 pb-24">
+          {filtered.length === 0 && (
             <p className="py-6 text-center text-xs text-muted-foreground">
-              Belum ada clan. Jadilah yang pertama!
+              {needle
+                ? `Tidak ada clan yang cocok dengan "${q}"`
+                : "Belum ada clan. Jadilah yang pertama!"}
             </p>
           )}
-          {(clans ?? []).map((c: any, i: number) => (
-            <ClanRankWings key={c._id} rank={i + 1}>
+          {filtered.map((c: any, i: number) => {
+            // Nomor peringkat hanya di Top clan (mulai dari 4; podium 1-3
+            // sudah tampil di atas).
+            const rank = tab === "best" && !needle ? i + 4 : 0;
+            return (
             <div
-              className="member-row cursor-pointer p-3 transition hover:border-[oklch(0.86_0.16_90)]/40"
+              key={c._id}
+              className="member-row flex cursor-pointer flex-col gap-3 p-4 transition hover:border-[oklch(0.86_0.16_90)]/40 sm:flex-row sm:items-center"
               onClick={() => setDetailId(c._id as Id<"clans">)}
             >
-              <div className="flex items-center gap-3">
-                <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                {rank > 0 && (
+                  <span
+                    className={cn(
+                      "w-7 shrink-0 text-center text-base font-black tabular-nums",
+                      rankColor(rank),
+                    )}
+                  >
+                    {rank}
+                  </span>
+                )}
+                <Avatar src={c.avatarUrl} seed={c.name} className="size-14 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className={cn("truncate font-bold", clanNameClass(c.level))}>{c.name}</p>
+                  <p className={cn("truncate text-[15px] font-bold", clanNameClass(c.level))}>{c.name}</p>
                   <ClanTag icon={c.tagIcon} tag={c.tag} color={c.color} level={c.level} className="mt-0.5" />
-                  <div className="mt-1 flex gap-3 text-[11px] text-muted-foreground">
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       <Users className="size-3" aria-hidden /> {c.memberCount} member
                     </span>
@@ -215,34 +420,37 @@ function NoClan({
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      const r = await requestJoin({ clanId: c._id as Id<"clans"> });
-                      toast.success(r.requested ? "Request terkirim" : "Request dibatalkan");
-                    } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Gagal request");
-                    }
-                  }}
-                  aria-label={myPending === c._id ? "Batalkan request" : "Join clan"}
-                  className={cn(
-                    "flex size-10 shrink-0 items-center justify-center rounded-full transition active:scale-95",
-                    myPending === c._id
-                      ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                      : "bg-primary text-white hover:bg-primary",
-                  )}
-                >
-                  {myPending === c._id ? (
-                    <Check className="size-5" strokeWidth={3} />
-                  ) : (
-                    <span className="text-xs font-bold">Join</span>
-                  )}
-                </button>
               </div>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const r = await requestJoin({ clanId: c._id as Id<"clans"> });
+                    toast.success(r.requested ? "Request terkirim" : "Request dibatalkan");
+                  } catch (err) {
+                    setDetailId(c._id as Id<"clans">);
+                    setWarn(
+                      err instanceof Error ? err.message : "Buka detail clan untuk request join",
+                    );
+                  }
+                }}
+                aria-label={myPending === c._id ? "Batalkan request" : "Join clan"}
+                className={cn(
+                  "flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl px-5 text-xs font-bold transition active:scale-95 sm:ml-auto",
+                  myPending === c._id
+                    ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                    : "bg-primary text-white hover:bg-primary",
+                )}
+              >
+                {myPending === c._id ? (
+                  <Check className="size-5" strokeWidth={3} />
+                ) : (
+                  "Join"
+                )}
+              </button>
             </div>
-            </ClanRankWings>
-          ))}
+            );
+          })}
       </div>
 
       {mode === "buat" && (
@@ -666,9 +874,6 @@ function ClanDetail({
   viewerNotMember?: boolean;
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId });
-  // Peringkat clan ini di daftar global (diamond tertinggi = #1), supaya
-  // warna nama di detail sama dengan warnanya di daftar clan.
-  const allClans = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   const donate = useMutation(api.clans.donate);
   const claim = useMutation(api.clans.claimDaily);
@@ -743,10 +948,6 @@ function ClanDetail({
   const t1 = topDonate[0];
   const t2 = topDonate[1];
   const t3 = topDonate[2];
-  // Peringkat global clan ini: 1 emas, 2 perak, 3 perunggu, lainnya putih.
-  const clanRank = [...(allClans ?? [])]
-    .sort((a: any, b: any) => (b.diamonds ?? 0) - (a.diamonds ?? 0))
-    .findIndex((x: any) => x._id === clanId) + 1;
   void viewerNotMember;
 
   return (
@@ -803,12 +1004,10 @@ function ClanDetail({
             </div>
             <p
               className={cn(
-                "mt-2 truncate text-2xl font-black text-white yn-outline",
-                // Warna mengikuti peringkat global clan: 1 emas, 2 perak,
-                // 3 perunggu, 4 ke atas tetap putih.
-                clanRank === 1 && "clan-color-golden",
-                clanRank === 2 && "clan-color-silver",
-                clanRank === 3 && "text-orange-300",
+                "mt-2 truncate text-2xl font-black yn-outline",
+                // Warna nama ikut LEVEL clan (biru → hijau → ungu → emas),
+                // sama persis dengan warnanya di daftar clan & Top clan.
+                clanNameClass(c.level),
               )}
             >
               {c.name}

@@ -9,7 +9,7 @@
 // halaman detail, jadi tidak ada yang berubah soal penyimpanan favorit.
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Download, Flame, Sparkles } from "lucide-react";
+import { Download, Flame, Sparkles } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,7 +17,6 @@ import { cn } from "@/lib/utils";
 import {
   DownloadsPanel,
   ForYouPanel,
-  MOST_MIN_TITLES,
   MostWatchedPanel,
 } from "@/components/HomeTopButtons";
 
@@ -26,7 +25,6 @@ type Tab = "downloads" | "most" | "foryou";
 export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const stats = useQuery(api.downloads.downloadStats, user ? {} : "skip");
-  const watched = useQuery(api.activities.mostWatched, user ? { limit: 20 } : "skip");
 
   // Default-nya Download: tab itu selalu punya isi.
   const [tab, setTab] = useState<Tab>("downloads");
@@ -40,9 +38,6 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   }, [tab]);
 
   const dlCount = stats?.done ?? 0;
-  // "Paling sering" baru aktif setelah riwayat cukup; sebelum itu tombolnya
-  // mati supaya tidak membuka analisis kosong.
-  const mostReady = ((watched ?? []) as unknown[]).length >= MOST_MIN_TITLES;
 
   const tabs: { key: Tab; label: string; Icon: typeof Download; badge: string | null }[] = [
     {
@@ -59,13 +54,9 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
     <div className="screen-enter pb-24">
       <header className="sticky top-0 z-20 border-b border-white/10">
         <div className="flex items-center gap-3 pt-3">
-          <button
-            onClick={onClose}
-            aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
+          {/* Tombol Kembali sengaja dihapus: tab di bawah bisa langsung
+              dipencet dan tombol navigasi bawah tetap berfungsi, jadi tidak
+              perlu tombol balik terpisah. */}
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-base font-bold tracking-tight">
               Koleksi kamu
@@ -83,7 +74,8 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
             hanya garis bawah + warna teks. */}
         <div className="mt-1 grid grid-cols-3 items-stretch gap-3 px-1">
           {tabs.map(({ key, label, Icon, badge }) => {
-            const disabled = key === "most" && !mostReady;
+            // Ketiganya selalu bisa dipencet — tidak ada tombol yang mati,
+            // jadi pengguna tidak perlu menekan tombol Kembali dulu.
             const active = tab === key;
             return (
               <button
@@ -94,14 +86,11 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
                   // umpan balik: kembalikan isi ke atas, jangan diam.
                   bodyRef.current?.scrollIntoView({ block: "start" });
                 }}
-                disabled={disabled}
+                disabled={false}
                 aria-selected={active}
-                title={
-                  disabled ? `Butuh ${MOST_MIN_TITLES} judul ditonton` : label
-                }
+                title={label}
                 className={cn(
                   "relative flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 pb-2 pt-2.5 transition",
-                  disabled && "opacity-40",
                   active ? "text-white" : "text-muted-foreground",
                 )}
               >

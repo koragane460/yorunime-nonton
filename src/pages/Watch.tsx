@@ -211,6 +211,20 @@ function WatchContent() {
   const epParam =
     params.get("ep") ?? (room ? `${room.animeId}__ep${room.episode}` : null);
 
+  /**
+   * URL pindah episode dengan SEMUA parameter yang tetap terbawa.
+   *
+   * Dulu tiap ganti episode membangun URL baru dari nol
+   * (`/nonton?anime=...&ep=...`), jadi `judul` dan `donghua=1` hilang:
+   * judul otomatis diganti "Untitled" dan donghua dimuat ulang seolah-olah
+   * anime biasa. Dengan menyalin query yang ada, yang berganti hanya `ep`.
+   */
+  const epUrl = (epId: string) => {
+    const p = new URLSearchParams(params.toString());
+    p.set("ep", epId);
+    return `/nonton?${p.toString()}`;
+  };
+
   // Otomatis join begitu membuka room (kecuali room yang membatasi peserta).
   useEffect(() => {
     if (!roomId || !room || joinedRoom) return;
@@ -1853,7 +1867,7 @@ function WatchContent() {
                   });
                   return;
                 }
-                navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex - 1].id}`);
+                navigate(epUrl(epList[epIndex - 1].id));
               }}
               className={cn(
                 "rounded-full bg-black/50 p-2",
@@ -1885,7 +1899,7 @@ function WatchContent() {
                   });
                   return;
                 }
-                navigate(`/nonton?anime=${animeId}&ep=${epList[epIndex + 1].id}`);
+                navigate(epUrl(epList[epIndex + 1].id));
               }}
               className={cn(
                 "rounded-full bg-black/50 p-2",
@@ -2212,7 +2226,7 @@ function WatchContent() {
                       void roomSetEpisode({ roomId: room._id, episode: e.number });
                       return;
                     }
-                    navigate(`/nonton?anime=${animeId}&ep=${e.id}`);
+                    navigate(epUrl(e.id));
                   }}
                   className={cn(
                     "rounded-md border py-2 text-xs font-semibold",

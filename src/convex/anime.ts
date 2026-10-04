@@ -253,6 +253,7 @@ const ANILIST_FIELDS = `
   genres
   isAdult
   studios(isMain: true) { nodes { name } }
+  description(asHtml: false)
   nextAiringEpisode { episode airingAt timeUntilAiring }
   startDate { year month day }
 `;
