@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useHideNavOnMount } from "@/components/AppLayout";
+import { useHideNavOnMount, useHideNavWhile } from "@/components/AppLayout";
 import {
   deleteEpisode,
   fetchWithProgress,
@@ -15,7 +15,6 @@ import {
 } from "@/lib/offline-store";
 import {
   AlertCircle,
-  Bookmark,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -61,13 +60,19 @@ function PanelShell({
   onClose,
   children,
   footer,
+  inline,
 }: {
   title: string;
   subtitle?: string;
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** true = isi tampil di tempat (tab), bukan layar fullscreen. */
+  inline?: boolean;
 }) {
+  // Mode tab: panel ini bukan layar penuh, jadi cukupopan biasa dan
+  // navigasi bawah tetap terlihat.
+  if (inline) return <div className="pb-24">{children}</div>;
   return (
     <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-border px-3 py-3">
@@ -110,8 +115,15 @@ type DlRow = {
   error?: string;
 };
 
-export function DownloadsPanel({ onClose }: { onClose: () => void }) {
-  useHideNavOnMount();
+export function DownloadsPanel({
+  onClose,
+  inline,
+}: {
+  onClose: () => void;
+  /** true = tampil di tempat sebagai tab, bukan layar fullscreen. */
+  inline?: boolean;
+}) {
+  useHideNavWhile(!inline);
   const navigate = useNavigate();
   const { user } = useAuth();
   const rows = useQuery(api.downloads.myDownloads, user ? {} : "skip");
@@ -227,6 +239,7 @@ export function DownloadsPanel({ onClose }: { onClose: () => void }) {
         title="Download"
         subtitle="Episode yang tersimpan di perangkat ini"
         onClose={onClose}
+      inline={inline}
       >
         <EmptyState
           icon={<Download className="size-6" />}
@@ -246,6 +259,7 @@ export function DownloadsPanel({ onClose }: { onClose: () => void }) {
           : "Episode yang tersimpan di perangkat ini"
       }
       onClose={onClose}
+      inline={inline}
       footer={
         <button
           onClick={() => {
@@ -525,8 +539,15 @@ type MostRow = {
   lastEpisode: number;
 };
 
-export function MostWatchedPanel({ onClose }: { onClose: () => void }) {
-  useHideNavOnMount();
+export function MostWatchedPanel({
+  onClose,
+  inline,
+}: {
+  onClose: () => void;
+  /** true = tampil di tempat sebagai tab, bukan layar fullscreen. */
+  inline?: boolean;
+}) {
+  useHideNavWhile(!inline);
   const navigate = useNavigate();
   const { user } = useAuth();
   const rows = useQuery(api.activities.mostWatched, user ? { limit: 20 } : "skip");
@@ -554,6 +575,7 @@ export function MostWatchedPanel({ onClose }: { onClose: () => void }) {
           : "Statistik tontonan kamu"
       }
       onClose={onClose}
+      inline={inline}
     >
       {items.length === 0 ? (
         <EmptyState
@@ -663,8 +685,15 @@ type RecoCard = {
   synopsis?: string;
 };
 
-export function ForYouPanel({ onClose }: { onClose: () => void }) {
-  useHideNavOnMount();
+export function ForYouPanel({
+  onClose,
+  inline,
+}: {
+  onClose: () => void;
+  /** true = tampil di tempat sebagai tab, bukan layar fullscreen. */
+  inline?: boolean;
+}) {
+  useHideNavWhile(!inline);
   const { user } = useAuth();
   const taste = useQuery(api.activities.genreTaste, user ? {} : "skip");
   const history = useQuery(api.activities.mostWatched, user ? { limit: 30 } : "skip");
@@ -718,6 +747,7 @@ export function ForYouPanel({ onClose }: { onClose: () => void }) {
           : "Makin banyak kamu nonton, makin tepat sarannya"
       }
       onClose={onClose}
+      inline={inline}
     >
       {loading ? (
         <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5">
@@ -823,172 +853,6 @@ function MiniPick({ card }: { card: RecoCard }) {
 }
 
 /* ========================================================= FAVORIT ===== */
-
-type FavRow = {
-  _id: string;
-  animeId: string;
-  animeTitle: string;
-  animeImage?: string;
-  createdAt: number;
-};
-
-/** Daftar judul yang ditandai favorit — dibuka dari tombol di navigasi. */
-export function FavoritesPanel({ onClose }: { onClose: () => void }) {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const rows = useQuery(api.activities.myFavorites, user ? {} : "skip");
-  const remove = useMutation(api.activities.toggleFavorite);
-  const stats = useQuery(api.downloads.downloadStats, user ? {} : "skip");
-  const watched = useQuery(api.activities.mostWatched, user ? { limit: 20 } : "skip");
-  const [sub, setSub] = useState<Exclude<TopPanel, null> | null>(null);
-  const items = ((rows ?? []) as unknown as FavRow[])
-    .slice()
-    .sort((a, b) => b.createdAt - a.createdAt);
-
-  // Layar penuh yang dibuka dari tiga tombol di paling atas.
-  if (sub === "downloads") return <DownloadsPanel onClose={() => setSub(null)} />;
-  if (sub === "most") return <MostWatchedPanel onClose={() => setSub(null)} />;
-  if (sub === "foryou") return <ForYouPanel onClose={() => setSub(null)} />;
-
-  const dlCount = stats?.done ?? 0;
-  // "Paling sering" butuh riwayat cukup; sebelum itu tombolnya dinonaktifkan
-  // supaya tidak membuka layar kosong.
-  const mostReady = ((watched ?? []) as unknown[]).length >= MOST_MIN_TITLES;
-
-  const topButtons = [
-    {
-      key: "downloads" as const,
-      label: "Download",
-      Icon: Download,
-      badge: dlCount > 0 ? (dlCount > 99 ? "99+" : String(dlCount)) : null,
-      disabled: false,
-    },
-    {
-      key: "most" as const,
-      label: "Paling sering",
-      Icon: Flame,
-      badge: null,
-      disabled: !mostReady,
-    },
-    {
-      key: "foryou" as const,
-      label: "Untuk kamu",
-      Icon: Sparkles,
-      badge: null,
-      disabled: false,
-    },
-  ];
-
-  return (
-    <div className="screen-enter pb-24">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 py-3 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onClose}
-            aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-bold tracking-tight">Favorit</h1>
-            <p className="truncate text-[11px] text-muted-foreground">
-              {items.length
-                ? `${items.length} judul tersimpan`
-                : "Judul yang kamu tandai favorit"}
-            </p>
-          </div>
-        </div>
-
-        {/* Tiga tombol di paling atas layar ini: Download / Paling sering /
-            Untuk kamu — jadi baris navigasi tetap 5 tombol. */}
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {topButtons.map(({ key, label, Icon, badge, disabled }) => (
-            <button
-              key={key}
-              onClick={() => !disabled && setSub(key)}
-              disabled={disabled}
-              title={disabled ? `Butuh ${MOST_MIN_TITLES} judul ditonton` : label}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 transition",
-                disabled
-                  ? "border-border opacity-40"
-                  : "border-border hover:border-foreground/40",
-              )}
-            >
-              <span className="relative">
-                <Icon className="size-5" />
-                {badge && (
-                  <span className="absolute -right-2 -top-1.5 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
-                    {badge}
-                  </span>
-                )}
-              </span>
-              <span className="text-center text-[10px] font-semibold leading-tight">
-                {label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <div className="pt-3">
-      {items.length === 0 ? (
-        <EmptyState
-          icon={<Bookmark className="size-6" />}
-          title="Belum ada favorit"
-          body="Buka halaman detail anime atau donghua, lalu tekan ikon bookmark untuk menyimpannya di sini."
-        />
-      ) : (
-        <div className="space-y-2">
-          {items.map((f) => (
-            <div
-              key={f._id}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card/50 p-2.5"
-            >
-              <button
-                onClick={() =>
-                  navigate(
-                    `/nonton?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`,
-                  )
-                }
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
-              >
-                <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
-                  {f.animeImage && (
-                    <img
-                      src={f.animeImage}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  )}
-                </div>
-                <p className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-                  {f.animeTitle}
-                </p>
-              </button>
-              <button
-                onClick={() =>
-                  void remove({
-                    animeId: f.animeId,
-                    animeTitle: f.animeTitle,
-                    animeImage: f.animeImage,
-                  })
-                }
-                aria-label={`Hapus ${f.animeTitle} dari favorit`}
-                title="Hapus dari favorit"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-red-500/60 hover:text-red-400"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      </div>
-    </div>
-  );
-}
 
 /* ================================================ LANJUTKAN NONTON ===== */
 

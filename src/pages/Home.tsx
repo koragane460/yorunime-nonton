@@ -2198,9 +2198,10 @@ function DonghuaDetailScreen({
   onPlay: (epSlug: string, ep: number, title: string) => void;
   /** Buka donghua lain dari baris "Yang serupa". */
   onPickDonghua?: (slug: string) => void;
-}) {
-  useHideNavOnMount();
+}) {useHideNavOnMount();
   const getDetail = useAction(api.sanka.detail);
+  const { user } = useAuth();
+  const toggleFav = useMutation(api.activities.toggleFavorite);
   const [detail, setDetail] = useState<SankaDetailShape | null>(null);
   const [failed, setFailed] = useState(false);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
@@ -2323,6 +2324,46 @@ function DonghuaDetailScreen({
         </div>
 
         <div className="px-3">
+          {/* Baris aksi: "Tonton" untuk episode pertama, "Favorite" di
+              kanannya. Sama seperti di detail anime. */}
+          <div className="mt-4 flex items-stretch gap-2">
+            <SkewButton
+              variant="accent"
+              className="flex-1"
+              disabled={detail.episodes.length === 0}
+              onClick={() => {
+                const first = detail.episodes[0];
+                if (!first) return;
+                onPlay(first.url, first.number, detail.title);
+              }}
+            >
+              <Play className="size-4 fill-current" aria-hidden />
+              {detail.episodes.length > 0
+                ? `Tonton episode ${detail.episodes[0].number}`
+                : "Belum ada episode"}
+            </SkewButton>
+            <SkewButton
+              variant="quiet"
+              aria-label="Favorite"
+              onClick={async () => {
+                if (!user) return;
+                const r = await toggleFav({
+                  animeId: `donghua:${slug}`,
+                  animeTitle: detail.title,
+                  animeImage: detail.poster ?? detail.cover ?? "",
+                });
+                toast.success(
+                  r.favorited
+                    ? "Ditambahkan ke favorite"
+                    : "Dihapus dari favorite",
+                );
+              }}
+            >
+              <Bell className="size-4" aria-hidden />
+              Favorite
+            </SkewButton>
+          </div>
+
           <SectionTitle>Sinopsis</SectionTitle>
           <p
             className="whitespace-pre-line text-sm leading-6 text-white"

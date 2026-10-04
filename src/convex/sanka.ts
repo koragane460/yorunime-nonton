@@ -30,6 +30,26 @@ import { action } from "./_generated/server";
 
 const BASE = "https://www.sankavollerei.web.id";
 
+const b64url = (u: string) => Buffer.from(u, "utf8").toString("base64url");
+
+/**
+ * Host poster donghua (donghive.vip) memakai proteksi hotlink: gambar
+ * dibalas 403 untuk request dari browser dan responsnya membawa
+ * `Cross-Origin-Resource-Policy: same-origin`, jadi <img> menampilkannya
+ * sebagai kotak hitam. Route /img di http.ts mengambil gambarnya di sisi
+ * server lalu mengirimkannya sebagai response same-origin.
+ */
+function proxyImage(u?: string | null): string {
+  const s = typeof u === "string" ? u.trim() : "";
+  if (!s || !/^https:\/\//i.test(s)) return "";
+  try {
+    new URL(s);
+  } catch {
+    return "";
+  }
+  return `${process.env.CONVEX_SITE_URL ?? ""}/img?u=${b64url(s)}`;
+}
+
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
@@ -261,7 +281,7 @@ function uiCard(x: SankaAnime) {
   return {
     id: x.slug,
     title: x.title,
-    image: x.poster ?? "",
+    image: proxyImage(x.poster),
     status: x.status ?? "",
     // Selalu DONGHUA — dipakai UI untuk membedakan dari anime.
     type: "DONGHUA",
@@ -422,7 +442,7 @@ export const detail = action({
         .map((r: any) => ({
           id: String(r?.slug ?? ""),
           title: stripEpisodeSuffix(cleanTitle(r?.title)),
-          image: r?.poster ? String(r.poster) : "",
+          image: proxyImage(r?.poster),
         }))
         .filter((r: { id: string; title: string }) => r.id && r.title);
 
@@ -432,8 +452,8 @@ export const detail = action({
       return {
         title,
         alterTitle: d.alter_title ? String(d.alter_title) : undefined,
-        poster: d.poster ? String(d.poster) : undefined,
-        cover: d.cover ? String(d.cover) : undefined,
+        poster: proxyImage(d.poster) || undefined,
+        cover: proxyImage(d.cover) || undefined,
         rating: ratingRaw != null ? String(ratingRaw) : undefined,
         status: (d.status ?? info.status)
           ? String(d.status ?? info.status)

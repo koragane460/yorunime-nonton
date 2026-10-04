@@ -175,4 +175,84 @@ const megaStream = httpAction(async (_ctx, request) => {
 
 http.route({ path: "/megastream", method: "GET", handler: megaStream });
 
+// ------------------------------------------------------------ proxy gambar ----
+//
+// Host sumber donghua (donghive.vip) memakai proteksi hotlink: gambar
+// Poster dibalas 403 kalau diakses langsung dari browser YoruNime, dan
+// responsnya juga membawa `Cross-Origin-Resource-Policy: same-origin`.
+// Akibatnya semua poster donghua tampil kotak hitam.
+//
+// Route ini ambil gambarnya di sisi server (dengan Referer + User-Agent),
+// lalu dikembalikan sebagai response same-origin supaya browser menerimanya.
+
+const IMAGE_HOST_REFS: Record<string, string> = {
+  "donghive.vip": "https://donghive.vip/",
+  "anichin.moe": "https://anichin.moe/",
+};
+
+const IMAGE_ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+];
+
+const imgProxy = httpAction(async (_ctx, request) => {
+  const params = new URL(request.url).searchParams;
+  const raw = params.get("u");
+  if (!raw) return new Response("missing u", { status: 400 });
+
+  let target: string;
+  try {
+    target = b64urlDecode(raw);
+  } catch {
+    return new Response("bad u", { status: 400 });
+  }
+
+  let url: URL;
+  try {
+    url = new URL(target);
+  } catch {
+    return new Response("bad url", { status: 400 });
+  }
+  if (url.protocol !== "https:") {
+    return new Response("bad protocol", { status: 400 });
+  }
+  // Hanya host gambar yang dikenal boleh diproksi, jadi route ini tidak
+  // berubah jadi proxy bebas untuk URL apa saja.
+  const referer = IMAGE_HOST_REFS[url.hostname.toLowerCase()];
+  if (!referer) return new Response("forbidden host", { status: 403 });
+
+  const upstream = await fetch(url.href, {
+    headers: {
+      "User-Agent": UA,
+      Referer: referer,
+      Accept: "image/avif,image/webp,image/png,image/jpeg,*/*",
+    },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!upstream.ok) {
+    return new Response("upstream " + upstream.status, { status: 502 });
+  }
+
+  const type = (upstream.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!IMAGE_ALLOWED_TYPES.includes(type)) {
+    return new Response("unsupported type", { status: 415 });
+  }
+
+  // Poster bersifat statis, jadi cache browser yang panjang sudah cukup
+  // supaya tidak memanggil host asal lagi pada kunjungan berikutnya.
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "Content-Type": type,
+      "Cache-Control": "public, max-age=604800, immutable",
+      "Cross-Origin-Resource-Policy": "cross-origin",
+    },
+  });
+});
+
+http.route({ path: "/img", method: "GET", handler: imgProxy });
+
 export default http;

@@ -195,6 +195,14 @@ export const profileStats = query({
         0,
         Math.floor((Date.now() - (me.createdAt ?? Date.now())) / 86400000),
       ),
+      // Tag clan ikut di sini karena panel akun dan panel Home membaca
+      // clanLevel dari objek auth user, yang tidak punya field itu. Tanpa
+      // nilai di bawah, warna tag selalu jatuh ke tier biru padahal chat
+      // menampilkan emas.
+      clanTag: me.clanTag,
+      clanTagIcon: me.clanTagIcon,
+      clanLevel: me.clanLevel ?? 0,
+      clanNameColor: me.clanNameColor,
     };
   },
 });
@@ -243,7 +251,12 @@ export const getPublicProfile = query({
       clanTagIcon: clan?.tagIcon,
       // Level clan menentukan warna nama clan di tag (lihat clanTextClass
       // di lstream-ui.tsx): biru muda / hijau muda / ungu / emas.
-      clanLevel: clan?.level ?? 0,
+      //
+      // `users.clanLevel` adalah sumber yang sama dengan yang dipakai chat
+      // (lihat chat.ts), jadi warna tag tidak lagi beda antara chat dan
+      // panel akun. Kalau user belum punya salinan, dipakai level di
+      // dokumen clan.
+      clanLevel: u.clanLevel ?? clan?.level ?? 0,
       clanNameColor: u.clanNameColor,
       watchCount: history.length,
       commentCount: comments.length,

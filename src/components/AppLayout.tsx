@@ -29,11 +29,8 @@ import { cn } from "@/lib/utils";
 import { displayId, usernameColor } from "@/lib/lstream";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 import { NotifButton } from "@/components/NotifButton";
-import {
-  FavoritesPanel,
-  MOST_MIN_TITLES,
-  type TopPanel,
-} from "@/components/HomeTopButtons";
+import { FavoritesScreen } from "@/components/FavoritesScreen";
+import { MOST_MIN_TITLES, type TopPanel } from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { MusicMiniBar } from "@/components/MusicMiniBar";
 import { xpForLevel } from "@/lib/level";
@@ -50,6 +47,13 @@ export function AppLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const ensure = useMutation(api.account.ensureUser);
+  // Level clan diambil dari query, bukan dari objek auth user: auth user
+  // tidak punya field clanLevel, jadi membacanya dari sana selalu undefined
+  // dan warna tag selalu biru walau chat menampilkan emas.
+  const myStats = useQuery(
+    api.account.profileStats,
+    user ? {} : "skip",
+  );
   // Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
   // Paling sering, Untuk kamu).
   //
@@ -105,7 +109,7 @@ export function AppLayout({
             clanTag={user.clanTag}
             clanTagIcon={user.clanTagIcon}
             clanColor={user.clanNameColor}
-            clanLevel={(user as unknown as { clanLevel?: number }).clanLevel ?? 0}
+            clanLevel={myStats?.clanLevel ?? 0}
             premium={(user.premiumUntil ?? 0) > Date.now()}
             premiumDays={Math.max(
               0,
@@ -126,7 +130,7 @@ export function AppLayout({
               fullscreen, supaya baris navigasi bawah tetap terlihat dan
               tombol Favorit bisa ditandai aktif. */}
           {navPanel === "favorites" ? (
-            <FavoritesPanel onClose={() => setNavPanel(null)} />
+            <FavoritesScreen onClose={() => setNavPanel(null)} />
           ) : (
             children
           )}

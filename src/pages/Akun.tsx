@@ -179,7 +179,7 @@ function AkunContent() {
                           icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
                           tag={t.name}
                           color={user.clanNameColor}
-                          level={(user as unknown as { clanLevel?: number }).clanLevel}
+                          level={stats?.clanLevel}
                         />
                       ) : (
                         <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[12px] font-bold text-primary-foreground">
@@ -250,7 +250,7 @@ function AkunContent() {
                 icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
                 tag={user.clanTag}
                 color={user.clanNameColor}
-                level={(user as unknown as { clanLevel?: number }).clanLevel}
+                level={stats?.clanLevel}
               />
             )}
           </div>
