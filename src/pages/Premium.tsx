@@ -156,11 +156,6 @@ export default function Premium() {
       <button
         onClick={() => {
           let target = "";
-          try {
-            target = "";
-          } catch {
-            /* storage diblokir */
-          }
           if (!target || target.startsWith("/premium")) target = "/home";
           navigate(target);
         }}

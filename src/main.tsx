@@ -37,7 +37,7 @@ function RouteLoading() {
   );
 }
 
-/** Silent error boundary — if VlyToolbar crashes it renders nothing instead of
+/** Silent error boundary - if VlyToolbar crashes it renders nothing instead of
  *  crashing the whole app (e.g. hook errors in the browser runtime). */
 class ToolbarErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -116,7 +116,7 @@ function RouteSyncer() {
         `${location.pathname}${location.search}`,
       );
     } catch {
-      /* storage diblokir — tombol kembali jatuh ke Home */
+      /* storage diblokir - tombol kembali jatuh ke Home */
     }
   }, [location.pathname, location.search]);
 
@@ -127,7 +127,7 @@ function RouteSyncer() {
         // Balik ke halaman terakhir yang bukan /nonton maupun /baca. RouteSyncer
         // menulis yn-return-to setiap kali route berubah (kecuali /nonton dan
         // /baca), jadi dari sini ambil targetnya, ganti URL dengan replaceState,
-        // lalu navigasi replace client-side — tidak ada full reload dan
+        // lalu navigasi replace client-side - tidak ada full reload dan
         // breadcrumb/halaman tampil seperti yang seharusnya.
         let target = "/home";
         try {
@@ -135,7 +135,7 @@ function RouteSyncer() {
             (sessionStorage.getItem("yn-return-to") ?? "").trim() ||
             "/home";
         } catch {
-          /* penyimpanan diblokir — tetap ke Home */
+          /* storage diblokir - tetap ke Home */
         }
         if (target.startsWith("/nonton") || target.startsWith("/baca")) {
           target = "/home";

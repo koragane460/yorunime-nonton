@@ -222,15 +222,19 @@ function WatchContent() {
 
   // Kembali dari nonton: JANGAN kembali ke episode sebelumnya (makanya tidak
   // pakai navigate(-1)). Balik ke halaman terakhir yang bukan nonton.
-  // RouteSyncer menyimpan path+search terakhir (bukan /nonton atau /baca),
-  // lalu tombol kembali mengarahkannya lewat history.replaceState supaya
-  // browser tidak membaca ulang halaman (no-refresh back).
+  // RouteSyncer menulis yn-return-to setiap kali route berubah (kecuali
+  // /nonton dan /baca), jadi tombol kembali membaca target yang sama,
+  // mengganti URL di history, lalu navigate replace tanpa full reload.
+  // Browser tidak akan membaca ulang halaman (no-refresh back).
   const goBackFromWatch = useCallback(() => {
     try {
       window.scrollTo({ top: 0 });
     } catch {
       /* abaikan */
     }
+    // Navigasi client-side: ganti URL di history (replaceState) lalu
+    // navigate replace tanpa memaksa full reload. Berpadu dengan RouteSyncer,
+    // yang sudah menulis yn-return-to pada route biasa.
     let target = "";
     try {
       target = sessionStorage.getItem("yn-return-to") ?? "";
@@ -242,8 +246,7 @@ function WatchContent() {
       target = "/home";
     }
     // Navigasi client-side: ganti URL di history (replaceState) lalu
-    // navigate replace tanpa memaksa full reload. Hammadera dengan RouteSyncer
-    // yang sudah menulis yn-return-to pada route biasa.
+    // navigate replace tanpa memaksa full reload. Berpadu dengan RouteSyncer,
     const to = target.startsWith("?") ? "/home" + target : target;
     if (typeof window !== "undefined") {
       try {
