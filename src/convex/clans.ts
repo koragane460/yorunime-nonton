@@ -51,10 +51,13 @@ async function myClan(ctx: any, userId: string) {
 function clanPublic(clan: any, memberCount: number) {
   const level = clan.level ?? 1;
   let color = "";
+  // Ambang warna ini harus sama dengan clanTextClass() di lstream-ui.tsx:
+  // 1-49 biru, 50-99 hijau, 100-149 ungu, 150+ emas. Kalau beda, nama clan
+  // tampil beda warna antara halaman Clan dan panel akun/chat.
   if (level >= 200) color = "golden";
   else if (level >= 150) color = "oren";
   else if (level >= 100) color = "galaxy";
-  else if (level >= 25) color = "merah";
+  else if (level >= 50) color = "merah";
   const ageDays = Math.max(
     0,
     Math.floor((Date.now() - (clan.createdAt ?? Date.now())) / 86400000),

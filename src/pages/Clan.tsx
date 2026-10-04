@@ -7,6 +7,7 @@ import { useHideNavOnMount, useHideNavWhile } from "@/components/AppLayout";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/AppLayout";
+import { ClanRankWings } from "@/components/ClanRankWings";
 import {
   Avatar,
   ClanLevelBar,
@@ -177,9 +178,9 @@ function NoClan({
               Belum ada clan. Jadilah yang pertama!
             </p>
           )}
-          {(clans ?? []).map((c: any) => (
+          {(clans ?? []).map((c: any, i: number) => (
+            <ClanRankWings key={c._id} rank={i + 1}>
             <div
-              key={c._id}
               className="member-row cursor-pointer p-3 transition hover:border-[oklch(0.86_0.16_90)]/40"
               onClick={() => setDetailId(c._id as Id<"clans">)}
             >
@@ -226,6 +227,7 @@ function NoClan({
                 </button>
               </div>
             </div>
+            </ClanRankWings>
           ))}
       </div>
 

@@ -20,7 +20,7 @@ export function MusicMiniBar() {
   if (p.screenOpen || location.pathname.startsWith("/nonton")) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[68px] z-[61] flex justify-center px-3 md:bottom-[76px]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[86px] z-[61] flex justify-center px-3 md:bottom-[94px]">
       <div className="pointer-events-auto relative flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-white/15 bg-black/80 py-2 pl-2 pr-2.5 shadow-2xl backdrop-blur-md">
         <button
           onClick={p.openScreen}

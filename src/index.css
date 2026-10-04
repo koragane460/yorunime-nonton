@@ -1096,3 +1096,102 @@ video::cue {
     1px 1px 0 #000,
     0 2px 3px rgba(0, 0, 0, 0.9);
 }
+
+/*
+ * Sayap clan peringkat 1-3 di daftar clan.
+ *
+ * Semua warna diambil dari variabel --wing-* yang di-set per peringkat di
+ * ClanRankWings.tsx, jadi satu CSS ini dipakai tiga-tiganya. Sayapnya
+ * diletakkan DI LUAR tepi kartu (left/right negatif) supaya terlihat
+ * seperti sayap yang terbuka dari dalam kartu, bukan stiker di depannya.
+ */
+.yn-wing-host {
+  isolation: isolate;
+}
+
+.yn-wing {
+  position: absolute;
+  top: 50%;
+  width: 34px;
+  height: 78px;
+  /* Pusat rotasi di pangkal sayap supaya gerakannya seperti terbuka,
+      bukan seperti bendera yang dikibaskan. */
+  transform-origin: center center;
+  transform: translateY(-50%) scale(var(--wing-scale, 1));
+  filter: drop-shadow(0 0 6px var(--wing-glow));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.yn-wing-left {
+  left: -17px;
+  animation: wing-open-l 0.9s cubic-bezier(0.22, 1, 0.36, 1) both,
+    wing-sway 3.6s ease-in-out 0.9s infinite;
+}
+
+.yn-wing-right {
+  right: -17px;
+  animation: wing-open-r 0.9s cubic-bezier(0.22, 1, 0.36, 1) both,
+    wing-sway 3.6s ease-in-out 0.9s infinite reverse;
+}
+
+/* Terbuka: dari menutup (menempel di kartu, hampir tak terlihat) ke
+   terbuka penuh. Scale-X membuat efek "membuka" tanpa mengubah tinggi. */
+@keyframes wing-open-l {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(0.1)
+      rotate(14deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(1)
+      rotate(0deg);
+  }
+}
+
+@keyframes wing-open-r {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(0.1)
+      rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(var(--wing-scale, 1)) scaleX(1)
+      rotate(0deg);
+  }
+}
+
+/* Goyang halus setelah terbuka: amplitudo kecil supaya elegan, bukan ramai. */
+@keyframes wing-sway {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(var(--wing-scale, 1)) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-50%) scale(var(--wing-scale, 1)) rotate(4deg);
+  }
+}
+
+.yn-wing-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 22px var(--wing-glow);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hormati preferensi pengguna yang mematikan animasi. */
+@media (prefers-reduced-motion: reduce) {
+  .yn-wing,
+  .yn-wing-glow {
+    animation: none;
+    opacity: 1;
+  }
+  .yn-wing {
+    transform: translateY(-50%) scale(var(--wing-scale, 1));
+  }
+}

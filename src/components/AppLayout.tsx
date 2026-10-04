@@ -94,7 +94,11 @@ export function AppLayout({
 
   return (
     <div className="yn-app-bg flex min-h-dvh w-full flex-col items-center">
-      {showPanel && user && (
+      {/* Panel akun hanya muncul di Home dan TIDAK saat layar Koleksi (Favorit)
+          terbuka. Dulu panel ini tetap tampil di atas layar Koleksi sehingga
+          terlihat seperti layar yang salah - tombol Favorit di navigasi
+          memang bukan untuk daftar favorit. */}
+      {showPanel && user && navPanel !== "favorites" && (
         <div className="w-full px-4 md:mx-auto md:max-w-2xl md:px-6 lg:max-w-4xl">
           <AccountPanel
             onOpen={() => navigate("/akun")}
@@ -760,13 +764,13 @@ function BottomNav({
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
                     : it.label
                 }
-                className="nav-item relative flex flex-col items-center justify-center py-2.5"
+                className="nav-item relative flex flex-col items-center justify-center py-3.5"
               >
                 <Icon
                   className={cn(
-                    // 5 kolom: ikon boleh sedikit lebih besar supaya mudah
-                    // ditekan di HP.
-                    "size-[21px] md:size-[24px]",
+                    // 5 kolom: ikon dibuat besar supaya jelas dan mudah
+                    // ditekan di HP. Dulu 21px, sekarang 27px.
+                    "size-[27px] md:size-[31px]",
                     active
                       ? "text-primary"
                       : it.dim

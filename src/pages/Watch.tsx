@@ -311,6 +311,21 @@ function WatchContent() {
     { label: string; url: string; type: string; baked?: boolean }[]
   >([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
+
+  // Pintu waktu sebelum video boleh diputar, sama seperti hitungan mundur
+  // halaman di pembaca manga/manhwa. Video sudah dimuat di belakang layar;
+  // hitungannya cuma memberi jeda supaya terasa "siap", bukan error.
+  // Premium langsung lewat.
+  const isPremiumUser = (user?.premiumUntil ?? 0) > Date.now();
+  const WATCH_DELAY_MS = isPremiumUser ? 0 : 2000;
+  const [holdUntil, setHoldUntil] = useState(0);
+  const [nowTick, setNowTick] = useState(Date.now());
+  const videoHolding = holdUntil > 0 && nowTick < holdUntil;
+  useEffect(() => {
+    if (holdUntil <= 0) return;
+    const t = window.setInterval(() => setNowTick(Date.now()), 200);
+    return () => window.clearInterval(t);
+  }, [holdUntil > 0]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sourceIdx, setSourceIdx] = useState(0);
   // Server yang sudah dicoba dan gagal untuk episode ini, supaya auto-failover
   // tidak berputar ke server yang sama.
@@ -854,6 +869,9 @@ function WatchContent() {
         setSources(d.sources);
         setSourceType("embed");
         setSourceIdx(0);
+        // Sama seperti anime: hitungan mundur dimulai setelah sumber siap.
+        setNowTick(Date.now());
+        setHoldUntil(WATCH_DELAY_MS > 0 ? Date.now() + WATCH_DELAY_MS : 0);
       };
       lastEpRef.current = epParam;
       deadServers.current = new Set();
@@ -903,6 +921,10 @@ function WatchContent() {
             : "embed",
       );
       setSourceIdx(0);
+      // Mulai hitungan mundur SETELAH sumber siap - sama seperti pembaca
+      // komik, gambar/video sudah dimuat, hitungan cuma jeda tampil.
+      setNowTick(Date.now());
+      setHoldUntil(WATCH_DELAY_MS > 0 ? Date.now() + WATCH_DELAY_MS : 0);
     };
 
     // Kalau perpindahan terjadi saat video masih diputar, tandai untuk autoplay.
@@ -1515,6 +1537,67 @@ function WatchContent() {
                     Memuat episode {currentEp ? currentEp.number : ""}...
                   </p>
                 </>
+              )}
+            </div>
+          </div>
+        ) : videoHolding ? (
+          // Hitungan mundur gaya pembaca komik: video sudah dimuat, tapi
+          // ditahan beberapa detik dulu. Premium langsung lewat.
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-black text-center">
+            {D.image && (
+              <div
+                className="pointer-events-none absolute inset-0 opacity-40"
+                style={{
+                  backgroundImage: `url(${D.image})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  filter: "blur(18px) brightness(0.4)",
+                }}
+              />
+            )}
+            <div className="relative flex flex-col items-center px-6">
+              <div className="relative flex size-20 items-center justify-center rounded-full border border-white/25 bg-black/50">
+                <svg
+                  viewBox="0 0 100 100"
+                  className="absolute inset-0 size-full -rotate-90"
+                  aria-hidden
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke="rgba(255,255,255,.18)"
+                    strokeWidth="4"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke="currentColor"
+                    className="text-primary"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 46}
+                    strokeDashoffset={
+                      2 * Math.PI * 46 * (videoHolding
+                        ? (holdUntil - nowTick) / WATCH_DELAY_MS
+                        : 0)
+                    }
+                  />
+                </svg>
+                <span className="text-2xl font-black text-white">
+                  {Math.ceil((holdUntil - nowTick) / 1000)}
+                </span>
+              </div>
+              <p className="mt-3 text-xs font-semibold text-white">
+                Menyiapkan video...
+              </p>
+              {!isPremiumUser && (
+                <p className="mt-1 text-[11px] text-white/55">
+                  Member premium langsung masuk tanpa hitungan
+                </p>
               )}
             </div>
           </div>

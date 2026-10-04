@@ -374,21 +374,32 @@ export function ClanLevelBar({
   );
 }
 
-/** Tag clan: background galaxy silau sesuai warna clan. *//**
- * Warna nama clan berdasarkan level clannya:
- *   1–24   biru muda
- *   25–99  hijau muda
- *   100–149 ungu
- *   150–200 emas
+/** Tag clan: background galaxy silau sesuai warna clan. */
+
+/**
+ * Warna nama clan berdasarkan level clannya.
+ *
+ * Ambang ini HARUS sama persis dengan yang dipakai di halaman Clan dan di
+ * chat clan - kalau berbeda, tag clan akan tampil beda warna di layar lain
+ * padahal clan-nya sama. Tingkatan yang dipakai:
+ *   1-49    biru muda
+ *   50-99   hijau muda
+ *   100-149 ungu
+ *   150-200 emas
  *
  * Semua warna terang sudah dipilih kontras terhadap latar gelap tag, jadi
  * tetap terbaca di atas banner apa pun.
  */
-function clanTextClass(level?: number) {
+export const CLAN_TIER_BLUE_MIN = 1;
+export const CLAN_TIER_GREEN_MIN = 50;
+export const CLAN_TIER_PURPLE_MIN = 100;
+export const CLAN_TIER_GOLD_MIN = 150;
+
+export function clanTextClass(level?: number) {
   const n = Number(level ?? 0);
-  if (n >= 150) return "clan-tier-gold";
-  if (n >= 100) return "clan-tier-purple";
-  if (n >= 25) return "clan-tier-green";
+  if (n >= CLAN_TIER_GOLD_MIN) return "clan-tier-gold";
+  if (n >= CLAN_TIER_PURPLE_MIN) return "clan-tier-purple";
+  if (n >= CLAN_TIER_GREEN_MIN) return "clan-tier-green";
   return "clan-tier-blue";
 }
 
