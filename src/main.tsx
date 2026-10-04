@@ -6,7 +6,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import "./index.css";
 import { UpdateGate } from "./components/UpdateGate";
 import { MusicPlayerProvider } from "./components/MusicPlayer";
@@ -97,6 +97,7 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 function RouteSyncer() {
   const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     window.parent.postMessage(
       { type: "iframe-route-change", path: location.pathname },
@@ -121,19 +122,39 @@ function RouteSyncer() {
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      if (event.data?.type === "navigate") {
-        if (event.data.direction === "back") {
-          // Balik lewat history.back() dari dalam halaman. Supaya URL/breadcrumb
-          // halaman tampil seperti yang seharusnya (tidak ke /nonton) — karena
-          // RouteSyncer sudah menulis yn-return-to adalah halaman yang benar.
-          window.history.back();
+      if (event.data?.type !== "navigate") return;
+      if (event.data.direction === "back") {
+        // Balik ke halaman terakhir yang bukan /nonton maupun /baca. RouteSyncer
+        // menulis yn-return-to setiap kali route berubah (kecuali /nonton dan
+        // /baca), jadi dari sini ambil targetnya, ganti URL dengan replaceState,
+        // lalu navigasi replace client-side — tidak ada full reload dan
+        // breadcrumb/halaman tampil seperti yang seharusnya.
+        let target = "/home";
+        try {
+          target =
+            (sessionStorage.getItem("yn-return-to") ?? "").trim() ||
+            "/home";
+        } catch {
+          /* penyimpanan diblokir — tetap ke Home */
         }
-        if (event.data.direction === "forward") window.history.forward();
+        if (target.startsWith("/nonton") || target.startsWith("/baca")) {
+          target = "/home";
+        }
+        const to = target.startsWith("?") ? "/home" + target : target;
+        if (typeof window !== "undefined") {
+          try {
+            window.history.replaceState(null, "", to);
+          } catch {
+            /* history diblokir */
+          }
+        }
+        navigate(to, { replace: true });
       }
+      if (event.data.direction === "forward") window.history.forward();
     }
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [navigate]);
 
   return null;
 }

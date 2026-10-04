@@ -225,7 +225,7 @@ function WatchContent() {
   // RouteSyncer menyimpan path+search terakhir (bukan /nonton atau /baca),
   // lalu tombol kembali mengarahkannya lewat history.replaceState supaya
   // browser tidak membaca ulang halaman (no-refresh back).
-  const goBackFromWatch = () => {
+  const goBackFromWatch = useCallback(() => {
     try {
       window.scrollTo({ top: 0 });
     } catch {
@@ -241,8 +241,9 @@ function WatchContent() {
     if (!target || target.startsWith("/nonton") || target.startsWith("/baca")) {
       target = "/home";
     }
-    // Navigasi client-side: history.replaceState + window.history.back(),
-    // supaya URL berubah tapi halaman tidak dibaca ulang (bukan full reload).
+    // Navigasi client-side: ganti URL di history (replaceState) lalu
+    // navigate replace tanpa memaksa full reload. Hammadera dengan RouteSyncer
+    // yang sudah menulis yn-return-to pada route biasa.
     const to = target.startsWith("?") ? "/home" + target : target;
     if (typeof window !== "undefined") {
       try {
@@ -251,21 +252,8 @@ function WatchContent() {
         /* history diblokir */
       }
     }
-    // Beri tanda bahwa kita sudah "back" dari sini, supaya pushState tidak
-    // terdeteksi ulang sebagai navigasi biasa oleh RouteSyncer.
-    if (typeof window !== "undefined") {
-      try {
-        const st = window.history.state ?? {};
-        if (!st.ynBackDone) {
-          st.ynBackDone = true;
-          window.history.pushState(st, "", to);
-        }
-      } catch {
-        /* abaikan */
-      }
-    }
     navigate(to, { replace: true });
-  };
+  }, [navigate]);
 
   useEffect(() => {
     if (roomInfo?.ended) {
@@ -276,7 +264,7 @@ function WatchContent() {
 
 
   const detail = useAction(api.anime.animeDetail);
-  // Resolver tunggal: backend hanya mengembalikan satu server "Direct HLS · SUB"
+  // Resolver tunggal: backend hanya mengembalikan satu server "Direct HLS - SUB"
   const resolveDirect = useAction(api.megaplay.resolveEpisode);
   // Donghua memakai server sendiri (SankaVollereii), bukan MegaPlay: slug-nya
   // bukan MAL id, jadi resolveEpisode biasa tidak akan menemukan apa pun.
@@ -386,7 +374,7 @@ function WatchContent() {
   // yang sedang diputar, bukan sekali per episode.
   const currentSrc = sources[sourceIdx] ?? sources[0];
   const bakedSubs = !!currentSrc?.baked;
-  // Notifikasi kecepatan di dalam player (mis. "2× speed") seperti subtitle:
+  // Notifikasi kecepatan di dalam player (mis. "2x speed") seperti subtitle:
   // muncul sebentar di tengah atas lalu hilang sendiri.
   const [speedNotice, setSpeedNotice] = useState("");
   const speedNoticeTimer = useRef<number | null>(null);
@@ -664,7 +652,6 @@ function WatchContent() {
     // dibaca oleh player sendiri; di sini kita hanya menyiapkan cue dari
     // sumber yang dipilih, tidak peduli dari mana lirik aslinya. Jika
     // subtitle tidak tersedia, biarkan cue kosong dan player tidak
-o
     // menggambar teks.
   }, [activeSub, autoVtt]);
 
@@ -860,7 +847,7 @@ o
   const detailReady = !!detailData && !detailData.error;
 
   // Ambil server streaming. Backend mengembalikan tepat satu server:
-  // "Direct HLS · SUB".
+  // "Direct HLS - SUB".
   //
   // Kecepatan: kalau id episode sudah berbentuk "<malId>__ep<no>" (semua anime
   // dari AniList/Jikan) server langsung dicari tanpa menunggu detail anime
@@ -1151,7 +1138,7 @@ o
       speedReadyRef.current = true;
       return;
     }
-    setSpeedNotice(`${speed}× speed`);
+    setSpeedNotice(`${speed}x speed`);
     if (speedNoticeTimer.current) clearTimeout(speedNoticeTimer.current);
     speedNoticeTimer.current = window.setTimeout(() => setSpeedNotice(""), 1400);
     return () => {
@@ -1693,17 +1680,8 @@ o
                 sekali: browser akan mengunduh file subtitle itu meskipun
                 tidak pernah ditampilkan, dan dia tetap bisa terbaca kalau
                 `mode`-nya berubah jadi "showing" di jalur lain. */}
-            {(direct?.subTracks ?? [])
-              .filter((t: any) => t.lang === "id")
-              .map((t: any) => (
-                <track
-                  key={t.url}
-                  kind="subtitles"
-                  src={t.url}
-                  srcLang={t.lang}
-                  label={t.label}
-                />
-              ))}
+            {/* Server native subtitle tracks DO NOT mount here. Player draws
+                its own overlay, so only user-selected subtitle source wins. */}
           </video>
         )}
         {/* Subtitle digambar sendiri: teks putih semi-bold dengan outline hitam
@@ -2064,32 +2042,6 @@ o
                 >
                   Matikan subtitle
                 </button>
-                {(direct?.subTracks ?? [])
-                  // Hanya Bahasa Indonesia yang ditampilkan. Track bahasa
-                  // lain milik server sengaja disembunyikan: nonton di
-                  // YoruNime selalu Indonesia, jadi menawarkannya cuma
-                  // menambah pilihan yang tidak pernah dipakai.
-                  .filter((t: any) => t.lang === "id")
-                  .map((t: any) => (
-                    <button
-                      key={t.url}
-                      onClick={() => pickSub(t.label)}
-                      className={cn(
-                        "block w-full rounded px-2 py-1 text-left text-xs",
-                        activeSub === t.label
-                          ? "bg-primary text-white"
-                          : "text-white/80 hover:bg-white/10",
-                      )}
-                    >
-                      {t.label}
-                      <span className="ml-1 rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
-                        ID
-                      </span>
-                    </button>
-                  ))}
-                {/* Subtitle Indonesia otomatis (diterjemahkan dari track
-                    English, jadi tetap muncul di server yang tidak punya
-                    subtitle Indonesia sendiri). */}
                 <button
                   onClick={() => autoVtt && pickSub(AUTO_SUB)}
                   disabled={!autoVtt}

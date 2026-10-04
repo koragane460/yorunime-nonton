@@ -157,7 +157,7 @@ export default function Premium() {
         onClick={() => {
           let target = "";
           try {
-            target = sessionStorage.getItem("yn-return-to") ?? "";
+            target = "";
           } catch {
             /* storage diblokir */
           }
