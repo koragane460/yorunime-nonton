@@ -1,8 +1,8 @@
 // Tools konten developer: sinopsis manual + anime tambahan.
 //
-// Tersedia di panel staff pada halaman Akun, tapi HANYA untuk developer
-// (tombolnya tidak dirender untuk moderator). Guardian sebenarnya ada di
-// server (`requireDev` di convex/content.ts), jadi panel ini cuma pintasan.
+// StaffPanel (halaman Akun) hanya merender satu tombol mengambang (FAB) untuk
+// developer; isinya dibuka dari `ContentToolsFab`. Guardian sebenarnya ada di
+// server (`requireDev` di convex/content.ts), jadi UI ini cuma pintasan.
 //
 // Anime tambahan TIDAK menyimpan daftar episode: yang disimpan hanya slug
 // sumber. Saat judul dibuka, `api.sanka.detail` (atau AniList) mengambil
@@ -13,7 +13,8 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
-import { Trash2, Wrench } from "lucide-react";
+import { Crown, Plus, Trash2, Wrench, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const DAYS = [
   "Senin",
@@ -25,7 +26,146 @@ const DAYS = [
   "Minggu",
 ];
 
-export function ContentTools() {
+/**
+ * Satu tombol untuk tiga tools developer.
+ *
+ * Sebelumnya "Tambah Sinopsis", "Tambah Anime", dan "Premium Clan" berdiri
+ * sendiri-sendiri di panel yang panjang. Sekarang semuanya dibuka dari satu
+ * tombol mengambang (FAB) di kanan bawah: sekali ketuk, pilih toolsnya.
+ */
+export function ContentToolsFab({
+  onOpenClan,
+}: {
+  onOpenClan: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [tool, setTool] = useState<"synopsis" | "anime" | null>(null);
+
+  const pick = (t: "synopsis" | "anime" | "clan") => {
+    if (t === "clan") {
+      setOpen(false);
+      setTool(null);
+      onOpenClan();
+      return;
+    }
+    setTool(t);
+  };
+
+  return (
+    <>
+      {/* Tombol mengambang */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Tools developer"
+        className={cn(
+          "fixed bottom-24 right-4 z-[70] flex size-14 items-center justify-center rounded-full shadow-lg shadow-black/40 transition active:scale-95",
+          open
+            ? "bg-foreground text-background"
+            : "bg-primary text-primary-foreground",
+        )}
+      >
+        {open ? <X className="size-6" /> : <Wrench className="size-6" />}
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[69] flex items-end justify-center bg-black/60 p-3 pb-24"
+          onClick={() => {
+            setOpen(false);
+            setTool(null);
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="thin-scroll max-h-[75vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-background p-3"
+          >
+            <p className="mb-2 text-center text-sm font-bold">
+              Tools Developer
+            </p>
+            {!tool ? (
+              <div className="space-y-2">
+                <FabMenu
+                  label="Tambah Sinopsis"
+                  hint="Tulis sendiri sinopsis anime atau donghua"
+                  onClick={() => pick("synopsis")}
+                />
+                <FabMenu
+                  label="Tambah Anime"
+                  hint="Judul baru, episodenya real-time dari sumber"
+                  onClick={() => pick("anime")}
+                />
+                <FabMenu
+                  label="Beri Premium Clan"
+                  hint="Kasih premium unlimited ke clan"
+                  tone="amber"
+                  onClick={() => pick("clan")}
+                />
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setTool(null)}
+                  className="mb-2 w-full rounded-lg border border-border py-1.5 text-[11px] font-bold text-muted-foreground"
+                >
+                  Kembali
+                </button>
+                <ContentTools mode={tool} />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function FabMenu({
+  label,
+  hint,
+  onClick,
+  tone,
+}: {
+  label: string;
+  hint: string;
+  onClick: () => void;
+  tone?: "amber";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition active:scale-[0.99]",
+        tone === "amber"
+          ? "border-amber-500/50 bg-amber-500/10"
+          : "border-border bg-secondary/30",
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-full",
+          tone === "amber" ? "bg-amber-500/20" : "bg-primary/15",
+        )}
+      >
+        {tone === "amber" ? (
+          <Crown className="size-4 text-amber-300" />
+        ) : (
+          <Plus className="size-4 text-primary" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-bold">{label}</span>
+        <span className="block text-[10px] text-muted-foreground">{hint}</span>
+      </span>
+    </button>
+  );
+}
+
+export function ContentTools({
+  mode = "full",
+}: {
+  /** "full" = dua bagian; dipakai di sheet FAB. */
+  mode?: "full" | "synopsis" | "anime";
+}) {
   const overrides = useQuery(api.content.listOverrides, {});
   const custom = useQuery(api.content.listCustomAnime, {});
   const setSynopsis = useMutation(api.content.setSynopsis);
@@ -45,6 +185,9 @@ export function ContentTools() {
     { malId: string; anilistId: string; title: string; image: string; status: string; episodes: number | null }[]
   >([]);
   const [searching, setSearching] = useState(false);
+  // Catat hasil pencarian yang benar-benar sudah dicoba, supaya UI bisa
+  // bilang "tidak ada hasil" alih-alih diam saja saat hasilnya kosong.
+  const [searched, setSearched] = useState("");
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -54,6 +197,7 @@ export function ContentTools() {
     { malId: string; anilistId: string; title: string; image: string; status: string; episodes: number | null }[]
   >([]);
   const [searching2, setSearching2] = useState(false);
+  const [searched2, setSearched2] = useState("");
   const [source, setSource] = useState<"sanka" | "anilist">("sanka");
   const [poster, setPoster] = useState("");
   const [newSynopsis, setNewSynopsis] = useState("");
@@ -73,7 +217,13 @@ export function ContentTools() {
   };
 
   return (
-    <div className="mt-2.5 rounded-xl border border-border bg-background/60 p-2.5">
+    <div
+      className={
+        mode === "full"
+          ? "mt-2.5 rounded-xl border border-border bg-background/60 p-2.5"
+          : "rounded-xl border border-border bg-background/60 p-2.5"
+      }
+    >
       <p className="flex items-center gap-1.5 text-[11px] font-bold">
         <Wrench className="size-3.5 text-primary" />
         Tools Konten
@@ -84,7 +234,12 @@ export function ContentTools() {
       </p>
 
       {/* ---- sinopsis manual ---- */}
-      <div className="mt-2.5 rounded-lg border border-border/70 bg-background/40 p-2">
+      <div
+        className={cn(
+          "rounded-lg border border-border/70 bg-background/40 p-2",
+          mode === "anime" ? "hidden" : "mt-2.5",
+        )}
+      >
         <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           Sinopsis manual
         </p>
@@ -123,7 +278,14 @@ export function ContentTools() {
                 onClick={async () => {
                   setSearching(true);
                   try {
-                    setHits(((await searchAnime({ q: search.trim() })) ?? []) as any);
+                    const r = ((await searchAnime({ q: search.trim() })) ??
+                      []) as any[];
+                    setHits(r);
+                    setSearched(search.trim());
+                    if (r.length === 0)
+                      toast.error(
+                        `Tidak ada hasil untuk "${search.trim()}". Coba judul Inggris/Jepang.`,
+                      );
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : "Gagal mencari");
                   } finally {
@@ -135,6 +297,13 @@ export function ContentTools() {
                 {searching ? "..." : "Cari"}
               </button>
             </div>
+            {hits.length === 0 && searched !== "" && (
+              <p className="mt-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[10px] text-amber-200">
+                Tidak ada hasil untuk &quot;{searched}&quot;. AniList &amp; MyAnimeList
+                hanya mengenal judul resminya — coba judul Inggris atau Jepang
+                (mis. &quot;Kusuriya no Hitorigoto&quot;).
+              </p>
+            )}
             {hits.length > 0 && (
               <div className="mt-1.5 max-h-52 space-y-1 overflow-y-auto">
                 {hits.map((h) => (
@@ -226,7 +395,12 @@ export function ContentTools() {
       </div>
 
       {/* ---- anime tambahan ---- */}
-      <div className="mt-2 rounded-lg border border-border/70 bg-background/40 p-2">
+      <div
+        className={cn(
+          "rounded-lg border border-border/70 bg-background/40 p-2",
+          mode === "synopsis" ? "hidden" : "mt-2",
+        )}
+      >
         <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           Tambah anime
         </p>
@@ -263,7 +437,14 @@ export function ContentTools() {
             onClick={async () => {
               setSearching2(true);
               try {
-                setHits2(((await searchAnime({ q: search2.trim() })) ?? []) as any);
+                const r = ((await searchAnime({ q: search2.trim() })) ??
+                  []) as any[];
+                setHits2(r);
+                setSearched2(search2.trim());
+                if (r.length === 0)
+                  toast.error(
+                    `Tidak ada hasil untuk "${search2.trim()}". Coba judul Inggris/Jepang.`,
+                  );
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Gagal mencari");
               } finally {
@@ -275,6 +456,12 @@ export function ContentTools() {
             {searching2 ? "..." : "Cari"}
           </button>
         </div>
+        {hits2.length === 0 && searched2 !== "" && (
+          <p className="mt-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[10px] text-amber-200">
+            Tidak ada hasil untuk &quot;{searched2}&quot;. Coba judul Inggris atau
+            Jepang.
+          </p>
+        )}
         {hits2.length > 0 && (
           <div className="mt-1.5 max-h-44 space-y-1 overflow-y-auto">
             {hits2.map((h) => (

@@ -150,19 +150,43 @@ export const searchAnime = action({
       body: JSON.stringify({ query, variables: { s: term } }),
       signal: AbortSignal.timeout(15_000),
     }).catch(() => null);
-    if (!res || !res.ok) return [];
-    const j: any = await res.json().catch(() => null);
+    const j: any = res && res.ok ? await res.json().catch(() => null) : null;
     const media: any[] = j?.data?.Page?.media ?? [];
-    return media
-      .filter((m) => !!m)
+    const shape = (m: any) => ({
+      malId: m.idMal ? String(m.idMal) : "",
+      anilistId: String(m.id ?? ""),
+      title: m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
+      image: m?.coverImage?.large ?? m?.images?.jpg?.large_image_url ?? "",
+      episodes: m.episodes ?? null,
+      status: String(m.status ?? ""),
+      year: m.seasonYear ?? m.year ?? null,
+    });
+    if (media.length > 0) return media.filter(Boolean).map(shape);
+
+    // Cadangan: Jikan (MyAnimeList). AniList sering tidak menemukan judul
+    // yang di-index dengan ejaan lokal/Indonesia, sedangkan Jikan mencari
+    // judul Inggris & Jepang langsung di database MAL.
+    const jr = await fetch(
+      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(term)}&limit=8`,
+      {
+        headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
+        signal: AbortSignal.timeout(15_000),
+      },
+    ).catch(() => null);
+    if (!jr || !jr.ok) return [];
+    const jj: any = await jr.json().catch(() => null);
+    const rows: any[] = jj?.data ?? [];
+    return rows
+      .filter((m) => !!m?.mal_id)
       .map((m) => ({
-        malId: m.idMal ? String(m.idMal) : "",
-        anilistId: String(m.id ?? ""),
-        title: m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
-        image: m?.coverImage?.large ?? "",
-        episodes: m.episodes ?? null,
-        status: String(m.status ?? ""),
-        year: m.seasonYear ?? null,
+        malId: String(m.mal_id),
+        anilistId: "",
+        title: m?.title?.romaji ?? m?.title?.english ?? m?.title?.title_japanese ?? "",
+        image:
+          m?.images?.jpg?.large_image_url ?? m?.images?.jpg?.image_url ?? "",
+        episodes: m?.episodes ?? null,
+        status: String(m?.status ?? ""),
+        year: m?.year ?? null,
       }));
   },
 });

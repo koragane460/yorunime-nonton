@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";import {
   Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { CsBadge, CsScreen } from "@/components/CsDevScreens";
-import { ContentTools } from "@/components/ContentTools";
+import { ContentToolsFab } from "@/components/ContentTools";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
@@ -167,7 +167,11 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
 
       {/* Paksa update: begitu versi minimum di server naik, semua app yang
           masih di bawah versi itu langsung diminta reload. */}
-      {isDev && <ContentTools />}
+      {/* Tiga tools developer (tambah sinopsis, tambah anime, premium clan)
+        gabung jadi SATU tombol mengambang supaya panel tidak panjang. */}
+      {isDev && (
+        <ContentToolsFab onOpenClan={() => setDialog("clan")} />
+      )}
 
       {isDev && (
         <div className="mt-2.5 rounded-xl border border-border bg-background/60 p-2.5">
@@ -323,14 +327,6 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
 
       {isDev && <GrantPremiumPanel />}
       {isDev && <ManualPaymentPanel />}
-      {isDev && (
-        <button
-          onClick={() => setDialog("clan")}
-          className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-500/50 bg-amber-500/10 py-2 text-xs font-bold text-amber-300"
-        >
-          <Crown className="size-3.5" /> Premium Clan
-        </button>
-      )}
 
       {picked && (
         <UserActions
