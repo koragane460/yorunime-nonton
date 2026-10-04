@@ -87,11 +87,13 @@ export async function staffGuard(ctx: any, need: "dev" | "mod") {
   if (userId === null) throw new Error("Not signed in");
   const me = await ctx.db.get(userId);
   if (!me) throw new Error("Not signed in");
-  // Mode uji: semua akun punya title Developer dan semua panel terbuka untuk
-  // setiap akun yang sudah login. ID 1 = developer asli, tidak pernah diturunkan
-  // jadi moderator.
-  const isDev = true;
-  const isMod = true;
+  // Akses staff mengikuti role asli user. Sebelumnya `isDev`/`isMod` di-hardcode
+  // `true` (mode uji), sehingga setiap akun punya title Developer dan bisa
+  // membuka panel developer — itu yang membuat semua orang terlihat
+  // developer. ID 1 tetap developer asli dan tidak bisa diturunkan.
+  const role = String(me.role ?? "").toLowerCase();
+  const isDev = role === "dev" || role === "creator" || Number(me.seqId ?? 0) === 1;
+  const isMod = isDev || role === "mod";
   if (need === "dev" && !isDev) throw new Error("Hanya developer");
   if (need === "mod" && !isMod) throw new Error("Hanya moderator/developer");
   return { userId, me };

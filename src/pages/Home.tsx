@@ -345,6 +345,28 @@ const [showMusic, setShowMusic] = useState(false);
     [todayAiring, donghuaAiring],
   );
   const favQuery = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  // Poster & judul asli dari AniList untuk kartu Favorite. Tanpa ini kartu
+  // favorit memakai gambar yang tersimpan saat dulu ditekan, yang belum tentu
+  // poster asli anime itu di Home.
+  const realCards = useAction(api.anime.realCards);
+  const [favReal, setFavReal] = useState<Record<string, { id: string; title: string; image: string }>>({});
+  useEffect(() => {
+    const rows = favQuery ?? [];
+    if (rows.length === 0) {
+      setFavReal({});
+      return;
+    }
+    let alive = true;
+    realCards({ ids: rows.map((r: any) => String(r.animeId ?? "")) })
+      .then((r: any) => {
+        if (alive && r) setFavReal(r);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favQuery?.length]);
 
   // Auto-rotate hero
   useEffect(() => {
@@ -721,19 +743,26 @@ const [showMusic, setShowMusic] = useState(false);
         <>
           <SectionTitle>Favorite Kamu</SectionTitle>
           <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
-            {favQuery.map((f: any) => (
-              <button
-                key={f._id}
-                onClick={() => openAnime(f.animeId)}
-                className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
-              >
-                <img src={f.animeImage ?? ""} alt="" className="aspect-[2/3] w-full object-cover" />
-                <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
-                <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
-                  {f.animeTitle}
-                </p>
-              </button>
-            ))}
+            {favQuery.map((f: any) => {
+              const real = favReal[String(f.animeId)];
+              return (
+                <button
+                  key={f._id}
+                  onClick={() => openAnime(real?.id ?? f.animeId, real?.title ?? f.animeTitle)}
+                  className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
+                >
+                  <img
+                    src={real?.image || f.animeImage || ""}
+                    alt=""
+                    className="aspect-[2/3] w-full object-cover"
+                  />
+                  <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
+                  <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
+                    {real?.title || f.animeTitle}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </>
       )}
@@ -1788,6 +1817,12 @@ function AnimeDetailScreen({
   const { user } = useAuth();
   const getDetail = useAction(api.anime.animeDetail);
   const getSimilar = useAction(api.anime.animeSimilar);
+  // Sinopsis manual dari developer (tools konten). Kalau ada, override ini
+  // yang dipakai — menggantikan sinopsis yang kosong/aneh dari sumber.
+  const customSynopsis = useQuery(
+    api.content.overrideFor,
+    animeId ? { key: animeId, kind: "anime" } : "skip",
+  );
   const isFav = useQuery(api.activities.isFavorite, user ? { animeId } : "skip");
   const favCount = useQuery(api.activities.favoriteCount, { animeId });
   const progress = useQuery(
@@ -1843,7 +1878,10 @@ function AnimeDetailScreen({
   const releasedCount = eps.filter((e: any) => e.released !== false).length;
   // Sinopsis: sebelum diklik "baca selengkapnya" tetap tampil ~5/6 paragraf.
   const synopsisText: string =
-    detail.synopsisId ?? detail.synopsis ?? "Sinopsis belum tersedia.";
+    customSynopsis?.synopsis ??
+    detail.synopsisId ??
+    detail.synopsis ??
+    "Sinopsis belum tersedia.";
   const synopsisBody = synopsisPreview(synopsisText, synopsisOpen);
   const canExpandSynopsis = synopsisBody !== synopsisText;
 
@@ -2266,9 +2304,18 @@ function DonghuaDetailScreen({
   }, [detail, allEpisodes]);
 
   // Sinopsis dipotong 5 baris; sisa teksnya ada di tombol "Baca selengkapnya".
+  // Sinopsis manual dari developer (tools konten) menggantikan yang dari sumber.
+  const customDonghuaSynopsis = useQuery(
+    api.content.overrideFor,
+    slug ? { key: slug, kind: "donghua" } : "skip",
+  );
   const synopsisLines = useMemo(
-    () => (detail?.synopsis ?? "").split(/\n+/).map((s) => s.trim()).filter(Boolean),
-    [detail?.synopsis],
+    () =>
+      (customDonghuaSynopsis?.synopsis ?? detail?.synopsis ?? "")
+        .split(/\n+/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    [customDonghuaSynopsis?.synopsis, detail?.synopsis],
   );
 
   if (failed) {

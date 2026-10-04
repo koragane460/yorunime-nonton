@@ -56,11 +56,13 @@ const TITLE_STYLE: Record<
  * "Moderator" di Akun.
  *
  * Aturannya: ID 1 adalah akun asli developer, jadi walau role-nya "mod"
- * title-nya tetap Developer. Role kosong/unknown jatuh ke Developer.
+ * title-nya tetap Developer. Role kosong/tidak dikenal TIDAK lagi jatuh ke
+ * Developer — user biasa tidak punya badge sama sekali (sebelumnya semua
+ * akun terlihat sebagai Developer).
  */
 export function titleStyleOf(role?: string, seqId?: number) {
   const key = role === "mod" && seqId === 1 ? "dev" : (role ?? "");
-  return TITLE_STYLE[key] ?? TITLE_STYLE.dev;
+  return TITLE_STYLE[key];
 }
 
 /** Sama seperti titleStyleOf, khusus warna tier clan. */
@@ -233,6 +235,8 @@ export function TitleBadge({
   compact?: boolean;
 }) {
   const def = titleStyleOf(role, seqId);
+  // User tanpa role staff tidak/badge staff pun tidak perlu dirender.
+  if (!def) return null;
   return (
     <span
       className={cn(
@@ -410,9 +414,13 @@ export function clanTextClass(level?: number) {
  * (teks [YRNM] di dalam kotak) selalu PUTIH untuk semua clan. Dua fungsi
  * ini dulu satu-satunya dan tag ikut ke-pink/kuning, padahal yang harus
  * berwarna cuma namanya.
+ *
+ * `yn-shimmer` ditambahkan di sini (bukan di tiap pemanggilan) supaya efek
+ * silau ikut konsisten di Home, daftar clan, podium, chat, dan detail —
+ * dan otomatis ikut untuk clan baru tanpa perlu sentuh tiap layar.
  */
 export function clanNameClass(level?: number) {
-  return clanTextClass(level);
+  return `${clanTextClass(level)} yn-shimmer`;
 }
 
 export function ClanTag({

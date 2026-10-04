@@ -85,7 +85,14 @@ function parseVtt(text: string): Cue[] {
       .slice(0, 2)
       .join("\n");
     if (!body) continue;
-    const [start, end] = timing.split("-->").map((s) => clean(s.split(" ")[0] ?? ""));
+    // PENTING: bagian setelah "-->" diawali spasi ("--> 00:00:06.300").
+    // Tanpa trim, `split(" ")[0]` mengembalikan string kosong dan SELURUH
+    // cue dibuang — subtitle tidak pernah muncul sama sekali. SRT juga
+    // memakai koma untuk milidetik, sedangkan WebVTT memakai titik, jadi
+    // keduanya dinormalkan ke format WebVTT di sini.
+    const [start, end] = timing
+      .split("-->")
+      .map((s) => clean(s.trim().split(" ")[0] ?? "").replace(",", "."));
     if (!start || !end) continue;
     out.push({ start, end, text: body });
     if (out.length >= MAX_CUES) break;
@@ -255,5 +262,189 @@ export const subtitleIndo = action({
         reason: e instanceof Error ? e.message : "Gagal membuat subtitle",
       };
     }
+  },
+});
+
+/* ------------------------------------------------------------------ *
+ *  Subtitle untuk DONGHUA.
+ *
+ *  Episode donghua tidak punya MAL id, jadi `subtitleIndo` di atas selalu
+ *  gagal untuknya — itulah alasan subtitle Indonesia tidak pernah muncul di
+ *  halaman nonton donghua. Sumbernya: file DailyMotion milik episode itu
+ *  sendiri, yang metadata-nya memuat track subtitle (SRT).
+ * ------------------------------------------------------------------ */
+
+const SANKA = "https://www.sankavollerei.web.id";
+
+function sankaHeaders(): Record<string, string> {
+  return {
+    "User-Agent": UA,
+    Accept: "application/json, text/plain, */*",
+    Referer: `${SANKA}/anime`,
+  };
+}
+
+const DM_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+/**
+ * Ambil file subtitle (SRT/VTT) dari CDN DailyMotion.
+ *
+ * Header sederhana saja sudah cukup dari jaringan publik, tapi isolate
+ * Convex kadang dibalas 403 tanpa `Referer`, jadi tiga bentuk header
+ * dicoba sebelum menyerah. Status terakhir dikembalikan supaya pesan error
+ * di UI menyebut penyebabnya, bukan asal "gagal".
+ */
+async function fetchSubtitleFile(
+  url: string,
+): Promise<{ text: string; status: string }> {
+  const tries: Record<string, string>[] = [
+    { "User-Agent": DM_UA, Referer: "https://www.dailymotion.com/" },
+    { "User-Agent": DM_UA },
+    { "User-Agent": DM_UA, Referer: "https://geo.dailymotion.com/", Accept: "*/*" },
+  ];
+  let status = "gagal";
+  for (const headers of tries) {
+    try {
+      const res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(15_000),
+      });
+      status = `HTTP ${res.status}`;
+      if (!res.ok) continue;
+      // CDN ini kadang membalas 200 dengan body terkompresi yang `res.text()`
+      // tidak berhasil di-decode di dalam isolate; arrayBuffer + decode
+      // manual jauh lebih andal.
+      const buf = new Uint8Array(await res.arrayBuffer());
+      let text = new TextDecoder("utf-8").decode(buf);
+      if (text.includes("�")) text = new TextDecoder("windows-1252").decode(buf);
+      if (text.length > 0)
+        return { text, status: `${status} ${buf.length}B` };
+    } catch (e) {
+      status = e instanceof Error ? e.message.slice(0, 60) : "gagal";
+    }
+  }
+  return { text: "", status };
+}
+
+/** Ambil semua track subtitle milik satu video DailyMotion. */
+async function dmSubtitleTracks(videoId: string) {
+  try {
+    const res = await fetch(
+      `https://www.dailymotion.com/player/metadata/video/${videoId}`,
+      {
+        headers: { "User-Agent": DM_UA, Referer: "https://www.dailymotion.com/" },
+        signal: AbortSignal.timeout(12_000),
+      },
+    );
+    if (!res.ok) return [] as { key: string; label: string; url: string }[];
+    const j: any = await res.json();
+    const data = j?.subtitles?.data;
+    if (!data || typeof data !== "object") return [];
+    const out: { key: string; label: string; url: string }[] = [];
+    for (const [key, val] of Object.entries(data as Record<string, any>)) {
+      const url = Array.isArray(val?.urls) ? String(val?.urls[0] ?? "") : "";
+      if (url) out.push({ key, label: String(val?.label ?? key), url });
+    }
+    return out;
+  } catch {
+    return [] as { key: string; label: string; url: string }[];
+  }
+}
+
+/**
+ * Subtitle Indonesia untuk satu episode donghua.
+ *
+ * Urutan syarat: cari server DailyMotion milik episode itu (bukan pencarian
+ * judul, yang bisa jadi video episode lain), ambil track yang Indonesia kalau
+ * ada; kalau tidak, track English/Mandarin otomatis diterjemahkan — sama
+ * seperti alur subtitle anime, jadi user tidak lagi melihat layar tanpa
+ * subtitle.
+ */
+export const donghuaSubtitle = action({
+  args: { slug: v.string() },
+  handler: async (_ctx, { slug }): Promise<
+    | { ok: true; vtt: string; source: string; lang: string }
+    | { ok: false; reason: string }
+  > => {
+    const epSlug = String(slug ?? "").trim();
+    if (!epSlug) return { ok: false as const, reason: "Episode belum tersedia" };
+
+    const cacheKey = `donghua:${epSlug}`;
+    const hit = cache.get(cacheKey);
+    if (hit && Date.now() - hit.at < CACHE_TTL) {
+      return { ok: true as const, vtt: hit.vtt, source: hit.source, lang: "id" };
+    }
+
+    // Server episode: coba donghub dulu (punya DailyMotion), lalu donghua.
+    let videos: string[] = [];
+    for (const src of ["donghub", "donghua"]) {
+      try {
+        const res = await fetch(
+          `${SANKA}/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
+          { headers: sankaHeaders(), signal: AbortSignal.timeout(15_000) },
+        );
+        if (!res.ok) continue;
+        const j: any = await res.json();
+        const streams: any[] = Array.isArray(j?.data?.streams)
+          ? j.data.streams
+          : Array.isArray(j?.streaming?.servers)
+            ? j.streaming.servers
+            : [];
+        videos = streams
+          .map((s: any) => String(s?.url ?? ""))
+          .map((u: string) => (u.match(/video=([a-z0-9]+)/i) ?? [])[1] ?? "")
+          .filter(Boolean);
+        if (videos.length > 0) break;
+      } catch {
+        /* coba source berikutnya */
+      }
+    }
+    if (videos.length === 0)
+      return { ok: false as const, reason: "Episode ini tidak punya subtitle" };
+
+    // Track dari video pertama yang benar-benar punya subtitle.
+    const ranked: { label: string; url: string }[] = [];
+    for (const vid of videos.slice(0, 2)) {
+      const tracks = await dmSubtitleTracks(vid);
+      for (const t of tracks) ranked.push({ label: t.label, url: t.url });
+      if (ranked.some((t) => /indonesia|indonesian|\bids?\b/i.test(t.label)))
+        break;
+    }
+    if (ranked.length === 0)
+      return { ok: false as const, reason: "Subtitle tidak tersedia" };
+
+    const sorted = [
+      ...ranked.filter((t) => /indonesia|indonesian|\bids?\b/i.test(t.label)),
+      ...ranked.filter((t) => !/indonesia|indonesian|\bids?\b/i.test(t.label)),
+    ];
+
+    let pick: { label: string; url: string } | null = null;
+    let cues: Cue[] = [];
+    let lastStatus = "tidak ada track";
+    for (const cand of sorted.slice(0, 3)) {
+      // CDN DailyMotion kadang memblokir header minimal; coba dua bentuk.
+      const raw = await fetchSubtitleFile(cand.url);
+      lastStatus = raw.status;
+      cues = parseVtt(raw.text);
+      if (cues.length > 0) {
+        pick = cand;
+        break;
+      }
+    }
+    if (!pick)
+      return {
+        ok: false as const,
+        reason: `Subtitle tidak bisa dibaca (${lastStatus})`,
+      };
+
+    const isIndo = /indonesia|indonesian|\bids?\b/i.test(pick.label);
+    const result = isIndo
+      ? { cues, translated: true }
+      : await translateCues(cues, /english|\ben\b/i.test(pick.label) ? "en" : "auto");
+    const source = isIndo ? "indo" : result.translated ? "auto" : "raw";
+    const vtt = toVtt(result.cues);
+    if (cache.size > 120) cache.clear();
+    cache.set(cacheKey, { vtt, source, at: Date.now() });
+    return { ok: true as const, vtt, source, lang: isIndo ? "id" : "en" };
   },
 });

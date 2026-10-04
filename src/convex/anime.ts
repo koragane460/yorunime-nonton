@@ -186,6 +186,10 @@ function synthEpisodes(a: any, eps: EpisodeItem[]): EpisodeItem[] {
   // Jumlah episode harus jujur mengikuti data anime. Dulu di-cap 24 supaya
   // anime panjang (One Piece >1000 episode) jadi terpotong.
   const total = Math.min(a.episodes ?? 12, 3000) || 12;
+  // Anime yang masih tayang: `a.episodes` hanyalah rencana, bukan jumlah
+  // episode yang sudah ada. Karena daftar aslinya tidak bisa diambil,
+  // episodenya ditandai belum tayang daripada dikarang lengkap.
+  const ongoing = /currently airing|airing/i.test(String(a?.status ?? ""));
   const out: EpisodeItem[] = [];
   for (let i = 1; i <= total; i++) {
     out.push({
@@ -193,6 +197,7 @@ function synthEpisodes(a: any, eps: EpisodeItem[]): EpisodeItem[] {
       number: i,
       title: `Episode ${i}`,
       duration: "24 menit",
+      released: !ongoing,
     });
   }
   return out;
@@ -371,14 +376,25 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   // AniList mengisi `episodes` dengan null untuk anime yang masih tayang
   // (One Piece, Naruto, dll). `nextAiringEpisode.episode` adalah episode
   // terakhir yang sudah tayang, jadi itu jumlah episode yang bisa ditonton.
-  const counted =
-    m.episodes ??
-    (m.status === "RELEASING" && m.nextAiringEpisode?.episode
-      ? m.nextAiringEpisode.episode - 1
-      : undefined);
+  //
+  // PENTING: untuk anime yang masih tayang, `episodes` adalah RENCANA total
+  // (mis. season baru = 12 episode) bukan jumlah yang sudah keluar. Kalau
+  // angka itu dipakai langsung, episode 4-12 ikut terlihat padahal belum
+  // pernah rilis. Jadi jumlah aired diambil dari `nextAiringEpisode`, dan
+  // episode setelahnya tetap ditampilkan tapi ditandai `released: false`
+  // supaya UI menonaktifkannya.
+  const releasing = m.status === "RELEASING";
+  const airedUpTo =
+    releasing && m.nextAiringEpisode?.episode
+      ? Number(m.nextAiringEpisode.episode) - 1
+      : undefined;
+  const counted = releasing ? (airedUpTo ?? m.episodes) : m.episodes;
   const total = upcoming ? 0 : Math.max(1, Math.min(counted ?? 1, 3000));
+  // Kalau jumlah aired diketahui pasti, tampilkan sampai episode itu saja:
+  // episode lanjutan yang tidak ada pun tidak perlu dikarang.
+  const listUpTo = releasing && airedUpTo ? Math.max(airedUpTo, 1) : total;
   const episodeList: EpisodeItem[] = [];
-  for (let i = 1; i <= total; i++) {
+  for (let i = 1; i <= listUpTo; i++) {
     episodeList.push({
       id: `${malId}__ep${i}`,
       number: i,
@@ -530,18 +546,30 @@ async function otakuDetail(id: string): Promise<AnimeDetail> {
   // kadang daftar episode belum lengkap padahal anime sudah selesai tayang.
   const declared = odNum(d.episodes);
   const total = Math.max(episodeList.length, declared ?? 0);
+  // Anime ongoing: `d.episodes` adalah rencana total, sedangkan `episodeList`
+  // berisi episode yang SUDAH tayang. Episode yang benar-benar ada harus tetap
+  // diploader sebagai `released: true`; hanya nomor sisanya yang ditandai
+  // belum tayang. Versi sebelumnya membangun ulang seluruh daftar dari nol,
+  // sehingga episode yang sudah rilis ikut ter-disable (dan kalau kebalikan,
+  // episode yang belum ada terlihat lengkap).
   const episodeAll: EpisodeItem[] =
-    episodeList.length === total
+    episodeList.length >= total
       ? episodeList
-      : Array.from({ length: total }, (_, i) => ({
-          id: `${id}__ep${i + 1}`,
-          number: i + 1,
-          title: `Episode ${i + 1}`,
-          // Sisipan ini belum tayang (anime ongoing, contoh 25 episode tapi baru
-          // 14 yang rilis) — UI harus men|gray-kan dan men-disable.
-          released: false,
-          duration: d.duration ?? "24 menit",
-        }));
+      : [
+          ...episodeList,
+          ...Array.from({ length: total - episodeList.length }, (_, i) => {
+            const number = episodeList.length + i + 1;
+            return {
+              id: `${id}__ep${number}`,
+              number,
+              title: `Episode ${number}`,
+              // Sisipan ini belum tayang (anime ongoing, contoh 25 episode tapi
+              // baru 14 yang rilis) — UI harus men|gray-kan dan men-disable.
+              released: false,
+              duration: d.duration ?? "24 menit",
+            };
+          }),
+        ];
   const year = Number(String(d.aired ?? "").match(/\b(19|20)\d{2}\b/)?.[0]);
   return {
     source: "otakudesu",
@@ -826,6 +854,55 @@ export const animeRecommended = action({
       if (out.length >= 14) break;
       if (seen.has(c.id)) continue;
       out.push(c);
+    }
+    return out;
+  },
+});
+
+/**
+ * Poster & judul ASLI dari AniList untuk sekumpulan id.
+ *
+ * Favorite menyimpan judul+poster saat pertama kali ditekan, jadi kalau
+ * anime itu favorit dari kartu fallback (atau dari sumber lain), poster di
+ * "Favorite Kamu" tidak sama dengan yang tampil di Home. Aqui ini mengambil
+ * data asli dari AniList per id, jadi kartu favorit memakai gambar yang
+ * sama dengan katalog dan epitope yang dibuka benar-benar milik anime itu.
+ */
+export const realCards = action({
+  args: { ids: v.array(v.string()) },
+  handler: async (runCtx, { ids }) => {
+    const out: Record<string, { id: string; title: string; image: string }> = {};
+    const list = (ids ?? []).filter((s) => !!String(s ?? "").trim()).slice(0, 40);
+    for (const raw of list) {
+      const id = String(raw).trim();
+      if (out[id]) continue;
+      const asInt = /^\d+$/.test(id);
+      // AniList menolak query yang mengirim `id` dan `idMal` sekaligus, jadi
+      // dua bentuk dicoba terpisah: MAL id dulu (dipakai seluruh katalog),
+      // lalu id AniList.
+      const variants: { q: string; vars: Record<string, number> }[] = asInt
+        ? [
+            {
+              q: `query($idMal:Int){ Media(idMal:$idMal, type:ANIME){ id idMal title{ romaji english native } coverImage{ extraLarge large } } }`,
+              vars: { idMal: Number(id) },
+            },
+            {
+              q: `query($id:Int){ Media(id:$id, type:ANIME){ id idMal title{ romaji english native } coverImage{ extraLarge large } } }`,
+              vars: { id: Number(id) },
+            },
+          ]
+        : [];
+      for (const v of variants) {
+        const d: any = await aniGraphql(v.q, v.vars).catch(() => null);
+        const m = d?.Media;
+        if (!m) continue;
+        out[id] = {
+          id: String(m.idMal ?? m.id ?? id),
+          title: m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
+          image: m?.coverImage?.extraLarge ?? m?.coverImage?.large ?? "",
+        };
+        break;
+      }
     }
     return out;
   },

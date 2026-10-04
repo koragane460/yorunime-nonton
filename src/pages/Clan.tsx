@@ -1145,9 +1145,10 @@ function ClanDetail({
             </div>
             <p
               className={cn(
-                "mt-2 truncate text-2xl font-black yn-outline",
-                // Warna nama ikut LEVEL clan (biru → hijau → ungu → emas),
-                // sama persis dengan warnanya di daftar clan & Top clan.
+                // `clanNameClass` sudah membawa warna per level + efek silau
+                // (beserta garis tepi tipisnya), jadi `yn-outline` tidak
+                // dipakai di sini — akan menimpa warna tier.
+                "mt-2 truncate text-2xl font-black",
                 clanNameClass(c.level),
               )}
             >

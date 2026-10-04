@@ -667,6 +667,96 @@ async function dailymotionHls(title: string): Promise<{
  * Bentuk dikembalikan sengaja sama dengan `megaplay.resolveEpisode` supaya
  * halaman Nonton tidak perlu tahu asal bedanya.
  */
+/**
+ * Subtitle milik DailyMotion untuk satu video id.
+ *
+ * File donghua (donghive/anichin) memang diberi label "Subtitle Indonesia",
+ * tapi saat diunggah ke DailyMotion track Indonesianya sering tidak ikut, jadi
+ * yang tersisa cuma `en-auto`. Fungsi ini mengembalikan semua track yang
+ * benar-benar ada supaya pemanggil bisa memakai yang Indonesia, atau
+ * menerjemahkannya.
+ */
+export async function dailymotionSubtitles(
+  videoId: string,
+): Promise<{ key: string; label: string; url: string }[]> {
+  try {
+    const res = await fetch(
+      `https://www.dailymotion.com/player/metadata/video/${videoId}`,
+      {
+        headers: { "User-Agent": UA, Referer: "https://www.dailymotion.com/" },
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    if (!res.ok) return [];
+    const j: any = await res.json();
+    const data = j?.subtitles?.data;
+    if (!data || typeof data !== "object") return [];
+    const out: { key: string; label: string; url: string }[] = [];
+    for (const [key, val] of Object.entries(data as Record<string, any>)) {
+      const url = Array.isArray(val?.urls) ? String(val?.urls[0] ?? "") : "";
+      if (!url) continue;
+      out.push({ key, label: String(val?.label ?? key), url });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** Video DailyMotion dari URL embed (…/player/xid.html?video=kXXXX). */
+export function dailymotionIdFromUrl(url: string): string {
+  return (String(url ?? "").match(/video=([a-z0-9]+)/i) ?? [])[1] ?? "";
+}
+
+/**
+ * Video HLS dari stream DailyMotion milik EPISODE INI saja.
+ *
+ * Versi lama mencari DailyMotion pakai judul seri (`dailymotionHls`), yang
+ * sering mengembalikan video episode lain — atau video yang sudah dihapus —
+ * sehingga subtitle tidak nyambung. Sekarang id video diambil dari daftar
+ * server episode yang sebenarnya, jadi video dan subtitle-nya satu paket.
+ */
+async function dailymotionHlsForEpisode(
+  slug: string,
+): Promise<{ label: string; url: string; subs: { key: string; label: string; url: string }[] } | null> {
+  for (const src of DONGHUA_SOURCES) {
+    const j = await sankaGet(`/anime/${src}/episode/${encodeURIComponent(slug)}`, 20_000);
+    const streams: any[] = Array.isArray(j?.data?.streams) ? j.data.streams : [];
+    for (const s of streams) {
+      const vid = dailymotionIdFromUrl(String(s?.url ?? ""));
+      if (!vid) continue;
+      let qualities: any = null;
+      try {
+        const meta = await fetch(
+          `https://www.dailymotion.com/player/metadata/video/${vid}`,
+          {
+            headers: { "User-Agent": UA, Referer: "https://www.dailymotion.com/" },
+            signal: AbortSignal.timeout(10_000),
+          },
+        );
+        if (!meta.ok) continue;
+        qualities = (await meta.json())?.qualities;
+      } catch {
+        continue;
+      }
+      if (!qualities || typeof qualities !== "object") continue;
+      const wanted = ["1080", "720", "480", "380", "240", "auto"];
+      for (const w of wanted) {
+        const list = (qualities as Record<string, any>)[w];
+        const m3u8 = Array.isArray(list) ? String(list[0]?.url ?? "") : "";
+        if (!m3u8) continue;
+        const subs = await dailymotionSubtitles(vid);
+        return {
+          label: `DailyMotion ${w === "auto" ? "auto" : `${w}p`}`,
+          url: m3u8,
+          subs,
+        };
+      }
+    }
+  }
+  return null;
+}
+
 export const resolveEpisode = action({
   args: { slug: v.string(), source: v.optional(v.string()) },
   handler: async (_ctx, { slug, source }) => {
@@ -675,21 +765,48 @@ export const resolveEpisode = action({
       return { ok: false as const, reason: "Episode belum tersedia" };
     }
 
-    // Prioritas 1: DailyMotion (HLS, diputar player sendiri). Judul episode
-    // diambil dari slug-nya ("judul-seri-episode-12-subtitle-indonesia").
-    const fromDm = await dailymotionHls(
-      epSlug
-        .replace(/-episode-\d+.*$/i, "")
-        .replace(/-/g, " ")
-        .trim(),
-    );
+    // Prioritas 1: DailyMotion milik episode ini (bukan pencarian judul).
+    const fromDm = await dailymotionHlsForEpisode(epSlug);
     if (fromDm) {
+      const indo = fromDm.subs.find((s) =>
+        /^(id|ind|indonesia|indon)/i.test(s.key) ||
+        /indonesia/i.test(s.label),
+      );
       return {
         ok: true as const,
         sources: [
           {
             label: fromDm.label,
             url: fromDm.url,
+            type: "hls" as const,
+            baked: false,
+          },
+        ],
+        subtitle: indo?.url ?? null,
+        subtitles: fromDm.subs.map((s) => ({ label: s.label, url: s.url })),
+        subTracks: [] as unknown[],
+        hasIndonesian: !!indo,
+        bakedSubs: false,
+        intro: null,
+        outro: null,
+      };
+    }
+
+    // Cadangan: pencarian judul, dipakai hanya kalau episode tidak punya
+    // server DailyMotion sama sekali (mis. sumber anichin/OK.ru).
+    const fromTitle = await dailymotionHls(
+      epSlug
+        .replace(/-episode-\d+.*$/i, "")
+        .replace(/-/g, " ")
+        .trim(),
+    );
+    if (fromTitle) {
+      return {
+        ok: true as const,
+        sources: [
+          {
+            label: fromTitle.label,
+            url: fromTitle.url,
             type: "hls" as const,
             baked: false,
           },

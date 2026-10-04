@@ -653,6 +653,50 @@ html.antilag .yn-banner-box::after {
     0 0.6px 0 rgb(0 0 0 / 0.85);
 }
 
+/*
+ * Silau pada NAMA clan: garis cahaya putih melewati tulisan, warnanya tetap
+ * mengikuti level clan (currentColor = warna tier).
+ *
+ * Karena isinya `background-clip: text`, `text-shadow` tidak bisa dipakai
+ * untuk garis tepi (bayangannya ikut terpotong jadi blok hitam). Jadi tepi
+ * tipisnya dibuat dengan `-webkit-text-stroke`, hasilnya sama tipisnya
+ * `.yn-outline` dan tidak menimpa warna tier.
+ */
+.yn-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    currentColor 0%,
+    currentColor 34%,
+    #ffffff 50%,
+    currentColor 66%,
+    currentColor 100%
+  );
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.6px rgb(0 0 0 / 0.9);
+  animation: yn-shimmer-sweep 3.8s linear infinite;
+}
+
+@keyframes yn-shimmer-sweep {
+  from {
+    background-position: 190% 0;
+  }
+  to {
+    background-position: -90% 0;
+  }
+}
+
+/* Hormati pengguna yang tidak suka gerakan terus-menerus. */
+@media (prefers-reduced-motion: reduce) {
+  .yn-shimmer,
+  .clan-shine,
+  .clan-shine::after {
+    animation: none !important;
+  }
+}
+
 /* Bintang statis. Tidak berkedip: kilatan light adalah salah satu penyebab
    tag terlihat "kedip" saat warna latar bergerak. */
 .clan-tag::before {

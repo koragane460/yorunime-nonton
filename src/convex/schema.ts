@@ -499,6 +499,32 @@ const schema = defineSchema(
       text: v.optional(v.string()),
       createdAt: v.number(),
     }).index("createdAt", ["createdAt"]),
+
+    // Sinopsis yang ditulis manual oleh developer (kalau sinopsis dari
+    // sumber kosong/aneh). Key = MAL id untuk anime, slug untuk donghua.
+    contentOverrides: defineTable({
+      key: v.string(),
+      kind: v.union(v.literal("anime"), v.literal("donghua")),
+      synopsis: v.string(),
+      updatedBy: v.optional(v.id("users")),
+      updatedAt: v.number(),
+    }).index("key_kind", ["key", "kind"]),
+
+    // Anime yang ditambahkan sendiri oleh developer. Episode TIDAK dikarang
+    // dan TIDAK disimpan di sini: detailnya diambil real-time dari sumber
+    // (Sanka / AniList) setiap kali dibuka, jadi daftar episodenya selalu
+    // sama dengan yang benar-benar ada.
+    customAnime: defineTable({
+      title: v.string(),
+      slug: v.string(),
+      source: v.union(v.literal("sanka"), v.literal("anilist")),
+      poster: v.optional(v.string()),
+      synopsis: v.string(),
+      airingDay: v.optional(v.string()),
+      airingTime: v.optional(v.string()),
+      genres: v.optional(v.array(v.string())),
+      createdAt: v.number(),
+    }).index("slug", ["slug"]),
   },
   {
     schemaValidation: false,

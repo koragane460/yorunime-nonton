@@ -145,18 +145,19 @@ export function ProfileSheet({
               )}
             </div>
 
-            {/* Dua tombol kotak panjangsidebelah: kiri Add Friend (ikon
-                orang + teks), kanan Chat (ikon + teks). Add Friend memakai
-                warna kotak pesan chat (abu-abu gelap); Chat kuning tua dan
-                baru bisa ditekan kalau sudah berteman. */}
+            {/* Dua tombol membulat (pill), tidak lagi kotak panjang yang memenuhi
+                lebar layar: lebar keduanya ikut isi teks + justify-self, jadi
+                rapih berdampingan dan tidak melar ke pinggir. Add Friend
+                memakai warna kotak pesan chat (abu-abu gelap); Chat kuning
+                tua dan baru bisa ditekan kalau sudah berteman. */}
             {!isMe && (
-              <div className="mx-auto mt-3 grid max-w-sm grid-cols-2 gap-2">
+              <div className="mx-auto mt-3 flex max-w-sm justify-center gap-2">
                 <button
                   type="button"
                   onClick={requestFriend}
                   disabled={sending || friendStatus === "friend" || friendStatus === "pending"}
                   className={cn(
-                    "flex items-center justify-center gap-2 border border-white/10 bg-white/[0.07] px-3 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]",
+                    "inline-flex w-fit items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-4 py-2 text-[12px] font-bold text-white transition active:scale-[0.98]",
                     (friendStatus === "friend" || friendStatus === "pending") &&
                       "opacity-50",
                   )}
@@ -183,7 +184,7 @@ export function ProfileSheet({
                       })
                     }
                     className={cn(
-                      "flex items-center justify-center gap-2 border px-3 py-2.5 text-[13px] font-bold transition active:scale-[0.98]",
+                      "inline-flex w-fit items-center justify-center gap-2 rounded-full border px-4 py-2 text-[12px] font-bold transition active:scale-[0.98]",
                       friendStatus === "friend"
                         ? "border-amber-500/50 bg-amber-600 text-white hover:bg-amber-500"
                         : "cursor-not-allowed border-white/10 bg-white/[0.04] text-white/35",

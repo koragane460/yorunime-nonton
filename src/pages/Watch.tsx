@@ -294,6 +294,10 @@ function WatchContent() {
   // Subtitle Indonesia otomatis: subtitle English diterjemahkan di backend
   // lalu dipasang sebagai track di player ini.
   const subtitleIndo = useAction(api.subtitle.subtitleIndo);
+  // Donghua tidak punya MAL id, jadi jalur subtitle anime di atas selalu gagal
+  // untuknya. Jalur ini mengambil track subtitle milik video DailyMotion
+  // episode tersebut, jadi subtitle Indonesia tetap muncul.
+  const donghuaSub = useAction(api.subtitle.donghuaSubtitle);
   const record = useMutation(api.activities.recordWatch);
   const saveProgress = useMutation(api.activities.saveProgress);
   const saveSettings = useMutation(api.account.updateSettings);
@@ -700,6 +704,54 @@ function WatchContent() {
       setAutoSubLoading(false);
       return;
     }
+    // Donghua: slug-nya bukan MAL id, jadi jalurnya terpisah.
+    if (isDonghua) {
+      const key = `yorunime-sub-donghua:${epParam}`;
+      const cachedDonghua = (() => {
+        try {
+          return localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      })();
+      setAutoVtt("");
+      setAutoSubError("");
+      setAutoSubSource("");
+      if (cachedDonghua && cachedDonghua.includes("WEBVTT")) {
+        setAutoVtt(cachedDonghua);
+        return;
+      }
+      let aliveDh = true;
+      setAutoSubLoading(true);
+      donghuaSub({ slug: epParam })
+        .then((r: any) => {
+          if (!aliveDh) return;
+          if (!r?.ok || !r.vtt) {
+            setAutoSubError(
+              r?.reason ?? "Subtitle Indonesia belum tersedia untuk episode ini",
+            );
+            return;
+          }
+          try {
+            localStorage.setItem(key, r.vtt);
+          } catch {
+            /* storage penuh */
+          }
+          setAutoVtt(r.vtt);
+          setAutoSubSource(String(r.source ?? "auto"));
+          if (r.source === "raw")
+            setAutoSubError("Terjemahan subtitle gagal, dipakai subtitle asli");
+        })
+        .catch(() => {
+          if (aliveDh) setAutoSubError("Subtitle Indonesia gagal dimuat");
+        })
+        .finally(() => {
+          if (aliveDh) setAutoSubLoading(false);
+        });
+      return () => {
+        aliveDh = false;
+      };
+    }
     const mm = epParam.match(/^(\d+)__ep(\d+)$/);
     // Episode tanpa MAL id (mis. Otakudesu) tidak punya sumber subtitle
     // Inggris untuk diterjemahkan, jadi tidak ada yang bisa dimuat.
@@ -763,7 +815,7 @@ function WatchContent() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epParam, animeId, bakedSubs, !!direct?.ok, subRetry]);
+  }, [epParam, animeId, isDonghua, bakedSubs, !!direct?.ok, subRetry]);
 
   const [detailData, setDetailData] = useState<any>(null);
   // Episode yang langsung tampil di grid; sisanya lewat "Lihat semua".
@@ -776,6 +828,17 @@ function WatchContent() {
   const currentEp =
     epIndex >= 0 ? epList[epIndex] : (epList.find((e: any) => e.id === epParam) ?? null);
   const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
+  // URL yang dipakai untuk unduhan: harus MP4. Server yang sedang diputar
+  // belum tentu MP4 (bisa HLS atau embed), jadi server MP4 dari episode yang
+  // sama dicari otomatis supaya memilih kualitas langsung mengunduh tanpa
+  // user harus ganti server lebih dulu.
+  const downloadUrl = useMemo(() => {
+    if (sourceType === "mp4" && streamUrl) return streamUrl;
+    const mp4 = (sources as any[]).find(
+      (s) => s?.type === "mp4" && !!s?.url,
+    );
+    return String(mp4?.url ?? "");
+  }, [sources, sourceType, streamUrl]);
 
   /**
    * Server yang sedang diputar error → tandai mati lalu pindah ke server
@@ -2535,8 +2598,9 @@ function WatchContent() {
       {downloadOpen && (
         <Popup onClose={() => setDownloadOpen(false)} title="Unduh">
           <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-            Episode ini akan masuk ke daftar Download di Home dan bisa ditonton
-            offline. Kualitas 1080p hanya untuk akun Premium.
+            {downloadUrl
+              ? "Pilih kualitas — episode ini langsung masuk ke daftar Download di Home dan bisa ditonton offline. Kualitas 1080p hanya untuk akun Premium."
+              : "Episode ini belum punya server MP4 yang bisa disimpan offline. Coba putar server lain dulu."}
           </p>
           <div className="flex flex-wrap gap-2">
             {QUALITIES.slice(2).map((q) => {
@@ -2544,25 +2608,15 @@ function WatchContent() {
               return (
                 <button
                   key={q}
-                  disabled={locked || !streamUrl}
+                  disabled={locked || !downloadUrl}
                   onClick={() => {
-                    if (!currentEp) return;
+                    if (!currentEp || !downloadUrl) return;
                     // Server HLS (m3u8) tidak bisa disimpan sebagai satu file
-                    // video oleh browser — yang bisa disimpan adalah MP4
-                    // langsung. Jadi antrean hanya dibuat untuk MP4; untuk HLS
-                    // user diberi tahu dengan jelas, bukan janji palsu.
-                    if (sourceType === "hls") {
-                      toast.error(
-                        "Server ini menyediakan stream HLS yang tidak bisa disimpan offline. Coba server lain.",
-                      );
-                      return;
-                    }
-                    if (sourceType === "embed") {
-                      toast.error(
-                        "Server embed tidak bisa diunduh. Pilih server HLS/MP4.",
-                      );
-                      return;
-                    }
+                    // video oleh browser, jadi antrean selalu memakai MP4.
+                    // Kalau server yang SEDANG diputar HLS/embed, MP4-nya
+                    // tetap diambil otomatis dari daftar server episode ini —
+                    // user tidak perlu ganti server dulu, dan begitu memilih
+                    // kualitas episode langsung masuk daftar Download.
                     void enqueueDownload({
                       animeId,
                       animeTitle: D.title,
@@ -2570,7 +2624,7 @@ function WatchContent() {
                       episode: currentEp.number,
                       episodeId: epParam ?? undefined,
                       quality: q,
-                      url: streamUrl,
+                      url: downloadUrl,
                     })
                       .then(() => {
                         toast.success(`Masuk antrean unduhan (${q})`);

@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";import {
   Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { CsBadge, CsScreen } from "@/components/CsDevScreens";
+import { ContentTools } from "@/components/ContentTools";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
@@ -166,6 +167,8 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
 
       {/* Paksa update: begitu versi minimum di server naik, semua app yang
           masih di bawah versi itu langsung diminta reload. */}
+      {isDev && <ContentTools />}
+
       {isDev && (
         <div className="mt-2.5 rounded-xl border border-border bg-background/60 p-2.5">
           <p className="flex items-center gap-1.5 text-[11px] font-bold">

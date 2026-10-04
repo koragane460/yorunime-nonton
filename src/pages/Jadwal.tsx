@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
@@ -68,6 +68,9 @@ function JadwalContent() {
   const todayAiring = useAction(api.anime.animeTodayAiring);
   const comicSchedule = useAction(api.manga.schedule);
   const donghuaSchedule = useAction(api.sanka.donghuaWeeklySchedule);
+  // Anime yang ditambahkan developer lewat tools konten. Episodenya real-time,
+  // tapi jadwal episodenya mengikuti hari yang diisi developer saat menambah.
+  const customAnime = useQuery(api.content.listCustomAnime, {});
   const [tab, setTab] = useState<Tab>("anime");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sched, setSched] = useState<Record<string, AiringItem[]>>({});
@@ -188,8 +191,10 @@ function JadwalContent() {
   }, []);
 
   const animeTotal = useMemo(
-    () => Object.values(sched).reduce((s, v) => s + v.length, 0),
-    [sched],
+    () =>
+      Object.values(sched).reduce((s, v) => s + v.length, 0) +
+      (customAnime ?? []).filter((c: any) => !!c.airingDay).length,
+    [sched, customAnime],
   );
   const donghuaTotal = useMemo(
     () =>
@@ -213,7 +218,22 @@ function JadwalContent() {
   const ActiveIcon = active.icon;
   const list =
     tab === "anime"
-      ? (sched[DAYS_ID[day]] ?? [])
+      ? [
+          ...(sched[DAYS_ID[day]] ?? []),
+          // Anime tambahan ikut muncul di hari yang diisi developer.
+          ...(customAnime ?? [])
+            .filter((c: any) => c.airingDay === DAYS_ID[day])
+            .map((c: any) => ({
+              id: c.slug,
+              title: c.title,
+              image: c.poster ?? "",
+              episode: 0,
+              airingAt: 0,
+              day: DAYS_ID[day],
+              time: c.airingTime ?? "",
+              custom: true,
+            })),
+        ]
       : tab === "donghua"
         ? (donghuaByDay[DAYS_ID[day]] ?? [])
         : (comics[tab]?.[DAYS_ID[day]] ?? []);
@@ -283,7 +303,8 @@ function JadwalContent() {
         {DAYS_ID.map((d, i) => {
           const count =
             tab === "anime"
-              ? (sched[d] ?? []).length
+              ? (sched[d] ?? []).length +
+                (customAnime ?? []).filter((c: any) => c.airingDay === d).length
               : tab === "donghua"
                 ? (donghuaByDay[d] ?? []).length
                 : (comics[tab]?.[d] ?? []).length;
@@ -337,25 +358,37 @@ function JadwalContent() {
           </p>
         ) : (
           <div className="space-y-2">
-            {(list as AiringItem[]).map((a) => (
+            {(list as (AiringItem & { custom?: boolean })[]).map((a) => (
               <button
                 key={`${a.id}-${a.episode}`}
                 onClick={() =>
                   navigate(
                     user
-                      ? `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`
+                      ? `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}${a.custom ? "&donghua=1" : ""}`
                       : "/auth",
                   )
                 }
                 className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-amber-300/50"
               >
-                <img src={a.image} alt="" className="h-16 w-11 shrink-0 rounded-lg object-cover" />
+                {a.image ? (
+                  <img
+                    src={a.image}
+                    alt=""
+                    className="h-16 w-11 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="h-16 w-11 shrink-0 rounded-lg bg-white/5" />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{a.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    Episode {a.episode} — {a.day}, {a.time} WIB
+                    {a.custom
+                      ? `Anime tambahan — ${a.day}${a.time ? `, ${a.time} WIB` : ""}`
+                      : `Episode ${a.episode} — ${a.day}, ${a.time} WIB`}
                   </p>
-                  <p className="text-[11px] text-amber-300">{countdown(a.airingAt)}</p>
+                  {!a.custom && a.airingAt > 0 && (
+                    <p className="text-[11px] text-amber-300">{countdown(a.airingAt)}</p>
+                  )}
                 </div>
                 <Clock className="size-5 shrink-0 text-amber-300/80" />
               </button>
