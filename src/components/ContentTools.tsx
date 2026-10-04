@@ -9,7 +9,7 @@
 // episode real-time, sehingga yang tampil selalu episode yang benar-benar
 // ada di sumber — bukan nomor karangan.
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
@@ -37,9 +37,23 @@ export function ContentTools() {
   const [key, setKey] = useState("");
   const [synopsis, setSynopsisText] = useState("");
   const [saving, setSaving] = useState(false);
+  // Pencarian judul -> MAL id, supaya developer tidak perlu membuka
+  // MyAnimeList hanya untuk menyalin satu angka.
+  const searchAnime = useAction(api.content.searchAnime);
+  const [search, setSearch] = useState("");
+  const [hits, setHits] = useState<
+    { malId: string; anilistId: string; title: string; image: string; status: string; episodes: number | null }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [search2, setSearch2] = useState("");
+  const [hits2, setHits2] = useState<
+    { malId: string; anilistId: string; title: string; image: string; status: string; episodes: number | null }[]
+  >([]);
+  const [searching2, setSearching2] = useState(false);
   const [source, setSource] = useState<"sanka" | "anilist">("sanka");
   const [poster, setPoster] = useState("");
   const [newSynopsis, setNewSynopsis] = useState("");
@@ -95,6 +109,66 @@ export function ContentTools() {
           placeholder={kind === "anime" ? "MAL id (mis. 5114)" : "Slug donghua (mis. perfect-world)"}
           className="mt-1.5 w-full rounded-lg border border-border bg-background/60 px-2.5 py-1.5 text-[11px] outline-none focus:border-foreground/50"
         />
+        {kind === "anime" && (
+          <div className="mt-1.5">
+            <div className="flex gap-1.5">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari judul untuk dapat MAL id…"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-background/60 px-2.5 py-1.5 text-[11px] outline-none focus:border-foreground/50"
+              />
+              <button
+                disabled={searching || search.trim().length < 2}
+                onClick={async () => {
+                  setSearching(true);
+                  try {
+                    setHits(((await searchAnime({ q: search.trim() })) ?? []) as any);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Gagal mencari");
+                  } finally {
+                    setSearching(false);
+                  }
+                }}
+                className="h-8 shrink-0 rounded-lg border border-border px-2.5 text-[11px] font-bold disabled:opacity-40"
+              >
+                {searching ? "..." : "Cari"}
+              </button>
+            </div>
+            {hits.length > 0 && (
+              <div className="mt-1.5 max-h-52 space-y-1 overflow-y-auto">
+                {hits.map((h) => (
+                  <button
+                    key={h.anilistId}
+                    onClick={() => {
+                      setKey(h.malId || h.anilistId);
+                      setSearch(h.title);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-2 py-1.5 text-left"
+                  >
+                    {h.image ? (
+                      <img
+                        src={h.image}
+                        alt=""
+                        className="h-9 w-6 shrink-0 rounded object-cover"
+                      />
+                    ) : null}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[10px] font-semibold">
+                        {h.title}
+                      </span>
+                      <span className="block text-[9px] text-muted-foreground">
+                        {h.status === "RELEASING" ? "Ongoing" : h.status} ·{" "}
+                        {h.episodes ? `${h.episodes} ep` : "?"} · MAL{" "}
+                        {h.malId || "?"}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <textarea
           value={synopsis}
           onChange={(e) => setSynopsisText(e.target.value.slice(0, 2000))}
@@ -177,9 +251,71 @@ export function ContentTools() {
           placeholder="Judul"
           className="mt-1.5 w-full rounded-lg border border-border bg-background/60 px-2.5 py-1.5 text-[11px] outline-none focus:border-foreground/50"
         />
+        <div className="mt-1.5 flex gap-1.5">
+          <input
+            value={search2}
+            onChange={(e) => setSearch2(e.target.value)}
+            placeholder="Cari judul (bisa isi slug otomatis)"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-background/60 px-2.5 py-1.5 text-[11px] outline-none focus:border-foreground/50"
+          />
+          <button
+            disabled={searching2 || search2.trim().length < 2}
+            onClick={async () => {
+              setSearching2(true);
+              try {
+                setHits2(((await searchAnime({ q: search2.trim() })) ?? []) as any);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal mencari");
+              } finally {
+                setSearching2(false);
+              }
+            }}
+            className="h-8 shrink-0 rounded-lg border border-border px-2.5 text-[11px] font-bold disabled:opacity-40"
+          >
+            {searching2 ? "..." : "Cari"}
+          </button>
+        </div>
+        {hits2.length > 0 && (
+          <div className="mt-1.5 max-h-44 space-y-1 overflow-y-auto">
+            {hits2.map((h) => (
+              <button
+                key={h.anilistId}
+                onClick={() => {
+                  setTitle(h.title);
+                  setPoster(h.image || "");
+                  // Pencarian ini dari AniList, jadi HANYA sumber AniList yang
+                  // bisa terisi otomatis (pakai MAL id). Untuk sumber Sanka
+                  // slug-nya berbeda format (contoh: perfect-world) dan tidak
+                  // bisa ditebak dari hasil pencarian — developer tetap isi
+                  // sendiri, daripada slug angka yang pasti salah.
+                  if (!slugTouched && source === "anilist") {
+                    setSlug(h.malId || h.anilistId);
+                  }
+                }}
+                className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-2 py-1.5 text-left"
+              >
+                {h.image ? (
+                  <img src={h.image} alt="" className="h-9 w-6 shrink-0 rounded object-cover" />
+                ) : null}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[10px] font-semibold">
+                    {h.title}
+                  </span>
+                  <span className="block text-[9px] text-muted-foreground">
+                    {h.status === "RELEASING" ? "Ongoing" : h.status} ·{" "}
+                    {h.episodes ? `${h.episodes} ep` : "?"} · MAL {h.malId || "?"}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
         <input
           value={slug}
-          onChange={(e) => setSlug(e.target.value)}
+          onChange={(e) => {
+            setSlug(e.target.value);
+            setSlugTouched(true);
+          }}
           placeholder={
             source === "sanka"
               ? "Slug sumber (mis. perfect-world)"

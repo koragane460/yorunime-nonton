@@ -15,7 +15,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, mutation, query } from "./_generated/server";
 
 const KINDS = ["anime", "donghua"] as const;
 export type OverrideKind = (typeof KINDS)[number];
@@ -121,7 +121,51 @@ export const listOverrides = query({
   },
 });
 
-/* ----------------------------------------------------- anime tambahan ---- */
+/* ------------------------------------------------- cari MAL id ---- */
+
+/**
+ * Cari anime berdasarkan judul lalu kembalikan MAL id-nya.
+ *
+ * Dipakai developer di panel tools supaya tidak perlu membuka MyAnimeList
+ * hanya untuk menyalin satu angka: ketik judul, pilih hasil, id langsung
+ * terisi di kolom yang relevan.
+ */
+export const searchAnime = action({
+  args: { q: v.string() },
+  handler: async (ctx, { q }) => {
+    await requireDev(ctx);
+    const term = norm(q, 80);
+    if (term.length < 2) return [];
+    const query = `query($s:String){
+      Page(page:1, perPage:8){
+        media(search:$s, type:ANIME, isAdult:false, sort:SEARCH_MATCH){
+          id idMal title{ romaji english native } coverImage{ large }
+          episodes status format seasonYear
+        }
+      }
+    }`;
+    const res = await fetch("https://graphql.anilist.co", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables: { s: term } }),
+      signal: AbortSignal.timeout(15_000),
+    }).catch(() => null);
+    if (!res || !res.ok) return [];
+    const j: any = await res.json().catch(() => null);
+    const media: any[] = j?.data?.Page?.media ?? [];
+    return media
+      .filter((m) => !!m)
+      .map((m) => ({
+        malId: m.idMal ? String(m.idMal) : "",
+        anilistId: String(m.id ?? ""),
+        title: m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
+        image: m?.coverImage?.large ?? "",
+        episodes: m.episodes ?? null,
+        status: String(m.status ?? ""),
+        year: m.seasonYear ?? null,
+      }));
+  },
+});
 
 const DAYS = [
   "Minggu",
