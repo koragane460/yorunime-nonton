@@ -35,6 +35,7 @@ import {
   type TopPanel,
 } from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
+import { MusicMiniBar } from "@/components/MusicMiniBar";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -133,6 +134,7 @@ export function AppLayout({
       </div>
       <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
       <AppFooter />
+      <MusicMiniBar />
       <MiniPlayerHost />
 
       <OverlayScrollLock />

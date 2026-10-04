@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -13,11 +13,17 @@ import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
+import { isMusicSecret } from "@/lib/musicSecret";
+
+// Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
+// antrean, tidak perlu ikut di bundel awal Home.
+const MusicScreen = lazy(() => import("@/pages/Music"));
 
 import {
   Search,
   Bell,
   ChevronLeft,
+  Loader2,
   ChevronRight,
   Check,
   Heart,
@@ -206,6 +212,7 @@ function HomeContent() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+const [showMusic, setShowMusic] = useState(false);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
   // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
   const [catalog, setCatalog] = useState<{
@@ -733,7 +740,22 @@ function HomeContent() {
           initialGenre={searchGenre}
           onClose={() => setShowSearch(false)}
           onPick={openAnime}
+          onOpenMusic={() => {
+            setShowSearch(false);
+            setShowMusic(true);
+          }}
         />
+      )}
+      {showMusic && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-[95] flex items-center justify-center bg-[#08060d] text-white/70">
+              <Loader2 className="size-6 animate-spin" />
+            </div>
+          }
+        >
+          <MusicScreen onClose={() => setShowMusic(false)} />
+        </Suspense>
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
       {pickId && pickSource === "sanka" && (
@@ -1123,10 +1145,12 @@ function SearchScreen({
   onClose,
   onPick,
   initialGenre,
+  onOpenMusic,
 }: {
   onClose: () => void;
   onPick: (id: string) => void;
   initialGenre?: string | null;
+  onOpenMusic: () => void;
 }) {
   useHideNavOnMount();
   const searchAnime = useAction(api.anime.animeSearch);
@@ -1198,6 +1222,12 @@ function SearchScreen({
       setResults(null);
       return;
     }
+    // Kode rahasia: mengetik 110219941 lalu menekan Cari membuka aplikasi
+    // pemutar musik penuh.
+    if (isMusicSecret(query)) {
+      onOpenMusic();
+      return;
+    }
     setSearching(true);
     try {
       // Pencarian mencakup anime DAN donghua: dua katalog AniList diambil
@@ -1238,7 +1268,7 @@ function SearchScreen({
           <button onClick={onClose} className="rounded-full border border-border p-2">
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="text-lg font-bold">Cari Anime</h1>
+          <h1 className="text-lg font-bold">Cari anime &amp; donghua</h1>
         </div>
 
         {/* Input + tombol Cari */}
@@ -1249,7 +1279,7 @@ function SearchScreen({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder="contoh: ayanokoji adalah aku"
+            placeholder="contoh: ayanokoji adalah aku / battle through"
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {query && (

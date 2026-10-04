@@ -9,6 +9,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import { UpdateGate } from "./components/UpdateGate";
+import { MusicPlayerProvider } from "./components/MusicPlayer";
 
 // Lazy load route components for better code splitting
 const Welcome = lazy(() => import("./pages/Welcome.tsx"));
@@ -141,6 +142,7 @@ createRoot(document.getElementById("root")!).render(
         <UpdateGate>
         <BrowserRouter>
           <ModerationProvider>
+            <MusicPlayerProvider>
             <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
@@ -242,6 +244,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+            </MusicPlayerProvider>
           </ModerationProvider>
         </BrowserRouter>
         </UpdateGate>
