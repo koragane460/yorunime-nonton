@@ -167,10 +167,29 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
 
       {/* Paksa update: begitu versi minimum di server naik, semua app yang
           masih di bawah versi itu langsung diminta reload. */}
-      {/* Tiga tools developer (tambah sinopsis, tambah anime, premium clan)
-        gabung jadi SATU tombol mengambang supaya panel tidak panjang. */}
+      {/* Semua tools developer (tambah sinopsis, tambah anime, kasih premium
+        ke user, pembayaran manual, premium clan) gabung jadi SATU tombol
+        mengambang supaya panel tidak panjang. */}
       {isDev && (
-        <ContentToolsFab onOpenClan={() => setDialog("clan")} />
+        <ContentToolsFab
+          onOpenClan={() => setDialog("clan")}
+          extraTools={[
+            {
+              key: "premium-user",
+              label: "Kasih premium ke user",
+              hint: "Durasi + nominal, untuk user biasa",
+              tone: "amber",
+              render: () => <GrantPremiumPanel />,
+            },
+            {
+              key: "bayar",
+              label: "Pembayaran manual",
+              hint: "Cek transfer masuk dari user",
+              tone: "amber",
+              render: () => <ManualPaymentPanel />,
+            },
+          ]}
+        />
       )}
 
       {isDev && (
@@ -325,8 +344,6 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
         )}
       </div>
 
-      {isDev && <GrantPremiumPanel />}
-      {isDev && <ManualPaymentPanel />}
 
       {picked && (
         <UserActions

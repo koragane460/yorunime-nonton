@@ -8,7 +8,7 @@
 // sumber. Saat judul dibuka, `api.sanka.detail` (atau AniList) mengambil
 // episode real-time, sehingga yang tampil selalu episode yang benar-benar
 // ada di sumber — bukan nomor karangan.
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -35,13 +35,24 @@ const DAYS = [
  */
 export function ContentToolsFab({
   onOpenClan,
+  extraTools = [],
 }: {
   onOpenClan: () => void;
+  /** Tools tambahan milik StaffPanel (premium user, pembayaran manual).
+      Dikirim sebagai komponen dari pemanggil supaya tidak ada import
+      bolak-balik antara StaffPanel dan file ini. */
+  extraTools?: {
+    key: string;
+    label: string;
+    hint: string;
+    tone?: "amber";
+    render: () => ReactNode;
+  }[];
 }) {
   const [open, setOpen] = useState(false);
-  const [tool, setTool] = useState<"synopsis" | "anime" | null>(null);
+  const [tool, setTool] = useState<string | null>(null);
 
-  const pick = (t: "synopsis" | "anime" | "clan") => {
+  const pick = (t: string) => {
     if (t === "clan") {
       setOpen(false);
       setTool(null);
@@ -95,6 +106,18 @@ export function ContentToolsFab({
                   onClick={() => pick("anime")}
                 />
                 <FabMenu
+                  label="Kasih premium ke user"
+                  hint="Durasi + nominal, untuk user biasa"
+                  tone="amber"
+                  onClick={() => pick("premium-user")}
+                />
+                <FabMenu
+                  label="Pembayaran manual"
+                  hint="Cek transfer masuk dari user"
+                  tone="amber"
+                  onClick={() => pick("bayar")}
+                />
+                <FabMenu
                   label="Beri Premium Clan"
                   hint="Kasih premium unlimited ke clan"
                   tone="amber"
@@ -109,7 +132,14 @@ export function ContentToolsFab({
                 >
                   Kembali
                 </button>
-                <ContentTools mode={tool} />
+                {tool === "synopsis" || tool === "anime" ? (
+                  <ContentTools mode={tool} />
+                ) : (
+                  (() => {
+                    const found = extraTools.find((t) => t.key === tool);
+                    return found ? <>{found.render()}</> : null;
+                  })()
+                )}
               </>
             )}
           </div>

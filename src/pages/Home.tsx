@@ -39,6 +39,8 @@ import {
   MessageSquare,
   Play,
   Star,
+  Info,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -1836,6 +1838,11 @@ function AnimeDetailScreen({
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
+  // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
+  // lain yang dibutuhkan saat menambah sinopsis / menambah anime. Hanya
+  // untuk developer — user biasa tidak melihat tombolnya sama sekali.
+  const devAccess = useQuery(api.moderation.myPanelAccess, {});
+  const [devInfoOpen, setDevInfoOpen] = useState(false);
 
   useEffect(() => {
     getDetail({ id: animeId, title: animeTitle })
@@ -1938,6 +1945,16 @@ function AnimeDetailScreen({
               <p className="mt-1 line-clamp-1 text-[11px] text-white/70">
                 {detail.rating ?? "Rating 13+"} • {detail.studio ?? "Studio tidak diketahui"}
               </p>
+              {/* Tombol info khusus developer: MAL id + URL poster + id sumber,
+                  dipakai saat mengisi tools konten. */}
+              {devAccess?.level === "dev" && (
+                <button
+                  onClick={() => setDevInfoOpen(true)}
+                  className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white/90"
+                >
+                  <Info className="size-3" /> Info developer
+                </button>
+              )}
               <span
                 className={cn(
                   "mt-1 inline-block rounded px-2 py-0.5 text-[10px] font-bold",
@@ -2014,6 +2031,60 @@ function AnimeDetailScreen({
           <p className="mt-1 text-center text-[11px] text-white/55">
             {fmtFavoritCount(favCount ?? 0)}
           </p>
+
+          {/* Panel info developer: data teknis untuk tools konten. */}
+          {devInfoOpen && devAccess?.level === "dev" && (
+            <div className="mt-3 rounded-2xl border border-primary/40 bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-bold text-primary">Info developer</p>
+                <button
+                  onClick={() => setDevInfoOpen(false)}
+                  className="rounded-full p-1 text-muted-foreground"
+                  aria-label="Tutup"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  ["MAL id", String(detail.id ?? animeId)],
+                  ["URL poster", String(detail.image ?? "")],
+                  ["Status", String(detail.status ?? "?")],
+                  ["Total episode", String(detail.totalEpisodes ?? "?")],
+                  ["Episode tayang", `${releasedCount} dari ${eps.length}`],
+                  ["Sumber", String(detail.source ?? "?")],
+                  ["Studio", String(detail.studio ?? "-")],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-start gap-2">
+                    <span className="w-24 shrink-0 text-[10px] text-muted-foreground">
+                      {label}
+                    </span>
+                    <span className="min-w-0 flex-1 break-all text-[11px]">
+                      {value || "-"}
+                    </span>
+                    {value && value !== "-" && (
+                      <button
+                        onClick={() => {
+                          void navigator.clipboard
+                            ?.writeText(value)
+                            .then(() => toast.success(`${label} disalin`))
+                            .catch(() => toast.error("Gagal menyalin"));
+                        }}
+                        className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-primary"
+                        aria-label={`Salin ${label}`}
+                      >
+                        <Copy className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+                Nilai di atas bisa langsung dipakai di Tools Developer
+                (Akun → tombol gerinda).
+              </p>
+            </div>
+          )}
 
           {/* Sinopsis — 5/6 paragraf dulu sebelum "baca selengkapnya" */}
           <SectionTitle>Sinopsis</SectionTitle>
