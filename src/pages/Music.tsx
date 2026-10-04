@@ -3,7 +3,7 @@
 // Masuk lewat kode rahasia di kolom pencarian Home.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
   ChevronLeft,
@@ -11,6 +11,7 @@ import {
   Heart,
   ListMusic,
   Loader2,
+  Mic2,
   Music2,
   Pause,
   Play,
@@ -53,8 +54,14 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
   const searchMusic = useAction(api.music.musicSearch);
   const loadSection = useAction(api.music.musicSection);
   const loadSections = useAction(api.music.musicSections);
+  // Lagu yang disukai. Query ini privat: backend hanya membaca milik user
+  // yang sedang masuk dan tidak menerima userId dari luar.
+  const likedRows = useQuery(api.activities.myMusicLikes, {});
 
   const [view, setView] = useState<"lib" | "player">("lib");
+  // Lirik ditampilkan/tutup dari header layar Pemutar. State-nya di sini
+  // (bukan di PlayerView) karena tombolnya ada di header.
+  const [showLyrics, setShowLyrics] = useState(false);
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [found, setFound] = useState<MusicTrack[] | null>(null);
@@ -169,13 +176,28 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
           </p>
         </div>
         {view === "player" && (
-          <button
-            onClick={() => setView("lib")}
-            aria-label="Ke pustaka"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
-          >
-            <ListMusic className="size-4" />
-          </button>
+          <>
+            <button
+              onClick={() => setShowLyrics((v) => !v)}
+              aria-label={showLyrics ? "Sembunyikan lirik" : "Lihat lirik"}
+              aria-pressed={showLyrics}
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-full transition",
+                showLyrics
+                  ? "bg-[oklch(0.86_0.16_90)] text-black"
+                  : "bg-white/10 hover:bg-white/20",
+              )}
+            >
+              <Mic2 className="size-4" />
+            </button>
+            <button
+              onClick={() => setView("lib")}
+              aria-label="Ke pustaka"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+            >
+              <ListMusic className="size-4" />
+            </button>
+          </>
         )}
       </header>
 
@@ -191,6 +213,7 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
           rows={rows}
           sectionRows={sectionRows}
           rowsLoading={rowsLoading}
+          likedRows={(likedRows ?? []) as LikedRow[]}
           queue={player.queue}
           activeIndex={player.index}
           onPlayQueue={player.playAt}
@@ -198,7 +221,11 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
           hasTrack={!!player.track}
         />
       ) : (
-        <PlayerView onBack={() => setView("lib")} />
+        <PlayerView
+          onBack={() => setView("lib")}
+          showLyrics={showLyrics}
+          setShowLyrics={setShowLyrics}
+        />
       )}
     </div>
   );
@@ -208,7 +235,8 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
 
 function LibraryView({
   q, setQ, searching, onSearch, onPick, shown, list, rows, sectionRows,
-  rowsLoading, queue, activeIndex, onPlayQueue, onOpenPlayer, hasTrack,
+  rowsLoading, likedRows, queue, activeIndex, onPlayQueue, onOpenPlayer,
+  hasTrack,
 }: {
   q: string;
   setQ: (v: string) => void;
@@ -220,6 +248,7 @@ function LibraryView({
   rows: Record<string, MusicTrack[]>;
   sectionRows: { id: string; label: string }[];
   rowsLoading: boolean;
+  likedRows: LikedRow[];
   queue: MusicTrack[];
   activeIndex: number;
   onPlayQueue: (i: number) => void;
@@ -305,24 +334,68 @@ function LibraryView({
               <Loader2 className="size-4 animate-spin" /> Memuat katalog...
             </div>
           ) : (
-            sectionRows.map((s) => {
+            <>
+            {/* Daftar lagu yang disukai - privat, hanya bisa dilihat pemilik
+                akunnya (query di backend sengaja tidak menerima userId). */}
+            {likedRows.length > 0 && (
+              <section className="mt-6">
+                <h2 className="mb-2.5 flex items-center gap-1.5 text-sm font-bold">
+                  <Heart className="size-4 fill-current text-[oklch(0.86_0.16_90)]" />{" "}
+                  Disukai
+                  <span className="text-[11px] font-medium text-white/45">
+                    ({likedRows.length} - privat)
+                  </span>
+                </h2>
+                <div className="flex flex-col">
+                  {likedRows.map((lt, i) => (
+                    <TrackRow
+                      key={`lk_${lt.key}_${i}`}
+                      track={toTrack(lt)}
+                      active={false}
+                      onPlay={() => onPick(likedRows.map(toTrack), i)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Layar utama ala Spotify/Metrolist: baris pertama pakai grid
+                besar (sampul + nama), sisanya baris geser. Jadi bukan cuma
+                geser-geser ke kanan. */}
+            {sectionRows.map((s) => {
               const items = rows[s.id] ?? [];
               if (items.length === 0) return null;
+              const isGrid = s.id === sectionRows[0]?.id;
               return (
-                <section key={s.id} className="mt-5">
+                <section key={s.id} className="mt-6">
                   <h2 className="mb-2 text-sm font-bold">{s.label}</h2>
-                  <div className="thin-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-                    {items.map((t, i) => (
-                      <CoverCard
-                        key={`${s.id}_${t.id}_${i}`}
-                        track={t}
-                        onPlay={() => onPick(items, i)}
-                      />
-                    ))}
-                  </div>
+                  {isGrid ? (
+                    /* Grid 2 kolom, sampul besar: terasa seperti beranda
+                        Spotify, bukan sekadar deretan geser. */
+                    <div className="grid grid-cols-2 gap-3">
+                      {items.slice(0, 6).map((t, i) => (
+                        <CoverTile
+                          key={`${s.id}_${t.id}_${i}`}
+                          track={t}
+                          onPlay={() => onPick(items, i)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="thin-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+                      {items.map((t, i) => (
+                        <CoverCard
+                          key={`${s.id}_${t.id}_${i}`}
+                          track={t}
+                          onPlay={() => onPick(items, i)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </section>
               );
-            })
+            })}
+            </>
           )}
         </>
       )}
@@ -332,10 +405,20 @@ function LibraryView({
 
 // ------------------------------------------------------------ pemutar ----
 
-function PlayerView({ onBack }: { onBack: () => void }) {
+function PlayerView({
+  onBack,
+  showLyrics,
+  setShowLyrics,
+}: {
+  onBack: () => void;
+  showLyrics: boolean;
+  setShowLyrics: (v: boolean) => void;
+}) {
   const p = useMusicPlayer();
   const barRef = useRef<HTMLDivElement>(null);
   const t = p.track;
+  // Tampilan lirik ala Spotify: baris aktif mengikuti posisi lagu dan
+  // digulir otomatis ke tengah layar.
 
   // Durasi asli dari elemen audio lebih akurat daripada metadata.
   const total = p.duration > 0 ? p.duration : t?.durationSec ?? 0;
@@ -381,6 +464,17 @@ function PlayerView({ onBack }: { onBack: () => void }) {
           </div>
 
           <div className="mx-auto mt-5 w-full max-w-sm">
+            {/* Alih-alih album, bisa tampilkan lirik yang mengikuti lagu. */}
+            {showLyrics ? (
+              <LyricsPane
+                artist={t.artist}
+                track={t.title}
+                position={p.position}
+                playing={p.playing}
+                onClose={() => setShowLyrics(false)}
+              />
+            ) : (
+            <>
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-xl font-bold tracking-tight">
@@ -393,8 +487,16 @@ function PlayerView({ onBack }: { onBack: () => void }) {
                   </p>
                 )}
               </div>
-              <button aria-label="Sukai" className="mt-1 shrink-0 text-white/50">
-                <Heart className="size-5" />
+              <button
+                aria-label={p.liked ? "Batal suka" : "Sukai lagu ini"}
+                aria-pressed={p.liked}
+                onClick={p.toggleLike}
+                className={cn(
+                  "mt-1 shrink-0 transition active:scale-90",
+                  p.liked ? "text-[oklch(0.86_0.16_90)]" : "text-white/50 hover:text-white",
+                )}
+              >
+                <Heart className={cn("size-5", p.liked && "fill-current")} />
               </button>
             </div>
 
@@ -507,6 +609,8 @@ function PlayerView({ onBack }: { onBack: () => void }) {
                 {Math.round((p.muted ? 0 : p.volume) * 100)}
               </span>
             </div>
+            </>
+            )}
           </div>
 
           {/* Antrean */}
@@ -543,6 +647,163 @@ function PlayerView({ onBack }: { onBack: () => void }) {
       >
         Kembali ke pustaka
       </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- lirik ----
+
+/** Satu baris lirik bersinkron. */
+type LyricLine = { t: number; text: string };
+
+/** Baris lagu yang disukai, bentuk persis seperti tabel musicLikes. */
+type LikedRow = {
+  key: string;
+  title: string;
+  artist: string;
+  videoId?: string;
+  audioUrl?: string;
+  cover?: string;
+  album?: string;
+};
+
+/** Ubah baris favorit musik jadi bentuk yang bisa diputar player. */
+function toTrack(r: LikedRow): MusicTrack {
+  return {
+    id: `liked_${r.key}`,
+    title: r.title,
+    artist: r.artist,
+    album: r.album ?? "",
+    cover: r.cover ?? "",
+    audioUrl: r.audioUrl ?? "",
+    durationSec: 0,
+    source: "archive",
+    kind: "potongan",
+  };
+}
+
+/**
+ * Lirik ala Spotify: baris aktif ditebalkan dan diwarnai, baris lain redup,
+ * dan panel menggulir otomatis supaya baris yang sedang dinyanyikan selalu
+ * di tengah layar.
+ */
+function LyricsPane({
+  artist,
+  track,
+  position,
+  playing,
+  onClose,
+}: {
+  artist: string;
+  track: string;
+  position: number;
+  playing: boolean;
+  onClose: () => void;
+}) {
+  const getLyrics = useAction(api.music.lyrics);
+  const [lines, setLines] = useState<LyricLine[] | null>(null);
+  const [plain, setPlain] = useState<string[] | null>(null);
+  const [busy, setBusy] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setBusy(true);
+    setLines(null);
+    setPlain(null);
+    getLyrics({ artist, track })
+      .then((r: unknown) => {
+        if (!alive) return;
+        const d = r as { synced: LyricLine[] | null; plain: string[] | null };
+        setLines(d.synced ?? null);
+        setPlain(d.plain ?? null);
+        setBusy(false);
+      })
+      .catch(() => alive && setBusy(false));
+    return () => {
+      alive = false;
+    };
+  }, [artist, track, getLyrics]);
+
+  // Baris aktif = baris terakhir yang waktunya sudah lewat posisi lagu.
+  const activeIdx = useMemo(() => {
+    if (!lines || lines.length === 0) return -1;
+    let idx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].t <= position + 0.3) idx = i;
+      else break;
+    }
+    return idx;
+  }, [lines, position]);
+
+  // Gulir otomatis hanya kalau lagunya sedang jalan, supaya user tetap bisa
+  // menggulir manual saat dijeda tanpa panel melawan.
+  useEffect(() => {
+    if (!playing || activeIdx < 0 || !lines) return;
+    const el = scrollRef.current?.querySelector<HTMLElement>(
+      `[data-lyric="${activeIdx}"]`,
+    );
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeIdx, playing, lines]);
+
+  return (
+    <div className="rounded-2xl bg-white/[0.06] ring-1 ring-white/12">
+      <div className="flex items-center justify-between px-3 py-2">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-white/80">
+          <Mic2 className="size-3.5" /> Lirik
+        </p>
+        <button
+          onClick={onClose}
+          aria-label="Tutup lirik"
+          className="text-[11px] text-white/60 underline"
+        >
+          Tutup
+        </button>
+      </div>
+      <div
+        ref={scrollRef}
+        className="thin-scroll max-h-72 overflow-y-auto px-3 pb-3"
+      >
+        {busy ? (
+          <div className="flex items-center gap-2 py-6 text-xs text-white/60">
+            <Loader2 className="size-4 animate-spin" /> Mencari lirik...
+          </div>
+        ) : lines && lines.length > 0 ? (
+          <div className="flex flex-col gap-2 py-1">
+            {lines.map((l, i) => {
+              const active = i === activeIdx;
+              return (
+                <p
+                  key={`${l.t}-${i}`}
+                  data-lyric={i}
+                  className={cn(
+                    "text-[13px] leading-snug transition-all duration-300",
+                    active
+                      ? "font-bold text-white"
+                      : i < activeIdx
+                        ? "text-white/35"
+                        : "text-white/60",
+                  )}
+                >
+                  {l.text || "\u00A0"}
+                </p>
+              );
+            })}
+          </div>
+        ) : plain && plain.length > 0 ? (
+          <div className="flex flex-col gap-1.5 py-1">
+            {plain.map((l, i) => (
+              <p key={i} className="text-[13px] leading-snug text-white/70">
+                {l || "\u00A0"}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-xs text-white/50">
+            Lirik belum tersedia untuk lagu ini.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -606,6 +867,43 @@ function TrackRow({
         </button>
       )}
     </div>
+  );
+}
+
+/** Kartu grid besar ala Spotify: sampul 2 kolom + nama di bawahnya. */
+function CoverTile({
+  track,
+  onPlay,
+}: {
+  track: MusicTrack;
+  onPlay: () => void;
+}) {
+  return (
+    <button
+      onClick={onPlay}
+      className="group text-left transition active:scale-[0.98]"
+    >
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10">
+        {track.cover ? (
+          <img
+            src={track.cover}
+            alt=""
+            className="size-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <span className="flex size-full items-center justify-center">
+            <Music2 className="size-8 text-white/25" />
+          </span>
+        )}
+        <span className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition group-hover:opacity-100">
+          <Play className="size-7 fill-white" />
+        </span>
+      </div>
+      <p className="mt-2 truncate text-[13px] font-bold">{track.title}</p>
+      <p className="truncate text-[11px] text-white/50">{track.artist}</p>
+    </button>
   );
 }
 

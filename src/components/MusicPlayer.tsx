@@ -19,7 +19,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useAction } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useLocation } from "react-router";
 import { api } from "@/convex/_generated/api";
 import {
@@ -55,6 +55,13 @@ type MusicCtx = {
   muted: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
+  /** Kunci unik lagu yang sedang diputar (artist|title) untuk tombol suka. */
+  likeKey: string | null;
+  /** Apakah lagu yang sedang diputar sudah disukai. */
+  liked: boolean;
+  toggleLike: () => void;
+  /** videoId YouTube lagu aktif (kalau diputar lewat YouTube). */
+  videoId: string | null;
   playTracks: (tracks: MusicTrack[], startAt?: number) => void;
   toggle: () => void;
   next: (auto?: boolean) => void;
@@ -196,20 +203,31 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   // elemen <audio>. YouTube dicoba dulu karena lagunya utuh.
   const [source, setSource] = useState<"youtube" | "direct" | "none">("none");
   const ytFind = useAction(api.music.youtubeFind);
+  /** videoId YouTube yang sedang diputar (untuk disimpan saat lagu disukai). */
+  const ytVideoId = useRef<string | null>(null);
 
   /** Muat lagu lewat YouTube; kembalikan false kalau tidak ketemu. */
   const tryYouTube = useCallback(
     async (t: MusicTrack): Promise<boolean> => {
       const q = `${t.artist} ${t.title}`.trim();
       if (q.length < 2) return false;
+      // Cari versi asli dulu. Kalau tidak ketemu, coba versi remix supaya
+      // lagu remix juga ada - peminta memang mau remix ikut tersedia.
       let videoId: string | null = null;
       try {
-        const r = (await ytFind({ q })) as { videoId: string | null };
-        videoId = r?.videoId ?? null;
+        const first = (await ytFind({ q })) as { videoId: string | null };
+        videoId = first?.videoId ?? null;
+        if (!videoId) {
+          const alt = (await ytFind({ q, remix: true })) as {
+            videoId: string | null;
+          };
+          videoId = alt?.videoId ?? null;
+        }
       } catch {
         return false;
       }
       if (!videoId) return false;
+      ytVideoId.current = videoId;
       const ok = await ensureYouTubePlayer(videoId, {
         onPlay: () => {
           setPlaying(true);
@@ -466,6 +484,29 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   // Musik dijeda selama layar nonton dibuka; kalau sebelumnya masih main,
   // langsung dilanjutkan lagi setelah keluar.
   const resumeAfterVideo = useRef(false);
+
+  // ---- tombol suka ----
+  // Kunci unik lagu aktif. Dipakai tombol hati dan daftar favorit musik.
+  const likeKey = track ? `${track.artist}|${track.title}`.toLowerCase() : null;
+  const isLiked = useQuery(
+    api.activities.isMusicLiked,
+    likeKey ? { key: likeKey } : "skip",
+  );
+  const toggleLikeMut = useMutation(api.activities.toggleMusicLike);
+  const toggleLike = useCallback(() => {
+    const t = track;
+    if (!t || !likeKey) return;
+    void toggleLikeMut({
+      key: likeKey,
+      title: t.title,
+      artist: t.artist,
+      videoId: ytVideoId.current ?? undefined,
+      audioUrl: t.audioUrl,
+      cover: t.cover,
+      album: t.album,
+    });
+  }, [track, likeKey, toggleLikeMut]);
+
   useEffect(() => {
     const a = audioRef.current;
     const onWatch = location.pathname.startsWith("/nonton");
@@ -504,6 +545,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       muted,
       shuffle,
       repeat,
+      likeKey,
+      liked: !!isLiked,
+      toggleLike,
+      videoId: ytVideoId.current,
       playTracks,
       toggle,
       next,
@@ -523,8 +568,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }),
     [
       queue, index, track, playing, loading, error, position, duration, volume,
-      muted, shuffle, repeat, playTracks, toggle, next, prev, seek, changeVolume,
-      toggleMute, toggleShuffle, cycleRepeat, playAt, removeAt, clearQueue,
+      muted, shuffle, repeat, likeKey, isLiked, toggleLike, playTracks, toggle,
+      next, prev, seek, changeVolume, toggleMute, toggleShuffle, cycleRepeat,
+      playAt, removeAt, clearQueue,
       screenOpen, openScreen, onOpenScreen,
     ],
   );

@@ -290,6 +290,83 @@ export const favoritesOf = query({
   },
 });
 
+// ===================================================== favorit musik ====
+//
+// Lagu yang disukai dari layar Musik. Sengaja dibuat terpisah dari favorit
+// anime dan SENGAJA privat: query di bawah hanya membaca milik user yang
+// sedang masuk, jadi orang lain tidak bisa melihat daftar lagu yang kamu
+// suka. Tidak ada query "favoritesOf" untuk tabel ini.
+
+export const toggleMusicLike = mutation({
+  args: {
+    key: v.string(),
+    title: v.string(),
+    artist: v.string(),
+    videoId: v.optional(v.string()),
+    audioUrl: v.optional(v.string()),
+    cover: v.optional(v.string()),
+    album: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const existing = await ctx.db
+      .query("musicLikes")
+      .withIndex("userId_key", (q) =>
+        q.eq("userId", userId).eq("key", args.key),
+      )
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { liked: false };
+    }
+    await ctx.db.insert("musicLikes", {
+      userId,
+      key: args.key,
+      title: args.title,
+      artist: args.artist,
+      videoId: args.videoId,
+      audioUrl: args.audioUrl,
+      cover: args.cover,
+      album: args.album,
+      createdAt: Date.now(),
+    });
+    return { liked: true };
+  },
+});
+
+/**
+ * Lagu yang disukai user yang sedang masuk.
+ *
+ * Tidak menerima userId dari luar dengan sengaja - daftar ini privat.
+ */
+export const myMusicLikes = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    return await ctx.db
+      .query("musicLikes")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+  },
+});
+
+/** Apakah satu lagu sedang disukai (dipakai tombol hati di pemutar). */
+export const isMusicLiked = query({
+  args: { key: v.string() },
+  handler: async (ctx, { key }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return false;
+    const row = await ctx.db
+      .query("musicLikes")
+      .withIndex("userId_key", (q) => q.eq("userId", userId).eq("key", key))
+      .first();
+    return !!row;
+  },
+});
+
 export const toggleFavorite = mutation({
   args: {
     animeId: v.string(),

@@ -330,6 +330,29 @@ const schema = defineSchema(
       .index("userId_created", ["userId", "createdAt"])
       .index("userId_anime", ["userId", "animeId"]),
 
+    /**
+     * Lagu yang disukai dari layar Musik.
+     *
+     * Sengaja tabel terpisah dari animeFavorites dan HANYA bisa dibaca oleh
+     * pemiliknya - permintaannya: lagu yang disukai itu privat, orang lain
+     * tidak boleh melihat daftarnya.
+     */
+    musicLikes: defineTable({
+      userId: v.id("users"),
+      /** videoId YouTube kalau lagu diputar lewat YouTube. */
+      videoId: v.optional(v.string()),
+      audioUrl: v.optional(v.string()),
+      title: v.string(),
+      artist: v.string(),
+      cover: v.optional(v.string()),
+      album: v.optional(v.string()),
+      /** Kunci unik lagu (artist|title) supaya tidak dobel saat disukai. */
+      key: v.string(),
+      createdAt: v.number(),
+    })
+      .index("userId_created", ["userId", "createdAt"])
+      .index("userId_key", ["userId", "key"]),
+
     /** Riwayat baca manga & manhwa (bukan anime). */
     comicHistory: defineTable({
       userId: v.id("users"),

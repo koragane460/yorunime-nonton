@@ -55,6 +55,36 @@ async function getJson(url: string): Promise<any | null> {
 const clip = (v: unknown, max = 120): string =>
   typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
 
+/**
+ * Saring lagu "brainrot" / meme / junk.
+ *
+ * Kata seperti "brainrot", "skibidi", atau "meme song" bikin lagu junk masuk
+ * katalog utama (sebelumnya ada judul "Italian Brainrot Anime Opening" di
+ * baris OST). Katalog resmi seharusnya lagu sungguhan, jadi yang judulnya
+ * mengandung kata-kata ini dibuang.
+ */
+const BRAINROT_WORDS = [
+  "brainrot",
+  "skibidi",
+  "meme song",
+  "ohio",
+  "gyatt",
+  "rizz",
+  "fanum tax",
+  "grimace shake",
+  "minecraft parody",
+  "parody",
+  "sped up",
+  "slowed reverb",
+  "tiktok version",
+];
+
+/** True kalau judul/album lagu ini termasuk junk yang tidak mau ditampilkan. */
+export function isBrainrot(t: { title: string; album: string }): boolean {
+  const hay = `${t.title} ${t.album}`.toLowerCase();
+  return BRAINROT_WORDS.some((w) => hay.includes(w));
+}
+
 /** iTunes hanya punya audio kalau ada previewUrl; hasil tanpa preview dibuang. */
 function mapItunes(raw: any): MusicTrack | null {
   const audioUrl = clip(raw?.previewUrl, 400);
@@ -97,6 +127,7 @@ async function searchItunes(
     const key = `${t.artist}|${t.title}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
+    if (isBrainrot(t)) continue;
     out.push(t);
   }
   return out;
@@ -231,6 +262,7 @@ export const musicSearch = action({
       const key = `${t.artist}|${t.title}`.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
+      if (isBrainrot(t)) continue;
       merged.push(t);
       if (merged.length >= limit) break;
     }
@@ -310,7 +342,7 @@ export const musicSections = action({
  * aman gagal (mengembalikan null) dan player jatuh ke pratinjau iTunes.
  */
 export const youtubeFind = action({
-  args: { q: v.string() },
+  args: { q: v.string(), remix: v.optional(v.boolean()) },
   handler: async (_ctx, args) => {
     const q = args.q.trim();
     if (q.length < 2) return { videoId: null };
@@ -319,7 +351,11 @@ export const youtubeFind = action({
     // Dulu saya menulisnya %253D (doobel encode), jadi nilainya salah dan
     // filter tidak diterapkan. Hasil pencarian tetap keluar karena kita
     // mengambil videoId, tapi kualitasnya tidak terjaga.
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%3D%3D`;
+    //
+    // `remix` menambahkan kata "remix" ke kueri supaya versi remix juga
+    // ketemu, bukan cuma versi asli lagunya.
+    const term = args.remix ? `${q} remix` : q;
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%3D%3D`;
     try {
       const res = await fetch(url, {
         headers: {
@@ -345,5 +381,95 @@ export const youtubeFind = action({
     } catch {
       return { videoId: null };
     }
+  },
+});
+
+/**
+ * Lirik lagu dengan penanda waktu per baris.
+ *
+ * Sumbernya LRCLIB (lrclib.net): gratis, tanpa API key, dan yang penting
+ * liriknya BERSINKRON - setiap baris punya waktu mulai, jadi di UI lirik
+ * bisa digulir otomatis mengikuti lagu seperti di Spotify.
+ *
+ * Format syncedLyrics adalah LRC: `[00:13.28] Perjalanan membawamu`.
+ * Di sini diuraikan jadi daftar { waktuDetik, teks } supaya frontend tidak
+ * perlu mem-parsing lagi.
+ */
+export const lyrics = action({
+  args: {
+    artist: v.string(),
+    track: v.string(),
+    /** Durasi lagu membantu LRCLIB memilih versi yang tepat. */
+    durationSec: v.optional(v.number()),
+  },
+  handler: async (_ctx, args) => {
+    const artist = args.artist.trim();
+    const track = args.track.trim();
+    if (!artist || !track) {
+      return { synced: null, plain: null };
+    }
+
+    const headers = {
+      "User-Agent": UA,
+      Accept: "application/json",
+    };
+
+    // 1) Coba exact match dulu (paling akurat, termasuk durasi).
+    // 2) Kalau tidak ada, pakai hasil pencarian teratas.
+    const urls = [
+      `https://lrclib.net/api/get?artist_name=${encodeURIComponent(artist)}` +
+        `&track_name=${encodeURIComponent(track)}` +
+        (args.durationSec && args.durationSec > 0
+          ? `&duration=${Math.round(args.durationSec)}`
+          : ""),
+      `https://lrclib.net/api/search?track_name=${encodeURIComponent(track)}` +
+        `&artist_name=${encodeURIComponent(artist)}`,
+      `https://lrclib.net/api/search?q=${encodeURIComponent(`${artist} ${track}`)}`,
+    ];
+
+    for (const u of urls) {
+      try {
+        const res = await fetch(u, {
+          headers,
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const rows: any[] = Array.isArray(data) ? data : [data];
+        // Pilih yang punya lirik bersinkron; kalau tidak ada, yang plain saja.
+        const best =
+          rows.find((r) => r?.syncedLyrics) ??
+          rows.find((r) => r?.plainLyrics) ??
+          null;
+        if (!best) continue;
+
+        const raw: string = best.syncedLyrics ?? best.plainLyrics ?? "";
+        if (!raw) continue;
+
+        // Uraikan LRC: `[mm:ss.xx] teks`. Baris tanpa waktu (metadata)
+        // dibuang.
+        const lines: { t: number; text: string }[] = [];
+        for (const line of raw.split("\n")) {
+          const m = line.match(/^\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\](.*)$/);
+          if (!m) continue;
+          const min = Number(m[1]);
+          const sec = Number(m[2]);
+          const frac = m[3] ? Number(`0.${m[3]}`) : 0;
+          const text = (m[4] ?? "").trim();
+          lines.push({ t: min * 60 + sec + frac, text });
+        }
+
+        if (lines.length > 0) {
+          return { synced: lines, plain: null };
+        }
+        const plain = (best.plainLyrics ?? "").split("\n").map((s: string) => s.trim());
+        if (plain.length > 0 && plain.some(Boolean)) {
+          return { synced: null, plain };
+        }
+      } catch {
+        continue;
+      }
+    }
+    return { synced: null, plain: null };
   },
 });
