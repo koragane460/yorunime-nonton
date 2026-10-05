@@ -99,6 +99,38 @@ export type SankaAnime = {
 };
 
 /**
+ * Bentuk pembanding judul: huruf kecil, tanpa tanda baca, spasi rapat. Dipakai
+ * untuk mencocokkan judul hasil search dengan judul di jadwal, karena keduanya
+ * kadang beda tipis ("Againts the Sky Supreme" vs "Against the Sky Supreme").
+ */
+function norm(s: string): string {
+  return String(s ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^a-z0-9 ]/g, "")
+    .trim();
+}
+
+/**
+ * Kemiripan dua judul 0-100. Bukan Exact: ejaan di sumber sering tidak sama
+ * ("Againts" vs "Against"), jadi yang dibandingkan adalah berapa banyak kata
+ * dari judul yang lebih pendek yang muncul di judul yang lebih panjang.
+ */
+function titleSimilarity(a: string, b: string): number {
+  const x = norm(a);
+  const y = norm(b);
+  if (!x || !y) return 0;
+  if (x === y) return 100;
+  const ax = x.split(" ").filter((w) => w.length > 1);
+  const ay = y.split(" ").filter((w) => w.length > 1);
+  if (ax.length === 0 || ay.length === 0) return 0;
+  const [small, big] = ax.length <= ay.length ? [ax, ay] : [ay, ax];
+  const pool = new Set(big);
+  const hit = small.filter((w) => pool.has(w)).length;
+  return Math.round((hit / small.length) * 100);
+}
+
+/**
  * Bersihkan judul dari "nama seri\t\t\tnama episode" yang dipakai donghub.
  * API menyatukan keduanya dengan beberapa tab; yang dibutuhkan user adalah nama
  * serinya saja supaya kartu tidak menulis "Judul Episode 08 Subtitle Indonesia".
@@ -256,6 +288,42 @@ async function donghuaLatestInternal(limit: number): Promise<SankaAnime[]> {
   return [];
 }
 
+/**
+ * Cari poster satu judul lewat endpoint search Sanka.
+ *
+ * Dipakai sebagai cadangan kalau endpoint detail gagal: sebagian judul di
+ * jadwal mingguan dijawab Sanka dengan "Error fetching detail", sehingga kartu
+ * tidak punya poster sama sekali dan tampil kosong di Update News. Search
+ * mengembalikan poster asli, tapi slugnya bisa beda tipis dari jadwal, jadi
+ * kandidat dicocokkan dari judulnya.
+ */
+async function donghuaPosterByTitle(title: string): Promise<string> {
+  if (norm(title).length < 3) return "";
+  let best = "";
+  let bestScore = 0;
+  for (const src of DONGHUA_SOURCES) {
+    const j = await sankaGet(
+      `/anime/${src}/search/${encodeURIComponent(String(title).trim())}`,
+      10_000,
+    );
+    for (const item of pickList(j)) {
+      const card = toCard(item);
+      if (!card?.poster) continue;
+      // Poster asli dari kartu search, jadi tidak perlu request detail lagi.
+      const score = titleSimilarity(title, card.title);
+      if (score > bestScore) {
+        bestScore = score;
+        best = proxyImage(card.poster);
+      }
+      if (score === 100) return best;
+    }
+  }
+  // 80 = semua kata kunci cocok, hanya satu kata yang salah eja. Di bawah itu
+  // judulnya beda seri, jadi lebih baik poster kosong daripada poster orang
+  // lain.
+  return bestScore >= 80 ? best : "";
+}
+
 /** Pencarian donghua — hanya katalog donghua, tidak pernah tercampur anime. */
 async function donghuaSearchInternal(
   q: string,
@@ -285,6 +353,10 @@ function uiCard(x: SankaAnime) {
     status: x.status ?? "",
     // Selalu DONGHUA — dipakai UI untuk membedakan dari anime.
     type: "DONGHUA",
+    // id-nya slug Sanka, bukan MAL id. UI memakai penanda ini untuk membuka
+    // layar detail DONGHUA; tanpa itu hasil pencarian donghua kebuka detail
+    // anime dan judulnya tertukar.
+    source: "sanka" as const,
     score: x.rating != null ? Number(x.rating) || undefined : undefined,
     episode: epNum || undefined,
   };
@@ -399,26 +471,35 @@ export const donghuaWeeklySchedule = action({
     // dan tidak membanjiri API setiap jadwal mingguan dimuat.
     const wanted = day ? byDay[DAY_NORMALIZE[day.trim().toLowerCase()]] : undefined;
     if (wanted && wanted.length > 0) {
-      await Promise.all(
-        wanted.map(async (card) => {
-          if (card.image) return;
-          for (const src of DONGHUA_SOURCES) {
-            const raw = await sankaGet(
-              `/anime/${src}/detail/${encodeURIComponent(card.id)}`,
-              10_000,
-            );
-            const d: Record<string, any> =
-              raw?.data && typeof raw.data === "object" && !Array.isArray(raw.data)
-                ? (raw.data as Record<string, any>)
-                : (raw ?? {});
-            const poster = proxyImage(d.poster);
-            if (poster) {
-              card.image = poster;
-              return;
-            }
+      // Sanka dibalas kosong kalau terlalu banyak request bersamaan, dan poster
+      // yang gagal diambil tidak akan dicoba lagi selama 30 menit (cache
+      // halaman jadwal). Jadi postcard diproses BERURUTAN: 7 judul x 2 sumber
+      // = 14 request sekaligus dijawab 429, dan hasilnya justru lebih banyak
+      // kartu tanpa poster.
+      for (const card of wanted) {
+        if (card.image) continue;
+        let found = "";
+        for (const src of DONGHUA_SOURCES) {
+          const raw = await sankaGet(
+            `/anime/${src}/detail/${encodeURIComponent(card.id)}`,
+            10_000,
+          );
+          const d: Record<string, any> =
+            raw?.data && typeof raw.data === "object" && !Array.isArray(raw.data)
+              ? (raw.data as Record<string, any>)
+              : (raw ?? {});
+          const poster = proxyImage(d.poster);
+          if (poster) {
+            found = poster;
+            break;
           }
-        }),
-      );
+        }
+        // Detail gagal untuk sebagian judul (Sanka balas "Error fetching
+        // detail"), jadi posternya kosong dan kartu tampil tanpa gambar.
+        // Endpoint search YANG SAMA mengembalikan poster untuk judul itu.
+        if (!found) found = await donghuaPosterByTitle(card.title);
+        if (found) card.image = found;
+      }
     }
     return { byDay, acak };
   },

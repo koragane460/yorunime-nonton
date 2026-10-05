@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -115,6 +115,90 @@ type DlRow = {
   error?: string;
 };
 
+/**
+ * Penarik file unduhan: fetch video -> simpan blob ke IndexedDB -> laporkan
+ * status ke Convex.
+ *
+ * Dipakai dua tempat: panel Download (tombol "unduh ulang") dan worker global
+ * yang otomatis menjalankan antrean. Keduanya memakai instance yang sama
+ * supaya satu file tidak pernah ditarik dua kali.
+ */
+function useEpisodeDownloader(onStored?: (localKey: string) => void) {
+  const setProgress = useMutation(api.downloads.updateProgress);
+  const runningRef = useRef<Set<string>>(new Set());
+  const download = useCallback(
+    async (row: DlRow) => {
+      // Efek (worker otomatis) dan tombol manual bisa memanggil ini bersamaan
+      // untuk baris yang sama, jadi dikunci per file.
+      if (runningRef.current.has(row._id)) return;
+      runningRef.current.add(row._id);
+      const localKey = `${row.animeId}__ep${row.episode}__${row.quality}`;
+      try {
+        await setProgress({ id: row._id as never, status: "downloading", progress: 0 });
+        const blob = await fetchWithProgress(row.url, (pct, received, total) => {
+          if (total > MAX_BYTES) {
+            throw new Error("Ukuran file melebihi batas penyimpanan offline");
+          }
+          void setProgress({
+            id: row._id as never,
+            progress: Math.round(pct * 100),
+            bytes: received,
+          });
+        });
+        await putEpisode(localKey, blob);
+        await setProgress({
+          id: row._id as never,
+          status: "done",
+          progress: 100,
+          bytes: blob.size,
+          localKey,
+        });
+        onStored?.(localKey);
+        toast.success(`Episode ${row.episode} tersimpan untuk offline`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Gagal mengunduh";
+        await setProgress({ id: row._id as never, status: "failed", error: msg });
+        toast.error(msg);
+      } finally {
+        runningRef.current.delete(row._id);
+      }
+    },
+    [setProgress, onStored],
+  );
+  return { download, runningRef };
+}
+
+/**
+ * Worker unduhan yang selalu hidup di seluruh aplikasi (tidak hanya saat layar
+ * Download dibuka).
+ *
+ * Tanpa ini, memilih resolusi di popup Unduh hanya membuat baris "queued" di
+ * server dan tidak ada yang menarik filenya sampai user membuka daftar dan
+ * menekan tombolnya. Padahal janjinya "episode langsung masuk daftar dan
+ * unduhannya mulai berjalan". Worker ini yang menjalankan janjinya, satu file
+ * pada satu waktu.
+ */
+export function DownloadWorker() {
+  const { user } = useAuth();
+  const rows = useQuery(api.downloads.myDownloads, user ? {} : "skip");
+  const { download, runningRef } = useEpisodeDownloader();
+  const items = (rows ?? []) as DlRow[];
+
+  const nextQueued = useMemo(
+    () =>
+      items.find(
+        (r) => r.status === "queued" && !runningRef.current.has(r._id),
+      ),
+    [items],
+  );
+  useEffect(() => {
+    if (!nextQueued) return;
+    void download(nextQueued);
+  }, [nextQueued, download]);
+
+  return null;
+}
+
 export function DownloadsPanel({
   onClose,
   inline,
@@ -145,39 +229,11 @@ export function DownloadsPanel({
   const done = items.filter((r) => r.status === "done");
   const failed = items.filter((r) => r.status === "failed");
 
-  /** Unduh satu episode: ambil video → simpan sebagai blob → tandai selesai. */
-  const download = useCallback(
-    async (row: DlRow) => {
-      const localKey = `${row.animeId}__ep${row.episode}__${row.quality}`;
-      try {
-        await setProgress({ id: row._id as never, status: "downloading", progress: 0 });
-        const blob = await fetchWithProgress(row.url, (pct, received, total) => {
-          if (total > MAX_BYTES) {
-            throw new Error("Ukuran file melebihi batas penyimpanan offline");
-          }
-          void setProgress({
-            id: row._id as never,
-            progress: Math.round(pct * 100),
-            bytes: received,
-          });
-        });
-        await putEpisode(localKey, blob);
-        await setProgress({
-          id: row._id as never,
-          status: "done",
-          progress: 100,
-          bytes: blob.size,
-          localKey,
-        });
-        setStored((prev) => new Set(prev).add(localKey));
-        toast.success(`Episode ${row.episode} tersimpan untuk offline`);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Gagal mengunduh";
-        await setProgress({ id: row._id as never, status: "failed", error: msg });
-        toast.error(msg);
-      }
-    },
-    [setProgress],
+  // Penarik file dipakai baris "Sedang berjalan" dan "Gagal" untuk dicoba
+  // ulang. Antrean yang masih "queued" tidak menunggu tombol: worker global
+  // (<DownloadWorker />) yang menjalankannya begitu dibuat.
+  const { download } = useEpisodeDownloader((localKey) =>
+    setStored((prev) => new Set(prev).add(localKey)),
   );
 
   /** Putar versi offline: buat object URL dari blob, buka di tab baru. */

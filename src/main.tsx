@@ -10,6 +10,7 @@ import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-ro
 import "./index.css";
 import { UpdateGate } from "./components/UpdateGate";
 import { MusicPlayerProvider } from "./components/MusicPlayer";
+import { DownloadWorker } from "./components/HomeTopButtons";
 
 // Lazy load route components for better code splitting
 const Welcome = lazy(() => import("./pages/Welcome.tsx"));
@@ -170,6 +171,10 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <ModerationProvider>
             <MusicPlayerProvider>
+            {/* Worker unduhan hidup di semua halaman: memilih resolusi di
+                popup Unduh harus langsung menjalankan unduhannya, bukan
+                hanya menambah baris di daftar. */}
+            <DownloadWorker />
             <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
