@@ -62,8 +62,22 @@ export const allStories = query({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
+    const me = await getAuthUserId(ctx);
     const rows = await ctx.db.query("stories").order("desc").take(120);
     const live = rows.filter((r) => r.expiresAt > now);
+    // Semua story yang saya sudah lihat diambil SEKALI (bukan dicek per story
+    // di dalam loop). Query sebelumnya melakukan 1-3 pembacaan database
+    // tambahan untuk setiap user + setiap story, dan karena query Convex
+    // reactive, semuanya jalan ulang setiap ada story baru atau penonton
+    // baru. Itu biaya yang terasa saat app dipakai ramai.
+    const myViews = new Set<string>();
+    if (me) {
+      const seenRows = await ctx.db
+        .query("storyViews")
+        .withIndex("userId", (q) => q.eq("userId", me))
+        .take(500);
+      for (const v of seenRows) myViews.add(String(v.storyId));
+    }
     const grouped = new Map<string, typeof live>();
     for (const r of live) {
       const key = String(r.userId);
@@ -73,23 +87,7 @@ export const allStories = query({
     for (const [uid, list] of grouped) {
       const u: any = await ctx.db.get(uid as never);
       if (!u) continue;
-      // Dilihat oleh saya?
-      const me = await getAuthUserId(ctx);
-      let seen = false;
-      if (me) {
-        for (const r of list) {
-          const v = await ctx.db
-            .query("storyViews")
-            .withIndex("storyId_user", (q) =>
-              q.eq("storyId", r._id).eq("userId", me),
-            )
-            .first();
-          if (v) {
-            seen = true;
-            break;
-          }
-        }
-      }
+      const seen = list.every((r) => myViews.has(String(r._id)));
       out.push({
         userId: uid,
         username: u.username ?? "user",

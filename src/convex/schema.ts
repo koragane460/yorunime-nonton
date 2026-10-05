@@ -324,7 +324,8 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("storyId_created", ["storyId", "createdAt"])
-      .index("storyId_user", ["storyId", "userId"]),
+      .index("storyId_user", ["storyId", "userId"])
+      .index("userId", ["userId"]),
 
     animeCache: defineTable({
       endpoint: v.string(),

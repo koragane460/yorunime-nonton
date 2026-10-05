@@ -595,6 +595,9 @@ export function StoryViewer({
   }, [currentStory, markViewed]);
 
   // Progres bar: gambar 5 detik, video mengikuti durasinya.
+  // PENTING untuk performa: state hanya diupdate 4x per detik (bukan 60ms
+  // sekali = 16x per detik). Setiap update merender ulang seluruh viewer,
+  // jadi interval rapat itu yang membuat story terasa berat di HP kentang.
   useEffect(() => {
     if (!currentStory) return;
     const dur = currentStory.mediaType === "video" ? 15000 : 5000;
@@ -604,7 +607,7 @@ export function StoryViewer({
       const p = Math.min(100, ((Date.now() - t0) / dur) * 100);
       setProgress(p);
       if (p >= 100) next();
-    }, 60);
+    }, 250);
     return () => window.clearInterval(timer);
   }, [currentStory, next]);
 
