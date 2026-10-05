@@ -55,8 +55,6 @@ type AnimeCardT = {
   synopsis?: string;
   /** Format dari AniList ("TV", "MOVIE", "DONGHUA", …). */
   type?: string;
-  /** Asal kartu: "sanka" = slug donghua, bukan MAL id anime. */
-  source?: CatalogPickSource;
 };
 
 /** Cegah error satu useQuery membunuh seluruh halaman. */
@@ -1188,10 +1186,7 @@ function SearchScreen({
   onOpenMusic,
 }: {
   onClose: () => void;
-  // Sumber ikut diteruskan: hasil donghua punya id berupa slug Sanka, bukan MAL
-  // id. Tanpa penandanya, kartu donghua di hasil pencarian kebuka layar detail
-  // anime dan judul yang tampil jadi judul anime lain.
-  onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
+  onPick: (id: string) => void;
   initialGenre?: string | null;
   onOpenMusic: () => void;
 }) {
@@ -1285,14 +1280,10 @@ function SearchScreen({
       const [animeRes, donghuaRes] = await Promise.all([animeP, donghuaP]);
       const seen = new Set<string>();
       const merged: AnimeCardT[] = [];
-      // Donghua selalu ditandai "sanka" supaya kliknya membuka detail donghua.
-      for (const [c, src] of [
-        ...(animeRes ?? []).map((c: AnimeCardT) => [c, "anilist"] as const),
-        ...(donghuaRes ?? []).map((c: AnimeCardT) => [c, "sanka"] as const),
-      ] as const) {
+      for (const c of [...(animeRes ?? []), ...(donghuaRes ?? [])]) {
         if (!c?.id || seen.has(c.id)) continue;
         seen.add(c.id);
-        merged.push({ ...c, type: c.type, source: src });
+        merged.push({ ...c, type: c.type });
       }
       setResults(merged);
     } catch {

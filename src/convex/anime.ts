@@ -363,41 +363,6 @@ async function translateId(text: string | undefined): Promise<string | undefined
   }
 }
 
-/**
- * Jumlah episode yang benar-benar sudah tayang, dibaca dari jadwal tayang
- * AniList.
- *
- * Media dengan `episodes: null` (season pendek, ONA, atau anthology seperti
- * "Yami Shibai 17") tidak punya jumlah dari AniList. Kalau angka itu dipakai
- * langsung, hasilnya `null` → UI memakai fallback 1 episode, padahal
- * jadwal tayangnya sudah sampai episode 13. Jadwal airing tidak pernah bohong
- * soal nomor episode, jadi itu yang dipakai.
- */
-async function anilistAiredCount(mediaId: number): Promise<number | undefined> {
-  if (!Number.isFinite(mediaId) || mediaId <= 0) return undefined;
-  try {
-    const d = await aniGraphql(
-      `query($id:Int){ Page(page:1, perPage:50){
-        airingSchedules(mediaId:$id, sort: EPISODE_DESC){ episode airingAt }
-      } }`,
-      { id: mediaId },
-    );
-    const nowSec = Math.floor(Date.now() / 1000);
-    let top = 0;
-    for (const s of d?.Page?.airingSchedules ?? []) {
-      const ep = Number(s?.episode ?? 0);
-      if (!Number.isFinite(ep) || ep <= 0) continue;
-      // Episode yang masih dijadwalkan (airingAt di masa depan) belum bisa
-      // ditonton, jadi tidak dihitung.
-      if (Number(s?.airingAt ?? 0) > nowSec) continue;
-      if (ep > top) top = ep;
-    }
-    return top > 0 ? top : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   const d = await aniGraphql(
     `query($id:Int){ Media(idMal:$id, type:ANIME){ ${ANILIST_FIELDS} } }`,
@@ -423,12 +388,7 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
     releasing && m.nextAiringEpisode?.episode
       ? Number(m.nextAiringEpisode.episode) - 1
       : undefined;
-  // `m.episodes` null = AniList tidak tahu jumlah totalnya. Angka itu HARUS
-  // diisi dari jadwal tayang, bukan dibiarkan null (yang berakhir sebagai
-  // "1 episode" padahal yang rilis sudah belasan episode).
-  const fromSchedule =
-    m.episodes == null ? await anilistAiredCount(Number(m.id)) : undefined;
-  const counted = releasing ? (airedUpTo ?? fromSchedule ?? m.episodes) : (m.episodes ?? fromSchedule);
+  const counted = releasing ? (airedUpTo ?? m.episodes) : m.episodes;
   const total = upcoming ? 0 : Math.max(1, Math.min(counted ?? 1, 3000));
   // Kalau jumlah aired diketahui pasti, tampilkan sampai episode itu saja:
   // episode lanjutan yang tidak ada pun tidak perlu dikarang.
