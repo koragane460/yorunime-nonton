@@ -145,6 +145,15 @@ const PRIVACY_OPTIONS: { id: "all" | "teman" | "diri"; label: string; hint: stri
   { id: "diri", label: "Hanya saya", hint: "Arsip pribadi — orang lain tidak melihat apa pun" },
 ];
 
+/** Alat sunting: kolom tombol vertikal di KANAN pratinjau. */
+const TOOLS: { id: Tool; label: string; icon: typeof Type }[] = [
+  { id: "teks", label: "Teks", icon: Type },
+  { id: "stiker", label: "Stiker", icon: Sticker },
+  { id: "pangkas", label: "Pangkas", icon: Crop },
+  { id: "suara", label: "Suara", icon: Volume2 },
+  { id: "privasi", label: "Privasi", icon: Lock },
+];
+
 /* =============================== CINCIN ================================= */
 
 /**
@@ -826,17 +835,38 @@ export function StoryEditor({
                 setSel(null);
               }}
               aria-label="Berikutnya"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white"
+              // Panah kanan dipindah ke sisi kiri (sebelah panah kiri) supaya
+              // kolom tombol alat di kanan tidak bertabrakan dengannya.
+              className="absolute left-14 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white"
             >
               <ChevronRight className="size-5" />
             </button>
           </>
         )}
-      </div>
+        {/* Kolom alat vertikal di kanan pratinjau: Teks, Stiker, Pangkas,
+            Suara, Privasi. Icon-only supaya tetap ringkas di layar kecil. */}
+        <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2">
+          {TOOLS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTool((v) => (v === t.id ? null : t.id))}
+              aria-label={t.label}
+              className={cn(
+                "flex size-10 items-center justify-center rounded-full border backdrop-blur-sm transition active:scale-95",
+                tool === t.id
+                  ? "border-white bg-white text-black"
+                  : "border-white/20 bg-black/50 text-white hover:border-white/40",
+              )}
+            >
+              <t.icon className="size-[18px]" />
+            </button>
+          ))}
+        </div>
 
-      {/* Panel alat */}
-      {tool && (
-        <div className="max-h-[42vh] overflow-y-auto border-t border-white/15 bg-[#12101a] px-3 py-3">
+        {/* Panel alat: kartu MELAYANG di atas media (menempel di samping
+            kolom tombol kanan), bukan panel yang meluncur dari bawah. */}
+        {tool && (
+          <div className="thin-scroll absolute bottom-3 left-2 right-14 z-20 max-h-[55%] touch-auto overflow-y-auto rounded-2xl border border-white/15 bg-[#12101a]/95 p-3 shadow-2xl backdrop-blur-sm">
           {/* ------------------------------ TEKS ------------------------------ */}
           {tool === "teks" && (
             <div className="space-y-2.5">
@@ -1242,67 +1272,33 @@ export function StoryEditor({
               ))}
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
-      {/* Bar alat + bar musik panjang di bawah */}
+      {/* Bar bawah: hanya kotak panjang musik — semua tombol alat lain sudah
+          pindah ke kolom vertikal di kanan pratinjau. */}
       <div className="border-t border-white/15 bg-black/80 p-2.5">
-        <div className="flex items-center justify-between gap-1.5">
-          {(
-            [
-              { id: "teks", label: "Teks", icon: Type },
-              { id: "stiker", label: "Stiker", icon: Sticker },
-              { id: "pangkas", label: "Pangkas", icon: Crop },
-              { id: "privasi", label: "Privasi", icon: Lock },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTool((v) => (v === t.id ? null : t.id))}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-semibold transition",
-                tool === t.id ? "bg-white text-black" : "text-white/75 hover:bg-white/10",
-              )}
-            >
-              <t.icon className="size-4" />
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Kotak panjang: pilih lagu + tombol Suara di dalamnya. */}
-        <div className="mt-2 flex items-stretch gap-1.5">
-          <button
-            onClick={() => setTool((v) => (v === "musik" ? null : "musik"))}
-            className={cn(
-              "flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
-              tool === "musik"
-                ? "border-sky-400 bg-sky-400/10"
-                : "border-white/20 bg-white/5 hover:border-white/40",
-            )}
-          >
-            <Music2 className="size-4 shrink-0 text-sky-300" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[11px] font-bold">
-                {music ? music.title : "Pilih lagu untuk story"}
-              </span>
-              <span className="block truncate text-[9px] text-white/50">
-                {music ? music.artist : "Ketuk untuk mencari lagu"}
-              </span>
+        <button
+          onClick={() => setTool((v) => (v === "musik" ? null : "musik"))}
+          className={cn(
+            "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
+            tool === "musik"
+              ? "border-sky-400 bg-sky-400/10"
+              : "border-white/20 bg-white/5 hover:border-white/40",
+          )}
+        >
+          <Music2 className="size-4 shrink-0 text-sky-300" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-bold">
+              {music ? music.title : "Pilih lagu untuk story"}
             </span>
-          </button>
-          <button
-            onClick={() => setTool((v) => (v === "suara" ? null : "suara"))}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-bold transition",
-              tool === "suara"
-                ? "border-sky-400 bg-sky-400/10 text-sky-200"
-                : "border-white/20 bg-white/5 text-white/80 hover:border-white/40",
-            )}
-          >
-            <Volume2 className="size-4" /> Suara
-          </button>
-        </div>
+            <span className="block truncate text-[9px] text-white/50">
+              {music ? music.artist : "Ketuk untuk mencari lagu"}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-white/40" />
+        </button>
       </div>
     </div>,
     document.body,
