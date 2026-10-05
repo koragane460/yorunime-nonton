@@ -209,7 +209,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   /** Muat lagu lewat YouTube; kembalikan false kalau tidak ketemu. */
   const tryYouTube = useCallback(
     async (t: MusicTrack): Promise<boolean> => {
-      const q = `${t.artist} ${t.title}`.trim();
+      // Track hasil fallback pencarian punya artist persis "YouTube" yang
+      // bukan artis sungguhan; memasukkannya ke kueri merusak pencarian
+      // ("YouTube Stress Relief" bukan yang dimaksud user). Kalau begitu,
+      // cukup cari judulnya saja.
+      const q =
+        t.artist.trim().toLowerCase() === "youtube"
+          ? t.title.trim()
+          : `${t.artist} ${t.title}`.trim();
       if (q.length < 2) return false;
       // Cari versi asli dulu. Kalau tidak ketemu, coba versi remix supaya
       // lagu remix juga ada - peminta memang mau remix ikut tersedia.

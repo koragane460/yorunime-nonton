@@ -469,6 +469,7 @@ function PlayerView({
                     track={t.title}
                     position={p.position}
                     playing={p.playing}
+                    duration={total}
                     onClose={() => setShowLyrics(false)}
                   />
                 </div>
@@ -700,6 +701,7 @@ function LyricsPane({
   track,
   position,
   playing,
+  duration,
   onClose,
 }: {
   cover?: string;
@@ -707,6 +709,8 @@ function LyricsPane({
   track: string;
   position: number;
   playing: boolean;
+  /** Durasi lagu; membantu LRCLIB memilih versi lirik yang persis. */
+  duration: number;
   onClose: () => void;
 }) {
   const getLyrics = useAction(api.music.lyrics);
@@ -715,12 +719,22 @@ function LyricsPane({
   const [busy, setBusy] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Ref posisi terkini. Panel ini hanya menerima `position` sebagai prop yang
+  // berubah tiap tick, tapi baris aktif HARUS dihitung ulang juga saat panel
+  // baru dibuka - kalau tidak, lirik yang terbuka di menit 1:34 tetap mulai
+  // dari awal sampai detik berikutnya lewat.
+  const posRef = useRef(position);
+  posRef.current = position;
+  useEffect(() => {
+    posRef.current = position;
+  }, [position]);
+
   useEffect(() => {
     let alive = true;
     setBusy(true);
     setLines(null);
     setPlain(null);
-    getLyrics({ artist, track })
+    getLyrics({ artist, track, durationSec: duration })
       .then((r: unknown) => {
         if (!alive) return;
         const d = r as { synced: LyricLine[] | null; plain: string[] | null };
@@ -732,7 +746,8 @@ function LyricsPane({
     return () => {
       alive = false;
     };
-  }, [artist, track, getLyrics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artist, track]);
 
   // Baris aktif = baris terakhir yang waktunya sudah lewat posisi lagu.
   const activeIdx = useMemo(() => {

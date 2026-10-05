@@ -28,7 +28,7 @@ export type MusicTrack = {
   audioUrl: string;
   /** Perkiraan durasi detik. 0 kalau belum diketahui (bagek elemen audio). */
   durationSec: number;
-  source: "itunes" | "archive";
+  source: "itunes" | "archive" | "youtube";
   /** "penuh" = trek utuh, "potongan" = pratinjau 30 detik. */
   kind: "penuh" | "potongan";
 };
@@ -110,9 +110,10 @@ async function searchItunes(
   term: string,
   limit: number,
   country?: string,
-): Promise<MusicTrack[]> {// Pasar `country` untuk fokus pasar tertentu. Untuk Indonesia, iTunes jauh
-    // lebih tepat: tanpa itu, kueri "lagu indonesia" mengembalikan artis
-    // Amerika.
+): Promise<MusicTrack[]> {
+  // Pasar `country` untuk fokus pasar tertentu. Untuk Indonesia, iTunes jauh
+  // lebih tepat: tanpa itu, kueri "lagu indonesia" mengembalikan artis
+  // Amerika.
   const url =
     `https://itunes.apple.com/search?term=${encodeURIComponent(term)}` +
     `&entity=song&limit=${Math.min(50, Math.max(1, limit))}` +
@@ -248,10 +249,15 @@ export const musicSearch = action({
     const q = args.q.trim();
     if (q.length < 2) return [] as MusicTrack[];
     const limit = Math.min(40, Math.max(6, args.limit ?? 20));
-    const [it, arRaw] = await Promise.all([
+    const [itRaw, arRaw] = await Promise.all([
       searchItunes(q, Math.ceil(limit * 0.7)).catch(() => [] as MusicTrack[]),
       searchArchive(q, 3, 3).catch(() => [] as MusicTrack[]),
     ]);
+    // SEMUA sumber difilter relevansi, bukan cuma archive. Tanpa ini, kueri
+    // spesifik seperti "stress relief" dijawab iTunes dengan lagu-lagu populer
+    // yang sama sekali tidak berhubungan (coba-coba mencocokkan "stress"
+    // dengan judul apa pun), lalu user tidak menemukan lagu yang dicari.
+    const it = relevant(itRaw, q);
     const ar = relevant(arRaw, q);
     const seen = new Set<string>();
     const merged: MusicTrack[] = [];
@@ -265,6 +271,31 @@ export const musicSearch = action({
       if (isBrainrot(t)) continue;
       merged.push(t);
       if (merged.length >= limit) break;
+    }
+    // Hasil relevan saja masih bisa kosong (judul memang tidak ada di iTunes
+    // atau Archive). Daripada mengembalikan daftar kosong, coba sekali lagi
+    // lewat YouTube: lagunya justru PENUH, bukan potongan 30 detik.
+    if (merged.length === 0) {
+      // VideoId-nya tetap dikirim lewat `youtubeId` (bukan audioUrl) karena
+      // MusicTrack tidak punya field khusus; Player sudah mengerti bentuk ini
+      // lewat pemetaan youtubeFind. Bentuk paling aman: audioUrl kosong +
+      // id yt_ supaya player menjalankan jalur YouTube-nya sendiri.
+      const videoId = await youtubeVideoIdFor(q);
+      if (videoId) {
+        return [
+          {
+            id: `yt_${videoId}`,
+            title: q.replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            artist: "YouTube",
+            album: "",
+            cover: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+            audioUrl: `https://www.youtube.com/watch?v=${videoId}`,
+            durationSec: 0,
+            source: "youtube" as const,
+            kind: "penuh" as const,
+          },
+        ];
+      }
     }
     return merged;
   },
@@ -341,46 +372,42 @@ export const musicSections = action({
  * butuh kunci apa pun. Kalau YouTube mengubah bentuk HTML-nya, fungsi ini
  * aman gagal (mengembalikan null) dan player jatuh ke pratinjau iTunes.
  */
+/** Helper internal: cari satu videoId YouTube untuk sebuah kueri. */
+async function youtubeVideoIdFor(term: string): Promise<string | null> {
+  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%3D%3D`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": UA,
+        "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+      },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const ids: string[] = [];
+    const re = /"videoId":"([A-Za-z0-9_-]{11})"/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) {
+      if (!ids.includes(m[1])) ids.push(m[1]);
+      if (ids.length >= 6) break;
+    }
+    return ids[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const youtubeFind = action({
   args: { q: v.string(), remix: v.optional(v.boolean()) },
   handler: async (_ctx, args) => {
     const q = args.q.trim();
     if (q.length < 2) return { videoId: null };
-
     // sp=EgIQAQ%3D%3D adalah filter "Video" saja (bukan playlist/channel).
-    // Dulu saya menulisnya %253D (doobel encode), jadi nilainya salah dan
-    // filter tidak diterapkan. Hasil pencarian tetap keluar karena kita
-    // mengambil videoId, tapi kualitasnya tidak terjaga.
-    //
     // `remix` menambahkan kata "remix" ke kueri supaya versi remix juga
     // ketemu, bukan cuma versi asli lagunya.
     const term = args.remix ? `${q} remix` : q;
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%3D%3D`;
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": UA,
-          "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-        },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-      if (!res.ok) return { videoId: null };
-      const html = await res.text();
-
-      // videoId valid: 11 karakter huruf/angka/-. Ambil berurutan dan buang
-      // duplikat, lalu pilih yang pertama (YouTube mengurutkan dari yang
-      // paling relevan untuk kueri ini).
-      const ids: string[] = [];
-      const re = /"videoId":"([A-Za-z0-9_-]{11})"/g;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(html)) !== null) {
-        if (!ids.includes(m[1])) ids.push(m[1]);
-        if (ids.length >= 6) break;
-      }
-      return { videoId: ids[0] ?? null };
-    } catch {
-      return { videoId: null };
-    }
+    return { videoId: await youtubeVideoIdFor(term) };
   },
 });
 
@@ -436,11 +463,21 @@ export const lyrics = action({
         if (!res.ok) continue;
         const data = await res.json();
         const rows: any[] = Array.isArray(data) ? data : [data];
-        // Pilih yang punya lirik bersinkron; kalau tidak ada, yang plain saja.
-        const best =
-          rows.find((r) => r?.syncedLyrics) ??
-          rows.find((r) => r?.plainLyrics) ??
-          null;
+        // Pilih yang punya lirik PALING BANYAK BARIS (bukan sembarang yang
+        // pertama): beberapa entri LRCLIB cuma berisi teaser/versi pendek,
+        // padahal versi full-nya ada di hasil lain. Lirik penuh = lirik yang
+        // diinginkan user, jadi yang terpanjang yang menang.
+        let best: any = null;
+        let bestLen = -1;
+        for (const r of rows) {
+          const raw: string = r?.syncedLyrics ?? r?.plainLyrics ?? "";
+          if (!raw) continue;
+          const n = raw.split("\n").length;
+          if (n > bestLen) {
+            bestLen = n;
+            best = r;
+          }
+        }
         if (!best) continue;
 
         const raw: string = best.syncedLyrics ?? best.plainLyrics ?? "";

@@ -9,6 +9,7 @@
  *     penonton untuk story sendiri, dan tombol hapus.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
@@ -169,7 +170,11 @@ export function StoryComposer({
 
   const chosen = items.filter((i) => selected.has(i.url));
 
-  return (
+  // PORTAL: layar ini dipasang langsung di <body>. Kalau dirender di dalam
+  // pohon yang punya transform/overflow-hidden (cincin avatar berada di dalam
+  // container bertransformasi), `fixed inset-0` hanya sebesar container itu,
+  // bukan sebesar layar - itulah kenapa dulu tidak terlihat fullscreen.
+  return createPortal(
     <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 pt-3">
@@ -291,7 +296,8 @@ export function StoryComposer({
           e.target.value = "";
         }}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -386,7 +392,9 @@ export function StoryEditor({
 
   if (!current) return null;
 
-  return (
+  // PORTAL ke <body>: sama alasannya dengan StoryComposer (transform pada
+  // container induk membuat `fixed` tidak lagi benar-benar fullscreen).
+  return createPortal(
     <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-black">
       {/* Bar atas */}
       <div className="flex items-center gap-3 px-3 pt-3">
@@ -487,7 +495,8 @@ export function StoryEditor({
           Semua lagu di daftar ini bebas royalti. Tidak ada lagu berhak cipta.
         </p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -612,7 +621,7 @@ export function StoryViewer({
   }, [currentStory, next]);
 
   if (!active || !currentStory) {
-    return (
+    return createPortal(
       <div className="screen-enter fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black">
         <p className="text-sm font-semibold text-white/70">Tidak ada story</p>
         <button
@@ -621,13 +630,14 @@ export function StoryViewer({
         >
           Tutup
         </button>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
   const list = active.stories;
 
-  return (
+  return createPortal(
     <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-black">
       {/* Bar progres */}
       <div className="flex gap-1 px-3 pt-3">
@@ -753,6 +763,7 @@ export function StoryViewer({
           )}
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
