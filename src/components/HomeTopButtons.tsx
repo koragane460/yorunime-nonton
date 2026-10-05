@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -145,9 +145,16 @@ export function DownloadsPanel({
   const done = items.filter((r) => r.status === "done");
   const failed = items.filter((r) => r.status === "failed");
 
+  /** Episode yang sedang ditarik file-nya, supaya tidak dobel. */
+  const runningRef = useRef<Set<string>>(new Set());
+
   /** Unduh satu episode: ambil video → simpan sebagai blob → tandai selesai. */
   const download = useCallback(
     async (row: DlRow) => {
+      // Satu worker per file. Effects + tombol manual bisa memanggil ini
+      // bersamaan untuk baris yang sama.
+      if (runningRef.current.has(row._id)) return;
+      runningRef.current.add(row._id);
       const localKey = `${row.animeId}__ep${row.episode}__${row.quality}`;
       try {
         await setProgress({ id: row._id as never, status: "downloading", progress: 0 });
@@ -175,10 +182,29 @@ export function DownloadsPanel({
         const msg = e instanceof Error ? e.message : "Gagal mengunduh";
         await setProgress({ id: row._id as never, status: "failed", error: msg });
         toast.error(msg);
+      } finally {
+        runningRef.current.delete(row._id);
       }
     },
     [setProgress],
   );
+
+  /**
+   * Unduhan yang Statusnya "queued" LANGSUNG dijalankan.
+   *
+   * Dulu baris antrean hanya muncul di daftar dan user harus menekan tombolnya
+   * sendiri, padahal di halaman nonton sudah tertulis "unduhan mulai
+   * berjalan". Expectasi itu yang dikeluhkan user, jadi antrean harus jalan
+   * begitu dibuat: satu per satu, bukan semua sekaligus (memulai banyak file
+   * bersamaan hanya memperlambat semuanya).
+   */
+  useEffect(() => {
+    const next = (items ?? []).find(
+      (r) => r.status === "queued" && !runningRef.current.has(r._id),
+    );
+    if (!next) return;
+    void download(next);
+  }, [items, download]);
 
   /** Putar versi offline: buat object URL dari blob, buka di tab baru. */
   const playOffline = useCallback(

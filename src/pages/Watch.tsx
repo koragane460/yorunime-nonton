@@ -87,12 +87,57 @@ function highestAvailable(hls: Hls | null): number {
   return availableQualities(hls).reduce((a, b) => (b > a ? b : a), 0);
 }
 
+/**
+ * Cache tinggi video per URL. Satu file tidak dicek dua kali, jadi pindah
+ * kualitas bolak-balik tidak memuat metadata ulang tiap kali.
+ */
+const heightCache = new Map<string, number>();
+
+/**
+ * Tinggi asli (piksel) sebuah file video, dibaca dari metadata file itu
+ * sendiri lewat `video.videoHeight`.
+ *
+ * Ini yang membuat pilihan resolusi benar-benar berbeda: server Indonesia
+ * hanya menyediakan satu file per episode, jadi tinggi file itulah satu-satunya
+ * cara tahu berapa megapixel yang benar-benar diputar. Tidak ada tebakan dari
+ * nama server. Metadata tidak termasuk data yang diproteksi CORS, jadi probing
+ * tetap berhasil untuk file yang lewat proxy.
+ */
+function probeVideoHeight(url: string, timeoutMs = 9000): Promise<number> {
+  const hit = heightCache.get(url);
+  if (hit) return Promise.resolve(hit);
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    let done = false;
+    const timer = window.setTimeout(() => finish(0), timeoutMs);
+    function finish(h: number) {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      v.removeAttribute("src");
+      v.load();
+      if (h > 0) heightCache.set(url, h);
+      resolve(h);
+    }
+    v.preload = "metadata";
+    v.muted = true;
+    v.addEventListener("loadedmetadata", () => finish(v.videoHeight || 0), {
+      once: true,
+    });
+    v.addEventListener("error", () => finish(0), { once: true });
+    v.src = url;
+  });
+}
+
 function applyLevel(hls: Hls | null, quality: string) {
   if (!hls) return;
   const target = parseInt(quality, 10);
   if (!Number.isFinite(target)) return;
   const levels = hls.levels ?? [];
-  if (levels.length <= 1) return;
+  if (levels.length <= 1) {
+    if (levels.length === 1) hls.currentLevel = 0;
+    return;
+  }
   const heights = levels.map((l) => levelHeight(l as never));
   let best = -1;
   // 1) level tertinggi yang masih <= target
@@ -112,8 +157,9 @@ function applyLevel(hls: Hls | null, quality: string) {
     });
   }
   if (best === -1) return;
+  // Mengeset `currentLevel` (bukan `nextLevel`) inilah yang mematikan ABR:
+  // hanya `nextLevel` yang boleh ditimpa hls.js saat bitrate berubah.
   hls.currentLevel = best;
-  // autoLevelCapSize tidak dipakai; currentLevel yang mengunci pilihan user.
 }
 
 /** Ubah timestamp WebVTT (00:01:02.500 / 01:02.500) menjadi detik. */
@@ -325,6 +371,9 @@ function WatchContent() {
   const [qualityDraft, setQualityDraft] = useState<string | null>(null);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  // Kualitas yang sedang dikirim ke server, supaya tombolnya tidak bisa ditekan
+  // dua kali (yang akan membuat dua baris unduhan untuk episode yang sama).
+  const [pendingQuality, setPendingQuality] = useState<string | null>(null);
   // Antrean unduhan disimpan di Convex (daftarnya), sementara file videonya
   // sendiri disimpan di IndexedDB perangkat — lihat src/lib/offline-store.ts.
   const enqueueDownload = useMutation(api.downloads.enqueue);
@@ -409,6 +458,147 @@ function WatchContent() {
   // Tampilkan info "1080p khusus Premium" ketika user menekan 1080p.
   const [premiumTapHint, setPremiumTapHint] = useState(false);
 
+/**
+   * Resolusi asli tiap file MP4 di daftar server episode ini.
+   *
+   * Server Indonesia tidak punya URL per kualitas (tidak seperti HLS yang punya
+   * beberapa level), hanya satu file per server. Jadi "ganti kualitas" berarti
+   * pindah ke server lain yang resolusinya memang berbeda — dan itu harus
+   * diketahui dari file sungguhan, bukan diasumsikan dari nama server.
+   */
+  const [srcHeights, setSrcHeights] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const mp4s = (sources as any[])
+      .filter((s) => s?.type === "mp4" && !!s?.url)
+      .slice(0, 4);
+    if (mp4s.length === 0) {
+      setSrcHeights({});
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      const out: Record<string, number> = {};
+      // Berurutan, bukan paralel: beberapa file sekaligus memicu connection
+      // reset di CDN dan hasil probing-nya jadi kosong semua.
+      for (const s of mp4s) {
+        const h = await probeVideoHeight(s.url);
+        if (!alive) return;
+        if (h > 0) out[s.url] = h;
+      }
+      if (alive) setSrcHeights(out);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sources]);
+
+  /** Server MP4 yang paling cocok untuk resolusi `target` (piksel). */
+  const bestSourceIdxFor = useCallback(
+    (target: number) => {
+      let under = -1;
+      let underH = 0;
+      let over = -1;
+      let overH = Infinity;
+      (sources as any[]).forEach((s, i) => {
+        if (s?.type !== "mp4" || !s?.url) return;
+        const h = srcHeights[s.url] ?? 0;
+        if (h <= 0) return;
+        if (h <= target) {
+          if (h > underH) {
+            underH = h;
+            under = i;
+          }
+        } else if (h < overH) {
+          overH = h;
+          over = i;
+        }
+      });
+      // Kalau semuanya lebih besar dari target, ambil yang terkecil supaya
+      // hasilnya setinggi mungkin. Tidak pernah mengembalikan file 480p
+      // berlabel 1080p.
+      return under >= 0 ? under : over;
+    },
+    [sources, srcHeights],
+  );
+
+  /** Pindah ke server lain, menjaga posisi playback. */
+  const switchSource = useCallback(
+    (i: number) => {
+      if (i === sourceIdx) return;
+      const s = (sources as any[])[i];
+      if (!s) return;
+      resumeAtRef.current = videoRef.current?.currentTime ?? 0;
+      autoplayNextRef.current = true;
+      setSourceIdx(i);
+      setSourceType(s.type === "hls" ? "hls" : s.type === "mp4" ? "mp4" : "embed");
+      setWaiting(false);
+    },
+    [sourceIdx, sources],
+  );
+
+  /**
+   * Terapkan pilihan resolusi ke player.
+   *
+   * Dua jalur, karena dua jenis sumber punya mekanisme berbeda:
+   *  - HLS punya beberapa level di dalam satu playlist; cukup pindah
+   *    `currentLevel` dan gambar seketika jadi lebih tajam atau lebih buram.
+   *  - MP4 cuma punya satu resolusi per file, jadi harus pindah SERVER. Kalau
+   *    tidak ada server lain yang cocok, player tetap di server saat ini —
+   *    bukan resolusi palsu 1080p.
+   */
+  const applyQuality = useCallback(
+    (q: string) => {
+      const target = parseInt(q, 10);
+      if (!Number.isFinite(target)) return;
+      const hls = hlsRef.current;
+      if (hls && sourceType === "hls") {
+        applyLevel(hls, q);
+        return;
+      }
+      const idx = bestSourceIdxFor(target);
+      if (idx >= 0) switchSource(idx);
+    },
+    [sourceType, bestSourceIdxFor, switchSource],
+  );
+
+  /**
+   * Resolusi yang benar-benar bisa dipakai sekarang: level HLS untuk sumber
+   * HLS, atau tinggi file asli untuk server MP4 yang sudah dicek.
+   */
+  const realQualities = useMemo(() => {
+    const list =
+      sourceType === "hls" && levels.length > 0
+        ? levels
+        : Object.values(srcHeights);
+    return [...new Set(list)].sort((a, b) => a - b);
+  }, [sourceType, levels, srcHeights]);
+
+  /**
+   * URL unduhan untuk sebuah resolusi. Harus MP4 (HLS tidak bisa disimpan
+   * browser sebagai satu file), jadi server yang dipilih adalah server MP4
+   * yang resolusinya paling cocok. Kalau tidak ada server MP4 yang setinggi
+   * itu, hasilnya file tertinggi yang ada — bukan file 480p berlabel 1080p.
+   */
+  const downloadUrlFor = useCallback(
+    (q: string) => {
+      const target = parseInt(q, 10) || 720;
+      const idx = bestSourceIdxFor(target);
+      const picked = idx >= 0 ? String((sources as any[])[idx]?.url ?? "") : "";
+      if (picked) return { url: picked, height: srcHeights[picked] ?? 0 };
+      const fallback = (sources as any[]).find((s) => s?.type === "mp4" && !!s?.url);
+      const url = String(fallback?.url ?? "");
+      return { url, height: url ? (srcHeights[url] ?? 0) : 0 };
+    },
+    [bestSourceIdxFor, sources, srcHeights],
+  );
+
+  // Dipakai oleh popup unduhan dan penanda "unduhan tersedia".
+  const downloadUrl = useMemo(
+    () => downloadUrlFor(quality).url,
+    [downloadUrlFor, quality],
+  );
+
   // ------------------------------------- gesture brightness & volume ----
   // Kecerahan = kecerahan LAYAR HP, bukan video.
   // Bukan filter di elemen <video> (itu memaksa GPU menggambar ulang tiap
@@ -465,30 +655,42 @@ function WatchContent() {
    * untuk akun biasa sesuai aturan yang sudah ada di app). Filter CSS tetap
    * dipakai sebagai penyempurnaan, bukan satu-satunya effector.
    */
+  /**
+   * Tombol HD.
+   *
+   * Dulu tombol ini hanya menyalakan filter CSS (unsharp mask). Itu cuma
+   * night's sharpening: detail yang hilang tetap hilang, jadi video 480p tetap
+   * buram dan tombolnya terasa tidak berfungsi sama sekali. Sekarang tombol
+   * ini benar-benar mengganti SUMBER VIDEO ke resolusi tertinggi yang tersedia
+   * di episode ini (level HLS tertinggi, atau server MP4 dengan file tertinggi),
+   * lalu mengunci pilihan itu supaya hls.js tidak menurunkannya sendiri.
+   * Filter CSS tetap dipakai sebagai penyempurnan, bukan satu-satunya effector.
+   */
   const toggleHd = useCallback(() => {
     setHdBoost((v) => {
       const next = !v;
-      const hls = hlsRef.current;
-      if (hls) {
-        if (next) {
-          const top = highestAvailable(hls);
-          // Akun non-Premium tetap tertahan di 720p sesuai aturan app.
-          const cap = (user?.premiumUntil ?? 0) > Date.now() ? 1080 : 720;
-          if (top > 0) {
-            const want = Math.min(top, cap);
-            applyLevel(hls, `${want}p`);
-            // Level terkunci: hls.js tidak boleh otomatis turun lagi.
-            hls.currentLevel = (hls.levels ?? []).findIndex(
-              (l) => levelHeight(l as never) === want,
-            );
-          }
+      // Akun non-Premium tetap tertahan di 720p sesuai aturan app.
+      const cap = (user?.premiumUntil ?? 0) > Date.now() ? 1080 : 720;
+      if (next) {
+        // Resolusi tertinggi yang benar-benar ada di stream ini.
+        const avail = sourceType === "hls" ? levels : Object.values(srcHeights);
+        const top = avail.reduce((a, b) => (b > a ? b : a), 0);
+        if (top > 0) {
+          applyQuality(`${Math.min(top, cap)}p`);
+          setQualityTouched(true);
+          setQuality(`${Math.min(top, cap)}p`);
         } else {
-          applyLevel(hls, quality);
+          // Belum ada data resolusi (HLS baru dimuat, atau MP4 belum selesai
+          // dicek). Tetap Livingkan tombol supaya user tidak mengira rusak.
+          applyQuality(`${cap}p`);
         }
+      } else {
+        // Mati lagi: kembali ke resolusi sesuai pilihan kualitas di bawah.
+        applyQuality(quality);
       }
       return next;
     });
-  }, [quality, user?.premiumUntil]);
+  }, [quality, user?.premiumUntil, sourceType, levels, srcHeights, applyQuality]);
 
   const [volumeLevel, setVolumeLevel] = useState(0.5);
   const gestureRef = useRef<{
@@ -828,17 +1030,6 @@ function WatchContent() {
   const currentEp =
     epIndex >= 0 ? epList[epIndex] : (epList.find((e: any) => e.id === epParam) ?? null);
   const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
-  // URL yang dipakai untuk unduhan: harus MP4. Server yang sedang diputar
-  // belum tentu MP4 (bisa HLS atau embed), jadi server MP4 dari episode yang
-  // sama dicari otomatis supaya memilih kualitas langsung mengunduh tanpa
-  // user harus ganti server lebih dulu.
-  const downloadUrl = useMemo(() => {
-    if (sourceType === "mp4" && streamUrl) return streamUrl;
-    const mp4 = (sources as any[]).find(
-      (s) => s?.type === "mp4" && !!s?.url,
-    );
-    return String(mp4?.url ?? "");
-  }, [sources, sourceType, streamUrl]);
 
   /**
    * Server yang sedang diputar error → tandai mati lalu pindah ke server
@@ -1120,7 +1311,15 @@ function WatchContent() {
       hls.loadSource(streamUrl);
       hls.attachMedia(v);
       // Pasang level sesuai kualitas yang dipilih begitu manifest terbaca.
-      hls.on(Hls.Events.MANIFEST_PARSED, () => applyLevel(hls, quality));
+      // `setLevels` WAJIB dipanggil di sini: efek lama membacanya dari
+      // `hlsRef.current` pada saat server baru diganti, padahal saat itu
+      // manifest belum di-fetch, jadi daftarnya kosong dan level yang dikunci
+      // selalu "tidak tersedia". Akibatnya tombol kualitas tidak pernah
+      // benar-benar mengganti gambar.
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setLevels(availableQualities(hls));
+        applyLevel(hls, quality);
+      });
       // Error HLS selalu dicoba dipulihkan dulu sebelum memberi tahu user —
       // seek / ganti menit sering memicu error sementara yang sebenarnya
       // bisa diperbaiki sendiri (hls.js), jadi tidak perlu "muat ulang".
@@ -1153,12 +1352,12 @@ function WatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceType, streamUrl]);
 
-  // Ganti kualitas saat nonton → langsung terapkan ke level HLS yang aktif.
-  // Di layar penuh (fullscreen) otomatis dinaikkan ke resolusi tertinggi yang
-  // boleh diakses — 1080p hanya kalau akun punya Premium.
+  // Ganti kualitas saat nonton -> benar-benar diterapkan ke player, baik ke
+  // level HLS maupun ke server MP4 yang resolusinya paling cocok. Di layar
+  // penuh (fullscreen) otomatis dinaikkan ke resolusi tertinggi yang boleh
+  // diakses: 1080p hanya kalau akun punya Premium.
   const isPremiumNow = (user?.premiumUntil ?? 0) > Date.now();
   useEffect(() => {
-    if (!hlsRef.current) return;
     // HD aktif = pilihan user yang menang, jangan ditimpa aturan otomatis.
     if (hdBoost) return;
     const wanted =
@@ -1169,8 +1368,9 @@ function WatchContent() {
           : quality === PREMIUM_QUALITY && !isPremiumNow
             ? "720p"
             : quality;
-    applyLevel(hlsRef.current, wanted);
-  }, [quality, isFs, isPremiumNow, hdBoost]);
+    applyQuality(wanted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quality, isFs, isPremiumNow, hdBoost, applyQuality]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -1252,6 +1452,55 @@ function WatchContent() {
     setQualityDraft(null);
     setQualityOpen(false);
   };
+
+  /**
+   * Unduh episode pada resolusi tertentu.
+   *
+   *Alurnya: resolutions -> server MP4 yang tinggi filenya paling cocok -> masuk
+   * daftar Download. Popup langsung ditutup begitu clicked, lalu worker unduhan
+   * di layar Download yang mulai menarik filenya (lihat `DownloadsPanel`).
+   * Label kualitas yang disimpan adalah REALITA file, bukan angka yang ditekan,
+   * supaya daftar Download tidak pernah menampilkan "1080p" untuk file 480p.
+   */
+  const startDownload = useCallback(
+    (q: string) => {
+      if (!currentEp) return;
+      const pick = downloadUrlFor(q);
+      if (!pick.url) {
+        toast.error("Belum ada server MP4 untuk episode ini");
+        return;
+      }
+      const asked = parseInt(q, 10) || 720;
+      const label = pick.height > 0 && pick.height < asked ? `${pick.height}p` : q;
+      const title = detailData?.title ?? "Anime";
+      const image = detailData?.image;
+      setPendingQuality(q);
+      void enqueueDownload({
+        animeId,
+        animeTitle: title,
+        animeImage: typeof image === "string" && image ? image : undefined,
+        episode: currentEp.number,
+        episodeId: epParam ?? undefined,
+        quality: label,
+        url: pick.url,
+      })
+        .then(() => {
+          // Popup ditutup begitu tombol ditekan, bukan setelah server membalas,
+          // supaya tidak terasa lambat walau unduhan yang sebenarnya jalan.
+          setDownloadOpen(false);
+          toast.success(
+            label === q
+              ? `Mengunduh ${title} Episode ${currentEp.number} (${label})`
+              : `Server ini hanya menyediakan ${label}, jadi itu yang diunduh`,
+          );
+        })
+        .catch((e: unknown) => {
+          toast.error(e instanceof Error ? e.message : "Gagal membuat unduhan");
+        })
+        .finally(() => setPendingQuality(null));
+    },
+    [animeId, detailData, currentEp, epParam, downloadUrlFor, enqueueDownload],
+  );
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -1495,6 +1744,8 @@ function WatchContent() {
   const postComment = useMutation(api.activities.postComment);
 
   // Resolusi yang benar-benar tersedia di stream HLS yang sedang diputar.
+  // Dibaca ulang tiap server/HLS berganti supaya tombol kualitas tahu level
+  // mana yang benar-benar ada (bukan asumsi).
   useEffect(() => {
     const hls = hlsRef.current;
     setLevels(hls ? availableQualities(hls) : []);
@@ -2481,13 +2732,28 @@ function WatchContent() {
             {QUALITIES.map((q) => {
               const height = parseInt(q, 10);
               const locked = q === PREMIUM_QUALITY && !isPremium;
-              // Kalau resolusi ini tidak ada di stream, tetap ditampilkan tapi
-              // ditandai supaya user tidak menyangka tombolnya tidak jalan.
-              const missing = levels.length > 0 && !levels.includes(height);
+              // Resolusi yang benar-benar ada di stream episode ini: level HLS
+              // untuk sumber HLS, atau tinggi file asli untuk server MP4.
+              // Kalau tidak ada, tombolnya TIDAK diklikable. Tombol yang bisa
+              // diklik tapi tidak mengubah apa-apa persis seperti yang dikeluhkan
+              // user ("mencet HD ga memperbaiki apa-apa").
+              const missing =
+                realQualities.length > 0 && !realQualities.includes(height);
+              // Resolusi yang benar-benar akan diputar kalau tombol ini ditekan:
+              // level terdekat di bawahnya, atau yang terkecil kalau semuanya
+              // lebih tinggi. Ditulis terbuka supaya user tidak menyangka
+              // mendapat sesuatu yang tidak ada.
+              const nearest = missing
+                ? realQualities.reduce((a, b) => {
+                    if (b > height) return a;
+                    return b > a ? b : a;
+                  }, realQualities[0] ?? 0)
+                : height;
               const active = (qualityDraft ?? quality) === q;
               return (
                 <div key={q}>
                   <button
+                    disabled={missing && !locked}
                     onClick={() => {
                       if (locked) {
                         setPremiumTapHint(true);
@@ -2498,7 +2764,7 @@ function WatchContent() {
                     }}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
-                      locked
+                      locked || missing
                         ? "cursor-not-allowed border-amber-500/40 bg-amber-500/5"
                         : active
                           ? "border-foreground/40 bg-primary/15"
@@ -2508,7 +2774,11 @@ function WatchContent() {
                     <span
                       className={cn(
                         "w-14 text-sm font-bold",
-                        locked ? "text-amber-300" : active ? "text-primary" : "",
+                        locked || missing
+                          ? "text-amber-300"
+                          : active
+                            ? "text-primary"
+                            : "",
                       )}
                     >
                       {q}
@@ -2519,8 +2789,8 @@ function WatchContent() {
                       </span>
                     )}
                     {missing && !locked && (
-                      <span className="text-[9px] text-muted-foreground">
-                        tidak tersedia di episode ini
+                      <span className="text-[9px] text-amber-300/90">
+                        episode ini tidak punya {height}p
                       </span>
                     )}
                     {active && !locked && (
@@ -2531,6 +2801,9 @@ function WatchContent() {
                   </button>
                   <p className="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
                     {QUALITY_INFO[q]}
+                    {missing && nearest > 0 && nearest !== height && (
+                      <> Kalau dipilih, yang diputar {nearest}p.</>
+                    )}
                   </p>
                 </div>
               );
@@ -2545,10 +2818,11 @@ function WatchContent() {
           <p className="mt-2 text-[11px] text-muted-foreground">
             Pilihan ini juga disimpan sebagai bawaan di Pengaturan.
           </p>
-          {levels.length > 0 && levels.length <= 1 && (
+          {realQualities.length === 1 && (
             <p className="mt-1 text-[10px] text-amber-300/90">
-              Episode ini hanya menyediakan satu resolusi ({levels[0]}p), jadi
-              pilihan lain tidak bisa dipakai.
+              Episode ini hanya punya satu resolusi ({realQualities[0]}p), jadi
+              pilihan lain tidak bisa dipakai. Pilih server lain di bawah player
+              untuk mencoba resolusi yang berbeda.
             </p>
           )}
           <div className="mt-3 flex gap-2">
@@ -2599,53 +2873,67 @@ function WatchContent() {
         <Popup onClose={() => setDownloadOpen(false)} title="Unduh">
           <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
             {downloadUrl
-              ? "Pilih kualitas — episode ini langsung masuk ke daftar Download di Home dan bisa ditonton offline. Kualitas 1080p hanya untuk akun Premium."
+              ? "Pilih kualitas. Episode ini langsung masuk ke daftar Download di Home dan unduhannya mulai berjalan sendiri. 1080p hanya untuk akun Premium."
               : "Episode ini belum punya server MP4 yang bisa disimpan offline. Coba putar server lain dulu."}
           </p>
-          <div className="flex flex-wrap gap-2">
+          {downloadUrl && realQualities.length > 0 && (
+            <p className="mb-3 rounded-lg border border-border bg-card/60 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
+              Resolusi asli episode ini di server yang tersedia:{" "}
+              <span className="font-bold text-foreground">
+                {realQualities.map((h) => `${h}p`).join(", ")}
+              </span>
+              . Kalau kamu memilih angka yang tidak ada di daftar itu, yang
+              diunduh adalah resolusi terdekat yang benar-benar ada - bukan
+              file 1080p yang isinya 480p.
+            </p>
+          )}
+          <div className="space-y-1.5">
             {QUALITIES.slice(2).map((q) => {
+              const height = parseInt(q, 10);
               const locked = q === PREMIUM_QUALITY && !isPremiumNow;
+              // Server yang benar-benar dipakai kalau kualitas ini dipilih.
+              const pick = downloadUrlFor(q);
+              // Resolusi nyata file itu, dibaca dari metadata file. Kalau 0,
+              // belum sempat dicek dan pilihan tetap dibiarkan.
+              const realH = pick.height;
+              const missing = realH > 0 && realH < height;
+              const usable = !!pick.url && !locked;
+              const busy = pendingQuality === q;
               return (
-                <button
-                  key={q}
-                  disabled={locked || !downloadUrl}
-                  onClick={() => {
-                    if (!currentEp || !downloadUrl) return;
-                    // Server HLS (m3u8) tidak bisa disimpan sebagai satu file
-                    // video oleh browser, jadi antrean selalu memakai MP4.
-                    // Kalau server yang SEDANG diputar HLS/embed, MP4-nya
-                    // tetap diambil otomatis dari daftar server episode ini —
-                    // user tidak perlu ganti server dulu, dan begitu memilih
-                    // kualitas episode langsung masuk daftar Download.
-                    void enqueueDownload({
-                      animeId,
-                      animeTitle: D.title,
-                      animeImage: D.image ?? undefined,
-                      episode: currentEp.number,
-                      episodeId: epParam ?? undefined,
-                      quality: q,
-                      url: downloadUrl,
-                    })
-                      .then(() => {
-                        toast.success(`Masuk antrean unduhan (${q})`);
-                        setDownloadOpen(false);
-                      })
-                      .catch((e: unknown) =>
-                        toast.error(
-                          e instanceof Error ? e.message : "Gagal membuat unduhan",
-                        ),
-                      );
-                  }}
-                  className={cn(
-                    "rounded-lg border px-4 py-2 text-sm transition",
-                    locked
-                      ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
-                      : "border-border hover:border-foreground/40",
-                  )}
-                >
-                  {q}
-                  {locked && <Lock className="ml-1 inline size-3" />}
-                </button>
+                <div key={q}>
+                  <button
+                    disabled={!usable || busy}
+                    onClick={() => startDownload(q)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
+                      !usable || busy
+                        ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
+                        : "border-border hover:border-foreground/40",
+                    )}
+                  >
+                    <span className="w-14 text-sm font-bold">{q}</span>
+                    {q === PREMIUM_QUALITY && (
+                      <span className="rounded-full border border-amber-400/60 bg-amber-400/15 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                        Premium
+                      </span>
+                    )}
+                    {missing && (
+                      <span className="text-[9px] text-amber-300/90">
+                        yang tersedia {realH}p
+                      </span>
+                    )}
+                    {usable && (
+                      <span className="ml-auto text-[10px] font-bold text-primary">
+                        {busy ? "Menyiapkan..." : "Unduh"}
+                      </span>
+                    )}
+                    {locked && <Lock className="ml-auto inline size-3" />}
+                  </button>
+                  <p className="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
+                    {QUALITY_INFO[q]}
+                    {realH > 0 && missing && <> File untuk pilihan ini {realH}p.</>}
+                  </p>
+                </div>
               );
             })}
           </div>

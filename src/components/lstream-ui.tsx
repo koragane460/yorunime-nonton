@@ -169,10 +169,13 @@ export function AnimeGrid({
     image: string;
     score?: number;
     status?: string;
+    // "sanka" = slug donghua. Wajib diteruskan supaya kartu itu membuka layar
+    // detail DONGHUA, bukan mencari id-nya sebagai MAL id anime.
+    source?: "anilist" | "sanka";
   }[];
   // Judul ikut diteruskan supaya halaman detail bisa mencari metadata anime
   // dari kartu penghasilnya, walau id-nya bukan MAL id.
-  onPick: (id: string, title?: string) => void;
+  onPick: (id: string, title?: string, source?: "anilist" | "sanka") => void;
   ranked?: boolean;
   newIds?: Set<string>;
 }) {
@@ -188,7 +191,7 @@ export function AnimeGrid({
           status={a.status}
           rank={ranked ? i + 1 : undefined}
           isNew={newIds?.has(a.id)}
-          onClick={() => onPick(a.id, a.title)}
+          onClick={() => onPick(a.id, a.title, a.source)}
         />
       ))}
     </div>
