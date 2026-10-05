@@ -19,6 +19,13 @@ import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } fro
 import { xpForLevel } from "@/lib/level";
 import { shrinkAvatar } from "@/lib/image";
 import {
+  StoryAddButton,
+  StoryComposer,
+  StoryEditor,
+  StoryRing,
+  StoryViewer,
+} from "@/components/StoriesUI";
+import {
   Bell,
   CircleAlert,
   CornerUpRight,
@@ -80,8 +87,27 @@ function AkunContent() {
   const [badgesOpen, setBadgesOpen] = useState(false);
   const [titlesOpen, setTitlesOpen] = useState(false);
   const [csOpen, setCsOpen] = useState(false);
+  // Story: komposisi (galeri/kamera) -> penyuntingan -> penampil.
+  const [storyStage, setStoryStage] = useState<
+    null | "pick" | "edit" | "view"
+  >(null);
+  const [storyPicks, setStoryPicks] = useState<
+    { file: File; url: string; kind: "image" | "video" }[]
+  >([]);
 
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
+  // Bersihkan story yang sudah lewat 24 jam. Dipanggil saat halaman Akun
+  // dibuka; UI sendiri sudah memfilter story kadaluarsa, ini hanya memastikan
+  // dokumen + penontonnya benar-benar dihapus dari database.
+  const purgeStories = useMutation(api.stories.purgeExpired);
+  useEffect(() => {
+    void purgeStories({}).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Story saya sendiri, untuk cincin biru muda + penanda ada story.
+  const myStories = useQuery(api.stories.myStories, user ? {} : "skip") as
+    | { _id: string; viewCount: number; expiresAt: number }[]
+    | undefined;
   const history = useQuery(api.activities.myHistory, user ? {} : "skip");
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
   const comicHistory = useQuery(api.comics.myHistory, user ? {} : "skip");
@@ -213,16 +239,21 @@ function AkunContent() {
       {/* Foto profil menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
         <div className="relative -mt-12 flex flex-col items-center">
-          {/* Cincin gradient berdenyut di sekeliling avatar */}
-          <div className="yn-avatar-ring">
-            <div className="rounded-full bg-background p-[2px]">
-              <Avatar
-                src={user.image}
+          {/* Cincin story: biru muda saat ada story yang belum dilihat.
+              Ketuk avatar = buka penampil story. Tombol + = buat story. */}
+          <div className="relative">
+            <div className="yn-avatar-ring">
+              <StoryRing
+                image={user.image}
                 seed={user.username}
-                className="size-24"
-                online={!user.hideOnline}
+                size={96}
+                hasStory={(myStories?.length ?? 0) > 0}
+                seen={false}
+                onClick={() => setStoryStage("view")}
+                className="rounded-full bg-background p-[2px]"
               />
             </div>
+            <StoryAddButton onClick={() => setStoryStage("pick")} />
           </div>
           {/* Urutan: username -> ID -> level badge + tag clan */}
           <div
@@ -502,6 +533,31 @@ function AkunContent() {
       {notifOpen && <NotifScreen onClose={() => setNotifOpen(false)} />}
       {badgesOpen && <BadgesPopup currentLevel={user.level ?? 1} onClose={() => setBadgesOpen(false)} />}
       {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
+
+      {/* ============================= STORY =============================
+          Tiga layar fullscreen: pilih media -> sunting -> penampil. */}
+      {storyStage === "pick" && (
+        <StoryComposer
+          onClose={() => setStoryStage(null)}
+          onPicked={(items) => {
+            setStoryPicks(items);
+            setStoryStage("edit");
+          }}
+        />
+      )}
+      {storyStage === "edit" && (
+        <StoryEditor
+          items={storyPicks}
+          onClose={() => setStoryStage(null)}
+          onPosted={() => {
+            setStoryStage(null);
+            setStoryPicks([]);
+          }}
+        />
+      )}
+      {storyStage === "view" && (
+        <StoryViewer userId={user._id} onClose={() => setStoryStage(null)} />
+      )}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { xpForLevel } from "@/lib/level";
 import { timeAgo, usernameColor } from "@/lib/lstream";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { StoryRing, StoryViewer } from "@/components/StoriesUI";
 import type { Id } from "@/convex/_generated/dataModel";
 
 type Tab = "komen" | "history" | "favorite";
@@ -55,6 +56,12 @@ export function ProfileSheet({
   const comicFavorites = useQuery(api.comics.favoritesOf, { userId });
   const [tab, setTab] = useState<Tab>("komen");
   const [sending, setSending] = useState(false);
+  // Story pemilik profil ini: cincin biru muda + penampil saat avatar
+  // ditekan. Sama seperti story di halaman Akun.
+  const theirStories = useQuery(api.stories.storiesOf, { userId }) as
+    | { _id: string; createdAt: number }[]
+    | undefined;
+  const [viewStory, setViewStory] = useState(false);
 
   const cost = profile ? xpForLevel(profile.level) : 1;
   const inLevel = profile ? Math.max(0, Math.min(profile.xpInLevel, cost)) : 0;
@@ -101,14 +108,17 @@ export function ProfileSheet({
             {/* Foto profile menutupi banner, tepat di tengah — dengan cincin glow */}
             <div className="relative -mt-16 flex justify-center">
               <div className="yn-avatar-ring">
-                <div className="rounded-full bg-background p-[2px]">
-                  <Avatar
-                    src={profile.image}
-                    seed={profile.username}
-                    className="size-24"
-                    online={!profile.hideOnline}
-                  />
-                </div>
+                <StoryRing
+                  image={profile.image}
+                  seed={profile.username}
+                  size={96}
+                  hasStory={(theirStories?.length ?? 0) > 0}
+                  seen={false}
+                  onClick={() =>
+                    (theirStories?.length ?? 0) > 0 && setViewStory(true)
+                  }
+                  className="rounded-full bg-background p-[2px]"
+                />
               </div>
             </div>
           </div>
@@ -427,6 +437,11 @@ export function ProfileSheet({
             )}
           </div>
         </div>
+      )}
+
+      {/* Story pemilik profil */}
+      {viewStory && (
+        <StoryViewer userId={undefined} onClose={() => setViewStory(false)} />
       )}
     </div>
   );
