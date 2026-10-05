@@ -224,6 +224,7 @@ function Plans() {
 
   const createOrder = useMutation(api.payments.createManualOrder);
   const attachProof = useMutation(api.payments.attachProof);
+  const cancelOrder = useMutation(api.payments.cancelMyOrder);
   const analyze = useAction(api.payments.analyzeProof);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
 
@@ -304,6 +305,16 @@ function Plans() {
       setErr(e instanceof Error ? e.message : "Gagal mengirim bukti");
     }
     setBusy(null);
+  };
+
+  // Tombol "Batal" di layar bayar: hapus order, lalu tutup layar. Order yang
+  // dihapus tidak muncul di riwayat pembayaran — tidak ada status menggantung
+  // untuk paket yang tidak jadi dibeli.
+  const batal = () => {
+    if (order) void cancelOrder({ orderId: order.orderId }).catch(() => {});
+    setOrder(null);
+    setVerdict(null);
+    setErr("");
   };
 
   return (
@@ -391,13 +402,9 @@ function Plans() {
           onNote={setNote}
           onPick={() => fileRef.current?.click()}
           onSend={() => void send()}
+          onCancel={batal}
           verdict={verdict}
           err={err}
-          onClose={() => {
-            setOrder(null);
-            setVerdict(null);
-            setErr("");
-          }}
         />
       )}
     </section>
@@ -417,9 +424,9 @@ function CheckoutOverlay({
   onNote,
   onPick,
   onSend,
+  onCancel,
   verdict,
   err,
-  onClose,
 }: {
   order: Order;
   image: string;
@@ -432,26 +439,24 @@ function CheckoutOverlay({
   onNote: (v: string) => void;
   onPick: () => void;
   onSend: () => void;
+  /** Tombol Batal di paling bawah: hapus order + tutup layar. */
+  onCancel: () => void;
   verdict: Verdict | null;
   /** Galat inline (toast bawah sudah dihapus permanen). */
   err: string;
-  onClose: () => void;
 }) {
   useHideNavOnMount(); // navbar disembunyikan selama layar bayar terbuka
   return (
     <div className="screen-enter fixed inset-0 z-[80] overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-md px-3 pb-10">
+        {/* Tanpa tombol X/tutup: satu-satunya cara keluar adalah Batal di
+            bawah, supaya order tidak tertinggal tanpa kejelasan. */}
         <div className="mb-3 mt-1 flex items-center gap-2">
-          <button
-            onClick={onClose}
-            aria-label="Tutup"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold">{order.planLabel}</p>
-            <p className="font-mono text-[10px] text-zinc-500">Bayar lewat QRIS</p>
+            <p className="truncate font-mono text-[10px] text-zinc-500">
+              Bayar lewat QRIS · {order.orderId}
+            </p>
           </div>
         </div>
         <Checkout
@@ -466,6 +471,7 @@ function CheckoutOverlay({
           onNote={onNote}
           onPick={onPick}
           onSend={onSend}
+          onCancel={onCancel}
           verdict={verdict}
           err={err}
         />
@@ -486,6 +492,7 @@ function Checkout({
   onNote,
   onPick,
   onSend,
+  onCancel,
   verdict,
   err,
 }: {
@@ -500,6 +507,7 @@ function Checkout({
   onNote: (v: string) => void;
   onPick: () => void;
   onSend: () => void;
+  onCancel: () => void;
   verdict: Verdict | null;
   err: string;
 }) {
@@ -604,19 +612,29 @@ function Checkout({
         </p>
       )}
 
-      <button
-        onClick={onSend}
-        disabled={!proof || note.trim().length === 0 || busy !== null}
-        className="yn-btn yn-btn-gold w-full disabled:opacity-40"
-      >
-        {busy === "send" ? (
-          <>
-            <Loader2 className="size-4 animate-spin" /> Menganalisis
-          </>
-        ) : (
-          "Kirim Transfer"
-        )}
-      </button>
+      {/* Dua tombol satu-satunya di layar beli: Batal dan Kirim bukti. */}
+      <div className="flex items-stretch gap-2">
+        <button
+          onClick={onCancel}
+          disabled={busy !== null}
+          className="yn-btn w-[34%] shrink-0 border border-white/20 text-zinc-200 disabled:opacity-40"
+        >
+          Batal
+        </button>
+        <button
+          onClick={onSend}
+          disabled={!proof || note.trim().length === 0 || busy !== null}
+          className="yn-btn yn-btn-gold flex-1 disabled:opacity-40"
+        >
+          {busy === "send" ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Menganalisis
+            </>
+          ) : (
+            "Kirim bukti"
+          )}
+        </button>
+      </div>
 
       {verdict && (
         <div

@@ -19,6 +19,38 @@ const STORY_TTL_MS = 24 * 3600 * 1000;
 /** Batas ukuran media yang diterima (25 MB, cukup untuk video pendek). */
 export const MAX_STORY_BYTES = 25 * 1024 * 1024;
 
+/** Apakah `a` dan `b` berteman (baris friendships bisa di dua arah). */
+async function isFriend(ctx: any, a: any, b: any): Promise<boolean> {
+  if (a === b) return true;
+  const asA = await ctx.db
+    .query("friendships")
+    .withIndex("userA", (q: any) => q.eq("userA", a))
+    .filter((q: any) => q.eq(q.field("userB"), b))
+    .first();
+  if (asA) return true;
+  const asB = await ctx.db
+    .query("friendships")
+    .withIndex("userB", (q: any) => q.eq("userB", a))
+    .filter((q: any) => q.eq(q.field("userA"), b))
+    .first();
+  return !!asB;
+}
+
+/**
+ * Saring story sesuai privasi untuk penonton `me`.
+ *  - "diri"  : hanya pemilik.
+ *  - "teman" : pemilik + teman.
+ *  - "all"   : semua orang (termasuk yang belum masuk).
+ */
+async function visibleTo(ctx: any, me: any, ownerId: any, privacy?: string) {
+  if (me && String(me) === String(ownerId)) return true;
+  const p = privacy ?? "all";
+  if (p === "all") return true;
+  if (!me) return false;
+  if (p === "diri") return false;
+  return await isFriend(ctx, me, ownerId);
+}
+
 export const myStories = query({
   args: {},
   handler: async (ctx) => {
@@ -64,7 +96,12 @@ export const allStories = query({
     const now = Date.now();
     const me = await getAuthUserId(ctx);
     const rows = await ctx.db.query("stories").order("desc").take(120);
-    const live = rows.filter((r) => r.expiresAt > now);
+    const liveRaw = rows.filter((r) => r.expiresAt > now);
+    // Privasi dulu: story "diri"/"teman" tidak boleh bocor ke feed publik.
+    const live = [];
+    for (const r of liveRaw) {
+      if (await visibleTo(ctx, me, r.userId, r.privacy)) live.push(r);
+    }
     // Semua story yang saya sudah lihat diambil SEKALI (bukan dicek per story
     // di dalam loop). Query sebelumnya melakukan 1-3 pembacaan database
     // tambahan untuk setiap user + setiap story, dan karena query Convex
@@ -99,6 +136,13 @@ export const allStories = query({
           mediaType: r.mediaType,
           caption: r.caption ?? "",
           musicKey: r.musicKey,
+          music: r.music,
+          privacy: r.privacy,
+          crop: r.crop,
+          texts: r.texts,
+          stickers: r.stickers,
+          mediaVol: r.mediaVol,
+          musicVol: r.musicVol,
           createdAt: r.createdAt,
         })),
       });
@@ -119,17 +163,73 @@ export const addStory = mutation({
     mediaType: v.union(v.literal("image"), v.literal("video")),
     caption: v.optional(v.string()),
     musicKey: v.optional(v.string()),
+    privacy: v.optional(
+      v.union(v.literal("all"), v.literal("teman"), v.literal("diri")),
+    ),
+    music: v.optional(
+      v.object({
+        title: v.string(),
+        artist: v.string(),
+        cover: v.optional(v.string()),
+        audioUrl: v.optional(v.string()),
+        source: v.optional(v.string()),
+      }),
+    ),
+    mediaVol: v.optional(v.number()),
+    musicVol: v.optional(v.number()),
+    crop: v.optional(
+      v.object({
+        aspect: v.string(),
+        zoom: v.optional(v.number()),
+      }),
+    ),
+    texts: v.optional(
+      v.array(
+        v.object({
+          text: v.string(),
+          color: v.string(),
+          outline: v.boolean(),
+          bg: v.boolean(),
+          font: v.string(),
+          x: v.number(),
+          y: v.number(),
+          scale: v.optional(v.number()),
+        }),
+      ),
+    ),
+    stickers: v.optional(
+      v.array(
+        v.object({
+          emoji: v.string(),
+          x: v.number(),
+          y: v.number(),
+          size: v.number(),
+        }),
+      ),
+    ),
   },
-  handler: async (ctx, { storageId, mediaType, caption, musicKey }) => {
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Belum masuk");
     const now = Date.now();
+    // Batasi jumlah lapisan supaya dokumen tidak membengkak.
+    const texts = (args.texts ?? [])
+      .filter((t) => t.text.trim().length > 0)
+      .slice(0, 12);
+    const stickers = (args.stickers ?? []).slice(0, 20);
     const id = await ctx.db.insert("stories", {
       userId,
-      storageId,
-      mediaType,
-      caption: caption?.trim() || undefined,
-      musicKey: musicKey || undefined,
+      storageId: args.storageId,
+      mediaType: args.mediaType,
+      caption: args.caption?.trim() || undefined,
+      musicKey: args.musicKey || undefined,
+      privacy: args.privacy ?? "all",
+      music: args.music,
+      mediaVol: args.mediaVol,
+      musicVol: args.musicVol,
+      crop: args.crop,
+      texts: texts.length > 0 ? texts : undefined,
+      stickers: stickers.length > 0 ? stickers : undefined,
       createdAt: now,
       expiresAt: now + STORY_TTL_MS,
     });
@@ -238,19 +338,32 @@ export const storiesOf = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const now = Date.now();
+    const me = await getAuthUserId(ctx);
     const rows = await ctx.db
       .query("stories")
       .withIndex("userId_created", (q) => q.eq("userId", userId))
       .order("desc")
       .take(50);
-    const live = rows.filter((r) => r.expiresAt > now);
-    return live.map((r) => ({
-      _id: r._id,
-      storageId: r.storageId,
-      mediaType: r.mediaType,
-      caption: r.caption ?? "",
-      musicKey: r.musicKey,
-      createdAt: r.createdAt,
-    }));
+    const out = [];
+    for (const r of rows) {
+      if (r.expiresAt <= now) continue;
+      if (!(await visibleTo(ctx, me, r.userId, r.privacy))) continue;
+      out.push({
+        _id: r._id,
+        storageId: r.storageId,
+        mediaType: r.mediaType,
+        caption: r.caption ?? "",
+        musicKey: r.musicKey,
+        music: r.music,
+        privacy: r.privacy,
+        crop: r.crop,
+        texts: r.texts,
+        stickers: r.stickers,
+        mediaVol: r.mediaVol,
+        musicVol: r.musicVol,
+        createdAt: r.createdAt,
+      });
+    }
+    return out;
   },
 });

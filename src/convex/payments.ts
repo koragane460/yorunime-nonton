@@ -236,6 +236,28 @@ export const createManualOrder = mutation({
   },
 });
 
+/**
+ * Tombol "Batal" di layar bayar: batalkan order milik sendiri.
+ *
+ * Barisnya DIHAPUS, bukan diberi status "batal" — supaya di riwayat
+ * pembayaran tidak ada status menggantung untuk paket yang tidak jadi dibeli.
+ */
+export const cancelMyOrder = mutation({
+  args: { orderId: v.string() },
+  handler: async (ctx, { orderId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const row = await ctx.db
+      .query("premiumPurchases")
+      .withIndex("orderId", (q) => q.eq("orderId", orderId))
+      .first();
+    if (!row || row.userId !== userId) return { ok: true as const };
+    if (row.status === "paid") throw new Error("Order ini sudah lunas");
+    await ctx.db.delete(row._id);
+    return { ok: true as const };
+  },
+});
+
 /** Lampirkan bukti transfer ke order milik sendiri. Bukti hanya bisa dipakai 1x. */
 export const attachProof = mutation({
   args: {

@@ -586,6 +586,13 @@ export const detail = action({
       ? [...DONGHUA_SOURCES, ...ANIME_SOURCES]
       : [...ANIME_SOURCES, ...DONGHUA_SOURCES];
 
+    // Sumber pertama yang punya konten TAPI tanpa daftar episode disimpan
+    // di sini. Loop tetap jalan ke sumber berikutnya yang mungkin punya
+    // daftar episode lengkap — dulu sumber pertama langsung menang sehingga
+    // ada judul yang metadatanya bilang episodenya banyak, tapi daftar
+    // episodnya kosong saat dibuka.
+    let fallback: SankaDetail | null = null;
+
     for (const src of order) {
       const raw = await sankaGet(
         `/anime/${src}/detail/${encodeURIComponent(s)}`,
@@ -637,7 +644,7 @@ export const detail = action({
       const title =
         stripEpisodeSuffix(cleanTitle(d.title)) || cleanTitle(d.title) || s;
       const ratingRaw = d.rating ?? info.rating;
-      return {
+      const res: SankaDetail = {
         title,
         alterTitle: d.alter_title ? String(d.alter_title) : undefined,
         poster: proxyImage(d.poster) || undefined,
@@ -654,8 +661,12 @@ export const detail = action({
         related,
         source: src,
       };
+      // Punya daftar episode → langsung menang. Tidak punya → simpan
+      // sebagai cadangan dan coba sumber lain dulu.
+      if (eps.length > 0) return res;
+      fallback ??= res;
     }
-    return { error: "Detail tidak ditemukan" };
+    return fallback ?? { error: "Detail tidak ditemukan" };
   },
 });
 

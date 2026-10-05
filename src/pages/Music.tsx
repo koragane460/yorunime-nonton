@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtTime, useMusicPlayer } from "@/components/MusicPlayer";
-import { cached, putCache } from "@/lib/musicCache";
+import { cached, putCache, clearMusicCache } from "@/lib/musicCache";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import type { MusicTrack } from "@/convex/music";
 
@@ -67,6 +67,8 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
   const [found, setFound] = useState<MusicTrack[] | null>(null);
   const [rows, setRows] = useState<Record<string, MusicTrack[]>>({});
   const [rowsLoading, setRowsLoading] = useState(true);
+  // Naikkan tiap kali user menekan "Coba lagi" — memicu efek pemuatan ulang.
+  const [reloadTick, setReloadTick] = useState(0);
   const [sectionRows, setSectionRows] =
     useState<{ id: string; label: string }[]>(FALLBACK_SECTIONS);
 
@@ -96,19 +98,26 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
         if (list.length > 0) setSectionRows(list);
       })
       .catch(() => {});
-    const jobs = sectionRows.map(async (s) => {
+    const jobs = sectionRows.map(async (s, i) => {
       // Cache di memori: layar Musik sering dibuka-tutup, dan katalog itu
       // praktis statis. Tanpa cache, 8 baris diambil ulang setiap kali layar
       // dibuka sehingga selalu terlihat "Memuat katalog...".
       const key = `sec:${s.id}`;
       const hit = cached<MusicTrack[]>(key);
-      if (hit) return [s.id, hit] as const;
+      if (hit && hit.length > 0) return [s.id, hit] as const;
+      // Jeda kecil antar baris supaya tidak menembak iTunes 8x serentak —
+      // permintaan paralel penuh sering kena rate limit dan hasilnya kosong
+      // semua, itulah dulu kenapa layar awal tampak melompong.
+      await new Promise((r) => setTimeout(r, i * 120));
       try {
         const r = (await loadSection({ section: s.id, limit: 12 })) as {
           tracks: MusicTrack[];
         };
         const tracks = r.tracks ?? [];
-        putCache(key, tracks);
+        // PENTING: jangan cache hasil kosong. Kalau iTunes sempat gagal,
+        // layar akan melompong 10 menit penuh; tanpa cache, buka berikutnya
+        // langsung mencoba lagi.
+        if (tracks.length > 0) putCache(key, tracks);
         return [s.id, tracks] as const;
       } catch {
         return [s.id, [] as MusicTrack[]] as const;
@@ -122,7 +131,15 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
     return () => {
       alive = false;
     };
-  }, [sectionRows, loadSection]);
+  }, [sectionRows, loadSection, reloadTick]);
+
+  // Tarik ulang seluruh katalog (tombol "Coba lagi" saat katalog kosong).
+  const reloadRows = () => {
+    clearMusicCache();
+    setRows({});
+    setRowsLoading(true);
+    setReloadTick((t) => t + 1);
+  };
 
   const doSearch = async () => {
     const term = q.trim();
@@ -213,6 +230,8 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
           rows={rows}
           sectionRows={sectionRows}
           rowsLoading={rowsLoading}
+          rowsEmpty={Object.values(rows).every((r) => r.length === 0)}
+          onRetry={reloadRows}
           likedRows={(likedRows ?? []) as LikedRow[]}
           queue={player.queue}
           activeIndex={player.index}
@@ -235,7 +254,7 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
 
 function LibraryView({
   q, setQ, searching, onSearch, onPick, shown, list, rows, sectionRows,
-  rowsLoading, likedRows, queue, activeIndex, onPlayQueue, onOpenPlayer,
+  rowsLoading, rowsEmpty, onRetry, likedRows, queue, activeIndex, onPlayQueue, onOpenPlayer,
   hasTrack,
 }: {
   q: string;
@@ -248,6 +267,8 @@ function LibraryView({
   rows: Record<string, MusicTrack[]>;
   sectionRows: { id: string; label: string }[];
   rowsLoading: boolean;
+  rowsEmpty: boolean;
+  onRetry: () => void;
   likedRows: LikedRow[];
   queue: MusicTrack[];
   activeIndex: number;
@@ -330,8 +351,49 @@ function LibraryView({
           )}
 
           {rowsLoading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-xs text-white/55">
-              <Loader2 className="size-4 animate-spin" /> Memuat katalog...
+            <div className="space-y-5">
+              {/* Skeleton: layar tidak pernah terlihat melompong saat katalog
+                  sedang ditarik dari backend. */}
+              <div className="grid grid-cols-2 gap-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="aspect-square animate-pulse rounded-2xl bg-white/8"
+                  />
+                ))}
+              </div>
+              {[0, 1].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 w-28 animate-pulse rounded-full bg-white/8" />
+                  {[0, 1].map((j) => (
+                    <div
+                      key={j}
+                      className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2"
+                    >
+                      <div className="size-11 shrink-0 animate-pulse rounded-lg bg-white/10" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="h-3 w-3/5 animate-pulse rounded-full bg-white/10" />
+                        <div className="h-2.5 w-2/5 animate-pulse rounded-full bg-white/8" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : rowsEmpty ? (
+            <div className="py-12 text-center">
+              <p className="text-sm font-semibold text-white/70">
+                Katalog belum termuat
+              </p>
+              <p className="mx-auto mt-1 max-w-xs text-[11px] text-white/45">
+                Sumber lagu sedang tidak merespons. Coba tarik ulang.
+              </p>
+              <button
+                onClick={onRetry}
+                className="mt-4 rounded-full bg-white px-5 py-2 text-xs font-bold text-black"
+              >
+                Coba lagi
+              </button>
             </div>
           ) : (
             <>

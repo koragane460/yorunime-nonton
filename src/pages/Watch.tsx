@@ -2532,6 +2532,19 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               <h2 className="text-base font-bold">Episode</h2>
               <span className="text-xs text-muted-foreground">{epList.length} episode</span>
             </div>
+            {epList.length === 0 && (
+              // Jangan biarkan grid kosong diam-diam: jelaskan bahwa episode
+              // judul ini belum tersedia di sumber, supaya tidak terlihat seperti
+              // bug padahal memang belum ada yang bisa diputar.
+              <div className="rounded-xl border border-border bg-secondary/30 px-4 py-6 text-center">
+                <p className="text-sm font-semibold">Episode belum tersedia</p>
+                <p className="mx-auto mt-1 max-w-sm text-[11px] text-muted-foreground">
+                  Daftar episode untuk judul ini belum ada di sumber. Coba buka
+                  lagi nanti — sumber donghua/anime sering menambahkan episode
+                  belakangan.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
               {(epList ?? [])
                 .slice(0, epAllOpen ? epList.length : EP_PREVIEW)

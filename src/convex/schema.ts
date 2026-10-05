@@ -311,6 +311,59 @@ const schema = defineSchema(
       mediaType: v.union(v.literal("image"), v.literal("video")),
       caption: v.optional(v.string()),
       musicKey: v.optional(v.string()),
+      /**
+       * Siapa yang boleh melihat: "all" (semua orang), "teman"
+       * (hanya teman), "diri" (hanya sendiri). Kosong = "all".
+       */
+      privacy: v.optional(
+        v.union(v.literal("all"), v.literal("teman"), v.literal("diri")),
+      ),
+      /** Lagu latar dari katalog Musik (iTunes/Archive). Boleh berhak cipta. */
+      music: v.optional(
+        v.object({
+          title: v.string(),
+          artist: v.string(),
+          cover: v.optional(v.string()),
+          audioUrl: v.optional(v.string()),
+          source: v.optional(v.string()),
+        }),
+      ),
+      /** Volume suara asli & suara tambahan (0..1). */
+      mediaVol: v.optional(v.number()),
+      musicVol: v.optional(v.number()),
+      /** Pangkas: rasio frame + zoom media. */
+      crop: v.optional(
+        v.object({
+          aspect: v.string(),
+          zoom: v.optional(v.number()),
+        }),
+      ),
+      /** Lapisan teks (posisi x/y = 0..1 dari tengah layar). */
+      texts: v.optional(
+        v.array(
+          v.object({
+            text: v.string(),
+            color: v.string(),
+            outline: v.boolean(),
+            bg: v.boolean(),
+            font: v.string(),
+            x: v.number(),
+            y: v.number(),
+            scale: v.optional(v.number()),
+          }),
+        ),
+      ),
+      /** Lapisan stiker emoji. */
+      stickers: v.optional(
+        v.array(
+          v.object({
+            emoji: v.string(),
+            x: v.number(),
+            y: v.number(),
+            size: v.number(),
+          }),
+        ),
+      ),
       createdAt: v.number(),
       expiresAt: v.number(),
     })

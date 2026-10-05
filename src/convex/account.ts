@@ -272,6 +272,24 @@ export const getPublicProfile = query({
           text: cm.text,
           createdAt: cm.createdAt,
           likeCount: cm.likes?.length ?? 0,
+          // Kartu komentar di panel akun memakai gaya yang sama dengan
+          // komentar di halaman anime (banner, foto, tag clan, dst.), jadi
+          // semua field yang dipakai komponen itu ikut dikirim. Penulisnya
+          // pasti pemilik profil ini.
+          image: u.image,
+          bannerUrl: u.bannerUrl,
+          premium: (u.premiumUntil ?? 0) > now,
+          staffRole: u.staffRole,
+          clanTag: u.clanTag,
+          clanTagIcon: u.clanTagIcon,
+          clanLevel: u.clanLevel ?? clan?.level ?? 0,
+          clanNameColor: u.clanNameColor,
+          // Id komentar berbentuk "<animeId>__ep<...>"; angka di ujungnya
+          // adalah nomor episode tempat komentar dibuat.
+          episode: (() => {
+            const m = String(cm.animeId).match(/__ep(\d+)$/);
+            return m ? Number(m[1]) : undefined;
+          })(),
         })),
     };
   },

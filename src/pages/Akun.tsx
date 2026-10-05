@@ -49,6 +49,7 @@ import {
   LogOut,
   Mail,
   MessageSquare,
+  Play,
   Send,
   Settings as SettingsIcon,
   X,
@@ -242,17 +243,31 @@ function AkunContent() {
           {/* Cincin story: biru muda saat ada story yang belum dilihat.
               Ketuk avatar = buka penampil story. Tombol + = buat story. */}
           <div className="relative">
-            <div className="yn-avatar-ring">
+            {/* Kalau ada story, cincin story-nya jadi border TERLUAR supaya
+                warnanya terlihat (biru tua = ada yang belum dilihat). Cincin
+                dekoratif ungu hanya dipakai saat belum ada story, karena
+                cincin itu menutupi warna cincin story. */}
+            {(myStories?.length ?? 0) > 0 ? (
               <StoryRing
                 image={user.image}
                 seed={user.username}
                 size={96}
-                hasStory={(myStories?.length ?? 0) > 0}
+                hasStory
                 seen={false}
                 onClick={() => setStoryStage("view")}
-                className="rounded-full bg-background p-[2px]"
+                className="rounded-full"
               />
-            </div>
+            ) : (
+              <div className="yn-avatar-ring">
+                <StoryRing
+                  image={user.image}
+                  seed={user.username}
+                  size={96}
+                  onClick={() => setStoryStage("view")}
+                  className="rounded-full bg-background p-[1px]"
+                />
+              </div>
+            )}
             <StoryAddButton onClick={() => setStoryStage("pick")} />
           </div>
           {/* Urutan: username -> ID -> level badge + tag clan */}
@@ -489,28 +504,78 @@ function AkunContent() {
           )}
 
         {tab === "komen" && (
-          <div className="thin-scroll max-h-[50vh] overflow-y-auto">
-            {(profile?.myComments ?? []).map((c) => (
-              <button
-                key={c._id}
-                onClick={() =>
-                  navigate(
-                    // Id komentar berbentuk "<animeId>__ep<...>"; bagian episode
-                    // dibuang supaya halaman nonton membuka anime yang benar.
-                    `/nonton?anime=${encodeURIComponent(String(c.animeId).split("__ep")[0] ?? "")}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
-                  )
-                }
-                className="block w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
-              >
-                <p className="text-sm">{c.text}</p>
-                <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span>{timeAgo(c.createdAt)}</span>
-                  <span className="flex items-center gap-0.5">
-                    <Heart className="size-3 text-primary" /> {c.likeCount}
-                  </span>
-                </p>
-              </button>
-            ))}
+          <div className="thin-scroll max-h-[50vh] space-y-2.5 overflow-y-auto">
+            {/* Kartu komentar bergaya SAMA dengan komentar di halaman anime:
+                banner, foto profil, status hari, username, tag clan, title,
+                badge premium — plus konteks "di anime apa episode berapa". */}
+            {(profile?.myComments ?? []).map((c: any) => {
+              const baseId = String(c.animeId).split("__ep")[0] ?? "";
+              const isNum = /^\d+$/.test(baseId);
+              const epQuery = c.episode
+                ? isNum
+                  ? `&ep=${encodeURIComponent(`${baseId}__ep${c.episode}`)}`
+                  : ""
+                : "";
+              return (
+                <div
+                  key={c._id}
+                  className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30"
+                >
+                  {c.bannerUrl && (
+                    <div
+                      className="mx-2 mt-2 h-8 rounded-md bg-cover bg-center opacity-70"
+                      style={{ backgroundImage: `url(${c.bannerUrl})` }}
+                    />
+                  )}
+                  <div className="flex items-center gap-2 px-2.5 pt-2">
+                    <Avatar src={c.image ?? user.image} seed={user.username} className="size-7" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <p className="truncate text-xs font-bold">{user.username}</p>
+                        {c.premium && <BlueCheck className="size-3.5" />}
+                        <TitleBadge role={c.staffRole} compact />
+                        {c.clanTag && (
+                          <ClanTag
+                            icon={c.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                            tag={c.clanTag}
+                            level={c.clanLevel}
+                            className="ml-1 scale-90 px-1.5 py-0 text-[9px]"
+                          />
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {timeAgo(c.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="break-words px-3 pb-1.5 pt-1.5 text-sm leading-5">
+                    {c.text}
+                  </p>
+                  <div className="flex items-center justify-between px-2.5 pb-2 text-[11px] text-muted-foreground">
+                    <button
+                      onClick={() =>
+                        navigate(
+                          // Buka anime tempat komentar itu dibuat. Kalau episode
+                          // diketahui (akhiran id "__ep<N>"), langsung ke
+                          // episode itu; id non-angka berarti donghua.
+                          `/nonton?anime=${encodeURIComponent(baseId)}${epQuery}${isNum ? "" : "&donghua=1"}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
+                        )
+                      }
+                      className="flex min-w-0 items-center gap-1.5 hover:text-primary"
+                    >
+                      <Play className="size-3 shrink-0" />
+                      <span className="truncate">
+                        di {c.animeTitle || "anime"}
+                        {c.episode ? ` · Episode ${c.episode}` : ""}
+                      </span>
+                    </button>
+                    <span className="flex shrink-0 items-center gap-0.5">
+                      <Heart className="size-3 text-primary" /> {c.likeCount}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
             {profile && (profile.myComments ?? []).length === 0 && (
               <p className="py-8 text-center text-xs text-muted-foreground">
                 Belum ada komentar — buka detail anime untuk berkomentar.
