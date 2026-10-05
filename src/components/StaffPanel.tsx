@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";import {
   Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { CsBadge, CsScreen } from "@/components/CsDevScreens";
 import { ContentToolsFab } from "@/components/ContentTools";
+import { OrdersPanel } from "@/components/OrdersPanel";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
@@ -187,6 +188,20 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
               hint: "Cek transfer masuk dari user",
               tone: "amber",
               render: () => <ManualPaymentPanel />,
+            },
+            {
+              key: "pesanan",
+              label: "Atur pesanan & saldo",
+              hint: "Pesanan Xendit, saldo, tarik saldo",
+              tone: "amber",
+              render: () => <OrdersPanel tab="orders" />,
+            },
+            {
+              key: "saldo",
+              label: "Saldo & tarik dana",
+              hint: "Total masuk, mutasi, tarik ke e-wallet",
+              tone: "amber",
+              render: () => <OrdersPanel tab="wallet" />,
             },
           ]}
         />

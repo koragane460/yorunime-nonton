@@ -223,6 +223,9 @@ function Plans() {
   );
 
   const createOrder = useMutation(api.payments.createManualOrder);
+  // Pembayaran otomatis: invoice Xendit berisi QRIS + semua e-wallet + VA.
+  const createInvoice = useAction(api.xendit.createInvoice);
+  const xenditReady = useQuery(api.xendit.xenditStatus, {});
   const attachProof = useMutation(api.payments.attachProof);
   const analyze = useAction(api.payments.analyzeProof);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
@@ -255,6 +258,25 @@ function Plans() {
       setOrder(await createOrder({ planId: plan.id }));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal membuat pesanan");
+    }
+    setBusy(null);
+  };
+
+  /** Beli lewat Xendit: buka halaman pembayaran resmi (QRIS + e-wallet). */
+  const payWithXendit = async (plan: Plan) => {
+    setErr("");
+    setBusy("order");
+    setVerdict(null);
+    try {
+      const inv = await createInvoice({ planId: plan.id });
+      // Halaman pembayaran milik Xendit, dibuka di tab baru supaya user bisa
+      // kembali ke app untuk mengecek status premium-nya.
+      window.open(inv.invoiceUrl, "_blank", "noopener");
+      setErr(
+        "Halaman pembayaran dibuka di tab baru. Selesaikan pembayaran di sana (QRIS / e-wallet / VA), premium aktif otomatis beberapa detik setelah dibayar.",
+      );
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal membuat pembayaran");
     }
     setBusy(null);
   };
@@ -340,18 +362,31 @@ function Plans() {
                 )}
               </div>
             </div>
+            {/* Utama: pembayaran otomatis lewat Xendit (kalau kuncinya sudah
+                diisi). QRIS manual tetap tersedia sebagai cadangan. */}
+            {xenditReady?.configured ? (
+              <button
+                disabled={busy !== null}
+                onClick={() => void payWithXendit(p)}
+                className="yn-btn yn-btn-gold mt-3 w-full disabled:opacity-50"
+              >
+                {busy === "order" ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Menyiapkan…
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="size-4" /> Bayar QRIS / e-wallet
+                  </>
+                )}
+              </button>
+            ) : null}
             <button
               disabled={busy !== null}
               onClick={() => void startOrder(p)}
-              className="yn-btn yn-btn-gold mt-3 w-full disabled:opacity-50"
+              className="yn-btn mt-2 w-full border border-gold/30 bg-transparent text-gold disabled:opacity-50"
             >
-              {busy === "order" ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" /> Menyiapkan…
-                </>
-              ) : (
-                "Beli premium"
-              )}
+              {xenditReady?.configured ? "Bayar lewat QRIS manual" : "Beli premium"}
             </button>
           </div>
         ))}

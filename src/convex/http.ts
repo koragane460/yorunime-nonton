@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { auth } from "./auth";
 
 const http = httpRouter();
@@ -254,5 +255,67 @@ const imgProxy = httpAction(async (_ctx, request) => {
 });
 
 http.route({ path: "/img", method: "GET", handler: imgProxy });
+
+/**
+ * Webhook Xendit: sinyal bahwa sebuah invoice sudah dibayar (atau kedaluwarsa).
+ *
+ * Xendit mengirim header `x-callback-token`. Token itu HARUS dicocokkan dengan
+ * verification token yang disimpan developer (env `XENDIT_CALLBACK_TOKEN`);
+ * tanpa ini siapa pun yang tahu URL-nya bisa mengklaim pembayaran palsu.
+ */
+const xenditCallback = httpAction(async (ctx, request) => {
+  const token = request.headers.get("x-callback-token") ?? "";
+  const expected = (process.env.XENDIT_CALLBACK_TOKEN ?? "").trim();
+  if (!expected || token !== expected) {
+    return new Response(JSON.stringify({ error: "token tidak valid" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  let body: any = null;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "body bukan JSON" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const externalId = String(body?.external_id ?? "");
+  const status = String(body?.status ?? "").toUpperCase();
+  if (!externalId) {
+    return new Response(JSON.stringify({ error: "external_id kosong" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (status !== "PAID" && status !== "SETTLED") {
+    // EXPIRED / belum dibayar: bukan error, webhook berhasil diterima.
+    return new Response(JSON.stringify({ ok: true, ignored: status }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  try {
+    await ctx.runMutation(internal.xendit.webhookPaid, {
+      externalId,
+      xenditInvoiceId: body?.id ? String(body.id) : undefined,
+      paidAmount: typeof body?.paid_amount === "number" ? body.paid_amount : undefined,
+      paymentMethod: body?.payment_method ? String(body.payment_method) : undefined,
+      paymentChannel: body?.payment_channel ? String(body.payment_channel) : undefined,
+    });
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "gagal" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+});
+
+http.route({ path: "/xendit/callback", method: "POST", handler: xenditCallback });
 
 export default http;

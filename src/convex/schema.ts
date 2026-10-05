@@ -278,6 +278,54 @@ const schema = defineSchema(
       createdAt: v.number(),
     }).index("userId_created", ["userId", "createdAt"]),
 
+    /**
+     * Buku besar saldo developer. Satu baris per transaksi (masuk atau
+     * keluar) supaya total mudah diaudit, bukan angka tunggal yang bisa
+     * dikorek seenaknya.
+     */
+    saldoLedger: defineTable({
+      kind: v.union(v.literal("topup"), v.literal("withdrawal")),
+      amount: v.number(),
+      refOrderId: v.optional(v.string()),
+      note: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("createdAt", ["createdAt"]),
+
+    /**
+     * Permintaan tarik saldo ke e-wallet. Eksekusi transfernya dilakukan di
+     * Dashboard Xendit, jadi status di sini hanya mencatat alurnya.
+     */
+    withdrawals: defineTable({
+      amount: v.number(),
+      channel: v.string(),
+      target: v.string(),
+      status: v.string(),
+      note: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("createdAt", ["createdAt"]),
+
+    /** Story: foto/video yang hilang sendiri setelah 24 jam. */
+    stories: defineTable({
+      userId: v.id("users"),
+      storageId: v.string(),
+      mediaType: v.union(v.literal("image"), v.literal("video")),
+      caption: v.optional(v.string()),
+      musicKey: v.optional(v.string()),
+      createdAt: v.number(),
+      expiresAt: v.number(),
+    })
+      .index("userId_created", ["userId", "createdAt"])
+      .index("expiresAt", ["expiresAt"]),
+
+    /** Siapa saja yang sudah melihat satu story (sekali per user). */
+    storyViews: defineTable({
+      storyId: v.id("stories"),
+      userId: v.id("users"),
+      createdAt: v.number(),
+    })
+      .index("storyId_created", ["storyId", "createdAt"])
+      .index("storyId_user", ["storyId", "userId"]),
+
     animeCache: defineTable({
       endpoint: v.string(),
       payload: v.any(),
