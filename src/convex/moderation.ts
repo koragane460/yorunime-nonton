@@ -109,12 +109,18 @@ export const myPanelAccess = query({
     const me = await ctx.db.get(userId);
     if (!me)
       return { level: "none" as const, adult: false, username: null };
-    // Mode uji: semua akun yang login dianggap developer, jadi panel
-    // terbuka untuk semuanya.
-    const isDev = true;
-    const isMod = true;
-    // Semua staff (dev/mod/tester/sepuh) boleh 18+, dan developer juga bisa
-    // memberi izin 18+ ke user biasa lewat panel.
+    // Akses panel mengikuti role asli akun — TIDAK ada lagi mode uji yang
+    // menganggap semua orang developer. Sebelumnya `isDev` hardcode `true`
+    // di sini, sehingga tombol "Info developer" muncul untuk semua user.
+    // Dev asli: role dev/creator, atau seqId 1 (pemilik pertama).
+    const role = String(me.role ?? "").toLowerCase();
+    const isDev =
+      role === "dev" ||
+      role === "creator" ||
+      String(me.staffRole ?? "").toLowerCase() === "dev" ||
+      Number(me.seqId ?? 0) === 1;
+    const isMod = isDev || role === "mod" || String(me.staffRole ?? "") === "mod";
+    // 18+ tetap mengikuti izin yang diberikan panel dev, plus staff.
     const adult = isDev || isMod || !!me.staffRole || me.adultAccess === true;
     if (isDev)
       return { level: "dev" as const, adult, username: me.username ?? null };
