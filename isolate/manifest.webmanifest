@@ -4,8 +4,8 @@
   "description": "Streaming anime subtitle Indonesia",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#120e1c",
-  "theme_color": "#120e1c",
+  "background_color": "#0f1a33",
+  "theme_color": "#0f1a33",
   "icons": [
     {
       "src": "/logo-512.png",
