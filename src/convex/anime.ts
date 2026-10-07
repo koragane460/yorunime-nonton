@@ -746,9 +746,13 @@ async function aniList(
   limit = 24,
   sort = "POPULARITY_DESC",
 ): Promise<AnimeCard[] | null> {
+  // Kunci cache WAJIB memuat `where`: tanpa itu, rekomendasi per genre
+  // (reco-genre + genre_in berbeda-beda) saling menimpa di satu kunci yang
+  // sama — "Untuk kamu" jadi menampilkan campuran genre salah, poster beda,
+  // dan episode tidak nyambung. v3 = buang entri lama yang sudah tercemar.
   return (await cached(
     runCtx,
-    `${endpoint}:v2:${page}:${sort}`,
+    `${endpoint}:v3:${where || "-"}:${page}:${sort}`,
     ttlMs,
     async () => {
       try {
@@ -1037,15 +1041,52 @@ export const animeSearch = action({
 export const animeGenres = action({
   args: {},
   handler: async (runCtx) =>
-    cached(runCtx, "genres", 7 * 24 * 3600 * 1000, async () => {
+    // v2: entri cache lama pernah berisi objek mentah (name bukan string) yang
+    // membuat chip genre di Pencarian tampil "[object Object]".
+    cached(runCtx, "genres:v2", 7 * 24 * 3600 * 1000, async () => {
+      // Satu nilai bisa datang sebagai string, objek berlabel, atau objek
+      // yang menempel langsung — ambil nama dari bentuk apapun supaya chip
+      // tidak pernah menampilkan "[object Object]".
+      const asName = (val: any): string => {
+        if (typeof val === "string") return val;
+        if (val && typeof val === "object") {
+          for (const k of ["name", "genreName", "genre_name", "romaji", "title"]) {
+            const v2 = (val as Record<string, unknown>)[k];
+            if (typeof v2 === "string" && v2.trim()) return v2.trim();
+            if (v2 && typeof v2 === "object") {
+              const inner = asName(v2);
+              if (inner) return inner;
+            }
+          }
+        }
+        return "";
+      };
+      const asId = (val: any, name: string): string => {
+        if (typeof val === "string" || typeof val === "number")
+          return String(val).trim() || name.toLowerCase();
+        return name.toLowerCase();
+      };
+      const harden = (list: any[]): { id: string; name: string }[] =>
+        (Array.isArray(list) ? list : [])
+          .map((x: any) => {
+            const name = asName(
+              typeof x === "object" && x !== null
+                ? (x.genreName ?? x.genre_name ?? x.name ?? x)
+                : x,
+            );
+            const rawId =
+              x && typeof x === "object"
+                ? (x.genreId ?? x.genre_id ?? x.mal_id ?? x.id)
+                : x;
+            return { id: asId(rawId, name), name };
+          })
+          .filter((g) => g.id && g.name && !g.name.includes("[object"));
+
       if (apiBase()) {
         try {
           const json = await fetchJson(`${apiBase()}/otakudesu/genre`);
           const list = json?.data?.genreList ?? json?.data ?? [];
-          const mapped = (Array.isArray(list) ? list : []).map((x: any) => ({
-            id: String(x.genreId ?? x.genre_id ?? x.id ?? x.genreName),
-            name: String(x.genreName ?? x.genre_name ?? x.name ?? x),
-          }));
+          const mapped = harden(list);
           if (mapped.length > 0) return mapped;
         } catch {
           /* fallback */
@@ -1055,10 +1096,7 @@ export const animeGenres = action({
         const json = await jikanEnqueue(() =>
           fetchJson("https://api.jikan.moe/v4/genres/anime?filter=genres"),
         );
-        const mapped = (json?.data ?? [])
-          .filter((x: any) => x.count > 60)
-          .slice(0, 75)
-          .map((x: any) => ({ id: String(x.mal_id), name: x.name }));
+        const mapped = harden(json?.data ?? []).slice(0, 75);
         if (mapped.length > 0) return mapped;
       } catch {
         /* fallback statis */
@@ -1089,6 +1127,162 @@ export const animeByGenre = action({
       },
     )) as AnimeCard[] | null;
     return r && r.length > 0 ? r : rotateByDate(FALLBACK_TOP, 12);
+  },
+});
+
+/**
+ * Filter genre MULTI: semua genre yang dipilih harus ada di judul (irisan).
+ * Nama genre dikirim dari client (dari animeGenres) dan dicocokkan langsung
+ * ke AniList pakai `and:[{genre:"X"},{genre:"Y"}]`.
+ */
+export const animeByGenres = action({
+  args: { genres: v.array(v.string()), page: v.optional(v.number()) },
+  handler: async (runCtx, { genres, page = 1 }) => {
+    const names = (genres ?? [])
+      .map((g) => String(g ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 6);
+    if (names.length === 0) return [] as AnimeCard[];
+    const key = `genres-multi:${names
+      .map((n) => n.toLowerCase())
+      .sort()
+      .join("+")}:${Math.max(1, Math.round(page))}`;
+    return (await cached(runCtx, key, LIST_TTL, async () => {
+      try {
+        const where = `and:[${names
+          .map((n) => `genre:"${n.replace(/["\\]/g, "")}"`)
+          .join(",")}]`;
+        const d = await aniGraphql(browseQuery(Math.max(1, Math.round(page)), where));
+        const list = (d?.Page?.media ?? [])
+          .filter((m: any) => m?.idMal)
+          .map(anilistCard);
+        if (list.length > 0) return list.slice(0, 24);
+      } catch {
+        /* AniList gagal → kirim kosong, client tetap punya daftar sebelumnya */
+      }
+      return [] as AnimeCard[];
+    })) as AnimeCard[];
+  },
+});
+
+/**
+ * Karakter anime (AniList) untuk bagian "Character" di detail.
+ * Dicari lewat idMal; kalau tidak ada (mis. donghua), dicoba lewat judul.
+ * Detail karakter digabung jadi satu teks tanpa label: peran, umur, VA,
+ * lalu bio pendek — sesuai permintaan UI.
+ */
+export const animeCharacters = action({
+  args: { idMal: v.optional(v.string()), title: v.optional(v.string()) },
+  handler: async (runCtx, { idMal, title }) => {
+    const id = String(idMal ?? "").trim();
+    const t = String(title ?? "").trim();
+    if (!id && !t) return [];
+    const key = `chars:v1:${id || t.toLowerCase()}`;
+    type Char = {
+      id: string;
+      name: string;
+      image: string;
+      meta: string;
+      bio: string;
+    };
+    const query = String.raw`
+      query($idMal:Int,$s:String){
+        Media(idMal:$idMal, type:ANIME){
+          characters(perPage:24, sort:[FAVOURITES_DESC,ROLE_DESC]){
+            edges{
+              role
+              node{
+                id
+                name{ full }
+                image{ large }
+                description(asHtml: false)
+                age
+                dateOfBirth { year month day }
+              }
+              voiceActors(language:JAPANESE){ name{ full } }
+            }
+          }
+        }
+      }`;
+    const queryByTitle = String.raw`
+      query($s:String){
+        Media(search:$s, type:ANIME){
+          characters(perPage:24, sort:[FAVOURITES_DESC,ROLE_DESC]){
+            edges{
+              role
+              node{
+                id
+                name{ full }
+                image{ large }
+                description(asHtml: false)
+                age
+                dateOfBirth { year month day }
+              }
+              voiceActors(language:JAPANESE){ name{ full } }
+            }
+          }
+        }
+      }`;
+    return (await cached(runCtx, key, 12 * 3600 * 1000, async () => {
+      const vars: Record<string, unknown> = {};
+      if (id) vars.idMal = Number(id);
+      if (!id && t) vars.s = t;
+      const months = [
+        "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+        "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+      ];
+      const fmt = (d: any): string =>
+        d?.year
+          ? `${d.day ? `${d.day} ` : ""}${d.month ? `${months[d.month - 1] ?? ""} ` : ""}${d.year}`
+          : "";
+      // AniList menolak idMal + search sekaligus: coba by id dulu, lalu by judul.
+      const edges: any[] =
+        (await aniGraphql(id ? query : queryByTitle, vars)
+          .then((d: any) => d?.Media?.characters?.edges)
+          .catch(() => null)) ??
+        (id && t
+          ? await aniGraphql(queryByTitle, { s: t })
+              .then((d: any) => d?.Media?.characters?.edges)
+              .catch(() => null)
+          : null) ??
+        [];
+      try {
+        const out: Char[] = [];
+        for (const e of edges) {
+          const n = e?.node;
+          const name = String(n?.name?.full ?? "").trim();
+          if (!name) continue;
+          const role =
+            e?.role === "MAIN"
+              ? "Utama"
+              : e?.role === "SUPPORTING"
+                ? "Pendukung"
+                : "";
+          const va = Array.isArray(e?.voiceActors)
+            ? String(e.voiceActors[0]?.name?.full ?? "")
+            : "";
+          const bits = [role, n?.age ? `${String(n.age)} tahun` : "", fmt(n?.dateOfBirth), va ? `VA: ${va}` : ""]
+            .filter(Boolean)
+            .join(" · ");
+          const bio = String(n?.description ?? "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 320);
+          out.push({
+            id: String(n?.id ?? out.length),
+            name,
+            image: String(n?.image?.large ?? ""),
+            meta: bits,
+            bio,
+          });
+          if (out.length >= 20) break;
+        }
+        return out;
+      } catch {
+        return [] as Char[];
+      }
+    })) as Char[];
   },
 });
 

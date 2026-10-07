@@ -195,7 +195,9 @@ export function StoryRing({
       )}
       style={{ width: size, height: size }}
     >
-      <span className="flex size-full items-center justify-center rounded-full bg-background p-[1.5px]">
+      {/* p-[1px]: gap cincin 1px supaya foto rapat ke cincin story.
+          Dulu 1.5px + padding luar lain membuat cincin terlihat miring. */}
+      <span className="flex size-full items-center justify-center rounded-full bg-background p-[1px]">
         <img
           src={image || `https://api.dicebear.com/7.x/bottts/svg?seed=${seed || "u"}`}
           alt=""

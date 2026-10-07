@@ -832,7 +832,8 @@ async function dailymotionHlsForEpisode(
         continue;
       }
       if (!qualities || typeof qualities !== "object") continue;
-      const wanted = ["1080", "720", "480", "380", "240", "auto"];
+      // 4K dulu sesuai permintaan: 2160 → 1440 → 1080 → dst.
+      const wanted = ["2160", "1440", "1080", "720", "480", "380", "240", "auto"];
       for (const w of wanted) {
         const list = (qualities as Record<string, any>)[w];
         const m3u8 = Array.isArray(list) ? String(list[0]?.url ?? "") : "";
@@ -884,8 +885,8 @@ export const resolveEpisode = action({
       };
     }
 
-    // Cadangan: pencarian judul, dipakai hanya kalau episode tidak punya
-    // server DailyMotion sama sekali (mis. sumber anichin/OK.ru).
+    // Cadangan: pencarian judul — masih DailyMotion (HLS), dipakai hanya
+    // kalau episode tidak punya server DailyMotion sama sekali.
     const fromTitle = await dailymotionHls(
       epSlug
         .replace(/-episode-\d+.*$/i, "")
@@ -912,51 +913,48 @@ export const resolveEpisode = action({
         outro: null,
       };
     }
-    // Source dari parameter kalau ada; kalau tidak, coba donghua dulu lalu
-    // sisanya — persis urutan yang dipakai `detail`.
-    const order = source
-      ? [source, ...DONGHUA_SOURCES.filter((s) => s !== source)]
-      : [...DONGHUA_SOURCES, ...ANIME_SOURCES];
-
-    for (const src of order) {
-      const j = await sankaGet(
-        `/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
-        20_000,
-      );
-      const rawList: any[] = Array.isArray(j?.data?.streams)
-        ? j.data.streams
-        : Array.isArray(j?.streaming?.servers)
-          ? j.streaming.servers
-          : [];
-      if (rawList.length === 0) continue;
-      const all = rawList
-        .map((s: any) => ({
-          label: String(s?.server ?? s?.name ?? src),
-          url: String(s?.url ?? ""),
-          type: "embed" as const,
-          baked: true,
-          ads: /\[ads\]|\bads\b/i.test(String(s?.server ?? s?.name ?? "")),
-        }))
-        .filter((s: { url: string }) => s.url.length > 0);
-      if (all.length === 0) continue;
-      // Tanpa iklan dulu; kalau tidak ada, semua server tetap dipakai.
-      const clean = all.filter((s) => !s.ads);
-      const sources = (clean.length > 0 ? clean : all).map(
-        ({ label, url, type, baked }) => ({ label, url, type, baked }),
-      );
-      return {
-        ok: true as const,
-        sources,
-        subtitle: null,
-        subtitles: [] as { label: string; url: string }[],
-        subTracks: [] as unknown[],
-        hasIndonesian: true,
-        bakedSubs: true,
-        intro: null,
-        outro: null,
-        megaM3u8: null,
-        megaRef: null,
-      };
+    // Server langsung milik episode (Direct HLS/MP4). Server EMBED dihapus
+    // sesuai permintaan: donghua hanya DailyMotion 4K + Direct HLS.
+    {
+      const order = source
+        ? [source, ...DONGHUA_SOURCES.filter((s) => s !== source)]
+        : DONGHUA_SOURCES;
+      for (const src of order) {
+        const j = await sankaGet(
+          `/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
+          20_000,
+        );
+        const rawList: any[] = Array.isArray(j?.data?.streams)
+          ? j.data.streams
+          : Array.isArray(j?.streaming?.servers)
+            ? j.streaming.servers
+            : [];
+        const direct = rawList
+          .map((s: any) => ({
+            label: String(s?.server ?? s?.name ?? src),
+            url: String(s?.url ?? ""),
+          }))
+          .filter((s: { url: string }) =>
+            /\.(m3u8|mp4)(\?|$)/i.test(s.url),
+          );
+        if (direct.length === 0) continue;
+        return {
+          ok: true as const,
+          sources: direct.map((s: { label: string; url: string }) => ({
+            label: `Direct HLS · ${s.label}`,
+            url: s.url,
+            type: /\.mp4(\?|$)/i.test(s.url) ? ("mp4" as const) : ("hls" as const),
+            baked: true,
+          })),
+          subtitle: null,
+          subtitles: [] as { label: string; url: string }[],
+          subTracks: [] as unknown[],
+          hasIndonesian: true,
+          bakedSubs: true,
+          intro: null,
+          outro: null,
+        };
+      }
     }
     return { ok: false as const, reason: "Episode belum tersedia" };
   },

@@ -23,6 +23,7 @@ import {
   HardDriveDownload,
   Loader2,
   PlayCircle,
+  RotateCw,
   Save,
   Sparkles,
   Trash2,
@@ -350,14 +351,31 @@ export function DownloadsPanel({
 
       {active.length > 0 && (
         <Section label="Sedang berjalan" icon={<Loader2 className="size-3.5 animate-spin" />}>
-          {active.map((r) => (
-            <DownloadRow
-              key={r._id}
-              row={r}
-              onDownload={() => void download(r)}
-              onRemove={() => void removeOne(r)}
-            />
-          ))}
+          {active.map((r) => {
+            // Macet = status "downloading" tapi tidak ada kabar 90 detik.
+            const stuck =
+              r.status === "downloading" &&
+              Date.now() - (r.updatedAt ?? 0) > 90_000;
+            return (
+              <DownloadRow
+                key={r._id}
+                row={r}
+                stuck={stuck}
+                onResume={
+                  stuck
+                    ? () =>
+                        void setProgress({
+                          id: r._id as never,
+                          status: "queued",
+                          progress: 0,
+                        })
+                    : undefined
+                }
+                onDownload={() => void download(r)}
+                onRemove={() => void removeOne(r)}
+              />
+            );
+          })}
         </Section>
       )}
 
@@ -452,6 +470,7 @@ function DownloadRow({
   row,
   offlineReady,
   onDownload,
+  onResume,
   onPlay,
   onSave,
   onWatch,
@@ -460,6 +479,10 @@ function DownloadRow({
   row: DlRow;
   offlineReady?: boolean;
   onDownload?: () => void;
+  /** Baris unduhan macet (tidak ada kabar 90 detik). */
+  stuck?: boolean;
+  /** Reset unduhan yang macet ke antrean — pekerja mengambilnya lagi. */
+  onResume?: () => void;
   onPlay?: () => void;
   onSave?: () => void;
   onWatch?: () => void;
@@ -512,6 +535,14 @@ function DownloadRow({
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5 border-t border-border/70 px-2.5 py-2">
+        {onResume && (
+          <RowAction
+            icon={<RotateCw className="size-3.5" />}
+            label="Lanjutkan"
+            onClick={onResume}
+            primary
+          />
+        )}
         {row.status !== "done" && onDownload && (
           <RowAction
             icon={<Download className="size-3.5" />}
@@ -657,9 +688,9 @@ export function MostWatchedPanel({
         />
       ) : (
         <>
-          {/* Genre paling sering — disorot, bukan disembunyikan di daftar. */}
-          <div className="mb-5 overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-card/60 to-card/30 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+          {/* Genre paling sering — kotak solid abu-abu, bukan gradien transparan. */}
+          <div className="mb-5 rounded-3xl border border-border bg-secondary/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
               Genre paling sering
             </p>
             {topGenre ? (
@@ -674,7 +705,7 @@ export function MostWatchedPanel({
                   {(taste?.genres ?? []).slice(1, 6).map((g) => (
                     <span
                       key={g.name}
-                      className="rounded-full border border-primary/30 bg-background/50 px-2.5 py-1 text-[10px] font-semibold"
+                      className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-[10px] font-semibold"
                     >
                       {g.name}
                     </span>

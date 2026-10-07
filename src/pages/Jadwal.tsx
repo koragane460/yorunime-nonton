@@ -255,14 +255,7 @@ function JadwalContent() {
         <button
           onClick={() => setPickerOpen((v) => !v)}
           className={cn(
-            "flex w-full items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition",
-            tab === "anime"
-              ? "border-amber-300/60 bg-amber-300/10"
-              : tab === "manga"
-                ? "border-sky-500/60 bg-sky-500/10"
-                : tab === "manhwa"
-                  ? "border-fuchsia-500/60 bg-fuchsia-500/10"
-                  : "border-violet-500/60 bg-violet-500/10",
+            "flex w-full items-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-sm font-semibold text-foreground transition",
           )}
         >
           <ActiveIcon className="size-4" />
@@ -286,8 +279,8 @@ function JadwalContent() {
                     // dikecilkan supaya tidak memenuhi layar.
                     "flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[11px] font-semibold transition",
                     tab === t.key
-                      ? "border-foreground/40 bg-primary/15 text-primary"
-                      : "border-border text-muted-foreground hover:border-foreground/40",
+                      ? "border-foreground/30 bg-secondary/60 text-foreground"
+                      : "border-border bg-secondary/30 text-muted-foreground hover:border-foreground/40",
                   )}
                 >
                   <Icon className="size-3.5" />
@@ -315,8 +308,8 @@ function JadwalContent() {
               className={cn(
                 "shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition",
                 day === i
-                  ? "border-amber-300 bg-amber-300/15 text-amber-200"
-                  : "border-border text-muted-foreground",
+                  ? "border-foreground/30 bg-secondary/60 text-foreground"
+                  : "border-border bg-secondary/30 text-muted-foreground",
               )}
             >
               {d}
@@ -368,7 +361,7 @@ function JadwalContent() {
                       : "/auth",
                   )
                 }
-                className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-amber-300/50"
+                className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
               >
                 {a.image ? (
                   <img
@@ -387,10 +380,10 @@ function JadwalContent() {
                       : `Episode ${a.episode} — ${a.day}, ${a.time} WIB`}
                   </p>
                   {!a.custom && a.airingAt > 0 && (
-                    <p className="text-[11px] text-amber-300">{countdown(a.airingAt)}</p>
+                    <p className="text-[11px] text-foreground/70">{countdown(a.airingAt)}</p>
                   )}
                 </div>
-                <Clock className="size-5 shrink-0 text-amber-300/80" />
+                <Clock className="size-5 shrink-0 text-muted-foreground/70" />
               </button>
             ))}
           </div>
@@ -424,21 +417,19 @@ function JadwalContent() {
                 <p className="text-xs text-muted-foreground">
                   {c.nextLabel} — {DAYS_ID[day]}, {c.time} WIB
                 </p>
-                <p className="text-[11px] text-amber-300">{countdown(c.predictedMs)}</p>
+                <p className="text-[11px] text-foreground/70">{countdown(c.predictedMs)}</p>
               </div>
-              <Clock className="size-5 shrink-0 text-amber-300/80" />
+              <Clock className="size-5 shrink-0 text-muted-foreground/70" />
             </button>
           ))}
         </div>
       )}
 
-      <p className="mt-4 text-center text-[10px] text-muted-foreground">
-        {tab === "anime"
-          ? "Sumber: AniList"
-          : tab === "donghua"
-            ? "Sumber: SankaVollerei"
-            : "Estimasi, bukan jadwal resmi — chapter bisa saja terlambat."}
-      </p>
+      {tab !== "anime" && tab !== "donghua" && (
+        <p className="mt-4 text-center text-[10px] text-muted-foreground">
+          Estimasi, bukan jadwal resmi — chapter bisa saja terlambat.
+        </p>
+      )}
     </div>
   );
 }

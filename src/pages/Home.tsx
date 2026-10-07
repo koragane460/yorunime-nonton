@@ -31,6 +31,7 @@ import {
   Gift,
   X,
   Gem,
+  ArrowLeftRight,
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
@@ -422,7 +423,7 @@ const [showMusic, setShowMusic] = useState(false);
       {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-white/10 border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-border bg-secondary/40 p-3.5 text-left transition hover:border-foreground/40"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
           <Sparkles className="size-6 text-primary" />
@@ -984,11 +985,15 @@ function LeaderEntryRow({
   suffix?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5">
+    /* Animasi naik: satu baris utuh (foto, username, XP) meluncur ke atas. */
+    <div
+      className="lb-rise flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
+      style={{ animationDelay: `${Math.min(rank, 14) * 45}ms` }}
+    >
       <span className="w-6 text-center text-sm font-bold text-red-400">{rank}</span>
       <Avatar src={image} seed={username} className="size-10" />
-      <div>
-        <p className="text-sm font-semibold">{username ?? "user"}</p>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{username ?? "user"}</p>
         <p className="text-xs text-muted-foreground">
           {xp.toLocaleString("id-ID")} {suffix}
         </p>
@@ -1011,7 +1016,10 @@ function PodiumCard({
   height: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col items-center">
+    <div
+      className="lb-rise flex min-w-0 flex-col items-center"
+      style={{ animationDelay: `${rank * 70}ms` }}
+    >
       <Avatar src={image} seed={username} className="size-11" />
       <p className="mt-1 w-full truncate text-center text-[11px] font-semibold leading-tight">
         {username ?? "user"}
@@ -1048,8 +1056,16 @@ function LeaderboardList({ period }: { period: string }) {
           {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-16" />}
         </div>
       )}
+      {/* key memakai rank: kalau urutan berubah (XP masuk live), baris yang
+          naik peringkatnya di-remount sehingga animasi naiknya terputar. */}
       {rest.slice(0, 47).map((e) => (
-        <LeaderEntryRow key={e.userId} rank={e.rank} username={e.username} image={e.image} xp={e.xp} />
+        <LeaderEntryRow
+          key={`${e.rank}-${e.userId}`}
+          rank={e.rank}
+          username={e.username}
+          image={e.image}
+          xp={e.xp}
+        />
       ))}
     </div>
   );
@@ -1069,7 +1085,7 @@ function TopGiveList() {
     <div className="space-y-2">
       {data.map((g: any, i) => (
         <LeaderEntryRow
-          key={g.userId}
+          key={`${i + 1}-${g.userId}`}
           rank={i + 1}
           username={g.username}
           image={g.image}
@@ -1101,20 +1117,16 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
               {mode === "xp" ? "Leaderboard XP" : "Top Give Premium"}
             </h1>
             <p className="text-[11px] text-muted-foreground">
-              {mode === "xp" ? "Peringkat XP komunitas" : "Peringkat orang paling banyak memberi premium"}
+              {mode === "xp" ? "Peringkat XP komunitas" : "Peringkat Giver Premium"}
             </p>
           </div>
-          {/* Tukar mode lewat ikon di kanan — tidak ada lagi dua pil lebar. */}
+          {/* Tukar mode lewat ikon swipe di kanan — tanpa background, polos. */}
           <button
             onClick={() => setMode(mode === "xp" ? "give" : "xp")}
             aria-label={mode === "xp" ? "Lihat Top Give Premium" : "Lihat Leaderboard XP"}
-            className="ml-auto flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+            className="ml-auto flex size-10 items-center justify-center rounded-xl text-muted-foreground transition hover:text-foreground"
           >
-            {mode === "xp" ? (
-              <Gift className="size-4 text-[oklch(0.86_0.16_90)]" />
-            ) : (
-              <Trophy className="size-4" />
-            )}
+            <ArrowLeftRight className="size-4" />
           </button>
         </div>
 
@@ -1137,13 +1149,6 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
                 </button>
               ))}
             </div>
-            <p className="mb-2.5 px-1 text-[10px] leading-relaxed text-muted-foreground">
-              {period === "harian"
-                ? "XP yang kamu dapet dalam 24 jam terakhir. Semua user ikut dihitung."
-                : period === "mingguan"
-                  ? "XP dalam 7 hari terakhir. Hanya user yang sudah gabung minimal 7 hari yang dihitung."
-                  : "XP dalam 30 hari terakhir. Hanya user yang sudah gabung minimal 30 hari yang dihitung."}
-            </p>
             <LeaderboardList period={period} />
           </>
         )}
@@ -1199,6 +1204,7 @@ function SearchScreen({
   const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const loadGenre = useAction(api.anime.animeByGenre);
+  const loadGenres = useAction(api.anime.animeByGenres);
   const loadAll = useAction(api.anime.animeTop);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AnimeCardT[] | null>(null);
@@ -1207,7 +1213,8 @@ function SearchScreen({
   const [searching, setSearching] = useState(false);
   const [genresOpen, setGenresOpen] = useState(false);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
-  const [activeGenre, setActiveGenre] = useState<string | "all">("all");
+  // Multi-select: kumpulan NAMA genre yang dipilih (irisannya dihitung server).
+  const [activeGenres, setActiveGenres] = useState<string[]>([]);
   const [adult, setAdult] = useState(false);
   const [adultUnlocked, setAdultUnlocked] = useState(false);
   // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
@@ -1221,35 +1228,66 @@ function SearchScreen({
 
   useEffect(() => {
     genres({})
-      .then((r) => setGenreList((r as any) ?? []))
-      .catch(() => {});
-    loadAll({})
-      .then((r) => {
-        setList((r as AnimeCardT[]) ?? []);
-        setListLoading(false);
+      .then((raw) => {
+        // Normalkan bentuk apa pun jadi {id,name} string — dulu ada payload
+        // cache lama berisi objek yang membuat chip tampil "[object Object]".
+        const norm = (Array.isArray(raw) ? raw : [])
+          .map((g: any) => {
+            const name =
+              typeof g?.name === "string"
+                ? g.name
+                : typeof g?.name?.name === "string"
+                  ? g.name.name
+                  : "";
+            return { id: String(g?.id ?? name.toLowerCase()), name };
+          })
+          .filter((g) => g.id && g.name);
+        setGenreList(norm);
+        if (initialGenre) {
+          const hit = norm.find((g) => g.id === initialGenre);
+          void applyGenres(hit ? [hit.name] : []);
+        }
       })
-      .catch(() => setListLoading(false));
-    if (initialGenre) {
-      setActiveGenre(initialGenre);
-      void pickGenreById(initialGenre);
+      .catch(() => {});
+    if (!initialGenre) {
+      loadAll({})
+        .then((r) => {
+          setList((r as AnimeCardT[]) ?? []);
+          setListLoading(false);
+        })
+        .catch(() => setListLoading(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const pickGenreById = async (id: string) => {
-    if (id === "all") {
-      setActiveGenre("all");
-      setListLoading(true);
-      try {
+  /** Terapkan sekumpulan genre (nama) — kosong = tanpa filter. */
+  const applyGenres = async (names: string[]) => {
+    setActiveGenres(names);
+    setListLoading(true);
+    try {
+      if (names.length === 0) {
         const r = (await loadAll({})) as AnimeCardT[];
         setList(r ?? []);
-      } catch {
-        setList([]);
+      } else {
+        const r = (await loadGenres({ genres: names })) as AnimeCardT[];
+        setList(r ?? []);
       }
-      setListLoading(false);
-      return;
+    } catch {
+      setList([]);
     }
-    setActiveGenre(id);
+    setListLoading(false);
+  };
+
+  const toggleGenre = (name: string) => {
+    const next = activeGenres.includes(name)
+      ? activeGenres.filter((g) => g !== name)
+      : [...activeGenres, name].slice(0, 6);
+    void applyGenres(next);
+  };
+
+  // Deep-link ?genre=<id> (dipakai lama): satu genre via id.
+  const pickGenreById = async (id: string) => {
+    if (id === "all") return applyGenres([]);
     setListLoading(true);
     try {
       const r = (await loadGenre({ genreId: id })) as AnimeCardT[];
@@ -1390,7 +1428,7 @@ function SearchScreen({
                 setAdult(false);
                 setAdultUnlocked(false);
               }}
-              className="shrink-0 text-[10px] font-semibold text-primary underline"
+              className="shrink-0 text-[10px] font-semibold text-primary"
             >
               reset
             </button>
@@ -1410,10 +1448,10 @@ function SearchScreen({
           {genresOpen && (
             <div className="fade-enter mt-2 flex flex-wrap gap-1.5">
               <button
-                onClick={() => void pickGenreById("all")}
+                onClick={() => void applyGenres([])}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs",
-                  activeGenre === "all"
+                  activeGenres.length === 0
                     ? "border-foreground/40 bg-primary/15 text-primary"
                     : "border-border text-muted-foreground",
                 )}
@@ -1423,10 +1461,10 @@ function SearchScreen({
               {genreList.map((g) => (
                 <button
                   key={g.id}
-                  onClick={() => void pickGenreById(g.id)}
+                  onClick={() => void toggleGenre(g.name)}
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs",
-                    activeGenre === g.id
+                    activeGenres.includes(g.name)
                       ? "border-foreground/40 bg-primary/15 text-primary"
                       : "border-border text-muted-foreground hover:border-foreground/40",
                   )}
@@ -1555,7 +1593,8 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         {/* Isi di atas input; chat rata full tanpa rounding */}
         <div className="flex min-h-0 w-full flex-1 flex-col pb-2 pt-3">
           {tab === "chat" && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-card">
+            /* Latar layar chat abu-abu — bubble pesan tetap warnanya sendiri. */
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-secondary/40">
               {/* Nobar: daftar room nonton bareng */}
               <NobarBar
                 onJoined={(roomId) => {
@@ -1738,6 +1777,7 @@ function DMScreen({
   return (
     <div className="screen-enter fixed inset-0 z-[60] flex flex-col bg-background">
       <div className="flex items-center gap-3 border-b border-border p-3">
+        {/* Area chat DM juga abu-abu (layar, bukan bubble). */}
         <button onClick={onBack} className="rounded-full border border-border p-1.5">
           <ChevronLeft className="size-4" />
         </button>
@@ -1750,7 +1790,7 @@ function DMScreen({
           + Teman
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col bg-secondary/40">
         {loading ? (
           <div className="space-y-2.5 p-3">
             {[0, 1, 2, 3, 4].map((i) => (
@@ -1814,6 +1854,72 @@ function synopsisPreview(text: string, open: boolean) {
   return `${(sp > 120 ? text.slice(0, sp) : text.slice(0, cut)).trimEnd()}…`;
 }
 
+type CharRow = {
+  id: string;
+  name: string;
+  image: string;
+  meta: string;
+  bio: string;
+};
+
+/**
+ * Bagian "Character" di layar detail (anime & donghua).
+ *
+ * Judul section di kiri atas, di bawahnya deretan kotak yang bisa digeser
+ * ke kanan. Tiap kotak: foto persegi di kiri, detail karakter digabung di
+ * kanan (tanpa label — peran, umur, VA, bio) — radius kecil + border asli.
+ * Karakter diurutkan paling ikonik dulu (sudah dari AniList FAVOURITES_DESC).
+ */
+function CharacterSection({ idMal, title }: { idMal?: string; title?: string }) {
+  const data = useQuery(
+    api.anime.animeCharacters,
+    idMal ? { idMal } : title ? { title } : "skip",
+  ) as CharRow[] | undefined;
+  const chars = (data ?? []).filter((c) => c?.name && c?.image);
+  if (data !== undefined && chars.length === 0) return null;
+  return (
+    <section className="mt-5">
+      <h2 className="mb-2 text-left text-base font-bold text-white">Character</h2>
+      {data === undefined ? (
+        <div className="flex gap-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton h-24 w-64 shrink-0 rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="thin-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {chars.map((c) => (
+            <div
+              key={c.id}
+              className="flex w-64 shrink-0 overflow-hidden rounded-lg border border-border bg-secondary/40"
+            >
+              <img
+                src={c.image}
+                alt={c.name}
+                loading="lazy"
+                className="size-24 shrink-0 bg-black object-cover"
+              />
+              <div className="min-w-0 flex-1 p-2">
+                <p className="truncate text-[12px] font-bold text-white">{c.name}</p>
+                {c.meta && (
+                  <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">
+                    {c.meta}
+                  </p>
+                )}
+                {c.bio && (
+                  <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-white/70">
+                    {c.bio}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function AnimeDetailScreen({
   animeId,
   animeTitle,
@@ -1849,6 +1955,7 @@ function AnimeDetailScreen({
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
+  // Bagian Character: foto + detail gabungan dari AniList (paling ikonik dulu).
   // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
   // lain yang dibutuhkan saat menambah sinopsis / menambah anime. Hanya
   // untuk developer — user biasa tidak melihat tombolnya sama sekali.
@@ -1894,6 +2001,12 @@ function AnimeDetailScreen({
   const PAGE = 60;
   const shownEps = allEpisodes ? eps : eps.slice(0, PAGE);
   const releasedCount = eps.filter((e: any) => e.released !== false).length;
+  // Nomor episode terawal yang benar-benar ada di sumber (untuk catatan
+  // "episode 1–X tidak tersedia" pada judul yang episodenya bolong).
+  const epNums = eps
+    .map((e: any) => Number(e?.number ?? 0))
+    .filter((n: number) => n > 0);
+  const minEp = epNums.length ? Math.min(...epNums) : 0;
   // Sinopsis: sebelum diklik "baca selengkapnya" tetap tampil ~5/6 paragraf.
   const synopsisText: string =
     customSynopsis?.synopsis ??
@@ -2043,6 +2156,12 @@ function AnimeDetailScreen({
             {fmtFavoritCount(favCount ?? 0)}
           </p>
 
+          {/* Character: kotak berdampingan yang bisa digeser ke kanan. */}
+          <CharacterSection
+            idMal={detail.id != null ? String(detail.id) : undefined}
+            title={detail.title}
+          />
+
           {/* Panel info developer: data teknis untuk tools konten. */}
           {devInfoOpen && devAccess?.level === "dev" && (
             <div className="mt-3 rounded-2xl border border-primary/40 bg-card p-3">
@@ -2097,17 +2216,24 @@ function AnimeDetailScreen({
             </div>
           )}
 
-          {/* Sinopsis — 5/6 paragraf dulu sebelum "baca selengkapnya" */}
+          {/* Sinopsis — abu-abu, di-scroll DI DALAM kotaknya. */}
           <SectionTitle>Sinopsis</SectionTitle>
-          <p className="whitespace-pre-line text-sm leading-6 text-white">
-            {synopsisBody}
-          </p>
+          <div
+            className={cn(
+              "thin-scroll rounded-xl border border-border bg-secondary/40 p-3",
+              synopsisOpen ? "" : "max-h-64 overflow-y-auto",
+            )}
+          >
+            <p className="whitespace-pre-line text-sm leading-6 text-white">
+              {synopsisBody}
+            </p>
+          </div>
           {canExpandSynopsis && (
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
               className="mt-2 inline-flex h-8 items-center text-[13px] font-medium text-white/70 transition hover:text-white"
             >
-              {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
+              {synopsisOpen ? "Tutup (balik ke kotak)" : "Baca selengkapnya"}
             </button>
           )}
 
@@ -2129,6 +2255,12 @@ function AnimeDetailScreen({
             </button>
             {episodeOpen && (
               <div className="px-3 pb-3">
+                {minEp > 1 && (
+                  <p className="mb-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
+                    Episode 1–{minEp - 1} tidak tersedia di sumber. Episode
+                    terawal yang ada: {minEp}.
+                  </p>
+                )}
                 {eps.length === 0 ? (
                   <p className="py-4 text-center text-xs text-white/70">
                     {detail.status === "Upcoming"
@@ -2384,6 +2516,14 @@ function DonghuaDetailScreen({
     const all = [...(detail?.episodes ?? [])].sort((a, b) => a.number - b.number);
     return allEpisodes ? all : all.slice(0, DONGHUA_EP_PREVIEW);
   }, [detail, allEpisodes]);
+  // Nomor episode terawal yang ada di sumber (sumber sering cuma menyimpan
+  // jendela terbaru — mis. Renegade Immortal mulai dari ep 75).
+  const minEpNo = useMemo(() => {
+    const nums = (detail?.episodes ?? [])
+      .map((e) => Number(e.number || 0))
+      .filter((n) => n > 0);
+    return nums.length ? Math.min(...nums) : 0;
+  }, [detail]);
 
   // Sinopsis dipotong 5 baris; sisa teksnya ada di tombol "Baca selengkapnya".
   // Sinopsis manual dari developer (tools konten) menggantikan yang dari sumber.
@@ -2530,21 +2670,26 @@ function DonghuaDetailScreen({
             </SkewButton>
           </div>
 
+          {/* Character: foto + detail gabungan dari AniList (by judul). */}
+          <CharacterSection title={detail.title} />
+
           <SectionTitle>Sinopsis</SectionTitle>
-          <p
-            className="whitespace-pre-line text-sm leading-6 text-white"
-            style={
-              truncated ? { maxHeight: "9rem", overflow: "hidden" } : undefined
-            }
+          <div
+            className={cn(
+              "thin-scroll rounded-xl border border-border bg-secondary/40 p-3",
+              synopsisOpen ? "" : "max-h-64 overflow-y-auto",
+            )}
           >
-            {shownParas.join("\n\n")}
-          </p>
+            <p className="whitespace-pre-line text-sm leading-6 text-white">
+              {shownParas.join("\n\n")}
+            </p>
+          </div>
           {canExpand && (
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
               className="mt-2 inline-flex h-8 items-center text-[13px] font-medium text-white/70 transition hover:text-white"
             >
-              {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
+              {synopsisOpen ? "Tutup (balik ke kotak)" : "Baca selengkapnya"}
             </button>
           )}
 
@@ -2556,6 +2701,12 @@ function DonghuaDetailScreen({
               </span>
             </div>
             <div className="px-3 pb-3">
+              {minEpNo > 1 && (
+                <p className="mb-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
+                  Episode 1–{minEpNo - 1} tidak tersedia di sumber. Episode
+                  terawal yang ada: {minEpNo}.
+                </p>
+              )}
               {eps.length === 0 ? (
                 <p className="py-4 text-center text-xs text-white/70">
                   Daftar episode belum tersedia

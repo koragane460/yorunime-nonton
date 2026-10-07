@@ -74,6 +74,10 @@ export default function Akun() {
 function AkunContent() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  // Level panel dipakai juga untuk gerbang fitur uji coba (mis. bikin story).
+  const access = useQuery(api.moderation.myPanelAccess, {});
+  const panelLevel: "dev" | "mod" | "none" =
+    access?.level === "dev" ? "dev" : access?.level === "mod" ? "mod" : "none";
   const [params, setParams] = useSearchParams();
   const tabParam = params.get("tab");
   const [tab, setTab] = useState<"history" | "komen" | "favorite">(
@@ -150,10 +154,25 @@ function AkunContent() {
   return (
     <div className="relative">
       {/* Banner full-bleed. Wrapper-nya memotong overflow supaya tidak ada
-          elemen yang keluar dari lebar layar (ruang hitam di kanan). */}        <div className="yn-banner-box -mx-4 md:-mx-6">
+          elemen yang keluar dari lebar layar (ruang hitam di kanan). */}
+      <div className="yn-banner-box -mx-4 md:-mx-6">
         <BlurBanner src={user.bannerUrl ?? user.image} className="h-52 w-full" />
-        {/* Title: paling atas, di dalam banner foto profil */}
-        <div className="absolute left-3 top-3 z-20 flex flex-col items-start">
+        {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
+        <div aria-hidden className="yn-banner-fade" />
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Pengaturan"
+          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
+        >
+          <SettingsIcon className="size-[18px]" />
+        </button>
+      </div>
+
+      {/* Title: DI LUAR banner-box. banner-box memotong overflow (overflow
+          hidden), jadi kalau popup titlenya ada di dalam, bagian bawah popup
+          terpotong tepat di tepi banner. Posisi visual tetap sama karena
+          absolute mengacu ke wrapper `relative` di atas. */}
+      <div className="absolute left-3 top-3 z-20 flex flex-col items-start">
           <button
             onClick={() => setTitlesOpen((v) => !v)}
             aria-label="Buka title"
@@ -226,16 +245,6 @@ function AkunContent() {
             </div>
           )}
         </div>
-        {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
-        <div aria-hidden className="yn-banner-fade" />
-        <button
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Pengaturan"
-          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-        >
-          <SettingsIcon className="size-[18px]" />
-        </button>
-      </div>
 
       {/* Foto profil menutupi banner, tepat di tengah layar */}
       <div className="w-full px-3">
@@ -258,17 +267,23 @@ function AkunContent() {
                 className="rounded-full"
               />
             ) : (
+              /* Gap cincin dipasangkan dengan ketebalan cincinnya (3px):
+                 p-[2px] bawaan StoryRing + p-[1px] di dalam = 3px rata
+                 berwarna background, jadi cincin dan foto terlihat pas. */
               <div className="yn-avatar-ring">
                 <StoryRing
                   image={user.image}
                   seed={user.username}
                   size={96}
                   onClick={() => setStoryStage("view")}
-                  className="rounded-full bg-background p-[1px]"
+                  className="rounded-full bg-background"
                 />
               </div>
             )}
-            <StoryAddButton onClick={() => setStoryStage("pick")} />
+            {/* Bikin story hanya untuk developer — fitur masih uji coba. */}
+            {panelLevel === "dev" && (
+              <StoryAddButton onClick={() => setStoryStage("pick")} />
+            )}
           </div>
           {/* Urutan: username -> ID -> level badge + tag clan */}
           <div

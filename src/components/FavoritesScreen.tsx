@@ -28,6 +28,13 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
 
   // Default-nya Download: tab itu selalu punya isi.
   const [tab, setTab] = useState<Tab>("downloads");
+  // Tab yang pernah dibuka tetap TERPASANG (disembunyikan pakai class
+  // `hidden`, bukan di-unmount). Pindah tab jadi instan: tidak ada mounting
+  // ulang, tidak ada kedip, dan query Convex tidak di-re-run dari nol.
+  const [visited, setVisited] = useState<Set<Tab>>(() => new Set(["downloads"]));
+  useEffect(() => {
+    setVisited((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  }, [tab]);
   // Referensi area isi: ketika tombol tab yang sedang aktif ditekan lagi,
   // daftar yang sudah terlihat Sometimes sudah berada jauh di bawah. Menekan
   // ulang tombol yang sama harus selalu memberi umpan balik, jadi isinya
@@ -119,12 +126,23 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
       </header>
 
       <div ref={bodyRef} className="pt-3">
-        {/* Ketiganya dirender inline, jadi tidak ada layar fullscreen. */}
-        {tab === "downloads" && (
-          <DownloadsPanel inline onClose={onClose} />
+        {/* Ketiganya dirender inline (tanpa layar fullscreen). Tab yang sudah
+            pernah dibuka hanya disembunyikan supaya pindah tab tanpa jeda. */}
+        {visited.has("downloads") && (
+          <div className={tab === "downloads" ? "" : "hidden"}>
+            <DownloadsPanel inline onClose={onClose} />
+          </div>
         )}
-        {tab === "most" && <MostWatchedPanel inline onClose={onClose} />}
-        {tab === "foryou" && <ForYouPanel inline onClose={onClose} />}
+        {visited.has("most") && (
+          <div className={tab === "most" ? "" : "hidden"}>
+            <MostWatchedPanel inline onClose={onClose} />
+          </div>
+        )}
+        {visited.has("foryou") && (
+          <div className={tab === "foryou" ? "" : "hidden"}>
+            <ForYouPanel inline onClose={onClose} />
+          </div>
+        )}
       </div>
     </div>
   );
