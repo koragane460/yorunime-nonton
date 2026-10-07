@@ -408,7 +408,7 @@ function JadwalContent() {
                 "flex w-full items-center gap-3 rounded-xl border bg-secondary/30 p-2.5 text-left transition",
                 tab === "manga"
                   ? "border-border/70 hover:border-sky-400/60"
-                  : "border-border/70 hover:border-fuchsia-400/60",
+                  : "border-border/70 hover:border-primary/60",
               )}
             >
               <img src={c.image} alt="" className="h-16 w-11 shrink-0 rounded-lg object-cover" />
@@ -448,7 +448,7 @@ function DonghuaCard({ row, dayLabel }: { row: DonghuaRow; dayLabel: string }) {
             : "/auth",
         )
       }
-      className="flex w-full items-center gap-3 rounded-xl border border-violet-500/40 bg-secondary/30 p-2.5 text-left transition hover:border-violet-400/70"
+      className="flex w-full items-center gap-3 rounded-xl border border-primary/40 bg-secondary/30 p-2.5 text-left transition hover:border-primary/70"
     >
       {row.image ? (
         <img
@@ -458,7 +458,7 @@ function DonghuaCard({ row, dayLabel }: { row: DonghuaRow; dayLabel: string }) {
         />
       ) : (
         <div className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-black/40">
-          <Sparkles className="size-4 text-violet-400/70" />
+          <Sparkles className="size-4 text-primary/70" />
         </div>
       )}
       <div className="min-w-0 flex-1">
@@ -468,7 +468,7 @@ function DonghuaCard({ row, dayLabel }: { row: DonghuaRow; dayLabel: string }) {
           {row.status ? ` • ${row.status}` : ""}
         </p>
       </div>
-      <Sparkles className="size-5 shrink-0 text-violet-400/80" />
+      <Sparkles className="size-5 shrink-0 text-primary/80" />
     </button>
   );
 }

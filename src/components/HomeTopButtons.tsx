@@ -15,20 +15,23 @@ import {
 } from "@/lib/offline-store";
 import {
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   Clock,
-  Download,
-  Flame,
   HardDriveDownload,
   Loader2,
   PlayCircle,
   RotateCw,
   Save,
-  Sparkles,
   Trash2,
   Tv,
 } from "lucide-react";
+// Ikon tiga tombol atas Home memakai gaya SF Symbols.
+import {
+  DownloadIcon as Download,
+  FlameIcon as Flame,
+  SparklesIcon as Sparkles,
+  ChevronLeftIcon as ChevronLeft,
+  ChevronRightIcon as ChevronRight,
+} from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -114,6 +117,8 @@ type DlRow = {
   progress?: number;
   localKey?: string;
   error?: string;
+  /** Waktu kabar terakhir dari Convex (ms) — dipakai deteksi unduhan macet. */
+  updatedAt?: number;
 };
 
 /**

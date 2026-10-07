@@ -217,7 +217,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(680px 380px at 50% -8%, rgba(124,58,237,0.28), transparent 70%), linear-gradient(180deg, #0a0a16 0%, #06060d 55%, #040408 100%)",
+            "radial-gradient(680px 380px at 50% -8%, rgba(158,44,74,0.30), transparent 70%), linear-gradient(180deg, #0f1a33 0%, #0b1428 55%, #070d1c 100%)",
         }}
       />
       <div

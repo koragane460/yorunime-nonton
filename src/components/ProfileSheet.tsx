@@ -318,7 +318,7 @@ export function ProfileSheet({
                       className={cn(
                         "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
                         c.kind === "manhwa"
-                          ? "bg-fuchsia-600 text-white"
+                          ? "bg-rose-600 text-white"
                           : "bg-sky-600 text-white",
                       )}
                     >
@@ -382,7 +382,7 @@ export function ProfileSheet({
                       className={cn(
                         "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
                         f.kind === "manhwa"
-                          ? "bg-fuchsia-600 text-white"
+                          ? "bg-rose-600 text-white"
                           : "bg-sky-600 text-white",
                       )}
                     >

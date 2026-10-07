@@ -5,25 +5,30 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
-  Home,
-  CalendarDays,
-  UserRound,
-  Info,
-  ChevronRight,
-  Crown,
-  Gem,
   Maximize,
   Settings,
   Pause,
   Play,
   X,
-  BookOpen,
-  PanelsTopLeft,
-  Bookmark,
-  Flame,
-  PlayCircle,
-  Sparkles,
 } from "lucide-react";
+// Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
+// bahasa bentuk dengan iOS (garis tipis, sudut membulat, varian fill saat aktif).
+import {
+  HomeIcon,
+  HomeIconFill,
+  CalendarIcon,
+  CalendarIconFill,
+  PersonIcon,
+  PersonIconFill,
+  InfoIcon,
+  InfoIconFill,
+  BookmarkIcon,
+  BookmarkIconFill,
+  BookIcon,
+  PanelsIcon,
+  GemIcon,
+  CrownIcon,
+} from "@/components/ios-icons";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { displayId, usernameColor } from "@/lib/lstream";
@@ -288,12 +293,12 @@ function AccountPanel({
 
           {/* Total Sacret + sisa hari premium */}
           <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
-              <Gem className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
+            <span className="flex items-center gap-1.5 font-semibold text-sky-300">
+              <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
             </span>
             {premium && (
               <span className="flex items-center gap-1.5 font-semibold text-gold">
-                <Crown className="size-3.5" /> {premiumDays} hari
+                <CrownIcon className="size-3.5" /> {premiumDays} hari
               </span>
             )}
           </div>
@@ -649,18 +654,37 @@ function BottomNav({
     path: string;
     label: string;
     icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+    /** Varian terisi untuk keadaan aktif — kebiasaan iOS: ikon memadat
+     *  saat tab terpilih, bukan cuma berganti warna. */
+    iconFill?: ComponentType<{ className?: string; strokeWidth?: number }>;
     panel?: Exclude<TopPanel, null>;
     dim?: boolean;
   }[] = [
-    { path: "/home", label: "Home", icon: Home },
-    { path: "/jadwal", label: "Jadwal", icon: CalendarDays },
-    { path: "/info", label: "Info", icon: Info },
+    { path: "/home", label: "Home", icon: HomeIcon, iconFill: HomeIconFill },
+    {
+      path: "/jadwal",
+      label: "Jadwal",
+      icon: CalendarIcon,
+      iconFill: CalendarIconFill,
+    },
+    { path: "/info", label: "Info", icon: InfoIcon, iconFill: InfoIconFill },
     // Favorit: tombol Ke-4. Membuka layar Favorit (bukan fullscreen), dan di
     // paling atas layar itu ada tiga tombol Download / Paling sering /
     // Untuk kamu. Ikon bookmark kotak, bukan love/hat — ini penanda
     // "disimpan", bukan "disukai".
-    { path: "", label: "Favorit", icon: Bookmark, panel: "favorites" },
-    { path: "/akun", label: "Akun", icon: UserRound },
+    {
+      path: "",
+      label: "Favorit",
+      icon: BookmarkIcon,
+      iconFill: BookmarkIconFill,
+      panel: "favorites",
+    },
+    {
+      path: "/akun",
+      label: "Akun",
+      icon: PersonIcon,
+      iconFill: PersonIconFill,
+    },
   ];
 
   const startHold = (path: string) => {
@@ -705,8 +729,8 @@ function BottomNav({
               <div className="grid grid-cols-2 gap-2 p-3">
                 {(
                   [
-                    ["/manga", "Manga", BookOpen, "Baca kanan ke kiri"],
-                    ["/manhwa", "Manhwa", PanelsTopLeft, "Gaya webtoon"],
+                    ["/manga", "Manga", BookIcon, "Baca kanan ke kiri"],
+                    ["/manhwa", "Manhwa", PanelsIcon, "Gaya webtoon"],
                   ] as const
                 ).map(([path, label, Icon, sub]) => {
                   const active = location.pathname.startsWith(path);
@@ -755,7 +779,8 @@ function BottomNav({
                   ? location.pathname === "/home" || location.pathname === "/"
                   : base !== "" && location.pathname.startsWith(base);
             const isHome = base === "/home";
-            const Icon = it.icon;
+            // Saat aktif: pakai varian fill kalau tersedia (gaya iOS).
+            const Icon = active && it.iconFill ? it.iconFill : it.icon;
             return (
               <button
                 key={it.path || `panel-${it.label}`}
@@ -786,10 +811,10 @@ function BottomNav({
                 className="nav-item relative flex flex-col items-center justify-center py-3.5"
               >
                 <Icon
-                  strokeWidth={1.75}
+                  strokeWidth={1.7}
                   className={cn(
                     // 5 kolom: ikon dibuat besar supaya jelas dan mudah
-                    // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.75)
+                    // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
                     // supaya tidak terlihat tebel dan berat.
                     "size-[25px] md:size-[28px]",
                     active

@@ -9,7 +9,6 @@
 // halaman detail, jadi tidak ada yang berubah soal penyimpanan favorit.
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Flame, Sparkles } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +18,12 @@ import {
   ForYouPanel,
   MostWatchedPanel,
 } from "@/components/HomeTopButtons";
+// Ikon tab memakai gaya SF Symbols, satu bahasa dengan nav bawah.
+import {
+  DownloadIcon as Download,
+  FlameIcon as Flame,
+  SparklesIcon as Sparkles,
+} from "@/components/ios-icons";
 
 type Tab = "downloads" | "most" | "foryou";
 

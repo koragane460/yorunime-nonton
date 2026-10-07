@@ -151,7 +151,7 @@ export function CardCarousel({
                         className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
                       />
                       {kind === "donghua" && (
-                        <span className="absolute left-1 top-1 rounded bg-violet-600 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
+                        <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
                           Donghua
                         </span>
                       )}

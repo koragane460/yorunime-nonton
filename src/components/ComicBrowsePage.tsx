@@ -321,7 +321,7 @@ function ComicHero({
   if (items.length === 0) return null;
   const cur = items[index % items.length];
   const views = formatViews(cur.views);
-  const badge = kind === "manga" ? "bg-sky-600" : "bg-fuchsia-600";
+  const badge = kind === "manga" ? "bg-sky-600" : "bg-rose-600";
   return (
     <div className="yn-banner-box relative mt-1 rounded-2xl border border-white/10 bg-black">
       {/* Poster komik vertikal: tinggi mengikuti rasio gambar asli supaya
@@ -359,7 +359,7 @@ function ComicHero({
             onClick={() => onPick(cur.slug)}
             className={cn(
               "rounded-full px-4 py-1.5 text-xs font-bold text-white transition",
-              kind === "manga" ? "bg-sky-600 hover:bg-sky-500" : "bg-fuchsia-600 hover:bg-fuchsia-500",
+              kind === "manga" ? "bg-sky-600 hover:bg-sky-500" : "bg-rose-600 hover:bg-rose-500",
             )}
           >
             Baca Sekarang

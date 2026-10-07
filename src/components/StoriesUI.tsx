@@ -303,10 +303,10 @@ export function StoryComposer({
           </button>
           <button
             onClick={() => videoRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/50 bg-fuchsia-400/5 px-3 py-7 transition hover:border-fuchsia-400"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-rose-400/50 bg-rose-400/5 px-3 py-7 transition hover:border-rose-400"
           >
-            <Camera className="size-7 text-fuchsia-300" />
-            <span className="text-sm font-bold text-fuchsia-200">Rekam video</span>
+            <Camera className="size-7 text-rose-300" />
+            <span className="text-sm font-bold text-rose-200">Rekam video</span>
             <span className="text-[10px] text-muted-foreground">Kamera video</span>
           </button>
         </div>

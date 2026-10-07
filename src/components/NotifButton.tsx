@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router";
+import { CheckCheck, Megaphone, MessageSquare } from "lucide-react";
 import {
-  Bell,
-  CheckCheck,
-  ChevronLeft,
-  Megaphone,
-  MessageSquare,
-  Sparkles,
-} from "lucide-react";
+  BellIcon,
+  ChevronLeftIcon,
+  SparklesIcon,
+} from "@/components/ios-icons";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
@@ -54,7 +52,7 @@ export function NotifButton({
           className,
         )}
       >
-        <Bell className="size-4" />
+        <BellIcon className="size-4" />
         {unread ? <UnreadBadge count={unread} /> : null}
       </button>
 
@@ -117,10 +115,10 @@ function NotifSheet({
             aria-label="Kembali"
             className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/20 text-white/80 transition hover:border-white/45 hover:text-white"
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeftIcon className="size-5" />
           </button>
           <SheetTitle className="flex items-center gap-2 text-base">
-            <Bell className="size-4 text-primary" /> Notifikasi
+            <BellIcon className="size-4 text-primary" /> Notifikasi
           </SheetTitle>
         </SheetHeader>
 
@@ -156,7 +154,7 @@ function NotifSheet({
                   )}
                 >
                   {n.type === "update" ? (
-                    <Sparkles className="size-4 text-primary" />
+                    <SparklesIcon className="size-4 text-primary" />
                   ) : (
                     <Megaphone className="size-4 text-muted-foreground" />
                   )}

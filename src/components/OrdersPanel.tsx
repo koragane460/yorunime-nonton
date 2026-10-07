@@ -190,7 +190,7 @@ function WalletPanel() {
   return (
     <div className="space-y-3">
       {/* Kartu saldo, gaya aplikasi dompet digital */}
-      <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 p-4 text-white shadow-lg">
+      <div className="rounded-2xl bg-gradient-to-br from-[oklch(0.45_0.16_14)] to-[oklch(0.32_0.07_262)] p-4 text-white shadow-lg">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold text-white/80">
           <Wallet className="size-3.5" /> Saldo
         </p>

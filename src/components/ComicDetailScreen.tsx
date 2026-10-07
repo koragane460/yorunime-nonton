@@ -94,9 +94,9 @@ export function ComicDetailScreen({
 
   const kind: "manga" | "manhwa" = d?.kind ?? fallbackKind;
   const isManga = kind === "manga";
-  const accent = isManga ? "bg-sky-600 hover:bg-sky-500" : "bg-fuchsia-600 hover:bg-fuchsia-500";
-  const accentText = isManga ? "text-sky-300" : "text-fuchsia-300";
-  const accentBorder = isManga ? "border-sky-500/60" : "border-fuchsia-500/60";
+  const accent = isManga ? "bg-sky-600 hover:bg-sky-500" : "bg-rose-600 hover:bg-rose-500";
+  const accentText = isManga ? "text-sky-300" : "text-rose-300";
+  const accentBorder = isManga ? "border-sky-500/60" : "border-rose-500/60";
 
   const chapters = d ? (asc ? [...d.chapters].reverse() : d.chapters) : [];
   const shown = showAll ? chapters : chapters.slice(0, 30);
@@ -178,7 +178,7 @@ export function ComicDetailScreen({
                   <span
                     className={cn(
                       "rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
-                      isManga ? "bg-sky-600 text-white" : "bg-fuchsia-600 text-white",
+                      isManga ? "bg-sky-600 text-white" : "bg-rose-600 text-white",
                     )}
                   >
                     {isManga ? "Manga" : "Manhwa"}
@@ -236,7 +236,7 @@ export function ComicDetailScreen({
                   {d.genres.map((g) => (
                     <span
                       key={g}
-                      className="rounded-full border border-fuchsia-500/40 bg-fuchsia-500/10 px-2.5 py-1 text-[11px] font-semibold text-fuchsia-200"
+                      className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-200"
                     >
                       {g}
                     </span>
@@ -326,7 +326,7 @@ export function ComicDetailScreen({
                                 "w-9 shrink-0 rounded-md py-1 text-center text-xs font-black",
                                 isManga
                                   ? "bg-sky-600/20 text-sky-200"
-                                  : "bg-fuchsia-600/20 text-fuchsia-200",
+                                  : "bg-rose-600/20 text-rose-200",
                               )}
                             >
                               {ch.number}
@@ -392,7 +392,7 @@ export function ComicDetailScreen({
                 <>
                   <button
                     onClick={() => setAsc((v) => !v)}
-                    className="mb-2 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground transition hover:border-fuchsia-500/60"
+                    className="mb-2 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground transition hover:border-rose-500/60"
                   >
                     {asc ? "Urutkan: Terbaru ↓" : "Urutkan: Terlama ↑"}
                   </button>
@@ -401,7 +401,7 @@ export function ComicDetailScreen({
                       <button
                         key={ch.url}
                         onClick={() => read(ch)}
-                        className="min-w-14 rounded-lg border border-fuchsia-500/35 bg-fuchsia-500/10 px-2.5 py-1.5 text-xs font-bold text-fuchsia-100 transition hover:bg-fuchsia-600/40"
+                        className="min-w-14 rounded-lg border border-rose-500/35 bg-rose-500/10 px-2.5 py-1.5 text-xs font-bold text-rose-100 transition hover:bg-rose-600/40"
                       >
                         {ch.number}
                       </button>

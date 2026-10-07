@@ -54,7 +54,7 @@ export function RequireAuth({
           aria-hidden
           style={{
             background:
-              "radial-gradient(760px 420px at 50% -10%, oklch(0.42 0.18 295 / 0.35), transparent 70%), linear-gradient(180deg, oklch(0.16 0.03 285), oklch(0.12 0.02 280) 60%, oklch(0.1 0.015 280))",
+              "radial-gradient(760px 420px at 50% -10%, oklch(0.5 0.16 14 / 0.32), transparent 70%), linear-gradient(180deg, oklch(0.2 0.045 262), oklch(0.17 0.038 262) 60%, oklch(0.15 0.034 262))",
           }}
         />
         <section className="pop-enter relative w-full max-w-sm">

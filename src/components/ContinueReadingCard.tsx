@@ -111,7 +111,7 @@ export function ContinueReadingCard() {
                   "mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
                   r.kind === "manga"
                     ? "bg-sky-600/80 text-white"
-                    : "bg-fuchsia-600/80 text-white",
+                    : "bg-rose-600/80 text-white",
                 )}
               >
                 {r.kind === "manga" ? "Manga" : "Manhwa"}

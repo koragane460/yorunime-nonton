@@ -20,29 +20,32 @@ import { isMusicSecret } from "@/lib/musicSecret";
 const MusicScreen = lazy(() => import("@/pages/Music"));
 
 import {
-  Search,
-  Bell,
-  ChevronLeft,
   Loader2,
-  ChevronRight,
   Check,
   Heart,
-  Trophy,
-  Gift,
   X,
-  Gem,
-  ArrowLeftRight,
-  SlidersHorizontal,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
   Lock,
   MessageSquare,
   Play,
   Star,
-  Info,
   Copy,
 } from "lucide-react";
+// Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
+import {
+  SearchIcon as Search,
+  BellIcon as Bell,
+  ChevronLeftIcon as ChevronLeft,
+  ChevronRightIcon as ChevronRight,
+  ChevronDownIcon as ChevronDown,
+  ChevronUpIcon as ChevronUp,
+  TrophyIcon as Trophy,
+  GiftIcon as Gift,
+  SwipeIcon as ArrowLeftRight,
+  SlidersIcon as SlidersHorizontal,
+  InfoIcon as Info,
+  SparklesIcon as Sparkles,
+  GemIcon as Gem,
+} from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -535,7 +538,7 @@ const [showMusic, setShowMusic] = useState(false);
       >
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 font-bold">
-            <Trophy className="size-4 text-red-400" /> Leaderboard
+            <Trophy className="size-4 text-primary" /> Leaderboard
           </p>
           <span className="text-xs text-muted-foreground">lihat semua ›</span>
         </div>
@@ -627,7 +630,7 @@ const [showMusic, setShowMusic] = useState(false);
                       className={cn(
                         "absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold",
                         a.isDonghua
-                          ? "bg-violet-600 text-white"
+                          ? "bg-sky-700 text-white"
                           : "bg-primary text-primary-foreground",
                       )}
                     >
@@ -990,7 +993,7 @@ function LeaderEntryRow({
       className="lb-rise flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
       style={{ animationDelay: `${Math.min(rank, 14) * 45}ms` }}
     >
-      <span className="w-6 text-center text-sm font-bold text-red-400">{rank}</span>
+      <span className="w-6 text-center text-sm font-bold text-primary">{rank}</span>
       <Avatar src={image} seed={username} className="size-10" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{username ?? "user"}</p>
@@ -1027,7 +1030,7 @@ function PodiumCard({
       <p className="text-[10px] leading-tight text-primary">{xp.toLocaleString("id-ID")} XP</p>
       <div
         className={cn(
-          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 bg-gradient-to-t from-red-500/10 to-red-500/25 pt-1 text-lg font-black text-red-200",
+          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 bg-gradient-to-t from-primary/15 to-primary/35 pt-1 text-lg font-black text-white",
           height,
         )}
       >
@@ -1442,7 +1445,7 @@ function SearchScreen({
             onClick={() => setGenresOpen((v) => !v)}
             className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold"
           >
-            <SlidersHorizontal className="size-4 text-red-400" /> Genre
+            <SlidersHorizontal className="size-4 text-primary" /> Genre
             {genresOpen ? <ChevronUp className="ml-auto size-4" /> : <ChevronDown className="ml-auto size-4" />}
           </button>
           {genresOpen && (
@@ -1871,10 +1874,27 @@ type CharRow = {
  * Karakter diurutkan paling ikonik dulu (sudah dari AniList FAVOURITES_DESC).
  */
 function CharacterSection({ idMal, title }: { idMal?: string; title?: string }) {
-  const data = useQuery(
-    api.anime.animeCharacters,
-    idMal ? { idMal } : title ? { title } : "skip",
-  ) as CharRow[] | undefined;
+  // animeCharacters adalah ACTION (keluar ke AniList), jadi tidak bisa dipanggil
+  // lewat useQuery — fetch sekali saat idMal/title berubah, hasilnya di state.
+  const fetchChars = useAction(api.anime.animeCharacters);
+  const [data, setData] = useState<CharRow[] | undefined>(undefined);
+  const key = idMal ?? title ?? "";
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    setData(undefined);
+    void fetchChars(idMal ? { idMal } : { title: title! })
+      .then((rows) => {
+        if (alive) setData(rows as CharRow[]);
+      })
+      .catch(() => {
+        if (alive) setData([]);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   const chars = (data ?? []).filter((c) => c?.name && c?.image);
   if (data !== undefined && chars.length === 0) return null;
   return (
@@ -2085,7 +2105,7 @@ function AnimeDetailScreen({
                   detail.status === "Completed"
                     ? "bg-emerald-500/80 text-white"
                     : detail.status === "OVA" || detail.status === "Movie"
-                      ? "bg-purple-500/80 text-white"
+                      ? "bg-sky-700/90 text-white"
                       : "bg-primary text-white",
                 )}
               >
