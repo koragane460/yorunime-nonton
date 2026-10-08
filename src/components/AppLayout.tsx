@@ -1,7 +1,17 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import {
+  DownloadsPanel,
+  MostWatchedPanel,
+  ForYouPanel,
+  ContinuePanel,
+} from "@/components/HomeTopButtons";
 import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
@@ -10,6 +20,8 @@ import {
   Pause,
   Play,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 // Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
 // bahasa bentuk dengan iOS (garis tipis, sudut membulat, varian fill saat aktif).
@@ -62,12 +74,15 @@ export function AppLayout({
   // Layar penuh yang dibuka tombol navigasi (Favorit, Lanjutkan nonton,
   // Paling sering, Untuk kamu).
   //
-  // State-nya sengaja ADA DI SINA, bukan di BottomNav: masing-masing panel
+  // State-nya sengaja ADA DI SINI, bukan di BottomNav: masing-masing panel
   // memanggil useHideNavOnMount() yang menyalakan flag overlay, dan
   // BottomNav memanggil `if (overlay) return null`. Kalau panel dirender di
   // dalam BottomNav, panel yang baru dibuka akan langsung membuat
   // BottomNav (dan dirinya sendiri) unmount.
   const [navPanel, setNavPanel] = useState<TopPanel>(null);
+  const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  const openTopPanel = useCallback((p: TopPanel) => setTopPanel(p), []);
+  const closeTopPanel = useCallback(() => setTopPanel(null), []);
 
   useEffect(() => {
     if (!navPanel) return;
@@ -156,6 +171,7 @@ export function AppLayout({
         </div>
       </div>
       <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
+      <TopPanelHost topPanel={topPanel} onClose={closeTopPanel} onOpen={openTopPanel} />
       <AppFooter />
       <MusicMiniBar />
       <MiniPlayerHost />
@@ -385,7 +401,7 @@ export function useHideNavWhile(active: boolean) {
   }, [active]);
 }
 
-// ------------------------------------------------------ mini player ----
+// ------------------------------------------------------- mini player ----
 
 type MiniState = {
   animeId: string;
@@ -598,6 +614,98 @@ export function MiniPlayerHost() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ------------------------------------------------------- top panel host ----
+
+function TopPanelHost({
+  topPanel,
+  onClose,
+  onOpen,
+}: {
+  topPanel: TopPanel;
+  onClose: () => void;
+  onOpen: (p: TopPanel) => void;
+}) {
+  if (!topPanel) return null;
+  return (
+    <div key={topPanel} className="screen-enter fixed inset-0 z-[70] bg-background">
+      <TopPanelChrome
+        title={panelTitle(topPanel)}
+        onBack={() => onClose()}
+        onReveal={() => onOpen(null)}
+      >
+        <TopPanelBody panel={topPanel} onClose={onClose} />
+      </TopPanelChrome>
+    </div>
+  );
+}
+
+function panelTitle(p: TopPanel): string {
+  return {
+    downloads: "Download",
+    most: "Paling sering",
+    foryou: "Untuk kamu",
+    favorites: "Favorit",
+    continue: "Lanjutkan nonton",
+  }[p] ?? "";
+}
+
+function TopPanelChrome({
+  title,
+  children,
+  onBack,
+  onReveal,
+}: {
+  title: string;
+  children: ReactNode;
+  onBack: () => void;
+  onReveal: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-2 border-b border-border px-3 py-3">
+        <button
+          onClick={onBack}
+          aria-label="Kembali"
+          className="flex size-9 items-center justify-center rounded-full border border-border"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <h1 className="truncate text-base font-bold tracking-tight">{title}</h1>
+        <div className="ml-auto flex size-9 items-center justify-end">
+          <button
+            onClick={onReveal}
+            aria-label="Tutup"
+            className="flex size-9 items-center justify-center rounded-full border border-border"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        </div>
+      </div>
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {children}
+      </div>
+    </>
+  );
+}
+
+function TopPanelBody({
+  panel,
+  onClose,
+}: {
+  panel: TopPanel;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      {panel === "downloads" && <DownloadsPanel onClose={onClose} />}
+      {panel === "most" && <MostWatchedPanel onClose={onClose} />}
+      {panel === "foryou" && <ForYouPanel onClose={onClose} />}
+      {panel === "favorites" && <FavoritesScreen onClose={onClose} />}
+      {panel === "continue" && <ContinuePanel onClose={onClose} />}
+    </>
   );
 }
 
