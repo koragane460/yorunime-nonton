@@ -6,7 +6,15 @@ import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { BookOpen, ChevronDown, ChevronUp, Clock, PanelsTopLeft, Sparkles, Tv } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  PanelsTopLeft,
+  Sparkles,
+  Tv,
+} from "lucide-react";
 
 const DAYS_ID = [
   "Minggu",
@@ -52,7 +60,6 @@ type ComicSlot = {
 };
 
 type Tab = "anime" | "manga" | "manhwa" | "donghua";
-
 export default function Jadwal() {
   return (
     <AppLayout hideAccountPanel>
@@ -79,6 +86,7 @@ function JadwalContent() {
   const [donghuaAcak, setDonghuaAcak] = useState<DonghuaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [comicLoading, setComicLoading] = useState(false);
+  const [duplicates, setDuplicates] = useState<Record<string, Record<string, number>>>({});
   const todayIdx = new Date().getDay();
   const [day, setDay] = useState(todayIdx);
 
@@ -231,13 +239,31 @@ function JadwalContent() {
               airingAt: 0,
               day: DAYS_ID[day],
               time: c.airingTime ?? "",
-              custom: true,
             })),
         ]
       : tab === "donghua"
         ? (donghuaByDay[DAYS_ID[day]] ?? [])
         : (comics[tab]?.[DAYS_ID[day]] ?? []);
   const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
+
+  // deteksi duplikat hari ini (sama id+episode)
+  const dupCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const item of list) {
+      const key = `${item.id}-${item.episode}`;
+      map[key] = (map[key] ?? 0) + 1;
+    }
+    return map;
+  }, [list]);
+
+  const now = new Date();
+  const diff = Math.max(
+    0,
+    (list[0]?.airingAt ?? list[0]?.predictedMs ?? 0) - now.getTime(),
+  );
+  const mins = Math.floor(diff / 60_000);
+  const hrs = Math.floor(mins / 60);
+  const secs = diff % 60;
 
   return (
     <div className="py-3">
@@ -255,19 +281,31 @@ function JadwalContent() {
         <button
           onClick={() => setPickerOpen((v) => !v)}
           className={cn(
-            "flex w-full items-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-sm font-semibold text-foreground transition",
+            "flex w-full items-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-sm font-semibold text-foreground",
+            pickerOpen ? "border-foreground/40" : "",
           )}
         >
-          <ActiveIcon className="size-4" />
-          <span className="flex-1 text-left">Jadwal {active.label}</span>
-          <span className="text-xs opacity-60">{active.count}</span>
-          {pickerOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          <ActiveIcon className="size-4 shrink-0 text-primary" />
+          <span className="flex-1">{active.label}</span>
+          {tab === "anime" ? (
+            <>
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                {totalShown} judul
+              </span>
+              <ChevronDown className="size-4 shrink-0 text-zinc-500" />
+            </>
+          ) : (
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              {totalShown} item
+            </span>
+          )}
         </button>
+
         {pickerOpen && (
-          <div className="pop-enter mt-1.5 grid grid-cols-4 gap-1.5">
-            {tabs.map((t) => {
-              const Icon = t.icon;
-              return (
+          <div className="mt-2 rounded-xl border border-border bg-secondary/40 p-2">
+            {tabs
+              .filter((t) => t.key !== tab)
+              .map((t) => (
                 <button
                   key={t.key}
                   onClick={() => {
@@ -275,212 +313,193 @@ function JadwalContent() {
                     setPickerOpen(false);
                   }}
                   className={cn(
-                    // Empat tombol dalam satu baris → padding & font
-                    // dikecilkan supaya tidak memenuhi layar.
-                    "flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[11px] font-semibold transition",
-                    tab === t.key
-                      ? "border-foreground/30 bg-secondary/60 text-foreground"
-                      : "border-border bg-secondary/30 text-muted-foreground hover:border-foreground/40",
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-foreground/5",
+                    t.key === "donghua" && "mt-1",
                   )}
                 >
-                  <Icon className="size-3.5" />
-                  {t.label}
+                  <t.icon className="size-4 shrink-0 text-primary" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">{t.label}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t.key === "anime"
+                        ? `${t.count} judul · ${Object.keys(sched).length} hari`
+                        : t.key === "donghua"
+                          ? `${t.count} item · ${Object.keys(donghuaByDay).length} hari`
+                          : `${t.count} chapter`}
+                    </p>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 text-zinc-500" />
                 </button>
-              );
-            })}
+              ))}
           </div>
         )}
       </div>
 
-      <div className="thin-scroll mb-3 flex gap-1.5 overflow-x-auto pb-1">
-        {DAYS_ID.map((d, i) => {
-          const count =
-            tab === "anime"
-              ? (sched[d] ?? []).length +
-                (customAnime ?? []).filter((c: any) => c.airingDay === d).length
-              : tab === "donghua"
-                ? (donghuaByDay[d] ?? []).length
-                : (comics[tab]?.[d] ?? []).length;
-          return (
-            <button
-              key={d}
-              onClick={() => setDay(i)}
-              className={cn(
-                "shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition",
-                day === i
-                  ? "border-foreground/30 bg-secondary/60 text-foreground"
-                  : "border-border bg-secondary/30 text-muted-foreground",
-              )}
-            >
-              {d}
-              <span className="ml-1 opacity-60">{count}</span>
-            </button>
-          );
-        })}
+      {/* timer hitung mundur + pengalihan hari */}
+      {(tab === "anime" || tab === "donghua") && (
+        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-2.5">
+          <Clock className="size-4 shrink-0 text-primary" />
+          <div className="flex-1">
+            {list.length > 0 ? (
+              <>
+                <p className="text-sm font-semibold">{list[0].title}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  tayang dalam {hrs > 0 ? `${hrs}j` : ""}
+                  {mins > 0 ? `${mins % 60}m` : ""}
+                  {sec && hrs === 0 ? `${secs}s` : ""}
+                  {list[0].episode ? ` · Ep ${list[0].episode}` : ""}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Tidak ada jadwal hari ini
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {day > 0 && (
+              <button
+                onClick={() => setDay((d) => (d - 1 + 7) % 7)}
+                className="flex size-8 items-center justify-center rounded-full border border-border text-zinc-500 hover:border-foreground/40"
+                aria-label="Hari sebelumnya"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+            )}
+            <span className="flex-1 text-center text-[11px] font-semibold text-zinc-400">
+              {DAYS_ID[day]}
+            </span>
+            {day < 6 && (
+              <button
+                onClick={() => setDay((d) => (d + 1) % 7)}
+                className="flex size-8 items-center justify-center rounded-full border border-border text-zinc-500 hover:border-foreground/40"
+                aria-label="Hari berikutnya"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* list item: sisa duplikat kayak di foto katalog */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">
+          {list.length === 0
+            ? tabs.find((t) => t.key === tab)?.label
+            : `${list.length} item`}{" "}
+          hari ini
+        </span>
+        {list.length > 0 && (
+          <span className="text-[11px] text-muted-foreground">
+            {Object.values(dupCounts).filter((c) => c > 1).length > 0
+              ? `${Object.values(dupCounts).filter((c) => c > 1).length} judul duplikat`
+              : ""}
+          </span>
+        )}
       </div>
 
-      {tab === "donghua" ? (
-        comicLoading ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">Memuat donghua…</p>
-        ) : (list as DonghuaRow[]).length === 0 && donghuaAcak.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada donghua untuk {DAYS_ID[day]}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {(list as DonghuaRow[]).map((d) => (
-              <DonghuaCard key={d.id} row={d} dayLabel={DAYS_ID[day]} />
-            ))}
-            {/* Judul tanpa hari tetap tetap ditampilkan supaya tidak ada
-                donghua yang hilang dari Jadwal. */}
-            {donghuaAcak.map((d) => (
-              <DonghuaCard key={`acak-${d.id}`} row={d} dayLabel="Tanpa hari" />
-            ))}
-          </div>
-        )
-      ) : tab === "anime" ? (
-        loading ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">Memuat jadwal…</p>
-        ) : animeTotal === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            Belum ada jadwal rilis yang tersedia
-          </p>
-        ) : list.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            Tidak ada anime yang tayang hari {DAYS_ID[day]}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {(list as (AiringItem & { custom?: boolean })[]).map((a) => (
-              <button
-                key={`${a.id}-${a.episode}`}
-                onClick={() =>
-                  navigate(
-                    user
-                      ? `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}${a.custom ? "&donghua=1" : ""}`
-                      : "/auth",
-                  )
-                }
-                className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
-              >
-                {a.image ? (
-                  <img
-                    src={a.image}
-                    alt=""
-                    className="h-16 w-11 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="h-16 w-11 shrink-0 rounded-lg bg-white/5" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{a.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {a.custom
-                      ? `Anime tambahan — ${a.day}${a.time ? `, ${a.time} WIB` : ""}`
-                      : `Episode ${a.episode} — ${a.day}, ${a.time} WIB`}
-                  </p>
-                  {!a.custom && a.airingAt > 0 && (
-                    <p className="text-[11px] text-foreground/70">{countdown(a.airingAt)}</p>
-                  )}
-                </div>
-                <Clock className="size-5 shrink-0 text-muted-foreground/70" />
-              </button>
-            ))}
-          </div>
-        )
-      ) : comicLoading ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">Memuat jadwal…</p>
-      ) : totalShown === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          Belum ada jadwal {tab} — cek lagi nanti
-        </p>
-      ) : (list as ComicSlot[]).length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          Tidak ada chapter {tab} yang diperkirakan hari {DAYS_ID[day]}
+      {loading ? (
+        <div className="mb-2 flex gap-2.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-44 w-28 shrink-0 overflow-hidden rounded-xl bg-card"
+            >
+              <div className="skeleton h-full w-full" />
+            </div>
+          ))}
+        </div>
+      ) : list.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">
+          Tidak ada jadwal{" "}
+          {tab === "anime"
+            ? "hari ini"
+            : tab === "donghua"
+              ? "pada hari ini"
+              : "dalam minggu ini"}.
         </p>
       ) : (
-        <div className="space-y-2">
-          {(list as ComicSlot[]).map((c) => (
+        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-2">
+          {list.map((item, i) => (
             <button
-              key={`${c.slug}-${c.nextChapter}`}
-              onClick={() => navigate(`/manga?komik=${encodeURIComponent(c.slug)}`)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-xl border bg-secondary/30 p-2.5 text-left transition",
-                tab === "manga"
-                  ? "border-border/70 hover:border-sky-400/60"
-                  : "border-border/70 hover:border-primary/60",
-              )}
+              key={`${item.id}-${item.episode ?? item.slug}`}
+              onClick={() => {
+                if (tab === "anime") {
+                  navigate(
+                    `/nonton?anime=${encodeURIComponent(item.id)}&ep=${encodeURIComponent(`${item.id}__ep${item.episode}`)}&judul=${encodeURIComponent(item.title)}`,
+                  );
+                } else if (tab === "donghua") {
+                  navigate(
+                    `/nonton?anime=${encodeURIComponent(item.id)}&ep=${encodeURIComponent(`sanka__${item.id}__ep${item.episode ?? 1}`)}&judul=${encodeURIComponent(item.title)}&donghua=1`,
+                  );
+                }
+              }}
+              className="w-28 shrink-0 text-left"
             >
-              <img src={c.image} alt="" className="h-16 w-11 shrink-0 rounded-lg object-cover" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{c.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {c.nextLabel} — {DAYS_ID[day]}, {c.time} WIB
-                </p>
-                <p className="text-[11px] text-foreground/70">{countdown(c.predictedMs)}</p>
+              <div className="relative">
+                <div className="aspect-[2/3] overflow-hidden rounded-xl bg-black">
+                  <img
+                    src={item.image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                {item.episode ? (
+                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    Ep {item.episode}
+                  </span>
+                ) : null}
+                {item.estimated && (
+                  <span className="absolute right-1.5 top-1.5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
+                    Estimasi
+                  </span>
+                )}
+                {/* badge duplikat */}
+                {dupCounts[`${item.id}-${item.episode}`] > 1 && (
+                  <span className="absolute -right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                    {dupCounts[`${item.id}-${item.episode}`]}
+                  </span>
+                )}
               </div>
-              <Clock className="size-5 shrink-0 text-muted-foreground/70" />
+              <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
+                {item.title}
+              </p>
+              {item.time && (
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  {item.time}
+                </p>
+              )}
             </button>
           ))}
         </div>
       )}
 
-      {tab !== "anime" && tab !== "donghua" && (
-        <p className="mt-4 text-center text-[10px] text-muted-foreground">
-          Estimasi, bukan jadwal resmi — chapter bisa saja terlambat.
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** Satu baris jadwal donghua; dipisah supaya daftar hari dan daftar
-    "tanpa hari" punya tampilan yang sama. */
-function DonghuaCard({ row, dayLabel }: { row: DonghuaRow; dayLabel: string }) {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  return (
-    <button
-      onClick={() =>
-        navigate(
-          user
-            ? `/nonton?anime=${encodeURIComponent(row.id)}&judul=${encodeURIComponent(row.title ?? "")}&donghua=1`
-            : "/auth",
-        )
-      }
-      className="flex w-full items-center gap-3 rounded-xl border border-primary/40 bg-secondary/30 p-2.5 text-left transition hover:border-primary/70"
-    >
-      {row.image ? (
-        <img
-          src={row.image}
-          alt=""
-          className="h-16 w-11 shrink-0 rounded-lg object-cover"
-        />
-      ) : (
-        <div className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-black/40">
-          <Sparkles className="size-4 text-primary/70" />
+      {/* tab show all + footer small */}
+      {list.length > 0 && (
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            onClick={() => setTab(tab === "anime" ? "anime" : "anime")}
+            className="text-[11px] text-primary hover:underline"
+          >
+            Lihat semua
+          </button>
+          <button
+            onClick={() => {
+              const t = document.querySelector(".thin-scroll") as HTMLElement | null;
+              t?.scrollTo({ left: 0, behavior: "smooth" });
+            }}
+            className="text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            Kembali ke atas
+          </button>
         </div>
       )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{row.title}</p>
-        <p className="text-xs text-muted-foreground">
-          {row.episode ? `Sampai episode ${row.episode}` : dayLabel}
-          {row.status ? ` • ${row.status}` : ""}
-        </p>
-      </div>
-      <Sparkles className="size-5 shrink-0 text-primary/80" />
-    </button>
-  );
-}
 
-function countdown(ts: number) {
-  const diff = ts - Date.now();
-  if (diff <= 0) return "Kemungkinan sudah rilis";
-  const d = Math.floor(diff / 86_400_000);
-  const h = Math.floor((diff % 86_400_000) / 3_600_000);
-  if (d > 0) return `${d} hari ${h} jam lagi`;
-  if (h > 0) return `${h} jam lagi`;
-  const m = Math.floor((diff % 3_600_000) / 60_000);
-  if (m > 0) return `${m} menit lagi`;
-  return `${Math.floor((diff % 60_000) / 1000)} detik lagi`;
+      <p className="mt-4 text-[11px] text-zinc-500 text-center">
+        Jadwal rilis hanya menampilkan judul yang sudah ada di database — tidak
+        semua episode hari ini.
+      </p>
+    </div>
+  );
 }
