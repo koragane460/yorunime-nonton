@@ -229,8 +229,17 @@ function HomeContent() {
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-const [showMusic, setShowMusic] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);  const [showMusic, setShowMusic] = useState(false);
+  // Link pemutar musik rahasia disuntikkan ke window supaya layar pencarian
+  // dan podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
+  useEffect(() => {
+    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
+    window.__yn_openMusic = () => setShowMusic((v) => !v);
+    return () => {
+      // @ts-expect-error
+      window.__yn_openMusic = undefined;
+    };
+  }, []);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
   // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
   const [catalog, setCatalog] = useState<{
@@ -1228,18 +1237,7 @@ function SearchScreen(/* @ts-expect-error - dibuat manual tanpa compile, hanya j
   initialGenre?: string | null;
   onOpenMusic: () => void;
 }) {
-  useHideNavOnMount();
-  // Link pemutar musik rahasia disuntikkan supaya podum leaderboard (yang jadi
-  // tetangga layar ini di z-index) bisa membukanya lewat sandi y2zLo4V.
-  useEffect(() => {
-    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
-    window.__yn_openMusic = onOpenMusic;
-    return () => {
-      // @ts-expect-error
-      window.__yn_openMusic = undefined;
-    };
-  }, [onOpenMusic]);
-  const searchAnime = useAction(api.anime.animeSearch);
+  useHideNavOnMount();    const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadGenres = useAction(api.anime.animeByGenres);
@@ -1253,16 +1251,7 @@ function SearchScreen(/* @ts-expect-error - dibuat manual tanpa compile, hanya j
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   // Multi-select: kumpulan NAMA genre yang dipilih (irisannya dihitung server).
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
-  // Link pemutar musik rahasia disuntikkan bila search screen dibuka dari
-  // layar Home (satu-satunya tempat yang memanggil onOpenMusic).
-  useEffect(() => {
-    // @ts-expect-error - hanya di-set di Home, bukan konstruktor browser.
-    window.__yn_openMusic = onOpenMusic;
-    return () => {
-      // @ts-expect-error
-      window.__yn_openMusic = undefined;
-    };
-  }, [onOpenMusic]);
+
   const [adult, setAdult] = useState(false);
   const [adultUnlocked, setAdultUnlocked] = useState(false);
   // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
