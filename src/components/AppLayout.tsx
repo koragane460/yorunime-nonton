@@ -638,10 +638,6 @@ function BottomNav({
   const [switcher, setSwitcher] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
-  const DlStats = useQuery(api.downloads.downloadStats, {});
-  const dlTotal = DlStats?.done ?? 0;
-  // badge hari ini diganti dari rute Jadwal nanti.
-  const animeTotalForBadge = 0;
   useEffect(() => {
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -654,30 +650,34 @@ function BottomNav({
   }, [location.pathname]);
 
   if (overlay) return null;
-  const items = [
-    { path: "/home", label: "Home", icon: HomeIcon, iconFill: HomeIconFill },    { path: "/jadwal",
+  const items: {
+    path: string;
+    label: string;
+    icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+    /** Varian terisi untuk keadaan aktif — kebiasaan iOS: ikon memadat
+     *  saat tab terpilih, bukan cuma berganti warna. */
+    iconFill?: ComponentType<{ className?: string; strokeWidth?: number }>;
+    panel?: Exclude<TopPanel, null>;
+    dim?: boolean;
+  }[] = [
+    { path: "/home", label: "Home", icon: HomeIcon, iconFill: HomeIconFill },
+    {
+      path: "/jadwal",
       label: "Jadwal",
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
-      badge: animeTotalForBadge,
     },
-    {
-      path: "/info",
-      label: "Info",
-      icon: InfoIcon,
-      iconFill: InfoIconFill,
-    },
+    { path: "/info", label: "Info", icon: InfoIcon, iconFill: InfoIconFill },
     // Favorit: tombol Ke-4. Membuka layar Favorit (bukan fullscreen), dan di
     // paling atas layar itu ada tiga tombol Download / Paling sering /
     // Untuk kamu. Ikon bookmark kotak, bukan love/hat — ini penanda
     // "disimpan", bukan "disukai".
     {
       path: "",
-      label: "Koleksi",
+      label: "Favorit",
       icon: BookmarkIcon,
       iconFill: BookmarkIconFill,
       panel: "favorites",
-      badge: dlTotal,
     },
     {
       path: "/akun",
@@ -686,6 +686,30 @@ function BottomNav({
       iconFill: PersonIconFill,
     },
   ];
+
+  const startHold = (path: string) => {
+    fired.current = false;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      fired.current = true;
+      setSwitcher(true);
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, 550);
+    // Prevent default supaya browser tidak_NS_treat sebagai klik ganda.
+    void path;
+  };
+  const cancelHold = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  const onClickItem = (path: string) => {
+    if (fired.current) {
+      fired.current = false;
+      cancelHold();
+      return;
+    }
+    navigate(path);
+  };
 
   return (
     <>
@@ -736,10 +760,7 @@ function BottomNav({
           </div>
         </>
       )}
-      {/* Navbar full width: 5 tombol bertuliskan (Home, Jadwal, Info, Koleksi, Akun).
-          Setiap sel punya ikon iPhone di atas, teks di tengah, dan badge kecil di
-          kanan kalau ada. Tombol yang aktif menerima garis tipis di atasnya +
-          ikon terisi (gaya iOS: ikon memadat saat tab terpilih). */}
+      {/* Navbar full width: 5 tombol (Home, Jadwal, Info, Favorit, Akun). */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
         <div className="mx-auto grid w-full grid-cols-5 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
@@ -750,7 +771,7 @@ function BottomNav({
               ? navPanel === it.panel
               : // Garis penanda aktif: cuma SATU tombol yang boleh
                 // menampilkan garis. Selama layar panel terbuka, tombol
-                // rute dianggap tidak aktif — kalau tidak, Koleksi dan
+                // rute dianggap tidak aktif — kalau tidak, Favorit dan
                 // (mis.) Home sama-sama menampilkan garisnya.
                 navPanel
                 ? false
@@ -760,64 +781,42 @@ function BottomNav({
             const isHome = base === "/home";
             // Saat aktif: pakai varian fill kalau tersedia (gaya iOS).
             const Icon = active && it.iconFill ? it.iconFill : it.icon;
-            const badge = it.badge ?? null;
             return (
               <button
                 key={it.path || `panel-${it.label}`}
+                onPointerDown={() => (isHome ? startHold(it.path) : undefined)}
+                onPointerUp={cancelHold}
+                onPointerLeave={cancelHold}
+                onPointerCancel={cancelHold}
+                onContextMenu={(e) => isHome && e.preventDefault()}
                 onClick={() => {
-                  // Tekan lama di Home (hold ~550ms) membuka pilihan Manga/Manhwa.
-                  if (isHome) {
-                    if (fired.current) {
-                      fired.current = false;
-                      if (timer.current) clearTimeout(timer.current);
-                      return;
-                    }
-                    fired.current = true;
-                    if (timer.current) clearTimeout(timer.current);
-                    timer.current = setTimeout(() => {
-                      if (fired.current) {
-                        fired.current = false;
-                        setSwitcher(true);
-                        if (navigator.vibrate) navigator.vibrate(12);
-                      }
-                    }, 550);
-                    return;
-                  }
                   // Tombol panel tidak punya rute: dia membuka layar penuh
                   // yang dirender AppLayout (bukan di sini — lihat catatan
                   // pada state navPanel).
                   if (it.panel) {
+                    // Tekan lagi sambil masih terbuka → tutup (pengganti
+                    // tombol Kembali yang sudah dihapus dari layar Favorit).
                     onOpenPanel(navPanel === it.panel ? null : it.panel);
                     return;
                   }
-                  navigate(it.path);
-                }}
-                onPointerUp={() => {
-                  if (isHome && timer.current) {
-                    clearTimeout(timer.current);
-                    timer.current = null;
-                  }
+                  onClickItem(it.path);
                 }}
                 aria-current={active ? "page" : undefined}
                 aria-label={it.label}
                 title={
-                  it.badge != null && it.path === "/jadwal"
-                    ? `Jadwal (${it.badge} item)`
-                    : it.badge != null && it.panel === "favorites"
-                      ? `Koleksi (${it.badge} unduhan)`
-                      : it.label
+                  it.dim
+                    ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
+                    : it.label
                 }
-                className={cn(
-                  // Nav item teks: ikon di atas, label di tengah, badge di kanan.
-                  "nav-item relative flex flex-col items-center justify-center gap-0.5 py-3.5",
-                )}
+                className="nav-item relative flex flex-col items-center justify-center py-3.5"
               >
-                {/* Ikon iPhone — ukuran kecil agar tidak memakan sel, tapi tetap
-                    terbaca di antara teks. */}
                 <Icon
                   strokeWidth={1.7}
                   className={cn(
-                    "size-4",
+                    // 5 kolom: ikon dibuat besar supaya jelas dan mudah
+                    // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
+                    // supaya tidak terlihat tebel dan berat.
+                    "size-[25px] md:size-[28px]",
                     active
                       ? "text-primary"
                       : it.dim
@@ -825,39 +824,6 @@ function BottomNav({
                         : "text-zinc-500",
                   )}
                 />
-                {/* Label teks — ditampilkan selalu, bukan hanya aktif. */}
-                <span
-                  className={cn(
-                    "text-[10px] font-semibold leading-none tracking-tight",
-                    active
-                      ? "text-primary"
-                      : it.dim
-                        ? "text-zinc-700"
-                        : "text-zinc-500",
-                  )}
-                >
-                  {it.label}
-                </span>
-                {badge != null && (
-                  <span
-                    className={cn(
-                      "absolute right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-zinc-800 text-zinc-400",
-                    )}
-                  >
-                    {badge > 99 ? "99+" : String(badge)}
-                  </span>
-                )}
-                {/* Garis penanda halaman aktif — tipis di ATAS tombol, bukan di bawah,
-                    supaya tidak menempel dengan kartu di atasnya. */}
-                {active && (
-                  <span
-                    className="absolute left-1/2 top-0 h-px w-8 -translate-x-1/2 rounded-b-sm bg-primary"
-                    aria-hidden
-                  />
-                )}
               </button>
             );
           })}

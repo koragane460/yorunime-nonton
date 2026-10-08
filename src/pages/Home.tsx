@@ -90,16 +90,6 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
-  // Link pemutar musik rahasia disuntikkan ke window supaya podum & layar
-  // pencarian bisa membukanya lewat onPointerDown sandi tanpa navigasi.
-  useEffect(() => {
-    // @ts-expect-error - hanya dimuat pada sesi aplikasi, bukan properti browser asli.
-    window.__yn_openMusic = () => setShowMusic((v) => !v);
-    return () => {
-      // @ts-expect-error
-      window.__yn_openMusic = undefined;
-    };
-  }, []);
   return (
     <AppLayout>
       <HomeContent />
@@ -229,27 +219,8 @@ function HomeContent() {
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);  const [showMusic, setShowMusic] = useState(false);
-  // Link pemutar musik rahasia disuntikkan ke window supaya layar pencarian dan
-  // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
-  useEffect(() => {
-    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
-    window.__yn_openMusic = () => setShowMusic((v) => !v);
-    return () => {
-      // @ts-expect-error
-      window.__yn_openMusic = undefined;
-    };
-  }, []);
-  // Link pemutar musik rahasia disuntikkan ke window supaya layar pencarian
-  // dan podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
-  useEffect(() => {
-    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
-    window.__yn_openMusic = () => setShowMusic((v) => !v);
-    return () => {
-      // @ts-expect-error
-      window.__yn_openMusic = undefined;
-    };
-  }, []);
+  const [showSearch, setShowSearch] = useState(false);
+const [showMusic, setShowMusic] = useState(false);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
   // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
   const [catalog, setCatalog] = useState<{
@@ -1003,7 +974,7 @@ function GlobalChatPreview() {
 
 // ------------------------------------------------------ leaderboard ----
 
-function LeaderEntryRow(/* @ts-expect-error - dibuat manual tanpa compile, hanya jadi dokumen. */{
+function LeaderEntryRow({
   rank,
   username,
   image,
@@ -1034,7 +1005,7 @@ function LeaderEntryRow(/* @ts-expect-error - dibuat manual tanpa compile, hanya
   );
 }
 
-function PodiumCard(/* @ts-expect-error - dibuat manual tanpa compile, hanya jadi dokumen. */{
+function PodiumCard({
   rank,
   username,
   image,
@@ -1065,19 +1036,6 @@ function PodiumCard(/* @ts-expect-error - dibuat manual tanpa compile, hanya jad
       >
         {rank}
       </div>
-      {/* Slot kode rahasia di pojok podum: tidak begitu terlihat, tapi
-          kalau ditekan langsung buka aplikasi pemutar musik. */}
-      <span className="sr-only pointer-events-auto"
-        onPointerDown={(e) => {
-          if (!isMusicSecret(String(username || ""))) return;
-          e.stopPropagation();
-          const host = e.currentTarget.closest(".screen-enter");
-          if (host) {
-            const onOpenMusic: (() => void) | undefined = (window as any).__yn_openMusic;
-            onOpenMusic?.();
-          }
-        }}
-      />
     </div>
   );
 }
@@ -1231,16 +1189,7 @@ function HomeLeaderboardPreview() {
 
 // ------------------------------------------------------ search screen ----
 
-/* Semua layar fullscreen: navigasi bawah & panel akun hilang sampai layar
-    ditutup. `useHideNavOnMount()` sudah menangani itu di tiap layarnya. */
-function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
-  onClose: () => void;
-  onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
-  initialGenre?: string | null;
-  onOpenMusic: () => void;
-}) {
-  useHideNavOnMount();
-  const searchAnime = useAction(api.anime.animeSearch);
+function SearchScreen({
   onClose,
   onPick,
   initialGenre,
@@ -1254,7 +1203,8 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   initialGenre?: string | null;
   onOpenMusic: () => void;
 }) {
-  useHideNavOnMount();    const searchAnime = useAction(api.anime.animeSearch);
+  useHideNavOnMount();
+  const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadGenres = useAction(api.anime.animeByGenres);
@@ -1268,7 +1218,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   // Multi-select: kumpulan NAMA genre yang dipilih (irisannya dihitung server).
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
-
   const [adult, setAdult] = useState(false);
   const [adultUnlocked, setAdultUnlocked] = useState(false);
   // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
@@ -1357,6 +1306,12 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
       setResults(null);
       return;
     }
+    // Kode rahasia: mengetik 110219941 lalu menekan Cari membuka aplikasi
+    // pemutar musik penuh.
+    if (isMusicSecret(query)) {
+      onOpenMusic();
+      return;
+    }
     setSearching(true);
     try {
       // Pencarian mencakup anime DAN donghua: dua katalog AniList diambil
@@ -1405,16 +1360,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
           </button>
           <h1 className="text-lg font-bold">Cari anime &amp; donghua</h1>
         </div>
-
-        {/* Sandi pemutar musik: diketik di input pencarian lalu tekan Cari
-            → layar ini tertutup, lalu layar pemutar musik dibuka. Sandinya ada
-            di `isMusicSecret` di `src/lib/musicSecret` dan hanya dipakai lewat
-            input teks, bukan lewat tombol. */}
-        {isMusicSecret(query) && (
-          <p className="mt-3 rounded-xl bg-emerald-900/40 px-3 py-2 text-xs text-emerald-300">
-            Kode musik aktif — buka pemutar?
-          </p>
-        )}
 
         {/* Input + tombol Cari */}
         <div className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
@@ -2440,15 +2385,6 @@ function AnimeDetailScreen({
  * Kemiringan dipakai di elemen luar, isinya dikembalikan ke lurus supaya
  * teks tidak ikut miring.
  */
-
-/** Link musik rahasia yang disuntik layar pencarian saat layarnya dibuka. */
-export declare global {
-  interface Window {
-    /** Dipanggil dari layar pencarian bila kata kunci musik rahasia diketik.
-        Sandi-nya ada di `isMusicSecret` di `src/lib/musicSecret`. */
-    __yn_openMusic?: () => void;
-  }
-}
 /**
  * Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
  * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999

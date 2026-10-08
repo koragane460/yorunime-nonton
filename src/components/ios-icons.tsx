@@ -261,9 +261,9 @@ export function TrophyIcon(props: IconProps) {
 export function SwipeIcon(props: IconProps) {
   return (
     <S {...props}>
-      <path d="M7.9 8.3 4.7 12l3.2 3.7" />
-      <path d="M4.8 12h14.4" />
-      <path d="M16.1 8.3 19.3 12l-3.2 3.7" />
+      <path d="M7.5 8.4 4 12l3.5 3.6" />
+      <path d="M4.4 12h15.2" />
+      <path d="M16.5 8.4 20 12l-3.5 3.6" />
     </S>
   );
 }
