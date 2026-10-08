@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import {
   BookOpen,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clock,
   PanelsTopLeft,
@@ -57,6 +59,23 @@ type ComicSlot = {
   predictedMs: number;
   day: string;
   time: string;
+};
+
+// Tipe gabungan untuk semua tab: tiap cabang (anime/donghua/comic) punya
+// field berbeda, jadi dinormalisasi ke satu tipe longgar supaya render kartu,
+// deteksi duplikat, dan timer hitung mundur bisa mengakses field apa pun
+// tanpa error union.
+type ScheduleItem = {
+  id?: string;
+  slug?: string;
+  title: string;
+  image: string;
+  episode?: number;
+  airingAt?: number;
+  predictedMs?: number;
+  estimated?: boolean;
+  time?: string;
+  day?: string;
 };
 
 type Tab = "anime" | "manga" | "manhwa" | "donghua";
@@ -224,7 +243,7 @@ function JadwalContent() {
   ];
   const active = tabs.find((t) => t.key === tab) ?? tabs[0];
   const ActiveIcon = active.icon;
-  const list =
+  const list: ScheduleItem[] =
     tab === "anime"
       ? [
           ...(sched[DAYS_ID[day]] ?? []),
@@ -346,7 +365,7 @@ function JadwalContent() {
                 <p className="text-[11px] text-muted-foreground">
                   tayang dalam {hrs > 0 ? `${hrs}j` : ""}
                   {mins > 0 ? `${mins % 60}m` : ""}
-                  {sec && hrs === 0 ? `${secs}s` : ""}
+                  {secs > 0 && hrs === 0 ? `${secs}s` : ""}
                   {list[0].episode ? ` · Ep ${list[0].episode}` : ""}
                 </p>
               </>
@@ -461,12 +480,11 @@ function JadwalContent() {
                   </span>
                 )}
                 {item.id != null &&
-                  (dupCounts[`${item.id}-${item.episode ?? 0}`] > 1) && (
+                  (dupCounts[`${item.id}-${item.episode ?? 0}`] ?? 0) > 1 && (
                     <span className="absolute -right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
-                      {dupCounts[`${item.id}-${item.episode ?? 0}]`}
+                      {dupCounts[`${item.id}-${item.episode ?? 0}`]}
                     </span>
-                  )
-                }
+                  )}
               </div>
               <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                 {item.title}

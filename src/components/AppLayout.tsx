@@ -3,10 +3,6 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import {
   DownloadsPanel,
   MostWatchedPanel,
   ForYouPanel,
@@ -643,6 +639,8 @@ function TopPanelHost({
 }
 
 function panelTitle(p: TopPanel): string {
+  // TopPanel termasuk null (state tertutup) — jangan pakai null sebagai key.
+  if (!p) return "";
   return {
     downloads: "Download",
     most: "Paling sering",
