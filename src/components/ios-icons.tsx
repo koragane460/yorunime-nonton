@@ -88,13 +88,12 @@ export function CalendarIconFill(props: IconProps) {
   );
 }
 
-/** Lingkaran info dengan huruf "i" — proporsi SF info.circle. */
+/** Jam analog kecil dengan jarum pendek + panjang — ikon History/Clock. */
 export function InfoIcon(props: IconProps) {
   return (
     <S {...props}>
-      <circle cx="12" cy="12" r="8.8" />
-      <path d="M12 11.2v5" />
-      <path d="M12 7.9h.01" />
+      <circle cx="12" cy="12" r="9.2" />
+      <path d="M12 7v5l3 2.8" />
     </S>
   );
 }
@@ -102,12 +101,8 @@ export function InfoIcon(props: IconProps) {
 export function InfoIconFill(props: IconProps) {
   return (
     <S {...props}>
-      <path
-        fill="currentColor"
-        stroke="none"
-        fillRule="evenodd"
-        d="M12 3.2c4.86 0 8.8 3.94 8.8 8.8s-3.94 8.8-8.8 8.8-8.8-3.94-8.8-8.8S7.14 3.2 12 3.2zm-1.15 7.7h2.3a.95.95 0 0 1 .95.95v4.35a.95.95 0 0 1-.95.95h-2.3a.95.95 0 0 1-.95-.95v-4.35a.95.95 0 0 1 .95-.95zM12 7.05a1.35 1.35 0 1 0 0 2.7 1.35 1.35 0 0 0 0-2.7z"
-      />
+      <path fill="currentColor" stroke="none" fillRule="evenodd" d="M12 2.8a9.2 9.2 0 1 0 0 18.4A9.2 9.2 0 0 0 12 2.8z" />
+      <path fill="currentColor" stroke="none" d="M12 7v5l3 2.8" />
     </S>
   );
 }

@@ -775,7 +775,7 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    { path: "/info", label: "Info", icon: InfoIcon, iconFill: InfoIconFill },
+    { path: "/info", label: "History", icon: InfoIcon, iconFill: InfoIconFill },
     // Favorit: tombol Ke-4. Membuka layar Favorit (bukan fullscreen), dan di
     // paling atas layar itu ada tiga tombol Download / Paling sering /
     // Untuk kamu. Ikon bookmark kotak, bukan love/hat — ini penanda

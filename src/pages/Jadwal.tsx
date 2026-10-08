@@ -464,8 +464,9 @@ function JadwalContent() {
                   (dupCounts[`${item.id}-${item.episode ?? 0}`] > 1) && (
                     <span className="absolute -right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
                       {dupCounts[`${item.id}-${item.episode ?? 0}]`}
-                    )
-                  )}
+                    </span>
+                  )
+                }
               </div>
               <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                 {item.title}
