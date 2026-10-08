@@ -230,6 +230,16 @@ function HomeContent() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);  const [showMusic, setShowMusic] = useState(false);
+  // Link pemutar musik rahasia disuntikkan ke window supaya layar pencarian dan
+  // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
+  useEffect(() => {
+    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
+    window.__yn_openMusic = () => setShowMusic((v) => !v);
+    return () => {
+      // @ts-expect-error
+      window.__yn_openMusic = undefined;
+    };
+  }, []);
   // Link pemutar musik rahasia disuntikkan ke window supaya layar pencarian
   // dan podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {
@@ -1223,7 +1233,14 @@ function HomeLeaderboardPreview() {
 
 /* Semua layar fullscreen: navigasi bawah & panel akun hilang sampai layar
     ditutup. `useHideNavOnMount()` sudah menangani itu di tiap layarnya. */
-function SearchScreen(/* @ts-expect-error - dibuat manual tanpa compile, hanya jadi dokumen. */{
+function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
+  onClose: () => void;
+  onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
+  initialGenre?: string | null;
+  onOpenMusic: () => void;
+}) {
+  useHideNavOnMount();
+  const searchAnime = useAction(api.anime.animeSearch);
   onClose,
   onPick,
   initialGenre,
