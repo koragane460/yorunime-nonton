@@ -423,15 +423,19 @@ function JadwalContent() {
         <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-2">
           {list.map((item, i) => (
             <button
-              key={`${item.id}-${item.episode ?? item.slug}`}
+              key={`${item.id ?? item.slug}-${item.episode ?? 0}-${item.slug ?? ""}`}
               onClick={() => {
                 if (tab === "anime") {
+                  const id = String(item.id ?? "");
+                  const ep = item.episode != null ? String(item.episode) : "0";
                   navigate(
-                    `/nonton?anime=${encodeURIComponent(item.id)}&ep=${encodeURIComponent(`${item.id}__ep${item.episode}`)}&judul=${encodeURIComponent(item.title)}`,
+                    `/nonton?anime=${encodeURIComponent(id)}&ep=${encodeURIComponent(`${id}__ep${ep}`)}&judul=${encodeURIComponent(item.title ?? "")}`,
                   );
                 } else if (tab === "donghua") {
+                  const donghuaId = String(item.id ?? "");
+                  const donghuaEp = item.episode != null ? String(item.episode) : "1";
                   navigate(
-                    `/nonton?anime=${encodeURIComponent(item.id)}&ep=${encodeURIComponent(`sanka__${item.id}__ep${item.episode ?? 1}`)}&judul=${encodeURIComponent(item.title)}&donghua=1`,
+                    `/nonton?anime=${encodeURIComponent(donghuaId)}&ep=${encodeURIComponent(`sanka__${donghuaId}__ep${donghuaEp}`)}&judul=${encodeURIComponent(item.title ?? "")}&donghua=1`,
                   );
                 }
               }}
@@ -445,22 +449,23 @@ function JadwalContent() {
                     className="h-full w-full object-cover"
                   />
                 </div>
-                {item.episode ? (
-                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
-                    Ep {item.episode}
-                  </span>
-                ) : null}
+                {typeof item.episode === "number" &&
+                  item.episode !== 0 && (
+                    <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      Ep {item.episode}
+                    </span>
+                  )}
                 {item.estimated && (
                   <span className="absolute right-1.5 top-1.5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
                     Estimasi
                   </span>
                 )}
-                {/* badge duplikat */}
-                {dupCounts[`${item.id}-${item.episode}`] > 1 && (
-                  <span className="absolute -right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
-                    {dupCounts[`${item.id}-${item.episode}`]}
-                  </span>
-                )}
+                {item.id != null &&
+                  (dupCounts[`${item.id}-${item.episode ?? 0}`] > 1) && (
+                    <span className="absolute -right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                      {dupCounts[`${item.id}-${item.episode ?? 0}]`}
+                    )
+                  )}
               </div>
               <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                 {item.title}
