@@ -1899,89 +1899,6 @@ function synopsisPreview(text: string, open: boolean) {
   return `${(sp > 120 ? text.slice(0, sp) : text.slice(0, cut)).trimEnd()}…`;
 }
 
-type CharRow = {
-  id: string;
-  name: string;
-  image: string;
-  meta: string;
-  bio: string;
-};
-
-/**
- * Bagian "Character" di layar detail (anime & donghua).
- *
- * Judul section di kiri atas, di bawahnya deretan kotak yang bisa digeser
- * ke kanan. Tiap kotak: foto persegi di kiri, detail karakter digabung di
- * kanan (tanpa label — peran, umur, VA, bio) — radius kecil + border asli.
- * Karakter diurutkan paling ikonik dulu (sudah dari AniList FAVOURITES_DESC).
- */
-function CharacterSection({ idMal, title }: { idMal?: string; title?: string }) {
-  // animeCharacters adalah ACTION (keluar ke AniList), jadi tidak bisa dipanggil
-  // lewat useQuery — fetch sekali saat idMal/title berubah, hasilnya di state.
-  const fetchChars = useAction(api.anime.animeCharacters);
-  const [data, setData] = useState<CharRow[] | undefined>(undefined);
-  const key = idMal ?? title ?? "";
-  useEffect(() => {
-    if (!key) return;
-    let alive = true;
-    setData(undefined);
-    void fetchChars(idMal ? { idMal } : { title: title! })
-      .then((rows) => {
-        if (alive) setData(rows as CharRow[]);
-      })
-      .catch(() => {
-        if (alive) setData([]);
-      });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  const chars = (data ?? []).filter((c) => c?.name && c?.image);
-  if (data !== undefined && chars.length === 0) return null;
-  return (
-    <section className="mt-5">
-      <h2 className="mb-2 text-left text-base font-bold text-white">Character</h2>
-      {data === undefined ? (
-        <div className="flex gap-2">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton h-24 w-64 shrink-0 rounded-lg" />
-          ))}
-        </div>
-      ) : (
-        <div className="thin-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-          {chars.map((c) => (
-            <div
-              key={c.id}
-              className="flex w-64 shrink-0 overflow-hidden rounded-lg border border-border bg-secondary/40"
-            >
-              <img
-                src={c.image}
-                alt={c.name}
-                loading="lazy"
-                className="size-24 shrink-0 bg-black object-cover"
-              />
-              <div className="min-w-0 flex-1 p-2">
-                <p className="truncate text-[12px] font-bold text-white">{c.name}</p>
-                {c.meta && (
-                  <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">
-                    {c.meta}
-                  </p>
-                )}
-                {c.bio && (
-                  <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-white/70">
-                    {c.bio}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 function AnimeDetailScreen({
   animeId,
   animeTitle,
@@ -2218,11 +2135,6 @@ function AnimeDetailScreen({
             {fmtFavoritCount(favCount ?? 0)}
           </p>
 
-          {/* Character: kotak berdampingan yang bisa digeser ke kanan. */}
-          <CharacterSection
-            idMal={detail.id != null ? String(detail.id) : undefined}
-            title={detail.title}
-          />
 
           {/* Panel info developer: data teknis untuk tools konten. */}
           {devInfoOpen && devAccess?.level === "dev" && (
@@ -2733,8 +2645,6 @@ function DonghuaDetailScreen({
             </SkewButton>
           </div>
 
-          {/* Character: foto + detail gabungan dari AniList (by judul). */}
-          <CharacterSection title={detail.title} />
 
           <SectionTitle>Sinopsis</SectionTitle>
           <div

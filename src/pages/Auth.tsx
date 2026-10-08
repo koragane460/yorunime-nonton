@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  consumeFirebaseRedirect,
-  firebaseReady,
-  getActiveFirebaseIdToken,
-  getFirebaseIdToken,
-  signInWithGoogleFirebase,
-} from "@/lib/firebase";
 import logo from "@/assets/logo.svg";
 import { ArrowRight, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,29 +8,6 @@ import { resolveRedirectAfterAuth } from "@/lib/authRedirect";
 
 interface AuthProps {
   redirectAfterAuth?: string;
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4 shrink-0" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A11 11 0 0 0 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38Z"
-      />
-    </svg>
-  );
 }
 
 type Mode = "main" | "password" | "otp";
@@ -66,59 +36,8 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     if (!authLoading && isAuthenticated) navigate(redirect, { replace: true });
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
-  // Balik dari redirect Google (cadangan kalau popup diblokir).
-  useEffect(() => {
-    if (isLoading || isAuthenticated || !firebaseReady) return;
-    let cancelled = false;
-    void (async () => {
-      const cameBack = await consumeFirebaseRedirect();
-      if (!cameBack || cancelled) return;
-      const idToken = await getActiveFirebaseIdToken();
-      if (!idToken || cancelled) return;
-      setIsLoading(true);
-      try {
-        await signIn("firebase", { idToken });
-        navigate(redirect, { replace: true });
-      } catch {
-        setError("Gagal masuk dengan Google. Coba lagi.");
-        setIsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, isAuthenticated]);
 
-  // ------------------------------------------------------------- Google ----
-  const handleGoogle = async () => {
-    setError(null);
-    if (!firebaseReady) {
-      setError(
-        "Firebase belum dikonfigurasi. Isi dulu VITE_FIREBASE_API_KEY, AUTH_DOMAIN, dan PROJECT_ID di tab Keys.",
-      );
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const fbUser = await signInWithGoogleFirebase();
-      // Popup Firebase yang menangani pilih akun & izinnya — tidak ada layar
-      // tambahan dari kita, dan user tetap di halaman YoruNime.
-      if (!fbUser) {
-        // Popup gagal dibuka: browser sudah diarahkan ke halaman Google.
-        setIsLoading(false);
-        return;
-      }
-      const idToken = await getFirebaseIdToken(fbUser);
-      if (!idToken) throw new Error("Gagal mengambil token Firebase");
-      await signIn("firebase", { idToken });
-      navigate(redirect, { replace: true });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal masuk dengan Google.");
-      setIsLoading(false);
-    }
-  };
-
+  
   // ------------------------------------------------- Email + password ----
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim());
   const passOk = password.length >= 8;
@@ -255,26 +174,6 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
         <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-sm">
           {mode === "main" && (
             <div className="space-y-2.5">
-              <button
-                onClick={handleGoogle}
-                disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-white/15 bg-white px-4 py-3 text-sm font-bold text-zinc-900 transition hover:bg-zinc-100 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <GoogleIcon />
-                )}
-                Lanjutkan dengan Google
-              </button>
-
-              <div className="flex items-center gap-3 py-0.5">
-                <span className="h-px flex-1 bg-white/10" />
-                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-                  atau
-                </span>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
 
               <button
                 onClick={() => {
@@ -295,12 +194,6 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 Kirim kode ke email
               </button>
 
-              {!firebaseReady && (
-                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[10px] leading-relaxed text-amber-300/90">
-                  Login Google belum aktif. Lengkapi credential Firebase di tab
-                  Keys dulu.
-                </p>
-              )}
             </div>
           )}
 

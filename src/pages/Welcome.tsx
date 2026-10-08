@@ -672,7 +672,6 @@ function WelcomeFlow() {
                         >
                           <p className="flex items-center gap-1.5 text-[11px] font-semibold">
                             {d.type === "google" ? (
-                              <GoogleIcon />
                             ) : (
                               <Mail className="size-3.5 text-primary" />
                             )}
@@ -922,7 +921,6 @@ function WelcomeFlow() {
                 {loggingIn ? (
                   <Loader2 className="size-5 animate-spin" />
                 ) : (
-                  <GoogleIcon />
                 )}
                 Login dengan Google
               </Button>
@@ -1008,7 +1006,6 @@ function WelcomeFlow() {
                   >
                     <div className="border-b border-border px-5 py-4">
                       <p className="flex items-center gap-2 text-sm font-bold">
-                        <GoogleIcon /> Pilih akun
                       </p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                         untuk melanjutkan ke YoruNime
