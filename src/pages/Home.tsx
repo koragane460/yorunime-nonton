@@ -219,8 +219,17 @@ function HomeContent() {
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-const [showMusic, setShowMusic] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);  const [showMusic, setShowMusic] = useState(false);
+  // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
+  // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
+  useEffect(() => {
+    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
+    window.__yn_openMusic = () => setShowMusic((v) => !v);
+    return () => {
+      // @ts-expect-error
+      window.__yn_openMusic = undefined;
+    };
+  }, []);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
   // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
   const [catalog, setCatalog] = useState<{
@@ -382,6 +391,17 @@ const [showMusic, setShowMusic] = useState(false);
     const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroItems.length), 6000);
     return () => clearInterval(t);
   }, [heroItems.length]);
+
+  // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
+  // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
+  useEffect(() => {
+    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
+    window.__yn_openMusic = () => setShowMusic((v) => !v);
+    return () => {
+      // @ts-expect-error
+      window.__yn_openMusic = undefined;
+    };
+  }, []);
 
   // Judul ikut disimpan: kartu dari sumber non-MAL (mis. Otakudesu) punya id
   // berupa slug, jadi tanpa judul backend tidak bisa menemukan sinopsis,
@@ -980,23 +1000,30 @@ function LeaderEntryRow({
   image,
   xp,
   suffix = "XP",
+  compact = false,
 }: {
   rank: number;
   username?: string;
   image?: string;
   xp: number;
   suffix?: string;
+  compact?: boolean;
 }) {
   return (
     /* Animasi naik: satu baris utuh (foto, username, XP) meluncur ke atas. */
     <div
-      className="lb-rise flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
+      className={cn(
+        "lb-rise flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5",
+        compact && "gap-2 py-2",
+      )}
       style={{ animationDelay: `${Math.min(rank, 14) * 45}ms` }}
     >
-      <span className="w-6 text-center text-sm font-bold text-primary">{rank}</span>
-      <Avatar src={image} seed={username} className="size-10" />
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold">{username ?? "user"}</p>
+      <span className={cn("text-center font-bold text-primary", compact ? "text-xs h-4 py-0.5" : "text-sm")}>
+        {rank}
+      </span>
+      <Avatar src={image} seed={username} className={cn("shrink-0", compact ? "size-8" : "size-10")} />
+      <div className="min-w-0 flex-1">
+        <p className={cn("truncate font-semibold", compact ? "text-xs" : "text-sm")}>{username ?? "user"}</p>
         <p className="text-xs text-muted-foreground">
           {xp.toLocaleString("id-ID")} {suffix}
         </p>
@@ -1036,6 +1063,19 @@ function PodiumCard({
       >
         {rank}
       </div>
+      {/* Slot kode rahasia di pojok podum: tidak begitu terlihat, tapi
+          kalau ditekan langsung buka aplikasi pemutar musik. */}
+      <span className="sr-only pointer-events-auto"
+        onPointerDown={(e) => {
+          if (!isMusicSecret(String(username || ""))) return;
+          e.stopPropagation();
+          const host = e.currentTarget.closest(".screen-enter");
+          if (host) {
+            const onOpenMusic: (() => void) | undefined = (window as any).__yn_openMusic;
+            onOpenMusic?.();
+          }
+        }}
+      />
     </div>
   );
 }
@@ -1189,21 +1229,23 @@ function HomeLeaderboardPreview() {
 
 // ------------------------------------------------------ search screen ----
 
-function SearchScreen({
-  onClose,
-  onPick,
-  initialGenre,
-  onOpenMusic,
-}: {
+function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   onClose: () => void;
-  // Sumber ikut diteruskan: hasil donghua punya id berupa slug Sanka, bukan MAL
-  // id. Tanpa penandanya, kartu donghua di hasil pencarian kebuka layar detail
-  // anime dan judul yang tampil jadi judul anime lain.
   onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
   initialGenre?: string | null;
   onOpenMusic: () => void;
 }) {
   useHideNavOnMount();
+  // Link pemutar musik rahasia disuntukkan supaya podum leaderboard bisa
+  // membukanya lewat sandi y2zLo4V tanpa navigasi.
+  useEffect(() => {
+    // @ts-expect-error - properti aplikasi khusus, bukan bagian dari Window baku.
+    window.__yn_openMusic = onOpenMusic;
+    return () => {
+      // @ts-expect-error
+      window.__yn_openMusic = undefined;
+    };
+  }, [onOpenMusic]);
   const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const loadGenre = useAction(api.anime.animeByGenre);
@@ -2507,7 +2549,8 @@ function DonghuaDetailScreen({
   onPlay: (epSlug: string, ep: number, title: string) => void;
   /** Buka donghua lain dari baris "Yang serupa". */
   onPickDonghua?: (slug: string) => void;
-}) {useHideNavOnMount();
+}) {
+  useHideNavOnMount();
   const getDetail = useAction(api.sanka.detail);
   const { user } = useAuth();
   const toggleFav = useMutation(api.activities.toggleFavorite);
