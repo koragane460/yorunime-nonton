@@ -1374,6 +1374,18 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quality, isFs, isPremiumNow, hdBoost, applyQuality]);
 
+  // HD aktif: setiap kali level/stream dikenal (termasuk level HLS yang datang
+  // belakangan setelah tombol HD ditekan), paksakan ke resolusi tertinggi yang
+  // boleh — inilah bagian "ningkatin kualitas" dari tombol HD.
+  useEffect(() => {
+    if (!hdBoost) return;
+    const avail = sourceType === "hls" ? levels : Object.values(srcHeights);
+    const top = avail.reduce((a, b) => (b > a ? b : a), 0);
+    if (top <= 0) return; // level belum diketahui; toggleHd sudah menerapkan cap
+    const cap = isPremiumNow ? 1080 : 720;
+    applyQuality(`${Math.min(top, cap)}p`);
+  }, [hdBoost, levels, srcHeights, sourceType, isPremiumNow, applyQuality]);
+
   // Catat history (sekali per episode)
   useEffect(() => {
     if (!user || !detailData || detailData.error || !currentEp || recorded) return;
@@ -1843,13 +1855,15 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
         {/* Filter ketajaman untuk tombol HD: unsharp mask lewat matriks 3x3.
             Kernel jumlahnya 1.0 jadi kecerahan rata-rata tidak berubah —
-            yang berbeda cuma tepi detail, tidak ada koreksi warna sama sekali. */}
+            yang berbeda cuma tepi detail, tidak ada koreksi warna sama sekali.
+            Bobot dinaikkan (2.4 / -0.35) supaya efeknya benar-benar menghilangkan
+            burem & blur, bukan cuma memberi sedikit ketajaman. */}
         <svg aria-hidden className="pointer-events-none absolute h-0 w-0">
           <filter id="yn-sharpen" colorInterpolationFilters="sRGB">
             <feConvolveMatrix
               order="3"
               preserveAlpha="true"
-              kernelMatrix="0 -0.2 0 -0.2 1.8 -0.2 0 -0.2 0"
+              kernelMatrix="0 -0.35 0 -0.35 2.4 -0.35 0 -0.35 0"
             />
           </filter>
         </svg>
@@ -2619,7 +2633,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             />
             <ToolButton
               icon={<Settings2 className="size-4" />}
-              label={quality}
+              label={hdBoost ? "HD" : quality}
               onClick={() => {
                 setQualityDraft(quality);
                 setQualityOpen(true);
@@ -2745,6 +2759,37 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       {qualityOpen && (
         <Popup onClose={cancelQuality} title="Kualitas">
           <div className="space-y-1.5">
+            {/* HD digabung ke menu Kualitas (dulu cuma tombol terpisah di
+                layar penuh): sekali tekan = resolusi tertinggi episode ini +
+                filter perjelas (hilangkan burem & blur). */}
+            <button
+              onClick={toggleHd}
+              aria-pressed={hdBoost}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
+                hdBoost
+                  ? "border-foreground/40 bg-primary/15"
+                  : "border-border hover:border-foreground/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "w-14 text-sm font-bold",
+                  hdBoost ? "text-primary" : "",
+                )}
+              >
+                HD
+              </span>
+              <span className="text-[11px] leading-snug text-muted-foreground">
+                Resolusi tertinggi episode ini + perjelas gambar (hilangkan burem
+                & blur)
+              </span>
+              {hdBoost && (
+                <span className="ml-auto text-[10px] font-bold text-primary">
+                  dipakai
+                </span>
+              )}
+            </button>
             {QUALITIES.map((q) => {
               const height = parseInt(q, 10);
               const locked = q === PREMIUM_QUALITY && !isPremium;

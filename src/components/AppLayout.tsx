@@ -780,7 +780,7 @@ function BottomNav({
     // "disimpan", bukan "disukai".
     {
       path: "",
-      label: "Favorit",
+      label: "Koleksi",
       icon: BookmarkIcon,
       iconFill: BookmarkIconFill,
       panel: "favorites",
@@ -827,7 +827,7 @@ function BottomNav({
             className="fixed inset-0 z-40"
             onClick={() => setSwitcher(false)}
           />
-          <div className="pop-enter fixed inset-x-0 bottom-[68px] z-50 mx-auto w-full max-w-2xl px-6 lg:max-w-4xl">
+          <div className="pop-enter fixed inset-x-0 bottom-[92px] z-50 mx-auto w-full max-w-2xl px-6 lg:max-w-4xl">
             <div className="overflow-hidden rounded-2xl border border-foreground/40 bg-background/95 shadow-2xl backdrop-blur">
               <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Ganti kategori
@@ -866,7 +866,9 @@ function BottomNav({
           </div>
         </>
       )}
-      {/* Navbar full width: 5 tombol (Home, Jadwal, Info, Favorit, Akun). */}
+      {/* Navbar full width: 5 tombol (Home, Jadwal, History, Koleksi, Akun).
+          Tiap tombol punya teks di BAWAH ikonnya — sesuai permintaan: Home,
+          Jadwal, History, Koleksi, Akun. Teks aktif memakai warna primary. */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
         <div className="mx-auto grid w-full grid-cols-5 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
@@ -914,7 +916,7 @@ function BottomNav({
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
                     : it.label
                 }
-                className="nav-item relative flex flex-col items-center justify-center py-3.5"
+                className="nav-item relative flex flex-col items-center justify-center pb-2 pt-2.5"
               >
                 <Icon
                   strokeWidth={1.7}
@@ -930,6 +932,20 @@ function BottomNav({
                         : "text-zinc-500",
                   )}
                 />
+                {/* Teks label di bawah ikon (Home, Jadwal, History, Koleksi,
+                    Akun). Muncul untuk SEMUA tombol; yang aktif lebih terang. */}
+                <span
+                  className={cn(
+                    "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none",
+                    active
+                      ? "font-semibold text-primary"
+                      : it.dim
+                        ? "font-medium text-zinc-700"
+                        : "font-medium text-zinc-500",
+                  )}
+                >
+                  {it.label}
+                </span>
               </button>
             );
           })}

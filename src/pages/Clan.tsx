@@ -361,10 +361,14 @@ function NoClan({
   const podium = ranked.slice(0, 3);
   // "Acak" tapi STABIL: urutannya ditentukan dari hash id, jadi tidak
   // berubah tiap render (tidak berkedip saat ada update data kecil).
-  const rest = ranked
+  // Dipakai HANYA di tab "Semua" — tab "Top clan" harus urut peringkat
+  // 1-100 (podium 1-3 di atas, sisanya 4-100), bukan acak.
+  const restRandom = ranked
     .slice(3)
     .slice()
     .sort((a: any, b: any) => hashId(a._id) - hashId(b._id));
+  const restRanked = ranked.slice(3, 100);
+  const rest = tab === "best" ? restRanked : restRandom;
   const needle = q.trim().toLowerCase();
   // Saat mencari, cari di SEMUA clan (termasuk top 3) dan podium disembunyikan.
   const pool = needle ? ranked : rest;
@@ -508,7 +512,7 @@ function NoClan({
         {needle
           ? `Hasil pencarian (${filtered.length})`
           : tab === "best"
-            ? `Peringkat 4 ke bawah (${filtered.length})`
+            ? `Peringkat 4-100 (${filtered.length})`
             : `Clan lainnya (${filtered.length}) — urutan acak`}
       </p>
 
@@ -524,19 +528,21 @@ function NoClan({
           )}
           {filtered.map((c: any, i: number) => {
             // Nomor peringkat hanya di Top clan (mulai dari 4; podium 1-3
-            // sudah tampil di atas).
+            // sudah tampil di atas). Tab "Semua" TANPA nomor di list — yang
+            // bernomor cuma podium 1-3, sesuai permintaan.
             const rank = tab === "best" && !needle ? i + 4 : 0;
             return (
             <div
               key={c._id}
-              className="member-row flex cursor-pointer flex-col gap-3 p-4 transition hover:border-[oklch(0.86_0.16_90)]/40 sm:flex-row sm:items-center"
+              className="member-row flex cursor-pointer items-center gap-3 p-3.5 transition hover:border-[oklch(0.86_0.16_90)]/40"
               onClick={() => setDetailId(c._id as Id<"clans">)}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 {rank > 0 && (
                   <span
                     className={cn(
-                      "w-7 shrink-0 text-center text-base font-black tabular-nums",
+                      // Nomor peringkat di KIRI ATAS baris.
+                      "w-6 shrink-0 self-start pt-0.5 text-center text-base font-black tabular-nums",
                       rankColor(rank),
                     )}
                   >
@@ -680,13 +686,27 @@ function CreateClan({
                   title={ic.name}
                   onClick={() => setIcon(ic.key)}
                   className={cn(
-                    "flex aspect-square items-center justify-center overflow-hidden rounded-xl border p-1.5 transition",
+                    "flex aspect-square items-center justify-center overflow-hidden rounded-2xl border p-1.5 transition",
                     icon === ic.key
                       ? "border-[oklch(0.86_0.16_90)] bg-[oklch(0.86_0.16_90)]/15"
-                      : "border-border hover:border-[oklch(0.86_0.16_90)]/50",
+                      : "border-white/10 hover:border-[oklch(0.86_0.16_90)]/50",
                   )}
                 >
-                  <Logo className="size-full" style={{ color: ic.tone }} aria-hidden />
+                  {/* Tile gradasi lembut sesuai warna ikon + garis tipis
+                      (strokeWidth 1.5) — menggantikan ikon tebal penuh kotak. */}
+                  <span
+                    className="flex size-full items-center justify-center rounded-xl"
+                    style={{
+                      background: `linear-gradient(145deg, ${ic.tone}2b, ${ic.tone}0a)`,
+                    }}
+                  >
+                    <Logo
+                      strokeWidth={1.5}
+                      className="size-7"
+                      style={{ color: ic.tone }}
+                      aria-hidden
+                    />
+                  </span>
                 </button>
               );
             })}
@@ -847,21 +867,26 @@ function JoinClan({ onBack }: { onBack: () => void }) {
               Belum ada clan. Jadilah yang pertama!
             </p>
           )}
-          {visible.map((c: any, i: number) => (
+          {visible.map((c: any, i: number) => {
+            // Nomor di kiri atas baris: tab "Top clan" → 1-100 penuh;
+            // tab "Semua" → hanya 3 teratas (1, 2, 3) yang bernomor;
+            // saat mencari → tanpa nomor.
+            const rank = needle ? 0 : tab === "best" ? i + 1 : i < 3 ? i + 1 : 0;
+            return (
             <div
               key={c._id}
               className="member-row cursor-pointer p-3 transition hover:border-[oklch(0.86_0.16_90)]/40"
               onClick={() => setDetailId(c._id as Id<"clans">)}
             >
               <div className="flex items-center gap-3">
-                {tab === "best" && (
+                {rank > 0 && (
                   <span
                     className={cn(
-                      "w-6 shrink-0 text-center text-sm font-black",
-                      rankColor(i + 1),
+                      "w-6 shrink-0 self-start pt-0.5 text-center text-sm font-black tabular-nums",
+                      rankColor(rank),
                     )}
                   >
-                    {i + 1}
+                    {rank}
                   </span>
                 )}
                 <Avatar src={c.avatarUrl} seed={c.name} className="size-12" />
@@ -908,7 +933,8 @@ function JoinClan({ onBack }: { onBack: () => void }) {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

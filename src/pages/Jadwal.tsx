@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import {
   BookOpen,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   ChevronUp,
   Clock,
@@ -27,6 +26,40 @@ const DAYS_ID = [
   "Jumat",
   "Sabtu",
 ];
+
+/** Singkatan hari untuk strip tanggal (Min, Sen, Sel, …). */
+const SHORT_DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+/** Nama bulan singkat untuk label tanggal terpilih. */
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+
+/**
+ * Tanggal konkret untuk tiap hari di minggu berjalan (Minggu..Sabtu).
+ * Dipakai strip hari di atas daftar: tiap pilihan menampilkan tulisan hari
+ * DAN angka tanggal sesuai tanggal hari ini (bukan sekadar "Senin-Minggu").
+ */
+function weekDates(): Date[] {
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  base.setDate(now.getDate() - now.getDay());
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    return d;
+  });
+}
 
 type AiringItem = {
   id: string;
@@ -354,6 +387,45 @@ function JadwalContent() {
         )}
       </div>
 
+      {/* Pilih hari: tulisan hari + angka tanggal sesuai tanggal berjalan.
+          Berlaku untuk SEMUA tab (anime, manga, manhwa, donghua). */}
+      <div className="mb-3 grid grid-cols-7 gap-1.5">
+        {weekDates().map((d, i) => {
+          const active = i === day;
+          return (
+            <button
+              key={i}
+              onClick={() => setDay(i)}
+              aria-current={active ? "date" : undefined}
+              aria-label={`${DAYS_ID[i]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`}
+              className={cn(
+                "flex flex-col items-center rounded-xl border px-1 py-1.5 transition",
+                active
+                  ? "border-primary bg-primary/15"
+                  : "border-border hover:border-foreground/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "text-[9px] font-semibold leading-none",
+                  active ? "text-primary" : "text-zinc-500",
+                )}
+              >
+                {SHORT_DAYS[i]}
+              </span>
+              <span
+                className={cn(
+                  "mt-1 text-[13px] font-black leading-none tabular-nums",
+                  active ? "text-foreground" : "text-zinc-400",
+                )}
+              >
+                {d.getDate()}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* timer hitung mundur + pengalihan hari */}
       {(tab === "anime" || tab === "donghua") && (
         <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-2.5">
@@ -375,28 +447,8 @@ function JadwalContent() {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            {day > 0 && (
-              <button
-                onClick={() => setDay((d) => (d - 1 + 7) % 7)}
-                className="flex size-8 items-center justify-center rounded-full border border-border text-zinc-500 hover:border-foreground/40"
-                aria-label="Hari sebelumnya"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-            )}
-            <span className="flex-1 text-center text-[11px] font-semibold text-zinc-400">
-              {DAYS_ID[day]}
-            </span>
-            {day < 6 && (
-              <button
-                onClick={() => setDay((d) => (d + 1) % 7)}
-                className="flex size-8 items-center justify-center rounded-full border border-border text-zinc-500 hover:border-foreground/40"
-                aria-label="Hari berikutnya"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            )}
+          <div className="flex-1 text-right text-[11px] font-semibold text-zinc-400">
+            {DAYS_ID[day]}, {weekDates()[day].getDate()} {MONTHS[weekDates()[day].getMonth()]}
           </div>
         </div>
       )}

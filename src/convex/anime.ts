@@ -1236,7 +1236,7 @@ export const animeCharacters = action({
           ? `${d.day ? `${d.day} ` : ""}${d.month ? `${months[d.month - 1] ?? ""} ` : ""}${d.year}`
           : "";
       // AniList menolak idMal + search sekaligus: coba by id dulu, lalu by judul.
-      const edges: any[] =
+      let edges: any[] =
         (await aniGraphql(id ? query : queryByTitle, vars)
           .then((d: any) => d?.Media?.characters?.edges)
           .catch(() => null)) ??
@@ -1246,6 +1246,17 @@ export const animeCharacters = action({
               .catch(() => null)
           : null) ??
         [];
+      // Manga/manhwa: di AniList tipenya MANGA. Kalau pencarian ANIME kosong
+      // (judul komik yang tidak punya adaptasi anime), ulangi pakai type MANGA
+      // supaya bagian "Character" di detail manga/manhwa tetap terisi.
+      if (edges.length === 0 && t) {
+        edges =
+          (await aniGraphql(queryByTitle.replace("type:ANIME", "type:MANGA"), {
+            s: t,
+          })
+            .then((d: any) => d?.Media?.characters?.edges)
+            .catch(() => null)) ?? [];
+      }
       try {
         const out: Char[] = [];
         for (const e of edges) {

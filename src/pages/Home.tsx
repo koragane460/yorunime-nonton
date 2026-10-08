@@ -9,6 +9,7 @@ import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { ProfileSheet } from "@/components/ProfileSheet";
+import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
@@ -2211,6 +2212,10 @@ function AnimeDetailScreen({
             </button>
           )}
 
+          {/* Kolom karakter paling ikonik (urut favorit AniList) — foto +
+              nama saja, tanpa teks personalitas/umur. */}
+          <CharacterRow idMal={String(animeId)} title={animeTitle} />
+
           {/* Episode — bisa dibuka & ditutup */}
           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
             <button
@@ -2711,6 +2716,9 @@ function DonghuaDetailScreen({
               )}
             </div>
           </div>
+
+          {/* Kolom karakter paling ikonik untuk donghua — dicari lewat judul. */}
+          <CharacterRow title={detail.title} />
 
           {/* "Yang serupa" — rekomendasi dari API donghua, jadialways
               donghua juga (never tercampur anime). */}

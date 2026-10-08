@@ -334,7 +334,9 @@ export function Avatar({
       )}
     >
       <img
-        src={src ?? avatarFallback(seed)}
+        // `||` (bukan `??`) supaya string kosong juga jatuh ke fallback yang
+        // sama dengan StoryRing — foto profil konsisten di semua layar.
+        src={src || avatarFallback(seed)}
         alt=""
         className="block size-full rounded-full object-cover"
       />
@@ -456,7 +458,8 @@ export function ClanTag({
         style={{ color: tone }}
         aria-hidden
       >
-        <Icon className="size-3.5" />
+        {/* Garis tipis 1.6 — logo tag tidak terlihat tebal/berat. */}
+        <Icon strokeWidth={1.6} className="size-3.5" />
       </span>
       {/* Tag clan (teks [TAG]) selalu PUTIH untuk semua clan. Warna per level
           dipakai di NAMA clan (lihat clanNameClass), bukan di sini. */}

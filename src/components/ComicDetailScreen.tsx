@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { StatusChip, formatViews } from "@/components/ComicCard";
+import { CharacterRow } from "@/components/CharacterRow";
 import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -294,6 +295,9 @@ export function ComicDetailScreen({
                   </button>
                 )}
               </div>
+
+              {/* Kolom karakter paling ikonik manga/manhwa — foto + nama. */}
+              <CharacterRow title={d.title} />
 
               {/* Chapter — manga: baris, manhwa: grid pill */}
               {!isPremium && (

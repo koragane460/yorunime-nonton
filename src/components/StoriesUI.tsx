@@ -14,6 +14,7 @@ import type { PointerEvent as RPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { avatarFallback } from "@/lib/lstream";
 import type { MusicTrack } from "@/convex/music";
 import { toast } from "sonner";
 import {
@@ -198,8 +199,11 @@ export function StoryRing({
       {/* p-[1px]: gap cincin 1px supaya foto rapat ke cincin story.
           Dulu 1.5px + padding luar lain membuat cincin terlihat miring. */}
       <span className="flex size-full items-center justify-center rounded-full bg-background p-[1px]">
+        {/* Fallback HARUS sama dengan Avatar (lstream-ui): pixel-art dari
+            avatarFallback — dulu memakai dicebear bottts sehingga foto profil
+            di panel akun (Avatar) dan di halaman Akun (StoryRing) beda. */}
         <img
-          src={image || `https://api.dicebear.com/7.x/bottts/svg?seed=${seed || "u"}`}
+          src={image || avatarFallback(seed)}
           alt=""
           className="size-full rounded-full object-cover"
         />
