@@ -229,7 +229,7 @@ function AccountPanel({
           onClick={() => goto("/akun?tab=settings")}
           className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
         >
-          <Settings className="size-4" />
+          <Settings className="size-4" strokeWidth={1.7} />
         </button>
         <NotifButton />
       </div>
@@ -887,8 +887,12 @@ function BottomNav({
                   ? location.pathname === "/home" || location.pathname === "/"
                   : base !== "" && location.pathname.startsWith(base);
             const isHome = base === "/home";
-            // Saat aktif: pakai varian fill kalau tersedia (gaya iOS).
-            const Icon = active && it.iconFill ? it.iconFill : it.icon;
+            // Ikon SELALU pakai varian outline, aktif maupun tidak — bobotnya
+            // persis sama, jadi tombol tidak mendadak "tebel" saat dipencet.
+            // Dulu tab aktif berganti ke varian fill (blok tebal); yang
+            // menandai tab aktif sekarang hanya warna primary + label teks di
+            // bawah ikon + garis penanda di atas tombol.
+            const Icon = it.icon;
             return (
               <button
                 key={it.path || `panel-${it.label}`}

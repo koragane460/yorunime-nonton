@@ -398,19 +398,14 @@ html.antilag .yn-banner-box::after {
    soft blue yang sangat redup (bukan glow ungu menyala), lalu hitam penuh.
    Batas bawahnya diukur Home lalu disimpan ke --yn-tint-end. */
 .yn-app-bg {
-  --yn-tint-end: 860px;
+  /*
+   * Latar aplikasi SOLID gelap, sesuai permintaan: tanpa gradasi radial,
+   * tanpa lapisan transparan — hanya warna solid --background (tinta navy
+   * gelap). Warna lain tetap datang dari kartu/banner di atasnya, bukan dari
+   * latar halaman.
+   */
   background-color: var(--background);
-  background-image:
-    radial-gradient(760px 460px at 50% 0%, oklch(0.36 0.11 14 / 0.34) 0%, transparent 70%),
-    radial-gradient(560px 320px at 6% 0%, oklch(0.4 0.09 240 / 0.22) 0%, transparent 70%),
-    linear-gradient(
-      180deg,
-      oklch(0.2 0.045 262) 0%,
-      oklch(0.165 0.036 262) calc(var(--yn-tint-end) - 260px),
-      var(--background) var(--yn-tint-end)
-    );
-  background-repeat: no-repeat;
-  background-position: top;
+  background-image: none;
 }
 
 /* Bilah sambung warna di bawah banner: sapuan tipis yang langsung hilang.

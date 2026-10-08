@@ -48,15 +48,7 @@ export function RequireAuth({
 
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-5">
-        {/* Cahaya latar: ungu sangat redup di atas, hitam pekat di bawah. */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden
-          style={{
-            background:
-              "radial-gradient(760px 420px at 50% -10%, oklch(0.5 0.16 14 / 0.32), transparent 70%), linear-gradient(180deg, oklch(0.2 0.045 262), oklch(0.17 0.038 262) 60%, oklch(0.15 0.034 262))",
-          }}
-        />
+        {/* Latar solid gelap (tanpa gradasi/radial), sesuai permintaan. */}
         <section className="pop-enter relative w-full max-w-sm">
           <div className="rounded-3xl border border-white/10 bg-black/45 p-6 shadow-2xl backdrop-blur-xl">
             <div className="flex flex-col items-center text-center">
