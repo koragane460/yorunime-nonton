@@ -220,7 +220,9 @@ function HomeContent() {
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);  const [showMusic, setShowMusic] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showMusic, setShowMusic] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {
@@ -442,9 +444,18 @@ function HomeContent() {
     return () => window.removeEventListener("resize", paint);
   }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
 
+  const tabs = useMemo(
+    () => [
+      { id: "roi", label: "roi" },
+      ...genreList.slice(0, 5).map((g) => ({ id: g.name, label: g.name })),
+      { id: "kontroversi", label: "Kontroversi" },
+    ],
+    [genreList],
+  );
+
   return (
     <div className="pb-8">
-      {/* 1) YORUNIME PREMIUM — card ke /premium, tombol beli masih di-lock */}
+      {/* 1) YORUNIME PREMIUM — card ke /premium */}
       <button
         onClick={() => navigate("/premium")}
         className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-border bg-secondary/40 p-3.5 text-left transition hover:border-foreground/40"
@@ -462,6 +473,27 @@ function HomeContent() {
           Beli
         </span>
       </button>
+
+      {/* 2) TAB HORIZONTAL */}
+      <div className="fade-enter mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {tabs.map((t, i) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              setActiveTab(i);
+              setShowSearch(false);
+            }}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition",
+              activeTab === i
+                ? "border-gold-strong bg-gold-soft text-gold-strong"
+                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {/* 3) HERO BANNER */}
       {loading ? (
@@ -493,11 +525,17 @@ function HomeContent() {
               >
                 {!a.image && (
                   <div className="absolute inset-0 bg-hero-gradient" />
-                )}
-                <div className="relative w-full p-4">
-                  <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
-                    {a.status ?? "Ongoing"}
-                  </span>
+                )}                <div className="relative w-full p-4">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
+                      {a.status ?? "Ongoing"}
+                    </span>
+                    <span className="rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-black text-gold-strong">
+                      New
+                    </span>
+                  </div>
+
+
                   <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
                   <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-zinc-300">
                     {a.synopsis ?? "Sinopsis belum tersedia."}

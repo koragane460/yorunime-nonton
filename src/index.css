@@ -3,6 +3,48 @@
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
 
+/* Aksen kuning: star rating, badge highlights, tab indicator */
+.yn-gold-star {
+  color: var(--gold-strong);
+}
+.yn-gold-bg {
+  background-color: var(--gold-strong);
+}
+.yn-gold-soft {
+  background-color: var(--highlight-soft);
+}
+.yn-tab-indicator {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold-strong) 14%, var(--gold-strong) 86%, transparent);
+  border-radius: 999px;
+  transition: width 0.25s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.2s ease;
+}
+/* Kartu poster: overlay bawah gelap bertingkat, badge New biru, Eps kiri bawah */
+.yn-poster-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  background-color: oklch(0.16 0.03 262);
+  border: 1px solid oklch(1 0 0 / 9%);
+}
+.yn-poster-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(6 10 22 / 0) 0%,
+    rgba(6 10 22 / 0.18) 38%,
+    rgba(6 10 22 / 0.88) 100%
+  );
+  pointer-events: none;
+}
+/* Grid 3 kolom layar kecil; di atas itu tetap rapat tapi tidak clash */
+.yn-anime-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
 /* DO NOT CHANGE */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -89,8 +131,10 @@
   /* Burgundy — aksen merek. */
   --brand: oklch(0.56 0.155 14);          /* wine / burgundy */
   --brand-foreground: oklch(0.98 0.01 20);
-  --gold: oklch(0.85 0.15 95);           /* kuning terang, untuk aksen kecil */
-  --gold-foreground: oklch(0.18 0.04 70);
+  --gold: oklch(0.86 0.16 92);           /* kuning terang, untuk aksen kecil */
+  --gold-foreground: oklch(0.2 0.05 70);
+  --gold-strong: oklch(0.86 0.18 88);     /* kuning mencolok, untuk star/badge/tab */
+  --gold-strong-foreground: oklch(0.2 0.05 70);
   --background: oklch(0.155 0.032 262);  /* tinta navy */
   --foreground: oklch(0.96 0.012 250);   /* putih dingin */
   --card: oklch(0.2 0.04 262);
@@ -113,7 +157,7 @@
   --ring: oklch(0.56 0.155 14 / 55%);
   --chart-1: oklch(0.56 0.155 14);        /* burgundy */
   --chart-2: oklch(0.72 0.1 240);         /* soft blue */
-  --chart-3: oklch(0.85 0.15 95);
+  --chart-3: oklch(0.86 0.17 90);
   --chart-4: oklch(0.65 0.11 245);
   --chart-5: oklch(0.7 0.14 150);
   --sidebar: oklch(0.175 0.038 262);
@@ -124,6 +168,8 @@
   --sidebar-accent-foreground: oklch(0.93 0.015 250);
   --sidebar-border: oklch(0.4 0.05 260 / 50%);
   --sidebar-ring: oklch(0.56 0.155 14 / 55%);
+  --highlight: oklch(0.86 0.17 90 / 92%);
+  --highlight-soft: oklch(0.86 0.15 92 / 22%);
 }
 
 /* Tema terang opsional dari pengaturan */
