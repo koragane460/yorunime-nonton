@@ -1191,14 +1191,17 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       setDirect(d);
       setSubTouched(false);
       setSources(d.sources);
-      setSourceType(
-        d.sources?.[0]?.type === "hls"
-          ? "hls"
-          : d.sources?.[0]?.type === "mp4"
-            ? "mp4"
-            : "embed",
+      // MP4 diutamakan sebagai sumber awal: langsung diputar tanpa baca
+      // manifest, jadi frame pertama jauh lebih cepat dan tidak mungkin
+      // macet di "Memuat episode...". Kalau file-nya rusak, failover tetap
+      // pindah ke server berikutnya seperti biasa.
+      const mp4Idx = (d.sources as any[]).findIndex(
+        (s: any) => s?.type === "mp4" && !!s?.url,
       );
-      setSourceIdx(0);
+      const fi = mp4Idx >= 0 ? mp4Idx : 0;
+      const ft = d.sources?.[fi]?.type;
+      setSourceType(ft === "hls" ? "hls" : ft === "mp4" ? "mp4" : "embed");
+      setSourceIdx(fi);
       // Mulai hitungan mundur SETELAH sumber siap - sama seperti pembaca
       // komik, gambar/video sudah dimuat, hitungan cuma jeda tampil.
       setNowTick(Date.now());

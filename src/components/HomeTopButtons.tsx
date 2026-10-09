@@ -9,6 +9,7 @@ import {
   fetchWithProgress,
   fmtBytes,
   getEpisode,
+  getPartial,
   listKeys,
   MAX_BYTES,
   putEpisode,
@@ -140,17 +141,33 @@ function useEpisodeDownloader(onStored?: (localKey: string) => void) {
       runningRef.current.add(row._id);
       const localKey = `${row.animeId}__ep${row.episode}__${row.quality}`;
       try {
-        await setProgress({ id: row._id as never, status: "downloading", progress: 0 });
-        const blob = await fetchWithProgress(row.url, (pct, received, total) => {
-          if (total > MAX_BYTES) {
-            throw new Error("Ukuran file melebihi batas penyimpanan offline");
-          }
-          void setProgress({
-            id: row._id as never,
-            progress: Math.round(pct * 100),
-            bytes: received,
-          });
+        // Unduhan yang gagal di tengah jalan menyimpan bagian yang sudah
+        // terunduh. Kalau ada, kita LANJUT dari titik itu (misal 7,8 MB)
+        // lewat header Range — bukan mengulang dari nol.
+        const partial = await getPartial(localKey);
+        const startLen = partial?.length ?? 0;
+        await setProgress({
+          id: row._id as never,
+          status: "downloading",
+          // Jangan reset progres ke 0 kalau memang menyambung potongan lama.
+          progress: startLen > 0 ? Math.min(99, row.progress ?? 0) : 0,
+          ...(startLen > 0 ? { bytes: startLen } : {}),
         });
+        const blob = await fetchWithProgress(
+          row.url,
+          (pct, received, total) => {
+            if (total > MAX_BYTES) {
+              throw new Error("Ukuran file melebihi batas penyimpanan offline");
+            }
+            void setProgress({
+              id: row._id as never,
+              progress: Math.round(pct * 100),
+              bytes: received,
+            });
+          },
+          undefined,
+          { startBytes: partial, partialKey: localKey },
+        );
         await putEpisode(localKey, blob);
         await setProgress({
           id: row._id as never,

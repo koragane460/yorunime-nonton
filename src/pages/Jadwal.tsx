@@ -141,6 +141,12 @@ function JadwalContent() {
   const [duplicates, setDuplicates] = useState<Record<string, Record<string, number>>>({});
   const todayIdx = new Date().getDay();
   const [day, setDay] = useState(todayIdx);
+  // "Lihat semua" menampilkan seluruh rilis hari itu; tanpa ini daftar
+  // dipotong supaya halaman tidak terlalu panjang saat pertama dibuka.
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => {
+    setShowAll(false);
+  }, [tab, day]);
 
   useEffect(() => {
     // Jadwal mingguan AniList (lengkap per hari) digabung dengan daftar
@@ -309,13 +315,21 @@ function JadwalContent() {
   }, [list]);
 
   const now = new Date();
+  // Kartu hitung mundur menunjuk anime berikutnya yang BELUM tayang — kalau
+  // jam rilisnya sudah lewat, otomatis berganti ke yang berikutnya
+  // (permintaan user: "kalo udah di luar jam rilis ... jadi selanjutnya").
+  const nextUp =
+    list.find((it) => (it.airingAt ?? it.predictedMs ?? 0) > now.getTime()) ??
+    list[0];
   const diff = Math.max(
     0,
-    (list[0]?.airingAt ?? list[0]?.predictedMs ?? 0) - now.getTime(),
+    (nextUp?.airingAt ?? nextUp?.predictedMs ?? 0) - now.getTime(),
   );
   const mins = Math.floor(diff / 60_000);
   const hrs = Math.floor(mins / 60);
   const secs = diff % 60;
+  // Daftar yang dirender: default dipotong, "Lihat semua" menampilkan semua.
+  const shownList = showAll ? list : list.slice(0, 6);
 
   return (
     <div className="py-3">
@@ -333,8 +347,8 @@ function JadwalContent() {
         <button
           onClick={() => setPickerOpen((v) => !v)}
           className={cn(
-            "flex w-full items-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-2.5 text-sm font-semibold text-foreground",
-            pickerOpen ? "border-foreground/40" : "",
+            "flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.07] to-white/[0.02] px-4 py-3 text-sm font-semibold text-foreground",
+            pickerOpen ? "border-primary/50" : "",
           )}
         >
           <ActiveIcon className="size-4 shrink-0 text-primary" />
@@ -354,7 +368,7 @@ function JadwalContent() {
         </button>
 
         {pickerOpen && (
-          <div className="mt-2 rounded-xl border border-border bg-secondary/40 p-2">
+          <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02]">
             {tabs
               .filter((t) => t.key !== tab)
               .map((t) => (
@@ -364,12 +378,11 @@ function JadwalContent() {
                     setTab(t.key);
                     setPickerOpen(false);
                   }}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-foreground/5",
-                    t.key === "donghua" && "mt-1",
-                  )}
+                  className="flex w-full items-center gap-3 border-b border-white/10 px-4 py-3 text-left transition last:border-b-0 hover:bg-white/5"
                 >
-                  <t.icon className="size-4 shrink-0 text-primary" />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                    <t.icon className="size-4 text-primary" />
+                  </span>
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{t.label}</p>
                     <p className="text-[11px] text-muted-foreground">
@@ -402,7 +415,7 @@ function JadwalContent() {
                 "flex flex-col items-center rounded-xl border px-1 py-1.5 transition",
                 active
                   ? "border-primary bg-primary/15"
-                  : "border-border hover:border-foreground/40",
+                  : "border-white/10 hover:border-white/30",
               )}
             >
               <span
@@ -428,17 +441,17 @@ function JadwalContent() {
 
       {/* timer hitung mundur + pengalihan hari */}
       {(tab === "anime" || tab === "donghua") && (
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-secondary/40 px-4 py-2.5">
+        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
           <Clock className="size-4 shrink-0 text-primary" />
           <div className="flex-1">
-            {list.length > 0 ? (
+            {nextUp ? (
               <>
-                <p className="text-sm font-semibold">{list[0].title}</p>
+                <p className="text-sm font-semibold">{nextUp.title}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  tayang dalam {hrs > 0 ? `${hrs}j` : ""}
-                  {mins > 0 ? `${mins % 60}m` : ""}
-                  {secs > 0 && hrs === 0 ? `${secs}s` : ""}
-                  {list[0].episode ? ` · Ep ${list[0].episode}` : ""}
+                  {diff > 0
+                    ? `tayang dalam ${hrs > 0 ? `${hrs}j` : ""}${mins > 0 ? `${mins % 60}m` : ""}${secs > 0 && hrs === 0 ? `${secs}s` : ""}`
+                    : "sudah tayang"}
+                  {nextUp.episode ? ` · Ep ${nextUp.episode}` : ""}
                 </p>
               </>
             ) : (
@@ -471,13 +484,17 @@ function JadwalContent() {
       </div>
 
       {loading ? (
-        <div className="mb-2 flex gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="mb-2 flex flex-col gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-44 w-28 shrink-0 overflow-hidden rounded-xl bg-card"
+              className="flex items-center gap-3 rounded-2xl bg-card p-2.5"
             >
-              <div className="skeleton h-full w-full" />
+              <div className="skeleton h-24 w-16 shrink-0 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-4 w-3/4 rounded" />
+                <div className="skeleton h-3 w-1/2 rounded" />
+              </div>
             </div>
           ))}
         </div>
@@ -491,8 +508,27 @@ function JadwalContent() {
               : "dalam minggu ini"}.
         </p>
       ) : (
-        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-2">
-          {list.map((item, i) => (
+        <div className="space-y-2 pb-2">
+          {shownList.map((item) => {
+            // Hitung mundur per item: "x jam lagi" sampai jam rilis tiba,
+            // lalu berubah jadi "Sudah tayang" dan itemnya sedikit redup.
+            const at = item.airingAt ?? item.predictedMs ?? 0;
+            const leftMs = at - Date.now();
+            const itemAired = at > 0 && leftMs <= 0;
+            const ih = Math.floor(leftMs / 3_600_000);
+            const im = Math.floor(leftMs / 60_000) % 60;
+            const is = Math.floor(leftMs / 1_000) % 60;
+            const itemCountdown =
+              leftMs <= 0
+                ? itemAired
+                  ? "Sudah tayang"
+                  : ""
+                : ih > 0
+                  ? `${ih}j ${im}m lagi`
+                  : im > 0
+                    ? `${im}m ${is}s lagi`
+                    : `${is}s lagi`;
+            return (
             <button
               key={`${item.id ?? item.slug}-${item.episode ?? 0}-${item.slug ?? ""}`}
               onClick={() => {
@@ -510,9 +546,13 @@ function JadwalContent() {
                   );
                 }
               }}
-              className="w-28 shrink-0 text-left"
+              className={cn(
+                "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition hover:border-primary/40",
+                itemAired && "opacity-60",
+              )}
             >
-              <div className="relative">
+              {/* Gambar + badge episode */}
+              <div className="relative w-16 shrink-0">
                 <div className="aspect-[2/3] overflow-hidden rounded-xl bg-black">
                   <img
                     src={item.image}
@@ -522,60 +562,77 @@ function JadwalContent() {
                 </div>
                 {typeof item.episode === "number" &&
                   item.episode !== 0 && (
-                    <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
                       Ep {item.episode}
                     </span>
                   )}
-                {item.estimated && (
-                  <span className="absolute right-1.5 top-1.5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
-                    Estimasi
-                  </span>
-                )}
                 {item.id != null &&
                   (dupCounts[`${item.id}-${item.episode ?? 0}`] ?? 0) > 1 && (
-                    <span className="absolute -right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                    <span className="absolute -right-1.5 top-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
                       {dupCounts[`${item.id}-${item.episode ?? 0}`]}
                     </span>
                   )}
               </div>
-              <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
-                {item.title}
-              </p>
-              {item.time && (
-                <p className="font-mono text-[10px] text-muted-foreground">
-                  {item.time}
+
+              {/* Judul + jam rilis + hitung mundur */}
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-sm font-semibold leading-5">
+                  {item.title}
                 </p>
-              )}
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  {item.time && (
+                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-white/75">
+                      {item.time}
+                    </span>
+                  )}
+                  {itemCountdown && (
+                    <span
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 font-bold",
+                        itemAired
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-primary/15 text-primary",
+                      )}
+                    >
+                      {itemCountdown}
+                    </span>
+                  )}
+                  {item.estimated && (
+                    <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                      Estimasi
+                    </span>
+                  )}
+                </div>
+              </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* tab show all + footer small */}
+      {/* "Lihat semua" menampilkan seluruh rilis hari itu (permintaan user);
+          disclaimer lama sudah dihapus. */}
       {list.length > 0 && (
         <div className="mt-4 flex items-center justify-between">
           <button
-            onClick={() => setTab(tab === "anime" ? "anime" : "anime")}
-            className="text-[11px] text-primary hover:underline"
+            onClick={() => {
+              setShowAll(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="text-[11px] font-semibold text-primary hover:underline"
           >
-            Lihat semua
+            {showAll
+              ? `Semua ${list.length} rilis hari ini ditampilkan`
+              : `Lihat semua (${list.length} rilis hari ini)`}
           </button>
           <button
-            onClick={() => {
-              const t = document.querySelector(".thin-scroll") as HTMLElement | null;
-              t?.scrollTo({ left: 0, behavior: "smooth" });
-            }}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="text-[11px] text-muted-foreground hover:text-foreground"
           >
             Kembali ke atas
           </button>
         </div>
       )}
-
-      <p className="mt-4 text-[11px] text-zinc-500 text-center">
-        Jadwal rilis hanya menampilkan judul yang sudah ada di database — tidak
-        semua episode hari ini.
-      </p>
     </div>
   );
 }

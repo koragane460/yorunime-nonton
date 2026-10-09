@@ -251,24 +251,6 @@ export function ComicDetailScreen({
                 </div>
               )}
 
-              <h2 className="mb-1 mt-4 text-base font-bold">Sinopsis</h2>
-              <p
-                className={cn(
-                  "text-sm leading-6 text-zinc-300",
-                  !openSynopsis && "line-clamp-4",
-                )}
-              >
-                {d.synopsis || "Sinopsis belum tersedia."}
-              </p>
-              {d.synopsis.length > 160 && (
-                <button
-                  onClick={() => setOpenSynopsis((v) => !v)}
-                  className={cn("mt-1 text-xs font-semibold underline", accentText)}
-                >
-                  {openSynopsis ? "Tutup" : "Baca selengkapnya"}
-                </button>
-              )}
-
               {/* Tombol baca — manga & manhwa beda warna & ikon */}
               <div className="mt-4 flex gap-2">
                 <button
@@ -296,8 +278,28 @@ export function ComicDetailScreen({
                 )}
               </div>
 
-              {/* Kolom karakter paling ikonik manga/manhwa — foto + nama. */}
+              {/* Kolom karakter paling ikonik manga/manhwa — foto + nama.
+                  Muncul tepat di bawah tombol Baca, SEBELUM sinopsis. */}
               <CharacterRow title={d.title} />
+
+              {/* Sinopsis — di BAWAH Character (permintaan user). */}
+              <h2 className="mb-1 mt-5 text-base font-bold">Sinopsis</h2>
+              <p
+                className={cn(
+                  "text-sm leading-6 text-zinc-300",
+                  !openSynopsis && "line-clamp-4",
+                )}
+              >
+                {d.synopsis || "Sinopsis belum tersedia."}
+              </p>
+              {d.synopsis.length > 160 && (
+                <button
+                  onClick={() => setOpenSynopsis((v) => !v)}
+                  className={cn("mt-1 text-xs font-semibold underline", accentText)}
+                >
+                  {openSynopsis ? "Tutup" : "Baca selengkapnya"}
+                </button>
+              )}
 
               {/* Chapter — manga: baris, manhwa: grid pill */}
               {!isPremium && (

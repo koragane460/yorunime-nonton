@@ -106,7 +106,9 @@
   --accent: oklch(0.3 0.055 255);         /* soft blue redup untuk hover/sorot */
   --accent-foreground: oklch(0.96 0.012 250);
   --destructive: oklch(0.55 0.16 25);
-  --border: oklch(0.4 0.05 260 / 50%);
+  /* Outline di seluruh aplikasi dibuat tipis & transparan (putih 9%),
+     bukan garis abu-abu pekat yang terlihat "tebal" — sesuai permintaan. */
+  --border: oklch(1 0 0 / 9%);
   --input: oklch(0.32 0.05 260 / 60%);
   --ring: oklch(0.56 0.155 14 / 55%);
   --chart-1: oklch(0.56 0.155 14);        /* burgundy */
@@ -161,7 +163,9 @@
   --accent: oklch(0.3 0.055 255);
   --accent-foreground: oklch(0.96 0.012 250);
   --destructive: oklch(0.55 0.16 25);
-  --border: oklch(0.4 0.05 260 / 50%);
+  /* Outline di seluruh aplikasi dibuat tipis & transparan (putih 9%),
+     bukan garis abu-abu pekat yang terlihat "tebal" — sesuai permintaan. */
+  --border: oklch(1 0 0 / 9%);
   --input: oklch(0.32 0.05 260 / 60%);
   --ring: oklch(0.56 0.155 14 / 55%);
 }
@@ -314,7 +318,7 @@ html.antilag .yn-banner-box::after {
   border-radius: 1.5rem;
   background:
     linear-gradient(180deg, oklch(0.23 0.045 262 / 0.9), oklch(0.17 0.038 262 / 0.96));
-  border: 1px solid oklch(0.44 0.055 262 / 22%);
+  border: 1px solid oklch(1 0 0 / 8%);
   box-shadow:
     inset 0 1px 0 oklch(1 0 0 / 7%),
     0 10px 30px -18px oklch(0 0 0 / 85%);
@@ -991,7 +995,7 @@ button:not([disabled]):active,
 .member-row {
   border-radius: 1.25rem;
   background: oklch(0.205 0.042 262);
-  border: 1px solid oklch(0.4 0.05 260 / 45%);
+  border: 1px solid oklch(1 0 0 / 8%);
 }
 
 /* Badge role kecil uppercase (LEADER kuning / MEMBER abu) */

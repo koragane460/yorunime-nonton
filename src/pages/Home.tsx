@@ -2191,7 +2191,11 @@ function AnimeDetailScreen({
             </div>
           )}
 
-          {/* Sinopsis — abu-abu, di-scroll DI DALAM kotaknya. */}
+          {/* Kolom karakter paling ikonik — muncul tepat di bawah tombol
+              Nonton/Favorite, SEBELUM sinopsis (permintaan user). */}
+          <CharacterRow idMal={String(animeId)} title={animeTitle} />
+
+          {/* Sinopsis — di BAWAH Character, abu-abu, di-scroll DI DALAM kotaknya. */}
           <SectionTitle>Sinopsis</SectionTitle>
           <div
             className={cn(
@@ -2211,10 +2215,6 @@ function AnimeDetailScreen({
               {synopsisOpen ? "Tutup (balik ke kotak)" : "Baca selengkapnya"}
             </button>
           )}
-
-          {/* Kolom karakter paling ikonik (urut favorit AniList) — foto +
-              nama saja, tanpa teks personalitas/umur. */}
-          <CharacterRow idMal={String(animeId)} title={animeTitle} />
 
           {/* Episode — bisa dibuka & ditutup */}
           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
@@ -2651,6 +2651,10 @@ function DonghuaDetailScreen({
           </div>
 
 
+          {/* Kolom karakter donghua — di bawah tombol Nonton/Favorite,
+              sebelum sinopsis. */}
+          <CharacterRow title={detail.title} />
+
           <SectionTitle>Sinopsis</SectionTitle>
           <div
             className={cn(
@@ -2716,9 +2720,6 @@ function DonghuaDetailScreen({
               )}
             </div>
           </div>
-
-          {/* Kolom karakter paling ikonik untuk donghua — dicari lewat judul. */}
-          <CharacterRow title={detail.title} />
 
           {/* "Yang serupa" — rekomendasi dari API donghua, jadialways
               donghua juga (never tercampur anime). */}

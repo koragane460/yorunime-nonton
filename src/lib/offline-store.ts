@@ -70,13 +70,53 @@ export async function deleteEpisode(key: string): Promise<void> {
   }
 }
 
-/** Semua kunci yang tersimpan — untuk mencocokkan dengan daftar unduhan. */
+/** Semua kunci yang tersimpan — untuk mencocokkan dengan daftar unduhan.
+ *  Kunci parsial (unduhan yang belum selesai) tidak ikut dihitung. */
 export async function listKeys(): Promise<string[]> {
   try {
     const keys = await tx<IDBValidKey[]>("readonly", (s) => s.getAllKeys());
-    return keys.map(String);
+    return keys.map(String).filter((k) => !k.startsWith(PARTIAL_PREFIX));
   } catch {
     return [];
+  }
+}
+
+/* ----------------------------------------------------- unduhan parsial ----
+ * Unduhan yang gagal di tengah jalan menyimpan bagian yang sudah terunduh di
+ * sini. Saat user menekan "Lanjutkan"/"unduh ulang", bagian itu dipakai
+ * sebagai awalan + header `Range`, jadi unduhan LANJUT dari titik terakhir
+ * (misal 7,8 MB) — bukan mengulang dari nol.
+ */
+const PARTIAL_PREFIX = "__partial__";
+
+/** Simpan potongan unduhan yang belum selesai (diam-diam; gagal = abaikan). */
+export async function putPartial(key: string, blob: Blob): Promise<void> {
+  // Jangan simpan sampah yang sudah melebihi batas penyimpanan.
+  if (blob.size <= 0 || blob.size > MAX_BYTES) return;
+  try {
+    await tx("readwrite", (s) => s.put(blob, PARTIAL_PREFIX + key));
+  } catch {
+    /* storage penuh / ditolak — unduhan berikutnya mulai dari nol */
+  }
+}
+
+/** Ambil potongan terakhir yang tersimpan; `null` kalau tidak ada. */
+export async function getPartial(key: string): Promise<Uint8Array | null> {
+  try {
+    const v = await tx<unknown>("readonly", (s) => s.get(PARTIAL_PREFIX + key));
+    if (!(v instanceof Blob) || v.size === 0) return null;
+    return new Uint8Array(await v.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/** Hapus potongan parsial (dipanggil saat unduhan selesai). */
+export async function clearPartial(key: string): Promise<void> {
+  try {
+    await tx("readwrite", (s) => s.delete(PARTIAL_PREFIX + key));
+  } catch {
+    /* sudah hilang — abaikan */
   }
 }
 
@@ -91,25 +131,79 @@ export async function fetchWithProgress(
   url: string,
   onProgress: (pct: number, received: number, total: number) => void,
   signal?: AbortSignal,
+  opts?: {
+    /** Bagian yang sudah terunduh sebelumnya (dipakai sebagai awalan + Range). */
+    startBytes?: Uint8Array | null;
+    /** Kunci penyimpanan; saat gagal di tengah jalan, hasilnya disimpan di sini. */
+    partialKey?: string;
+  },
 ): Promise<Blob> {
-  const res = await fetch(url, { signal });
+  const startLen = opts?.startBytes?.length ?? 0;
+  const res = await fetch(url, {
+    signal,
+    // Minta server melanjutkan dari byte ke-`startLen`. Proxy YoruNime
+    // meneruskan header ini ke upstream dan meneruskan balasan 206-nya.
+    ...(startLen > 0 ? { headers: { Range: `bytes=${startLen}-` } } : {}),
+  });
   if (!res.ok) throw new Error(`Server menolak (${res.status})`);
-  const total = Number(res.headers.get("content-length") ?? 0);
-  if (!res.body) return await res.blob();
+
+  // 206 = server menghormati Range → sambung dari potongan lama.
+  // 200 = server mengabaikan Range → potongan lama dibuang, mulai dari nol.
+  const resumed = res.status === 206 && startLen > 0 && !!opts?.startBytes;
+  const rangeTotal = Number(
+    (res.headers.get("content-range") ?? "").split("/")[1] ?? 0,
+  );
+  const total =
+    rangeTotal > 0
+      ? rangeTotal
+      : Number(res.headers.get("content-length") ?? 0) +
+        (resumed ? startLen : 0);
+
+  const chunks: Uint8Array[] = [];
+  if (resumed && opts?.startBytes) chunks.push(opts.startBytes);
+  let received = resumed ? startLen : 0;
+
+  if (!res.body) {
+    const b = await res.blob();
+    if (resumed && opts?.startBytes) {
+      // Disalin ke buffer baru supaya bertipe ArrayBuffer murni (bukan view
+      // ke SharedArrayBuffer) — ini jalur cadangan; hampir tidak pernah
+      // dipakai karena fetch modern selalu mengembalikan body stream.
+      return new Blob([new Uint8Array(opts.startBytes), b], {
+        type: res.headers.get("content-type") ?? "video/mp4",
+      });
+    }
+    onProgress(1, b.size, b.size);
+    return b;
+  }
 
   const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.length;
-      if (total > 0) onProgress(received / total, received, total);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        chunks.push(value);
+        received += value.length;
+        if (total > 0) onProgress(received / total, received, total);
+      }
     }
+  } catch (e) {
+    // Gagal di tengah jalan (jaringan putus / dibatalkan): simpan bagian
+    // yang sudah ada supaya percobaan berikutnya lanjut dari titik ini.
+    if (opts?.partialKey && chunks.length > (resumed ? 1 : 0)) {
+      await putPartial(
+        opts.partialKey,
+        new Blob(chunks as BlobPart[], {
+          type: res.headers.get("content-type") ?? "video/mp4",
+        }),
+      );
+    }
+    throw e;
   }
   onProgress(1, received, total || received);
+  // Selesai → potongan parsial tidak diperlukan lagi.
+  if (opts?.partialKey) await clearPartial(opts.partialKey);
   return new Blob(chunks as BlobPart[], {
     type: res.headers.get("content-type") ?? "video/mp4",
   });

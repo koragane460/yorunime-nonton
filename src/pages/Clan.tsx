@@ -508,22 +508,26 @@ function NoClan({
         </div>
       )}
 
-      <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-        {needle
-          ? `Hasil pencarian (${filtered.length})`
-          : tab === "best"
-            ? `Peringkat 4-100 (${filtered.length})`
-            : `Clan lainnya (${filtered.length}) — urutan acak`}
-      </p>
+      {/* Label daftar: hanya tampil kalau ada isinya, dan tanpa ejaan
+          "urutan acak" yang membingungkan (permintaan user). */}
+      {filtered.length > 0 && (
+        <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          {needle
+            ? `Hasil pencarian (${filtered.length})`
+            : tab === "best"
+              ? `Peringkat 4-100 (${filtered.length})`
+              : `Clan lainnya (${filtered.length})`}
+        </p>
+      )}
 
       {/* List clan: LEBAR penuh (tanpa ruang kosong kiri-kanan, karena
           sayapnya sudah ada di podium). */}
       <div className="space-y-2 pb-24">
-          {filtered.length === 0 && (
+          {/* Hanya pesan "tidak cocok" saat mencari; placeholder
+              "Belum ada clan. Jadilah yang pertama!" dihapus sesuai permintaan. */}
+          {filtered.length === 0 && needle && (
             <p className="py-6 text-center text-xs text-muted-foreground">
-              {needle
-                ? `Tidak ada clan yang cocok dengan "${q}"`
-                : "Belum ada clan. Jadilah yang pertama!"}
+              Tidak ada clan yang cocok dengan "{q}"
             </p>
           )}
           {filtered.map((c: any, i: number) => {
@@ -862,11 +866,6 @@ function JoinClan({ onBack }: { onBack: () => void }) {
         )}
 
         <div className="space-y-2 pb-24">
-          {(clans ?? []).length === 0 && (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Belum ada clan. Jadilah yang pertama!
-            </p>
-          )}
           {visible.map((c: any, i: number) => {
             // Nomor di kiri atas baris: tab "Top clan" → 1-100 penuh;
             // tab "Semua" → hanya 3 teratas (1, 2, 3) yang bernomor;

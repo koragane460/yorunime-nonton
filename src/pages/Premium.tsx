@@ -320,11 +320,15 @@ function Plans() {
   return (
     <section className="mt-6">
       <h2 className="text-[13px] font-bold text-gold">Paket</h2>
-      <div className="mt-2 grid gap-2.5">
-        {(plans ?? []).map((p) => (
+      {/* Kartu lurus ke atas, digeser ke kanan-kiri: paling murah di kiri,
+          paling mahal di kanan (permintaan user). */}
+      <div className="thin-scroll -mx-3 mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-1">
+        {[...(plans ?? [])]
+          .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+          .map((p) => (
           <div
             key={p.id}
-            className="yn-card yn-card-hover relative overflow-hidden p-4"
+            className="yn-card yn-card-hover relative w-[18.5rem] shrink-0 snap-start overflow-hidden p-4"
           >
             {/* garis aksen tipis di tepi kiri */}
             <span aria-hidden className="absolute inset-y-4 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold/70 to-gold/0" />
@@ -337,7 +341,12 @@ function Plans() {
                   {p.label}
                 </p>
                 <p className="font-mono text-[10px] leading-tight text-zinc-500">
-                  {p.days} hari
+                  {p.days} hari · nonton tanpa iklan
+                </p>
+                <p className="mt-0.5 text-[10px] leading-snug text-zinc-400">
+                  {typeof p.sacret === "number" && p.sacret > 0
+                    ? `Bonus ${p.sacret.toLocaleString("id-ID")} Sacret · kualitas sampai 1080p`
+                    : "Kualitas sampai 720p · tanpa iklan"}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -512,6 +521,9 @@ function Checkout({
   err: string;
 }) {
   const live = useQuery(api.payments.myOrder, { orderId: order.orderId });
+  // Gambar QRIS diperbesar saat diketuk (permintaan user: bisa dilihat
+  // gede seperti membuka foto).
+  const [qrisZoom, setQrisZoom] = useState(false);
   if (live?.status === "paid" && !verdict) {
     return (
       <div className="yn-card border-emerald-500/30 p-4">
@@ -528,14 +540,41 @@ function Checkout({
     <div className="space-y-4">
       <div className="yn-card flex flex-col items-center gap-2.5 p-5">
         {image ? (
-          <img
-            src={image}
-            alt="QRIS YoruNime"
-            className="size-48 rounded-xl bg-white p-2.5 shadow-lg shadow-black/40"
-          />
+          <button
+            type="button"
+            onClick={() => setQrisZoom(true)}
+            aria-label="Perbesar gambar QRIS"
+            className="block"
+          >
+            <img
+              src={image}
+              alt="QRIS YoruNime"
+              /* object-contain + rasio asli: gambar TIDAK pernah gepeng/
+                 dipaksa jadi kotak, walau berkas QRIS-nya bukan persegi. */
+              className="max-h-72 w-auto max-w-full rounded-xl bg-white p-2.5 object-contain shadow-lg shadow-black/40"
+            />
+          </button>
         ) : (
           <div className="flex size-48 items-center justify-center rounded-xl bg-black/40 text-xs text-zinc-400">
             QRIS belum tersedia
+          </div>
+        )}
+        {/* Pratinjau besar: ketuk gambar untuk melihat QRIS sebesar layar. */}
+        {qrisZoom && image && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setQrisZoom(false)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <img
+              src={image}
+              alt="QRIS YoruNime (besar)"
+              className="max-h-full max-w-full rounded-2xl bg-white object-contain p-3"
+            />
+            <span className="absolute bottom-10 text-xs text-white/70">
+              Ketuk di mana saja untuk menutup
+            </span>
           </div>
         )}
         <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
