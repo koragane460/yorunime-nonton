@@ -1266,6 +1266,83 @@ function HomeLeaderboardPreview() {
   );
 }
 
+// ------------------------------------------------------ search result row (fotom-style horizontal row) ----
+
+/**
+ * Satu baris hasil pencarian ala fotom, meniru susunan:
+ *    badge  judul (besar)  label source  deskripsi pendek
+ *
+ * Fotom tidak menampilkan angka view di item pencarian, jadi di layar ini
+ * juga tidak. Badge «Judul Inggris...» hanya muncul untuk donghua supaya
+ * perbedaan anime vs donghua terbaca dari item pencarian.
+ */
+function SearchResultRow({
+  item,
+  onClick,
+}: {
+  item: AnimeCardT;
+  onClick: () => void;
+}) {
+  const source = item.source ?? "anilist";
+  const isDonghua = source === "sanka";
+  const synopsis =
+    (item.synopsis as string | undefined) ?? "";
+
+  return (
+    <button
+      onClick={onClick}
+      className="group flex items-start gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5 text-left transition hover:border-foreground/40 hover:border-foreground/60"
+    >
+      <div className="relative aspect-[2/3] w-16 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted">
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.title}
+            loading="lazy"
+            className="size-full object-cover transition duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+            <Star className="size-4 opacity-40" aria-hidden />
+          </div>
+        )}
+        {isDonghua && (
+          <span className="absolute left-0.5 top-0.5 rounded border border-black/40 bg-zinc-800/80 px-1 py-0.5 text-[9px] font-semibold text-zinc-200">
+            DH
+          </span>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold leading-snug text-white">
+          {item.title}
+        </p>
+        {isDonghua && (
+          <p className="mt-0.5 text-[11px] text-muted-foreground"
+          >
+            Judul Inggris: {item.title}
+          </p>
+        )}
+        {synopsis && (
+          <p className="mt-1 text-[12px] leading-snug text-foreground/80 line-clamp-2">
+            {synopsis}
+          </p>
+        )}
+      </div>
+
+      <div className="ml-2 shrink-0">
+        <span className="size-6 rounded-md bg-secondary/80 p-0.5">
+          {item.type === "Movie" ? (
+            <Film className="size-5 text-gold-strong" aria-hidden />
+          ) : (
+            <ChevronRight className="size-5 text-gold-strong" aria-hidden />
+          )}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 // ------------------------------------------------------ search screen ----
 
 function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
