@@ -1520,45 +1520,36 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         </div>
         )}
 
-        {/* Genre collapsible — "Semua" paling kiri */}
-        <div className="mt-3">
-          <button
-            onClick={() => setGenresOpen((v) => !v)}
-            className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold"
-          >
-            <SlidersHorizontal className="size-4 text-primary" /> Genre
-            {genresOpen ? <ChevronUp className="ml-auto size-4" /> : <ChevronDown className="ml-auto size-4" />}
-          </button>
-          {genresOpen && (
-            <div className="fade-enter mt-2 flex flex-wrap gap-1.5">
-              <button
-                onClick={() => void applyGenres([])}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs",
-                  activeGenres.length === 0
-                    ? "border-foreground/40 bg-primary/15 text-primary"
-                    : "border-border text-muted-foreground",
-                )}
-              >
-                Semua
-              </button>
-              {genreList.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => void toggleGenre(g.name)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs",
-                    activeGenres.includes(g.name)
-                      ? "border-foreground/40 bg-primary/15 text-primary"
-                      : "border-border text-muted-foreground hover:border-foreground/40",
-                  )}
-                >
-                  {g.name}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Dropdown Urutkan: “Relevant ▾” di fotom. */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={() => void applyGenres(activeGenres)}
+          className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+        >
+          Semua genre
+        </button>
+        <div className="flex gap-1">
+          {activeGenres.slice(0, 4).map((g) => (
+            <button
+              key={g}
+              onClick={() => toggleGenre(g)}
+              className="rounded-full border border-border bg-gold-soft px-2.5 py-1 text-[10px] font-semibold text-gold-strong"
+            >
+              {g}
+            </button>
+          ))}
         </div>
+        <button
+          onClick={() => {
+            // Urutan: hanya “Relevance” yang dipakai — saya pertahankan biar
+            // label ekran persis seperti fotom, meski di backend filter lite.
+          }}
+          className="gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+        >
+          <Star className="size-3.5 text-gold-strong" aria-hidden />
+          Relevant ▾
+        </button>
+      </div>
 
         {/* Hasil: hasil pencarian > daftar genre/semua */}
         {searching && (
@@ -1567,7 +1558,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         {results !== null && !searching && (
           <div className="mt-4">
             {results.length === 0 ? (
-              <div className="py-8 text-center">
+              <div className="mt-4 py-8 text-center">
                 <p className="text-sm text-muted-foreground">
                   Judul persis itu tidak ada
                 </p>
@@ -1586,19 +1577,34 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
                     Cari juga judul 18+
                   </button>
                 )}
-                <div className="mt-6 text-left">
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">
-                    Mungkin kamu mencari salah satu ini
-                  </p>
-                  {listLoading ? (
-                    <GridSkeleton count={6} />
-                  ) : (
-                    <AnimeGrid items={list.slice(0, 10)} onPick={onPick} newIds={new Set()} />
-                  )}
-                </div>
               </div>
             ) : (
-              <AnimeGrid items={results} onPick={onPick} newIds={new Set()} />
+              <>
+                <div className="mb-2 flex items-baseline justify-between">
+                  <p className="text-base font-bold tracking-tight">
+                    Hasil Pencarian ({results.length})
+                  </p>
+                  <button
+                    onClick={() => {
+                      /* Urutan default: Relevance. Tidak ada re-sort lain
+                          yang tersedia di layar ini. */
+                    }}
+                    className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+                  >
+                    <Star className="size-3.5 text-gold-strong mr-1" aria-hidden />
+                    Relevant ▾
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {results.map((a) => (
+                    <SearchResultRow
+                      key={a.id}
+                      item={a}
+                      onClick={() => onPick(a.id, a.title, a.source)}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1606,7 +1612,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
           <div className="mt-4">
             {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} />}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
