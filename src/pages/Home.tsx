@@ -30,6 +30,7 @@ import {
   Play,
   Star,
   Copy,
+  Film,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -1628,14 +1629,14 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         </button>
       </div>
 
-        {/* Hasil: hasil pencarian > daftar genre/semua */}
-        {searching && (
-          <p className="mt-3 text-center text-xs text-muted-foreground">Mencari…</p>
-        )}
-        {results !== null && !searching && (
-          <div className="mt-4">
-            {results.length === 0 ? (
-              <div className="mt-4 py-8 text-center">
+      {/* Hasil: hasil pencarian > daftar genre/semua */}
+      {searching && (
+        <p className="mt-3 text-center text-xs text-muted-foreground">Mencari…</p>
+      )}
+      {results !== null && !searching && (
+        <div className="mt-4">
+          {results.length === 0 ? (
+            <div className="mt-4 py-8 text-center">
                 <p className="text-sm text-muted-foreground">
                   Judul persis itu tidak ada
                 </p>
@@ -1659,8 +1660,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
               <>
                 <div className="mb-2 flex items-baseline justify-between">
                   <p className="text-base font-bold tracking-tight">
-                    Hasil Pencarian ({results.length})
-                  </p>
+                    Hasil Pencarian ({results.length})                  </p>
                   <button
                     onClick={() => {
                       /* Urutan default: Relevance. Tidak ada re-sort lain
@@ -1689,13 +1689,14 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
           <div className="mt-4">
             {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} />}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
 }
 
 // ------------------------------------------------------ chat screens ----
+
 
 function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   useHideNavOnMount();
