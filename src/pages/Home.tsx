@@ -605,7 +605,7 @@ function HomeContent() {
         <HomeLeaderboardPreview />
       </button>
 
-      {/* 5) CHAT BARENG */}
+      {/* 5) CHAT BARENG — abu-abu, bukan biru */}
       <button
         onClick={() => setShowChat(true)}
         className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
@@ -973,7 +973,7 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
       <div className="my-2.5 h-px bg-white/10" />
       {last ? (
         <p className="truncate text-xs text-zinc-400">
-          <span className="font-semibold text-primary">{last.username}</span>:{" "}
+          <span className="font-semibold text-zinc-300">{last.username}</span>:{" "}
           {last.text ?? (last.premiumGive ? "Give premium" : "[foto]")}
         </p>
       ) : (
@@ -1010,11 +1010,11 @@ function GlobalChatPreview() {
 
   const m = visible[idx % visible.length] as any;
   return (
-    <div className="fog-card mt-2 h-14 overflow-hidden">
+    <div className="fog-card mt-2 h-14 overflow-hidden bg-[#0b0b14]">
       <div className="flex items-center gap-2.5 text-[13px]">
         <Avatar src={m.image} seed={m.username} className="size-9" />
         <p className="truncate">
-          <span className="font-semibold text-primary">{m.username}</span>
+          <span className="font-semibold text-zinc-300">{m.username}</span>
           {m.premium && <BlueCheck className="ml-1 inline size-3.5" />}
           <span className="text-muted-foreground"> : </span>
           <span className="text-zinc-300">

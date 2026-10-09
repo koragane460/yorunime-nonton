@@ -590,16 +590,15 @@ export function ChatPanel({
                 <div
                   className={cn(
                     "w-fit max-w-full min-w-0 border px-3 py-2",
-                    "rounded-md",
-                    // Pesan yang isinya cuma foto: bubble dibuat transparan
-                    // supaya tidak ada kotak hitam di belakang fotonya.
-                    m.imageUrl && !m.text
-                      ? "border-transparent bg-transparent p-0 shadow-none"
-                      : give
-                        ? "bubble-give"
-                        : mine
-                          ? "bubble-mine"
-                          : "bubble-other",
+                    "rounded-md",                    // Pesan yang isinya cuma foto: bubble dibuat transparan
+                      // supaya tidak ada kotak hitam di belakang fotonya.
+                      m.imageUrl && !m.text
+                          ? "border-transparent bg-transparent p-0 shadow-none"
+                          : give
+                              ? "bubble-give"
+                              : mine
+                                  ? "bubble-mine"
+                                  : "bubble-other",
                     blinkId === m._id && "reply-blink",
                   )}
                 >

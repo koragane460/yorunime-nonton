@@ -3,7 +3,7 @@
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
 
-/* Aksen kuning: star rating, badge highlights, tab indicator */
+/* Aksen kuning: star rating, badge highlights, tab indicator, New badge */
 .yn-gold-star {
   color: var(--gold-strong);
 }
@@ -19,7 +19,7 @@
   border-radius: 999px;
   transition: width 0.25s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.2s ease;
 }
-/* Kartu poster: overlay bawah gelap bertingkat, badge New biru, Eps kiri bawah */
+/* Kartu poster: overlay bawah gelap bertingkat, badge New kuning, Eps kiri bawah */
 .yn-poster-card {
   position: relative;
   overflow: hidden;
@@ -170,7 +170,98 @@
   --highlight-soft: oklch(0.86 0.15 92 / 22%);
 }
 
-/* Tema terang opsional dari pengaturan */
+/* ------------------------------------------------------------------
+ * Chat bubble color utilities (global / DM / clan / room).
+ * All message bubbles are GRAY/BLACK — never blue — so chat does not
+ * visually break the home yellow-black accent.
+ *
+ *  .bubble-mine  sender bubble   : dark gray bg + gray text
+ *  .bubble-other recipient bubble: slightly lifted gray bg + gray text
+ *  .bubble-give  give-premium marker: gold text, no background tint
+ *  .msg-in / .msg-other / .msg-own  row-level variants (unused fallback)
+ * ------------------------------------------------------------------ */
+
+/* Base bubble (shared by sender/recipient/give) */
+.bubble-mine,
+.bubble-other,
+.bubble-give,
+.msg-in,
+.msg-own,
+.msg-other {
+  color: oklch(0.6 0.03 250);
+  border-color: oklch(0.32 0.05 260);
+}
+
+/* Sender bubble (what I type) */
+.bubble-mine,
+.msg-in,
+.msg-own {
+  background-color: oklch(0.22 0.04 260);
+}
+
+/* Recipient bubble (what others type) */
+.bubble-other,
+.msg-other {
+  background-color: oklch(0.27 0.045 260);
+}
+
+/* Give-premium bubble: transparent, gold text */
+.bubble-give,
+.give-tag {
+  background-color: transparent !important;
+  color: var(--gold-strong) !important;
+}
+.bubble-give .bubble-top,
+.bubble-give .bubble-body {
+  background-color: transparent !important;
+  color: var(--gold-strong) !important;
+}
+
+/* Give-premium tile: dark-gray card, gold text */
+.give-card,
+.give-card * {
+  background-color: oklch(0.18 0.04 260) !important;
+  border-color: oklch(0.32 0.05 260) !important;
+  color: var(--gold-strong) !important;
+}
+
+/* --------------------------------------------------------------
+ * Takeout banner / footer inside chat
+ * -------------------------------------------------------------- */
+.chat-banner,
+.chat-banner-box,
+.yn-banner-box {
+  background-color: oklch(0.18 0.035 262) !important;
+  border-color: oklch(0.32 0.05 260) !important;
+  color: var(--chat-fore, oklch(0.73 0.035 250));
+}
+.chat-banner .chat-banner-title,
+.yn-banner-box .yn-banner-title {
+  color: var(--chat-fore, oklch(0.73 0.035 250));
+}
+.chat-banner .chat-banner-sub,
+.yn-banner-box .yn-banner-sub {
+  color: var(--chat-muted, oklch(0.45 0.03 250));
+}
+
+/* --------------------------------------------------------------
+ * Takeout/chat footer: input area + send button
+ * -------------------------------------------------------------- */
+.chat-footer,
+.chat-input-area {
+  background-color: oklch(0.14 0.03 262);
+}
+.chat-footer input,
+.chat-footer textarea {
+  background-color: oklch(0.18 0.035 262);
+  color: oklch(0.94 0.012 250);
+  border-color: oklch(0.3 0.05 260);
+}
+.chat-footer .send-btn {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
 .theme-light {
   --background: oklch(0.975 0.006 250);
   --foreground: oklch(0.2 0.035 262);
@@ -241,3 +332,67 @@
     cursor: pointer;
   }
 }
+
+/* ------------------------------------------------------------------
+ * Chat bubble colors — abu-abu (bukan biru) untuk global / DM / clan.
+ *
+ * Semua pesan chat (global, DM, clan, room) pakai abu-abu gelap:
+ *   sender  = bg-abu-hitam (bagian atas) + teks abu 200
+ *   other   = bg-abu hitam terang + teks abu 300
+ *   give    = marker give premium berwarna kuning, bukan biru
+ * 
+ * Clans dipisah dari global/DM: chat clan tetap pakai abu-abu, tapi
+ * identity clan-nya (avatar/card) tetap kelihatan. Preview chat
+ * home (GlobalChatPreview) dan pop-up ClanBox sama-sama abu-abu,
+ * supaya tidak keliatan "chat biru" di mana-mana.
+ * ------------------------------------------------------------------ */
+
+@layer chat {
+  /* Bubble pesan: bagian atas banner (badge badge + clan tag + reply quote) */
+  .chat-bubble .bubble-top {
+    background-color: var(--bubble-mine, oklch(0.22 0.04 260));
+    color: var(--bubble-mine-text, oklch(0.62 0.03 250));
+  }
+  .chat-bubble .bubble-body {
+    background-color: var(--bubble-mine, oklch(0.22 0.04 260));
+    color: var(--bubble-mine-text, oklch(0.62 0.03 250));
+  }
+
+  /* Pesan orang lain (other) */
+  .chat-bubble.other .bubble-top {
+    background-color: var(--bubble-other, oklch(0.24 0.045 255));
+    color: var(--bubble-other-text, oklch(0.55 0.03 250));
+  }
+  .chat-bubble.other .bubble-body {
+    background-color: var(--bubble-other, oklch(0.24 0.045 255));
+    color: var(--bubble-other-text, oklch(0.55 0.03 250));
+  }
+
+  /* Give premium: marker kuning, bukan biru */
+  .chat-bubble.give .bubble-top,
+  .chat-bubble.give .bubble-body {
+    background-color: var(--bubble-give, transparent);
+    color: var(--bubble-give-text, var(--gold-strong));
+  }
+  .chat-bubble.give .give-tag {
+    background-color: var(--gold-strong);
+    color: var(--gold-strong-foreground);
+  }
+
+  /* Kategori chat pane: daftar pesan, header, dan footer (input) semua
+   * pakai abu-abu / navy, bukan biru. */
+  .chat-panel,
+  .chat-panel .chat-list,
+  .chat-panel .chat-footer {
+    background-color: var(--chat-bg, oklch(0.14 0.03 262));
+  }
+  .chat-panel .chat-header,
+  .chat-panel .chat-tab {
+    background-color: var(--chat-bg, oklch(0.14 0.03 262));
+    color: var(--chat-fore, oklch(0.73 0.035 250));
+  }
+  .chat-panel .chat-muted {
+    background-color: var(--chat-muted, oklch(0.22 0.04 260));
+  }
+}
+
