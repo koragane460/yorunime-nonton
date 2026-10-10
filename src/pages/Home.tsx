@@ -940,3 +940,4 @@ function HomeContent() {
       {pickId && pickSource === "sanka" && (
         <DonghuaDetailScreen
           slug={pickId}
+        />
