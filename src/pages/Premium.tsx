@@ -35,14 +35,14 @@ type History = {
 };
 
 const PERKS = [
-  "Tanpa iklan yang menyela di tengah nonton",
-  "Kualitas 1080p, buffering lebih jarang",
+  "Unlock manga dan manhwa untuk dibaca",
+  "Kualitas 1080p lebih jernih dan enak di mata",
   "Memuat episode anime jauh lebih cepat dan tidak memakan waktu lama",
   "Memuat gambar manga dan manhwa jauh lebih cepat tanpa harus menunggu lama",
-  "Centang emas di samping namamu",
+  "Dapatkan centang biru di samping namamu",
+  "XP nonton 2× lebih banyak dibandingkan non-premium",
   "Bonus Sacret setiap kali membeli paket",
   "Bisa kasih premium ke orang lain dan kumpulkan XP",
-  "Kuis dan event khusus member premium",
 ];
 
 const HOW_IT_WORKS = [
@@ -177,19 +177,18 @@ export default function Premium() {
 
 function Hero() {
   return (
-    <header className="pop-enter border-b border-white/10 pb-5 pt-1">
-      <p className="font-mono text-[10px] tracking-[0.22em] text-zinc-500">
+    <header className="pop-enter flex flex-col items-center border-b border-white/10 pb-5 pt-2 text-center">
+      <span className="flex size-14 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_24px_-4px] shadow-gold/50">
+        <Crown className="size-7 text-gold" />
+      </span>
+      <p className="mt-2.5 font-mono text-[11px] tracking-[0.28em] text-zinc-400">
         YORUNIME
       </p>
-      <h1 className="mt-1.5 flex items-center gap-2 text-2xl font-extrabold leading-tight">
-        Premium
-        <span className="text-gold">.</span>
-        <span className="flex size-8 items-center justify-center rounded-xl border border-gold/40 bg-gold/10">
-          <Crown className="size-4 text-gold" />
-        </span>
+      <h1 className="mt-0.5 text-3xl font-extrabold leading-tight">
+        Premium<span className="text-gold">.</span>
       </h1>
-      <p className="mt-1.5 max-w-[20rem] text-[13px] leading-6 text-zinc-400">
-        Nonton tanpa iklan, kualitas 1080p, loading sat set, dan centang emas
+      <p className="mt-2 max-w-[22rem] text-[13px] leading-6 text-zinc-400">
+        Nonton tanpa iklan, kualitas 1080p, loading sat set, dan centang biru
         di samping namamu.
       </p>
     </header>
@@ -237,6 +236,17 @@ function Plans() {
   // Toast bawah sudah dihapus permanen, jadi galat pembayaran tampil inline.
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Penunjuk geser kartu paket.
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [activePlan, setActivePlan] = useState(0);
+  const planCount = plans?.length ?? 0;
+  const onCarouselScroll = () => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / (el.scrollWidth / Math.max(1, planCount)));
+    setActivePlan(Math.min(planCount - 1, Math.max(0, idx)));
+  };
 
   const ready = config?.ready === true;
   const image = config?.qrUrl || qrUrl || "";
@@ -322,43 +332,51 @@ function Plans() {
       <h2 className="text-[13px] font-bold text-gold">Paket</h2>
       {/* Kartu lurus ke atas, digeser ke kanan-kiri: paling murah di kiri,
           paling mahal di kanan (permintaan user). */}
-      <div className="thin-scroll -mx-3 mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-1">
+      <div ref={carouselRef} onScroll={onCarouselScroll} className="thin-scroll -mx-3 mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-1">
         {[...(plans ?? [])]
           .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
-          .map((p) => (
+          .map((p, i) => (
           <div
             key={p.id}
-            className="yn-card yn-card-hover relative w-[18.5rem] shrink-0 snap-start overflow-hidden p-4"
+            className="yn-card yn-card-hover relative w-full shrink-0 snap-start overflow-hidden p-4"
           >
-            {/* garis aksen tipis di tepi kiri */}
-            <span aria-hidden className="absolute inset-y-4 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold/70 to-gold/0" />
-            <div className="flex items-center gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10">
-                <Sparkles className="size-5 text-gold" />
+            {/* Mahkota di tengah */}
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="flex size-14 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_20px_-4px] shadow-gold/40">
+                <Crown className="size-7 text-gold" />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-extrabold leading-tight text-white">
-                  {p.label}
-                </p>
-                <p className="font-mono text-[10px] leading-tight text-zinc-500">
-                  {p.days} hari · nonton tanpa iklan
-                </p>
-                <p className="mt-0.5 text-[10px] leading-snug text-zinc-400">
+              <p className="text-base font-extrabold leading-tight text-white">{p.label}</p>
+              <p className="font-mono text-[10px] leading-tight text-zinc-500">
+                {p.days} hari · nonton tanpa iklan
+              </p>
+            </div>
+
+            {/* Dua kotak: Sacret (berlian) + HD 1080p */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="flex flex-col items-center gap-1 rounded-xl border border-primary/40 bg-gradient-to-b from-primary/25 to-primary/5 px-2 py-2.5">
+                <Gem className="size-6 text-primary" />
+                <p className="text-[11px] font-bold text-primary">
                   {typeof p.sacret === "number" && p.sacret > 0
-                    ? `Bonus ${p.sacret.toLocaleString("id-ID")} Sacret · kualitas sampai 1080p`
-                    : "Kualitas sampai 720p · tanpa iklan"}
+                    ? `${p.sacret.toLocaleString("id-ID")} Sacret`
+                    : "Tanpa bonus"}
                 </p>
               </div>
-              <div className="shrink-0 text-right">
-                <p className="font-mono text-[15px] font-bold text-gold">
-                  {p.price.toLocaleString("id-ID")}
-                </p>
-                {typeof p.sacret === "number" && p.sacret > 0 && (
-                  <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] font-bold text-primary">
-                    <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
-                  </p>
-                )}
+              <div className="flex flex-col items-center gap-1 rounded-xl border border-sky-400/40 bg-gradient-to-b from-sky-400/25 to-sky-400/5 px-2 py-2.5">
+                <span className="flex size-6 items-center justify-center rounded-md border border-sky-300/60 font-mono text-[10px] font-black text-sky-200">HD</span>
+                <p className="text-[11px] font-bold text-sky-200">1080p</p>
               </div>
+            </div>
+
+            {/* Harga + tombol */}
+            <div className="mt-3 text-center">
+              <p className="font-mono text-xl font-bold text-gold">
+                RP {p.price.toLocaleString("id-ID")}
+              </p>
+              {typeof p.sacret === "number" && p.sacret > 0 && (
+                <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-bold text-primary">
+                  <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
+                </p>
+              )}
             </div>
             <button
               disabled={busy !== null}
@@ -370,12 +388,26 @@ function Plans() {
                   <Loader2 className="size-4 animate-spin" /> Menyiapkan…
                 </>
               ) : (
-                "Beli premium"
+                "Beli"
               )}
             </button>
           </div>
         ))}
       </div>
+      {/* Titik penunjuk geser */}
+      {planCount > 1 && (
+        <div className="mt-2 flex justify-center gap-1.5">
+          {Array.from({ length: planCount }).map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                i === activePlan ? "w-4 bg-gold" : "w-1.5 bg-white/25",
+              )}
+            />
+          ))}
+        </div>
+      )}
       {!ready && (
         <p className="mt-2 text-[11px] text-zinc-500">
           Pembayaran sedang disiapkan developer. Cek lagi nanti.

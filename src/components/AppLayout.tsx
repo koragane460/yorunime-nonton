@@ -220,7 +220,7 @@ function AccountPanel({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="yn-banner-box pop-enter relative mt-3 w-full rounded-2xl border border-white/15">
+    <div className="yn-banner-box pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] rounded-3xl border border-white/15 shadow-[0_0_28px_-6px] shadow-primary/25">
       {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
           Keduanya di luar area teks supaya tidak saling nimpa. */}
       <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1.5">
@@ -284,15 +284,15 @@ function AccountPanel({
             </div>
           </div>
 
-          {/* Bar level: kiri "Level n", kanan "1/12.000" */}
+          {/* Bar level: lebih kecil, tanpa garis pembatas */}
           <div className="mt-2.5">
-            <div className="mb-1 flex items-center justify-between text-[11px]">
+            <div className="mb-1 flex items-center justify-between text-[10px]">
               <span className="font-semibold text-white">Level {level}</span>
               <span className="text-zinc-400">
                 {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
               </span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
+            <div className="h-1.5 overflow-hidden rounded-full bg-black/60">
               <div
                 className="h-full rounded-full bg-primary"
                 style={{ width: `${pct}%` }}
@@ -300,17 +300,14 @@ function AccountPanel({
             </div>
           </div>
 
-          {/* Garis pembatas tipis */}
-          <div className="my-2.5 h-px bg-white/15" />
-
-          {/* Total Sacret + sisa hari premium */}
-          <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5 font-semibold text-sky-300">
-              <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
+          {/* Total Sacret + sisa hari premium — ikon & teks lebih besar */}
+          <div className="mt-2.5 flex items-center gap-5 text-sm">
+            <span className="flex items-center gap-1.5 font-bold text-sky-300">
+              <GemIcon className="size-5" /> {diamonds.toLocaleString("id-ID")} Sacret
             </span>
             {premium && (
-              <span className="flex items-center gap-1.5 font-semibold text-gold">
-                <CrownIcon className="size-3.5" /> {premiumDays} hari
+              <span className="flex items-center gap-1.5 font-bold text-gold">
+                <CrownIcon className="size-5" /> {premiumDays} hari
               </span>
             )}
           </div>

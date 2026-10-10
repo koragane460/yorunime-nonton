@@ -21,11 +21,11 @@ export const PLANS: Record<
   string,
   { label: string; days: number; price: number; sacret: number }
 > = {
-  p1: { label: "1 Bulan", days: 30, price: 7000, sacret: 500 },
-  p2: { label: "3 Bulan", days: 90, price: 30000, sacret: 1350 },
-  p3: { label: "1 Tahun", days: 365, price: 120000, sacret: 4500 },
-  p4: { label: "3 Tahun", days: 1095, price: 150000, sacret: 8000 },
-  p5: { label: "7 Tahun", days: 2555, price: 200000, sacret: 21000 },
+  p1: { label: "Premium 1 Bulan", days: 30, price: 7000, sacret: 600 },
+  p2: { label: "Premium 4 Bulan", days: 120, price: 30000, sacret: 1350 },
+  p3: { label: "Premium 1 Tahun", days: 365, price: 100000, sacret: 6000 },
+  p4: { label: "Premium 3 Tahun", days: 1095, price: 165000, sacret: 11000 },
+  p5: { label: "Premium 7 Tahun", days: 2555, price: 210000, sacret: 21000 },
 };
 
 /** Lama logo merah tampil setelah akun di-tag developer. */

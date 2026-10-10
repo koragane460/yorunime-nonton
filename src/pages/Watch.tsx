@@ -364,6 +364,8 @@ function WatchContent() {
   // Posisi playback yang harus dipulihkan setelah transisi layar penuh.
   const resumeAtRef = useRef(0);
   const [playing, setPlaying] = useState(false);
+  // Auto next: kalau aktif, episode berikutnya langsung diputar sehabis ini.
+  const [autoNext, setAutoNext] = useState(false);
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
   // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
   // datanya arrive (dan sebaliknya saat user ganti di player).
@@ -1984,6 +1986,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             style={{ filter: videoFilter }}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
+            onEnded={() => {
+              // Auto next: sehabis episode selesai, langsung putar berikutnya.
+              if (!autoNext) return;
+              const nxt = epList[epIndex + 1];
+              if (nxt?.id) navigate(epUrl(nxt.id), { replace: true });
+            }}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
             onLoadedMetadata={(e) => {
               setDuration(e.currentTarget.duration);
@@ -2481,6 +2489,21 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               Lewati Intro
             </button>
           )}
+
+        {/* Auto next: tombol aktif/nonaktif di pojok, putih bersih. */}
+        {!uiLocked && (
+          <button
+            onClick={() => setAutoNext((v) => !v)}
+            className={cn(
+              "absolute bottom-28 left-3 rounded-full border px-3 py-1.5 text-xs font-bold transition",
+              autoNext
+                ? "border-white bg-white text-black"
+                : "border-white/50 bg-black/75 text-white hover:bg-white hover:text-black",
+            )}
+          >
+            Auto next {autoNext ? "ON" : "OFF"}
+          </button>
+        )}
       </div>
       </div>
 

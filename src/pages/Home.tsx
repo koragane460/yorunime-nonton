@@ -47,6 +47,7 @@ import {
   InfoIcon as Info,
   SparklesIcon as Sparkles,
   GemIcon as Gem,
+  CrownIcon,
 } from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -445,13 +446,16 @@ function HomeContent() {
     return () => window.removeEventListener("resize", paint);
   }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
 
+  // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
+  // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   const tabs = useMemo(
     () => [
-      { id: "roi", label: "roi" },
-      ...genreList.slice(0, 5).map((g) => ({ id: g.name, label: g.name })),
+      { id: "semua", label: "Semua" },
+      { id: "terbaru", label: "Terbaru" },
+      { id: "populer", label: "Populer" },
       { id: "kontroversi", label: "Kontroversi" },
     ],
-    [genreList],
+    [],
   );
 
   return (
@@ -459,19 +463,21 @@ function HomeContent() {
       {/* 1) YORUNIME PREMIUM — card ke /premium */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-2xl border border-border bg-secondary/40 p-3.5 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/15 via-secondary/40 to-secondary/40 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 transition hover:border-gold/60"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <Sparkles className="size-6 text-primary" />
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/15 shadow-[0_0_16px_-4px] shadow-gold/50">
+          <CrownIcon className="size-7 text-gold" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold">YoruNime</span>
-          <span className="block text-xs text-zinc-400">
-            Dukung YoruNime — nonton tanpa batas, tanpa iklan
+          <span className="block font-mono text-[11px] font-bold tracking-[0.2em] text-gold">
+            PREMIUM
+          </span>
+          <span className="mt-0.5 block text-xs leading-snug text-zinc-300">
+            Premium mulai dari 7.000 — baca manga dan manhwa sepuasnya
           </span>
         </span>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground">
-          Beli
+        <span className="flex shrink-0 items-center rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-black">
+          Buka Premium
         </span>
       </button>
 
@@ -605,19 +611,20 @@ function HomeContent() {
         <HomeLeaderboardPreview />
       </button>
 
-      {/* 5) CHAT BARENG — abu-abu, bukan biru */}
+      {/* 5) CHAT BARENG — rounded, tanpa garis pembatas */}
       <button
         onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-3 w-full rounded-3xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
       >
-        <div className="flex items-center justify-between pb-2.5">
+        <div className="flex items-center justify-between pb-2">
           <p className="flex items-center gap-2 font-bold">
-            <MessageSquare className="size-5" aria-hidden /> Chat bareng
+            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15">
+              <MessageSquare className="size-5 text-primary" aria-hidden />
+            </span>
+            Chat bareng
           </p>
           <span className="text-xs text-muted-foreground">buka ›</span>
         </div>
-        {/* Garis pembatas di bawah judul (sebelum dipencet) */}
-        <div className="h-px bg-white/15" />
         <QueryBoundary label="Gagal memuat chat">
           <GlobalChatPreview />
         </QueryBoundary>
@@ -755,6 +762,58 @@ function HomeContent() {
           />
         )}
       </SectionRow>
+
+      {/* Anime Hot — Top 1-3 yang lagi panas */}
+      {!loading && topList.length > 0 && (
+        <div className="fade-enter mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
+              <span className="text-lg" aria-hidden>🔥</span> Anime Hot
+            </p>
+            <button
+              onClick={() =>
+                setCatalog({ kind: "popular", title: "Anime Hot", items: topList as unknown as CatalogCard[] })
+              }
+              className="text-xs font-semibold text-primary"
+            >
+              Lihat selengkap ›
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {topList.slice(0, 3).map((a, i) => (
+              <button
+                key={a.id}
+                onClick={() => openAnime(a.id, a.title, a.source)}
+                className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10"
+              >
+                {a.image ? (
+                  <img
+                    src={a.image}
+                    alt={a.title}
+                    loading="lazy"
+                    className="size-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="size-full bg-muted" />
+                )}
+                <span
+                  className={cn(
+                    "absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-lg font-black text-black",
+                    i === 0 ? "bg-yellow-400" : i === 1 ? "bg-zinc-300" : "bg-amber-600",
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-1.5 pt-4">
+                  <p className="line-clamp-2 text-left text-[10px] font-semibold leading-tight text-white">
+                    {a.title}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <SectionRow
         title="Top Anime Hari Ini"
@@ -1010,7 +1069,7 @@ function GlobalChatPreview() {
 
   const m = visible[idx % visible.length] as any;
   return (
-    <div className="fog-card mt-2 h-14 overflow-hidden bg-[#0b0b14]">
+    <div className="fog-card mt-2 h-14 overflow-hidden rounded-xl bg-gradient-to-r from-[#0b0b14] via-[#14141f] to-[#0b0b14]">
       <div className="flex items-center gap-2.5 text-[13px]">
         <Avatar src={m.image} seed={m.username} className="size-9" />
         <p className="truncate">
@@ -1196,8 +1255,8 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
             <ChevronLeft className="size-4" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-base font-bold leading-tight">
-              {mode === "xp" ? "Leaderboard XP" : "Top Give Premium"}
+            <h1 className="text-base font-extrabold leading-tight">
+              {mode === "xp" ? "TOP XP & GIVEAWAY" : "Top Give Premium"}
             </h1>
             <p className="text-[11px] text-muted-foreground">
               {mode === "xp" ? "Peringkat XP komunitas" : "Peringkat Giver Premium"}
@@ -1292,9 +1351,9 @@ function SearchResultRow({
   return (
     <button
       onClick={onClick}
-      className="group flex items-start gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5 text-left transition hover:border-foreground/40 hover:border-foreground/60"
+      className="group flex items-start gap-3 rounded-2xl px-1 py-2 text-left transition"
     >
-      <div className="relative aspect-[2/3] w-16 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted">
+      <div className="relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
         {item.image ? (
           <img
             src={item.image}
@@ -1315,30 +1374,33 @@ function SearchResultRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold leading-snug text-white">
-          {item.title}
-        </p>
-        {isDonghua && (
-          <p className="mt-0.5 text-[11px] text-muted-foreground"
-          >
-            Judul Inggris: {item.title}
+        <div className="flex items-start justify-between gap-2">
+          <p className="min-w-0 flex-1 text-sm font-bold leading-snug text-white">
+            {item.title}
           </p>
-        )}
+          {item.type === "Movie" && (
+            <Film className="size-4 shrink-0 text-gold-strong" aria-hidden />
+          )}
+        </div>
         {synopsis && (
-          <p className="mt-1 text-[12px] leading-snug text-foreground/80 line-clamp-2">
+          <p className="mt-1 text-[12px] leading-snug text-foreground/70 line-clamp-2">
             {synopsis}
           </p>
         )}
-      </div>
-
-      <div className="ml-2 shrink-0">
-        <span className="size-6 rounded-md bg-secondary/80 p-0.5">
-          {item.type === "Movie" ? (
-            <Film className="size-5 text-gold-strong" aria-hidden />
-          ) : (
-            <ChevronRight className="size-5 text-gold-strong" aria-hidden />
+        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+          {typeof item.score === "number" && item.score > 0 && (
+            <span className="flex items-center gap-1">
+              <Star className="size-3.5 text-gold-strong" aria-hidden />
+              {item.score.toFixed(1)}
+            </span>
           )}
-        </span>
+          {item.status && (
+            <span className="flex items-center gap-1">
+              <Play className="size-3.5" aria-hidden />
+              {item.status}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
@@ -1598,25 +1660,88 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         </div>
         )}
 
-      {/* Dropdown Urutkan: “Relevant ▾” di fotom. */}
-      <div className="flex items-center justify-between gap-2">
+      {/* Baris filter: tombol genre + chip aktif + urutan */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
-          onClick={() => void applyGenres(activeGenres)}
-          className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+          onClick={() => setGenresOpen((v) => !v)}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+            genresOpen
+              ? "border-gold-strong bg-gold-soft text-gold-strong"
+              : "border-border bg-card text-muted-foreground hover:border-foreground/40",
+          )}
         >
-          Semua genre
+          <SlidersHorizontal className="size-3.5" aria-hidden />
+          Genre
+          {activeGenres.length > 0 && (
+            <span className="ml-0.5 rounded-full bg-gold-strong px-1.5 text-[10px] font-bold text-background">
+              {activeGenres.length}
+            </span>
+          )}
         </button>
-        <div className="flex gap-1">
-          {activeGenres.slice(0, 4).map((g) => (
+        <div className="flex flex-1 flex-wrap gap-1">
+          {activeGenres.map((g) => (
             <button
               key={g}
               onClick={() => toggleGenre(g)}
-              className="rounded-full border border-border bg-gold-soft px-2.5 py-1 text-[10px] font-semibold text-gold-strong"
+              className="flex items-center gap-1 rounded-full border border-gold-strong bg-gold-soft px-2.5 py-1 text-[10px] font-semibold text-gold-strong"
             >
               {g}
+              <X className="size-3" aria-hidden />
             </button>
           ))}
         </div>
+        {activeGenres.length > 0 && (
+          <button
+            onClick={() => void applyGenres([])}
+            className="shrink-0 text-[11px] font-semibold text-primary"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* Panel pilihan genre — muncul saat tombol Genre ditekan */}
+      {genresOpen && (
+        <div className="mt-2 rounded-2xl border border-border bg-card p-3">
+          <p className="mb-2 text-xs font-bold text-muted-foreground">
+            Pilih genre (bisa lebih dari satu)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => void applyGenres([])}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                activeGenres.length === 0
+                  ? "border-gold-strong bg-gold-soft text-gold-strong"
+                  : "border-border bg-secondary/40 text-muted-foreground",
+              )}
+            >
+              Semua
+            </button>
+            {genreList.map((g) => {
+              const on = activeGenres.includes(g.name);
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => toggleGenre(g.name)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                    on
+                      ? "border-gold-strong bg-gold-soft text-gold-strong"
+                      : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+                  )}
+                >
+                  {g.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Urutan */}
+      <div className="mt-2 flex justify-end">
         <button
           onClick={() => {
             // Urutan: hanya “Relevance” yang dipakai — saya pertahankan biar
@@ -1702,7 +1827,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   useHideNavOnMount();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"chat" | "teman">("chat");
+  const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
   const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
   const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
@@ -1712,6 +1837,18 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   );
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip");
   const requests = useQuery(api.friends.listRequests, user ? {} : "skip");
+  const myClan = useQuery(api.clans.myMembership, user ? {} : "skip");
+  const clanId = myClan?.clanId as Id<"clans"> | undefined;
+  const {
+    messages: clanMsgs,
+    sendFast: sendClanFast,
+    dropLocal: dropClanLocal,
+    loading: clanLoading,
+  } = useFastChat(
+    clanId ? { kind: "clan", clanId, limit: 60 } : "skip",
+    { kind: "clan", clanId },
+    user,
+  );
   const sendReq = useMutation(api.friends.sendFriendRequest);
   const [dmPeer, setDmPeer] = useState<{ id: Id<"users">; name: string } | null>(null);
   // Chat pribadi juga pakai echo lokal supaya pesan langsung nempel di layar.
@@ -1738,9 +1875,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           <h1 className="truncate text-lg font-bold">Chat</h1>
         </div>
         <div className="w-full px-4">
-          {/* Tab tanpa kotak — garis bawah saat aktif (chat clan pindah ke kotak clan di Home) */}
+          {/* Tab: Chat · Clan · Teman — clan digabung kembali ke chat bareng */}
           <div className="flex border-b border-border/60">
-            {(["chat", "teman"] as const).map((t) => (
+            {(["chat", "clan", "teman"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1749,7 +1886,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   tab === t ? "text-foreground" : "text-muted-foreground",
                 )}
               >
-                {t === "chat" ? "Chat" : "Teman"}
+                {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
                 {tab === t && (
                   <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />
                 )}
@@ -1792,6 +1929,60 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                 <p className="shrink-0 px-3 pb-1 text-center text-[10px] text-muted-foreground">
                   Memuat riwayat chat…
                 </p>
+              )}
+            </div>
+          )}
+
+          {tab === "clan" && (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-secondary/40">
+              {clanId ? (
+                <>
+                  <ChatPanel
+                    kind="clan"
+                    messages={(clanMsgs ?? []) as unknown as ChatMsg[]}
+                    meId={meId}
+                    onOpenProfile={(id) => setProfileId(id)}
+                    onSend={async (p) => {
+                      await sendClanFast(p);
+                    }}
+                    onDeleteLocal={dropClanLocal}
+                  />
+                  {clanLoading && (
+                    <p className="shrink-0 px-3 pb-1 text-center text-[10px] text-muted-foreground">
+                      Memuat riwayat chat clan…
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                  <span className="flex size-16 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
+                    <svg className="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden>
+                      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
+                    </svg>
+                  </span>
+                  <p className="text-sm font-semibold">Kamu belum join clan :(</p>
+                  <p className="text-xs text-muted-foreground">
+                    Join clan atau buat clan untuk bergabung
+                  </p>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      navigate("/clan");
+                    }}
+                    className="mt-1 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
+                  >
+                    Lihat clan
+                  </button>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      navigate("/clan?buat=1");
+                    }}
+                    className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground"
+                  >
+                    Buat clan
+                  </button>
+                </div>
               )}
             </div>
           )}

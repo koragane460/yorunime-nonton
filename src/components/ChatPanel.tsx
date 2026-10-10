@@ -725,7 +725,7 @@ export function ChatPanel({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full"
+              className="size-11 rounded-full"
               disabled={muted}
               onClick={() => {
                 if (muted) {
@@ -735,7 +735,7 @@ export function ChatPanel({
                 setPlusOpen((v) => !v);
               }}
             >
-              <Plus className="size-4" />
+              <Plus className="size-5" />
             </Button>
             {plusOpen && (
               <div className="pop-enter absolute bottom-12 left-0 z-10 flex flex-col gap-2 rounded-2xl border border-border bg-popover p-2 shadow-xl">
@@ -765,15 +765,15 @@ export function ChatPanel({
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
             placeholder={muted ? "Kamu sedang dimute…" : "Tulis pesan…"}
             disabled={muted}
-            className="flex-1 rounded-full focus-visible:border-white/20 focus-visible:ring-0 disabled:opacity-50"
+            className="h-11 flex-1 rounded-full text-[15px] focus-visible:border-white/20 focus-visible:ring-0 disabled:opacity-50"
           />
           <Button
             size="icon"
             disabled={muted}
-            className="rounded-full bg-primary text-primary-foreground hover:brightness-110"
+            className="size-11 rounded-full bg-primary text-primary-foreground hover:brightness-110"
             onClick={submit}
           >
-            <Send className="size-4" />
+            <Send className="size-5" />
           </Button>
         </div>
         <input
