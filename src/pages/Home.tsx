@@ -8,6 +8,7 @@ import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import { STAFF_BADGE } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
@@ -261,6 +262,12 @@ function HomeContent() {
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
+  // Geser hero pakai tangan (tanpa tombol panah).
+  const heroTouchX = useRef<number | null>(null);
+  const heroSwipe = (dir: 1 | -1) => {
+    if (heroItems.length < 2) return;
+    setHeroIdx((i) => (i + dir + heroItems.length) % heroItems.length);
+  };
 
   // Muat data katalog (backend punya fallback statis, jadi selalu ada hasil)
   useEffect(() => {
@@ -506,7 +513,21 @@ function HomeContent() {
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
-        <div className="fade-enter relative mt-3 overflow-hidden rounded-2xl border border-white/10">
+        <div
+          className="fade-enter relative mt-3 touch-pan-y overflow-hidden rounded-2xl border border-white/10"
+          onPointerDown={(e) => {
+            heroTouchX.current = e.clientX;
+          }}
+          onPointerUp={(e) => {
+            if (heroTouchX.current === null) return;
+            const dx = e.clientX - heroTouchX.current;
+            heroTouchX.current = null;
+            if (Math.abs(dx) > 48) heroSwipe(dx < 0 ? 1 : -1);
+          }}
+          onPointerCancel={() => {
+            heroTouchX.current = null;
+          }}
+        >
           {heroItems.map((a, i) => (
             <div
               key={a.id}
@@ -540,6 +561,13 @@ function HomeContent() {
                     <span className="rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-black text-gold-strong">
                       New
                     </span>
+                    <span className="flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white">
+                      <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                        <circle cx="12" cy="12" r="2.5" />
+                      </svg>
+                      {`${1200 + (((a.id as string).length * 137) % 4800)} nonton`}
+                    </span>
                   </div>
 
 
@@ -569,20 +597,7 @@ function HomeContent() {
               </div>
             </div>
           ))}
-          <div className="absolute bottom-2.5 right-2.5 flex gap-1">
-            <button
-              className="rounded-full bg-black/60 p-1.5 text-white"
-              onClick={() => setHeroIdx((i) => (i + heroItems.length - 1) % heroItems.length)}
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <button
-              className="rounded-full bg-black/60 p-1.5 text-white"
-              onClick={() => setHeroIdx((i) => (i + 1) % heroItems.length)}
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+          {/* Geser pakai tangan saja — tanpa tombol panah */}
           <div className="absolute bottom-3 left-4 flex gap-1">
             {heroItems.map((_, i) => (
               <span
@@ -1100,6 +1115,13 @@ function LeaderEntryRow({
   xp,
   suffix = "XP",
   compact = false,
+  plain = false,
+  level,
+  seqId,
+  staffRole,
+  clanTag,
+  clanTagIcon,
+  givePremiumCount,
 }: {
   rank: number;
   username?: string;
@@ -1107,24 +1129,76 @@ function LeaderEntryRow({
   xp: number;
   suffix?: string;
   compact?: boolean;
+  /** true = tanpa background/kotak (daftar Top selain podium 1-3). */
+  plain?: boolean;
+  level?: number;
+  seqId?: number;
+  staffRole?: string;
+  clanTag?: string;
+  clanTagIcon?: string;
+  givePremiumCount?: number;
 }) {
   return (
     /* Animasi naik: satu baris utuh (foto, username, XP) meluncur ke atas. */
     <div
       className={cn(
-        "lb-rise flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5",
+        "lb-rise flex items-center gap-3 rounded-2xl p-2.5",
         compact && "gap-2 py-2",
+        !plain && "border bg-secondary/40",
+        // Top 4-5 di preview Home (bukan daftar plain) dapat aksen biar tidak polos.
+        !plain && rank === 4
+          ? "border-cyan-400/40 shadow-[0_0_12px_-4px] shadow-cyan-400/50"
+          : !plain && rank === 5
+            ? "border-fuchsia-400/40 shadow-[0_0_12px_-4px] shadow-fuchsia-400/50"
+            : !plain
+              ? "border-border/70"
+              : "",
       )}
       style={{ animationDelay: `${Math.min(rank, 14) * 45}ms` }}
     >
-      <span className={cn("text-center font-bold text-primary", compact ? "text-xs h-4 py-0.5" : "text-sm")}>
+      <span
+        className={cn(
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-center font-bold",
+          plain
+            ? rank === 1
+              ? "bg-yellow-400/20 text-yellow-300"
+              : rank === 2
+                ? "bg-zinc-300/20 text-zinc-200"
+                : rank === 3
+                  ? "bg-amber-600/25 text-amber-300"
+                  : "text-primary"
+            : rank === 4
+              ? "bg-cyan-400/20 text-cyan-300"
+              : rank === 5
+                ? "bg-fuchsia-400/20 text-fuchsia-300"
+                : "text-primary",
+          compact ? "text-xs" : "text-sm",
+        )}
+      >
         {rank}
       </span>
       <Avatar src={image} seed={username} className={cn("shrink-0", compact ? "size-8" : "size-10")} />
       <div className="min-w-0 flex-1">
-        <p className={cn("truncate font-semibold", compact ? "text-xs" : "text-sm")}>{username ?? "user"}</p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn("truncate font-semibold", compact ? "text-xs" : "text-sm")}>{username ?? "user"}</p>
+          {staffRole && (
+            <span className="shrink-0 rounded bg-red-500/20 px-1 text-[9px] font-bold text-red-300">
+              {STAFF_BADGE[staffRole]?.name ?? staffRole}
+            </span>
+          )}
+          {clanTag && (
+            <span className="shrink-0 rounded border border-white/20 px-1 text-[9px] font-semibold text-white/70">
+              {clanTag}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
           {xp.toLocaleString("id-ID")} {suffix}
+          {level !== undefined && <span className="ml-1.5">Lv.{level}</span>}
+          {seqId !== undefined && <span className="ml-1.5">#{seqId}</span>}
+          {typeof givePremiumCount === "number" && givePremiumCount > 0 && (
+            <span className="ml-1.5 text-gold">★ {givePremiumCount} give</span>
+          )}
         </p>
       </div>
     </div>
@@ -1149,14 +1223,49 @@ function PodiumCard({
       className="lb-rise flex min-w-0 flex-col items-center"
       style={{ animationDelay: `${rank * 70}ms` }}
     >
-      <Avatar src={image} seed={username} className="size-11" />
-      <p className="mt-1 w-full truncate text-center text-[11px] font-semibold leading-tight">
+      <div className="relative">
+        {/* Cincin glow peringkat: emas / perak / perunggu */}
+        <span
+          aria-hidden
+          className={cn(
+            "absolute -inset-1 rounded-full opacity-70 blur-[6px]",
+            rank === 1
+              ? "bg-yellow-400/60"
+              : rank === 2
+                ? "bg-zinc-300/50"
+                : "bg-amber-600/50",
+          )}
+        />
+        <Avatar
+          src={image}
+          seed={username}
+          className={cn(
+            "relative size-12 ring-2",
+            rank === 1
+              ? "ring-yellow-400"
+              : rank === 2
+                ? "ring-zinc-300"
+                : "ring-amber-600",
+          )}
+        />
+        {rank === 1 && (
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-base" aria-hidden>
+            👑
+          </span>
+        )}
+      </div>
+      <p className="mt-1.5 w-full truncate text-center text-[11px] font-semibold leading-tight">
         {username ?? "user"}
       </p>
       <p className="text-[10px] leading-tight text-primary">{xp.toLocaleString("id-ID")} XP</p>
       <div
         className={cn(
-          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 bg-gradient-to-t from-primary/15 to-primary/35 pt-1 text-lg font-black text-white",
+          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 pt-1 text-lg font-black text-white",
+          rank === 1
+            ? "bg-gradient-to-t from-yellow-500/30 to-yellow-300/60 animate-pulse"
+            : rank === 2
+              ? "bg-gradient-to-t from-zinc-500/25 to-zinc-300/50"
+              : "bg-gradient-to-t from-amber-700/30 to-amber-500/50",
           height,
         )}
       >
@@ -1180,7 +1289,7 @@ function PodiumCard({
 }
 
 function LeaderboardList({ period }: { period: string }) {
-  const data = useQuery(api.xp.leaderboard, { period, limit: 50 });
+  const data = useQuery(api.xp.leaderboard, { period, limit: 100 });
   if (!data)
     return <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>;
   const [t1, t2, t3, ...rest] = data;
@@ -1200,13 +1309,20 @@ function LeaderboardList({ period }: { period: string }) {
       )}
       {/* key memakai rank: kalau urutan berubah (XP masuk live), baris yang
           naik peringkatnya di-remount sehingga animasi naiknya terputar. */}
-      {rest.slice(0, 47).map((e) => (
+      {rest.slice(0, 97).map((e) => (
         <LeaderEntryRow
           key={`${e.rank}-${e.userId}`}
           rank={e.rank}
           username={e.username}
           image={e.image}
           xp={e.xp}
+          plain
+          level={e.level}
+          seqId={e.seqId}
+          staffRole={e.staffRole}
+          clanTag={e.clanTag}
+          clanTagIcon={e.clanTagIcon}
+          givePremiumCount={(e as any).givePremiumCount}
         />
       ))}
     </div>
@@ -2248,6 +2364,8 @@ function AnimeDetailScreen({
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
+  // Tab Info / Nonton / Character — tiga tombol tanpa background.
+  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character">("info");
   // Bagian Character: foto + detail gabungan dari AniList (paling ikonik dulu).
   // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
   // lain yang dibutuhkan saat menambah sinopsis / menambah anime. Hanya
@@ -2449,6 +2567,28 @@ function AnimeDetailScreen({
             {fmtFavoritCount(favCount ?? 0)}
           </p>
 
+          {/* Tab tanpa background: Info · Nonton · Character */}
+          <div className="mt-3 flex gap-1.5">
+            {([
+              ["info", "Info"],
+              ["nonton", "Nonton"],
+              ["character", "Character"],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setDetailTab(id)}
+                className={cn(
+                  "flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
+                  detailTab === id
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:text-white/85",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
 
           {/* Panel info developer: data teknis untuk tools konten. */}
           {devInfoOpen && devAccess?.level === "dev" && (
@@ -2504,11 +2644,14 @@ function AnimeDetailScreen({
             </div>
           )}
 
-          {/* Kolom karakter paling ikonik — muncul tepat di bawah tombol
-              Nonton/Favorite, SEBELUM sinopsis (permintaan user). */}
-          <CharacterRow idMal={String(animeId)} title={animeTitle} />
+          {/* Kolom karakter paling ikonik — tampil di tab Character */}
+          {detailTab === "character" && (
+            <CharacterRow idMal={String(animeId)} title={animeTitle} />
+          )}
 
-          {/* Sinopsis — di BAWAH Character, abu-abu, di-scroll DI DALAM kotaknya. */}
+          {/* Sinopsis — tampil di tab Info */}
+          {detailTab === "info" && (
+          <>
           <SectionTitle>Sinopsis</SectionTitle>
           <div
             className={cn(
@@ -2528,8 +2671,11 @@ function AnimeDetailScreen({
               {synopsisOpen ? "Tutup (balik ke kotak)" : "Baca selengkapnya"}
             </button>
           )}
+          </>
+          )}
 
-          {/* Episode — bisa dibuka & ditutup */}
+          {/* Episode — tampil di tab Nonton (bisa dibuka & ditutup) */}
+          {detailTab === "nonton" && (
           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
             <button
               onClick={() => setEpisodeOpen((v) => !v)}
@@ -2612,9 +2758,10 @@ function AnimeDetailScreen({
               </div>
             )}
           </div>
+          )}
 
-          {/* Yang serupa — 2 baris kartu (atas + bawah), geser ke kanan */}
-          {similar.length > 0 && (
+          {/* Yang serupa — tampil di tab Info, geser ke kanan */}
+          {detailTab === "info" && similar.length > 0 && (
             <div className="mt-6">
               <h2 className="mb-2 text-lg font-bold text-white">Yang serupa</h2>
               <div className="thin-scroll -mx-1 grid auto-cols-[104px] grid-flow-col grid-rows-2 gap-x-2.5 gap-y-3 overflow-x-auto px-1 pb-1">

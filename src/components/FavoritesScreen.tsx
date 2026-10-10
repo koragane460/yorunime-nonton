@@ -30,6 +30,9 @@ type Tab = "downloads" | "most" | "foryou";
 export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const stats = useQuery(api.downloads.downloadStats, user ? {} : "skip");
+  // Jumlah anime yang di-favoritkan — tampil di kiri atas sesuai permintaan.
+  const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const favCount = favorites?.length ?? 0;
 
   // Default-nya Download: tab itu selalu punya isi.
   const [tab, setTab] = useState<Tab>("downloads");
@@ -71,7 +74,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
               perlu tombol balik terpisah. */}
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-base font-bold tracking-tight">
-              Koleksi kamu
+              {favCount} Favorite
             </h1>
             <p className="truncate text-[11px] text-muted-foreground">
               Unduhan, riwayat tonton, dan rekomendasi

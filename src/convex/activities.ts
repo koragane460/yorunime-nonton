@@ -464,6 +464,61 @@ export const isFavorite = query({
   },
 });
 
+/** Like/tidak suka satu anime — tombol Like menyatu (bukan like/dislike terpisah). */
+export const toggleAnimeLike = mutation({
+  args: { animeId: v.string(), value: v.union(v.literal(1), v.literal(-1)) },
+  handler: async (ctx, { animeId, value }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const existing = await ctx.db
+      .query("animeLikes")
+      .withIndex("userId_anime", (q) =>
+        q.eq("userId", userId).eq("animeId", animeId),
+      )
+      .first();
+    // Tekan tombol yang sama lagi = batal. Tekan tombol lain = ganti pilihan.
+    if (existing && existing.value === value) {
+      await ctx.db.delete(existing._id);
+      return;
+    }
+    if (existing) {
+      await ctx.db.patch(existing._id, { value });
+      return;
+    }
+    await ctx.db.insert("animeLikes", {
+      userId,
+      animeId,
+      value,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/** Total like + dislike satu anime, serta pilihan user saat ini. */
+export const animeLikeStats = query({
+  args: { animeId: v.string() },
+  handler: async (ctx, { animeId }) => {
+    const rows = await ctx.db
+      .query("animeLikes")
+      .filter((q) => q.eq(q.field("animeId"), animeId))
+      .take(99999);
+    const userId = await getAuthUserId(ctx);
+    let liked = false;
+    let disliked = false;
+    let likeCount = 0;
+    let dislikeCount = 0;
+    for (const r of rows) {
+      if (r.value === 1) likeCount++;
+      else dislikeCount++;
+      if (userId && r.userId === userId) {
+        liked = r.value === 1;
+        disliked = r.value === -1;
+      }
+    }
+    return { likeCount, dislikeCount, total: likeCount + dislikeCount, liked, disliked };
+  },
+});
+
 // ------------------------------------------------------------ komentar ----
 
 export const listComments = query({

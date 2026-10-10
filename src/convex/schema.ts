@@ -432,6 +432,15 @@ const schema = defineSchema(
       .index("userId_created", ["userId", "createdAt"])
       .index("userId_anime", ["userId", "animeId"]),
 
+    /** Suka/tidak suka satu anime — tombol Like menyatu di layar nonton. */
+    animeLikes: defineTable({
+      userId: v.id("users"),
+      animeId: v.string(),
+      /** 1 = suka, -1 = tidak suka. */
+      value: v.number(),
+      createdAt: v.number(),
+    }).index("userId_anime", ["userId", "animeId"]),
+
     /**
      * Lagu yang disukai dari layar Musik.
      *

@@ -101,7 +101,7 @@ export function AnimeCard({
   return (
     <button
       onClick={onClick}
-      className="group relative w-full overflow-hidden rounded-xl border border-border/60 bg-card text-left transition hover:border-foreground/40 hover:border-foreground/60"
+      className="group relative w-full overflow-hidden rounded-xl text-left transition hover:opacity-90"
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
         {image ? (

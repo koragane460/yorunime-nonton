@@ -388,24 +388,57 @@ function AkunContent() {
 
       <div className="mt-3 space-y-2">
         {tab === "history" &&
-          (history ?? []).map((h: any) => (
-            <button
-              key={h._id}
-              onClick={() =>
-                navigate(
-                  `/nonton?anime=${h.animeId}&ep=&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
-                )
-              }
-              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
-            >
-              <img src={h.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
-                <p className="text-xs text-muted-foreground">Episode {h.episode}</p>
+          (() => {
+            // Kelompokkan history per hari: Hari ini / Kemarin / 00/00/0000.
+            const fmtDay = (ts: number) => {
+              const d = new Date(ts);
+              const now = new Date();
+              const startOf = (x: Date) =>
+                new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+              const diff = Math.round(
+                (startOf(now) - startOf(d)) / 86_400_000,
+              );
+              if (diff <= 0) return "Hari ini";
+              if (diff === 1) return "Kemarin";
+              return `${String(d.getDate()).padStart(2, "0")}/${String(
+                d.getMonth() + 1,
+              ).padStart(2, "0")}/${d.getFullYear()}`;
+            };
+            const groups: { label: string; items: any[] }[] = [];
+            for (const h of history ?? []) {
+              const label = fmtDay(h.updatedAt);
+              const last = groups[groups.length - 1];
+              if (last && last.label === label) last.items.push(h);
+              else groups.push({ label, items: [h] });
+            }
+            return groups.map((g) => (
+              <div key={g.label}>
+                <p className="mb-1.5 mt-1 rounded-lg bg-secondary/50 px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+                  {g.label}
+                </p>
+                <div className="space-y-2">
+                  {g.items.map((h) => (
+                    <button
+                      key={h._id}
+                      onClick={() =>
+                        navigate(
+                          `/nonton?anime=${h.animeId}&ep=&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
+                        )
+                      }
+                      className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+                    >
+                      <img src={h.animeImage ?? ""} className="h-14 w-10 rounded object-cover" alt="" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
+                        <p className="text-xs text-muted-foreground">Episode {h.episode}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{timeAgo(h.updatedAt)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <span className="text-[10px] text-muted-foreground">{timeAgo(h.updatedAt)}</span>
-            </button>
-          ))}
+            ));
+          })()}
         {tab === "history" && (comicHistory ?? []).length > 0 && (
           <>
             <p className="px-1 pt-2 text-[11px] font-semibold text-muted-foreground">
@@ -560,6 +593,12 @@ function AkunContent() {
                       </div>
                       <p className="text-[10px] text-muted-foreground">
                         {timeAgo(c.createdAt)}
+                        {user.level !== undefined && (
+                          <span className="ml-1.5">Lv.{user.level}</span>
+                        )}
+                        {user.seqId !== undefined && (
+                          <span className="ml-1.5">#{user.seqId}</span>
+                        )}
                       </p>
                     </div>
                   </div>

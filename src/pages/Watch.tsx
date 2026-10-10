@@ -26,6 +26,8 @@ import {
   SkipBack,
   SkipForward,
   Sun,
+  ThumbsUp,
+  Heart,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -1120,6 +1122,22 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
   // Detail anime sudah siap (dipakai sebagai sumber nomor episode & judul).
   const detailReady = !!detailData && !detailData.error;
+
+  // Like (menyatu) + Favorite untuk judul ini.
+  const likeStats = useQuery(
+    api.activities.animeLikeStats,
+    animeId ? { animeId } : "skip",
+  );
+  const toggleLike = useMutation(api.activities.toggleAnimeLike);
+  const isFav = useQuery(
+    api.activities.isFavorite,
+    animeId ? { animeId } : "skip",
+  );
+  const toggleFav = useMutation(api.activities.toggleFavorite);
+  const favCount = useQuery(
+    api.activities.favoriteCount,
+    animeId ? { animeId } : "skip",
+  );
 
   // Ambil server streaming. Backend mengembalikan tepat satu server:
   // "Direct HLS - SUB".
@@ -2543,6 +2561,53 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         </div>
       )}
 
+      {/* Like (menyatu) + Favorite — memanjang ke samping, di bawah player */}
+      <div className="w-full px-3 pt-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => {
+              // Tombol Like menyatu: menekan lagi membatalkan, menekan saat
+              // sebelumnya tidak suka akan mengganti jadi suka.
+              void toggleLike({ animeId, value: 1 }).catch(() => {});
+            }}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
+              likeStats?.liked
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            <ThumbsUp className="size-4" aria-hidden />
+            <span>{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
+            <span className="text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground">
+              {(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}
+            </span>
+          </button>
+          <button
+            onClick={() => {
+              void toggleFav({
+                animeId,
+                animeTitle: detailReady ? detailData.title : D.title,
+                animeImage: detailReady ? detailData.image : D.image,
+              }).catch(() => {});
+            }}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
+              isFav
+                ? "border-red-500/60 bg-red-500/15 text-red-300"
+                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
+            <span>Favorite</span>
+            {typeof favCount === "number" && favCount > 0 && (
+              <span className="text-muted-foreground">{favCount.toLocaleString("id-ID")}</span>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
       <div className="w-full p-3">
         <div className="flex items-start gap-3">
@@ -2724,7 +2789,13 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         ) : (
           <>
             {/* Komentar episode — gaya baru */}
-            <SectionTitle>Diskusi Episode</SectionTitle>
+            <div className="flex items-baseline justify-between">
+              <SectionTitle>
+                <span className="normal-case">
+                  {(shownComments?.length ?? 0).toLocaleString("id-ID")} Komentar
+                </span>
+              </SectionTitle>
+            </div>
             <CommentsSection
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
               comments={shownComments}

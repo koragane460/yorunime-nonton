@@ -217,6 +217,34 @@
   color: var(--gold-strong) !important;
 }
 
+/* Kutipan reply di dalam bubble: lebih abu dari bubble biasa. */
+.bubble-reply {
+  background-color: oklch(0.32 0.02 260);
+  border-left: 2px solid oklch(0.45 0.03 260);
+  color: oklch(0.72 0.02 250);
+}
+.bubble-reply p {
+  color: oklch(0.8 0.02 250);
+}
+
+/* Siluet/efek pada pesan yang KENA reply: berpendar samar. */
+.reply-blink {
+  animation: replyBlink 1.4s ease-in-out 2;
+  border-radius: 0.9rem;
+}
+@keyframes replyBlink {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 0 2px oklch(0.6 0.05 260 / 0.7),
+      0 0 16px 2px oklch(0.55 0.05 260 / 0.5);
+    filter: brightness(1.35);
+  }
+}
+
 /* Give-premium tile: dark-gray card, gold text */
 .give-card,
 .give-card * {

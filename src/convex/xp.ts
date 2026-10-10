@@ -58,7 +58,7 @@ function joinedAt(u: { createdAt?: number; _creationTime: number }): number {
 export const leaderboard = query({
   args: { period: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, { period, limit = 50 }) => {
-    const take = Math.min(limit, 50);
+    const take = Math.min(limit, 100);
     const users = await ctx.db.query("users").collect();
     const byId = new Map(users.map((u) => [u._id, u]));
     const minAge = PERIOD_MIN_AGE[period] ?? 0;
@@ -101,6 +101,21 @@ export const leaderboard = query({
       return u ? eligible(u) : false;
     });
     entries.sort((a, b) => b.xp - a.xp);
-    return entries.slice(0, take).map((e, i) => ({ rank: i + 1, ...e }));
+    // Sertakan data profil tambahan untuk daftar Top 1-100 (title, tag clan,
+    // level, id, jumlah give premium) sesuai permintaan.
+    return entries.slice(0, take).map((e, i) => {
+      const u = byId.get(e.userId as any);
+      return {
+        rank: i + 1,
+        ...e,
+        level: u?.level ?? e.level,
+        seqId: u?.seqId,
+        staffRole: u?.staffRole,
+        clanTag: u?.clanTag,
+        clanTagIcon: u?.clanTagIcon,
+        clanNameColor: u?.clanNameColor,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
+      };
+    });
   },
 });
