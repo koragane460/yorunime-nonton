@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowsLeftRight, Crown, Users, Star, Cpu, ShieldCheck, Bookmark, ChevronRight, ChevronLeft } from "lucide-react";
+import { ArrowLeftRight, Crown, Users, Star, Cpu, ShieldCheck, Bookmark, ChevronRight, ChevronLeft } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { levelCost, CLAN_LEVELS_MAX, claimAmountForLevel } from "@/convex/clans";
-import { Avatar, BlueCheck, StaffBadge, LvProgressBar } from "@/components/lstream-ui";
+
+import { Avatar, BlueCheck, ShineBadge, LevelBadge, clanTierClass } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -36,8 +36,6 @@ export default function Clan() {
   const wantCreate = searchParams.get("create");
   const openCreate = wantCreate === "1";
 
-  const myClan = useQuery(api.clans.myClan, user ? {} : "skip");
-  const clan = myClan?.clan;
 
   useEffect(() => {
     if (openCreate) {
@@ -49,17 +47,21 @@ export default function Clan() {
     }
   }, [openCreate, joinTag]);
 
-  const joinClan = useMutation(api.clans.joinClan);
+  const joinClan = useMutation(api.clans.requestJoin);
   const leaveClan = useMutation(api.clans.leaveClan);
   const createClan = useMutation(api.clans.createClan);
   const donate = useMutation(api.clans.donate);
   const claimDaily = useMutation(api.clans.claimDaily);
   const updateProfile = useMutation(api.users.updateProfile);
+  const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
+  const clan = membership?.clan;
+  const isInClan = !!membership;
+  const canJoin = !clan && user;
 
   const handleJoin = async () => {
     if (!user || !joinTag) return;
     try {
-      await joinClan({ tag: joinTag });
+      await joinClan({ clanId: membership?.clan?._id ?? "" });
       navigate("/dashboard?tab=clan");
     } catch (e) {
       console.error(e);
@@ -71,8 +73,8 @@ export default function Clan() {
     try {
       const name = (document.querySelector("#clan-name") as HTMLInputElement)?.value ?? "";
       const tag = (document.querySelector("#clan-tag") as HTMLInputElement)?.value ?? "";
-      const info = (document.querySelector("#clan-info") as HTMLInputElement)?.value ?? "";
-      await createClan({ name, tag, info });
+      const description = (document.querySelector("#clan-info") as HTMLInputElement)?.value ?? "";
+      await createClan({ name, tag, tagIcon: "", avatarUrl: "", description });
       setOpen(false);
       navigate("/dashboard?tab=clan");
     } catch (e) {
@@ -122,11 +124,8 @@ export default function Clan() {
     }
   };
 
-  const isLeader = clan ? clan.leaderId === user?.id : false;
-  const canManage = clan ? isLeader || clan.myRole === "officer" : false;
-  const canJoin = !clan && user;
-  const isMember = !clan || (clan && (clan.myRole === "leader" || clan.myRole === "officer"));
-  const isInClan = !!myClan;
+  const isLeader = false;
+  const canManage = membership && (membership.role === "leader" || membership.role === "officer")
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -144,7 +143,7 @@ export default function Clan() {
           onClick={() => setOpen(true)}
           className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-white/10"
         >
-          <ArrowsLeftRight className="size-4" />
+          <ArrowLeftRight className="size-4" />
           {isInClan ? "Keluar" : canJoin ? "Bergabung" : "Buat"}
         </button>
       </div>
@@ -184,17 +183,23 @@ export default function Clan() {
               />
               <div>
                 <h2 className="text-2xl font-extrabold">{clan.name}</h2>
-                <p className="text-sm text-muted-foreground">{clan.tag}</p>
+                <p className="text-sm text-muted-foreground font-mono">{clan.tag != null ? `[${clan.tag}]` : ""}</p>
               </div>
-              {clan.badge && <Badge>{clan.badge}</Badge>}
-              {isLeader && <Badge>Leader</Badge>}
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-2xl border bg-white/5 p-4">
                 <div className="text-xs text-muted-foreground">Level</div>
-                <div className="mt-1 text-xl font-extrabold">{clan.level}</div>
                 <div className="mt-1">
-                  <LvProgressBar value={clan.levelProgress} />
+                  <LevelBadge level={clan.level} />
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-accent to-primary transition-all duration-300"
+                      style={{ width: `${Math.min(100, (clan.levelProgress / clan.levelCost) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground font-mono">
+                    {clan.levelProgress.toLocaleString()} / {clan.levelCost.toLocaleString()}
+                  </p>
                 </div>
               </div>
               <div className="rounded-2xl border bg-white/5 p-4">
@@ -243,18 +248,18 @@ export default function Clan() {
               <div className="mt-2 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Pemimpin</span>
-                  <span className="font-semibold">{isLeader ? "Ya" : "Tidak"}</span>
+                  <span className="font-semibold">{isLeader ? "Ya, kamu" : "Tidak"}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Officer</span>
                   <span className="font-semibold">
-                    {clan.myRole === "officer" ? "Ya" : "Tidak"}
+                    {membership?.role === "officer" ? "Ya" : "Tidak"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Anggota</span>
                   <span className="font-semibold">
-                    {clan.myRole === "member" ? "Ya" : "Tidak"}
+                    {membership?.role === "member" ? "Ya" : "Tidak"}
                   </span>
                 </div>
               </div>
