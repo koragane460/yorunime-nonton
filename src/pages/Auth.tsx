@@ -10,6 +10,8 @@ interface AuthProps {
   redirectAfterAuth?: string;
 }
 
+const DASHBOARD_REDIRECT = "/dashboard";
+
 type Mode = "main" | "password" | "otp";
 
 export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
@@ -18,7 +20,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
     searchParams.get("returnTo"),
-    redirectAfterAuth,
+    DASHBOARD_REDIRECT,
   );
 
   const [mode, setMode] = useState<Mode>("main");

@@ -56,7 +56,7 @@ export default function Landing() {
           </span>
         </div>
         <Button
-          onClick={() => navigate("/auth?returnTo=/dashboard")}
+          onClick={() => navigate("/auth?returnTo=/home")}
           className="rounded-full bg-amber-300 font-bold text-black hover:bg-amber-200"
         >
           Masuk
@@ -91,7 +91,7 @@ export default function Landing() {
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button
             size="lg"
-            onClick={() => navigate("/auth?returnTo=/dashboard")}
+            onClick={() => navigate("/auth?returnTo=/home")}
             className="rounded-full bg-amber-300 px-8 font-bold text-black hover:bg-amber-200"
           >
             Mulai Nonton — Gratis
@@ -99,7 +99,7 @@ export default function Landing() {
           <Button
             size="lg"
             variant="outline"
-            onClick={() => navigate("/auth?returnTo=/dashboard")}
+            onClick={() => navigate("/auth?returnTo=/home")}
             className="rounded-full"
           >
             Lihat Leaderboard
@@ -166,7 +166,7 @@ export default function Landing() {
           </p>
           <Button
             size="lg"
-            onClick={() => navigate("/auth?returnTo=/dashboard")}
+            onClick={() => navigate("/auth?returnTo=/home")}
             className="mt-5 rounded-full bg-amber-300 px-10 font-bold text-black hover:bg-amber-200"
           >
             Gabung Sekarang
