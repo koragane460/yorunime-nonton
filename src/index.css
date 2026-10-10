@@ -1,129 +1,426 @@
-/* Shine text shimmer (used by clan name, tabs, hero captions) */
-.yn-shimmer {
-  position: relative;
-  display: inline-block;
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+/* Aksen kuning: star rating, badge highlights, tab indicator, New badge */
+.yn-gold-star {
+  color: var(--gold-strong);
 }
-.yn-shimmer::before {
-  content: "";
+.yn-gold-bg {
+  background-color: var(--gold-strong);
+}
+.yn-gold-soft {
+  background-color: var(--highlight-soft);
+}
+.yn-tab-indicator {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold-strong) 14%, var(--gold-strong) 86%, transparent);
+  border-radius: 999px;
+  transition: width 0.25s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.2s ease;
+}
+/* Kartu poster: overlay bawah gelap bertingkat, badge New kuning, Eps kiri bawah */
+.yn-poster-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  background-color: oklch(0.16 0.03 262);
+  border: 1px solid oklch(1 0 0 / 9%);
+}
+.yn-poster-overlay {
   position: absolute;
-  inset: 0 0 0 auto;
-  width: 120%;
-  height: 120%;
+  inset: 0;
   background: linear-gradient(
-    105deg,
-    transparent 0%,
-    oklch(1 0 0 / 0.06) 50%,
-    transparent 100%
+    180deg,
+    rgba(6 10 22 / 0) 0%,
+    rgba(6 10 22 / 0.18) 38%,
+    rgba(6 10 22 / 0.88) 100%
   );
-  animation: ynShimmer 3.2s ease-in-out infinite;
+  pointer-events: none;
 }
-.yn-shimmer:hover::before {
-  width: 140%;
-  animation-duration: 1.8s;
+/* Grid 3 kolom layar kecil; di atas itu masih rapat tapi tidak clash */
+.yn-anime-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
 }
-@keyframes ynShimmer {
-  0% {
-    transform: translateX(-130%);
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --font-sans:
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Sora", "Plus Jakarta Sans", ui-sans-serif, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    font-family: var(--font-sans);
   }
+  /* Teks seluruh aplikasi sedikit lebih kecil dari bawaan (16px -> 15px)
+     supaya layout terasa lebih padat dan enak dibaca di HP. */
+  html {
+    font-size: 15px;
+  }
+  body {
+    line-height: 1.45;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/*
+ * Palet YoruNime: tiga warna inti.
+ *
+ * Navy    : tinta dasar layar gelap & kartu (bukan hitam netral — sedikit
+ *           nuansa biru supaya terasa "premium", bukan template).
+ * Burgundy: aksen utama (tombol, XP, indikator aktif). L 0.56 supaya AMAN
+ *           dua arah: putih di atasnya ~4.6:1, dan warnanya di atas navy
+ *           ~4.3:1 — jadi tetap terbaca sebagai teks kecil maupun latar.
+ * Soft blue: aksen sekunder (halus, untuk permukaan & sorotan), tidak pernah
+ *           dipakai sebagai tombol utama supaya hierarki tetap jelas.
+ * Tidak ada ungu, tidak ada oren, tidak ada gradient pelangi di tombol.
+ */
+:root {
+  --radius: 0.75rem;
+  /* Burgundy — aksen merek. */
+  --brand: oklch(0.56 0.155 14);
+  --brand-foreground: oklch(0.98 0.01 20);
+  --gold: oklch(0.86 0.16 92);
+  --gold-foreground: oklch(0.2 0.05 70);
+  --gold-strong: oklch(0.86 0.18 88);
+  --gold-strong-foreground: oklch(0.2 0.05 70);
+  --background: oklch(0.155 0.032 262);
+  --foreground: oklch(0.96 0.012 250);
+  --card: oklch(0.2 0.04 262);
+  --card-foreground: oklch(0.96 0.012 250);
+  --popover: oklch(0.19 0.04 262);
+  --popover-foreground: oklch(0.96 0.012 250);
+  --primary: oklch(0.56 0.155 14);
+  --primary-foreground: oklch(0.98 0.01 20);
+  --secondary: oklch(0.26 0.045 262);
+  --secondary-foreground: oklch(0.93 0.015 250);
+  --muted: oklch(0.25 0.04 262);
+  --muted-foreground: oklch(0.73 0.035 250);
+  --accent: oklch(0.3 0.055 255);
+  --accent-foreground: oklch(0.96 0.012 250);
+  --destructive: oklch(0.55 0.16 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(0.32 0.05 260 / 60%);
+  --ring: oklch(0.56 0.155 14 / 55%);
+  --chart-1: oklch(0.56 0.155 14);
+  --chart-2: oklch(0.72 0.1 240);
+  --chart-3: oklch(0.86 0.17 90);
+  --chart-4: oklch(0.65 0.11 245);
+  --chart-5: oklch(0.7 0.14 150);
+  --sidebar: oklch(0.175 0.038 262);
+  --sidebar-foreground: oklch(0.96 0.012 250);
+  --sidebar-primary: oklch(0.56 0.155 14);
+  --sidebar-primary-foreground: oklch(0.98 0.01 20);
+  --sidebar-accent: oklch(0.26 0.05 262);
+  --sidebar-accent-foreground: oklch(0.93 0.015 250);
+  --sidebar-border: oklch(0.4 0.05 260 / 50%);
+  --sidebar-ring: oklch(0.56 0.155 14 / 55%);
+  --highlight: oklch(0.86 0.17 90 / 92%);
+  --highlight-soft: oklch(0.86 0.15 92 / 22%);
+}
+
+/* ------------------------------------------------------------------
+ * Chat bubble color utilities (global / DM / clan / room).
+ * All message bubbles are GRAY/BLACK — never blue — so chat does not
+ * visually break the home yellow-black accent.
+ *
+ *  .bubble-mine  sender bubble   : dark gray bg + gray text
+ *  .bubble-other recipient bubble: slightly lifted gray bg + gray text
+ *  .bubble-give  give-premium marker: gold text, no background tint
+ *  .msg-in / .msg-other / .msg-own  row-level variants (unused fallback)
+ * ------------------------------------------------------------------ */
+
+/* Base bubble (shared by sender/recipient/give) */
+.bubble-mine,
+.bubble-other,
+.bubble-give,
+.msg-in,
+.msg-own,
+.msg-other {
+  color: oklch(0.6 0.03 250);
+  border-color: oklch(0.32 0.05 260);
+}
+
+/* Sender bubble (what I type) */
+.bubble-mine,
+.msg-in,
+.msg-own {
+  background-color: oklch(0.22 0.04 260);
+}
+
+/* Recipient bubble (what others type) */
+.bubble-other,
+.msg-other {
+  background-color: oklch(0.27 0.045 260);
+}
+
+/* Give-premium bubble: transparent, gold text */
+.bubble-give,
+.give-tag {
+  background-color: transparent !important;
+  color: var(--gold-strong) !important;
+}
+.bubble-give .bubble-top,
+.bubble-give .bubble-body {
+  background-color: transparent !important;
+  color: var(--gold-strong) !important;
+}
+
+/* Kutipan reply di dalam bubble: lebih abu dari bubble biasa. */
+.bubble-reply {
+  background-color: oklch(0.32 0.02 260);
+  border-left: 2px solid oklch(0.45 0.03 260);
+  color: oklch(0.72 0.02 250);
+}
+.bubble-reply p {
+  color: oklch(0.8 0.02 250);
+}
+
+/* Siluet/efek pada pesan yang KENA reply: berpendar samar. */
+.reply-blink {
+  animation: replyBlink 1.4s ease-in-out 2;
+  border-radius: 0.9rem;
+}
+@keyframes replyBlink {
+  0%,
   100% {
-    transform: translateX(130%);
+    box-shadow: 0 0 0 0 transparent;
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 0 2px oklch(0.6 0.05 260 / 0.7),
+      0 0 16px 2px oklch(0.55 0.05 260 / 0.5);
+    filter: brightness(1.35);
   }
 }
 
-/* Glow premium / give button — gold gradient, soft outer glow */
-.glow-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.7rem 1.6rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--gold-strong) 0%, var(--gold) 55%, oklch(1 0 0 / 0.12) 100%);
-  color: var(--gold-strong-foreground);
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  box-shadow:
-    0 0 0 1px oklch(1 0 0 / 8%),
-    0 6px 22px oklch(0 0 0 / 0.5),
-    inset 0 1px 0 oklch(1 0 0 / 0.15),
-    0 0 18px oklch(1 0 0 / 0.28);
-  overflow: hidden;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-.glow-btn:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px oklch(1 0 0 / 8%),
-    0 8px 28px oklch(0 0 0 / 0.55),
-    inset 0 1px 0 oklch(1 0 0 / 0.15),
-    0 0 26px oklch(1 0 0 / 0.35);
-}
-.glow-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, transparent 55%, oklch(1 0 0 / 0.06) 100%);
-  pointer-events: none;
-}
-.glow-btn svg {
-  position: relative;
-  z-index: 1;
-}
-.glow-btn .label {
-  position: relative;
-  z-index: 1;
-  font-size: 0.72em;
-  font-weight: 800;
-  text-transform: uppercase;
+/* Give-premium tile: dark-gray card, gold text */
+.give-card,
+.give-card * {
+  background-color: oklch(0.18 0.04 260) !important;
+  border-color: oklch(0.32 0.05 260) !important;
+  color: var(--gold-strong) !important;
 }
 
-/* Blur premium card/button — frosted-glass button with soft highlight */
-.premium-blur {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.6rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--gold-strong) 0%, var(--gold) 60%, oklch(1 0 0 / 0.1) 100%);
-  color: var(--gold-strong-foreground);
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  box-shadow:
-    0 0 0 1px oklch(1 0 0 / 8%),
-    0 8px 28px oklch(0 0 0 / 0.45),
-    inset 0 1px 0 oklch(1 0 0 / 0.12);
-  overflow: hidden;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+/* --------------------------------------------------------------
+ * Takeout banner / footer inside chat
+ * -------------------------------------------------------------- */
+.chat-banner,
+.chat-banner-box,
+.yn-banner-box {
+  background-color: oklch(0.18 0.035 262) !important;
+  border-color: oklch(0.32 0.05 260) !important;
+  color: var(--chat-fore, oklch(0.73 0.035 250));
 }
-.premium-blur:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px oklch(1 0 0 / 8%),
-    0 10px 32px oklch(0 0 0 / 0.5),
-    inset 0 1px 0 oklch(1 0 0 / 0.12),
-    0 0 30px oklch(1 0 0 / 0.32);
+.chat-banner .chat-banner-title,
+.yn-banner-box .yn-banner-title {
+  color: var(--chat-fore, oklch(0.73 0.035 250));
 }
-.premium-blur::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(60% 40% at 50% 0%, oklch(1 0 0 / 0.16) 0%, transparent 60%);
-  pointer-events: none;
+.chat-banner .chat-banner-sub,
+.yn-banner-box .yn-banner-sub {
+  color: var(--chat-muted, oklch(0.45 0.03 250));
 }
-.premium-blur svg {
-  position: relative;
-  z-index: 1;
+
+/* --------------------------------------------------------------
+ * Takeout/chat footer: input area + send button
+ * -------------------------------------------------------------- */
+.chat-footer,
+.chat-input-area {
+  background-color: oklch(0.14 0.03 262);
 }
-.premium-blur .label {
-  position: relative;
-  z-index: 1;
-  font-size: 0.72em;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+.chat-footer input,
+.chat-footer textarea {
+  background-color: oklch(0.18 0.035 262);
+  color: oklch(0.94 0.012 250);
+  border-color: oklch(0.3 0.05 260);
 }
+.chat-footer .send-btn {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.theme-light {
+  --background: oklch(0.975 0.006 250);
+  --foreground: oklch(0.2 0.035 262);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.035 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.035 262);
+  --primary: oklch(0.5 0.16 14);
+  --primary-foreground: oklch(0.99 0.005 20);
+  --secondary: oklch(0.95 0.012 250);
+  --secondary-foreground: oklch(0.26 0.04 262);
+  --muted: oklch(0.94 0.012 250);
+  --muted-foreground: oklch(0.47 0.03 255);
+  --accent: oklch(0.92 0.03 245);
+  --accent-foreground: oklch(0.26 0.04 262);
+  --border: oklch(0.87 0.015 255);
+  --input: oklch(0.87 0.015 255);
+  --ring: oklch(0.5 0.16 14 / 55%);
+}
+
+.dark {
+  --background: oklch(0.155 0.032 262);
+  --foreground: oklch(0.96 0.012 250);
+  --card: oklch(0.2 0.04 262);
+  --card-foreground: oklch(0.96 0.012 250);
+  --popover: oklch(0.19 0.04 262);
+  --popover-foreground: oklch(0.96 0.012 250);
+  --primary: oklch(0.56 0.155 14);
+  --primary-foreground: oklch(0.98 0.01 20);
+  --secondary: oklch(0.26 0.045 262);
+  --secondary-foreground: oklch(0.93 0.015 250);
+  --muted: oklch(0.25 0.04 262);
+  --muted-foreground: oklch(0.73 0.035 250);
+  --accent: oklch(0.3 0.055 255);
+  --accent-foreground: oklch(0.96 0.012 250);
+  --destructive: oklch(0.55 0.16 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(0.32 0.05 260 / 60%);
+  --ring: oklch(0.56 0.155 14 / 55%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  html {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Chat bubble colors — abu-abu (bukan biru) untuk global / DM / clan.
+ *
+ * Semua pesan chat (global, DM, clan, room) pakai abu-abu gelap:
+ *   sender  = bg-abu-hitam (bagian atas) + teks abu 200
+ *   other   = bg-abu hitam terang + teks abu 300
+ *   give    = marker give premium berwarna kuning, bukan biru
+ * 
+ * Clans dipisah dari global/DM: chat clan tetap pakai abu-abu, tapi
+ * identity clan-nya (avatar/card) tetap kelihatan. Preview chat
+ * home (GlobalChatPreview) dan pop-up ClanBox sama-sama abu-abu,
+ * supaya tidak keliatan "chat biru" di mana-mana.
+ * ------------------------------------------------------------------ */
+
+@layer chat {
+  /* Bubble pesan: bagian atas banner (badge badge + clan tag + reply quote) */
+  .chat-bubble .bubble-top {
+    background-color: var(--bubble-mine, oklch(0.22 0.04 260));
+    color: var(--bubble-mine-text, oklch(0.62 0.03 250));
+  }
+  .chat-bubble .bubble-body {
+    background-color: var(--bubble-mine, oklch(0.22 0.04 260));
+    color: var(--bubble-mine-text, oklch(0.62 0.03 250));
+  }
+
+  /* Pesan orang lain (other) */
+  .chat-bubble.other .bubble-top {
+    background-color: var(--bubble-other, oklch(0.24 0.045 255));
+    color: var(--bubble-other-text, oklch(0.55 0.03 250));
+  }
+  .chat-bubble.other .bubble-body {
+    background-color: var(--bubble-other, oklch(0.24 0.045 255));
+    color: var(--bubble-other-text, oklch(0.55 0.03 250));
+  }
+
+  /* Give premium: marker kuning, bukan biru */
+  .chat-bubble.give .bubble-top,
+  .chat-bubble.give .bubble-body {
+    background-color: var(--bubble-give, transparent);
+    color: var(--bubble-give-text, var(--gold-strong));
+  }
+  .chat-bubble.give .give-tag {
+    background-color: var(--gold-strong);
+    color: var(--gold-strong-foreground);
+  }
+
+  /* Kategori chat pane: daftar pesan, header, dan footer (input) semua
+   * pakai abu-abu / navy, bukan biru. */
+  .chat-panel,
+  .chat-panel .chat-list,
+  .chat-panel .chat-footer {
+    background-color: var(--chat-bg, oklch(0.14 0.03 262));
+  }
+  .chat-panel .chat-header,
+  .chat-panel .chat-tab {
+    background-color: var(--chat-bg, oklch(0.14 0.03 262));
+    color: var(--chat-fore, oklch(0.73 0.035 250));
+  }
+  .chat-panel .chat-muted {
+    background-color: var(--chat-muted, oklch(0.22 0.04 260));
+  }
+}
+
