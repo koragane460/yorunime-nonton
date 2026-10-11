@@ -16,6 +16,7 @@ import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import { CardCarousel, CatalogScreen, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { isMusicSecret } from "@/lib/musicSecret";
+import type { CatalogCard } from "@/components/CatalogRows";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
 // antrean, tidak perlu ikut di bundel awal Home.
@@ -198,7 +199,6 @@ function BrowseRow({
             items={items}
             onPick={onPick}
             newIds={new Set()}
-            views={undefined}
           />
           <div className="mt-3 flex justify-center">
             <button
@@ -883,7 +883,6 @@ function HomeContent() {
           items={catalog.items}
           onClose={() => setCatalog(null)}
           onPick={openAnime}
-          ranked
         />
       )}
 
@@ -1888,7 +1887,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         )}
         {results === null && (
           <div className="mt-4">
-            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} views={undefined} />}
+            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid            items={list} onPick={onPick} newIds={new Set()} />}
           </div>
         )}
       </div>
