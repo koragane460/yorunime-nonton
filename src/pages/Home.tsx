@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
-import type { CardT as CatalogCard } from "@/components/CatalogRows";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
@@ -15,7 +14,7 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
-import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
+import { CardCarousel, CatalogScreen, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { isMusicSecret } from "@/lib/musicSecret";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
@@ -776,7 +775,6 @@ function HomeContent() {
             onPick={openAnime}
             ranked
             newIds={new Set()}
-            views={undefined}
           />
         )}
       </SectionRow>
@@ -852,7 +850,6 @@ function HomeContent() {
             onPick={openAnime}
             ranked
             newIds={new Set()}
-            views={undefined}
           />
         )}
       </SectionRow>
@@ -875,7 +872,6 @@ function HomeContent() {
             items={foryouList.slice(0, 12)}
             onPick={openAnime}
             newIds={new Set()}
-            views={undefined}
           />
         )}
       </SectionRow>
@@ -887,6 +883,7 @@ function HomeContent() {
           items={catalog.items}
           onClose={() => setCatalog(null)}
           onPick={openAnime}
+          ranked
         />
       )}
 

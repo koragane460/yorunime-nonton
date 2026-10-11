@@ -34,10 +34,11 @@ export function GlobalChatPreview() {
     <div className="mt-2 flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-[#0b0b14]/90 p-3 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex shrink-0 items-center gap-2.5 text-[13px]">
-          <Avatar src={m.image} seed={m.username} className="size-9">
+          <Avatar className="size-9">
             <AvatarFallback className="bg-white/10 text-white text-xs">
               {m.username?.[0]?.toUpperCase() ?? "?"}
             </AvatarFallback>
+            {m.image && <AvatarImage src={m.image} alt={m.username ?? ""} />}
           </Avatar>
           <div>
             <p className="truncate font-semibold text-zinc-200">
