@@ -1,45 +1,46 @@
-export default function Home() {
-  return null;
-}
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { useAction, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
+import { SectionTitle } from "@/components/lstream-ui";
+import { CardT, CatalogScreen, CatalogKind } from "@/components/CatalogRows";
+import { HomeTopButtons } from "@/components/HomeTopButtons";
+import { CardCarousel } from "@/components/CatalogRows";
 
-// Placeholder for episode sort popover UI in real file.
-// In the actual component (in the real project), the episode sort
-// control would be:
-//
-// <div className="mb-2 rounded-lg border border-white/20 bg-black/30 px-3 py-1.5 text-xs">
-//   <div className="flex items-center justify-between">
-//     <span className="font-semibold text-white/85">Urutkan episode</span>
-//     <div className="flex gap-1">
-//       {[
-//         { value: "newest-ep", label: "Episode terbaru" },
-//         { value: "oldest-ep", label: "Episode terlama" },
-//         { value: "newest-date", label: "Tanggal terbaru" },
-//         { value: "oldest-date", label: "Tanggal terlama" },
-//       ].map(({ value, label }) => (
-//         <button
-//           key={value}
-//           onClick={() => setEpisodeOrder(
-//             episodeOrder === value ? "newest-ep" : value,
-//           )}
-//           className={cn(
-//             "rounded border px-2.5 py-1 text-[11px] font-semibold transition",
-//             episodeOrder === value
-//               ? "border-white/40 bg-white/20 text-white"
-//               : "border-white/15 text-white/60 hover:border-white/30",
-//           )}
-//         >
-//           {label}
-//         </button>
-//       ))}
-//     </div>
-//   </div>
-// </div>
-//
-// State declaration in component:
-//   const [episodeOrder, setEpisodeOrder] = useState<
-//     "newest-ep" | "oldest-ep" | "newest-date" | "oldest-date"
-//   >("newest-ep");
-//
-// Sorting logic uses episodeOrder to pick sort comparator; date sorting
-// will be driven by episode releasedAt field if present on the episode
-// objects in that project's detail model.
+export default function Home() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [initialKind] = useState<CatalogKind>("anime");
+
+  const { onPick, items, searching } = CatalogScreen({
+    kind: initialKind,
+    onPick: (id, title, source) => {
+      if (!title) {
+        const fallback = (items ??[])
+          .find((item: any) => String(item.id) === String(id))
+          ?.title;
+        navigate(`/browse/${encodeURIComponent(String(id))}${title ? "&title=" + encodeURIComponent(title) : ""}${source === "sanka" ? "&donghua=1" : ""}`);
+        return;
+      }
+      navigate(`/browse/${encodeURIComponent(String(id))}${title ? "&title=" + encodeURIComponent(title) : ""}${source === "sanka" ? "&donghua=1" : ""}`);
+    },
+  });
+
+  if (!user) {
+    return (e) => (e);
+  }
+
+  if (!user) {
+    return (e) => (e);
+  }
+
+  return (
+    <HomeTopButtons
+      onForYou={() => {}}
+      onMostWatched={() => {}}
+      onDownload={() => {}}
+    />
+  );
+}
