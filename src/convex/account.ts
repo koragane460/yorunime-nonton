@@ -3,6 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { xpForLevel, tierForLevel } from "./users";
+import type { Id } from "./_generated/dataModel";
 
 export const ensureUser = mutation({
   args: {},
@@ -13,8 +14,6 @@ export const ensureUser = mutation({
     if (!user) return null;
     const patch: Record<string, unknown> = {};
     if (user.seqId === undefined) {
-      // Nomor urut akun: increment counter global supaya #1 dipakai akun pertama
-      // (developer) dan seterusnya berurutan.
       const row = await ctx.db
         .query("counters")
         .withIndex("key", (q) => q.eq("key", "userSeq"))
@@ -61,8 +60,6 @@ export const profileStats = query({
         0,
         Math.floor((Date.now() - (user.createdAt ?? Date.now())) / 86_400_000),
       ),
-      // Level clan dipakai warna tag clan di panel akun. Sumber yang sama
-      // dengan chat: users.clanLevel, baik-baik saja kalau belum ada salinan.
       clanLevel: user.clanLevel ?? clan?.level ?? 0,
     };
   },
@@ -109,13 +106,6 @@ export const getPublicProfile = query({
       hideOnline: u.hideOnline,
       clanTag: clan?.tag,
       clanTagIcon: clan?.tagIcon,
-      // Level clan menentukan warna nama clan di tag (lihat clanTextClass
-      // di lstream-ui.tsx): biru muda / hijau muda / ungu / emas.
-      //
-      // `users.clanLevel` adalah sumber yang sama dengan yang dipakai chat
-      // (lihat chat.ts), jadi warna tag tidak lagi beda antara chat dan
-      // panel akun. Kalau user belum punya salinan, dipakai level di
-      // dokumen clan.
       clanLevel: u.clanLevel ?? clan?.level ?? 0,
       clanNameColor: u.clanNameColor,
       watchCount: history.length,
@@ -132,10 +122,6 @@ export const getPublicProfile = query({
           text: cm.text,
           createdAt: cm.createdAt,
           likeCount: cm.likes?.length ?? 0,
-          // Kartu komentar di panel akun memakai gaya yang sama dengan
-          // komentar di halaman anime (banner, foto, tag clan, dst.), jadi
-          // semua field yang dipakai komponen itu ikut dikirim. Penulisnya
-          // pasti pemilik profil ini.
           image: u.image,
           bannerUrl: u.bannerUrl,
           premium: (u.premiumUntil ?? 0) > now,
@@ -144,8 +130,6 @@ export const getPublicProfile = query({
           clanTagIcon: u.clanTagIcon,
           clanLevel: u.clanLevel ?? clan?.level ?? 0,
           clanNameColor: u.clanNameColor,
-          // Id komentar berbentuk "<animeId>__ep<...>"; angka di ujungnya
-          // adalah nomor episode tempat komentar dibuat.
           episode: (() => {
             const m = String(cm.animeId).match(/__ep(\d+)$/);
             return m ? Number(m[1]) : undefined;
@@ -155,76 +139,139 @@ export const getPublicProfile = query({
   },
 });
 
+export const updateProfile = mutation({
+  args: {
+    username: v.optional(v.string()),
+    image: v.optional(v.string()),
+    bannerUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, { username, image, bannerUrl }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const patch: Record<string, unknown> = {};
+    if (username !== undefined) {
+      const clean = username.trim().replace(/[^a-zA-Z0-9_]/g, "");
+      if (clean.length < 3) throw new Error("Username minimal 3 karakter");
+      const clash = await ctx.db
+        .query("users")
+        .withIndex("username", (q) => q.eq("username", clean))
+        .first();
+      if (clash && clash._id !== userId)
+        throw new Error("Username sudah dipakai");
+      patch.username = clean;
+    }
+    if (image !== undefined) patch.image = image;
+    if (bannerUrl !== undefined) patch.bannerUrl = bannerUrl;
+    if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
+    return await ctx.db.get(userId);
+  },
+});
+
+export const updateSettings = mutation({
+  args: {
+    hideOnline: v.optional(v.boolean()),
+    autoRejectFriend: v.optional(v.boolean()),
+    autoRejectFriendAction: v.optional(v.string()),
+    defaultQuality: v.optional(v.string()),
+    defaultSpeed: v.optional(v.number()),
+    theme: v.optional(v.string()),
+    customColor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const patch: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(args)) {
+      if (val !== undefined) patch[k] = val;
+    }
+    await ctx.db.patch(userId, patch);
+    return await ctx.db.get(userId);
+  },
+});
+
 /**
- * Feed kartu di halaman Akun: komentar anime terbaru dari DEVELOPER
- * (staffRole dev/mod/tester/sepuh/creator) + TEMAN (friendships),anked
- * terbaru dulu. Semua identitas penulis (username, foto, staffRole, premium,
- * tag clan, level clan) ikut dikirim supaya kartunya tampil sama seperti
- * komentar di halaman anime. Banner & judul anime juga dikirim supaya kartu
- * bisa menampilkan banner anime tempat komentar itu dibuat.
+ * Top giver premium komunitas: siapa yang paling banyak bagi hari premium
+ * lewat chat. Digunakan di halaman Akun (perhitungan title) dan di panel
+ * leaderboard Home. Ranking didasarkan pada hari premium yang dikirim
+ * (days * slots), bukan nilai nominal.
  */
-export const teamFeed = query({
+export const topGive = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 50 }) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return [];
-    // Kumpulkan id penulis yang berhak masuk feed: developer + teman.
-    const allowed = new Set<string>();
-    const staff = await ctx.db.query("users").collect();
-    for (const u of staff) {
-      if (u.staffRole) allowed.add(u._id);
-    }
-    const friendships = await ctx.db
-      .query("friendships")
-      .filter((r) => r.eq(r.field("userA"), userId))
+    const takes = Math.min(limit ?? 50, 100);
+    const gives = await ctx.db
+      .query("premiumGives")
+      .withIndex("createdAt")
       .collect();
-    const friendships2 = await ctx.db
-      .query("friendships")
-      .filter((r) => r.eq(r.field("userB"), userId))
-      .collect();
-    for (const f of [...friendships, ...friendships2]) {
-      allowed.add(f.userA === userId ? f.userB : f.userA);
+    const byUser: Record<
+      string,
+      { userId: string; totalDays: number; totalSlots: number; sends: number }
+    > = {};
+    for (const g of gives) {
+      const uid = String(g.fromUserId);
+      if (!byUser[uid]) {
+        byUser[uid] = { userId: uid, totalDays: 0, totalSlots: 0, sends: 0 };
+      }
+      byUser[uid].totalDays += g.days;
+      byUser[uid].totalSlots += g.slots;
+      byUser[uid].sends += 1;
     }
+    const rows = Object.values(byUser)
+      .map((r) => ({
+        ...r,
+        score: r.totalDays * r.totalSlots,
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, takes);
+    const userIds = rows.map((r) => r.userId);
+    const userMap = new Map<string, any>();
+    for (const uid of userIds) {
+      const u = await ctx.db.get(uid as unknown as Id<"users">);
+      if (u) userMap.set(uid, u);
+    }
+    return rows.map((r, i) => {
+      const u = userMap.get(r.userId) as any;
+      return {
+        userId: r.userId,
+        username: u?.username,
+        image: u?.image,
+        days: r.totalDays,
+        slots: r.totalSlots,
+        sends: r.sends,
+      };
+    });
+  },
+});
 
-    const comments = await ctx.db
-      .query("animeComments")
-      .withIndex("animeId_created")
-      .order("desc")
-      .collect();
-    const now = Date.now();
-    const preview = Math.min(limit, 200);
-    const out = [];
-    for (const cm of comments) {
-      if (out.length >= limit) break;
-      if (!allowed.has(cm.userId) || cm.deleted) continue;
-      const writer = await ctx.db.get(cm.userId);
-      if (!writer) continue;
-      // Id komentar berbentuk "<animeId>__ep<N>"; angka di ujung = episode.
-      const m = String(cm.animeId).match(/__ep(\d+)$/);
-      out.push({
-        _id: cm._id,
-        animeId: cm.animeId,
-        animeTitle: cm.animeTitle,
-        text: cm.text,
-        createdAt: cm.createdAt,
-        likeCount: cm.likes?.length ?? 0,
-        episode: m ? Number(m[1]) : undefined,
-        writer: {
-          username: writer.username,
-          image: writer.image,
-          premium: (writer.premiumUntil ?? 0) > now,
-          staffRole: writer.staffRole,
-          level: writer.level ?? 1,
-          clanTag: writer.clanTag,
-          clanTagIcon: writer.clanTagIcon,
-          clanLevel: writer.clanLevel ?? 0,
-          clanNameColor: writer.clanNameColor,
-        },
-      });
-      // Batasi iterasi supaya query tidak meluber kalau feed sudah penuh.
-      if (out.length >= preview) break;
-    }
-    return out;
+/**
+ * Peringkat XP total komunitas (bukan periode). Dipakai untuk
+ * perhitungan title "Puncak XP" di panel akun dan untuk preview
+ * leaderboard singkat di Home. Limit kecil karena hanya untuk
+ * perhitungan + preview 5 besar.
+ */
+export const totalLeaderboard = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 20 }) => {
+    const users = await ctx.db.query("users").collect();
+    const rows = users
+      .map((u) => ({
+        userId: u._id,
+        username: u.username,
+        image: u.image,
+        xp: u.xp ?? 0,
+        level: u.level,
+        seqId: u.seqId,
+        staffRole: u.staffRole,
+        clanTag: u.clanTag,
+        clanTagIcon: u.clanTagIcon,
+        clanNameColor: u.clanNameColor,
+        clanLevel: u.clanLevel,
+        premium: (u.premiumUntil ?? 0) > Date.now(),
+        givePremiumCount: 0,
+      }))
+      .sort((a, b) => b.xp - a.xp)
+      .slice(0, limit ?? 20);
+    return rows.map((r, i) => ({ ...r, rank: i + 1 }));
   },
 });
 
