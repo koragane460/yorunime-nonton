@@ -1,46 +1,23 @@
-import { useCallback, useEffect } from "react";
-import { useNavigate } from "react-router";
-import { useAction, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
-import { SectionTitle } from "@/components/lstream-ui";
-import { CardT, CatalogScreen, CatalogKind } from "@/components/CatalogRows";
-import { HomeTopButtons } from "@/components/HomeTopButtons";
-import { CardCarousel } from "@/components/CatalogRows";
+import { useState } from "react";
+import { CatalogScreen } from "@/components/CatalogRows";
 
 export default function Home() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [initialKind] = useState<CatalogKind>("anime");
-
-  const { onPick, items, searching } = CatalogScreen({
-    kind: initialKind,
-    onPick: (id, title, source) => {
-      if (!title) {
-        const fallback = (items ??[])
-          .find((item: any) => String(item.id) === String(id))
-          ?.title;
-        navigate(`/browse/${encodeURIComponent(String(id))}${title ? "&title=" + encodeURIComponent(title) : ""}${source === "sanka" ? "&donghua=1" : ""}`);
-        return;
-      }
-      navigate(`/browse/${encodeURIComponent(String(id))}${title ? "&title=" + encodeURIComponent(title) : ""}${source === "sanka" ? "&donghua=1" : ""}`);
-    },
-  });
-
-  if (!user) {
-    return (e) => (e);
-  }
-
-  if (!user) {
-    return (e) => (e);
-  }
-
   return (
-    <HomeTopButtons
-      onForYou={() => {}}
-      onMostWatched={() => {}}
-      onDownload={() => {}}
-    />
+    <div className="flex flex-1 flex-col bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="mx-auto max-w-lg px-4 py-3">
+          <h1 className="text-lg font-bold tracking-tight">YoruNime</h1>
+        </div>
+      </header>
+
+      {/* Main content area */}
+      <main className="flex flex-1 flex-col">
+        {/* Placeholder - catalog content would go here */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-6">
+          <p className="text-sm text-muted-foreground">Home screen</p>
+        </div>
+      </main>
+    </div>
   );
 }
