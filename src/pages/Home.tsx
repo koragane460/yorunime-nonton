@@ -16,7 +16,6 @@ import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import { CardCarousel, CatalogScreen, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { isMusicSecret } from "@/lib/musicSecret";
-import type { CatalogCard } from "@/components/CatalogRows";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
 // antrean, tidak perlu ikut di bundel awal Home.
@@ -55,9 +54,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import type { Id } from "@/convex/_generated/dataModel";
+import type { CardT } from "@/components/CatalogRows";
 
 
-type AnimeCardT = CatalogCard & {
+type AnimeCardT = CardT & {
   source?: CatalogPickSource;
   isDonghua?: boolean;
   episode?: number;
