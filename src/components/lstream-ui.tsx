@@ -86,6 +86,7 @@ export function AnimeCard({
   onClick,
   isNew,
   imageOnly,
+  views,
 }: {
   id?: string;
   title: string;
@@ -97,6 +98,8 @@ export function AnimeCard({
   isNew?: boolean;
   /** true = hanya poster, judul & skor ditampilkan oleh pemanggil. */
   imageOnly?: boolean;
+  /** Jumlah views — ditampilkan di bawah judul saat tersedia. */
+  views?: number;
 }) {
   return (
     <button
@@ -145,12 +148,26 @@ export function AnimeCard({
       </div>
       {!imageOnly && (
         <div className="p-2">
-          <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4">{title}</p>
-          {score !== undefined && score > 0 && (
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-gold">
-              <Star className="size-3 fill-gold" /> {score.toFixed(2)}
-            </p>
-          )}
+          {/* Judul TRANSPARENT, tanpa background gelap. */}
+          <p className="line-clamp-2 text-xs font-medium leading-4 text-foreground/95">
+            {title}
+          </p>
+          {/* Views ditampilkan di bawah judul, di belakang poster. */}
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground/80">
+            {score !== undefined && score > 0 && (
+              <>
+                <Star className="size-3 fill-gold" />
+                <span>{score.toFixed(2)}</span>
+              </>
+            )}
+            {views !== undefined && views > 0 && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <Eye className="size-3" />
+                <span>{views.toLocaleString("id-ID")}</span>
+              </>
+            )}
+          </div>
         </div>
       )}
     </button>

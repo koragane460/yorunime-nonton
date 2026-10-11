@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
+import type { CardT as CatalogCard } from "@/components/CatalogRows";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
@@ -52,19 +53,15 @@ import {
 } from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import type { Id } from "@/convex/_generated/dataModel";
 
-type AnimeCardT = {
-  id: string;
-  title: string;
-  image: string;
-  score?: number;
-  status?: string;
-  synopsis?: string;
-  /** Format dari AniList ("TV", "MOVIE", "DONGHUA", …). */
-  type?: string;
-  /** Asal kartu: "sanka" = slug donghua, bukan MAL id anime. */
+
+type AnimeCardT = CatalogCard & {
   source?: CatalogPickSource;
+  isDonghua?: boolean;
+  episode?: number;
+  timeLabel?: string;
 };
 
 /** Cegah error satu useQuery membunuh seluruh halaman. */
@@ -198,7 +195,12 @@ function BrowseRow({
         <GridSkeleton count={10} />
       ) : (
         <>
-          <AnimeGrid items={items} onPick={onPick} newIds={new Set()} />
+          <AnimeGrid
+            items={items}
+            onPick={onPick}
+            newIds={new Set()}
+            views={undefined}
+          />
           <div className="mt-3 flex justify-center">
             <button
               onClick={() => setPage((p) => p + 1)}
@@ -554,17 +556,17 @@ function HomeContent() {
                 {!a.image && (
                   <div className="absolute inset-0 bg-hero-gradient" />
                 )}                <div className="relative w-full p-4">
-                  <div className="mb-1.5 flex items-center gap-2">
+                  <div className="mb-1 flex items-center gap-2">
                     <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                       {a.status ?? "Ongoing"}
                     </span>
-                    <span className="rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-black text-gold-strong">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-black text-gold-strong">
+                      <CrownIcon className="size-3" />
                       New
                     </span>
-                    <span className="flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white">
                       <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-                        <circle cx="12" cy="12" r="2.5" />
+                        <path d="M4 12h16M12 4v16" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       {`${1200 + (((a.id as string).length * 137) % 4800)} nonton`}
                     </span>
@@ -774,6 +776,7 @@ function HomeContent() {
             onPick={openAnime}
             ranked
             newIds={new Set()}
+            views={undefined}
           />
         )}
       </SectionRow>
@@ -849,6 +852,7 @@ function HomeContent() {
             onPick={openAnime}
             ranked
             newIds={new Set()}
+            views={undefined}
           />
         )}
       </SectionRow>
@@ -867,7 +871,12 @@ function HomeContent() {
         {loading ? (
           <GridSkeleton count={12} />
         ) : (
-          <AnimeGrid items={foryouList.slice(0, 12)} onPick={openAnime} newIds={new Set()} />
+          <AnimeGrid
+            items={foryouList.slice(0, 12)}
+            onPick={openAnime}
+            newIds={new Set()}
+            views={undefined}
+          />
         )}
       </SectionRow>
 
@@ -1057,54 +1066,8 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
       )}
     </button>
   );
-}
+}// ------------------------------------------------------ chat preview ----
 
-// ------------------------------------------------------ chat preview ----
-
-function GlobalChatPreview() {
-  const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 6 });
-  const [idx, setIdx] = useState(0);
-
-  // Rotasi 1 pesan setiap 3 menit
-  useEffect(() => {
-    const t = setInterval(() => setIdx((i) => i + 1), 180_000);
-    return () => clearInterval(t);
-  }, []);
-
-  if (!msgs)
-    return <div className="skeleton mt-2 h-10 w-full rounded-lg" />;
-
-  const visible = msgs.slice(-6);
-  if (visible.length === 0)
-    return (
-      <p className="fog-card py-3 text-center text-xs text-muted-foreground">
-        Belum ada chat — jadi yang pertama!
-      </p>
-    );
-
-  const m = visible[idx % visible.length] as any;
-  return (
-    <div className="fog-card mt-2 h-14 overflow-hidden rounded-xl bg-gradient-to-r from-[#0b0b14] via-[#14141f] to-[#0b0b14]">
-      <div className="flex items-center gap-2.5 text-[13px]">
-        <Avatar src={m.image} seed={m.username} className="size-9" />
-        <p className="truncate">
-          <span className="font-semibold text-zinc-300">{m.username}</span>
-          {m.premium && <BlueCheck className="ml-1 inline size-3.5" />}
-          <span className="text-muted-foreground"> : </span>
-          <span className="text-zinc-300">
-            {m.premiumGive ? (
-              <span className="inline-flex items-center gap-1">
-                <Gift className="size-3.5" aria-hidden /> give premium
-              </span>
-            ) : (
-              m.text ?? "[foto]"
-            )}
-          </span>
-        </p>
-      </div>
-    </div>
-  );
-}
 
 // ------------------------------------------------------ leaderboard ----
 
@@ -1928,7 +1891,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         )}
         {results === null && (
           <div className="mt-4">
-            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} />}
+            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} views={undefined} />}
           </div>
         )}
       </div>
