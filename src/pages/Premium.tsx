@@ -381,7 +381,7 @@ function Plans() {
             <button
               disabled={busy !== null}
               onClick={() => void startOrder(p)}
-              className="yn-btn yn-btn-gold mt-3 w-full disabled:opacity-50"
+              className="mt-3 w-full rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-black shadow-[0_0_18px_-6px] shadow-gold/60 transition active:scale-[0.98] disabled:opacity-50"
             >
               {busy === "order" ? (
                 <>

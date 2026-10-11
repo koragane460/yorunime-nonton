@@ -14,7 +14,7 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
-import { CardCarousel, CatalogScreen, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
+import { CardT as CatalogCard, CardCarousel, CatalogScreen, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { isMusicSecret } from "@/lib/musicSecret";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
@@ -226,7 +226,6 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {
@@ -295,7 +294,7 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const heroItems = heroList.slice(0, 2);
+  const heroItems = heroList.slice(0, 5);
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
@@ -455,16 +454,6 @@ function HomeContent() {
   }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
 
   // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
-  // Tab di sini cuma penyaring tampilan (tidak menarik genre).
-  const tabs = useMemo(
-    () => [
-      { id: "semua", label: "Semua" },
-      { id: "terbaru", label: "Terbaru" },
-      { id: "populer", label: "Populer" },
-      { id: "kontroversi", label: "Kontroversi" },
-    ],
-    [],
-  );
 
   return (
     <div className="pb-8">
@@ -489,33 +478,12 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) TAB HORIZONTAL */}
-      <div className="fade-enter mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {tabs.map((t, i) => (
-          <button
-            key={t.id}
-            onClick={() => {
-              setActiveTab(i);
-              setShowSearch(false);
-            }}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition",
-              activeTab === i
-                ? "border-gold-strong bg-gold-soft text-gold-strong"
-                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 3) HERO BANNER */}
+      {/* 1) HERO BANNER — leaderboard podium digabung di kartu yang sama */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <div
-          className="fade-enter relative mt-3 touch-pan-y overflow-hidden rounded-2xl border border-white/10"
+          className="fade-enter relative mt-4 touch-pan-y overflow-hidden rounded-2xl border border-white/10"
           onPointerDown={(e) => {
             heroTouchX.current = e.clientX;
           }}
@@ -609,23 +577,19 @@ function HomeContent() {
                 )}
               />
             ))}
-          </div>
+          </div>          {/* LEADERBOARD — digabung ke banner yang sama, bukan kartu sendiri */}
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="flex w-full items-center gap-2 border-t border-white/10 bg-black/40 px-4 py-2.5 text-left backdrop-blur-sm transition hover:bg-black/55"
+          >
+            <Trophy className="size-4 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-bold">Leaderboard</span>
+              <span className="block text-[10px] text-muted-foreground">Top XP minggu ini — lihat semua ›</span>
+            </span>
+          </button>
         </div>
       ) : null}
-
-      {/* 4) LEADERBOARD (gabung XP + Top Give Premium) */}
-      <button
-        onClick={() => setShowLeaderboard(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
-      >
-        <div className="flex items-center justify-between">
-          <p className="flex items-center gap-2 font-bold">
-            <Trophy className="size-4 text-primary" /> Leaderboard
-          </p>
-          <span className="text-xs text-muted-foreground">lihat semua ›</span>
-        </div>
-        <HomeLeaderboardPreview />
-      </button>
 
       {/* 5) CHAT BARENG — rounded, tanpa garis pembatas */}
       <button
@@ -997,19 +961,20 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
     return (
       <button
         onClick={onOpen}
-        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-card/60 p-3 text-left transition hover:border-primary/50"
       >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <Trophy className="size-5 text-primary" />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 to-gold/10">
+          <Trophy className="size-4 text-primary" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold">Belum punya clan</span>
-          <span className="block text-xs text-zinc-400">
-            Buat clan dan kumpulkan XP bersama teman
-          </span>
+          <span className="block text-xs font-bold">Belum punya clan</span>
+          <span className="block text-[10px] text-zinc-400">Bikin bareng teman, kumpulin XP</span>
         </span>
-        <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
+        <span className="shrink-0 rounded-lg border border-primary/60 px-2.5 py-1 text-[10px] font-bold text-primary">
           Buat
+        </span>
+        <span className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-[10px] font-bold text-white">
+          Join
         </span>
       </button>
     );
@@ -1404,12 +1369,8 @@ function HomeLeaderboardPreview() {
 // ------------------------------------------------------ search result row (fotom-style horizontal row) ----
 
 /**
- * Satu baris hasil pencarian ala fotom, meniru susunan:
- *    badge  judul (besar)  label source  deskripsi pendek
- *
- * Fotom tidak menampilkan angka view di item pencarian, jadi di layar ini
- * juga tidak. Badge «Judul Inggris...» hanya muncul untuk donghua supaya
- * perbedaan anime vs donghua terbaca dari item pencarian.
+ * Satu baris hasil/daftar pencarian: gambar + judul + sinopsis panjang +
+ * jumlah nonton & favorite (persis layout yang diminta).
  */
 function SearchResultRow({
   item,
@@ -1420,8 +1381,9 @@ function SearchResultRow({
 }) {
   const source = item.source ?? "anilist";
   const isDonghua = source === "sanka";
-  const synopsis =
-    (item.synopsis as string | undefined) ?? "";
+  const synopsis = (item.synopsis as string | undefined) ?? "";
+  const views = (item as unknown as { views?: number }).views ?? 0;
+  const favs = (item as unknown as { favorites?: number }).favorites ?? 0;
 
   return (
     <button
@@ -1458,7 +1420,7 @@ function SearchResultRow({
           )}
         </div>
         {synopsis && (
-          <p className="mt-1 text-[12px] leading-snug text-foreground/70 line-clamp-2">
+          <p className="mt-1 text-[12px] leading-snug text-foreground/70 line-clamp-3">
             {synopsis}
           </p>
         )}
@@ -1469,7 +1431,19 @@ function SearchResultRow({
               {item.score.toFixed(1)}
             </span>
           )}
-          {item.status && (
+          {views > 0 && (
+            <span className="flex items-center gap-1">
+              <Play className="size-3.5" aria-hidden />
+              {views.toLocaleString("id-ID")} nonton
+            </span>
+          )}
+          {favs > 0 && (
+            <span className="flex items-center gap-1">
+              <Heart className="size-3.5" aria-hidden />
+              {favs.toLocaleString("id-ID")}
+            </span>
+          )}
+          {!views && item.status && (
             <span className="flex items-center gap-1">
               <Play className="size-3.5" aria-hidden />
               {item.status}
@@ -1887,7 +1861,19 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         )}
         {results === null && (
           <div className="mt-4">
-            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid            items={list} onPick={onPick} newIds={new Set()} />}
+            {listLoading ? (
+              <GridSkeleton count={12} />
+            ) : (
+              <div className="space-y-2">
+                {list.map((a) => (
+                  <SearchResultRow
+                    key={a.id}
+                    item={a}
+                    onClick={() => onPick(a.id, a.title, a.source)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2526,8 +2512,9 @@ function AnimeDetailScreen({
             {fmtFavoritCount(favCount ?? 0)}
           </p>
 
-          {/* Tab tanpa background: Info · Nonton · Character */}
-          <div className="mt-3 flex gap-1.5">
+          {/* Tab tanpa background kotak: Info · Nonton · Character, dengan
+              garis putih di bawah tab aktif */}
+          <div className="mt-4 flex">
             {([
               ["info", "Info"],
               ["nonton", "Nonton"],
@@ -2537,16 +2524,18 @@ function AnimeDetailScreen({
                 key={id}
                 onClick={() => setDetailTab(id)}
                 className={cn(
-                  "flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
-                  detailTab === id
-                    ? "bg-white/15 text-white"
-                    : "text-white/60 hover:text-white/85",
+                  "relative flex-1 pb-2.5 text-sm font-semibold transition",
+                  detailTab === id ? "text-white" : "text-white/50 hover:text-white/80",
                 )}
               >
                 {label}
+                {detailTab === id && (
+                  <span className="absolute inset-x-8 bottom-0 h-px bg-white" />
+                )}
               </button>
             ))}
           </div>
+          <div className="h-px bg-white/15" />
 
 
           {/* Panel info developer: data teknis untuk tools konten. */}
@@ -2608,20 +2597,18 @@ function AnimeDetailScreen({
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
           )}
 
-          {/* Sinopsis — tampil di tab Info */}
+          {/* Sinopsis — tampil di tab Info, teks panjang tanpa kotak */}
           {detailTab === "info" && (
           <>
           <SectionTitle>Sinopsis</SectionTitle>
-          <div
+          <p
             className={cn(
-              "thin-scroll rounded-xl border border-border bg-secondary/40 p-3",
-              synopsisOpen ? "" : "max-h-64 overflow-y-auto",
+              "whitespace-pre-line text-[13px] leading-6 text-white/90",
+              !synopsisOpen && "max-h-none line-clamp-8",
             )}
           >
-            <p className="whitespace-pre-line text-sm leading-6 text-white">
-              {synopsisBody}
-            </p>
-          </div>
+            {synopsisBody}
+          </p>
           {canExpandSynopsis && (
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
@@ -2633,12 +2620,12 @@ function AnimeDetailScreen({
           </>
           )}
 
-          {/* Episode — tampil di tab Nonton (bisa dibuka & ditutup) */}
+          {/* Episode — tampil di tab Nonton, grid polos tanpa kotak luar */}
           {detailTab === "nonton" && (
-          <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
+          <div className="mt-5">
             <button
               onClick={() => setEpisodeOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left"
+              className="flex w-full items-center justify-between gap-2 py-1 text-left"
             >
               <h2 className="text-base font-bold text-white">Episode</h2>
               <span className="flex items-center gap-1.5 text-xs text-white/80">
@@ -2651,7 +2638,7 @@ function AnimeDetailScreen({
               </span>
             </button>
             {episodeOpen && (
-              <div className="px-3 pb-3">
+              <div className="pt-2">
                 {minEp > 1 && (
                   <p className="mb-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
                     Episode 1–{minEp - 1} tidak tersedia di sumber. Episode
@@ -2666,15 +2653,16 @@ function AnimeDetailScreen({
                   </p>
                 ) : (
                   <>
+                    {/* Tombol pengatur urutan episode: terbaru / terlama */}
                     <button
                       onClick={() =>
                         setEpisodeOrder(episodeOrder === "first" ? "last" : "first")
                       }
-                      className="mb-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white/85 transition hover:border-foreground/40"
+                      className="mb-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/85 transition hover:border-white/40"
                     >
                       {episodeOrder === "first"
-                        ? "Urutkan: Terlama ↓"
-                        : "Urutkan: Terbaru ↑"}
+                        ? "Urutkan: episode terlama ↓"
+                        : "Urutkan: episode terbaru ↑"}
                     </button>
                     <div className="flex flex-wrap gap-1.5">
                       {shownEps.map((e: any) => {

@@ -1,280 +1,473 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeftRight, Crown, Users, Star, Cpu, ShieldCheck, Bookmark, ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronLeft, Crown, Gem, Search, TrendingUp, Users, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-
-import { Avatar, BlueCheck, ShineBadge, LevelBadge, clanTierClass } from "@/components/lstream-ui";
+import { useHideNavOnMount } from "@/components/AppLayout";
+import { ClanLevelBar, ClanTag, clanNameClass } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
+/** Layar clan utama: kalau belum punya clan tampil Browse+Top; kalau sudah
+ *  punya tampil ringkas clan-nya, dan layar Buat Clan terpisah (?create=1). */
 export default function Clan() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [open, setOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  useHideNavOnMount();
 
-  const joinTag = searchParams.get("join");
-  const wantCreate = searchParams.get("create");
-  const openCreate = wantCreate === "1";
+  const wantCreate = searchParams.get("create") === "1";
+  const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
 
+  if (wantCreate) return <CreateClan onDone={() => setSearchParams({})} />;
+  if (membership === undefined) {
+    return (
+      <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
+        <div className="p-3">
+          <div className="skeleton h-40 w-full rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+  if (membership) return <MyClanScreen />;
+  return <JoinScreen />;
+}
 
-  useEffect(() => {
-    if (openCreate) {
-      setOpen(true);
+/* ====================================================================== */
+/*  LAYAR JOIN / BROWSE CLAN — foto 4                                      */
+/* ====================================================================== */
+
+function JoinScreen() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<"semua" | "top">("semua");
+  const [q, setQ] = useState("");
+  const all = useQuery(api.clans.listClans, {});
+  const requestJoin = useMutation(api.clans.requestJoin);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const list = useMemo(() => {
+    if (!all) return [];
+    // Search: cocokkan nama ATAU tag clan.
+    let out = all;
+    const term = q.trim().toLowerCase();
+    if (term) {
+      out = out.filter(
+        (c: any) =>
+          c.name?.toLowerCase().includes(term) ||
+          c.tag?.toLowerCase().includes(term),
+      );
+    }
+    // Tab "Top clan" = urut XP/Sacret, ambil 100 teratas.
+    if (tab === "top") {
+      out = [...out].sort((a: any, b: any) => (b.diamonds ?? 0) - (a.diamonds ?? 0)).slice(0, 100);
+    }
+    return out;
+  }, [all, q, tab]);
+
+  // Semua tab: 1-3 teratas tetap diberi highlight_di atas (clan teratas),
+  // sisanya urutan biasa sesuai poin.
+  const top3 = tab === "semua" ? list.slice(0, 3) : [];
+
+  const join = async (clanId: string) => {
+    if (!user) {
+      navigate("/auth?returnTo=/clan");
       return;
     }
-    if (joinTag) {
-      void navigator.clipboard?.writeText(joinTag);
-    }
-  }, [openCreate, joinTag]);
-
-  const joinClan = useMutation(api.clans.requestJoin);
-  const leaveClan = useMutation(api.clans.leaveClan);
-  const createClan = useMutation(api.clans.createClan);
-  const donate = useMutation(api.clans.donate);
-  const claimDaily = useMutation(api.clans.claimDaily);
-  const updateProfile = useMutation(api.users.updateProfile);
-  const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
-  const clan = membership?.clan;
-  const isInClan = !!membership;
-  const canJoin = !clan && user;
-
-  const handleJoin = async () => {
-    if (!user || !joinTag) return;
+    setBusyId(clanId);
     try {
-      await joinClan({ clanId: membership?.clan?._id ?? "" });
-      navigate("/dashboard?tab=clan");
+      await requestJoin({ clanId: clanId as never });
+      toast.success("Permintaan gabung dikirim — tunggu dibuka leader");
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Gagal gabung");
+    } finally {
+      setBusyId(null);
     }
   };
-
-  const handleCreate = async () => {
-    if (!user) return;
-    try {
-      const name = (document.querySelector("#clan-name") as HTMLInputElement)?.value ?? "";
-      const tag = (document.querySelector("#clan-tag") as HTMLInputElement)?.value ?? "";
-      const description = (document.querySelector("#clan-info") as HTMLInputElement)?.value ?? "";
-      await createClan({ name, tag, tagIcon: "", avatarUrl: "", description });
-      setOpen(false);
-      navigate("/dashboard?tab=clan");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleLeave = async () => {
-    if (!user) return;
-    try {
-      await leaveClan({});
-      navigate("/dashboard?tab=clan");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleDonate = async (amount: number) => {
-    if (!user) return;
-    try {
-      await donate({ amount });
-      navigate("/dashboard?tab=clan");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleClaim = async () => {
-    if (!user) return;
-    try {
-      await claimDaily({});
-      navigate("/dashboard?tab=clan");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleUpdateName = async () => {
-    if (!user) return;
-    try {
-      const input = document.querySelector("#clan-name") as HTMLInputElement;
-      await updateProfile({ username: input.value });
-      setOpen(false);
-      navigate("/dashboard?tab=clan");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const isLeader = false;
-  const canManage = membership && (membership.role === "leader" || membership.role === "officer")
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Klan</h1>
-          <p className="text-sm text-muted-foreground">
-            {isInClan
-              ? "Kelola klan, donor, dan anggotanya."
-              : "Buat atau bergabunglah ke klan untuk bersaing."}
+    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
+      <div className="w-full p-3">
+        {/* Header */}
+        <div className="mb-3 mt-3 flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            aria-label="Kembali"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Clan</h1>
+          <button
+            onClick={() => (user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1"))}
+            className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-white"
+          >
+            + Buat
+          </button>
+        </div>
+
+        {/* Tab Semua / Top clan */}
+        <div className="flex gap-1 border-b border-white/10 pb-2">
+          <button
+            onClick={() => setTab("semua")}
+            className={cn(
+              "relative flex-1 pb-2 text-xs font-semibold",
+              tab === "semua" ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            Semua
+            {tab === "semua" && (
+              <span className="absolute inset-x-6 bottom-0 h-0.5 rounded bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("top")}
+            className={cn(
+              "relative flex-1 pb-2 text-xs font-semibold",
+              tab === "top" ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            Top clan
+            {tab === "top" && (
+              <span className="absolute inset-x-6 bottom-0 h-0.5 rounded bg-primary" />
+            )}
+          </button>
+        </div>
+
+        {/* Kolom pencarian */}
+        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Cari nama atau tag clan…"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {q && (
+            <button onClick={() => setQ("")} aria-label="Bersihkan">
+              <X className="size-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
+        {/* Daftar clan */}
+        {all === undefined ? (
+          <div className="mt-4 space-y-2.5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton h-24 w-full rounded-2xl" />
+            ))}
+          </div>
+        ) : list.length === 0 ? (
+          <p className="py-10 text-center text-xs text-muted-foreground">
+            Tidak ada clan yang cocok.
           </p>
+        ) : (
+          <div className="mt-3 space-y-2.5 pb-24">
+            {list.map((c: any, i: number) => (
+              <ClanRow
+                key={c._id}
+                clan={c}
+                rank={tab === "top" ? i + 1 : top3.includes(c) ? top3.indexOf(c) + 1 : undefined}
+                onJoin={() => void join(c._id)}
+                busy={busyId === c._id}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Satu baris clan: kotak memanjang — gambar kiri, nama+tag+stats kanan, tombol Join. */
+function ClanRow({
+  clan: c,
+  rank,
+  onJoin,
+  busy,
+}: {
+  clan: any;
+  rank?: number;
+  onJoin: () => void;
+  busy?: boolean;
+}) {
+  const { user } = useAuth();
+  const levelCost = c.levelCost ?? 100000;
+  const progress = Math.min(100, ((c.levelProgress ?? 0) / levelCost) * 100);
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border bg-card/70 p-3",
+        rank === 1
+          ? "border-gold/50"
+          : rank === 2
+            ? "border-zinc-400/40"
+            : rank === 3
+              ? "border-amber-600/40"
+              : "border-border/70",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        {rank !== undefined ? (
+          <span
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-lg font-black",
+              rank === 1
+                ? "bg-yellow-400/20 text-yellow-300"
+                : rank === 2
+                  ? "bg-zinc-300/20 text-zinc-200"
+                  : rank === 3
+                    ? "bg-amber-600/25 text-amber-300"
+                    : "bg-secondary text-primary",
+            )}
+          >
+            {rank === 1 ? <Crown className="size-4" /> : rank}
+          </span>
+        ) : (
+          <img
+            src={c.avatarUrl || ""}
+            alt=""
+            className="size-10 shrink-0 rounded-xl border border-white/10 object-cover"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
+            <ClanTag
+              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={c.tag}
+              color={c.color}
+              level={c.level}
+              className="px-1.5 py-0 text-[9px]"
+            />
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <Users className="size-3" /> {c.memberCount} member
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Gem className="size-3 text-sky-300" /> {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
+            </span>
+            <span>{c.ageDays ?? 0}h</span>
+          </div>
         </div>
         <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-white/10"
+          onClick={onJoin}
+          disabled={busy || c.isMine || c.isRequested || !user}
+          className={cn(
+            "shrink-0 rounded-xl px-3.5 py-1.5 text-[11px] font-bold transition",
+            c.isMine
+              ? "border border-border text-muted-foreground"
+              : "bg-primary text-white active:scale-95 disabled:opacity-50",
+          )}
         >
-          <ArrowLeftRight className="size-4" />
-          {isInClan ? "Keluar" : canJoin ? "Bergabung" : "Buat"}
+          {c.isMine ? "Milikmu" : c.isRequested ? "Diajukan" : busy ? "…" : user ? "Join" : "Login"}
         </button>
       </div>
-
-      {openCreate ? (
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent className="overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Buat Klan</SheetTitle>
-              <SheetDescription>Isi form di bawah ini untuk membuat klan baru.</SheetDescription>
-            </SheetHeader>
-            <div className="mt-6 space-y-4">
-              <div className="grid gap-3">
-                <Label htmlFor="clan-name">Nama Klan</Label>
-                <Input id="clan-name" placeholder="Nama klan" />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="clan-tag">Tag Klan</Label>
-                <Input id="clan-tag" placeholder="3-4 karakter" />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="clan-info">Deskripsi</Label>
-                <Input id="clan-info" placeholder="Tentang klan" />
-              </div>
-              <Button onClick={handleCreate} className="mt-2">Buat Klan</Button>
-            </div>
-          </SheetContent>
-        </Sheet>
-      ) : clan ? (
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-5">
-            <div className="flex items-center gap-3">
-              <Avatar
-                src={clan.avatarUrl}
-                seed={clan.name}
-                className="size-12"
-              />
-              <div>
-                <h2 className="text-2xl font-extrabold">{clan.name}</h2>
-                <p className="text-sm text-muted-foreground font-mono">{clan.tag != null ? `[${clan.tag}]` : ""}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-2xl border bg-white/5 p-4">
-                <div className="text-xs text-muted-foreground">Level</div>
-                <div className="mt-1">
-                  <LevelBadge level={clan.level} />
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-accent to-primary transition-all duration-300"
-                      style={{ width: `${Math.min(100, (clan.levelProgress / clan.levelCost) * 100)}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground font-mono">
-                    {clan.levelProgress.toLocaleString()} / {clan.levelCost.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="rounded-2xl border bg-white/5 p-4">
-                <div className="text-xs text-muted-foreground">Anggota</div>
-                <div className="mt-1 text-xl font-extrabold">{clan.memberCount}</div>
-              </div>
-              <div className="rounded-2xl border bg-white/5 p-4">
-                <div className="text-xs text-muted-foreground">Diamond</div>
-                <div className="mt-1 text-xl font-extrabold">{clan.diamonds}</div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => handleDonate(clan.level >= 50 ? 5000 : 2000)}
-                className="bg-amber-500 hover:bg-amber-400"
-              >
-                Donasi
-              </Button>
-              <Button
-                onClick={handleClaim}
-                className="bg-emerald-500 hover:bg-emerald-400"
-              >
-                Claim Harian
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-5">
-            <div className="rounded-2xl border bg-white/5 p-4">
-              <div className="text-xs text-muted-foreground">Status</div>
-              <div className="mt-2 text-sm font-semibold">
-                {isInClan ? "Anggota" : "Bebas"}
-              </div>
-              {canJoin && <Button onClick={handleJoin} className="mt-3">Bergabung</Button>}
-              {canManage && (
-                <Button
-                  variant="outline"
-                  onClick={handleLeave}
-                  className="mt-3 text-destructive"
-                >
-                  Keluar
-                </Button>
-              )}
-            </div>
-            <div className="rounded-2xl border bg-white/5 p-4">
-              <div className="text-xs text-muted-foreground">Tingkat Keanggotaan</div>
-              <div className="mt-2 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Pemimpin</span>
-                  <span className="font-semibold">{isLeader ? "Ya, kamu" : "Tidak"}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Officer</span>
-                  <span className="font-semibold">
-                    {membership?.role === "officer" ? "Ya" : "Tidak"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Anggota</span>
-                  <span className="font-semibold">
-                    {membership?.role === "member" ? "Ya" : "Tidak"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Bar level di bawah nama+stats */}
+      <div className="mt-2.5">
+        <div className="mb-1 flex justify-between text-[9px] text-muted-foreground">
+          <span>Lv.{c.level}</span>
+          <span>
+            {(c.levelProgress ?? 0).toLocaleString("id-ID")} / {levelCost.toLocaleString("id-ID")}
+          </span>
         </div>
-      ) : (
-        <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            {user
-              ? "Kamu belum memiliki klan. Buat atau bergabung untuk mulai berkarya."
-              : "Silakan login untuk membuat atau bergabung ke klan."}
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================== */
+/*  LAYAR BUAT CLAN — terpisah (bukan sheet yang sama dengan Join)          */
+/* ====================================================================== */
+
+function CreateClan({ onDone }: { onDone: () => void }) {
+  const navigate = useNavigate();
+  useHideNavOnMount();
+  const createClan = useMutation(api.clans.createClan);
+  const [name, setName] = useState("");
+  const [tag, setTag] = useState("");
+  const [desc, setDesc] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!name.trim() || tag.trim().length < 2) {
+      toast.error("Nama wajib dan tag minimal 2 karakter");
+      return;
+    }
+    setBusy(true);
+    try {
+      await createClan({ name: name.trim(), tag: tag.toUpperCase(), tagIcon: "", avatarUrl: "", description: desc.trim() });
+      toast.success("Clan dibuat — level 1, kumpulkan Sacret bareng!");
+      onDone();
+      navigate("/clan");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal membuat clan");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
+      <div className="w-full p-3">
+        <div className="mb-3 mt-3 flex items-center gap-3">
+          <button
+            onClick={onDone}
+            aria-label="Kembali"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <h1 className="text-lg font-extrabold">Buat Clan</h1>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="clan-name">Nama clan</Label>
+            <Input
+              id="clan-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="mis. YoruNime"
+              maxLength={28}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="clan-tag">Tag clan</Label>
+            <Input
+              id="clan-tag"
+              value={tag}
+              onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
+              placeholder="3-4 huruf, mis. YRNM"
+              maxLength={5}
+              className="font-mono"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="clan-info">Deskripsi (opsional)</Label>
+            <Input
+              id="clan-info"
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="Hazem bareng, nonton bareng"
+              maxLength={120}
+            />
+          </div>
+          <button
+            onClick={() => void submit()}
+            disabled={busy}
+            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-50"
+          >
+            {busy ? "Menyimpan…" : "Buat Clan"}
+          </button>
+          <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+            Membuat clan gratis. Wajib level 10+ kalau kembali ke fase pemula;
+            Sacret clan dikumpulkan dari donasi harian.
           </p>
         </div>
-      )}
-    </main>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================== */
+/*  CLAN MILIK USER (ringkas)                                              */
+/* ====================================================================== */
+
+function MyClanScreen() {
+  const navigate = useNavigate();
+  const membership = useQuery(api.clans.myMembership, {});
+  if (!membership?.clan) return null;
+  const c = membership.clan as any;
+  return (
+    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
+      <div className="w-full p-3">
+        <div className="mb-3 mt-3 flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            aria-label="Kembali"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <h1 className="text-lg font-extrabold">Clan kamu</h1>
+        </div>
+
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-card/70">
+          <img
+            src={c.backgroundUrl || c.avatarUrl || ""}
+            alt=""
+            className="h-24 w-full object-cover"
+          />
+          <div className="p-3">
+            <div className="flex items-center gap-3">
+              <img src={c.avatarUrl || ""} alt="" className="size-12 rounded-xl object-cover" />
+              <div className="min-w-0 flex-1">
+                <p className={cn("truncate font-bold", clanNameClass(c.level))}>{c.name}</p>
+                <ClanTag
+                  icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+                  tag={c.tag}
+                  color={c.color}
+                  level={c.level}
+                  className="px-1.5 py-0 text-[9px]"
+                />
+              </div>
+            </div>
+            <div className="my-3 h-px bg-white/10" />
+            <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-muted-foreground">
+              <div>
+                <p className="text-base font-bold text-foreground">{c.level} Lv</p>
+                Level
+              </div>
+              <div>
+                <p className="inline-flex items-center gap-1 text-base font-bold text-foreground">
+                  <Gem className="size-3.5 text-sky-300" />
+                  {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
+                </p>
+                Sacret
+              </div>
+              <div>
+                <p className="inline-flex items-center gap-1 text-base font-bold text-foreground">
+                  <Users className="size-3.5" />
+                  {c.memberCount}
+                </p>
+                Member
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-border/70 bg-card/70 p-3">
+          <p className="mb-2 text-xs font-bold">Level clan</p>
+          <ClanLevelBar
+            level={c.level}
+            progress={c.levelProgress ?? 0}
+            cost={c.levelCost ?? 100000}
+          />
+          <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <TrendingUp className="size-3.5 text-primary" />
+            Donasi Sacret buat naik level clan
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate("/")}
+          className="mt-6 w-full rounded-xl border border-border py-2.5 text-xs font-semibold text-muted-foreground"
+        >
+          Kembali ke Home
+        </button>
+      </div>
+    </div>
   );
 }

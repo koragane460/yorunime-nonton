@@ -591,7 +591,7 @@ export function ChatPanel({
               <div className={cn("flex max-w-[70%] min-w-0 flex-col", mine ? "items-end" : "items-start")}>
                 <div
                   className={cn(
-                    "w-fit max-w-full min-w-0 border px-3 py-2",
+                    "w-fit max-w-full min-w-0 border-0 px-3 py-2",
                     "rounded-md",                    // Pesan yang isinya cuma foto: bubble dibuat transparan
                       // supaya tidak ada kotak hitam di belakang fotonya.
                       m.imageUrl && !m.text

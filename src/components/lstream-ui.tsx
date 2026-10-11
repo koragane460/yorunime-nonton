@@ -180,6 +180,7 @@ export function AnimeGrid({
   onPick,
   ranked,
   newIds,
+  views,
 }: {
   items: {
     id: string;
@@ -196,6 +197,7 @@ export function AnimeGrid({
   onPick: (id: string, title?: string, source?: "anilist" | "sanka") => void;
   ranked?: boolean;
   newIds?: Set<string>;
+  views?: number[];
 }) {
   return (
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
@@ -207,6 +209,7 @@ export function AnimeGrid({
           image={a.image}
           score={a.score}
           status={a.status}
+          views={views?.[i]}
           rank={ranked ? i + 1 : undefined}
           isNew={newIds?.has(a.id)}
           onClick={() => onPick(a.id, a.title, a.source)}

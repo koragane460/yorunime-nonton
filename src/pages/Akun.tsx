@@ -1400,7 +1400,6 @@ function FullScreen({
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="text-base font-bold">{title}</h1>
         </div>
         {children}
       </div>

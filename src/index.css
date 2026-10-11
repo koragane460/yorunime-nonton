@@ -86,6 +86,8 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-soft: var(--highlight-soft);
   --font-sans:
     "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: "Sora", "Plus Jakarta Sans", ui-sans-serif, sans-serif;

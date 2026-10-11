@@ -97,7 +97,9 @@ export function CharacterRow({
   return (
     <div className="mt-5">
       <SectionTitle>Character</SectionTitle>
-      <div className="thin-scroll -mx-3 flex gap-2.5 overflow-x-auto px-3 pb-1">
+      {/* KARAKTER MENGALIR KE BAWAH (grid 2 kolom), bukan geser ke samping.
+          Kotak detail selalu muncul di bawah daftar. */}
+      <div className="grid grid-cols-2 gap-2.5">
         {shown.map((c) => {
           const active = c.id === openId;
           return (
@@ -106,11 +108,11 @@ export function CharacterRow({
               type="button"
               onClick={() => setOpenId(active ? null : c.id)}
               aria-pressed={active}
-              className="w-24 shrink-0 text-left"
+              className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-card/50 p-2 text-left transition active:scale-[0.99]"
             >
               <div
                 className={
-                  "aspect-[3/4] w-full overflow-hidden rounded-xl border bg-muted transition " +
+                  "h-20 w-16 shrink-0 overflow-hidden rounded-lg border bg-muted transition " +
                   (active ? "border-primary" : "border-border/60")
                 }
               >
@@ -121,20 +123,28 @@ export function CharacterRow({
                   className="h-full w-full object-cover"
                 />
               </div>
-              <p
-                className={
-                  "mt-1 line-clamp-2 text-[11px] font-medium leading-4 " +
-                  (active ? "text-primary" : "")
-                }
-              >
-                {c.name}
-              </p>
+              <div className="min-w-0 flex-1">
+                <p
+                  className={
+                    "line-clamp-2 text-[11px] font-bold leading-tight " +
+                    (active ? "text-primary" : "")
+                  }
+                >
+                  {c.name}
+                </p>
+                <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
+                  {openAge || (c.meta ?? "").split("·")[0]?.trim() || ""}
+                </p>
+                <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-white/70">
+                  {personalityOf(c.bio) || "Personalitas: belum tersedia."}
+                </p>
+              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Kotak detail karakter — muncul tepat di bawah deretan. Backgroundnya
+      {/* Kotak detail karakter — muncul tepat di bawah daftar. Backgroundnya
           foto karakter yang sama, di-blur & digelapkan supaya teks tetap jelas. */}
       {open && (
         <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/10">
