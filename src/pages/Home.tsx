@@ -613,10 +613,10 @@ function HomeContent() {
         </div>
       ) : null}
 
-      {/* 4) LEADERBOARD (gabung XP + Top Give Premium) */}
-      <button
+      {/* 4) LEADERBOARD (gabung dengan hero banner, jadi satu unit; podium top 4&5 tetap tampil, layar full terbuka lewat "lihat semua" atau geser kanan) */}
+      <div
         onClick={() => setShowLeaderboard(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-3 flex flex-col rounded-full border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
       >
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 font-bold">
@@ -625,43 +625,22 @@ function HomeContent() {
           <span className="text-xs text-muted-foreground">lihat semua ›</span>
         </div>
         <HomeLeaderboardPreview />
-      </button>
+      </div>
 
-      {/* 5) CHAT BARENG — rounded, tanpa garis pembatas */}
-      <button
-        onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 w-full rounded-3xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
-      >
-        <div className="flex items-center justify-between pb-2">
-          <p className="flex items-center gap-2 font-bold">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15">
-              <MessageSquare className="size-5 text-primary" aria-hidden />
-            </span>
-            Chat bareng
-          </p>
-          <span className="text-xs text-muted-foreground">buka ›</span>
-        </div>
-        <QueryBoundary label="Gagal memuat chat">
-          <GlobalChatPreview />
-        </QueryBoundary>
-      </button>
 
-      {/* 5b) KOTAK CLAN — langsung di bawah Chat bareng (hanya kalau punya clan) */}
-      <QueryBoundary label="Gagal memuat clan">
-        <ClanBox onOpen={() => navigate("/clan")} />
-      </QueryBoundary>
+
+
 
       {/* 6) CARI ANIME — buka layar full screen.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
       <div ref={searchAnchor}>
-        <SectionTitle>Cari anime &amp; donghua</SectionTitle>
-        <button
-          onClick={() => {
-            setSearchGenre(null);
-            setShowSearch(true);
-          }}
-        className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
+        <SectionTitle>Cari anime &amp; donghua</SectionTitle>          <button
+            onClick={() => {
+              setSearchGenre(null);
+              setShowSearch(true);
+            }}
+          className="flex w-full items-center gap-2 rounded-full border border-border bg-card px-4 py-3 text-left"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-sm text-muted-foreground">
