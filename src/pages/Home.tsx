@@ -46,6 +46,7 @@ import {
   Star,
   Copy,
   Film,
+  Clapperboard,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -69,6 +70,9 @@ import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import type { Id } from "@/convex/_generated/dataModel";
 
+
+/** Karakter ringkas untuk banner. */
+type CharRow = { id: string; name: string; image: string };
 
 type AnimeCardT = CatalogCard & {
   source?: CatalogPickSource;
@@ -623,11 +627,6 @@ function HomeContent() {
         </QueryBoundary>
       </button>
 
-      {/* 5b) KOTAK CLAN — langsung di bawah Chat bareng */}
-      <QueryBoundary label="Gagal memuat clan">
-        <ClanBox onOpen={() => navigate("/clan")} />
-      </QueryBoundary>
-
       {/* 6) CARI ANIME — buka layar full screen.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
@@ -954,96 +953,6 @@ function HomeContent() {
     </div>
   );
 }
-
-// ------------------------------------------------------ kotak clan ----
-
-/**
- * Kotak clan yang muncul di Home tepat di bawah "Chat bareng".
- * Hanya dirender kalau user punya clan (atau belum punya, biar ada ajakan).
- */
-function ClanBox({ onOpen }: { onOpen: () => void }) {
-  const { user } = useAuth();
-  const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
-  const clan = useQuery(
-    api.clans.clanDetail,
-    membership?.clanId ? { clanId: membership.clanId } : "skip",
-  );
-  const msgs = useQuery(
-    api.chat.listMessages,
-    membership?.clanId ? { kind: "clan", clanId: membership.clanId, limit: 4 } : "skip",
-  );
-
-  if (!membership) {
-    return (
-      <button
-        onClick={onOpen}
-        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
-      >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-          <Trophy className="size-5 text-primary" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold">Belum punya clan</span>
-          <span className="block text-xs text-zinc-400">
-            Buat clan dan kumpulkan XP bersama teman
-          </span>
-        </span>
-        <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
-          Buat
-        </span>
-      </button>
-    );
-  }
-
-  if (!clan) return null;
-  const c = clan.clan;
-  const last = msgs?.[msgs.length - 1];
-  return (
-    <button
-      onClick={onOpen}
-      className="fade-enter mt-2.5 w-full overflow-hidden rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
-    >
-      <div className="flex items-center gap-3">
-        <img
-          src={c.avatarUrl}
-          alt=""
-          className="size-11 shrink-0 rounded-xl object-cover"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            {/* Nama clan ikut warna LEVEL-nya, sama seperti yang tampil di
-                chat dan di panel clan — bukan putih polos. */}
-            <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
-            <ClanTag
-              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
-              tag={c.tag}
-              color={c.color}
-              level={c.level}
-              className="px-1.5 py-0 text-[9px]"
-            />
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            Lv.{c.level} · {c.memberCount} member ·{" "}
-            {c.diamonds.toLocaleString("id-ID")} Sacret
-          </p>
-        </div>
-        <ChevronRight className="size-5 shrink-0 text-zinc-500" />
-      </div>
-      <div className="my-2.5 h-px bg-white/10" />
-      {last ? (
-        <p className="truncate text-xs text-zinc-400">
-          <span className="font-semibold text-zinc-300">{last.username}</span>:{" "}
-          {last.text ?? (last.premiumGive ? "Give premium" : "[foto]")}
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Belum ada chat di clan — sapa teman kamu!
-        </p>
-      )}
-    </button>
-  );
-}// ------------------------------------------------------ chat preview ----
-
 
 // ------------------------------------------------------ leaderboard ----
 
@@ -2020,24 +1929,26 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   <p className="text-xs text-muted-foreground">
                     Join clan atau buat clan untuk bergabung
                   </p>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/clan");
-                    }}
-                    className="mt-1 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
-                  >
-                    Lihat clan
-                  </button>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/clan?buat=1");
-                    }}
-                    className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground"
-                  >
-                    Buat clan
-                  </button>
+                  <div className="mx-auto mt-1 flex w-full max-w-[280px] flex-col items-stretch gap-2">
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate("/clan");
+                      }}
+                      className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white shadow-[0_0_20px_-6px] shadow-primary/60 transition hover:brightness-110"
+                    >
+                      Lihat clan
+                    </button>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate("/clan?buat=1");
+                      }}
+                      className="rounded-full border border-primary/60 px-5 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                    >
+                      Buat clan
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -2237,6 +2148,95 @@ function DMScreen({
 }
 
 
+// ------------------------------------------------------- cuplikan ----
+
+/**
+ * Tab "Cuplikan" — pemutar trailer/hese ala TikTok:
+
+ * - Latar hitam full layar, video berada di tengah lebar penuh (iframe
+ *   YouTube bertata letak 9:16 diperlebar supaya rasa vertikalnya kuat).
+ * - Info judul & tombol <Tonton> di bawah, ikon suara/mute di kanan.
+ * - IFrame YouTube pakai API bawaan; tidak mungkin mengatur lebar penuh
+ *   seperti TikTok murni, tapi tampilannya sudah terasa sama.
+ */
+function CuplikanPanel({
+  trailerUrl,
+  title,
+  image,
+}: {
+  trailerUrl?: string;
+  title: string;
+  image: string;
+}) {
+  const embed = youtubeEmbedUrl(trailerUrl ?? "");
+  return (
+    <div className="mt-3">
+      {embed ? (
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black">
+          {/* 9:16 ala TikTok, penuh lebar layar. */}
+          <div className="relative aspect-[9/16] max-h-[70vh] w-full">
+            <iframe
+              src={embed}
+              title={`Cuplikan ${title}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 size-full"
+            />
+          </div>
+          {/* Info bawah ala TikTok: judul + action bar. */}
+          <div className="flex items-end justify-between gap-3 bg-gradient-to-t from-black/90 to-transparent p-3">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+                <Clapperboard className="size-3.5" /> Cuplikan
+              </p>
+              <p className="mt-1 line-clamp-2 text-sm font-bold text-white">
+                {title}
+              </p>
+            </div>
+            <a
+              href={trailerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-[0_0_18px_-4px] shadow-primary/70 transition hover:brightness-110"
+            >
+              Buka di YouTube
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-card/50 px-4 py-10 text-center">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.06] text-muted-foreground">
+            <Clapperboard className="size-7" />
+          </span>
+          <p className="text-sm font-semibold">Cuplikan belum tersedia</p>
+          <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
+            Sumber ini belum punya trailer yang bisa diputar. Coba lagi
+            nanti — data diperbarui setiap beberapa jam.
+          </p>
+          {image && (
+            <img
+              src={image}
+              alt=""
+              className="mt-2 max-h-40 rounded-xl object-cover opacity-70"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** URL YouTube apa pun (watch/shorts/youtu.be/embed) → URL embed. */
+function youtubeEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/,
+  );
+  const id = m?.[1];
+  if (!id) return null;
+  return `https://www.youtube.com/embed/${id}?rel=0&playsinline=1`;
+}
+
 // ------------------------------------------------------- detail screen ----
 
 /** Format detik → "12:34" (dipakai untuk durasi nonton). */
@@ -2283,6 +2283,7 @@ function AnimeDetailScreen({
   const { user } = useAuth();
   const getDetail = useAction(api.anime.animeDetail);
   const getSimilar = useAction(api.anime.animeSimilar);
+  const fetchChars = useAction(api.anime.animeCharacters);
   // Sinopsis manual dari developer (tools konten). Kalau ada, override ini
   // yang dipakai — menggantikan sinopsis yang kosong/aneh dari sumber.
   const customSynopsis = useQuery(
@@ -2302,8 +2303,10 @@ function AnimeDetailScreen({
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
+  // Dua karakter ikonik untuk overlap di banner kanan (nama tersirat).
+  const [bannerChars, setBannerChars] = useState<CharRow[] | undefined>(undefined);
   // Tab Info / Nonton / Character — tiga tombol tanpa background.
-  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character">("info");
+  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "cuplikan">("info");
   // Bagian Character: foto + detail gabungan dari AniList (paling ikonik dulu).
   // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
   // lain yang dibutuhkan saat menambah sinopsis / menambah anime. Hanya
@@ -2318,6 +2321,15 @@ function AnimeDetailScreen({
     setSimilar([]);
     getSimilar({ id: animeId })
       .then((r: any) => setSimilar((r as AnimeCardT[]) ?? []))
+      .catch(() => {});
+    // Dua karakter ikonik untuk dekorasi banner (foto + nama di overlay).
+    setBannerChars(undefined);
+    fetchChars({ idMal: /^[0-9]+$/.test(animeId) ? animeId : undefined, title: animeTitle ?? undefined })
+      .then((r: any) => {
+        setBannerChars(
+          Array.isArray(r) ? (r as CharRow[])?.slice(0, 2) ?? undefined : undefined,
+        );
+      })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, animeTitle]);
@@ -2393,14 +2405,15 @@ function AnimeDetailScreen({
         </div>
 
         <div className="px-3">
-          {/* Tab tanpa background kotak: Info · Nonton · Character — garis
-              putih di bawah tab aktif */}
+          {/* Tab tanpa background kotak: Info · Nonton · Character · Cuplikan
+              — garis putih di bawah tab aktif */}
           <div className="mt-4 flex">
             {(
               [
                 ["info", "Info"],
                 ["nonton", "Nonton"],
                 ["character", "Character"],
+                ["cuplikan", "Cuplikan"],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -2422,8 +2435,9 @@ function AnimeDetailScreen({
           </div>
           <div className="h-px bg-white/15" />
 
-          {/* Info anime — di BAWAH tab: poster, judul, genre, rating, studio,
-              status. Di ATAS tab cuma sisa banner anime. */}
+          {/* Info anime — di BAWAH tab & HANYA saat Info aktif. Tab Nonton
+              langsung daftar episode; Character langsung daftar karakter. */}
+          {detailTab === "info" && (
           <div className="mt-3 flex items-start gap-3">
             {detail.image ? (
               <img
@@ -2593,6 +2607,15 @@ function AnimeDetailScreen({
           {/* Kolom karakter paling ikonik — tampil di tab Character */}
           {detailTab === "character" && (
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
+          )}
+
+          {/* Tab Cuplikan: player vertikal ala TikTok memutar trailer anime. */}
+          {detailTab === "cuplikan" && (
+            <CuplikanPanel
+              trailerUrl={detail.trailerUrl as string | undefined}
+              title={detail.title as string}
+              image={(detail.image as string) ?? ""}
+            />
           )}
 
           {/* Sinopsis — tampil di tab Info */}

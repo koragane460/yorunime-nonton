@@ -613,13 +613,13 @@ function JadwalContent() {
       {/* "Lihat semua" menampilkan seluruh rilis hari itu (permintaan user);
           disclaimer lama sudah dihapus. */}
       {list.length > 0 && (
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-5 flex items-center justify-between gap-3 pb-6">
           <button
             onClick={() => {
               setShowAll(true);
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="text-[11px] font-semibold text-primary hover:underline"
+            className="flex-1 rounded-2xl border border-primary/50 bg-primary/10 px-4 py-3 text-xs font-bold text-primary transition hover:bg-primary/20"
           >
             {showAll
               ? `Semua ${list.length} rilis hari ini ditampilkan`
@@ -627,7 +627,7 @@ function JadwalContent() {
           </button>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="text-[11px] text-muted-foreground hover:text-foreground"
+            className="shrink-0 rounded-2xl border border-white/15 bg-white/[0.04] px-4 py-3 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40 hover:text-foreground"
           >
             Kembali ke atas
           </button>

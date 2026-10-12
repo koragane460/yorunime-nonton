@@ -138,6 +138,8 @@ export type AnimeDetail = AnimeCard & {
   synopsis: string;
   totalEpisodes: number;
   episodeList: EpisodeItem[];
+  /** Video trailer YouTube (tombol "Cuplikan"). */
+  trailerUrl?: string;
 };
 
 // ------------------------------------------------------------- jikan ol ----
@@ -261,6 +263,7 @@ const ANILIST_FIELDS = `
   description(asHtml: false)
   nextAiringEpisode { episode airingAt timeUntilAiring }
   startDate { year month day }
+  trailer { id site }
 `;
 
 async function aniGraphql(
@@ -406,6 +409,16 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   const m = d?.Media;
   if (!m) return null;
   const card = anilistCard(m);
+  // Trailer YouTube untuk tombol "Cuplikan": AniList mengisi `trailer`
+  // dengan id video YouTube (site: YOUTUBE) — dipakai langsung di player.
+  const ytTrailer =
+    m.trailer?.site?.toUpperCase() === "YOUTUBE" && m.trailer.id
+      ? `https://www.youtube.com/watch?v=${m.trailer.id}`
+      : undefined;
+  const card0 = card;
+  const cardWithTrailer = ytTrailer
+    ? { ...card0, trailerUrl: ytTrailer }
+    : card0;
   // Judul yang belum tayang tidak boleh dikarang jadi episode playable.
   const upcoming = m.status === "NOT_YET_RELEASED";
   // AniList mengisi `episodes` dengan null untuk anime yang masih tayang
@@ -446,10 +459,10 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
       duration: m.duration ? `${m.duration} menit` : undefined,
     });
   }
-  const synopsis = card.synopsis ?? "Sinopsis belum tersedia.";
+  const synopsis = cardWithTrailer.synopsis ?? "Sinopsis belum tersedia.";
   const synopsisId = await translateId(synopsis);
   return {
-    ...card,
+    ...cardWithTrailer,
     genres: Array.isArray(m.genres) ? m.genres : [],
     year: m.seasonYear ?? undefined,
     studio:
@@ -1395,6 +1408,7 @@ export const animeDetail = action({
     title: v.optional(v.string()),
   },
   handler: async (runCtx, { id, source, title }) => {
+    // Lebih baik tetap memakai cache: detail = metadata + daftar episode.
     const detail = (await cached(
       runCtx,
       `detail:${source ?? "auto"}:${id}:${title ?? ""}`,

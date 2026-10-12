@@ -573,27 +573,34 @@ export function ChatPanel({
           </p>
         )}
         {messages.map((m) => {
-          const mine = m.userId === meId;
-          const give = m.premiumGive;
+          const mine = m.userId === meId;          const give = m.premiumGive;
           return (
             <div
               key={m._id}
-              className={cn("msg-in flex gap-2", mine && "flex-row-reverse")}
+              className={cn("msg-in flex w-full items-end gap-2", mine && "flex-row-reverse")}
             >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
                 <img
                   src={m.image ?? avatarFallback(m.username)}
                   alt=""
-                  className="size-9 shrink-0 rounded-full border border-white/15 object-cover"
+                  className={cn(
+                    "size-9 shrink-0 rounded-full object-cover",
+                    // Avatar cuma diberi garis tipis, tanpa blok hitam.
+                    !m.image && "bg-white/[0.08]",
+                  )}
                 />
               </button>
               <div className={cn("flex max-w-[70%] min-w-0 flex-col", mine ? "items-end" : "items-start")}>
                 <div
                   className={cn(
-                    "w-fit max-w-full min-w-0 border-0 px-3 py-2",
-                    "rounded-md",                    // Pesan yang isinya cuma foto: bubble dibuat transparan
-                      // supaya tidak ada kotak hitam di belakang fotonya.
+                    "w-fit flex flex-col items-start rounded-md px-3 py-2",
+                    "w-auto max-w-full min-w-0 border-0 self-start",
+                    mine && "self-end items-end",
+                    // Bubble dibungkus w-fit: tidak melar lebar penuh sampai
+                    // muncul garis abu-abu panjang seperti sebelumnya.
+                    // Pesan yang isinya cuma foto: bubble dibuat transparan
+                    // supaya tidak ada kotak hitam di belakang fotonya.
                       m.imageUrl && !m.text
                           ? "border-transparent bg-transparent p-0 shadow-none"
                           : give
