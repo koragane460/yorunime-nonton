@@ -2543,19 +2543,7 @@ function AnimeDetailScreen({
           {progress && progress.durationSec > 0 && (
             <p className="mt-1.5 text-center text-[11px] text-white/60">
               Lanjut menit {Math.floor(progress.progressSec / 60)}/
-              {Math.floor(progress.durationSec / 60)}
-            </p>
-          )}
-          <p className="mt-1 text-center text-[11px] text-white/55">
-            {fmtFavoritCount(favCount ?? 0)}
-          </p>
-
-          {/* Panel info developer: data teknis untuk tools konten. */}
-          {devInfoOpen && devAccess?.level === "dev" && (
-            <div className="mt-3 rounded-2xl border border-primary/40 bg-card p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-bold text-primary">Info developer</p>
-                <button
+              {Math.floor(progress.durationSec / 60)}\n            )}\n                <button
                   onClick={() => setDevInfoOpen(false)}
                   className="rounded-full p-1 text-muted-foreground"
                   aria-label="Tutup"
@@ -2598,17 +2586,7 @@ function AnimeDetailScreen({
                 ))}
               </div>
               <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-                Nilai di atas bisa langsung dipakai di Tools Developer
-                (Akun → tombol gerinda).
-              </p>
-            </div>
-          )}
-
-          {/* Kolom karakter paling ikonik — tampil di tab Character */}
-          {detailTab === "character" && (
-            <CharacterRow idMal={String(animeId)} title={animeTitle} />
-          )}
-
+              {Math.floor(progress.durationSec / 60)}\n            )}\n          )}\n
           {/* Tab Cuplikan: player vertikal ala TikTok memutar trailer anime. */}
           {detailTab === "cuplikan" && (
             <CuplikanPanel
@@ -2756,68 +2734,6 @@ function AnimeDetailScreen({
                     ) : null}
                   </button>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Komentar hanya ada di halaman Nonton */}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Tombol kotak miring (skew). Satu helper untuk semua baris aksi supaya
- * tinggi, radius, dan kemiringannya selalu sama persis di layar HP.
- * Kemiringan dipakai di elemen luar, isinya dikembalikan ke lurus supaya
- * teks tidak ikut miring. */
-/** Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
- * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999
- * dibulatkan ke puluhan/ratusan; ribuan pakai satuan k dengan satu desimal
- * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan. */
-function fmtFavoritCount(n: number): string {
-  const v = Math.max(0, Math.floor(n));
-  if (v === 0) return "Belum ada Favorite";
-  if (v < 10) return `${v} Favorit`;
-  if (v < 100) return `${Math.floor(v / 10) * 10}+`;
-  if (v < 1000) return `${Math.floor(v / 100) * 100}+`;
-  const k = v / 1000;
-  if (k < 10) {
-    const one = Math.round(k * 10) / 10;
-    return `${one.toFixed(1).replace(/\.0$/, "")}k`;
-  }
-  return `${Math.floor(k)}k`;
-}
-
-export function SkewButton({
-  children,
-  onClick,
-  variant = "accent",
-  className,
-  disabled,
-  ...rest
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  variant?: "accent" | "quiet" | "plain";
-  className?: string;
-  disabled?: boolean;
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "className">) {
-  return (
-    <button
-      {...rest}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "-skew-x-6 rounded-lg px-4 text-sm font-semibold transition",
-        "flex min-h-11 shrink-0 items-center justify-center gap-2",
-        variant === "accent" &&
-          "bg-accent text-accent-foreground hover:brightness-110",
-        variant === "quiet" &&
-          "border border-white/25 bg-black/60 text-white hover:bg-black/75",
-        variant === "plain" &&
-          "border border-border bg-card text-foreground hover:border-foreground/40",
-        disabled && "pointer-events-none opacity-40",
         className,
       )}
     >

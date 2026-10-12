@@ -1,0 +1,1 @@
+export { CuplikanPanel } from "./CuplikanPanel"
