@@ -6,7 +6,15 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
+import {
+  AnimeCard,
+  AnimeGrid,
+  SectionTitle,
+  Avatar,
+  BlueCheck,
+  ClanTag,
+  clanNameClass,
+} from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
@@ -14,7 +22,13 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
-import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
+import {
+  CardCarousel,
+  CatalogScreen,
+  type CardT as CatalogCard,
+  type CatalogKind,
+  type PickSource as CatalogPickSource,
+} from "@/components/CatalogRows";
 import { isMusicSecret } from "@/lib/musicSecret";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
@@ -118,12 +132,11 @@ function GridSkeleton({ count = 10 }: { count?: number }) {
   );
 }
 
+
 /** Baris katalog lengkap (50 item/halaman) + tombol "muat lebih banyak". */
-/**
- * Judul section + "Lihat selengkapnya" di kanan (tanpa background).
+/** Judul section + "Lihat selengkapnya" di kanan (tanpa background).
  * Teksnya hanya muncul kalau memang ada sisa item, supaya tidak menawarkan
- * sesuatu yang tidak ada.
- */
+ * sesuatu yang tidak ada. */
 function SectionRow({
   title,
   count,
@@ -571,7 +584,6 @@ function HomeContent() {
                     </span>
                   </div>
 
-
                   <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
                   <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-zinc-300">
                     {a.synopsis ?? "Sinopsis belum tersedia."}
@@ -628,18 +640,16 @@ function HomeContent() {
       </div>
 
 
-
-
-
       {/* 6) CARI ANIME — buka layar full screen.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
       <div ref={searchAnchor}>
-        <SectionTitle>Cari anime &amp; donghua</SectionTitle>          <button
-            onClick={() => {
-              setSearchGenre(null);
-              setShowSearch(true);
-            }}
+        <SectionTitle>Cari anime &amp; donghua</SectionTitle>
+        <button
+          onClick={() => {
+            setSearchGenre(null);
+            setShowSearch(true);
+          }}
           className="flex w-full items-center gap-2 rounded-full border border-border bg-card px-4 py-3 text-left"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -957,7 +967,7 @@ function HomeContent() {
   );
 }
 
-// ------------------------------------------------------- kotak clan ----
+// ------------------------------------------------------ kotak clan ----
 
 /**
  * Kotak clan yang muncul di Home tepat di bawah "Chat bareng".
@@ -1493,7 +1503,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   const [listLoading, setListLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [genresOpen, setGenresOpen] = useState(false);
-  const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   // Multi-select: kumpulan NAMA genre yang dipilih (irisannya dihitung server).
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
   const [adult, setAdult] = useState(false);
@@ -1506,6 +1515,8 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   );
   const canAdult = !!panelAccess?.adult;
   const genres = useAction(api.anime.animeGenres);
+
+  const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     genres({})
@@ -1842,7 +1853,8 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
               <>
                 <div className="mb-2 flex items-baseline justify-between">
                   <p className="text-base font-bold tracking-tight">
-                    Hasil Pencarian ({results.length})                  </p>
+                    Hasil Pencarian ({results.length})
+                  </p>
                   <button
                     onClick={() => {
                       /* Urutan default: Relevance. Tidak ada re-sort lain
@@ -2251,10 +2263,8 @@ function fmtClock(sec: number) {
   return `${h > 0 ? `${h}:` : ""}${mm}:${dd}`;
 }
 
-/**
- * Sinopsis sebelum diklik "baca selengkapnya": tetap tampil sekitar 5/6
- * isinya (paragraf pertama, atau potongan 70% kalau cuma satu paragraf).
- */
+/** Sinopsis sebelum diklik "baca selengkapnya": tetap tampil sekitar 5/6
+ * isinya (paragraf pertama, atau potongan 70% kalau cuma satu paragraf). */
 function synopsisPreview(text: string, open: boolean) {
   if (open) return text;
   const paras = text
@@ -2510,11 +2520,13 @@ function AnimeDetailScreen({
 
           {/* Tab tanpa background: Info · Nonton · Character */}
           <div className="mt-3 flex gap-1.5">
-            {([
-              ["info", "Info"],
-              ["nonton", "Nonton"],
-              ["character", "Character"],
-            ] as const).map(([id, label]) => (
+            {(
+              [
+                ["info", "Info"],
+                ["nonton", "Nonton"],
+                ["character", "Character"],
+              ] as const
+            ).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setDetailTab(id)}
@@ -2669,7 +2681,7 @@ function AnimeDetailScreen({
                               navigate(
                                 `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
                                   animeTitle ?? detail.title ?? "",
-                                )}`,
+                                )}`
                               )
                             }
                             className={cn(
@@ -2739,18 +2751,14 @@ function AnimeDetailScreen({
   );
 }
 
-/**
- * Tombol kotak miring (skew). Satu helper untuk semua baris aksi supaya
+/** Tombol kotak miring (skew). Satu helper untuk semua baris aksi supaya
  * tinggi, radius, dan kemiringannya selalu sama persis di layar HP.
  * Kemiringan dipakai di elemen luar, isinya dikembalikan ke lurus supaya
- * teks tidak ikut miring.
- */
-/**
- * Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
+ * teks tidak ikut miring. */
+/** Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
  * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999
  * dibulatkan ke puluhan/ratusan; ribuan pakai satuan k dengan satu desimal
- * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan.
- */
+ * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan. */
 function fmtFavoritCount(n: number): string {
   const v = Math.max(0, Math.floor(n));
   if (v === 0) return "Belum ada Favorite";
@@ -3050,7 +3058,6 @@ function DonghuaDetailScreen({
               Favorite
             </SkewButton>
           </div>
-
 
           {/* Kolom karakter donghua — di bawah tombol Nonton/Favorite,
               sebelum sinopsis. */}
