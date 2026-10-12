@@ -239,7 +239,6 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {
@@ -308,7 +307,7 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const heroItems = heroList.slice(0, 2);
+  const heroItems = heroList.slice(0, 5);
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
@@ -467,18 +466,6 @@ function HomeContent() {
     return () => window.removeEventListener("resize", paint);
   }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
 
-  // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
-  // Tab di sini cuma penyaring tampilan (tidak menarik genre).
-  const tabs = useMemo(
-    () => [
-      { id: "semua", label: "Semua" },
-      { id: "terbaru", label: "Terbaru" },
-      { id: "populer", label: "Populer" },
-      { id: "kontroversi", label: "Kontroversi" },
-    ],
-    [],
-  );
-
   return (
     <div className="pb-8">
       {/* 1) YORUNIME PREMIUM — card ke /premium */}
@@ -502,28 +489,7 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) TAB HORIZONTAL */}
-      <div className="fade-enter mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {tabs.map((t, i) => (
-          <button
-            key={t.id}
-            onClick={() => {
-              setActiveTab(i);
-              setShowSearch(false);
-            }}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition",
-              activeTab === i
-                ? "border-gold-strong bg-gold-soft text-gold-strong"
-                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 3) HERO BANNER */}
+      {/* 1) HERO BANNER — leaderboard podium digabung di kartu yang sama */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
@@ -622,23 +588,45 @@ function HomeContent() {
               />
             ))}
           </div>
+          {/* LEADERBOARD — digabung ke banner yang sama, bukan kartu sendiri */}
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="flex w-full items-center gap-2 border-t border-white/10 bg-black/40 px-4 py-2.5 text-left backdrop-blur-sm transition hover:bg-black/55"
+          >
+            <Trophy className="size-4 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-bold">Leaderboard</span>
+              <span className="block text-[10px] text-muted-foreground">
+                Top XP minggu ini — lihat semua ›
+              </span>
+            </span>
+          </button>
         </div>
       ) : null}
 
-      {/* 4) LEADERBOARD (gabung dengan hero banner, jadi satu unit; podium top 4&5 tetap tampil, layar full terbuka lewat "lihat semua" atau geser kanan) */}
-      <div
-        onClick={() => setShowLeaderboard(true)}
-        className="fade-enter mt-3 flex flex-col rounded-full border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
+      {/* 5) CHAT BARENG — preview chat global, buka layar penuh */}
+      <button
+        onClick={() => setShowChat(true)}
+        className="fade-enter mt-3 w-full rounded-3xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pb-2">
           <p className="flex items-center gap-2 font-bold">
-            <Trophy className="size-4 text-primary" /> Leaderboard
+            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15">
+              <MessageSquare className="size-5 text-primary" aria-hidden />
+            </span>
+            Chat bareng
           </p>
-          <span className="text-xs text-muted-foreground">lihat semua ›</span>
+          <span className="text-xs text-muted-foreground">buka ›</span>
         </div>
-        <HomeLeaderboardPreview />
-      </div>
+        <QueryBoundary label="Gagal memuat chat">
+          <GlobalChatPreview />
+        </QueryBoundary>
+      </button>
 
+      {/* 5b) KOTAK CLAN — langsung di bawah Chat bareng */}
+      <QueryBoundary label="Gagal memuat clan">
+        <ClanBox onOpen={() => navigate("/clan")} />
+      </QueryBoundary>
 
       {/* 6) CARI ANIME — buka layar full screen.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
@@ -1396,12 +1384,9 @@ function HomeLeaderboardPreview() {
 // ------------------------------------------------------ search result row (fotom-style horizontal row) ----
 
 /**
- * Satu baris hasil pencarian ala fotom, meniru susunan:
- *    badge  judul (besar)  label source  deskripsi pendek
- *
- * Fotom tidak menampilkan angka view di item pencarian, jadi di layar ini
- * juga tidak. Badge «Judul Inggris...» hanya muncul untuk donghua supaya
- * perbedaan anime vs donghua terbaca dari item pencarian.
+ * Satu baris hasil/daftar pencarian: gambar + judul + sinopsis + jumlah
+ * nonton & favorite + status. Dipakai untuk hasil pencarian DAN daftar
+ * sebelum pencarian, supaya tampilannya sama persis.
  */
 function SearchResultRow({
   item,
@@ -1414,6 +1399,8 @@ function SearchResultRow({
   const isDonghua = source === "sanka";
   const synopsis =
     (item.synopsis as string | undefined) ?? "";
+  const views = (item as unknown as { views?: number }).views ?? 0;
+  const favs = (item as unknown as { favorites?: number }).favorites ?? 0;
 
   return (
     <button
@@ -1459,6 +1446,18 @@ function SearchResultRow({
             <span className="flex items-center gap-1">
               <Star className="size-3.5 text-gold-strong" aria-hidden />
               {item.score.toFixed(1)}
+            </span>
+          )}
+          {views > 0 && (
+            <span className="flex items-center gap-1">
+              <Play className="size-3.5" aria-hidden />
+              {views.toLocaleString("id-ID")} nonton
+            </span>
+          )}
+          {favs > 0 && (
+            <span className="flex items-center gap-1">
+              <Heart className="size-3.5" aria-hidden />
+              {favs.toLocaleString("id-ID")}
             </span>
           )}
           {item.status && (
@@ -1808,20 +1807,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         </div>
       )}
 
-      {/* Urutan */}
-      <div className="mt-2 flex justify-end">
-        <button
-          onClick={() => {
-            // Urutan: hanya “Relevance” yang dipakai — saya pertahankan biar
-            // label ekran persis seperti fotom, meski di backend filter lite.
-          }}
-          className="gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
-        >
-          <Star className="size-3.5 text-gold-strong" aria-hidden />
-          Relevant ▾
-        </button>
-      </div>
-
       {/* Hasil: hasil pencarian > daftar genre/semua */}
       {searching && (
         <p className="mt-3 text-center text-xs text-muted-foreground">Mencari…</p>
@@ -1855,16 +1840,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
                   <p className="text-base font-bold tracking-tight">
                     Hasil Pencarian ({results.length})
                   </p>
-                  <button
-                    onClick={() => {
-                      /* Urutan default: Relevance. Tidak ada re-sort lain
-                          yang tersedia di layar ini. */
-                    }}
-                    className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
-                  >
-                    <Star className="size-3.5 text-gold-strong mr-1" aria-hidden />
-                    Relevant ▾
-                  </button>
                 </div>
                 <div className="space-y-2">
                   {results.map((a) => (
@@ -1881,7 +1856,19 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         )}
         {results === null && (
           <div className="mt-4">
-            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} views={undefined} />}
+            {listLoading ? (
+              <GridSkeleton count={12} />
+            ) : (
+              <div className="space-y-2">
+                {list.map((a) => (
+                  <SearchResultRow
+                    key={a.id}
+                    item={a}
+                    onClick={() => onPick(a.id, a.title, a.source)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2397,25 +2384,58 @@ function AnimeDetailScreen({
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
           </div>
 
-          {/* Header saja. Favorite tidak lagi di pojok kanan atas: sekarang
-              jadi tombol di baris yang sama dengan "Lanjut episode". */}
           <div className="absolute inset-x-0 top-0 z-10">
             <DetailHeader title="Detail Anime" onClose={onClose} />
           </div>
 
-          {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
-          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
+          {/* Poster, judul, genre, dan tombol aksi pindah ke BAWAH tab —
+              di atas tab cuma sisa banner anime. */}
+        </div>
+
+        <div className="px-3">
+          {/* Tab tanpa background kotak: Info · Nonton · Character — garis
+              putih di bawah tab aktif */}
+          <div className="mt-4 flex">
+            {(
+              [
+                ["info", "Info"],
+                ["nonton", "Nonton"],
+                ["character", "Character"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setDetailTab(id)}
+                className={cn(
+                  "relative flex-1 pb-2.5 text-sm font-semibold transition",
+                  detailTab === id
+                    ? "text-white"
+                    : "text-white/50 hover:text-white/80",
+                )}
+              >
+                {label}
+                {detailTab === id && (
+                  <span className="absolute inset-x-8 bottom-0 h-px bg-white" />
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="h-px bg-white/15" />
+
+          {/* Info anime — di BAWAH tab: poster, judul, genre, rating, studio,
+              status. Di ATAS tab cuma sisa banner anime. */}
+          <div className="mt-3 flex items-start gap-3">
             {detail.image ? (
               <img
                 src={detail.image}
                 alt=""
-                className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg object-cover shadow-xl"
+                className="aspect-[2/3] w-24 shrink-0 rounded-lg object-cover shadow-xl"
               />
             ) : (
-              <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
+              <div className="aspect-[2/3] w-24 shrink-0 rounded-lg bg-black/40" />
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
+              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white">
                 {detail.title}
               </h2>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -2455,12 +2475,10 @@ function AnimeDetailScreen({
               </span>
             </div>
           </div>
-        </div>
 
-        <div className="px-3">
           {/* Baris aksi: "Lanjut episode" lebar, "Favorite" kotak miring di
               kanannya. Dua-duanya satu tinggi supaya rata di layar HP. */}
-          <div className="mt-4 flex items-stretch gap-2">
+          <div className="mt-3 flex items-stretch gap-2">
             <SkewButton
               variant="accent"
               className="flex-1 bg-sky-700 text-white hover:bg-sky-600"
@@ -2517,31 +2535,6 @@ function AnimeDetailScreen({
           <p className="mt-1 text-center text-[11px] text-white/55">
             {fmtFavoritCount(favCount ?? 0)}
           </p>
-
-          {/* Tab tanpa background: Info · Nonton · Character */}
-          <div className="mt-3 flex gap-1.5">
-            {(
-              [
-                ["info", "Info"],
-                ["nonton", "Nonton"],
-                ["character", "Character"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setDetailTab(id)}
-                className={cn(
-                  "flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
-                  detailTab === id
-                    ? "bg-white/15 text-white"
-                    : "text-white/60 hover:text-white/85",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
 
           {/* Panel info developer: data teknis untuk tools konten. */}
           {devInfoOpen && devAccess?.level === "dev" && (

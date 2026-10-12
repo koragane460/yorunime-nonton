@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { Eye } from "lucide-react";
+import { Eye, Star } from "lucide-react";
 
 export type ComicItem = {
   slug: string;
@@ -15,6 +15,8 @@ export type ComicItem = {
   latestChapter?: string;
   updatedAgo?: string;
   views?: number;
+  /** Rating numerik (kalau tersedia dari sumber) — bintang kuning strong. */
+  score?: number;
 };
 
 export const COMIC_KIND_LABEL = { manga: "Manga", manhwa: "Manhwa" } as const;
@@ -92,9 +94,21 @@ export function ComicCard({
       <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
         {item.title}
       </p>
-      <p className="truncate text-[10px] text-muted-foreground">
-        {item.latestChapter ?? item.genres[0] ?? ""}
-        {item.updatedAgo ? ` · ${item.updatedAgo}` : ""}
+      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
+        <span className="max-w-[55%] truncate font-semibold text-foreground/70">
+          {COMIC_KIND_LABEL[item.kind]}
+        </span>
+        <span className="truncate">
+          {item.latestChapter ?? item.genres[0] ?? ""}
+          {item.updatedAgo ? ` · ${item.updatedAgo}` : ""}
+        </span>
+        {typeof item.score === "number" && item.score > 0 && (
+          <>
+            <span className="text-muted-foreground/40">·</span>
+            <Star className="size-3 shrink-0 fill-gold-strong text-gold-strong" />
+            <span>{item.score.toFixed(1)}</span>
+          </>
+        )}
       </p>
     </button>
   );

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Loader2, Search, X } from "lucide-react";
+import { ChevronLeft, Loader2, Search, Star, X } from "lucide-react";
 
 /**
  * Asal data kartu. "sanka" berarti id-nya slug SankaVollereii (donghua),
@@ -158,6 +158,18 @@ export function CardCarousel({
                     </div>
                     <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                       {c.title}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
+                      <span className="max-w-[60%] truncate font-semibold text-foreground/70">
+                        {kind === "donghua" ? "Donghua" : (c.type ?? "Anime")}
+                      </span>
+                      {c.score ? (
+                        <>
+                          <span className="text-muted-foreground/40">·</span>
+                          <Star className="size-3 fill-gold-strong text-gold-strong" />
+                          <span>{c.score.toFixed(1)}</span>
+                        </>
+                      ) : null}
                     </p>
                   </button>
                 ))}
@@ -355,14 +367,21 @@ export function CatalogScreen({
                       "aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105",
                     )}
                   />
-                  {c.score ? (
-                    <span className="absolute right-1 top-1 rounded bg-black/75 px-1 py-0.5 text-[9px] font-bold text-amber-300">
-                      ★ {c.score.toFixed(1)}
-                    </span>
-                  ) : null}
                 </div>
                 <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                   {c.title}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
+                  <span className="max-w-[60%] truncate font-semibold text-foreground/70">
+                    {kind === "donghua" ? "Donghua" : (c.type ?? "Anime")}
+                  </span>
+                  {c.score ? (
+                    <>
+                      <span className="text-muted-foreground/40">·</span>
+                      <Star className="size-3 fill-gold-strong text-gold-strong" />
+                      <span>{c.score.toFixed(1)}</span>
+                    </>
+                  ) : null}
                 </p>
               </button>
             ))}

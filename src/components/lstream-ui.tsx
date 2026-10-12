@@ -83,6 +83,7 @@ export function AnimeCard({
   image,
   score,
   status,
+  type,
   rank,
   onClick,
   isNew,
@@ -94,6 +95,8 @@ export function AnimeCard({
   image: string;
   score?: number;
   status?: string;
+  /** Label format tayang: "TV", "Movie", "OVA", "Donghua", dll. */
+  type?: string;
   rank?: number;
   onClick?: () => void;
   isNew?: boolean;
@@ -153,12 +156,19 @@ export function AnimeCard({
           <p className="line-clamp-2 text-xs font-medium leading-4 text-foreground/95">
             {title}
           </p>
-          {/* Views ditampilkan di bawah judul, di belakang poster. */}
+          {/* Baris meta: label format (TV/Movie/Donghua) + rating bintang
+              kuning strong (tanpa outline) + views. */}
           <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground/80">
+            {type && (
+              <span className="max-w-[60%] truncate font-semibold text-foreground/70">
+                {type}
+              </span>
+            )}
             {score !== undefined && score > 0 && (
               <>
-                <Star className="size-3 fill-gold" />
-                <span>{score.toFixed(2)}</span>
+                {type && <span className="text-muted-foreground/40">·</span>}
+                <Star className="size-3 fill-gold-strong text-gold-strong" />
+                <span>{score.toFixed(1)}</span>
               </>
             )}
             {views !== undefined && views > 0 && (
@@ -188,6 +198,7 @@ export function AnimeGrid({
     image: string;
     score?: number;
     status?: string;
+    type?: string;
     // "sanka" = slug donghua. Wajib diteruskan supaya kartu itu membuka layar
     // detail DONGHUA, bukan dicari sebagai MAL id anime.
     source?: "anilist" | "sanka";
@@ -209,6 +220,7 @@ export function AnimeGrid({
           image={a.image}
           score={a.score}
           status={a.status}
+          type={a.type}
           views={views?.[i]}
           rank={ranked ? i + 1 : undefined}
           isNew={newIds?.has(a.id)}

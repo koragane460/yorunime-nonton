@@ -866,7 +866,7 @@ function BottomNav({
       {/* Navbar full width: 5 tombol (Home, Jadwal, History, Koleksi, Akun).
           Tiap tombol punya teks di BAWAH ikonnya — sesuai permintaan: Home,
           Jadwal, History, Koleksi, Akun. Teks aktif memakai warna primary. */}
-      <nav className="nav-bar fixed inset-x-0 bottom-0 z-40">
+      <nav className="nav-bar fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto grid w-full grid-cols-5 md:max-w-2xl lg:max-w-4xl">
           {items.map((it) => {
             const base = it.path.split("?")[0];
