@@ -15,6 +15,9 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 /** Daftar unduhan user, terbaru dulu. */
+/** Kuota unduhan per hari per user — berlaku di seluruh aplikasi. */
+export const DAILY_DOWNLOAD_LIMIT = 5;
+
 export const myDownloads = query({
   args: {},
   handler: async (ctx) => {
@@ -51,7 +54,11 @@ export const downloadStats = query({
       } else if (r.status === "downloading") downloading += 1;
       else if (r.status === "failed") failed += 1;
     }
-    return { total: rows.length, done, downloading, failed, bytes };
+    // Unduhan yang dimulai hari ini (batas 5/hari).
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const today = rows.filter((r) => r.createdAt >= dayStart.getTime()).length;
+    return { total: rows.length, done, downloading, failed, bytes, today };
   },
 });
 
@@ -87,6 +94,13 @@ export const enqueue = mutation({
         r.quality === quality,
     );
     if (dup) return { ok: true as const, id: dup._id, existed: true };
+    // Batas unduhan: maksimal 5 per hari kalender per user.
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const todayCount = existing.filter((r) => r.createdAt >= dayStart.getTime()).length;
+    if (todayCount >= DAILY_DOWNLOAD_LIMIT) {
+      throw new Error("Batas 5 unduhan per hari tercapai. Coba lagi besok.");
+    }
     const id = await ctx.db.insert("downloads", {
       userId,
       animeId,

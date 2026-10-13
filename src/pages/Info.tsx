@@ -310,9 +310,46 @@ function LanjutTab() {
     return [...anime, ...comic].sort((a, b) => b.at - a.at);
   }, [rows, comicRows]);
 
+  // Kelompokkan per hari: Hari ini → Kemarin → dd/mm/yyyy (tanpa background).
+  const groups = useMemo(() => {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startYesterday = startToday - 86400000;
+    const byKey = new Map<number, { label: string; items: typeof merged }>();
+    for (const it of merged) {
+      const d = new Date(it.at);
+      const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      let label: string;
+      if (key >= startToday) label = "Hari ini";
+      else if (key >= startYesterday) label = "Kemarin";
+      else
+        label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      const g = byKey.get(key);
+      if (g) g.items.push(it);
+      else byKey.set(key, { label, items: [it] });
+    }
+    // Urut: hari terbaru dulu (Map mempertahankan urutan sisipan, merged sudah desc).
+    return [...byKey.entries()].sort((a, b) => b[0] - a[0]).map(([, g]) => g);
+  }, [merged]);
+
+  if (merged.length === 0) {
+    return (
+      <p className="py-10 text-center text-xs text-muted-foreground">
+        Belum ada anime atau komik yang belum selesai
+      </p>
+    );
+  }
+
   return (
-    <div className="space-y-2 pt-3">
-      {merged.map((item) => {
+    <div className="pt-3">
+      {groups.map((g) => (
+        <div key={g.label} className="mb-4">
+          {/* Judul tanggal tanpa background, rata kiri. */}
+          <h3 className="mb-2 text-left text-sm font-bold tracking-tight text-foreground/90">
+            {g.label}
+          </h3>
+          <div className="space-y-2">
+            {g.items.map((item) => {
         if (item.type === "comic") {
           const c: any = item.data;
           return (
@@ -385,15 +422,13 @@ function LanjutTab() {
                 {dur > 0 ? `${posM}men/${durM}men` : "0/0"}
               </p>
             </div>
-            <PlayCircle className="size-5 shrink-0 self-center text-primary" />
-          </button>
-        );
-      })}
-      {merged.length === 0 && (
-        <p className="py-10 text-center text-xs text-muted-foreground">
-          Belum ada anime atau komik yang belum selesai
-        </p>
-      )}
+                <PlayCircle className="size-5 shrink-0 self-center text-primary" />
+              </button>
+            );
+          })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

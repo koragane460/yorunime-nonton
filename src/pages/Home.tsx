@@ -2510,14 +2510,21 @@ function AnimeDetailScreen({
     user ? { animeId } : "skip",
   );
   const toggleFav = useMutation(api.activities.toggleFavorite);
+  // Karakter diambil sekali di level layar: dipakai banner (2 karakter ikonik)
+  // sekaligus tab Character & Cuplikan.
+  const getChars = useAction(api.anime.animeCharacters);
+  const [chars, setChars] = useState<{ id: string; name: string; image: string }[]>([]);
   const [detail, setDetail] = useState<any>(null);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [episodeOrder, setEpisodeOrder] = useState<"first" | "last">("first");
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
-  // Tab Info / Nonton / Character — tiga tombol tanpa background.
-  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character">("info");
+  // Tab Info / Nonton / Character / Cuplikan — tombol tanpa background rounded,
+  // hanya garis bawah pada teks yang aktif.
+  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "cuplikan">("info");
+  // Tab Cuplikan: karakter terpilih + daftar klip TikTok-nya.
+  const [cuplikanChar, setCuplikanChar] = useState<{ id: string; name: string } | null>(null);
   // Bagian Character: foto + detail gabungan dari AniList (paling ikonik dulu).
   // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
   // lain yang dibutuhkan saat menambah sinopsis / menambah anime. Hanya
@@ -2533,6 +2540,11 @@ function AnimeDetailScreen({
     getSimilar({ id: animeId })
       .then((r: any) => setSimilar((r as AnimeCardT[]) ?? []))
       .catch(() => {});
+    setChars([]);
+    setCuplikanChar(null);
+    getChars({ idMal: String(animeId), title: animeTitle })
+      .then((r: any) => setChars(((r ?? []) as { id: string; name: string; image: string }[]).filter((c) => c?.id)))
+      .catch(() => setChars([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, animeTitle]);
 
@@ -2582,11 +2594,25 @@ function AnimeDetailScreen({
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="w-full pb-24">
-        {/* Header transparan di atas banner full-bleed */}
+        {/* Header transparan di atas banner full-bleed.
+            Banner + poster HANYA tampil di tab Info; tab lain menyembunyikan
+            gambar supaya layar tidak penuh banner. */}
         <div className="relative">
+          {/* Tab selain Info: banner + poster disembunyikan, hanya header
+              (judul anime biar tetap jelas sedang membuka apa). */}
+          {detailTab !== "info" && (
+            <div className="relative z-10">
+              <DetailHeader
+                title={detail.title || "Detail Anime"}
+                onClose={onClose}
+              />
+            </div>
+          )}
+          {detailTab === "info" && (
+            <>
           {/* Banner: background anime full lebar sampai pinggir (kesamping panjang) */}
           <div
-            className="h-64 w-full shrink-0 bg-cover bg-center"
+            className="relative h-64 w-full shrink-0 overflow-hidden bg-cover bg-center"
             style={
               detail.image
                 ? {
@@ -2596,6 +2622,27 @@ function AnimeDetailScreen({
             }
           >
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
+            {/* 2 karakter ikonik di kanan banner supaya tidak terasa kosong.
+                Latar gambarnya di-blend (mask + mix-blend) dan diberi gradasi
+                bawah supaya menyatu, bukan kotak penuh. */}
+            {chars.slice(0, 2).map((c, i) =>
+              c.image ? (
+                <img
+                  key={c.id}
+                  src={c.image}
+                  alt=""
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute bottom-0 select-none object-contain opacity-95 mix-blend-lighten",
+                    i === 0 ? "right-14 h-[86%]" : "right-0 h-[68%]",
+                  )}
+                  style={{
+                    maskImage: "linear-gradient(180deg, #000 62%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(180deg, #000 62%, transparent 100%)",
+                  }}
+                />
+              ) : null,
+            )}
           </div>
 
           {/* Header saja. Favorite tidak lagi di pojok kanan atas: sekarang
@@ -2656,6 +2703,8 @@ function AnimeDetailScreen({
               </span>
             </div>
           </div>
+            </>
+          )}
         </div>
 
         <div className="px-3">
@@ -2719,24 +2768,30 @@ function AnimeDetailScreen({
             {fmtFavoritCount(favCount ?? 0)}
           </p>
 
-          {/* Tab tanpa background: Info · Nonton · Character */}
-          <div className="mt-3 flex gap-1.5">
+          {/* Tab tanpa background rounded: hanya garis bawah pada teks aktif.
+              Info · Nonton · Character · Cuplikan */}
+          <div className="mt-3 flex gap-1">
             {([
               ["info", "Info"],
               ["nonton", "Nonton"],
               ["character", "Character"],
+              ["cuplikan", "Cuplikan"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setDetailTab(id)}
                 className={cn(
-                  "flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
+                  "relative flex-1 px-1 pb-2 pt-1 text-sm font-semibold transition",
                   detailTab === id
-                    ? "bg-white/15 text-white"
-                    : "text-white/60 hover:text-white/85",
+                    ? "text-white"
+                    : "text-white/55 hover:text-white/80",
                 )}
               >
                 {label}
+                {/* Garis bawah penanda tab aktif — tanpa kotak rounded. */}
+                {detailTab === id && (
+                  <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-white/90" />
+                )}
               </button>
             ))}
           </div>
@@ -2799,6 +2854,16 @@ function AnimeDetailScreen({
           {/* Kolom karakter paling ikonik — tampil di tab Character */}
           {detailTab === "character" && (
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
+          )}
+
+          {/* Cuplikan karakter (bukan trailer) — tampil di tab Cuplikan */}
+          {detailTab === "cuplikan" && (
+            <CuplikanPanel
+              chars={chars}
+              animeTitle={detail.title ?? animeTitle ?? ""}
+              selected={cuplikanChar}
+              onSelect={setCuplikanChar}
+            />
           )}
 
           {/* Sinopsis — tampil di tab Info */}
@@ -2932,11 +2997,25 @@ function AnimeDetailScreen({
                     <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-white">
                       {s.title}
                     </p>
-                    {s.score ? (
-                      <p className="flex items-center gap-1 text-[10px] text-white/80">
-                        <Star className="size-3 fill-current" aria-hidden /> {s.score}
-                      </p>
-                    ) : null}
+                    {/* Baris meta: rating KUNING kuat (bintang), ikon TV +
+                        tipe tayangan, lalu jumlah episode. */}
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[10px] text-white/70">
+                      {s.score ? (
+                        <span className="inline-flex items-center gap-0.5 font-bold text-yellow-400">
+                          <Star className="size-3 fill-current" aria-hidden />
+                          {Number(s.score).toFixed(1)}
+                        </span>
+                      ) : null}
+                      {s.type ? (
+                        <span className="inline-flex items-center gap-0.5">
+                          <Tv className="size-3" aria-hidden />
+                          {typeLabel(s.type)}
+                        </span>
+                      ) : null}
+                      {s.episodes ? (
+                        <span>· {s.episodes} episode</span>
+                      ) : null}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -2974,6 +3053,16 @@ function fmtFavoritCount(n: number): string {
     return `${one.toFixed(1).replace(/\.0$/, "")}k`;
   }
   return `${Math.floor(k)}k`;
+}
+
+/** Format tipe tayangan (AniList format / sumber) jadi label pendek. */
+function typeLabel(t?: string): string {
+  if (!t) return "";
+  const u = t.toUpperCase();
+  if (u === "TV" || u === "OVA" || u === "ONA") return u;
+  if (u === "TV_SHORT") return "TV Short";
+  if (u === "MOVIE") return "Movie";
+  return u.charAt(0) + u.slice(1).toLowerCase();
 }
 
 export function SkewButton({
@@ -3015,6 +3104,151 @@ export function SkewButton({
   );
 }
 
+/**
+ * Tab Cuplikan: pilih karakter → tampilkan klip pendek karakter itu dari
+ * TikTok (BUKAN trailer). Klip di-embed lewat player resmi TikTok.
+ * Kalau pencarian TikTok diblokir/gagal, panel jatuh ke tombol pencarian
+ * resmi supaya user tetap bisa menemukan klipnya.
+ */
+function CuplikanPanel({
+  chars,
+  animeTitle,
+  selected,
+  onSelect,
+}: {
+  chars: { id: string; name: string; image: string }[];
+  animeTitle: string;
+  selected: { id: string; name: string } | null;
+  onSelect: (c: { id: string; name: string } | null) => void;
+}) {
+  const searchClips = useAction(api.cuplikan.tiktokClips);
+  const [clips, setClips] = useState<{ id: string; desc: string; author: string }[] | null>(null);
+
+  useEffect(() => {
+    if (!selected) {
+      setClips(null);
+      return;
+    }
+    let alive = true;
+    setClips(null);
+    searchClips({ q: `${selected.name} ${animeTitle}`.trim(), limit: 6 })
+      .then((r: any) => {
+        if (alive) setClips((r ?? []) as { id: string; desc: string; author: string }[]);
+      })
+      .catch(() => {
+        if (alive) setClips([]);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id]);
+
+  // Belum ada karakter dipilih → pilih dulu.
+  if (!selected) {
+    if (chars.length === 0) {
+      return (
+        <p className="py-8 text-center text-xs text-muted-foreground">
+          Karakter tidak ditemukan untuk judul ini.
+        </p>
+      );
+    }
+    return (
+      <div className="mt-4">
+        <SectionTitle>Pilih karakter</SectionTitle>
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          Tekan karakter untuk melihat klipnya (bukan trailer).
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {chars.slice(0, 12).map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onSelect({ id: c.id, name: c.name })}
+              className="text-left"
+            >
+              {c.image ? (
+                <img
+                  src={c.image}
+                  alt={c.name}
+                  loading="lazy"
+                  className="aspect-[3/4] w-full rounded-xl object-cover"
+                />
+              ) : (
+                <div className="skeleton aspect-[3/4] w-full rounded-xl" />
+              )}
+              <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
+                {c.name}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const searchUrl = `https://www.tiktok.com/search?q=${encodeURIComponent(
+    `${selected.name} ${animeTitle}`.trim(),
+  )}`;
+
+  return (
+    <div className="mt-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-bold text-white">Cuplikan {selected.name}</h2>
+          <p className="text-[11px] text-muted-foreground">Klip pendek dari TikTok</p>
+        </div>
+        <button
+          onClick={() => onSelect(null)}
+          className="shrink-0 rounded-full border border-border px-3 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-foreground/40"
+        >
+          Ganti karakter
+        </button>
+      </div>
+      {clips === null ? (
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton aspect-[9/14] w-full rounded-xl" />
+          ))}
+        </div>
+      ) : clips.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-5 text-center">
+          <p className="text-sm font-semibold">Klip tidak ditemukan</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pencarian TikTok sedang tidak tersedia dari aplikasi. Buka TikTok
+            untuk menemukan klip {selected.name} manual.
+          </p>
+          <a
+            href={searchUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex rounded-full bg-primary px-4 py-2 text-xs font-bold text-white"
+          >
+            Cari di TikTok
+          </a>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {clips.map((c) => (
+            <div key={c.id} className="overflow-hidden rounded-xl border border-border/60">
+              <iframe
+                src={`https://www.tiktok.com/player/v1/${c.id}`}
+                allow="fullscreen"
+                title={c.desc || `Cuplikan ${selected.name}`}
+                className="aspect-[9/14] w-full border-0"
+              />
+              {c.desc && (
+                <p className="line-clamp-2 px-2 py-1.5 text-[10px] leading-tight text-muted-foreground">
+                  {c.desc}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetailHeader({
   title,
   onClose,
@@ -3052,7 +3286,14 @@ type SankaDetailShape = {
   synopsis: string;
   genres: string[];
   episodes: { number: number; title: string; url: string }[];
-  related: { id: string; title: string; image: string }[];
+  related: {
+    id: string;
+    title: string;
+    image: string;
+    score?: number;
+    episodes?: number;
+    type?: string;
+  }[];
   source: string;
 };
 
@@ -3359,6 +3600,26 @@ function DonghuaDetailScreen({
                     <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                       {r.title}
                     </p>
+                    {/* Rating kuning + ikon TV + episode (kalau ada). */}
+                    {(r.score || r.type || r.episodes) && (
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[10px] text-white/70">
+                        {r.score ? (
+                          <span className="inline-flex items-center gap-0.5 font-bold text-yellow-400">
+                            <Star className="size-3 fill-current" aria-hidden />
+                            {Number(r.score).toFixed(1)}
+                          </span>
+                        ) : null}
+                        {r.type ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            <Tv className="size-3" aria-hidden />
+                            {typeLabel(r.type)}
+                          </span>
+                        ) : null}
+                        {r.episodes ? (
+                          <span>· {r.episodes} episode</span>
+                        ) : null}
+                      </p>
+                    )}
                   </button>
                 ))}
               </div>

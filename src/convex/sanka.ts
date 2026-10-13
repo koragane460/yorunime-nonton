@@ -518,10 +518,24 @@ export type SankaDetail = {
   genres: string[];
   episodes: { number: number; title: string; url: string }[];
   /** Judul lain dari API yang recommendsJudul serupa (donghua). */
-  related: { id: string; title: string; image: string }[];
+  related: {
+    id: string;
+    title: string;
+    image: string;
+    /** Meta opsional dari rekomendasi — rating, episode, tipe tayangan. */
+    score?: number;
+    episodes?: number;
+    type?: string;
+  }[];
   /** Source tempat detail ini diambil (dipakai lagi saat ambil episode). */
   source: string;
 };
+
+/** Angka positif dari berbagai bentuk API; selain itu undefined. */
+function pickNum(v: unknown): number | undefined {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
 
 function genresOf(list: unknown): string[] {
   if (!Array.isArray(list)) return [];
@@ -638,6 +652,11 @@ export const detail = action({
           id: String(r?.slug ?? ""),
           title: stripEpisodeSuffix(cleanTitle(r?.title)),
           image: proxyImage(r?.poster),
+          score: pickNum(r?.score ?? r?.rating),
+          episodes: pickNum(
+            r?.episodes ?? r?.episode_count ?? r?.total_episodes,
+          ),
+          type: r?.type ? String(r.type) : undefined,
         }))
         .filter((r: { id: string; title: string }) => r.id && r.title);
 
