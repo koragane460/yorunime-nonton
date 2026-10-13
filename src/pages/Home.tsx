@@ -256,19 +256,110 @@ function HomeContent() {
   const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
 
-  const [heroList, setHeroList] = useState<AnimeCardT[]>([]);
+  // Cari anime & donghua — search input + genre + Relevant ▾ + kartu.
+  const searchAnime = useAction(api.anime.animeSearch);
+  const searchDonghua = useAction(api.sanka.donghuaSearchCards);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [results, setResults] = useState<AnimeCardT[] | null>(null);
+  const [list, setList] = useState<AnimeCardT[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [genresOpen, setGenresOpen] = useState(false);
+  const [activeGenres, setActiveGenres] = useState<string[]>([]);
+  const [searchOrder, setSearchOrder] = useState("relevant");
+
+  // Ambil daftar genre (sama seperti SearchScreen) supaya dropdown Genre
+  // di layar ini tidak kosong.
+  useEffect(() => {
+    genres({})
+      .then((raw) => {
+        const norm: { id: string; name: string }[] = (Array.isArray(raw) ? raw : [])
+          .map((g: any) => {
+            const name =
+              typeof g?.name === "string"
+                ? g.name
+                : typeof g?.name?.name === "string"
+                  ? g.name.name
+                  : "";
+            return { id: String(g?.id ?? name.toLowerCase()), name };
+          })
+          .filter((g) => g.id && g.name);
+        setGenreList(norm);
+      })
+      .catch(() => {});
+  }, []);
+
+  const applyGenres = async (names: string[]) => {
+    setActiveGenres(names);
+    setListLoading(true);
+    try {
+      if (names.length === 0) {
+        const r = (await loadAll({})) as AnimeCardT[];
+        setList(r ?? []);
+      } else {
+        const r = (await loadGenres({ genres: names })) as AnimeCardT[];
+        setList(r ?? []);
+      }
+    } catch {
+      setList([]);
+    }
+    setListLoading(false);
+  };
+
+  const toggleGenre = (name: string) => {
+    const next = activeGenres.includes(name)
+      ? activeGenres.filter((g) => g !== name)
+      : [...activeGenres, name].slice(0, 6);
+    void applyGenres(next);
+  };
+
+  const doSearch = async () => {
+    if (!searchQuery.trim()) {
+      setResults(null);
+      return;
+    }
+    setSearching(true);
+    try {
+      const animeP: Promise<AnimeCardT[]> = searchAnime({ q: searchQuery })
+        .then((r: unknown) => (r ?? []) as AnimeCardT[])
+        .catch(() => [] as AnimeCardT[]);
+      const donghuaP: Promise<AnimeCardT[]> = searchDonghua({ q: searchQuery })
+        .then((r: unknown) => (r ?? []) as AnimeCardT[])
+        .catch(() => [] as AnimeCardT[]);
+      const [animeRes, donghuaRes] = await Promise.all([animeP, donghuaP]);
+      const seen = new Set<string>();
+      const merged: AnimeCardT[] = [];
+      const pairs: readonly (readonly [AnimeCardT, CatalogPickSource])[] = [
+        ...(animeRes ?? []).map((c) => [c, "anilist"] as const),
+        ...(donghuaRes ?? []).map((c) => [c, "sanka"] as const),
+      ];
+      for (const [c, src] of pairs) {
+        if (!c?.id || seen.has(c.id)) continue;
+        seen.add(c.id);
+        merged.push({ ...c, type: c.type, source: src });
+      }
+      setResults(merged);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
   const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
-  // Geser hero pakai tangan (tanpa tombol panah).
   const heroTouchX = useRef<number | null>(null);
   const heroSwipe = (dir: 1 | -1) => {
     if (heroItems.length < 2) return;
     setHeroIdx((i) => (i + dir + heroItems.length) % heroItems.length);
   };
+
+  const loadAll = useAction(api.anime.animeTop);
+  const loadGenres = useAction(api.anime.animeByGenres);
 
   // Muat data katalog (backend punya fallback statis, jadi selalu ada hasil)
   useEffect(() => {
@@ -295,7 +386,6 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const heroItems = heroList.slice(0, 2);
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
@@ -615,51 +705,243 @@ function HomeContent() {
         </QueryBoundary>
       </button>
 
-      {/* 5b) KOTAK CLAN — langsung di bawah Chat bareng (hanya kalau punya clan) */}
-      <QueryBoundary label="Gagal memuat clan">
-        <ClanBox onOpen={() => navigate("/clan")} />
-      </QueryBoundary>
-
-      {/* 6) CARI ANIME — buka layar full screen.
+      {/* 6) CARI ANIME — search + katalog kartu.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
       <div ref={searchAnchor}>
         <SectionTitle>Cari anime &amp; donghua</SectionTitle>
-        <button
-          onClick={() => {
-            setSearchGenre(null);
-            setShowSearch(true);
-          }}
-        className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
-        >
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <span className="flex-1 text-sm text-muted-foreground">
-            contoh: ayanokoji adalah aku
-          </span>
-          <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
-            Cari
-          </span>
-        </button>
-      </div>
 
-      {/* 6a) ANIME UPDATE NEWS — di bawah tombol search */}
-      {updateFirst && (
-        <>
-          <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight">Update News</h2>
-            <span className="text-[11px] text-muted-foreground">rilis hari ini</span>
-          </div>
-          {newsLoading ? (
-            <div className="mt-2 flex gap-2.5">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
-              ))}
+        {/* Input + tombol Cari */}
+        <div className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void doSearch()}
+            placeholder="contoh: ayanokoji adalah aku / battle through"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              aria-label="Bersihkan pencarian"
+            >
+              <X className="size-4 text-muted-foreground" />
+            </button>
+          )}
+          <button
+            onClick={() => void doSearch()}
+            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white"
+          >
+            Cari
+          </button>
+        </div>
+
+        {/* Filter 18+ (jika tersedia) */}
+        {canAdult && (
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+            <button
+              onClick={() => {
+                if (!adultUnlocked) {
+                  setAdultUnlocked(true);
+                  setAdult(true);
+                  return;
+                }
+                setAdult((v) => !v);
+              }}
+              className={cn(
+                "relative h-6 w-11 shrink-0 rounded-full transition",
+                adult ? "bg-red-600" : "bg-zinc-700",
+              )}
+              aria-label="Sertakan judul 18+"
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 size-5 rounded-full bg-white transition-all",
+                  adult ? "left-5.5" : "left-0.5",
+                )}
+              />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold">Sertakan judul 18+</p>
+              <p className="text-[10px] text-muted-foreground">
+                {adultUnlocked
+                  ? adult
+                    ? "Judul dewasa ikut ditampilkan"
+                    : "Cuma judul biasa yang dicari"
+                  : "Butuh konfirmasi, hanya untuk kamu yang sudah 18 tahun"}
+              </p>
             </div>
-          ) : updateNews.length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">
-              Tidak ada episode baru hari ini.
+            {adultUnlocked && (
+              <button
+                onClick={() => {
+                  setAdult(false);
+                  setAdultUnlocked(false);
+                }}
+                className="shrink-0 text-[10px] font-semibold text-primary"
+              >
+                reset
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Baris filter: tombol Genre + chip aktif + urutan */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setGenresOpen((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+              genresOpen
+                ? "border-gold-strong bg-gold-soft text-gold-strong"
+                : "border-border bg-card text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            <SlidersHorizontal className="size-3.5" aria-hidden />
+            Genre
+            {activeGenres.length > 0 && (
+              <span className="ml-0.5 rounded-full bg-gold-strong px-1.5 text-[10px] font-bold text-background">
+                {activeGenres.length}
+              </span>
+            )}
+          </button>
+          <div className="flex flex-1 flex-wrap gap-1">
+            {activeGenres.map((g) => (
+              <button
+                key={g}
+                onClick={() => toggleGenre(g)}
+                className="flex items-center gap-1 rounded-full border border-gold-strong bg-gold-soft px-2.5 py-1 text-[10px] font-semibold text-gold-strong"
+              >
+                {g}
+                <X className="size-3" aria-hidden />
+              </button>
+            ))}
+          </div>
+          {activeGenres.length > 0 && (
+            <button
+              onClick={() => void applyGenres([])}
+              className="shrink-0 text-[11px] font-semibold text-primary"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Panel pilihan genre — muncul saat tombol Genre ditekan */}
+        {genresOpen && (
+          <div className="mt-2 rounded-2xl border border-border bg-card p-3">
+            <p className="mb-2 text-xs font-bold text-muted-foreground">
+              Pilih genre (bisa lebih dari satu)
             </p>
-          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => void applyGenres([])}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                  activeGenres.length === 0
+                    ? "border-gold-strong bg-gold-soft text-gold-strong"
+                    : "border-border bg-secondary/40 text-muted-foreground",
+                )}
+              >
+                Semua
+              </button>
+              {genreList.map((g) => {
+                const on = activeGenres.includes(g.name);
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => toggleGenre(g.name)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                      on
+                        ? "border-gold-strong bg-gold-soft text-gold-strong"
+                        : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+                    )}
+                  >
+                    {g.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Urutan */}
+        <div className="mt-2 flex justify-end">
+          <button
+            onClick={() => setSearchOrder("relevant")}
+            className="gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+          >
+            <Star className="size-3.5 text-gold-strong" aria-hidden />
+            Relevant ▾
+          </button>
+        </div>
+      {results !== null && results.length > 0 && (
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {results.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => onPick(a.id, a.title, a.source ?? "anilist")}
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-border/60 transition hover:border-foreground/40"
+            >
+              <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
+                {a.image ? (
+                  <img
+                    src={a.image}
+                    alt={a.title}
+                    loading="lazy"
+                    className="size-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+                    <Star className="size-4 opacity-40" aria-hidden />
+                  </div>
+                )}
+                {a.isDonghua && (
+                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
+                    Donghua
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col p-2.5">
+                <div className="flex items-start justify-between gap-1.5">
+                  <p className="min-w-0 flex-1 truncate text-xs font-bold leading-snug text-white">
+                    {a.title}
+                  </p>
+                  {a.type === "Movie" && (
+                    <Film className="size-3.5 shrink-0 text-gold-strong" aria-hidden />
+                  )}
+                </div>
+                {a.synopsis && (
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-foreground/70">
+                    {a.synopsis}
+                  </p>
+                )}
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  {typeof a.score === "number" && a.score > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Star className="size-3.5 text-gold-strong" aria-hidden />
+                      {a.score.toFixed(1)}
+                    </span>
+                  )}
+                  {a.status && (
+                    <span className="flex items-center gap-1 italic">
+                      <Play className="size-3" aria-hidden />
+                      {a.status}
+                    </span>
+                  )}
+                  {a.type && a.type !== "Movie" && a.type !== "TV" && (
+                    <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-white/80">
+                      {a.type}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
             <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
               {updateNews.map((a) => (
                 <button
@@ -708,122 +990,7 @@ function HomeContent() {
         </>
       )}
 
-      {/* 6c) KATEGORI LENGKAP: Movie / OVA / Special / Upcoming / Season ini */}
-      <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
-      <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
-      <BrowseRow kind="ova" title="OVA &amp; ONA" onPick={openAnime} />
-      {/* Slot "Special" diganti Donghua: dua baris geser ke kanan (10 atas +
-          10 bawah) + "Lihat selengkapnya" yang membuka layar penuh. */}
-      <CardCarousel
-        kind="donghua"
-        title="Donghua"
-        subtitle="subtitle Indonesia"
-        onPick={openAnime}
-      />
-      <BrowseRow kind="upcoming" title="Segera Rilis (Upcoming)" onPick={openAnime} />
 
-      {/* 7) ANIME-ANIME — tiap baris dibatasi 12 kartu; sisanya ada di
-          "Lihat selengkapnya" yang membuka layar penuh berisi daftar
-          lengkap + kolom pencarian + tombol kembali. */}
-      <SectionRow
-        title="Top Anime"
-        count={topList.length}
-        onMore={() =>
-          setCatalog({
-            kind: "popular",
-            title: "Top Anime",
-            items: topList as unknown as CatalogCard[],
-          })
-        }
-      >
-        {loading ? (
-          <GridSkeleton count={12} />
-        ) : (
-          <AnimeGrid
-            items={topList.slice(0, 12)}
-            onPick={openAnime}
-            ranked
-            newIds={new Set()}
-            views={undefined}
-          />
-        )}
-      </SectionRow>
-
-      {/* Anime Hot — Top 1-3 yang lagi panas */}
-      {!loading && topList.length > 0 && (
-        <div className="fade-enter mt-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
-              <span className="text-lg" aria-hidden>🔥</span> Anime Hot
-            </p>
-            <button
-              onClick={() =>
-                setCatalog({ kind: "popular", title: "Anime Hot", items: topList as unknown as CatalogCard[] })
-              }
-              className="text-xs font-semibold text-primary"
-            >
-              Lihat selengkap ›
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {topList.slice(0, 3).map((a, i) => (
-              <button
-                key={a.id}
-                onClick={() => openAnime(a.id, a.title, a.source)}
-                className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10"
-              >
-                {a.image ? (
-                  <img
-                    src={a.image}
-                    alt={a.title}
-                    loading="lazy"
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="size-full bg-muted" />
-                )}
-                <span
-                  className={cn(
-                    "absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-lg font-black text-black",
-                    i === 0 ? "bg-yellow-400" : i === 1 ? "bg-zinc-300" : "bg-amber-600",
-                  )}
-                >
-                  {i + 1}
-                </span>
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-1.5 pt-4">
-                  <p className="line-clamp-2 text-left text-[10px] font-semibold leading-tight text-white">
-                    {a.title}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <SectionRow
-        title="Top Anime Hari Ini"
-        count={todayList.length}
-        onMore={() =>
-          setCatalog({
-            kind: "popular",
-            title: "Top Anime Hari Ini",
-            items: todayList as unknown as CatalogCard[],
-          })
-        }
-      >
-        {loading ? (
-          <GridSkeleton count={12} />
-        ) : (
-          <AnimeGrid
-            items={todayList.slice(0, 12)}
-            onPick={openAnime}
-            ranked
-            newIds={new Set()}
-            views={undefined}
-          />
-        )}
-      </SectionRow>
 
       <SectionRow
         title="Untuk Kamu"
