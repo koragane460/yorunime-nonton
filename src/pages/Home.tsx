@@ -352,7 +352,20 @@ function HomeContent() {
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
+  const [heroItems, setHeroItems] = useState<AnimeCardT[]>([]);
   const heroTouchX = useRef<number | null>(null);
+
+  // Hero data is fetched at load time and must update the same hero tiles the
+  // swipe and auto-rotate logic reads. Only the first successful payload wins
+  // so existing animated state is not flushed while user is interacting.
+  useEffect(() => {
+    const tick = async () => {
+      const r = await hero({ page: 1 });
+      if ((r?.length ?? 0) > 0) setHeroItems(r);
+    };
+    tick().catch(() => {});
+  }, []);
+
   const heroSwipe = (dir: 1 | -1) => {
     if (heroItems.length < 2) return;
     setHeroIdx((i) => (i + dir + heroItems.length) % heroItems.length);
@@ -372,7 +385,7 @@ function HomeContent() {
       genres({}),
     ]).then(([rHero, rTop, rToday, rForYou, rGenres]) => {
       if (!alive) return;
-      if (rHero.status === "fulfilled") setHeroList((rHero.value as AnimeCardT[]) ?? []);
+      if (rHero.status === "fulfilled") setHeroItems((rHero.value as AnimeCardT[]) ?? []);
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
       if (rToday.status === "fulfilled") setTodayList((rToday.value as AnimeCardT[]) ?? []);
       if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
@@ -542,7 +555,7 @@ function HomeContent() {
     paint();
     window.addEventListener("resize", paint);
     return () => window.removeEventListener("resize", paint);
-  }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
+  }, [todayAiring.length, foryouList.length, genreList.length]);
 
   // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
@@ -877,72 +890,6 @@ function HomeContent() {
             Relevant ▾
           </button>
         </div>
-      {results !== null && results.length > 0 && (
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {results.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => onPick(a.id, a.title, a.source ?? "anilist")}
-              className="group relative flex flex-col overflow-hidden rounded-xl border border-border/60 transition hover:border-foreground/40"
-            >
-              <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
-                {a.image ? (
-                  <img
-                    src={a.image}
-                    alt={a.title}
-                    loading="lazy"
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
-                    <Star className="size-4 opacity-40" aria-hidden />
-                  </div>
-                )}
-                {a.isDonghua && (
-                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
-                    Donghua
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col p-2.5">
-                <div className="flex items-start justify-between gap-1.5">
-                  <p className="min-w-0 flex-1 truncate text-xs font-bold leading-snug text-white">
-                    {a.title}
-                  </p>
-                  {a.type === "Movie" && (
-                    <Film className="size-3.5 shrink-0 text-gold-strong" aria-hidden />
-                  )}
-                </div>
-                {a.synopsis && (
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-foreground/70">
-                    {a.synopsis}
-                  </p>
-                )}
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                  {typeof a.score === "number" && a.score > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Star className="size-3.5 text-gold-strong" aria-hidden />
-                      {a.score.toFixed(1)}
-                    </span>
-                  )}
-                  {a.status && (
-                    <span className="flex items-center gap-1 italic">
-                      <Play className="size-3" aria-hidden />
-                      {a.status}
-                    </span>
-                  )}
-                  {a.type && a.type !== "Movie" && a.type !== "TV" && (
-                    <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-white/80">
-                      {a.type}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-            <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
               {updateNews.map((a) => (
                 <button
                   key={`${a.isDonghua ? "dh" : "an"}-${a.id}-${a.episode}`}
