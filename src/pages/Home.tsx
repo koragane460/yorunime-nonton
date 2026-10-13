@@ -1976,7 +1976,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
             {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} views={undefined} />}
           </div>
         )}
-      </div>
     </div>
   );
 }
