@@ -32,6 +32,7 @@ import {
   Star,
   Copy,
   Film,
+  Tv,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -60,6 +61,8 @@ type AnimeCardT = CatalogCard & {
   source?: CatalogPickSource;
   isDonghua?: boolean;
   episode?: number;
+  /** Total episode (rencana/aktual) dari katalog — tampil di baris daftar. */
+  episodes?: number;
   timeLabel?: string;
 };
 
@@ -251,6 +254,8 @@ function HomeContent() {
   const searchAnchor = useRef<HTMLDivElement | null>(null);
 
   const hero = useAction(api.anime.animeOngoing);
+  // Donghua ikut rotasi hero banner supaya bukan hanya anime yang tampil.
+  const heroDonghua = useAction(api.sanka.donghuaLatestCards);
   const top = useAction(api.anime.animeTop);
   const today = useAction(api.anime.animeTrendingToday);
   const forYou = useAction(api.anime.animeForYou);
@@ -267,6 +272,14 @@ function HomeContent() {
   const [genresOpen, setGenresOpen] = useState(false);
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
   const [searchOrder, setSearchOrder] = useState("relevant");
+  const [adult, setAdult] = useState(false);
+  const [adultUnlocked, setAdultUnlocked] = useState(false);
+  // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
+  const panelAccess = useQuery(
+    api.moderation.myPanelAccess,
+    user ? {} : "skip",
+  );
+  const canAdult = !!panelAccess?.adult;
 
   // Ambil daftar genre (sama seperti SearchScreen) supaya dropdown Genre
   // di layar ini tidak kosong.
@@ -360,15 +373,36 @@ function HomeContent() {
   // so existing animated state is not flushed while user is interacting.
   useEffect(() => {
     const tick = async () => {
-      const r = await hero({ page: 1 });
-      if ((r?.length ?? 0) > 0) setHeroItems(r);
+      const [animeRes, donghuaRes] = await Promise.allSettled([
+        hero({ page: 1 }),
+        heroDonghua({ limit: 6 }),
+      ]);
+      const anime =
+        animeRes.status === "fulfilled"
+          ? ((animeRes.value ?? []) as unknown as AnimeCardT[]).slice(0, 6)
+          : [];
+      const donghua =
+        donghuaRes.status === "fulfilled"
+          ? ((donghuaRes.value ?? []) as unknown as AnimeCardT[])
+              .slice(0, 4)
+              .map((d) => ({
+                ...d,
+                isDonghua: true as const,
+                source: "sanka" as const,
+              }))
+          : [];
+      // Anime dulu, lalu donghua — rotasi hero berisi keduanya.
+      const merged = [...anime, ...donghua];
+      if (merged.length > 0) setHeroItems(merged);
     };
     tick().catch(() => {});
   }, []);
 
+  // Total slide = anime + donghua + 1 slide leaderboard di ujung rotasi.
+  const heroTotal = heroItems.length + 1;
   const heroSwipe = (dir: 1 | -1) => {
-    if (heroItems.length < 2) return;
-    setHeroIdx((i) => (i + dir + heroItems.length) % heroItems.length);
+    if (heroTotal < 2) return;
+    setHeroIdx((i) => (i + dir + heroTotal) % heroTotal);
   };
 
   const loadAll = useAction(api.anime.animeTop);
@@ -378,14 +412,12 @@ function HomeContent() {
   useEffect(() => {
     let alive = true;
     Promise.allSettled([
-      hero({ page: 1 }),
       top({}),
       today({}),
       forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
-    ]).then(([rHero, rTop, rToday, rForYou, rGenres]) => {
+    ]).then(([rTop, rToday, rForYou, rGenres]) => {
       if (!alive) return;
-      if (rHero.status === "fulfilled") setHeroItems((rHero.value as AnimeCardT[]) ?? []);
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
       if (rToday.status === "fulfilled") setTodayList((rToday.value as AnimeCardT[]) ?? []);
       if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
@@ -503,8 +535,9 @@ function HomeContent() {
 
   // Auto-rotate hero
   useEffect(() => {
-    if (heroItems.length < 2) return;
-    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroItems.length), 6000);
+    if (heroItems.length < 1) return;
+    // heroTotal selalu >= 2 (minimal 1 judul + slide leaderboard).
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % (heroItems.length + 1)), 6000);
     return () => clearInterval(t);
   }, [heroItems.length]);
 
@@ -631,6 +664,11 @@ function HomeContent() {
                     <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                       {a.status ?? "Ongoing"}
                     </span>
+                    {a.isDonghua && (
+                      <span className="rounded-md bg-sky-700 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">
+                        Donghua
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1 rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-black text-gold-strong">
                       <CrownIcon className="size-3" />
                       New
@@ -650,17 +688,25 @@ function HomeContent() {
                   </p>
                   <div className="mt-2.5 flex gap-2">
                     <button
-                      onClick={() => openAnime(a.id, a.title)}
+                      onClick={() =>
+                        openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
+                      }
                       className="rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary"
                     >
                       Lihat detail
                     </button>
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        if (a.source === "sanka") {
+                          // Donghua: buka detail dulu karena slug episode
+                          // dibuat di layar detail, bukan di sini.
+                          openAnime(a.id, a.title, "sanka");
+                          return;
+                        }
                         navigate(
                           `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
-                        )
-                      }
+                        );
+                      }}
                       className="rounded-full border border-white/25 bg-black/40 px-4 py-1.5 text-xs font-semibold text-white transition hover:border-white/50"
                     >
                       ▶ Tonton
@@ -670,9 +716,29 @@ function HomeContent() {
               </div>
             </div>
           ))}
+          {/* Slide terakhir rotasi hero: leaderboard mini. */}
+          <div
+            className={cn(
+              "transition-opacity duration-500",
+              heroIdx === heroItems.length ? "block opacity-100" : "hidden opacity-0",
+            )}
+          >
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="block w-full bg-card p-4 text-left"
+            >
+              <div className="flex items-center justify-between">
+                <p className="flex items-center gap-2 font-bold">
+                  <Trophy className="size-4 text-primary" /> Leaderboard
+                </p>
+                <span className="text-xs text-muted-foreground">lihat semua ›</span>
+              </div>
+              <HomeLeaderboardPreview />
+            </button>
+          </div>
           {/* Geser pakai tangan saja — tanpa tombol panah */}
           <div className="absolute bottom-3 left-4 flex gap-1">
-            {heroItems.map((_, i) => (
+            {Array.from({ length: heroItems.length + 1 }).map((_, i) => (
               <span
                 key={i}
                 className={cn(
@@ -890,6 +956,27 @@ function HomeContent() {
             Relevant ▾
           </button>
         </div>
+      </div>
+
+      {/* 6a) ANIME UPDATE NEWS — di bawah tombol search */}
+        {updateFirst && (
+          <>
+            <div className="mt-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold tracking-tight">Update News</h2>
+              <span className="text-[11px] text-muted-foreground">rilis hari ini</span>
+            </div>
+            {newsLoading ? (
+              <div className="mt-2 flex gap-2.5">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
+                ))}
+              </div>
+            ) : updateNews.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                Tidak ada episode baru hari ini.
+              </p>
+            ) : (
+              <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
               {updateNews.map((a) => (
                 <button
                   key={`${a.isDonghua ? "dh" : "an"}-${a.id}-${a.episode}`}
@@ -1561,6 +1648,12 @@ function SearchResultRow({
               {item.status}
             </span>
           )}
+          {typeof item.episodes === "number" && item.episodes > 0 && (
+            <span className="flex items-center gap-1">
+              <Tv className="size-3.5" aria-hidden />
+              {item.episodes} Episode
+            </span>
+          )}
         </div>
       </div>
     </button>
@@ -1972,10 +2065,25 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
           </div>
         )}
         {results === null && (
-          <div className="mt-4">
-            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} views={undefined} />}
+          <div className="mt-2">
+            {listLoading ? (
+              <GridSkeleton count={12} />
+            ) : (
+              /* Daftar pra-pencarian bergaya baris: gambar + judul + sinopsis
+                 + rating + status + jumlah episode (sama seperti hasil cari). */
+              <div className="space-y-1">
+                {list.map((a) => (
+                  <SearchResultRow
+                    key={a.id}
+                    item={a}
+                    onClick={() => onPick(a.id, a.title, a.source)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
+      </div>
     </div>
   );
 }

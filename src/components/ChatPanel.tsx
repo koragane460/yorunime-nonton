@@ -577,7 +577,7 @@ export function ChatPanel({
           return (
             <div
               key={m._id}
-              className={cn("msg-in flex w-full items-end gap-2 border-0", mine && "flex-row-reverse")}
+              className={cn("flex w-full items-end gap-2 border-0", mine && "flex-row-reverse")}
             >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
