@@ -6,15 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import {
-  AnimeCard,
-  AnimeGrid,
-  SectionTitle,
-  Avatar,
-  BlueCheck,
-  ClanTag,
-  clanNameClass,
-} from "@/components/lstream-ui";
+import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
@@ -22,13 +14,7 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
-import {
-  CardCarousel,
-  CatalogScreen,
-  type CardT as CatalogCard,
-  type CatalogKind,
-  type PickSource as CatalogPickSource,
-} from "@/components/CatalogRows";
+import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { isMusicSecret } from "@/lib/musicSecret";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
@@ -46,7 +32,6 @@ import {
   Star,
   Copy,
   Film,
-  Clapperboard,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -70,9 +55,6 @@ import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import type { Id } from "@/convex/_generated/dataModel";
 
-
-/** Karakter ringkas untuk banner. */
-type CharRow = { id: string; name: string; image: string };
 
 type AnimeCardT = CatalogCard & {
   source?: CatalogPickSource;
@@ -136,11 +118,12 @@ function GridSkeleton({ count = 10 }: { count?: number }) {
   );
 }
 
-
 /** Baris katalog lengkap (50 item/halaman) + tombol "muat lebih banyak". */
-/** Judul section + "Lihat selengkapnya" di kanan (tanpa background).
+/**
+ * Judul section + "Lihat selengkapnya" di kanan (tanpa background).
  * Teksnya hanya muncul kalau memang ada sisa item, supaya tidak menawarkan
- * sesuatu yang tidak ada. */
+ * sesuatu yang tidak ada.
+ */
 function SectionRow({
   title,
   count,
@@ -243,6 +226,7 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {
@@ -311,7 +295,7 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const heroItems = heroList.slice(0, 5);
+  const heroItems = heroList.slice(0, 2);
   // "Anime Update News" = anime yang episodenya benar-benar rilis hari ini,
   // lengkap jam tayangnya (dihitung dari zona waktu device user).
   const todayNews = useAction(api.anime.animeTodayAiring);
@@ -470,6 +454,18 @@ function HomeContent() {
     return () => window.removeEventListener("resize", paint);
   }, [heroList.length, todayAiring.length, foryouList.length, genreList.length]);
 
+  // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
+  // Tab di sini cuma penyaring tampilan (tidak menarik genre).
+  const tabs = useMemo(
+    () => [
+      { id: "semua", label: "Semua" },
+      { id: "terbaru", label: "Terbaru" },
+      { id: "populer", label: "Populer" },
+      { id: "kontroversi", label: "Kontroversi" },
+    ],
+    [],
+  );
+
   return (
     <div className="pb-8">
       {/* 1) YORUNIME PREMIUM — card ke /premium */}
@@ -493,7 +489,28 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 1) HERO BANNER — leaderboard podium digabung di kartu yang sama */}
+      {/* 2) TAB HORIZONTAL */}
+      <div className="fade-enter mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {tabs.map((t, i) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              setActiveTab(i);
+              setShowSearch(false);
+            }}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition",
+              activeTab === i
+                ? "border-gold-strong bg-gold-soft text-gold-strong"
+                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 3) HERO BANNER */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
@@ -554,6 +571,7 @@ function HomeContent() {
                     </span>
                   </div>
 
+
                   <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
                   <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-zinc-300">
                     {a.synopsis ?? "Sinopsis belum tersedia."}
@@ -592,23 +610,24 @@ function HomeContent() {
               />
             ))}
           </div>
-          {/* LEADERBOARD — digabung ke banner yang sama, bukan kartu sendiri */}
-          <button
-            onClick={() => setShowLeaderboard(true)}
-            className="flex w-full items-center gap-2 border-t border-white/10 bg-black/40 px-4 py-2.5 text-left backdrop-blur-sm transition hover:bg-black/55"
-          >
-            <Trophy className="size-4 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs font-bold">Leaderboard</span>
-              <span className="block text-[10px] text-muted-foreground">
-                Top XP minggu ini — lihat semua ›
-              </span>
-            </span>
-          </button>
         </div>
       ) : null}
 
-      {/* 5) CHAT BARENG — preview chat global, buka layar penuh */}
+      {/* 4) LEADERBOARD (gabung XP + Top Give Premium) */}
+      <button
+        onClick={() => setShowLeaderboard(true)}
+        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
+      >
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-2 font-bold">
+            <Trophy className="size-4 text-primary" /> Leaderboard
+          </p>
+          <span className="text-xs text-muted-foreground">lihat semua ›</span>
+        </div>
+        <HomeLeaderboardPreview />
+      </button>
+
+      {/* 5) CHAT BARENG — rounded, tanpa garis pembatas */}
       <button
         onClick={() => setShowChat(true)}
         className="fade-enter mt-3 w-full rounded-3xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
@@ -627,6 +646,11 @@ function HomeContent() {
         </QueryBoundary>
       </button>
 
+      {/* 5b) KOTAK CLAN — langsung di bawah Chat bareng (hanya kalau punya clan) */}
+      <QueryBoundary label="Gagal memuat clan">
+        <ClanBox onOpen={() => navigate("/clan")} />
+      </QueryBoundary>
+
       {/* 6) CARI ANIME — buka layar full screen.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
@@ -637,7 +661,7 @@ function HomeContent() {
             setSearchGenre(null);
             setShowSearch(true);
           }}
-          className="flex w-full items-center gap-2 rounded-full border border-border bg-card px-4 py-3 text-left"
+        className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-sm text-muted-foreground">
@@ -953,6 +977,96 @@ function HomeContent() {
     </div>
   );
 }
+
+// ------------------------------------------------------- kotak clan ----
+
+/**
+ * Kotak clan yang muncul di Home tepat di bawah "Chat bareng".
+ * Hanya dirender kalau user punya clan (atau belum punya, biar ada ajakan).
+ */
+function ClanBox({ onOpen }: { onOpen: () => void }) {
+  const { user } = useAuth();
+  const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
+  const clan = useQuery(
+    api.clans.clanDetail,
+    membership?.clanId ? { clanId: membership.clanId } : "skip",
+  );
+  const msgs = useQuery(
+    api.chat.listMessages,
+    membership?.clanId ? { kind: "clan", clanId: membership.clanId, limit: 4 } : "skip",
+  );
+
+  if (!membership) {
+    return (
+      <button
+        onClick={onOpen}
+        className="fade-enter mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+          <Trophy className="size-5 text-primary" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">Belum punya clan</span>
+          <span className="block text-xs text-zinc-400">
+            Buat clan dan kumpulkan XP bersama teman
+          </span>
+        </span>
+        <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
+          Buat
+        </span>
+      </button>
+    );
+  }
+
+  if (!clan) return null;
+  const c = clan.clan;
+  const last = msgs?.[msgs.length - 1];
+  return (
+    <button
+      onClick={onOpen}
+      className="fade-enter mt-2.5 w-full overflow-hidden rounded-2xl border border-white/10 bg-card p-3.5 text-left transition hover:border-foreground/40"
+    >
+      <div className="flex items-center gap-3">
+        <img
+          src={c.avatarUrl}
+          alt=""
+          className="size-11 shrink-0 rounded-xl object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            {/* Nama clan ikut warna LEVEL-nya, sama seperti yang tampil di
+                chat dan di panel clan — bukan putih polos. */}
+            <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
+            <ClanTag
+              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={c.tag}
+              color={c.color}
+              level={c.level}
+              className="px-1.5 py-0 text-[9px]"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Lv.{c.level} · {c.memberCount} member ·{" "}
+            {c.diamonds.toLocaleString("id-ID")} Sacret
+          </p>
+        </div>
+        <ChevronRight className="size-5 shrink-0 text-zinc-500" />
+      </div>
+      <div className="my-2.5 h-px bg-white/10" />
+      {last ? (
+        <p className="truncate text-xs text-zinc-400">
+          <span className="font-semibold text-zinc-300">{last.username}</span>:{" "}
+          {last.text ?? (last.premiumGive ? "Give premium" : "[foto]")}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Belum ada chat di clan — sapa teman kamu!
+        </p>
+      )}
+    </button>
+  );
+}// ------------------------------------------------------ chat preview ----
+
 
 // ------------------------------------------------------ leaderboard ----
 
@@ -1293,9 +1407,12 @@ function HomeLeaderboardPreview() {
 // ------------------------------------------------------ search result row (fotom-style horizontal row) ----
 
 /**
- * Satu baris hasil/daftar pencarian: gambar + judul + sinopsis + jumlah
- * nonton & favorite + status. Dipakai untuk hasil pencarian DAN daftar
- * sebelum pencarian, supaya tampilannya sama persis.
+ * Satu baris hasil pencarian ala fotom, meniru susunan:
+ *    badge  judul (besar)  label source  deskripsi pendek
+ *
+ * Fotom tidak menampilkan angka view di item pencarian, jadi di layar ini
+ * juga tidak. Badge «Judul Inggris...» hanya muncul untuk donghua supaya
+ * perbedaan anime vs donghua terbaca dari item pencarian.
  */
 function SearchResultRow({
   item,
@@ -1308,8 +1425,6 @@ function SearchResultRow({
   const isDonghua = source === "sanka";
   const synopsis =
     (item.synopsis as string | undefined) ?? "";
-  const views = (item as unknown as { views?: number }).views ?? 0;
-  const favs = (item as unknown as { favorites?: number }).favorites ?? 0;
 
   return (
     <button
@@ -1357,18 +1472,6 @@ function SearchResultRow({
               {item.score.toFixed(1)}
             </span>
           )}
-          {views > 0 && (
-            <span className="flex items-center gap-1">
-              <Play className="size-3.5" aria-hidden />
-              {views.toLocaleString("id-ID")} nonton
-            </span>
-          )}
-          {favs > 0 && (
-            <span className="flex items-center gap-1">
-              <Heart className="size-3.5" aria-hidden />
-              {favs.toLocaleString("id-ID")}
-            </span>
-          )}
           {item.status && (
             <span className="flex items-center gap-1">
               <Play className="size-3.5" aria-hidden />
@@ -1411,6 +1514,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   const [listLoading, setListLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [genresOpen, setGenresOpen] = useState(false);
+  const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   // Multi-select: kumpulan NAMA genre yang dipilih (irisannya dihitung server).
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
   const [adult, setAdult] = useState(false);
@@ -1423,8 +1527,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   );
   const canAdult = !!panelAccess?.adult;
   const genres = useAction(api.anime.animeGenres);
-
-  const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     genres({})
@@ -1716,6 +1818,20 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         </div>
       )}
 
+      {/* Urutan */}
+      <div className="mt-2 flex justify-end">
+        <button
+          onClick={() => {
+            // Urutan: hanya “Relevance” yang dipakai — saya pertahankan biar
+            // label ekran persis seperti fotom, meski di backend filter lite.
+          }}
+          className="gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+        >
+          <Star className="size-3.5 text-gold-strong" aria-hidden />
+          Relevant ▾
+        </button>
+      </div>
+
       {/* Hasil: hasil pencarian > daftar genre/semua */}
       {searching && (
         <p className="mt-3 text-center text-xs text-muted-foreground">Mencari…</p>
@@ -1747,8 +1863,17 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
               <>
                 <div className="mb-2 flex items-baseline justify-between">
                   <p className="text-base font-bold tracking-tight">
-                    Hasil Pencarian ({results.length})
-                  </p>
+                    Hasil Pencarian ({results.length})                  </p>
+                  <button
+                    onClick={() => {
+                      /* Urutan default: Relevance. Tidak ada re-sort lain
+                          yang tersedia di layar ini. */
+                    }}
+                    className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
+                  >
+                    <Star className="size-3.5 text-gold-strong mr-1" aria-hidden />
+                    Relevant ▾
+                  </button>
                 </div>
                 <div className="space-y-2">
                   {results.map((a) => (
@@ -1765,19 +1890,7 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         )}
         {results === null && (
           <div className="mt-4">
-            {listLoading ? (
-              <GridSkeleton count={12} />
-            ) : (
-              <div className="space-y-2">
-                {list.map((a) => (
-                  <SearchResultRow
-                    key={a.id}
-                    item={a}
-                    onClick={() => onPick(a.id, a.title, a.source)}
-                  />
-                ))}
-              </div>
-            )}
+            {listLoading ? <GridSkeleton count={12} /> : <AnimeGrid items={list} onPick={onPick} newIds={new Set()} views={undefined} />}
           </div>
         )}
       </div>
@@ -1929,26 +2042,24 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   <p className="text-xs text-muted-foreground">
                     Join clan atau buat clan untuk bergabung
                   </p>
-                  <div className="mx-auto mt-1 flex w-full max-w-[280px] flex-col items-stretch gap-2">
-                    <button
-                      onClick={() => {
-                        onClose();
-                        navigate("/clan");
-                      }}
-                      className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-white shadow-[0_0_20px_-6px] shadow-primary/60 transition hover:brightness-110"
-                    >
-                      Lihat clan
-                    </button>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        navigate("/clan?buat=1");
-                      }}
-                      className="rounded-full border border-primary/60 px-5 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
-                    >
-                      Buat clan
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      navigate("/clan");
+                    }}
+                    className="mt-1 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
+                  >
+                    Lihat clan
+                  </button>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      navigate("/clan?buat=1");
+                    }}
+                    className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground"
+                  >
+                    Buat clan
+                  </button>
                 </div>
               )}
             </div>
@@ -2148,95 +2259,6 @@ function DMScreen({
 }
 
 
-// ------------------------------------------------------- cuplikan ----
-
-/**
- * Tab "Cuplikan" — pemutar trailer/hese ala TikTok:
-
- * - Latar hitam full layar, video berada di tengah lebar penuh (iframe
- *   YouTube bertata letak 9:16 diperlebar supaya rasa vertikalnya kuat).
- * - Info judul & tombol <Tonton> di bawah, ikon suara/mute di kanan.
- * - IFrame YouTube pakai API bawaan; tidak mungkin mengatur lebar penuh
- *   seperti TikTok murni, tapi tampilannya sudah terasa sama.
- */
-function CuplikanPanel({
-  trailerUrl,
-  title,
-  image,
-}: {
-  trailerUrl?: string;
-  title: string;
-  image: string;
-}) {
-  const embed = youtubeEmbedUrl(trailerUrl ?? "");
-  return (
-    <div className="mt-3">
-      {embed ? (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black">
-          {/* 9:16 ala TikTok, penuh lebar layar. */}
-          <div className="relative aspect-[9/16] max-h-[70vh] w-full">
-            <iframe
-              src={embed}
-              title={`Cuplikan ${title}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 size-full"
-            />
-          </div>
-          {/* Info bawah ala TikTok: judul + action bar. */}
-          <div className="flex items-end justify-between gap-3 bg-gradient-to-t from-black/90 to-transparent p-3">
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
-                <Clapperboard className="size-3.5" /> Cuplikan
-              </p>
-              <p className="mt-1 line-clamp-2 text-sm font-bold text-white">
-                {title}
-              </p>
-            </div>
-            <a
-              href={trailerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-[0_0_18px_-4px] shadow-primary/70 transition hover:brightness-110"
-            >
-              Buka di YouTube
-            </a>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-card/50 px-4 py-10 text-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.06] text-muted-foreground">
-            <Clapperboard className="size-7" />
-          </span>
-          <p className="text-sm font-semibold">Cuplikan belum tersedia</p>
-          <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
-            Sumber ini belum punya trailer yang bisa diputar. Coba lagi
-            nanti — data diperbarui setiap beberapa jam.
-          </p>
-          {image && (
-            <img
-              src={image}
-              alt=""
-              className="mt-2 max-h-40 rounded-xl object-cover opacity-70"
-            />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** URL YouTube apa pun (watch/shorts/youtu.be/embed) → URL embed. */
-function youtubeEmbedUrl(url: string): string | null {
-  if (!url) return null;
-  const m = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/,
-  );
-  const id = m?.[1];
-  if (!id) return null;
-  return `https://www.youtube.com/embed/${id}?rel=0&playsinline=1`;
-}
-
 // ------------------------------------------------------- detail screen ----
 
 /** Format detik → "12:34" (dipakai untuk durasi nonton). */
@@ -2250,8 +2272,10 @@ function fmtClock(sec: number) {
   return `${h > 0 ? `${h}:` : ""}${mm}:${dd}`;
 }
 
-/** Sinopsis sebelum diklik "baca selengkapnya": tetap tampil sekitar 5/6
- * isinya (paragraf pertama, atau potongan 70% kalau cuma satu paragraf). */
+/**
+ * Sinopsis sebelum diklik "baca selengkapnya": tetap tampil sekitar 5/6
+ * isinya (paragraf pertama, atau potongan 70% kalau cuma satu paragraf).
+ */
 function synopsisPreview(text: string, open: boolean) {
   if (open) return text;
   const paras = text
@@ -2283,7 +2307,6 @@ function AnimeDetailScreen({
   const { user } = useAuth();
   const getDetail = useAction(api.anime.animeDetail);
   const getSimilar = useAction(api.anime.animeSimilar);
-  const fetchChars = useAction(api.anime.animeCharacters);
   // Sinopsis manual dari developer (tools konten). Kalau ada, override ini
   // yang dipakai — menggantikan sinopsis yang kosong/aneh dari sumber.
   const customSynopsis = useQuery(
@@ -2303,10 +2326,8 @@ function AnimeDetailScreen({
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
-  // Dua karakter ikonik untuk overlap di banner kanan (nama tersirat).
-  const [bannerChars, setBannerChars] = useState<CharRow[] | undefined>(undefined);
   // Tab Info / Nonton / Character — tiga tombol tanpa background.
-  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "cuplikan">("info");
+  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character">("info");
   // Bagian Character: foto + detail gabungan dari AniList (paling ikonik dulu).
   // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
   // lain yang dibutuhkan saat menambah sinopsis / menambah anime. Hanya
@@ -2321,15 +2342,6 @@ function AnimeDetailScreen({
     setSimilar([]);
     getSimilar({ id: animeId })
       .then((r: any) => setSimilar((r as AnimeCardT[]) ?? []))
-      .catch(() => {});
-    // Dua karakter ikonik untuk dekorasi banner (foto + nama di overlay).
-    setBannerChars(undefined);
-    fetchChars({ idMal: /^[0-9]+$/.test(animeId) ? animeId : undefined, title: animeTitle ?? undefined })
-      .then((r: any) => {
-        setBannerChars(
-          Array.isArray(r) ? (r as CharRow[])?.slice(0, 2) ?? undefined : undefined,
-        );
-      })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, animeTitle]);
@@ -2396,60 +2408,25 @@ function AnimeDetailScreen({
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
           </div>
 
+          {/* Header saja. Favorite tidak lagi di pojok kanan atas: sekarang
+              jadi tombol di baris yang sama dengan "Lanjut episode". */}
           <div className="absolute inset-x-0 top-0 z-10">
             <DetailHeader title="Detail Anime" onClose={onClose} />
           </div>
 
-          {/* Poster, judul, genre, dan tombol aksi pindah ke BAWAH tab —
-              di atas tab cuma sisa banner anime. */}
-        </div>
-
-        <div className="px-3">
-          {/* Tab tanpa background kotak: Info · Nonton · Character · Cuplikan
-              — garis putih di bawah tab aktif */}
-          <div className="mt-4 flex">
-            {(
-              [
-                ["info", "Info"],
-                ["nonton", "Nonton"],
-                ["character", "Character"],
-                ["cuplikan", "Cuplikan"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setDetailTab(id)}
-                className={cn(
-                  "relative flex-1 pb-2.5 text-sm font-semibold transition",
-                  detailTab === id
-                    ? "text-white"
-                    : "text-white/50 hover:text-white/80",
-                )}
-              >
-                {label}
-                {detailTab === id && (
-                  <span className="absolute inset-x-8 bottom-0 h-px bg-white" />
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="h-px bg-white/15" />
-
-          {/* Info anime — di BAWAH tab & HANYA saat Info aktif. Tab Nonton
-              langsung daftar episode; Character langsung daftar karakter. */}
-          {detailTab === "info" && (
-          <div className="mt-3 flex items-start gap-3">
+          {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
+          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
             {detail.image ? (
               <img
                 src={detail.image}
                 alt=""
-                className="aspect-[2/3] w-24 shrink-0 rounded-lg object-cover shadow-xl"
+                className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg object-cover shadow-xl"
               />
             ) : (
-              <div className="aspect-[2/3] w-24 shrink-0 rounded-lg bg-black/40" />
+              <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white">
+              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
                 {detail.title}
               </h2>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -2489,10 +2466,12 @@ function AnimeDetailScreen({
               </span>
             </div>
           </div>
+        </div>
 
+        <div className="px-3">
           {/* Baris aksi: "Lanjut episode" lebar, "Favorite" kotak miring di
               kanannya. Dua-duanya satu tinggi supaya rata di layar HP. */}
-          <div className="mt-3 flex items-stretch gap-2">
+          <div className="mt-4 flex items-stretch gap-2">
             <SkewButton
               variant="accent"
               className="flex-1 bg-sky-700 text-white hover:bg-sky-600"
@@ -2543,7 +2522,42 @@ function AnimeDetailScreen({
           {progress && progress.durationSec > 0 && (
             <p className="mt-1.5 text-center text-[11px] text-white/60">
               Lanjut menit {Math.floor(progress.progressSec / 60)}/
-              {Math.floor(progress.durationSec / 60)}\n            )}\n                <button
+              {Math.floor(progress.durationSec / 60)}
+            </p>
+          )}
+          <p className="mt-1 text-center text-[11px] text-white/55">
+            {fmtFavoritCount(favCount ?? 0)}
+          </p>
+
+          {/* Tab tanpa background: Info · Nonton · Character */}
+          <div className="mt-3 flex gap-1.5">
+            {([
+              ["info", "Info"],
+              ["nonton", "Nonton"],
+              ["character", "Character"],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setDetailTab(id)}
+                className={cn(
+                  "flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
+                  detailTab === id
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:text-white/85",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+
+          {/* Panel info developer: data teknis untuk tools konten. */}
+          {devInfoOpen && devAccess?.level === "dev" && (
+            <div className="mt-3 rounded-2xl border border-primary/40 bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-bold text-primary">Info developer</p>
+                <button
                   onClick={() => setDevInfoOpen(false)}
                   className="rounded-full p-1 text-muted-foreground"
                   aria-label="Tutup"
@@ -2586,14 +2600,15 @@ function AnimeDetailScreen({
                 ))}
               </div>
               <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-              {Math.floor(progress.durationSec / 60)}\n            )}\n          )}\n
-          {/* Tab Cuplikan: player vertikal ala TikTok memutar trailer anime. */}
-          {detailTab === "cuplikan" && (
-            <CuplikanPanel
-              trailerUrl={detail.trailerUrl as string | undefined}
-              title={detail.title as string}
-              image={(detail.image as string) ?? ""}
-            />
+                Nilai di atas bisa langsung dipakai di Tools Developer
+                (Akun → tombol gerinda).
+              </p>
+            </div>
+          )}
+
+          {/* Kolom karakter paling ikonik — tampil di tab Character */}
+          {detailTab === "character" && (
+            <CharacterRow idMal={String(animeId)} title={animeTitle} />
           )}
 
           {/* Sinopsis — tampil di tab Info */}
@@ -2675,7 +2690,7 @@ function AnimeDetailScreen({
                               navigate(
                                 `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
                                   animeTitle ?? detail.title ?? "",
-                                )}`
+                                )}`,
                               )
                             }
                             className={cn(
@@ -2734,6 +2749,72 @@ function AnimeDetailScreen({
                     ) : null}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Komentar hanya ada di halaman Nonton */}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Tombol kotak miring (skew). Satu helper untuk semua baris aksi supaya
+ * tinggi, radius, dan kemiringannya selalu sama persis di layar HP.
+ * Kemiringan dipakai di elemen luar, isinya dikembalikan ke lurus supaya
+ * teks tidak ikut miring.
+ */
+/**
+ * Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
+ * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999
+ * dibulatkan ke puluhan/ratusan; ribuan pakai satuan k dengan satu desimal
+ * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan.
+ */
+function fmtFavoritCount(n: number): string {
+  const v = Math.max(0, Math.floor(n));
+  if (v === 0) return "Belum ada Favorite";
+  if (v < 10) return `${v} Favorit`;
+  if (v < 100) return `${Math.floor(v / 10) * 10}+`;
+  if (v < 1000) return `${Math.floor(v / 100) * 100}+`;
+  const k = v / 1000;
+  if (k < 10) {
+    const one = Math.round(k * 10) / 10;
+    return `${one.toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return `${Math.floor(k)}k`;
+}
+
+export function SkewButton({
+  children,
+  onClick,
+  variant = "accent",
+  className,
+  disabled,
+  ...rest
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  variant?: "accent" | "quiet" | "plain";
+  className?: string;
+  disabled?: boolean;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "className">) {
+  return (
+    <button
+      {...rest}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "-skew-x-6 rounded-lg px-4 text-sm font-semibold transition",
+        "flex min-h-11 shrink-0 items-center justify-center gap-2",
+        variant === "accent" &&
+          "bg-accent text-accent-foreground hover:brightness-110",
+        variant === "quiet" &&
+          "border border-white/25 bg-black/60 text-white hover:bg-black/75",
+        variant === "plain" &&
+          "border border-border bg-card text-foreground hover:border-foreground/40",
+        disabled && "pointer-events-none opacity-40",
         className,
       )}
     >
@@ -2990,6 +3071,7 @@ function DonghuaDetailScreen({
               Favorite
             </SkewButton>
           </div>
+
 
           {/* Kolom karakter donghua — di bawah tombol Nonton/Favorite,
               sebelum sinopsis. */}
