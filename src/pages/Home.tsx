@@ -456,16 +456,6 @@ function HomeContent() {
 
   // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
-  const tabs = useMemo(
-    () => [
-      { id: "semua", label: "Semua" },
-      { id: "terbaru", label: "Terbaru" },
-      { id: "populer", label: "Populer" },
-      { id: "kontroversi", label: "Kontroversi" },
-    ],
-    [],
-  );
-
   return (
     <div className="pb-8">
       {/* 1) YORUNIME PREMIUM — card ke /premium */}
@@ -489,28 +479,7 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) TAB HORIZONTAL */}
-      <div className="fade-enter mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {tabs.map((t, i) => (
-          <button
-            key={t.id}
-            onClick={() => {
-              setActiveTab(i);
-              setShowSearch(false);
-            }}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition",
-              activeTab === i
-                ? "border-gold-strong bg-gold-soft text-gold-strong"
-                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 3) HERO BANNER */}
+      {/* 2) HERO BANNER */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (

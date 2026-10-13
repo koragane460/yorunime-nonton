@@ -577,7 +577,7 @@ export function ChatPanel({
           return (
             <div
               key={m._id}
-              className={cn("msg-in flex w-full items-end gap-2", mine && "flex-row-reverse")}
+              className={cn("msg-in flex w-full items-end gap-2 border-0", mine && "flex-row-reverse")}
             >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
@@ -595,7 +595,7 @@ export function ChatPanel({
                 <div
                   className={cn(
                     "w-fit flex flex-col items-start rounded-md px-3 py-2",
-                    "w-auto max-w-full min-w-0 border-0 self-start",
+                    "w-auto max-w-full min-w-0 self-start border-0",
                     mine && "self-end items-end",
                     // Bubble dibungkus w-fit: tidak melar lebar penuh sampai
                     // muncul garis abu-abu panjang seperti sebelumnya.
