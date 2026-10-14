@@ -155,17 +155,36 @@ function AkunContent() {
     <div className="relative">
       {/* Banner full-bleed. Wrapper-nya memotong overflow supaya tidak ada
           elemen yang keluar dari lebar layar (ruang hitam di kanan). */}
-      <div className="yn-banner-box -mx-4 md:-mx-6">
+      <div className="yn-banner-box relative -mx-4 overflow-hidden md:-mx-6">
         <BlurBanner src={user.bannerUrl ?? user.image} className="h-52 w-full" />
         {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
         <div aria-hidden className="yn-banner-fade" />
-        <button
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Pengaturan"
-          className="absolute right-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-        >
-          <SettingsIcon className="size-[18px]" />
-        </button>
+        {/* Veil gradasi: banner menyatu dengan kartu profil di bawahnya */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(0deg, rgba(9,11,20,.95) 0%, rgba(9,11,20,.35) 55%, rgba(9,11,20,.55) 100%)",
+          }}
+        />
+        {/* Aksi pojok kanan atas: Notifikasi lalu Pengaturan */}
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            onClick={() => setNotifOpen(true)}
+            aria-label="Notifikasi"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
+          >
+            <Bell className="size-[18px]" />
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Pengaturan"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
+          >
+            <SettingsIcon className="size-[18px]" />
+          </button>
+        </div>
       </div>
 
       {/* Title: DI LUAR banner-box. banner-box memotong overflow (overflow
@@ -246,12 +265,12 @@ function AkunContent() {
           )}
         </div>
 
-      {/* Foto profil menutupi banner, tepat di tengah layar */}
-      <div className="w-full px-3">
-        <div className="relative -mt-12 flex flex-col items-center">
+      {/* Header profil: avatar kiri + identitas kanan, menutupi banner */}
+      <div className="w-full">
+        <div className="relative -mt-12 flex items-end gap-3">
           {/* Cincin story: biru muda saat ada story yang belum dilihat.
               Ketuk avatar = buka penampil story. Tombol + = buat story. */}
-          <div className="relative">
+          <div className="relative shrink-0">
             {/* Kalau ada story, cincin story-nya jadi border TERLUAR supaya
                 warnanya terlihat (biru tua = ada yang belum dilihat). Cincin
                 dekoratif ungu hanya dipakai saat belum ada story, karena
@@ -285,47 +304,46 @@ function AkunContent() {
               <StoryAddButton onClick={() => setStoryStage("pick")} />
             )}
           </div>
-          {/* Urutan: username -> ID -> level badge + tag clan */}
-          <div
-            key={user.username}
-            className="mt-2.5 flex min-w-0 max-w-full items-center justify-center gap-1.5"
-          >
-            <p
-              className={cn(
-                "truncate text-lg font-black",
-                usernameColor(user.username),
-              )}
-            >
-              {user.username}
-            </p>
-            {premium && <BlueCheck className="size-5 shrink-0" />}
-            {(user.devTagUntil ?? 0) > Date.now() && <RedMark className="size-5" />}
-            <TitleBadge role={user.staffRole} seqId={user.seqId} />
-            <span className="shrink-0 font-mono text-[11px] text-zinc-500">
+          {/* Kolom kanan: username + ID + badge, lalu level & clan */}
+          <div className="min-w-0 flex-1 pb-1.5">
+            <div key={user.username} className="flex min-w-0 items-center gap-1.5">
+              <p
+                className={cn(
+                  "truncate text-lg font-black",
+                  usernameColor(user.username),
+                )}
+              >
+                {user.username}
+              </p>
+              {premium && <BlueCheck className="size-5 shrink-0" />}
+              {(user.devTagUntil ?? 0) > Date.now() && <RedMark className="size-5" />}
+              <TitleBadge role={user.staffRole} seqId={user.seqId} />
+            </div>
+            <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-500">
               {displayId(user.seqId, user._id)}
-            </span>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
-            <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
-              <LevelBadge level={user.level ?? 1} />
-            </button>
-            {user.clanTag && (
-              <ClanTag
-                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                tag={user.clanTag}
-                color={user.clanNameColor}
-                level={stats?.clanLevel}
-              />
-            )}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <button onClick={() => setBadgesOpen(true)} aria-label="Info badge level">
+                <LevelBadge level={user.level ?? 1} />
+              </button>
+              {user.clanTag && (
+                <ClanTag
+                  icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                  tag={user.clanTag}
+                  color={user.clanNameColor}
+                  level={stats?.clanLevel}
+                />
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Bar level */}
-        <div className="mt-3">
-          <div className="mb-1 flex items-center justify-between text-[11px]">
+        {/* Kartu level + resource: progress XP, Sacret, dan premium */}
+        <div className="mt-3 rounded-2xl border border-white/10 bg-card p-3.5">
+          <div className="mb-2 flex items-center justify-between text-[11px]">
             <span className="font-semibold text-foreground">Level {user.level}</span>
-            <span className="text-zinc-400">
-              {xpInLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
+            <span className="font-mono text-zinc-400">
+              {xpInLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")} XP
             </span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-black/60">
@@ -334,24 +352,34 @@ function AkunContent() {
               style={{ width: `${pct}%` }}
             />
           </div>
-        </div>
 
-        <div className="my-3 h-px bg-white/25" />
-
-        {/* Sacret + hari premium */}
-        <div className="flex items-center gap-4 text-xs">
-          <span className="flex items-center gap-1.5 font-semibold text-cyan-300">
-            <Gem className="size-3.5" /> {(user.diamonds ?? 0).toLocaleString("id-ID")}
-          </span>
-          {premium && (
-            <span className="flex items-center gap-1.5 font-semibold text-gold">
-              <Crown className="size-3.5" /> {premiumDays} hari
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <span className="flex items-center gap-2 rounded-xl border border-white/10 bg-secondary/40 px-3 py-2">
+              <Gem className="size-4 shrink-0 text-cyan-300" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-foreground">
+                  {(user.diamonds ?? 0).toLocaleString("id-ID")}
+                </span>
+                <span className="block text-[10px] text-muted-foreground">Sacret</span>
+              </span>
             </span>
-          )}
+            <button
+              onClick={() => navigate("/premium")}
+              className="flex items-center gap-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-left transition hover:border-gold/60"
+            >
+              <Crown className="size-4 shrink-0 text-gold" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-gold">
+                  {premium ? `${premiumDays} hari` : "Aktifkan"}
+                </span>
+                <span className="block text-[10px] text-zinc-400">Premium</span>
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* Stats horizontal tanpa background: History · Komen · Bergabung · Menit */}
-        <div className="mt-3 grid grid-cols-4 divide-x divide-white/15 text-center">
+        {/* Statistik: empat kartu kecil, bukan garis pembatas */}
+        <div className="mt-3 grid grid-cols-4 gap-2">
           <Stat label="History" value={stats?.watchCount ?? 0} />
           <Stat label="Komen" value={stats?.commentCount ?? 0} />
           <Stat label="Bergabung" value={`${stats?.joinedDays ?? 0}h`} />
@@ -359,8 +387,8 @@ function AkunContent() {
         </div>
       </div>
 
-      {/* Tabs tanpa background blok */}
-      <div className="mt-4 flex gap-1 border-b border-white/10">
+      {/* Tabs: pil bulat dalam satu wadah, bukan garis bawah */}
+      <div className="mt-4 grid grid-cols-3 gap-1.5 rounded-2xl border border-white/10 bg-card p-1.5">
         {(
           [
             ["history", "History", <HistoryIcon key="h" className="size-3.5" />],
@@ -372,16 +400,13 @@ function AkunContent() {
             key={k}
             onClick={() => setTabAndUrl(k as typeof tab)}
             className={cn(
-              "relative flex-1 pb-2 pt-1 text-xs font-medium",
-              tab === k ? "text-foreground" : "text-muted-foreground",
+              "flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition",
+              tab === k
+                ? "bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_var(--primary)]"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="flex items-center justify-center gap-1">
-              {icon} {label}
-            </span>
-            {tab === k && (
-              <span className="absolute inset-x-3 bottom-0 h-px bg-foreground/70" />
-            )}
+            {icon} {label}
           </button>
         ))}
       </div>
@@ -683,9 +708,9 @@ function AkunContent() {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="py-1">
-      <p className="text-base font-bold text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+    <div className="rounded-2xl border border-white/10 bg-card px-1 py-2.5 text-center">
+      <p className="truncate text-base font-bold text-foreground">{value}</p>
+      <p className="truncate text-[10px] text-muted-foreground">{label}</p>
     </div>
   );
 }

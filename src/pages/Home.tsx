@@ -716,7 +716,9 @@ function HomeContent() {
               </div>
             </div>
           ))}
-          {/* Slide terakhir rotasi hero: leaderboard mini. */}
+          {/* Slide terakhir rotasi hero: leaderboard SATU dengan banner.
+              Memakai vignette + aksen merah/emas seperti slide anime lain,
+              jadi tidak ada lagi kartu leaderboard terpisah di bawah banner. */}
           <div
             className={cn(
               "transition-opacity duration-500",
@@ -725,15 +727,29 @@ function HomeContent() {
           >
             <button
               onClick={() => setShowLeaderboard(true)}
-              className="block w-full bg-card p-4 text-left"
+              className="relative block min-h-60 w-full overflow-hidden text-left"
+              style={{
+                backgroundImage:
+                  "linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.62) 55%, rgba(0,0,0,.42) 100%), radial-gradient(120% 90% at 12% -10%, rgba(255,45,45,.45) 0%, rgba(255,45,45,0) 55%), radial-gradient(100% 80% at 110% 5%, rgba(255,196,0,.3) 0%, rgba(255,196,0,0) 60%)",
+              }}
             >
-              <div className="flex items-center justify-between">
-                <p className="flex items-center gap-2 font-bold">
-                  <Trophy className="size-4 text-primary" /> Leaderboard
+              <div className="relative w-full p-4">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
+                    Live
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white">
+                    <Trophy className="size-3 text-[var(--gold-strong)]" /> Top XP
+                    komunitas
+                  </span>
+                  <span className="ml-auto text-xs text-zinc-300">lihat semua ›</span>
+                </div>
+                <h3 className="mt-1.5 text-lg font-black">Leaderboard</h3>
+                <p className="mt-0.5 text-xs leading-relaxed text-zinc-300">
+                  Peringkat XP pemain — ketuk untuk membuka lengkap.
                 </p>
-                <span className="text-xs text-muted-foreground">lihat semua ›</span>
+                <HomeLeaderboardPreview />
               </div>
-              <HomeLeaderboardPreview />
             </button>
           </div>
           {/* Geser pakai tangan saja — tanpa tombol panah */}
@@ -751,21 +767,7 @@ function HomeContent() {
         </div>
       ) : null}
 
-      {/* 4) LEADERBOARD (gabung XP + Top Give Premium) */}
-      <button
-        onClick={() => setShowLeaderboard(true)}
-        className="fade-enter mt-3 w-full rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
-      >
-        <div className="flex items-center justify-between">
-          <p className="flex items-center gap-2 font-bold">
-            <Trophy className="size-4 text-primary" /> Leaderboard
-          </p>
-          <span className="text-xs text-muted-foreground">lihat semua ›</span>
-        </div>
-        <HomeLeaderboardPreview />
-      </button>
-
-      {/* 5) CHAT BARENG — rounded, tanpa garis pembatas */}
+      {/* 4) CHAT BARENG — rounded, tanpa garis pembatas */}
       <button
         onClick={() => setShowChat(true)}
         className="fade-enter mt-3 w-full rounded-3xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
@@ -784,7 +786,7 @@ function HomeContent() {
         </QueryBoundary>
       </button>
 
-      {/* 6) CARI ANIME — search + katalog kartu.
+      {/* 5) CARI ANIME — search + katalog kartu.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
       <div ref={searchAnchor}>
