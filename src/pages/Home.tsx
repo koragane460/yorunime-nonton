@@ -104,7 +104,7 @@ export default function Home() {
 
 function HeroSkeleton() {
   return (
-    <div className="skeleton mt-3 h-44 w-full rounded-2xl border border-white/5" />
+    <div className="skeleton mt-3 h-[420px] w-full rounded-2xl border border-white/5" />
   );
 }
 
@@ -261,103 +261,8 @@ function HomeContent() {
   const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
 
-  // Cari anime & donghua — search input + genre + Relevant ▾ + kartu.
-  const searchAnime = useAction(api.anime.animeSearch);
-  const searchDonghua = useAction(api.sanka.donghuaSearchCards);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<AnimeCardT[] | null>(null);
-  const [list, setList] = useState<AnimeCardT[]>([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [genresOpen, setGenresOpen] = useState(false);
-  const [activeGenres, setActiveGenres] = useState<string[]>([]);
-  const [searchOrder, setSearchOrder] = useState("relevant");
-  const [adult, setAdult] = useState(false);
-  const [adultUnlocked, setAdultUnlocked] = useState(false);
-  // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
-  const panelAccess = useQuery(
-    api.moderation.myPanelAccess,
-    user ? {} : "skip",
-  );
-  const canAdult = !!panelAccess?.adult;
-
-  // Ambil daftar genre (sama seperti SearchScreen) supaya dropdown Genre
-  // di layar ini tidak kosong.
-  useEffect(() => {
-    genres({})
-      .then((raw) => {
-        const norm: { id: string; name: string }[] = (Array.isArray(raw) ? raw : [])
-          .map((g: any) => {
-            const name =
-              typeof g?.name === "string"
-                ? g.name
-                : typeof g?.name?.name === "string"
-                  ? g.name.name
-                  : "";
-            return { id: String(g?.id ?? name.toLowerCase()), name };
-          })
-          .filter((g) => g.id && g.name);
-        setGenreList(norm);
-      })
-      .catch(() => {});
-  }, []);
-
-  const applyGenres = async (names: string[]) => {
-    setActiveGenres(names);
-    setListLoading(true);
-    try {
-      if (names.length === 0) {
-        const r = (await loadAll({})) as AnimeCardT[];
-        setList(r ?? []);
-      } else {
-        const r = (await loadGenres({ genres: names })) as AnimeCardT[];
-        setList(r ?? []);
-      }
-    } catch {
-      setList([]);
-    }
-    setListLoading(false);
-  };
-
-  const toggleGenre = (name: string) => {
-    const next = activeGenres.includes(name)
-      ? activeGenres.filter((g) => g !== name)
-      : [...activeGenres, name].slice(0, 6);
-    void applyGenres(next);
-  };
-
-  const doSearch = async () => {
-    if (!searchQuery.trim()) {
-      setResults(null);
-      return;
-    }
-    setSearching(true);
-    try {
-      const animeP: Promise<AnimeCardT[]> = searchAnime({ q: searchQuery })
-        .then((r: unknown) => (r ?? []) as AnimeCardT[])
-        .catch(() => [] as AnimeCardT[]);
-      const donghuaP: Promise<AnimeCardT[]> = searchDonghua({ q: searchQuery })
-        .then((r: unknown) => (r ?? []) as AnimeCardT[])
-        .catch(() => [] as AnimeCardT[]);
-      const [animeRes, donghuaRes] = await Promise.all([animeP, donghuaP]);
-      const seen = new Set<string>();
-      const merged: AnimeCardT[] = [];
-      const pairs: readonly (readonly [AnimeCardT, CatalogPickSource])[] = [
-        ...(animeRes ?? []).map((c) => [c, "anilist"] as const),
-        ...(donghuaRes ?? []).map((c) => [c, "sanka"] as const),
-      ];
-      for (const [c, src] of pairs) {
-        if (!c?.id || seen.has(c.id)) continue;
-        seen.add(c.id);
-        merged.push({ ...c, type: c.type, source: src });
-      }
-      setResults(merged);
-    } catch {
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
+  // Pencarian dipindahkan penuh ke layar SearchScreen (fullscreen):
+  // tombol di Home hanya pemicu, tidak ada input/genre/hasil di Home.
 
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
@@ -404,9 +309,6 @@ function HomeContent() {
     if (heroTotal < 2) return;
     setHeroIdx((i) => (i + dir + heroTotal) % heroTotal);
   };
-
-  const loadAll = useAction(api.anime.animeTop);
-  const loadGenres = useAction(api.anime.animeByGenres);
 
   // Muat data katalog (backend punya fallback statis, jadi selalu ada hasil)
   useEffect(() => {
@@ -620,7 +522,7 @@ function HomeContent() {
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <div
-          className="fade-enter relative mt-3 touch-pan-y overflow-hidden rounded-2xl border border-white/10"
+          className="fade-enter relative mt-3 h-[420px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
           onPointerDown={(e) => {
             heroTouchX.current = e.clientX;
           }}
@@ -638,12 +540,16 @@ function HomeContent() {
             <div
               key={a.id}
               className={cn(
-                "transition-opacity duration-500",
-                i === heroIdx ? "block opacity-100" : "hidden opacity-0",
+                // Semua slide ditumpuk absolute + opacity supaya pergantian
+                // slide benar-benar FADE (bukan langsung hilang/tampil).
+                "absolute inset-0 transition-opacity duration-700",
+                i === heroIdx
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-0",
               )}
             >
               <div
-                className="relative min-h-60 overflow-hidden bg-cover bg-center"
+                className="relative h-full overflow-hidden bg-cover bg-center"
                 style={
                   a.image
                     ? {
@@ -659,7 +565,7 @@ function HomeContent() {
               >
                 {!a.image && (
                   <div className="absolute inset-0 bg-hero-gradient" />
-                )}                <div className="relative w-full p-4">
+                )}                <div className="relative flex h-full w-full flex-col p-4 pb-9">
                   <div className="mb-1 flex items-center gap-2">
                     <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                       {a.status ?? "Ongoing"}
@@ -686,7 +592,7 @@ function HomeContent() {
                   <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-zinc-300">
                     {a.synopsis ?? "Sinopsis belum tersedia."}
                   </p>
-                  <div className="mt-2.5 flex gap-2">
+                  <div className="mt-auto flex gap-2 pt-3">
                     <button
                       onClick={() =>
                         openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
@@ -721,19 +627,21 @@ function HomeContent() {
               jadi tidak ada lagi kartu leaderboard terpisah di bawah banner. */}
           <div
             className={cn(
-              "transition-opacity duration-500",
-              heroIdx === heroItems.length ? "block opacity-100" : "hidden opacity-0",
+              "absolute inset-0 transition-opacity duration-700",
+              heroIdx === heroItems.length
+                ? "opacity-100"
+                : "pointer-events-none opacity-0",
             )}
           >
             <button
               onClick={() => setShowLeaderboard(true)}
-              className="relative block min-h-60 w-full overflow-hidden text-left"
+              className="relative flex h-full w-full flex-col overflow-hidden p-4 pb-9 text-left"
               style={{
                 backgroundImage:
                   "linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.62) 55%, rgba(0,0,0,.42) 100%), radial-gradient(120% 90% at 12% -10%, rgba(255,45,45,.45) 0%, rgba(255,45,45,0) 55%), radial-gradient(100% 80% at 110% 5%, rgba(255,196,0,.3) 0%, rgba(255,196,0,0) 60%)",
               }}
             >
-              <div className="relative w-full p-4 pb-9">
+              <div className="relative min-h-0 flex-1 overflow-hidden">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                     Live
@@ -786,179 +694,34 @@ function HomeContent() {
         </QueryBoundary>
       </button>
 
-      {/* 5) CARI ANIME — search + katalog kartu.
+      {/* 5) CARI ANIME — hanya tombol pemicu; pencarian tampil di layar
+          FULL SCREEN (SearchScreen), bukan nempel di Home.
           `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
           warna itu harus berhenti tepat di bawah tombol ini. */}
       <div ref={searchAnchor}>
         <SectionTitle>Cari anime &amp; donghua</SectionTitle>
-
-        {/* Input + tombol Cari */}
-        <div className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+        <button
+          onClick={() => {
+            setSearchGenre(null);
+            setShowSearch(true);
+          }}
+          className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
+        >
           <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder="contoh: ayanokoji adalah aku / battle through"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              aria-label="Bersihkan pencarian"
-            >
-              <X className="size-4 text-muted-foreground" />
-            </button>
-          )}
-          <button
-            onClick={() => void doSearch()}
-            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white"
-          >
+          <span className="flex-1 text-sm text-muted-foreground">
+            contoh: ayanokoji adalah aku / battle through
+          </span>
+          <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
             Cari
-          </button>
-        </div>
-
-        {/* Filter 18+ (jika tersedia) */}
-        {canAdult && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
-            <button
-              onClick={() => {
-                if (!adultUnlocked) {
-                  setAdultUnlocked(true);
-                  setAdult(true);
-                  return;
-                }
-                setAdult((v) => !v);
-              }}
-              className={cn(
-                "relative h-6 w-11 shrink-0 rounded-full transition",
-                adult ? "bg-red-600" : "bg-zinc-700",
-              )}
-              aria-label="Sertakan judul 18+"
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 size-5 rounded-full bg-white transition-all",
-                  adult ? "left-5.5" : "left-0.5",
-                )}
-              />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold">Sertakan judul 18+</p>
-              <p className="text-[10px] text-muted-foreground">
-                {adultUnlocked
-                  ? adult
-                    ? "Judul dewasa ikut ditampilkan"
-                    : "Cuma judul biasa yang dicari"
-                  : "Butuh konfirmasi, hanya untuk kamu yang sudah 18 tahun"}
-              </p>
-            </div>
-            {adultUnlocked && (
-              <button
-                onClick={() => {
-                  setAdult(false);
-                  setAdultUnlocked(false);
-                }}
-                className="shrink-0 text-[10px] font-semibold text-primary"
-              >
-                reset
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Baris filter: tombol Genre + chip aktif + urutan */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setGenresOpen((v) => !v)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-              genresOpen
-                ? "border-gold-strong bg-gold-soft text-gold-strong"
-                : "border-border bg-card text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            <SlidersHorizontal className="size-3.5" aria-hidden />
-            Genre
-            {activeGenres.length > 0 && (
-              <span className="ml-0.5 rounded-full bg-gold-strong px-1.5 text-[10px] font-bold text-background">
-                {activeGenres.length}
-              </span>
-            )}
-          </button>
-          <div className="flex flex-1 flex-wrap gap-1">
-            {activeGenres.map((g) => (
-              <button
-                key={g}
-                onClick={() => toggleGenre(g)}
-                className="flex items-center gap-1 rounded-full border border-gold-strong bg-gold-soft px-2.5 py-1 text-[10px] font-semibold text-gold-strong"
-              >
-                {g}
-                <X className="size-3" aria-hidden />
-              </button>
-            ))}
-          </div>
-          {activeGenres.length > 0 && (
-            <button
-              onClick={() => void applyGenres([])}
-              className="shrink-0 text-[11px] font-semibold text-primary"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-
-        {/* Panel pilihan genre — muncul saat tombol Genre ditekan */}
-        {genresOpen && (
-          <div className="mt-2 rounded-2xl border border-border bg-card p-3">
-            <p className="mb-2 text-xs font-bold text-muted-foreground">
-              Pilih genre (bisa lebih dari satu)
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => void applyGenres([])}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                  activeGenres.length === 0
-                    ? "border-gold-strong bg-gold-soft text-gold-strong"
-                    : "border-border bg-secondary/40 text-muted-foreground",
-                )}
-              >
-                Semua
-              </button>
-              {genreList.map((g) => {
-                const on = activeGenres.includes(g.name);
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => toggleGenre(g.name)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                      on
-                        ? "border-gold-strong bg-gold-soft text-gold-strong"
-                        : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
-                    )}
-                  >
-                    {g.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Urutan */}
-        <div className="mt-2 flex justify-end">
-          <button
-            onClick={() => setSearchOrder("relevant")}
-            className="gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
-          >
-            <Star className="size-3.5 text-gold-strong" aria-hidden />
-            Relevant ▾
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
+
+
+
+
+
+
 
       {/* 6a) ANIME UPDATE NEWS — di bawah tombol search */}
         {updateFirst && (
@@ -1027,6 +790,118 @@ function HomeContent() {
       )}
 
 
+
+      {/* 6c) KATEGORI LENGKAP: Season Ini / Movie / OVA / Donghua / Upcoming */}
+      <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
+      <BrowseRow kind="ova" title="OVA &amp; ONA" onPick={openAnime} />
+      {/* Slot khusus Donghua: dua baris geser ke kanan + "Lihat selengkapnya". */}
+      <CardCarousel
+        kind="donghua"
+        title="Donghua"
+        subtitle="subtitle Indonesia"
+        onPick={openAnime}
+      />
+      <BrowseRow kind="upcoming" title="Segera Rilis (Upcoming)" onPick={openAnime} />
+
+      {/* 7) TOP ANIME — 12 kartu, sisanya di layar penuh */}
+      <SectionRow
+        title="Top Anime"
+        count={topList.length}
+        onMore={() =>
+          setCatalog({
+            kind: "popular",
+            title: "Top Anime",
+            items: topList as unknown as CatalogCard[],
+          })
+        }
+      >
+        {loading ? (
+          <GridSkeleton count={12} />
+        ) : (
+          <AnimeGrid
+            items={topList.slice(0, 12)}
+            onPick={openAnime}
+            ranked
+            newIds={new Set()}
+          />
+        )}
+      </SectionRow>
+
+      {/* Anime Hot — Top 1-3 yang lagi panas */}
+      {!loading && topList.length > 0 && (
+        <div className="fade-enter mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
+              <span className="text-lg" aria-hidden>🔥</span> Anime Hot
+            </p>
+            <button
+              onClick={() =>
+                setCatalog({ kind: "popular", title: "Anime Hot", items: topList as unknown as CatalogCard[] })
+              }
+              className="text-xs font-semibold text-primary"
+            >
+              Lihat selengkap ›
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {topList.slice(0, 3).map((a, i) => (
+              <button
+                key={a.id}
+                onClick={() => openAnime(a.id, a.title, a.source)}
+                className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10"
+              >
+                {a.image ? (
+                  <img
+                    src={a.image}
+                    alt={a.title}
+                    loading="lazy"
+                    className="size-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="size-full bg-muted" />
+                )}
+                <span
+                  className={cn(
+                    "absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-lg font-black text-black",
+                    i === 0 ? "bg-yellow-400" : i === 1 ? "bg-zinc-300" : "bg-amber-600",
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-1.5 pt-4">
+                  <p className="line-clamp-2 text-left text-[10px] font-semibold leading-tight text-white">
+                    {a.title}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <SectionRow
+        title="Top Anime Hari Ini"
+        count={todayList.length}
+        onMore={() =>
+          setCatalog({
+            kind: "popular",
+            title: "Top Anime Hari Ini",
+            items: todayList as unknown as CatalogCard[],
+          })
+        }
+      >
+        {loading ? (
+          <GridSkeleton count={12} />
+        ) : (
+          <AnimeGrid
+            items={todayList.slice(0, 12)}
+            onPick={openAnime}
+            ranked
+            newIds={new Set()}
+          />
+        )}
+      </SectionRow>
 
       <SectionRow
         title="Untuk Kamu"
@@ -2597,21 +2472,9 @@ function AnimeDetailScreen({
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="w-full pb-24">
         {/* Header transparan di atas banner full-bleed.
-            Banner + poster HANYA tampil di tab Info; tab lain menyembunyikan
-            gambar supaya layar tidak penuh banner. */}
+            Banner + poster tampil di SEMUA tab (Info/Nonton/Character/
+            Cuplikan) supaya judul, rating, studio, dan status tidak hilang. */}
         <div className="relative">
-          {/* Tab selain Info: banner + poster disembunyikan, hanya header
-              (judul anime biar tetap jelas sedang membuka apa). */}
-          {detailTab !== "info" && (
-            <div className="relative z-10">
-              <DetailHeader
-                title={detail.title || "Detail Anime"}
-                onClose={onClose}
-              />
-            </div>
-          )}
-          {detailTab === "info" && (
-            <>
           {/* Banner: background anime full lebar sampai pinggir (kesamping panjang) */}
           <div
             className="relative h-64 w-full shrink-0 overflow-hidden bg-cover bg-center"
@@ -2624,27 +2487,6 @@ function AnimeDetailScreen({
             }
           >
             {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
-            {/* 2 karakter ikonik di kanan banner supaya tidak terasa kosong.
-                Latar gambarnya di-blend (mask + mix-blend) dan diberi gradasi
-                bawah supaya menyatu, bukan kotak penuh. */}
-            {chars.slice(0, 2).map((c, i) =>
-              c.image ? (
-                <img
-                  key={c.id}
-                  src={c.image}
-                  alt=""
-                  aria-hidden
-                  className={cn(
-                    "pointer-events-none absolute bottom-0 select-none object-contain opacity-95 mix-blend-lighten",
-                    i === 0 ? "right-14 h-[86%]" : "right-0 h-[68%]",
-                  )}
-                  style={{
-                    maskImage: "linear-gradient(180deg, #000 62%, transparent 100%)",
-                    WebkitMaskImage: "linear-gradient(180deg, #000 62%, transparent 100%)",
-                  }}
-                />
-              ) : null,
-            )}
           </div>
 
           {/* Header saja. Favorite tidak lagi di pojok kanan atas: sekarang
@@ -2668,6 +2510,12 @@ function AnimeDetailScreen({
               <h2 className="line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
                 {detail.title}
               </h2>
+              {/* Judul terjemahan Inggris — teks kecil di bawah judul asli. */}
+              {detail.titleEnglish && (
+                <p className="mt-0.5 line-clamp-1 text-[11px] italic text-white/70">
+                  {detail.titleEnglish}
+                </p>
+              )}
               <div className="mt-1 flex flex-wrap gap-1">
                 {(detail.genres ?? []).slice(0, 3).map((g: string) => (
                   <span
@@ -2705,8 +2553,6 @@ function AnimeDetailScreen({
               </span>
             </div>
           </div>
-            </>
-          )}
         </div>
 
         <div className="px-3">
@@ -2951,10 +2797,11 @@ function AnimeDetailScreen({
                               )
                             }
                             className={cn(
-                              "size-10 rounded-lg border text-sm font-semibold transition",
+                              // Transparan: tanpa kotak, hanya nomor episode.
+                              "size-10 rounded-lg text-sm font-semibold transition",
                               released
-                                ? "border-border bg-secondary/40 text-white hover:border-foreground/40"
-                                : "cursor-not-allowed border-white/5 bg-white/[0.03] text-white/25",
+                                ? "text-white/90 hover:bg-white/10"
+                                : "cursor-not-allowed text-white/25",
                             )}
                           >
                             {e.number}
@@ -3555,7 +3402,7 @@ function DonghuaDetailScreen({
                       <button
                         key={e.number || e.url}
                         onClick={() => onPlay(e.url, e.number || 1, detail.title)}
-                        className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40"
+                        className="size-10 rounded-lg text-sm font-semibold text-white/90 transition hover:bg-white/10"
                       >
                         {e.number}
                       </button>

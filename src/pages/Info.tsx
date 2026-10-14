@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/AppLayout";
 import {
   BookOpen,
   ChevronDown,
+  Clock,
   ChevronUp,
   Eye,
   EyeOff,
@@ -360,8 +361,13 @@ function LanjutTab() {
                   `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
                 )
               }
-              className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
+              className="relative flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
             >
+              {/* Jam kapan terakhir dibaca — pojok kanan atas. */}
+              <span className="absolute right-2.5 top-2 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                <Clock className="size-3" aria-hidden />
+                {fmtClock(item.at)}
+              </span>
               <img
                 src={c.comicImage ?? ""}
                 alt=""
@@ -392,16 +398,20 @@ function LanjutTab() {
         // tetap menampilkan "00/00" sampai user mulai nonton.
         const posM = pos > 0 ? Math.floor(pos / 60) : 0;
         const durM = dur > 0 ? Math.floor(dur / 60) : 0;
-        return (
-          <button
-            key={item.key}
+        return (            <button
+              key={item.key}
             onClick={() =>
               navigate(
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
               )
             }
-            className="flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left transition hover:border-foreground/40"
+            className="relative flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
           >
+            {/* Jam kapan terakhir ditonton — pojok kanan atas. */}
+            <span className="absolute right-2.5 top-2 z-10 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+              <Clock className="size-3" aria-hidden />
+              {fmtClock(item.at)}
+            </span>
             <img
               src={h.animeImage ?? ""}
               alt=""
@@ -431,6 +441,14 @@ function LanjutTab() {
       ))}
     </div>
   );
+}
+
+/** Jam "HH.MM" dari timestamp — kapan terakhir menonton/membaca. */
+function fmtClock(ts: number) {
+  const d = new Date(ts || 0);
+  return `${String(d.getHours()).padStart(2, "0")}.${String(
+    d.getMinutes(),
+  ).padStart(2, "0")}`;
 }
 
 /** Menit yang sudah ditonton, selalu dua digit: "Menit 07/24". */

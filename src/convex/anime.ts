@@ -132,6 +132,8 @@ export type EpisodeItem = {
 
 export type AnimeDetail = AnimeCard & {
   genres: string[];
+  /** Judul terjemahan Inggris — ditampilkan kecil di bawah judul asli. */
+  titleEnglish?: string;
   studio?: string;
   rating?: string;
   year?: number;
@@ -229,6 +231,10 @@ async function jikanDetail(id: string): Promise<AnimeDetail> {
   return {
     ...jikanCard(a),
     genres: (a.genres ?? []).map((x: any) => x.name),
+    titleEnglish:
+      typeof a.title_english === "string" && a.title_english
+        ? a.title_english
+        : undefined,
     studio: a.studios?.[0]?.name,
     rating: a.rating,
     year: a.year ?? a.aired?.prop?.from?.year ?? undefined,
@@ -449,6 +455,12 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   // Kalau jumlah aired diketahui pasti, tampilkan sampai episode itu saja:
   // episode lanjutan yang tidak ada pun tidak perlu dikarang.
   const listUpTo = releasing && airedUpTo ? Math.max(airedUpTo, 1) : total;
+  // Judul Inggris untuk teks kecil di bawah judul asli di layar detail.
+  const titleEnglish =
+    typeof m.title?.english === "string" &&
+    m.title.english !== m.title.romaji
+      ? m.title.english
+      : undefined;
   const episodeList: EpisodeItem[] = [];
   for (let i = 1; i <= listUpTo; i++) {
     episodeList.push({
@@ -464,6 +476,7 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
   return {
     ...cardWithTrailer,
     genres: Array.isArray(m.genres) ? m.genres : [],
+    titleEnglish,
     year: m.seasonYear ?? undefined,
     studio:
       m.studios?.nodes?.[0]?.name ??
@@ -637,6 +650,10 @@ async function otakuDetail(id: string): Promise<AnimeDetail> {
     synopsis: synopsis || "Sinopsis belum tersedia.",
     synopsisId: synopsis || undefined,
     genres,
+    titleEnglish:
+      typeof d.title_english === "string" && d.title_english
+        ? d.title_english
+        : undefined,
     studio: typeof d.studios === "string" ? d.studios : (d.studios?.[0] ?? undefined),
     rating: d.rating ?? undefined,
     year: Number.isFinite(year) ? year : undefined,

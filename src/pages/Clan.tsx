@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { ClanLevelBar, ClanTag, clanNameClass } from "@/components/lstream-ui";
-import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import { DEFAULT_CLAN_ICON, PICKABLE_CLAN_ICONS } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -297,6 +297,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   const createClan = useMutation(api.clans.createClan);
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
+  // Icon tag clan + foto profil — dulu kosong terus; sekarang dipilih di form.
+  const [tagIcon, setTagIcon] = useState(DEFAULT_CLAN_ICON);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -307,7 +310,13 @@ function CreateClan({ onDone }: { onDone: () => void }) {
     }
     setBusy(true);
     try {
-      await createClan({ name: name.trim(), tag: tag.toUpperCase(), tagIcon: "", avatarUrl: "", description: desc.trim() });
+      await createClan({
+        name: name.trim(),
+        tag: tag.toUpperCase(),
+        tagIcon,
+        avatarUrl: avatarUrl.trim(),
+        description: desc.trim(),
+      });
       toast.success("Clan dibuat — level 1, kumpulkan Sacret bareng!");
       onDone();
       navigate("/clan");
@@ -333,6 +342,37 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         </div>
 
         <div className="space-y-4">
+          {/* Preview langsung: foto profil + nama + tag clan */}
+          <div className="rounded-2xl border border-white/10 bg-card p-3">
+            <p className="mb-2 text-[11px] font-bold text-muted-foreground">
+              Preview clan kamu
+            </p>
+            <div className="flex items-center gap-3">
+              {avatarUrl.trim() ? (
+                <img
+                  src={avatarUrl.trim()}
+                  alt=""
+                  className="size-12 shrink-0 rounded-xl object-cover"
+                />
+              ) : (
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-secondary/40 text-muted-foreground">
+                  <Users className="size-5" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className={cn("truncate font-bold", clanNameClass(1))}>
+                  {name.trim() || "Nama clan"}
+                </p>
+                <ClanTag
+                  icon={tagIcon}
+                  tag={tag.toUpperCase() || "TAG"}
+                  level={1}
+                  className="mt-1 px-1.5 py-0 text-[10px]"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="clan-name">Nama clan</Label>
             <Input
@@ -344,16 +384,50 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="clan-tag">Tag clan</Label>
+            <Label htmlFor="clan-tag">Tag clan (3-4 huruf)</Label>
             <Input
               id="clan-tag"
               value={tag}
               onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
-              placeholder="3-4 huruf, mis. YRNM"
+              placeholder="mis. YRNM"
               maxLength={5}
               className="font-mono"
             />
           </div>
+
+          {/* Pilihan icon tag clan */}
+          <div className="grid gap-2">
+            <Label>Icon tag clan</Label>
+            <div className="grid grid-cols-6 gap-2">
+              {PICKABLE_CLAN_ICONS.map((ic) => (
+                <button
+                  key={ic.key}
+                  type="button"
+                  onClick={() => setTagIcon(ic.key)}
+                  aria-label={ic.name}
+                  className={cn(
+                    "flex aspect-square items-center justify-center rounded-xl border transition",
+                    tagIcon === ic.key
+                      ? "border-primary bg-primary/15 ring-2 ring-primary/60"
+                      : "border-white/10 bg-secondary/40 hover:border-foreground/40",
+                  )}
+                >
+                  <ic.Icon className="size-5" style={{ color: ic.tone }} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="clan-avatar">Foto profil clan (URL gambar, opsional)</Label>
+            <Input
+              id="clan-avatar"
+              value={avatarUrl}
+              onChange={(e) => setAvatarUrl(e.target.value)}
+              placeholder="https://…/foto-clan.jpg"
+            />
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="clan-info">Deskripsi (opsional)</Label>
             <Input
