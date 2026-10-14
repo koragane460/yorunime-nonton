@@ -196,6 +196,12 @@ export const sendMessage = mutation({
     if (imageUrl && imageUrl.startsWith("data:")) {
       throw new Error("Kirim foto lewat tombol foto (bukan teks gambar)");
     }
+    // Kirim foto dikunci Premium — dicek di server juga, bukan cuma tombol
+    // yang disembunyikan di UI. User non-premium tidak bisa mengirim foto
+    // dengan cara apa pun.
+    if ((imageStorageId || imageUrl) && (me.premiumUntil ?? 0) < Date.now()) {
+      throw new Error("Kirim foto hanya untuk akun Premium");
+    }
     if (text && text.length > TEXT_MAX) throw new Error("Pesan terlalu panjang");
 
     let index: string | undefined = undefined;

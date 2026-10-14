@@ -9,6 +9,7 @@ import {
   Shield,
   Star,
   Eye,
+  Tv,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,7 @@ export function AnimeCard({
   isNew,
   imageOnly,
   views,
+  episodes,
 }: {
   id?: string;
   title: string;
@@ -104,6 +106,8 @@ export function AnimeCard({
   imageOnly?: boolean;
   /** Jumlah views — ditampilkan di bawah judul saat tersedia. */
   views?: number;
+  /** Jumlah episode — "N episode" di bawah judul (donghua memakai `episode`). */
+  episodes?: number;
 }) {
   return (
     <button
@@ -156,17 +160,28 @@ export function AnimeCard({
           <p className="line-clamp-2 text-xs font-medium leading-4 text-foreground/95">
             {title}
           </p>
-          {/* Baris meta: label format (TV/Movie/Donghua) + rating bintang
-              kuning strong (tanpa outline) + views. */}
+          {/* Baris meta: ikon TV + label format (TV/Movie/Donghua) + jumlah
+              episode + rating bintang kuning strong (tanpa outline) + views. */}
           <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground/80">
             {type && (
-              <span className="max-w-[60%] truncate font-semibold text-foreground/70">
-                {type}
+              <span className="inline-flex max-w-[55%] items-center gap-0.5 truncate font-semibold text-foreground/70">
+                <Tv className="size-3 shrink-0" aria-hidden />
+                {type === "MOVIE"
+                  ? "Movie"
+                  : type === "TV_SHORT"
+                    ? "TV Short"
+                    : type}
               </span>
+            )}
+            {typeof episodes === "number" && episodes > 0 && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="whitespace-nowrap">{episodes} episode</span>
+              </>
             )}
             {score !== undefined && score > 0 && (
               <>
-                {type && <span className="text-muted-foreground/40">·</span>}
+                <span className="text-muted-foreground/40">·</span>
                 <Star className="size-3 fill-gold-strong text-gold-strong" />
                 <span>{score.toFixed(1)}</span>
               </>
@@ -199,6 +214,8 @@ export function AnimeGrid({
     score?: number;
     status?: string;
     type?: string;
+    /** Jumlah episode — tampil di bawah judul ("N episode"). */
+    episodes?: number;
     // "sanka" = slug donghua. Wajib diteruskan supaya kartu itu membuka layar
     // detail DONGHUA, bukan dicari sebagai MAL id anime.
     source?: "anilist" | "sanka";
@@ -221,6 +238,7 @@ export function AnimeGrid({
           score={a.score}
           status={a.status}
           type={a.type}
+          episodes={a.episodes}
           views={views?.[i]}
           rank={ranked ? i + 1 : undefined}
           isNew={newIds?.has(a.id)}

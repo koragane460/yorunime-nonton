@@ -108,6 +108,10 @@ export function AppLayout({
     applyAntiLag(getAntiLag());
   }, []);
 
+  // Panel akun tidak boleh kelihatan sama sekali selama layar fullscreen
+  // terbuka (Detail, Pencarian, Chat, Leaderboard, panel atas, dll).
+  const overlayOpen = useAppOverlayOpen();
+
   const isAuth = location.pathname.startsWith("/auth");
   if (isAuth) return <>{children}</>;
 
@@ -116,7 +120,11 @@ export function AppLayout({
     location.pathname === "/home" ||
     location.pathname === "/" ||
     location.pathname.startsWith("/dashboard");
-  const showPanel = !hideAccountPanel && isHome && location.pathname === "/home";
+  const showPanel =
+    !hideAccountPanel &&
+    isHome &&
+    location.pathname === "/home" &&
+    !overlayOpen;
 
   return (
     <div className="yn-app-bg flex min-h-dvh w-full flex-col items-center">
@@ -151,9 +159,16 @@ export function AppLayout({
       )}
       {/* Konten full-bleed di HP; di desktop (md+) konten tetap di tengah biar
           enak dibaca. Tidak ada lagi kolom kosong di kanan layar HP. */}
+      {/* Animasi route memakai FADE (opacity) — bukan `screen-enter`.
+          `screen-enter` meninggalkan `transform` permanen (fill-mode both),
+          dan transform itu menjadikan div ini containing block untuk SEMUA
+          elemen `position: fixed` di dalamnya: layar Detail/Pencarian jadi
+          ikut turun di bawah panel akun dan melebar ke luar viewport
+          (muncul halaman kosong raksasa di bawah). Fade tidak mengubah
+          positioning sama sekali. */}
       <div
         key={location.pathname}
-        className="screen-enter w-full flex-1 md:mx-auto md:max-w-2xl lg:max-w-4xl"
+        className="fade-enter w-full flex-1 md:mx-auto md:max-w-2xl lg:max-w-4xl"
       >
         <div className="px-4 md:px-6">
           {/* Layar Favorit dipanggil sebagai halaman biasa, bukan fixed
@@ -348,7 +363,7 @@ function OverlayScrollLock() {
   return null;
 }
 
-function useAppOverlayOpen() {
+export function useAppOverlayOpen() {
   return useSyncExternalStore(
     (cb) => {
       overlayListeners.push(cb);

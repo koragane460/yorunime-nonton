@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Loader2, Search, Star, X } from "lucide-react";
+import { ChevronLeft, Loader2, Search, Star, Tv, X } from "lucide-react";
 
 /**
  * Asal data kartu. "sanka" berarti id-nya slug SankaVollereii (donghua),
@@ -19,6 +19,10 @@ export type CardT = {
   status?: string;
   synopsis?: string;
   type?: string;
+  /** Jumlah episode (anime) — tampil "N episode" di bawah judul. */
+  episodes?: number;
+  /** Donghua: jumlah episode saat ini dari Sanka (dipakai "N episode"). */
+  episode?: number;
 };
 
 export type CatalogKind =
@@ -160,9 +164,18 @@ export function CardCarousel({
                       {c.title}
                     </p>
                     <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
-                      <span className="max-w-[60%] truncate font-semibold text-foreground/70">
+                      <span className="inline-flex max-w-[55%] items-center gap-0.5 truncate font-semibold text-foreground/70">
+                        <Tv className="size-3 shrink-0" aria-hidden />
                         {kind === "donghua" ? "Donghua" : (c.type ?? "Anime")}
                       </span>
+                      {c.episodes ?? c.episode ? (
+                        <>
+                          <span className="text-muted-foreground/40">·</span>
+                          <span className="whitespace-nowrap">
+                            {c.episodes ?? c.episode} episode
+                          </span>
+                        </>
+                      ) : null}
                       {c.score ? (
                         <>
                           <span className="text-muted-foreground/40">·</span>
@@ -372,9 +385,18 @@ export function CatalogScreen({
                   {c.title}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
-                  <span className="max-w-[60%] truncate font-semibold text-foreground/70">
+                  <span className="inline-flex max-w-[55%] items-center gap-0.5 truncate font-semibold text-foreground/70">
+                    <Tv className="size-3 shrink-0" aria-hidden />
                     {kind === "donghua" ? "Donghua" : (c.type ?? "Anime")}
                   </span>
+                  {c.episodes ?? c.episode ? (
+                    <>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="whitespace-nowrap">
+                        {c.episodes ?? c.episode} episode
+                      </span>
+                    </>
+                  ) : null}
                   {c.score ? (
                     <>
                       <span className="text-muted-foreground/40">·</span>

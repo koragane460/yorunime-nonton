@@ -104,7 +104,7 @@ export default function Home() {
 
 function HeroSkeleton() {
   return (
-    <div className="skeleton mt-3 h-[420px] w-full rounded-2xl border border-white/5" />
+    <div className="skeleton mt-3 h-[300px] w-full rounded-2xl border border-white/5" />
   );
 }
 
@@ -517,12 +517,14 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) HERO BANNER */}
+      {/* 2) HERO BANNER — tinggi ditentukan OLEH BANNER (ukuran alami kartu
+          anime), bukan oleh slide leaderboard. Slide leaderboard yang
+          dipadatkan supaya muat di dalam kotak yang sama. */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <div
-          className="fade-enter relative mt-3 h-[420px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
+          className="fade-enter relative mt-3 h-[300px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
           onPointerDown={(e) => {
             heroTouchX.current = e.clientX;
           }}
@@ -641,7 +643,7 @@ function HomeContent() {
                   "linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.62) 55%, rgba(0,0,0,.42) 100%), radial-gradient(120% 90% at 12% -10%, rgba(255,45,45,.45) 0%, rgba(255,45,45,0) 55%), radial-gradient(100% 80% at 110% 5%, rgba(255,196,0,.3) 0%, rgba(255,196,0,0) 60%)",
               }}
             >
-              <div className="relative min-h-0 flex-1 overflow-hidden">
+              <div className="relative min-h-0 flex-1 overflow-y-auto thin-scroll">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                     Live
@@ -1434,18 +1436,16 @@ function HomeLeaderboardPreview() {
         <div className="skeleton h-10 w-full rounded-xl" />
       </div>
     );
-  const [t1, t2, t3, ...rest] = data;
+  const [t1, t2, t3] = data;
+  // Preview ini hidup DI DALAM slide hero, jadi tingginya mengikuti ukuran
+  // banner (podium 3 besar saja). Daftar lengkap tetap ada di layar penuh
+  // LeaderboardScreen — di sini leaderboard yang menyesuaikan, bukan sebaliknya.
   return (
     <div className="mt-2">
       <div className="grid grid-cols-3 items-end gap-2">
-        {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-14" />}
-        {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-20" />}
-        {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-11" />}
-      </div>
-      <div className="mt-2 space-y-1.5">
-        {rest.map((e) => (
-          <LeaderEntryRow key={e.userId} rank={e.rank} username={e.username} image={e.image} xp={e.xp} />
-        ))}
+        {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-12" />}
+        {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-16" />}
+        {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-10" />}
       </div>
     </div>
   );
@@ -1871,20 +1871,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         </div>
       )}
 
-      {/* Urutan */}
-      <div className="mt-2 flex justify-end">
-        <button
-          onClick={() => {
-            // Urutan: hanya “Relevance” yang dipakai — saya pertahankan biar
-            // label ekran persis seperti fotom, meski di backend filter lite.
-          }}
-          className="gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
-        >
-          <Star className="size-3.5 text-gold-strong" aria-hidden />
-          Relevant ▾
-        </button>
-      </div>
-
       {/* Hasil: hasil pencarian > daftar genre/semua */}
       {searching && (
         <p className="mt-3 text-center text-xs text-muted-foreground">Mencari…</p>
@@ -1917,16 +1903,6 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
                 <div className="mb-2 flex items-baseline justify-between">
                   <p className="text-base font-bold tracking-tight">
                     Hasil Pencarian ({results.length})                  </p>
-                  <button
-                    onClick={() => {
-                      /* Urutan default: Relevance. Tidak ada re-sort lain
-                          yang tersedia di layar ini. */
-                    }}
-                    className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40"
-                  >
-                    <Star className="size-3.5 text-gold-strong mr-1" aria-hidden />
-                    Relevant ▾
-                  </button>
                 </div>
                 <div className="space-y-2">
                   {results.map((a) => (
@@ -2512,7 +2488,7 @@ function AnimeDetailScreen({
               </h2>
               {/* Judul terjemahan Inggris — teks kecil di bawah judul asli. */}
               {detail.titleEnglish && (
-                <p className="mt-0.5 line-clamp-1 text-[11px] italic text-white/70">
+                <p className="mt-0.5 line-clamp-1 text-[11px] text-white/70">
                   {detail.titleEnglish}
                 </p>
               )}
@@ -2797,11 +2773,11 @@ function AnimeDetailScreen({
                               )
                             }
                             className={cn(
-                              // Transparan: tanpa kotak, hanya nomor episode.
-                              "size-10 rounded-lg text-sm font-semibold transition",
-                              released
-                                ? "text-white/90 hover:bg-white/10"
-                                : "cursor-not-allowed text-white/25",
+                              // Kotak nomor episode DENGAN background (bukan
+                              // transparan) supaya jelas itu tombol.
+                              "size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40",
+                              !released &&
+                                "cursor-not-allowed border-border/40 bg-secondary/10 text-white/25 hover:border-border/40",
                             )}
                           >
                             {e.number}
@@ -3402,7 +3378,7 @@ function DonghuaDetailScreen({
                       <button
                         key={e.number || e.url}
                         onClick={() => onPlay(e.url, e.number || 1, detail.title)}
-                        className="size-10 rounded-lg text-sm font-semibold text-white/90 transition hover:bg-white/10"
+                        className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40"
                       >
                         {e.number}
                       </button>

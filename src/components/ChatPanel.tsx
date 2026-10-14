@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Check, Crown, ImagePlus, MoreVertical, Plus, Reply, Send, Trash2, VolumeX, X } from "lucide-react";
+import { Check, Crown, ImagePlus, Lock, MoreVertical, Plus, Reply, Send, Trash2, VolumeX, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -492,6 +492,9 @@ export function ChatPanel({
   const nsfwReport = useMutation(api.chat.nsfwReport);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const { muted } = useModeration();
+  // Kirim foto = fitur Premium. User non-premium tidak bisa membuka picker
+  // foto sama sekali (server juga menolak, lihat convex/chat.ts).
+  const canPhoto = (user?.premiumUntil ?? 0) > Date.now();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -591,18 +594,17 @@ export function ChatPanel({
                   )}
                 />
               </button>
-              <div className={cn("flex max-w-[70%] min-w-0 flex-col", mine ? "items-end" : "items-start")}>
+              <div className={cn("flex w-3/4 min-w-0 flex-col", mine ? "items-end" : "items-start")}>
                 <div
                   className={cn(
-                    "w-fit flex flex-col items-start rounded-md px-3 py-2",
-                    "w-auto max-w-full min-w-0 self-start border-0",
-                    mine && "self-end items-end",
-                    // Bubble dibungkus w-fit: tidak melar lebar penuh sampai
-                    // muncul garis abu-abu panjang seperti sebelumnya.
+                    // Semua bubble panjangnya SAMA (w-full di kolom w-3/4):
+                    // pesan pendek maupun panjang tetap satu ukuran kotak.
+                    "flex w-full flex-col rounded-md px-3 py-2",
+                    mine && "items-end",
                     // Pesan yang isinya cuma foto: bubble dibuat transparan
                     // supaya tidak ada kotak hitam di belakang fotonya.
                       m.imageUrl && !m.text
-                          ? "border-transparent bg-transparent p-0 shadow-none"
+                          ? "border-transparent bg-transparent px-1 pb-1 pt-0 shadow-none"
                           : give
                               ? "bubble-give"
                               : mine
@@ -670,35 +672,37 @@ export function ChatPanel({
                       )}
                     </>
                   )}
-                </div>
-                <div
-                  className={cn(
-                    "mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground",
-                    mine && "flex-row-reverse",
-                  )}
-                >
-                  <span>{new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <button
-                    aria-label="Reply"
-                    title="Reply"
-                    onClick={() => setReplyTo(m)}
-                    className="hover:text-primary"
+                  {/* Meta pesan — waktu, reply, dan menu titik-tiga SEMUA di
+                      DALAM bubble, bukan di luar kotak. */}
+                  <div
+                    className={cn(
+                      "mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground",
+                      mine && "flex-row-reverse",
+                    )}
                   >
-                    <Reply className="size-3.5" />
-                  </button>
-                  {mine ? (
-                    <DeleteButton messageId={m._id} onDeleteLocal={onDeleteLocal} />
-                  ) : (
-                    /* Tombol ":" di pojok pesan → popup lapor */
+                    <span>{new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
                     <button
-                      aria-label="Laporkan pesan"
-                      title="Lapor"
-                      onClick={() => setReportMsg(m)}
-                      className="hover:text-foreground"
+                      aria-label="Reply"
+                      title="Reply"
+                      onClick={() => setReplyTo(m)}
+                      className="hover:text-primary"
                     >
-                      <MoreVertical className="size-3.5" />
+                      <Reply className="size-3.5" />
                     </button>
-                  )}
+                    {mine ? (
+                      <DeleteButton messageId={m._id} onDeleteLocal={onDeleteLocal} />
+                    ) : (
+                      /* Tombol ":" di pojok pesan → popup lapor */
+                      <button
+                        aria-label="Laporkan pesan"
+                        title="Lapor"
+                        onClick={() => setReportMsg(m)}
+                        className="hover:text-foreground"
+                      >
+                        <MoreVertical className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -749,10 +753,29 @@ export function ChatPanel({
             {plusOpen && (
               <div className="pop-enter absolute bottom-12 left-0 z-10 flex flex-col gap-2 rounded-2xl border border-border bg-popover p-2 shadow-xl">
                 <button
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent"
-                  onClick={() => fileRef.current?.click()}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent",
+                    !canPhoto && "cursor-not-allowed text-muted-foreground hover:bg-transparent",
+                  )}
+                  onClick={() => {
+                    // Fitur terkunci Premium: kalau bukan premium, file picker
+                    // tidak pernah terbuka — tidak bisa dipakai sama sekali.
+                    if (!canPhoto) {
+                      setPlusOpen(false);
+                      toast.error(
+                        "Kirim foto hanya untuk akun Premium — buka Premium dulu",
+                      );
+                      return;
+                    }
+                    fileRef.current?.click();
+                  }}
                 >
-                  <ImagePlus className="size-4" /> Kirim foto
+                  {canPhoto ? (
+                    <ImagePlus className="size-4" />
+                  ) : (
+                    <Lock className="size-4" />
+                  )}
+                  Kirim foto{!canPhoto ? " (Premium)" : ""}
                 </button>
                 {!noPremium && (
                 <button
