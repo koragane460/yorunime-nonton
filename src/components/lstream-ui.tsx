@@ -160,12 +160,19 @@ export function AnimeCard({
           <p className="line-clamp-2 text-xs font-medium leading-4 text-foreground/95">
             {title}
           </p>
-          {/* Baris meta: ikon TV + label format (TV/Movie/Donghua) + jumlah
-              episode + rating bintang kuning strong (tanpa outline) + views. */}
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground/80">
+          {/* Baris meta meniru persis bagian "Yang serupa": bintang kuning
+              + rating dulu, lalu ikon TV + tipe; "· N episode" wrap sendiri
+              ke baris berikutnya di kartu yang sempit. */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] text-white/70">
+            {score !== undefined && score > 0 && (
+              <span className="inline-flex items-center gap-0.5 font-bold text-yellow-400">
+                <Star className="size-3 fill-current" aria-hidden />
+                {score.toFixed(1)}
+              </span>
+            )}
             {type && (
-              <span className="inline-flex max-w-[55%] items-center gap-0.5 truncate font-semibold text-foreground/70">
-                <Tv className="size-3 shrink-0" aria-hidden />
+              <span className="inline-flex items-center gap-0.5">
+                <Tv className="size-3" aria-hidden />
                 {type === "MOVIE"
                   ? "Movie"
                   : type === "TV_SHORT"
@@ -174,24 +181,13 @@ export function AnimeCard({
               </span>
             )}
             {typeof episodes === "number" && episodes > 0 && (
-              <>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="whitespace-nowrap">{episodes} episode</span>
-              </>
-            )}
-            {score !== undefined && score > 0 && (
-              <>
-                <span className="text-muted-foreground/40">·</span>
-                <Star className="size-3 fill-gold-strong text-gold-strong" />
-                <span>{score.toFixed(1)}</span>
-              </>
+              <span>· {episodes} episode</span>
             )}
             {views !== undefined && views > 0 && (
-              <>
-                <span className="text-muted-foreground/40">·</span>
-                <Eye className="size-3" />
-                <span>{views.toLocaleString("id-ID")}</span>
-              </>
+              <span className="inline-flex items-center gap-0.5">
+                <Eye className="size-3" aria-hidden />
+                {views.toLocaleString("id-ID")}
+              </span>
             )}
           </div>
         </div>

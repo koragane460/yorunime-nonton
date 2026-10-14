@@ -80,6 +80,24 @@ export const getPublicProfile = query({
       .query("watchHistory")
       .withIndex("userId_updated", (q) => q.eq("userId", userId))
       .collect();
+    // Poster per anime — dipakai kartu komentar di bawah. Komentar hanya
+    // menyimpan id + judul, jadi gambar anime diambil dari riwayat tonton
+    // dan favorite user yang sama.
+    const favs = await ctx.db
+      .query("animeFavorites")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .collect();
+    const posterByAnime = new Map<string, string>();
+    for (const f of favs) {
+      if (f.animeImage) posterByAnime.set(f.animeId, f.animeImage);
+    }
+    for (const h of history) {
+      if (h.animeImage && !posterByAnime.has(h.animeId))
+        posterByAnime.set(h.animeId, h.animeImage);
+    }
+    const posterFor = (animeId: string) =>
+      posterByAnime.get(String(animeId).split("__ep")[0]) ??
+      posterByAnime.get(animeId);
     const comments = await ctx.db
       .query("animeComments")
       .filter((q: any) => q.eq(q.field("userId"), userId))
@@ -113,12 +131,14 @@ export const getPublicProfile = query({
       minutesWatched: history.reduce((s, h) => s + (h.minutesWatched ?? 0), 0),
       joinedAt: u.createdAt ?? now,
       myComments: comments
+        .filter((cm: any) => !cm.deleted)
         .sort((a: any, b: any) => b.createdAt - a.createdAt)
         .slice(0, 30)
         .map((cm: any) => ({
           _id: cm._id,
           animeId: cm.animeId,
           animeTitle: cm.animeTitle,
+          animeImage: posterFor(cm.animeId),
           text: cm.text,
           createdAt: cm.createdAt,
           likeCount: cm.likes?.length ?? 0,

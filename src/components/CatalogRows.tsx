@@ -163,25 +163,19 @@ export function CardCarousel({
                     <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                       {c.title}
                     </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
-                      <span className="inline-flex max-w-[55%] items-center gap-0.5 truncate font-semibold text-foreground/70">
-                        <Tv className="size-3 shrink-0" aria-hidden />
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[10px] text-white/70">
+                      {c.score ? (
+                        <span className="inline-flex items-center gap-0.5 font-bold text-yellow-400">
+                          <Star className="size-3 fill-current" aria-hidden />
+                          {c.score.toFixed(1)}
+                        </span>
+                      ) : null}
+                      <span className="inline-flex items-center gap-0.5">
+                        <Tv className="size-3" aria-hidden />
                         {kind === "donghua" ? "Donghua" : (c.type ?? "Anime")}
                       </span>
                       {c.episodes ?? c.episode ? (
-                        <>
-                          <span className="text-muted-foreground/40">·</span>
-                          <span className="whitespace-nowrap">
-                            {c.episodes ?? c.episode} episode
-                          </span>
-                        </>
-                      ) : null}
-                      {c.score ? (
-                        <>
-                          <span className="text-muted-foreground/40">·</span>
-                          <Star className="size-3 fill-gold-strong text-gold-strong" />
-                          <span>{c.score.toFixed(1)}</span>
-                        </>
+                        <span>· {c.episodes ?? c.episode} episode</span>
                       ) : null}
                     </p>
                   </button>
@@ -384,25 +378,19 @@ export function CatalogScreen({
                 <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
                   {c.title}
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
-                  <span className="inline-flex max-w-[55%] items-center gap-0.5 truncate font-semibold text-foreground/70">
-                    <Tv className="size-3 shrink-0" aria-hidden />
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[10px] text-white/70">
+                  {c.score ? (
+                    <span className="inline-flex items-center gap-0.5 font-bold text-yellow-400">
+                      <Star className="size-3 fill-current" aria-hidden />
+                      {c.score.toFixed(1)}
+                    </span>
+                  ) : null}
+                  <span className="inline-flex items-center gap-0.5">
+                    <Tv className="size-3" aria-hidden />
                     {kind === "donghua" ? "Donghua" : (c.type ?? "Anime")}
                   </span>
                   {c.episodes ?? c.episode ? (
-                    <>
-                      <span className="text-muted-foreground/40">·</span>
-                      <span className="whitespace-nowrap">
-                        {c.episodes ?? c.episode} episode
-                      </span>
-                    </>
-                  ) : null}
-                  {c.score ? (
-                    <>
-                      <span className="text-muted-foreground/40">·</span>
-                      <Star className="size-3 fill-gold-strong text-gold-strong" />
-                      <span>{c.score.toFixed(1)}</span>
-                    </>
+                    <span>· {c.episodes ?? c.episode} episode</span>
                   ) : null}
                 </p>
               </button>

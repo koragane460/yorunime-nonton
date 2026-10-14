@@ -16,6 +16,16 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Avatar,
+  BlueCheck,
+  ClanTag,
+  LevelBadge,
+  TitleBadge,
+} from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import { displayId, usernameColor } from "@/lib/lstream";
 
 type Plan = { id: string; label: string; days: number; price: number; sacret?: number };
 type Order = {
@@ -43,13 +53,6 @@ const PERKS = [
   "XP nonton 2× lebih banyak dibandingkan non-premium",
   "Bonus Sacret setiap kali membeli paket",
   "Bisa kasih premium ke orang lain dan kumpulkan XP",
-];
-
-const HOW_IT_WORKS = [
-  "Buka paket, tekan Beli premium.",
-  "Scan QRIS yang muncul, transfer sesuai nominal.",
-  "Screenshot bukti transfer, lalu unggah di kolom bukti.",
-  "Isi keterangan transfer, tekan Kirim Transfer, lalu tunggu dicek.",
 ];
 
 /** Bukti transfer harus tajam. Skor di bawah ini berarti foto buram. */
@@ -166,7 +169,6 @@ export default function Premium() {
       </button>
       <div className="py-3">
         <Hero />
-        <HowTo />
         <Plans />
         <Perks />
         <HistoryList />
@@ -175,41 +177,67 @@ export default function Premium() {
   );
 }
 
+/**
+ * Kartu profil lurus (tanpa skew) di atas layar Premium — menggantikan
+ * hero "YORUNIME Premium" + langkah "Cara beli" yang diminta dihapus.
+ * Isinya: foto profil, username, title staff, badge centang biru, tag clan,
+ * ID, dan status premium.
+ */
 function Hero() {
-  return (
-    <header className="pop-enter flex flex-col items-center border-b border-white/10 pb-5 pt-2 text-center">
-      <span className="flex size-14 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_24px_-4px] shadow-gold/50">
-        <Crown className="size-7 text-gold" />
-      </span>
-      <p className="mt-2.5 font-mono text-[11px] tracking-[0.28em] text-zinc-400">
-        YORUNIME
-      </p>
-      <h1 className="mt-0.5 text-3xl font-extrabold leading-tight">
-        Premium<span className="text-gold">.</span>
-      </h1>
-      <p className="mt-2 max-w-[22rem] text-[13px] leading-6 text-zinc-400">
-        Nonton tanpa iklan, kualitas 1080p, loading sat set, dan centang biru
-        di samping namamu.
-      </p>
-    </header>
+  const { user } = useAuth();
+  const now = Date.now();
+  const premium = (user?.premiumUntil ?? 0) > now;
+  const premiumDays = Math.max(
+    0,
+    Math.floor(((user?.premiumUntil ?? 0) - now) / 86400000),
   );
-}
-
-function HowTo() {
+  if (!user) return null;
   return (
-    <section className="mt-6">
-      <h2 className="text-[13px] font-bold text-gold">Cara beli</h2>
-      <div className="yn-card mt-2 divide-y divide-white/8 px-4">
-        {HOW_IT_WORKS.map((step, i) => (
-          <div key={step} className="flex items-start gap-3 py-3">
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/10 font-mono text-[10px] font-bold text-gold">
-              {i + 1}
-            </span>
-            <span className="text-[13px] leading-6 text-zinc-300">{step}</span>
-          </div>
-        ))}
+    <header className="pop-enter yn-card flex items-center gap-3 rounded-2xl border border-gold/25 p-3">
+      <Avatar
+        src={user.image}
+        seed={user.username}
+        className="size-12 shrink-0 ring-2 ring-gold/40"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className={cn("truncate text-sm font-bold", usernameColor(user.username))}>
+            {user.username ?? "user"}
+          </span>
+          {premium && <BlueCheck className="size-3.5" />}
+          <TitleBadge role={user.staffRole} compact />
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <LevelBadge level={user.level ?? 1} className="origin-left scale-90" />
+          {user.clanTag && (
+            <ClanTag
+              icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+              tag={user.clanTag}
+              color={user.clanNameColor}
+              className="scale-90"
+            />
+          )}
+          <span className="text-[10px] text-zinc-500">
+            ID: {displayId(user.seqId, user._id)}
+          </span>
+        </div>
       </div>
-    </section>
+      <span
+        className={cn(
+          "shrink-0 rounded-lg px-2.5 py-1.5 text-center text-[10px] font-bold",
+          premium ? "bg-gold/15 text-gold" : "bg-white/5 text-zinc-400",
+        )}
+      >
+        {premium ? (
+          <>
+            Premium
+            <span className="block text-[13px]">{premiumDays} hari</span>
+          </>
+        ) : (
+          "Belum premium"
+        )}
+      </span>
+    </header>
   );
 }
 

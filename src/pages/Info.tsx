@@ -311,7 +311,8 @@ function LanjutTab() {
     return [...anime, ...comic].sort((a, b) => b.at - a.at);
   }, [rows, comicRows]);
 
-  // Kelompokkan per hari: Hari ini → Kemarin → dd/mm/yyyy (tanpa background).
+  // Kelompokkan per hari: Hari ini → Kemarin → dd/mm/yyyy. Tiap label
+  // hari dibungkus kotak rounded biru muda supaya mudah dikenali.
   const groups = useMemo(() => {
     const now = new Date();
     const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -345,8 +346,8 @@ function LanjutTab() {
     <div className="pt-3">
       {groups.map((g) => (
         <div key={g.label} className="mb-4">
-          {/* Judul tanggal tanpa background, rata kiri. */}
-          <h3 className="mb-2 text-left text-sm font-bold tracking-tight text-foreground/90">
+          {/* Judul tanggal: kotak rounded biru muda, rata kiri. */}
+          <h3 className="mb-2 inline-flex rounded-lg bg-sky-500/15 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-sky-300">
             {g.label}
           </h3>
           <div className="space-y-2">

@@ -219,10 +219,14 @@ export function DownloadWorker() {
 export function DownloadsPanel({
   onClose,
   inline,
+  minimalEmpty,
 }: {
   onClose: () => void;
   /** true = tampil di tempat sebagai tab, bukan layar fullscreen. */
   inline?: boolean;
+  /** true = layar kosong hanya ikon (tanpa judul/pesan kecil) — dipakai
+      layar Koleksi yang diminta bersih dari tulisan kecil. */
+  minimalEmpty?: boolean;
 }) {
   useHideNavWhile(!inline);
   const navigate = useNavigate();
@@ -314,11 +318,19 @@ export function DownloadsPanel({
         onClose={onClose}
         inline={inline}
       >
-        <EmptyState
-          icon={<Download className="size-6" />}
-          title="Belum ada episode diunduh"
-          body="Tekan tombol Download di halaman nonton. File-nya tersimpan di perangkatmu dan bisa ditonton tanpa internet."
-        />
+        {minimalEmpty ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <span className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
+              <Download className="size-6" />
+            </span>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Download className="size-6" />}
+            title="Belum ada episode diunduh"
+            body="Tekan tombol Download di halaman nonton. File-nya tersimpan di perangkatmu dan bisa ditonton tanpa internet."
+          />
+        )}
       </PanelShell>
     );
   }

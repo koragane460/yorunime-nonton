@@ -33,6 +33,8 @@ import {
   Copy,
   Film,
   Tv,
+  Plus,
+  Users,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -644,20 +646,11 @@ function HomeContent() {
               }}
             >
               <div className="relative min-h-0 flex-1 overflow-y-auto thin-scroll">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
-                    Live
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white">
-                    <Trophy className="size-3 text-[var(--gold-strong)]" /> Top XP
-                    komunitas
-                  </span>
-                  <span className="ml-auto text-xs text-zinc-300">lihat semua ›</span>
-                </div>
-                <h3 className="mt-1.5 text-lg font-black">Leaderboard</h3>
-                <p className="mt-0.5 text-xs leading-relaxed text-zinc-300">
-                  Peringkat XP pemain — ketuk untuk membuka lengkap.
-                </p>
+                {/* Semua teks di atas podium dihapus (badge Live, deskripsi,
+                    nama & XP) — hanya judul "Leaderboard" yang dipertahankan,
+                    supaya baris kotak top 4-5 tetap kelihatan di dalam
+                    kotak banner tanpa haerd. */}
+                <h3 className="text-lg font-black">Leaderboard</h3>
                 <HomeLeaderboardPreview />
               </div>
             </button>
@@ -1154,7 +1147,7 @@ function LeaderEntryRow({
     <div
       className={cn(
         "lb-rise flex items-center gap-3 rounded-2xl p-2.5",
-        compact && "gap-2 py-2",
+        compact && "gap-2 py-1.5",
         !plain && "border bg-secondary/40",
         // Top 4-5 di preview Home (bukan daftar plain) dapat aksen biar tidak polos.
         !plain && rank === 4
@@ -1222,12 +1215,15 @@ function PodiumCard({
   image,
   xp,
   height,
+  hideLabel,
 }: {
   rank: number;
   username?: string;
   image?: string;
   xp: number;
   height: string;
+  /** true = sembunyikan nama & XP di atas podium (preview hero yang compact). */
+  hideLabel?: boolean;
 }) {
   return (
     <div
@@ -1265,10 +1261,14 @@ function PodiumCard({
           </span>
         )}
       </div>
-      <p className="mt-1.5 w-full truncate text-center text-[11px] font-semibold leading-tight">
-        {username ?? "user"}
-      </p>
-      <p className="text-[10px] leading-tight text-primary">{xp.toLocaleString("id-ID")} XP</p>
+      {!hideLabel && (
+        <>
+          <p className="mt-1.5 w-full truncate text-center text-[11px] font-semibold leading-tight">
+            {username ?? "user"}
+          </p>
+          <p className="text-[10px] leading-tight text-primary">{xp.toLocaleString("id-ID")} XP</p>
+        </>
+      )}
       <div
         className={cn(
           "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 pt-1 text-lg font-black text-white",
@@ -1436,17 +1436,31 @@ function HomeLeaderboardPreview() {
         <div className="skeleton h-10 w-full rounded-xl" />
       </div>
     );
-  const [t1, t2, t3] = data;
+  const [t1, t2, t3, ...rest] = data;
   // Preview ini hidup DI DALAM slide hero, jadi tingginya mengikuti ukuran
-  // banner (podium 3 besar saja). Daftar lengkap tetap ada di layar penuh
-  // LeaderboardScreen — di sini leaderboard yang menyesuaikan, bukan sebaliknya.
+  // banner: podium 3 besar tanpa teks nama/XP, lalu 2 baris kotak top 4-5.
+  // Daftar lengkap tetap di layar penuh LeaderboardScreen.
   return (
-    <div className="mt-2">
+    <div className="mt-1.5">
       <div className="grid grid-cols-3 items-end gap-2">
-        {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-12" />}
-        {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-16" />}
-        {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-10" />}
+        {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-10" hideLabel />}
+        {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-12" hideLabel />}
+        {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-8" hideLabel />}
       </div>
+      {rest.length > 0 && (
+        <div className="mt-1.5 space-y-1.5">
+          {rest.slice(0, 2).map((e) => (
+            <LeaderEntryRow
+              key={e.userId}
+              rank={e.rank}
+              username={e.username}
+              image={e.image}
+              xp={e.xp}
+              compact
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2085,24 +2099,30 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   <p className="text-xs text-muted-foreground">
                     Join clan atau buat clan untuk bergabung
                   </p>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/clan");
-                    }}
-                    className="mt-1 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
-                  >
-                    Lihat clan
-                  </button>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/clan?buat=1");
-                    }}
-                    className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground"
-                  >
-                    Buat clan
-                  </button>
+                  {/* Tombol clan compact (sejajar, tidak melebar ke pinggir,
+                      text lebih kecil) dengan glow gradient biar lebih keren. */}
+                  <div className="mt-1 flex items-center justify-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate("/clan");
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 via-rose-500 to-primary px-3.5 py-1.5 text-[11px] font-black tracking-wide text-white shadow-[0_0_18px_-4px] shadow-rose-500/80 ring-1 ring-white/25 transition hover:brightness-110 active:scale-95"
+                    >
+                      <Users className="size-3" aria-hidden />
+                      Lihat clan
+                    </button>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate("/clan?buat=1");
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-300 ring-1 ring-emerald-400/20 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-95"
+                    >
+                      <Plus className="size-3" aria-hidden />
+                      Buat clan
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ import {
   Heart,
   LogIn,
   Send,
+  Tv,
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -417,15 +418,39 @@ export function ProfileSheet({
                           `/nonton?anime=${encodeURIComponent(String(c.animeId).split("__ep")[0] ?? "")}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
                         );
                       }}
-                      className="mb-2 block w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
+                      className="flex w-full items-start gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
                     >
-                      <p className="text-sm">{c.text}</p>
-                      <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <span>{timeAgo(c.createdAt)}</span>
-                        <span className="flex items-center gap-0.5">
-                          <Heart className="size-3 text-primary" /> {c.likeCount}
+                      {/* Poster anime yang dikomentari + judul + episode */}
+                      {c.animeImage ? (
+                        <img
+                          src={c.animeImage}
+                          alt=""
+                          className="h-16 w-11 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-16 w-11 shrink-0 items-center justify-center rounded bg-white/5">
+                          <Tv className="size-4 text-muted-foreground" />
                         </span>
-                      </p>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">
+                          {c.animeTitle ?? "Anime"}
+                        </p>
+                        {c.episode !== undefined && (
+                          <p className="text-xs text-muted-foreground">
+                            Episode {c.episode}
+                          </p>
+                        )}
+                        <p className="mt-1 line-clamp-2 text-sm text-zinc-300">
+                          {c.text}
+                        </p>
+                        <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span>{timeAgo(c.createdAt)}</span>
+                          <span className="flex items-center gap-0.5">
+                            <Heart className="size-3 text-primary" /> {c.likeCount}
+                          </span>
+                        </p>
+                      </div>
                     </button>
                   ))}
             </div>
