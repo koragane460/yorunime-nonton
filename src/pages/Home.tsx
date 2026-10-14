@@ -733,7 +733,7 @@ function HomeContent() {
                   "linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.62) 55%, rgba(0,0,0,.42) 100%), radial-gradient(120% 90% at 12% -10%, rgba(255,45,45,.45) 0%, rgba(255,45,45,0) 55%), radial-gradient(100% 80% at 110% 5%, rgba(255,196,0,.3) 0%, rgba(255,196,0,0) 60%)",
               }}
             >
-              <div className="relative w-full p-4">
+              <div className="relative w-full p-4 pb-9">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                     Live
