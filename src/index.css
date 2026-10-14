@@ -427,3 +427,69 @@
   }
 }
 
+/* ------------------------------------------------------------------
+ * Animasi fade untuk pindah/muncul layar.
+ *  .screen-enter — layar penuh (detail, chat, pencarian, dst.) & konten
+ *                  halaman saat route berganti: fade + slide halus.
+ *  .fade-enter   — kartu/section yang muncul di dalam halaman.
+ *  .pop-enter    — popup/dialog: fade + scale kecil.
+ * Mode Anti lag mematikan semua animasi di bawah.
+ * ------------------------------------------------------------------ */
+@keyframes yn-screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes yn-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes yn-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.screen-enter {
+  animation: yn-screen-in 0.28s ease-out both;
+}
+.fade-enter {
+  animation: yn-fade-in 0.35s ease-out both;
+}
+.pop-enter {
+  animation: yn-pop-in 0.18s ease-out both;
+}
+
+/* Anti lag: matikan animasi & transisi berat (dipakai AppLayout). */
+.antilag .screen-enter,
+.antilag .fade-enter,
+.antilag .pop-enter,
+.antilag *,
+.antilag *::before,
+.antilag *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter,
+  .fade-enter,
+  .pop-enter {
+    animation: none !important;
+  }
+}
+
