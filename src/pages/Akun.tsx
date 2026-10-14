@@ -73,198 +73,46 @@ export default function Akun() {
 
 function AkunContent() {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  // Level panel dipakai juga untuk gerbang fitur uji coba (mis. bikin story).
-  const access = useQuery(api.moderation.myPanelAccess, {});
-  const panelLevel: "dev" | "mod" | "none" =
-    access?.level === "dev" ? "dev" : access?.level === "mod" ? "mod" : "none";
-  const [params, setParams] = useSearchParams();
-  const tabParam = params.get("tab");
-  const [tab, setTab] = useState<"history" | "komen" | "favorite">(
-    tabParam === "favorite"
-      ? "favorite"
-      : tabParam === "history"
-        ? "history"
-        : "komen",
+  const [params] = useSearchParams();
+  // Layar Akun kini HANYA tombol Pengaturan. Banner, profil, title, story,
+  // statistik, dan tab history/komen/favorite dihapus permanen.
+  const [settingsOpen, setSettingsOpen] = useState(
+    params.get("tab") === "settings",
   );
-  const [settingsOpen, setSettingsOpen] = useState(tabParam === "settings");
-  const [notifOpen, setNotifOpen] = useState(tabParam === "notif");
-  const [badgesOpen, setBadgesOpen] = useState(false);
-  const [titlesOpen, setTitlesOpen] = useState(false);
   const [csOpen, setCsOpen] = useState(false);
-  // Story: komposisi (galeri/kamera) -> penyuntingan -> penampil.
-  const [storyStage, setStoryStage] = useState<
-    null | "pick" | "edit" | "view"
-  >(null);
-  const [storyPicks, setStoryPicks] = useState<
-    { file: File; url: string; kind: "image" | "video" }[]
-  >([]);
-
-  const stats = useQuery(api.account.profileStats, user ? {} : "skip");
-  // Bersihkan story yang sudah lewat 24 jam. Dipanggil saat halaman Akun
-  // dibuka; UI sendiri sudah memfilter story kadaluarsa, ini hanya memastikan
-  // dokumen + penontonnya benar-benar dihapus dari database.
-  const purgeStories = useMutation(api.stories.purgeExpired);
-  useEffect(() => {
-    void purgeStories({}).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  // Story saya sendiri, untuk cincin biru muda + penanda ada story.
-  const myStories = useQuery(api.stories.myStories, user ? {} : "skip") as
-    | { _id: string; viewCount: number; expiresAt: number }[]
-    | undefined;
-  const history = useQuery(api.activities.myHistory, user ? {} : "skip");
-  const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
-  const comicHistory = useQuery(api.comics.myHistory, user ? {} : "skip");
-  const comicFavorites = useQuery(api.comics.myFavorites, user ? {} : "skip");
-  const profile = useQuery(api.account.getPublicProfile, user ? { userId: user._id } : "skip");
-  // Data title: clan, peringkat XP, dan peringkat give premium.
-  const xpBoard = useQuery(api.account.totalLeaderboard, { limit: 50 });
-  const giveBoard = useQuery(api.account.topGive, { limit: 10 });
 
   if (!user) return null;
-  const xpInLevel = user.xp ?? 0;
-  const cost = xpForLevel(user.level ?? 1);
-  const pct = Math.min(100, (xpInLevel / Math.max(1, cost)) * 100);
-  const premium = (user.premiumUntil ?? 0) > Date.now();
-  const premiumDays = Math.max(
-    0,
-    Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
-  );
-
-  const setTabAndUrl = (t: typeof tab) => {
-    setTab(t);
-    setParams({});
-  };
-
-  // Title hanya muncul kalau datanya memang ada, tidak ada title karangan.
-  const xpRank = (xpBoard ?? []).findIndex((r) => r.userId === user._id);
-  const giveRank = (giveBoard ?? []).findIndex((r) => r.userId === user._id);
-  const titles: { name: string; note: string; clan?: boolean }[] = [];
-  if (user.clanTag)
-    titles.push({ name: user.clanTag, note: "Title clan", clan: true });
-  if (xpRank >= 0)
-    titles.push({ name: "Puncak XP", note: `Peringkat #${xpRank + 1}` });
-  if (giveRank >= 0)
-    titles.push({
-      name: "Raja Premium",
-      note: `Peringkat #${giveRank + 1} · ${giveBoard![giveRank].days} hari diberikan`,
-    });
-
   return (
     <div className="relative">
-      {/* Banner full-bleed. Wrapper-nya memotong overflow supaya tidak ada
-          elemen yang keluar dari lebar layar (ruang hitam di kanan). */}
-      <div className="yn-banner-box relative -mx-4 overflow-hidden md:-mx-6">
-        <BlurBanner src={user.bannerUrl ?? user.image} className="h-52 w-full" />
-        {/* Bilah sambung warna tipis di bawah banner, tanpa blur */}
-        <div aria-hidden className="yn-banner-fade" />
-        {/* Veil gradasi: banner menyatu dengan kartu profil di bawahnya */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(0deg, rgba(9,11,20,.95) 0%, rgba(9,11,20,.35) 55%, rgba(9,11,20,.55) 100%)",
-          }}
-        />
-        {/* Aksi pojok kanan atas: Notifikasi lalu Pengaturan */}
-        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
-          <button
-            onClick={() => setNotifOpen(true)}
-            aria-label="Notifikasi"
-            className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-          >
-            <Bell className="size-[18px]" />
-          </button>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Pengaturan"
-            className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-          >
-            <SettingsIcon className="size-[18px]" />
-          </button>
-        </div>
+      {/* Satu-satunya kontrol di layar Akun: tombol Pengaturan. */}
+      <div className="flex justify-end pt-4">
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Pengaturan"
+          className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
+        >
+          <SettingsIcon className="size-[18px]" />
+        </button>
       </div>
 
-      {/* Title: DI LUAR banner-box. banner-box memotong overflow (overflow
-          hidden), jadi kalau popup titlenya ada di dalam, bagian bawah popup
-          terpotong tepat di tepi banner. Posisi visual tetap sama karena
-          absolute mengacu ke wrapper `relative` di atas. */}
-      <div className="absolute left-3 top-3 z-20 flex flex-col items-start">
-          <button
-            onClick={() => setTitlesOpen((v) => !v)}
-            aria-label="Buka title"
-            aria-expanded={titlesOpen}
-            className={cn(
-              "flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-semibold tracking-wide transition",
-              titlesOpen
-                ? "border-foreground/70 bg-primary/25 text-primary"
-                : "border-white/15 bg-black/40 text-zinc-200 backdrop-blur-sm hover:border-foreground/60 hover:text-white",
-            )}
-          >
-            <Crown className="size-3 text-[oklch(0.86_0.16_90)]" />
-            Title
-            {titles.length > 0 && (
-              <span className="rounded-full bg-white/15 px-1 font-mono text-[9px]">
-                {titles.length}
-              </span>
-            )}
-            <ChevronDown
-              className={cn("size-3.5 transition", titlesOpen && "rotate-180")}
-            />
-          </button>
+      {settingsOpen && (
+        <SettingsScreen
+          onClose={() => setSettingsOpen(false)}
+          onSignOut={signOut}
+          onOpenCs={() => {
+            setSettingsOpen(false);
+            setCsOpen(true);
+          }}
+        />
+      )}
+      {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
+    </div>
+  );
+}
 
-          {/* Kotak popup ikut kecil: lebarnya mengikuti isi (bukan 20rem fix),
-              judul + barisnya juga diperkecil supaya tidak terlalu besar. */}
-          {titlesOpen && (
-            <div className="pop-enter absolute left-0 top-full z-30 mt-2 w-max max-w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-foreground/40 bg-neutral-950/95">
-              <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-                <span className="flex size-6 items-center justify-center rounded-md bg-[oklch(0.86_0.16_90)]/15">
-                  <Crown className="size-3.5 text-[oklch(0.86_0.16_90)]" />
-                </span>
-                <p className="text-[11px] font-bold">Title kamu</p>
-                <button
-                  onClick={() => setTitlesOpen(false)}
-                  aria-label="Tutup title"
-                  className="ml-auto flex size-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-              {titles.length === 0 ? (
-                <p className="px-3 py-4 text-[12px] leading-5 text-zinc-400">
-                  Belum ada title. Gabung clan atau kumpulkan XP dulu.
-                </p>
-              ) : (
-                /* Semua title harus terlihat: daftar ini di-scroll, bukan dipotong. */
-                <ul className="thin-scroll max-h-[45dvh] divide-y divide-white/10 overflow-y-auto">
-                  {titles.map((t) => (
-                    <li key={t.name} className="flex items-center gap-2 px-2.5 py-2">
-                      {t.clan ? (
-                        <ClanTag
-                          icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                          tag={t.name}
-                          color={user.clanNameColor}
-                          level={stats?.clanLevel}
-                          className="px-1.5 py-0 text-[10px]"
-                        />
-                      ) : (
-                        <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
-                          {t.name}
-                        </span>
-                      )}
-                      <span className="ml-auto text-right font-mono text-[10px] text-zinc-400">
-                        {t.note}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-
+function __AkunContentRemoved() {
+  return (
+    <div className="relative">
       {/* Header profil: avatar kiri + identitas kanan, menutupi banner */}
       <div className="w-full">
         <div className="relative -mt-12 flex items-end gap-3">

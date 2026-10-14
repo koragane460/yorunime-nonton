@@ -551,7 +551,7 @@ export function ChatPanel({
       toast.error(e instanceof Error ? e.message : "Gagal kirim");
     }
   };  return (
-    <div className="flex min-h-0 flex-1 flex-col bg-black">
+    <div className="flex min-h-0 flex-1 flex-col bg-transparent">
       {muted && (
         <div className="mb-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-500/30 bg-zinc-500/10 px-3 py-1.5 text-[11px] font-semibold text-zinc-300">
           <VolumeX className="size-3.5" /> Kamu sedang dimute — kolom chat dikunci
@@ -559,7 +559,7 @@ export function ChatPanel({
       )}
       {/* daftar pesan */}
       <div
-        className={`thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-1 bg-black ${
+        className={`thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-1 bg-transparent ${
           compact ? "py-2" : "py-3"
         } ${
           muted ? "pointer-events-none select-none opacity-40 grayscale"

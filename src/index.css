@@ -190,7 +190,8 @@
 .msg-in,
 .msg-own,
 .msg-other {
-  color: oklch(0.6 0.03 250);
+  /* Teks pesan selalu putih di atas bubble abu-abu. */
+  color: oklch(0.97 0.008 255);
   border-color: oklch(0.32 0.05 260);
 }
 
@@ -223,10 +224,10 @@
 .bubble-reply {
   background-color: oklch(0.32 0.02 260);
   border-left: 2px solid oklch(0.45 0.03 260);
-  color: oklch(0.72 0.02 250);
+  color: oklch(0.85 0.012 250);
 }
 .bubble-reply p {
-  color: oklch(0.8 0.02 250);
+  color: oklch(0.93 0.01 250);
 }
 
 /* Siluet/efek pada pesan yang KENA reply: berpendar samar. */
@@ -381,21 +382,21 @@
   /* Bubble pesan: bagian atas banner (badge badge + clan tag + reply quote) */
   .chat-bubble .bubble-top {
     background-color: var(--bubble-mine, oklch(0.22 0.04 260));
-    color: var(--bubble-mine-text, oklch(0.62 0.03 250));
+    color: var(--bubble-mine-text, oklch(0.97 0.008 255));
   }
   .chat-bubble .bubble-body {
     background-color: var(--bubble-mine, oklch(0.22 0.04 260));
-    color: var(--bubble-mine-text, oklch(0.62 0.03 250));
+    color: var(--bubble-mine-text, oklch(0.97 0.008 255));
   }
 
   /* Pesan orang lain (other) */
   .chat-bubble.other .bubble-top {
     background-color: var(--bubble-other, oklch(0.24 0.045 255));
-    color: var(--bubble-other-text, oklch(0.55 0.03 250));
+    color: var(--bubble-other-text, oklch(0.97 0.008 255));
   }
   .chat-bubble.other .bubble-body {
     background-color: var(--bubble-other, oklch(0.24 0.045 255));
-    color: var(--bubble-other-text, oklch(0.55 0.03 250));
+    color: var(--bubble-other-text, oklch(0.97 0.008 255));
   }
 
   /* Give premium: marker kuning, bukan biru */

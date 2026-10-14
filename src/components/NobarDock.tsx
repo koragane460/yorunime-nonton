@@ -211,7 +211,7 @@ export function NobarDock({
       </div>
 
       {tab === "chat" ? (
-        <div className="flex h-[38vh] min-h-52 flex-col overflow-hidden bg-black sm:h-[320px]">
+        <div className="flex h-[38vh] min-h-52 flex-col overflow-hidden bg-secondary/40 sm:h-[320px]">
           {!chatLoading && msgs ? (
             <ChatPanel
               kind="room"
@@ -230,7 +230,7 @@ export function NobarDock({
           )}
         </div>
       ) : (
-        <div className="thin-scroll h-[46vh] min-h-64 space-y-1.5 overflow-y-auto bg-black p-2.5 sm:h-[380px]">
+        <div className="thin-scroll h-[46vh] min-h-64 space-y-1.5 overflow-y-auto bg-secondary/40 p-2.5 sm:h-[380px]">
           {members.map((m) => (
             <div
               key={m.userId}
