@@ -770,20 +770,6 @@ function BottomNav({
   const navigate = useNavigate();
   const location = useLocation();
   const overlay = useAppOverlayOpen();
-  // Tekan lama tombol Home (~550ms) → muncul 2 pilihan Manga / Manhwa di atasnya.
-  const [switcher, setSwitcher] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fired = useRef(false);
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
-
-  // Tutup switcher saat pindah halaman.
-  useEffect(() => {
-    setSwitcher(false);
-  }, [location.pathname]);
 
   if (overlay) return null;
   const items: {
@@ -804,7 +790,10 @@ function BottomNav({
       iconFill: CalendarIconFill,
     },
     { path: "/info", label: "History", icon: InfoIcon, iconFill: InfoIconFill },
-    // Favorit: tombol Ke-4. Membuka layar Favorit (bukan fullscreen), dan di
+    // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
+    // Home). Ikon buku, di kanan History.
+    { path: "/baca", label: "Baca", icon: BookIcon },
+    // Favorit: tombol Ke-5. Membuka layar Favorit (bukan fullscreen), dan di
     // paling atas layar itu ada tiga tombol Download / Paling sering /
     // Untuk kamu. Ikon bookmark kotak, bukan love/hat — ini penanda
     // "disimpan", bukan "disukai".
@@ -823,29 +812,7 @@ function BottomNav({
     },
   ];
 
-  const startHold = (path: string) => {
-    fired.current = false;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      fired.current = true;
-      setSwitcher(true);
-      if (navigator.vibrate) navigator.vibrate(12);
-    }, 550);
-    // Prevent default supaya browser tidak_NS_treat sebagai klik ganda.
-    void path;
-  };
-  const cancelHold = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  const onClickItem = (path: string) => {
-    if (fired.current) {
-      fired.current = false;
-      cancelHold();
-      return;
-    }
-    navigate(path);
-  };
+  const onClickItem = (path: string) => navigate(path);
 
   // Indeks tombol aktif — dipakai menentukan posisi kotak rounded glossy
   // yang berpindah halus antar tombol. -1 = tidak ada yang aktif.
@@ -860,78 +827,35 @@ function BottomNav({
 
   return (
     <>
-      {/* Pilihan Manga / Manhwa — muncul di atas tombol Home setelah ditekan lama */}
-      {switcher && (
-        <>
-          <button
-            aria-label="Tutup pilihan"
-            className="fixed inset-0 z-40"
-            onClick={() => setSwitcher(false)}
-          />
-          <div className="pop-enter fixed inset-x-0 bottom-[92px] z-50 mx-auto w-full max-w-2xl px-6 lg:max-w-4xl">
-            <div className="overflow-hidden rounded-2xl border border-foreground/40 bg-background/95 shadow-2xl backdrop-blur">
-              <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Ganti kategori
-              </p>
-              <div className="grid grid-cols-2 gap-2 p-3">
-                {(
-                  [
-                    ["/manga", "Manga", BookIcon, "Baca kanan ke kiri"],
-                    ["/manhwa", "Manhwa", PanelsIcon, "Gaya webtoon"],
-                  ] as const
-                ).map(([path, label, Icon, sub]) => {
-                  const active = location.pathname.startsWith(path);
-                  return (
-                    <button
-                      key={path}
-                      onClick={() => {
-                        setSwitcher(false);
-                        navigate(path);
-                      }}
-                      className={cn(
-                        "flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition",
-                        active
-                          ? "border-foreground/40 bg-primary/15"
-                          : "border-border hover:border-foreground/40",
-                      )}
-                    >
-                      <span className="flex items-center gap-1.5 text-sm font-bold">
-                        <Icon className="size-4 text-primary" /> {label}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{sub}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-      {/* Navbar 5 tombol: bentuknya BAR ROUNDED yang tidak full-width
-          (ada jarak kiri-kanan), dan tiap tombol aktif mendapat kotak
-          rounded KEDUA yang lebih kecil dari background navigasi — kotak
-          itu bergaya glossy/kaca dan berpindah HALUS antar tombol. */}
+      {/* Navbar 6 tombol: BAR ROUNDED super (glassmorphism) yang tidak
+          full-width, dan tiap tombol aktif mendapat kotak rounded KEDUA
+          (juga glassmorphism) yang berpindah HALUS antar tombol. */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto w-full max-w-2xl px-3 lg:max-w-4xl">
-          <div className="relative grid grid-cols-5 rounded-3xl border border-white/12 bg-black/85 p-1.5 shadow-[0_10px_30px_-12px_rgba(0,0,0,.9)] backdrop-blur-xl">
-            {/* Indikator: kotak rounded ke-2 (lebih kecil dari bar) dengan
-                efek glossy — bergerak halus (transition left) mengikuti
-                tombol yang sedang aktif. */}
+          <div
+            className={cn(
+              "relative grid grid-cols-6 rounded-[28px] border border-white/15 p-1.5",
+              "bg-white/[0.07] shadow-[0_12px_36px_-14px_rgba(0,0,0,.95)]",
+              "backdrop-blur-2xl backdrop-saturate-150",
+            )}
+          >
+            {/* Indikator: kotak rounded ke-2 (glassmorphism) — bergerak
+                halus (transition left+width) mengikuti tombol aktif. */}
             <span
               aria-hidden
               className={cn(
-                "pointer-events-none absolute bottom-1.5 top-1.5 rounded-2xl border border-white/25",
-                "bg-gradient-to-b from-white/22 via-white/10 to-white/5",
-                "shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_6px_16px_-8px_rgba(255,255,255,.35)]",
-                "backdrop-blur-md transition-all duration-300 ease-out",
+                "pointer-events-none absolute bottom-1.5 top-1.5 rounded-[22px] border border-white/25",
+                "bg-gradient-to-b from-white/25 via-white/12 to-white/6",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,.4),0_8px_20px_-8px_rgba(255,255,255,.3)]",
+                "backdrop-blur-xl transition-all duration-300 ease-out",
                 activeIdx < 0 && "opacity-0",
               )}
               style={{
-                width: "calc((100% - 12px) / 5)",
+                width: "calc((100% - 12px) / 6)",
                 left:
                   activeIdx < 0
                     ? "6px"
-                    : `calc(6px + ${activeIdx} * (100% - 12px) / 5)`,
+                    : `calc(6px + ${activeIdx} * (100% - 12px) / 6)`,
               }}
             />
             {items.map((it, idx) => {
@@ -956,11 +880,6 @@ function BottomNav({
             return (
               <button
                 key={it.path || `panel-${it.label}`}
-                onPointerDown={() => (isHome ? startHold(it.path) : undefined)}
-                onPointerUp={cancelHold}
-                onPointerLeave={cancelHold}
-                onPointerCancel={cancelHold}
-                onContextMenu={(e) => isHome && e.preventDefault()}
                 onClick={() => {
                   // Tombol panel tidak punya rute: dia membuka layar penuh
                   // yang dirender AppLayout (bukan di sini — lihat catatan
@@ -988,7 +907,7 @@ function BottomNav({
                 <Icon
                   strokeWidth={1.7}
                   className={cn(
-                    // 5 kolom: ikon dibuat besar supaya jelas dan mudah
+                    // 6 kolom: ikon dibuat besar supaya jelas dan mudah
                     // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
                     // supaya tidak terlihat tebel dan berat.
                     "size-[25px] md:size-[28px] transition-colors duration-200",

@@ -16,6 +16,7 @@ import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
+import { formatViews, type ComicItem } from "@/components/ComicCard";
 import { isMusicSecret } from "@/lib/musicSecret";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
@@ -36,6 +37,8 @@ import {
   Tv,
   Plus,
   Users,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -161,6 +164,119 @@ function SectionRow({
   );
 }
 
+/**
+ * Baris kartu manga / manhwa di Home ("Terbaru & Populer"): poster geser ke
+ * kanan + "Lihat selengkap" yang mengarah ke layar Baca. `variant` memberi
+ * sedikit perbedaan gaya antara manga (poster pendek) dan manhwa (poster
+ * webtoon yang lebih tinggi + label chapter terbaru).
+ */
+function ComicHomeRow({
+  title,
+  items,
+  loading,
+  variant,
+  onMore,
+  onPick,
+}: {
+  title: string;
+  items: ComicItem[];
+  loading: boolean;
+  variant: "manga" | "manhwa";
+  onMore: () => void;
+  onPick: (slug: string) => void;
+}) {
+  if (items.length === 0 && loading) {
+    return (
+      <div className="mt-4">
+        <SectionTitle>{title}</SectionTitle>
+        <div className="flex gap-2.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className={cn(
+                "skeleton w-28 shrink-0 rounded-xl",
+                variant === "manga" ? "h-40" : "h-52",
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (items.length === 0) return null;
+  return (
+    <div className="fade-enter mt-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        <button
+          onClick={onMore}
+          className="shrink-0 text-xs font-semibold text-primary"
+        >
+          Lihat selengkap ›
+        </button>
+      </div>
+      <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+        {items.map((c) => {
+          const views = formatViews(c.views);
+          return (
+            <button
+              key={c.slug}
+              onClick={() => onPick(c.slug)}
+              className="group w-28 shrink-0 text-left"
+            >
+              <div
+                className={cn(
+                  "relative overflow-hidden rounded-xl border border-border/60",
+                  variant === "manhwa" && "rounded-b-none",
+                )}
+              >
+                {c.image ? (
+                  <img
+                    src={c.image}
+                    alt={c.title}
+                    loading="lazy"
+                    className={cn(
+                      "w-full object-cover transition duration-300 group-hover:scale-105",
+                      variant === "manga" ? "aspect-[2/3]" : "aspect-[3/4.4]",
+                    )}
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      "w-full bg-muted",
+                      variant === "manga" ? "aspect-[2/3]" : "aspect-[3/4.4]",
+                    )}
+                  />
+                )}
+                {/* Label chapter terbaru — khas kartu webtoon/manhwa. */}
+                {variant === "manhwa" && c.latestChapter && (
+                  <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
+                    {c.latestChapter}
+                  </span>
+                )}
+                {/* Label "Berjalan" untuk manga yang masih tamat. */}
+                {variant === "manga" && c.ongoing && (
+                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+                    Berjalan
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
+                {c.title}
+              </p>
+              {views && (
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {views} dibaca
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function BrowseRow({
   kind,
   title,
@@ -271,6 +387,13 @@ function HomeContent() {
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
   const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
+  // Manga & manhwa untuk baris "Terbaru & Populer" di Home — diambil dari
+  // aksi manga (newest + trending digabung, tanpa dobel per slug).
+  const getComicNewest = useAction(api.manga.newest);
+  const getComicTrending = useAction(api.manga.trending);
+  const [mangaList, setMangaList] = useState<ComicItem[]>([]);
+  const [manhwaList, setManhwaList] = useState<ComicItem[]>([]);
+  const [loadingComics, setLoadingComics] = useState(true);
   const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
   const [heroItems, setHeroItems] = useState<AnimeCardT[]>([]);
@@ -330,6 +453,42 @@ function HomeContent() {
         setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
       setLoading(false);
     });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Manga & manhwa "Terbaru & Populer": newest + trending digabung, slug
+  // unik, dipotong 14 judul supaya ringan. Gagal fetch = diam (baris tidak
+  // tampil karena list kosong).
+  useEffect(() => {
+    let alive = true;
+    const loadKind = async (kind: "manga" | "manhwa") => {
+      const [n, t] = await Promise.allSettled([
+        getComicNewest({ kind }),
+        getComicTrending({ kind, limit: 10 }),
+      ]);
+      const merged: ComicItem[] = [];
+      const seen = new Set<string>();
+      for (const r of [n, t]) {
+        if (r.status !== "fulfilled") continue;
+        for (const it of ((r.value ?? []) as ComicItem[])) {
+          if (!it?.slug || seen.has(it.slug)) continue;
+          seen.add(it.slug);
+          merged.push(it);
+        }
+      }
+      return merged.slice(0, 14);
+    };
+    Promise.allSettled([loadKind("manga"), loadKind("manhwa")]).then(
+      ([m, mh]) => {
+        if (!alive) return;
+        if (m.status === "fulfilled") setMangaList(m.value);
+        if (mh.status === "fulfilled") setManhwaList(mh.value);
+        setLoadingComics(false);
+      },
+    );
     return () => {
       alive = false;
     };
@@ -803,58 +962,64 @@ function HomeContent() {
         </>
       )}
 
-      {/* 6b) ANIME HOT — tepat di bawah Update News. Tampilannya geser ke
-          kanan (mulai agak masuk) dan bisa digeser; angka 1-10 hanya teks
-          tanpa background kotak berwarna. */}
-      {!loading && topList.length > 0 && (
+      {/* 6b) SEASON INI — lalu GENRE di bawahnya: chip-pill geser ke
+          kanan. Menekan chip membuka layar SearchScreen dengan genre itu
+          terpilih (panel multi-select genre ikut terbuka). */}
+      <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      {!loading && genreList.length > 0 && (
         <div className="fade-enter mt-4">
           <div className="mb-2 flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
-              <span className="text-lg" aria-hidden>🔥</span> Anime Hot
-            </p>
+            <h2 className="text-lg font-bold tracking-tight">Genre</h2>
             <button
-              onClick={() =>
-                setCatalog({ kind: "popular", title: "Anime Hot", items: topList as unknown as CatalogCard[] })
-              }
+              onClick={() => {
+                setSearchGenre(null);
+                setShowSearch(true);
+              }}
               className="text-xs font-semibold text-primary"
             >
-              Lihat selengkap ›
+              Lihat semua ›
             </button>
           </div>
-          <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1 pl-6">
-            {topList.slice(0, 10).map((a, i) => (
+          <div className="thin-scroll flex gap-2 overflow-x-auto pb-1">
+            {genreList.map((g) => (
               <button
-                key={a.id}
-                onClick={() => openAnime(a.id, a.title, a.source)}
-                className="group relative aspect-[2/3] w-28 shrink-0 overflow-hidden rounded-2xl border border-white/10"
+                key={g.id}
+                onClick={() => {
+                  setSearchGenre(g.id);
+                  setShowSearch(true);
+                }}
+                className="shrink-0 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-foreground/40 active:scale-95"
               >
-                {a.image ? (
-                  <img
-                    src={a.image}
-                    alt={a.title}
-                    loading="lazy"
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="size-full bg-muted" />
-                )}
-                {/* Angka peringkat: teks polos + bayangan, TANPA background. */}
-                <span className="absolute left-1.5 top-1 text-lg font-black leading-none text-white drop-shadow-[0_2px_6px_rgba(0,0,0,.9)]">
-                  {i + 1}
-                </span>
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-1.5 pt-4">
-                  <p className="line-clamp-2 text-left text-[10px] font-semibold leading-tight text-white">
-                    {a.title}
-                  </p>
-                </div>
+                {g.name}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* 6c) KATEGORI LENGKAP: Season Ini / Movie / OVA / Donghua / Upcoming */}
-      <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      {/* 6c) MANGA TERBARU & POPULER — kartu geser ke kanan; "Lihat
+          selengkap" mengarah ke layar Baca (tab navigasi). */}
+      <ComicHomeRow
+        title="Manga Terbaru & Populer"
+        items={mangaList}
+        loading={loadingComics}
+        variant="manga"
+        onMore={() => navigate("/baca?jenis=manga")}
+        onPick={(slug) => navigate(`/baca?jenis=manga&komik=${encodeURIComponent(slug)}`)}
+      />
+
+      {/* 6d) MANHWA TERBARU & POPULER — gaya sedikit beda (poster lebih
+          tinggi + label webtoon), arah geser dan "Lihat selengkap" sama. */}
+      <ComicHomeRow
+        title="Manhwa Terbaru & Populer"
+        items={manhwaList}
+        loading={loadingComics}
+        variant="manhwa"
+        onMore={() => navigate("/baca?jenis=manhwa")}
+        onPick={(slug) => navigate(`/baca?jenis=manhwa&komik=${encodeURIComponent(slug)}`)}
+      />
+
+      {/* 6e) KATEGORI LENGKAP: Movie / OVA / Donghua / Upcoming */}
       <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
       <BrowseRow kind="ova" title="OVA &amp; ONA" onPick={openAnime} />
       {/* Slot khusus Donghua: dua baris geser ke kanan + "Lihat selengkapnya". */}
@@ -2407,7 +2572,10 @@ function AnimeDetailScreen({
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [episodeOrder, setEpisodeOrder] = useState<"first" | "last">("first");
   const [allEpisodes, setAllEpisodes] = useState(false);
-  const [episodeOpen, setEpisodeOpen] = useState(true);
+  // Tampilan daftar episode: kartu (list) atau kotak nomor (grid), plus
+  // pencarian lokal per nomor/judul episode.
+  const [episodeGrid, setEpisodeGrid] = useState(false);
+  const [episodeQuery, setEpisodeQuery] = useState("");
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
   // Tab Info / Nonton / Character / Vote — tombol tanpa background rounded,
   // hanya garis bawah pada teks yang aktif.
@@ -2461,6 +2629,15 @@ function AnimeDetailScreen({
 
   const eps: any[] = [...(detail.episodeList ?? [])];
   if (episodeOrder === "last") eps.reverse();
+  // Filter pencarian episode (nomor atau judul) — lokal, tanpa fetch.
+  const qEp = episodeQuery.trim().toLowerCase();
+  const filteredEps: any[] = qEp
+    ? eps.filter(
+        (e: any) =>
+          String(e.number).includes(qEp) ||
+          String(e.title ?? "").toLowerCase().includes(qEp),
+      )
+    : eps;
   // Anime panjang bisa punya ribuan episode, jadi ditampilkan bertahap
   // (60 per halaman) supaya HP tidak berat.
   const PAGE = 60;
@@ -2506,75 +2683,93 @@ function AnimeDetailScreen({
               jadi tombol di baris yang sama dengan "Lanjut episode". */}
           <div className="absolute inset-x-0 top-0 z-10">
             <DetailHeader title="Detail Anime" onClose={onClose} />
-          </div>
-
-          {/* Info overlay: poster kiri, judul+genre kanan, di ATAS banner */}
-          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
-            {detail.image ? (
-              <img
-                src={detail.image}
-                alt=""
-                className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg object-cover shadow-xl"
-              />
-            ) : (
-              <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
-            )}
-            <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
-                {detail.title}
-              </h2>
-              {/* Judul terjemahan Inggris — teks kecil di bawah judul asli. */}
-              {detail.titleEnglish && (
-                <p className="mt-0.5 line-clamp-1 text-[11px] text-white/70">
-                  {detail.titleEnglish}
-                </p>
-              )}
-              <div className="mt-1 flex flex-wrap gap-1">
-                {(detail.genres ?? []).slice(0, 3).map((g: string) => (
-                  <span
-                    key={g}
-                    className="rounded-full border border-white/25 bg-black/45 px-2 py-0.5 text-[10px] text-white/85"
-                  >
-                    {g}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-1 line-clamp-1 text-[11px] text-white/70">
-                {detail.rating ?? "Rating 13+"} • {detail.studio ?? "Studio tidak diketahui"}
+          </div>          {/* Info: judul + chip di bawah banner — lurus ke bawah (bukan
+              poster di samping judul), tapi gambarnya tetap tampil penuh
+              sebagai banner di atas. */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
+            <h2 className="text-2xl font-black leading-tight tracking-tight text-white yn-outline">
+              {detail.title}
+            </h2>
+            {/* Judul terjemahan Inggris — teks kecil di bawah judul asli. */}
+            {detail.titleEnglish && (
+              <p className="mt-0.5 line-clamp-1 text-[11px] text-white/70">
+                {detail.titleEnglish}
               </p>
-              {/* Tombol info khusus developer: MAL id + URL poster + id sumber,
-                  dipakai saat mengisi tools konten. */}
-              {devAccess?.level === "dev" && (
-                <button
-                  onClick={() => setDevInfoOpen(true)}
-                  className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white/90"
-                >
-                  <Info className="size-3" /> Info developer
-                </button>
+            )}
+            <span
+              className={cn(
+                "mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
+                detail.status === "Completed"
+                  ? "bg-emerald-500/80 text-white"
+                  : detail.status === "OVA" || detail.status === "Movie"
+                    ? "bg-sky-700/90 text-white"
+                    : "bg-primary text-white",
               )}
-              <span
-                className={cn(
-                  "mt-1 inline-block rounded px-2 py-0.5 text-[10px] font-bold",
-                  detail.status === "Completed"
-                    ? "bg-emerald-500/80 text-white"
-                    : detail.status === "OVA" || detail.status === "Movie"
-                      ? "bg-sky-700/90 text-white"
-                      : "bg-primary text-white",
-                )}
+            >
+              {detail.status ?? "Ongoing"}
+            </span>
+            {/* Tombol info khusus developer: MAL id + URL poster + id sumber,
+                dipakai saat mengisi tools konten. */}
+            {devAccess?.level === "dev" && (
+              <button
+                onClick={() => setDevInfoOpen(true)}
+                className="ml-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white/90"
               >
-                {detail.status ?? "Ongoing"}
-              </span>
-            </div>
+                <Info className="size-3" /> Info developer
+              </button>
+            )}
           </div>
         </div>
 
         <div className="px-3">
-          {/* Baris aksi: "Lanjut episode" lebar, "Favorite" kotak miring di
-              kanannya. Dua-duanya satu tinggi supaya rata di layar HP. */}
-          <div className="mt-4 flex items-stretch gap-2">
-            <SkewButton
-              variant="accent"
-              className="flex-1 bg-sky-700 text-white hover:bg-sky-600"
+          {/* Chip metadata — gaya pil seperti referensi: rating ★, studio,
+              tahun, tipe tayangan, dan durasi per episode. */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white">
+              <Star className="size-3 fill-current text-yellow-400" aria-hidden />
+              {detail.score ? Number(detail.score).toFixed(2) : (detail.rating ?? "Rating 13+")}
+            </span>
+            {detail.studio && (
+              <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+                {detail.studio}
+              </span>
+            )}
+            {detail.year && (
+              <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+                {detail.year}
+              </span>
+            )}
+            {detail.type && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+                <Tv className="size-3" aria-hidden /> {typeLabel(detail.type)}
+              </span>
+            )}
+            {eps.length > 0 && (
+              <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+                {eps[0]?.duration ?? "24 menit"} / ep
+              </span>
+            )}
+          </div>
+
+          {/* Genre — semua genre tampil sebagai chip pil (bukan cuma 3). */}
+          {(detail.genres ?? []).length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {(detail.genres ?? []).map((g: string) => (
+                <span
+                  key={g}
+                  className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-semibold text-primary"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Baris aksi: "Lanjut episode" + "Favorite" — kotak ROUNDED
+              lurus (tanpa kemiringan skew), tinggi sama. */}
+          <div className="mt-4 flex items-stretch gap-2.5">
+            <button
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 text-sm font-bold text-white transition hover:bg-sky-600 active:scale-[0.98]"
               onClick={() =>
                 navigate(
                   `/nonton?anime=${animeId}${
@@ -2582,17 +2777,16 @@ function AnimeDetailScreen({
                       ? `&judul=${encodeURIComponent(animeTitle)}`
                       : ""
                   }`,
-                )
-              }
+                )}
             >
               <Play className="size-4 fill-current" aria-hidden />
               {progress && !progress.finished && progress.progressSec > 30
                 ? `Lanjut episode ${progress.episode}`
                 : "Lanjut episode"}
-            </SkewButton>
-            <SkewButton
-              variant="quiet"
+            </button>
+            <button
               aria-label="Favorite"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-sm font-bold text-white transition hover:bg-white/[0.12] active:scale-[0.98]"
               onClick={async () => {
                 if (!user) return;
                 const r = await toggleFav({
@@ -2608,14 +2802,11 @@ function AnimeDetailScreen({
               }}
             >
               <Bell
-                className={cn(
-                  "size-4",
-                  isFav && "fill-current text-accent",
-                )}
+                className={cn("size-4", isFav && "fill-current text-accent")}
                 aria-hidden
               />
               Favorite
-            </SkewButton>
+            </button>
           </div>
           {/* Baris di bawah tombol: posisi tontonan dalam menit, lalu
               jumlah orang yang mem-favoritkan (format ringkas). */}
@@ -2751,89 +2942,168 @@ function AnimeDetailScreen({
           </>
           )}
 
-          {/* Episode — tampil di tab Nonton (bisa dibuka & ditutup) */}
+          {/* Episode — tab Nonton: judul + jumlah, tombol Grid/List, tombol
+              urut, kotak cari episode, lalu daftar kartu episode (nomor +
+              tanggal tayang + tombol putar) sesuai referensi. */}
           {detailTab === "nonton" && (
-          <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
-            <button
-              onClick={() => setEpisodeOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left"
-            >
-              <h2 className="text-base font-bold text-white">Episode</h2>
-              <span className="flex items-center gap-1.5 text-xs text-white/80">
-                {releasedCount} dari {eps.length} tayang
-                {episodeOpen ? (
-                  <ChevronUp className="size-4" aria-hidden />
+          <div className="mt-5">
+            {/* Baris judul + kontrol: Grid dan Urut */}
+            <div className="flex items-center gap-2">
+              <h2 className="flex-1 text-lg font-bold text-white">
+                Episode <span className="text-white/50">({eps.length})</span>
+              </h2>
+              <button
+                onClick={() => setEpisodeGrid((v) => !v)}
+                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/[0.12]"
+              >
+                {episodeGrid ? (
+                  <>
+                    <List className="size-3.5" aria-hidden /> List
+                  </>
                 ) : (
-                  <ChevronDown className="size-4" aria-hidden />
+                  <>
+                    <LayoutGrid className="size-3.5" aria-hidden /> Grid
+                  </>
                 )}
-              </span>
-            </button>
-            {episodeOpen && (
-              <div className="px-3 pb-3">
+              </button>
+              <button
+                onClick={() =>
+                  setEpisodeOrder(episodeOrder === "first" ? "last" : "first")
+                }
+                className="rounded-full border border-white/20 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/[0.12]"
+              >
+                Urut: {episodeOrder === "first" ? `${eps.length} → 1` : `1 → ${eps.length}`}
+              </button>
+            </div>
+
+            {eps.length === 0 ? (
+              <p className="py-8 text-center text-xs text-white/70">
+                {detail.status === "Upcoming"
+                  ? "Belum tayang — nantikan jadwal rilisnya"
+                  : "Daftar episode belum tersedia"}
+              </p>
+            ) : (
+              <>
+                {/* Kotak cari episode (filter nomor/judul, lokal). */}
+                <input
+                  value={episodeQuery}
+                  onChange={(e) => setEpisodeQuery(e.target.value)}
+                  placeholder="Cari episode… (mis. 12)"
+                  inputMode="numeric"
+                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-primary/60 focus:outline-none"
+                />
+
                 {minEp > 1 && (
-                  <p className="mb-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
+                  <p className="mt-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
                     Episode 1–{minEp - 1} tidak tersedia di sumber. Episode
                     terawal yang ada: {minEp}.
                   </p>
                 )}
-                {eps.length === 0 ? (
-                  <p className="py-4 text-center text-xs text-white/70">
-                    {detail.status === "Upcoming"
-                      ? "Belum tayang — nantikan jadwal rilisnya"
-                      : "Daftar episode belum tersedia"}
+
+                {filteredEps.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-white/60">
+                    Tidak ada episode yang cocok.
                   </p>
+                ) : episodeGrid ? (
+                  /* Mode Grid — kotak nomor rapat. */
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {filteredEps.map((e: any) => {
+                      const released = e.released !== false;
+                      return (
+                        <button
+                          key={e.id}
+                          disabled={!released}
+                          onClick={() =>
+                            navigate(
+                              `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
+                                animeTitle ?? detail.title ?? "",
+                              )}`,
+                            )
+                          }
+                          className={cn(
+                            "size-11 rounded-xl border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40",
+                            !released &&
+                              "cursor-not-allowed border-border/40 bg-secondary/10 text-white/25 hover:border-border/40",
+                          )}
+                        >
+                          {e.number}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <>
-                    <button
-                      onClick={() =>
-                        setEpisodeOrder(episodeOrder === "first" ? "last" : "first")
-                      }
-                      className="mb-2 rounded-full border border-white/20 px-3 py-1 text-xs text-white/85 transition hover:border-foreground/40"
-                    >
-                      {episodeOrder === "first"
-                        ? "Urutkan: Terlama ↓"
-                        : "Urutkan: Terbaru ↑"}
-                    </button>
-                    <div className="flex flex-wrap gap-1.5">
-                      {shownEps.map((e: any) => {
-                        const released = e.released !== false;
-                        return (
-                          <button
-                            key={e.id}
-                            disabled={!released}
-                            onClick={() =>
-                              navigate(
-                                `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
-                                  animeTitle ?? detail.title ?? "",
-                                )}`,
-                              )
-                            }
-                            className={cn(
-                              // Kotak nomor episode DENGAN background (bukan
-                              // transparan) supaya jelas itu tombol.
-                              "size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40",
-                              !released &&
-                                "cursor-not-allowed border-border/40 bg-secondary/10 text-white/25 hover:border-border/40",
+                  /* Mode List — kartu episode: nomor + tanggal + putar. */
+                  <div className="mt-3 space-y-2">
+                    {filteredEps.map((e: any, idx: number) => {
+                      const released = e.released !== false;
+                      // "BARU" untuk episode tayang terakhir.
+                      const isNew =
+                        released &&
+                        eps.findIndex((x: any) => x.released !== false) ===
+                          eps.findIndex((x: any) => x.id === e.id) &&
+                        episodeOrder === "last";
+                      return (
+                        <button
+                          key={e.id}
+                          disabled={!released}
+                          onClick={() =>
+                            navigate(
+                              `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
+                                animeTitle ?? detail.title ?? "",
+                              )}`,
+                            )
+                          }
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-left transition hover:bg-white/[0.08]",
+                            !released && "cursor-not-allowed opacity-45",
+                          )}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-white">
+                              Episode {e.number}
+                            </p>
+                            {isNew && (
+                              <span className="mt-1 inline-block rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-red-300">
+                                Baru
+                              </span>
                             )}
+                            {e.aired && (
+                              <p className="mt-0.5 text-[11px] text-white/55">
+                                {e.aired}
+                              </p>
+                            )}
+                          </div>
+                          <span
+                            className={cn(
+                              "flex size-9 shrink-0 items-center justify-center rounded-full",
+                              released
+                                ? "bg-white/15 text-white"
+                                : "bg-white/5 text-white/40",
+                            )}
+                            aria-hidden
                           >
-                            {e.number}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {eps.length > PAGE && (
-                      <button
-                        onClick={() => setAllEpisodes((v) => !v)}
-                        className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs text-white/85"
-                      >
-                        {allEpisodes
-                          ? "Tampilkan lebih sedikit"
-                          : `Tampilkan semua ${eps.length} episode`}
-                      </button>
-                    )}
-                  </>
+                            <Play className="size-4 fill-current" />
+                          </span>
+                          {/* Nomor urut kartu (kiri) — meniru gaya daftar
+                              referensi tanpa mengubah data. */}
+                          {idx < 0 && <span aria-hidden>{idx}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
-              </div>
+
+                {eps.length > PAGE && (
+                  <button
+                    onClick={() => setAllEpisodes((v) => !v)}
+                    className="mt-3 w-full rounded-xl border border-white/15 py-2 text-xs text-white/85"
+                  >
+                    {allEpisodes
+                      ? "Tampilkan lebih sedikit"
+                      : `Tampilkan semua ${eps.length} episode`}
+                  </button>
+                )}
+              </>
             )}
           </div>
           )}
@@ -3210,6 +3480,21 @@ function DonghuaDetailScreen({
     const all = [...(detail?.episodes ?? [])].sort((a, b) => a.number - b.number);
     return allEpisodes ? all : all.slice(0, DONGHUA_EP_PREVIEW);
   }, [detail, allEpisodes]);
+  // Kontrol daftar episode donghua — gaya sama dengan detail anime:
+  // tampilan Grid/List, urut, dan pencarian lokal.
+  const [epGrid, setEpGrid] = useState(false);
+  const [epOrder, setEpOrder] = useState<"first" | "last">("first");
+  const [epQuery, setEpQuery] = useState("");
+  const shownEps = useMemo(() => {
+    const ordered = epOrder === "last" ? [...eps].reverse() : eps;
+    const q = epQuery.trim().toLowerCase();
+    if (!q) return ordered;
+    return ordered.filter(
+      (e) =>
+        String(e.number).includes(q) ||
+        String(e.title ?? "").toLowerCase().includes(q),
+    );
+  }, [eps, epOrder, epQuery]);
   // Nomor episode terawal yang ada di sumber (sumber sering cuma menyimpan
   // jendela terbaru — mis. Renegade Immortal mulai dari ep 75).
   const minEpNo = useMemo(() => {
@@ -3289,47 +3574,38 @@ function DonghuaDetailScreen({
           <div className="absolute inset-x-0 top-0 z-10">
             <DetailHeader title="Detail Donghua" onClose={onClose} />
           </div>
-          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
-            {detail.poster ? (
-              <img
-                src={detail.poster}
-                alt=""
-                className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg object-cover shadow-xl"
-              />
-            ) : (
-              <div className="aspect-[2/3] w-24 shrink-0 self-end rounded-lg bg-black/40" />
-            )}
-            <div className="min-w-0 flex-1 self-end pb-1">
-              <h2 className="yn-outline text-xl font-black leading-tight text-white">
-                {detail.title}
-              </h2>
-              {detail.genres.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {detail.genres.slice(0, 3).map((g) => (
-                    <span
-                      key={g}
-                      className="rounded-full border border-white/25 bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white/90"
-                    >
-                      {g}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <p className="mt-1.5 text-[11px] font-medium text-white/85">
-                {detail.rating ? `★ ${detail.rating}` : "Rating belum ada"}
-                {detail.status ? ` • ${detail.status}` : ""}
-              </p>
-            </div>
+          {/* Judul lurus di bawah banner (bukan poster di samping). */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
+            <h2 className="yn-outline text-2xl font-black leading-tight tracking-tight text-white">
+              {detail.title}
+            </h2>
+            <p className="mt-1.5 text-[11px] font-medium text-white/85">
+              {detail.rating ? `★ ${detail.rating}` : "Rating belum ada"}
+              {detail.status ? ` • ${detail.status}` : ""}
+            </p>
           </div>
         </div>
 
         <div className="px-3">
-          {/* Baris aksi: "Tonton" untuk episode pertama, "Favorite" di
-              kanannya. Sama seperti di detail anime. */}
-          <div className="mt-4 flex items-stretch gap-2">
-            <SkewButton
-              variant="accent"
-              className="flex-1"
+          {/* Genre — semua tampil sebagai chip pil. */}
+          {detail.genres.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {detail.genres.map((g) => (
+                <span
+                  key={g}
+                  className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-semibold text-primary"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Baris aksi: "Tonton" + "Favorite" — kotak ROUNDED lurus
+              (tanpa skew), sama seperti detail anime. */}
+          <div className="mt-4 flex items-stretch gap-2.5">
+            <button
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
               disabled={detail.episodes.length === 0}
               onClick={() => {
                 const first = detail.episodes[0];
@@ -3341,10 +3617,10 @@ function DonghuaDetailScreen({
               {detail.episodes.length > 0
                 ? `Tonton episode ${detail.episodes[0].number}`
                 : "Belum ada episode"}
-            </SkewButton>
-            <SkewButton
-              variant="quiet"
+            </button>
+            <button
               aria-label="Favorite"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-sm font-bold text-white transition hover:bg-white/[0.12] active:scale-[0.98]"
               onClick={async () => {
                 if (!user) return;
                 const r = await toggleFav({
@@ -3361,7 +3637,7 @@ function DonghuaDetailScreen({
             >
               <Bell className="size-4" aria-hidden />
               Favorite
-            </SkewButton>
+            </button>
           </div>
 
 
@@ -3389,50 +3665,106 @@ function DonghuaDetailScreen({
             </button>
           )}
 
-          <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-card">
-            <div className="flex items-center justify-between gap-2 px-3 py-3">
-              <h2 className="text-base font-bold text-white">Episode</h2>
-              <span className="text-xs text-white/80">
-                {total > 0 ? `${total} episode` : "Belum ada"}
-              </span>
+          <div className="mt-5">
+            {/* Judul + kontrol: Grid/List dan Urut */}
+            <div className="flex items-center gap-2">
+              <h2 className="flex-1 text-lg font-bold text-white">
+                Episode <span className="text-white/50">({total})</span>
+              </h2>
+              <button
+                onClick={() => setEpGrid((v) => !v)}
+                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/[0.12]"
+              >
+                {epGrid ? (
+                  <><List className="size-3.5" aria-hidden /> List</>
+                ) : (
+                  <><LayoutGrid className="size-3.5" aria-hidden /> Grid</>
+                )}
+              </button>
+              <button
+                onClick={() => setEpOrder((o) => (o === "first" ? "last" : "first"))}
+                className="rounded-full border border-white/20 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/[0.12]"
+              >
+                Urut: {epOrder === "first" ? `${total} → 1` : `1 → ${total}`}
+              </button>
             </div>
-            <div className="px-3 pb-3">
-              {minEpNo > 1 && (
-                <p className="mb-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
-                  Episode 1–{minEpNo - 1} tidak tersedia di sumber. Episode
-                  terawal yang ada: {minEpNo}.
-                </p>
-              )}
-              {eps.length === 0 ? (
-                <p className="py-4 text-center text-xs text-white/70">
-                  Daftar episode belum tersedia
-                </p>
-              ) : (
-                <>
-                  <div className="flex flex-wrap gap-1.5">
-                    {eps.map((e) => (
+
+            {total === 0 ? (
+              <p className="py-8 text-center text-xs text-white/70">
+                Daftar episode belum tersedia
+              </p>
+            ) : (
+              <>
+                {/* Kotak cari episode (filter lokal). */}
+                <input
+                  value={epQuery}
+                  onChange={(e) => setEpQuery(e.target.value)}
+                  placeholder="Cari episode… (mis. 12)"
+                  inputMode="numeric"
+                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-primary/60 focus:outline-none"
+                />
+                {minEpNo > 1 && (
+                  <p className="mt-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
+                    Episode 1–{minEpNo - 1} tidak tersedia di sumber. Episode
+                    terawal yang ada: {minEpNo}.
+                  </p>
+                )}
+                {shownEps.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-white/60">
+                    Tidak ada episode yang cocok.
+                  </p>
+                ) : epGrid ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {shownEps.map((e) => (
                       <button
                         key={e.number || e.url}
                         onClick={() => onPlay(e.url, e.number || 1, detail.title)}
-                        className="size-10 rounded-lg border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40"
+                        className="size-11 rounded-xl border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40"
                       >
                         {e.number}
                       </button>
                     ))}
                   </div>
-                  {total > DONGHUA_EP_PREVIEW && (
-                    <button
-                      onClick={() => setAllEpisodes((v) => !v)}
-                      className="mt-2 w-full rounded-lg border border-white/15 py-2 text-xs text-white/85"
-                    >
-                      {allEpisodes
-                        ? "Tampilkan lebih sedikit"
-                        : `Lihat semua ${total} episode`}
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {shownEps.map((e) => (
+                      <button
+                        key={e.number || e.url}
+                        onClick={() => onPlay(e.url, e.number || 1, detail.title)}
+                        className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-left transition hover:bg-white/[0.08]"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-white">
+                            Episode {e.number}
+                          </p>
+                          {e.title && e.title !== `Episode ${e.number}` && (
+                            <p className="mt-0.5 line-clamp-1 text-[11px] text-white/55">
+                              {e.title}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white"
+                          aria-hidden
+                        >
+                          <Play className="size-4 fill-current" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {total > DONGHUA_EP_PREVIEW && (
+                  <button
+                    onClick={() => setAllEpisodes((v) => !v)}
+                    className="mt-3 w-full rounded-xl border border-white/15 py-2 text-xs text-white/85"
+                  >
+                    {allEpisodes
+                      ? "Tampilkan lebih sedikit"
+                      : `Lihat semua ${total} episode`}
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           {/* "Yang serupa" — rekomendasi dari API donghua, jadialways

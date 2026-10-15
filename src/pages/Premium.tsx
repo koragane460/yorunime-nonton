@@ -358,84 +358,99 @@ function Plans() {
   return (
     <section className="mt-6">
       <h2 className="text-[13px] font-bold text-gold">Paket</h2>
-      {/* Kartu lurus ke atas, digeser ke kanan-kiri: paling murah di kiri,
-          paling mahal di kanan (permintaan user). */}
-      <div ref={carouselRef} onScroll={onCarouselScroll} className="thin-scroll -mx-3 mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-1">
-        {[...(plans ?? [])]
-          .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
-          .map((p, i) => (
-          <div
-            key={p.id}
-            className="yn-card yn-card-hover relative w-full shrink-0 snap-start overflow-hidden p-5"
-          >
-            {/* Mahkota di tengah */}
-            <div className="flex flex-col items-center gap-2">
-              <span className="flex size-16 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_24px_-4px] shadow-gold/40">
-                <Crown className="size-9 text-gold" />
-              </span>
-              <p className="text-xl font-extrabold leading-tight text-white">{p.label}</p>
-              <p className="font-mono text-xs leading-tight text-zinc-500">
-                {p.days} hari · nonton tanpa iklan
-              </p>
-            </div>
-
-            {/* Dua kotak: Sacret (berlian) + HD 1080p */}
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <div className="flex flex-col items-center gap-1.5 rounded-xl border border-primary/40 bg-gradient-to-b from-primary/25 to-primary/5 px-2 py-3.5">
-                <Gem className="size-7 text-primary" />
-                <p className="text-[13px] font-bold text-primary">
-                  {typeof p.sacret === "number" && p.sacret > 0
-                    ? `${p.sacret.toLocaleString("id-ID")} Sacret`
-                    : "Tanpa bonus"}
-                </p>
-              </div>
-              <div className="flex flex-col items-center gap-1.5 rounded-xl border border-sky-400/40 bg-gradient-to-b from-sky-400/25 to-sky-400/5 px-2 py-3.5">
-                <span className="flex size-7 items-center justify-center rounded-md border border-sky-300/60 font-mono text-[11px] font-black text-sky-200">HD</span>
-                <p className="text-[13px] font-bold text-sky-200">1080p</p>
-              </div>
-            </div>
-
-            {/* Harga + tombol */}
-            <div className="mt-4 text-center">
-              <p className="font-mono text-3xl font-bold tracking-wide text-gold">
-                RP {p.price.toLocaleString("id-ID")}
-              </p>
-              {typeof p.sacret === "number" && p.sacret > 0 && (
-                <p className="mt-1 flex items-center justify-center gap-1 text-[13px] font-bold text-primary">
-                  <Gem className="size-3.5" /> +{p.sacret.toLocaleString("id-ID")} Sacret
-                </p>
-              )}
-            </div>
-            <button
-              disabled={busy !== null}
-              onClick={() => void startOrder(p)}
-              className="mt-4 w-full rounded-2xl bg-gold px-4 py-3.5 text-base font-bold text-black shadow-[0_0_18px_-6px] shadow-gold/60 transition active:scale-[0.98] disabled:opacity-50"
-            >
-              {busy === "order" ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" /> Menyiapkan…
-                </>
-              ) : (
-                "Beli"
-              )}
-            </button>
+      {/* Kartu paket gaya 2 kolom: durasi, harga coret (harga satuan dasar),
+          harga besar, catatan per bulan, chip Sacret (biru), chip Hemat%
+          (hijau), dan tombol "Pilih paket". Paket paling hemat mendapat
+          badge "Paling hemat" + aksen emas. */}
+      {(() => {
+        const sorted = [...(plans ?? [])].sort(
+          (a, b) => (a.price ?? 0) - (b.price ?? 0),
+        );
+        // Baseline harga per hari = paket paling mahal per hari (biasanya
+        // paket 1 bulan). Hemat% dihitung terhadap baseline itu.
+        const perDay = (p: Plan) => (p.days > 0 ? p.price / p.days : p.price);
+        const baseline = Math.max(...sorted.map(perDay), 0);
+        const bestId = sorted.reduce<Plan | null>((best, p) => {
+          if (perDay(p) <= 0) return best;
+          if (!best) return p;
+          return perDay(p) < perDay(best) ? p : best;
+        }, null)?.id;
+        return (
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            {sorted.map((p) => {
+              const hemat =
+                baseline > 0 && perDay(p) < baseline
+                  ? Math.round((1 - perDay(p) / baseline) * 100)
+                  : 0;
+              const perBulan = Math.round((p.price / Math.max(1, p.days)) * 30);
+              const best = p.id === bestId;
+              return (
+                <div
+                  key={p.id}
+                  className={cn(
+                    "relative flex flex-col rounded-2xl border p-3.5",
+                    best
+                      ? "border-gold/70 bg-gradient-to-b from-gold/12 to-transparent"
+                      : "border-border bg-card",
+                  )}
+                >
+                  {/* Badge "Paling hemat" di atas kartu terbaik */}
+                  {best && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-2.5 py-0.5 text-[10px] font-black text-black">
+                      Paling hemat
+                    </span>
+                  )}
+                  <p className="text-[13px] font-bold text-white/90">
+                    {p.label}
+                  </p>
+                  {/* Harga coret = harga satuan dasar (tanpa diskon). */}
+                  {hemat > 0 && (
+                    <p className="mt-1 font-mono text-[13px] text-zinc-500 line-through">
+                      Rp{Math.round((p.price / (1 - hemat / 100))).toLocaleString("id-ID")}
+                    </p>
+                  )}
+                  <p className="mt-0.5 font-mono text-2xl font-black leading-tight tracking-tight text-white">
+                    Rp{p.price.toLocaleString("id-ID")}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-zinc-500">
+                    {p.days} hari{p.days >= 60 ? ` · ≈ Rp${perBulan.toLocaleString("id-ID")} / bulan` : ""}
+                  </p>
+                  {/* Chip Sacret (berlian biru) */}
+                  {typeof p.sacret === "number" && p.sacret > 0 && (
+                    <span className="mt-2 inline-flex w-fit items-center gap-1 rounded-full border border-sky-400/40 bg-sky-400/15 px-2 py-0.5 text-[10px] font-bold text-sky-200">
+                      <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
+                    </span>
+                  )}
+                  {/* Chip Hemat% (hijau) */}
+                  {hemat > 0 && (
+                    <span className="mt-1.5 inline-flex w-fit items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      Hemat {hemat}%
+                    </span>
+                  )}
+                  <button
+                    disabled={busy !== null}
+                    onClick={() => void startOrder(p)}
+                    className={cn(
+                      "mt-3 w-full rounded-xl px-3 py-2.5 text-[13px] font-bold transition active:scale-[0.98] disabled:opacity-50",
+                      best
+                        ? "bg-gold text-black shadow-[0_0_16px_-6px] shadow-gold/60"
+                        : "border border-white/15 bg-white/[0.06] text-white hover:bg-white/[0.12]",
+                    )}
+                  >
+                    {busy === "order" ? (
+                      <span className="flex items-center justify-center gap-1.5">
+                        <Loader2 className="size-3.5 animate-spin" /> Menyiapkan…
+                      </span>
+                    ) : (
+                      "Pilih paket"
+                    )}
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
-      {/* Titik penunjuk geser */}
-      {planCount > 1 && (
-        <div className="mt-2 flex justify-center gap-1.5">
-          {Array.from({ length: planCount }).map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                i === activePlan ? "w-4 bg-gold" : "w-1.5 bg-white/25",
-              )}
-            />
-          ))}
-        </div>
-      )}
+        );
+      })()}
       {!ready && (
         <p className="mt-2 text-[11px] text-zinc-500">
           Pembayaran sedang disiapkan developer. Cek lagi nanti.

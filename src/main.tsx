@@ -25,6 +25,7 @@ const Info = lazy(() => import("./pages/Info.tsx"));
 const Premium = lazy(() => import("./pages/Premium.tsx"));
 const Manga = lazy(() => import("./pages/Manga.tsx"));
 const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
+const Baca = lazy(() => import("./pages/Baca.tsx"));
 
 const ReadComic = lazy(() => import("./pages/ReadComic.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -252,6 +253,17 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Manhwa />
+                  </RequireAuth>
+                }
+              />
+              {/* Tab Baca: panel ganti kategori + katalog. Bentrok dengan
+                  reader /baca/:slug/:chapter TIDAK — route ini lebih spesifik
+                  cocok hanya untuk /baca persis. */}
+              <Route
+                path="/baca"
+                element={
+                  <RequireAuth>
+                    <Baca />
                   </RequireAuth>
                 }
               />
