@@ -366,50 +366,50 @@ function Plans() {
           .map((p, i) => (
           <div
             key={p.id}
-            className="yn-card yn-card-hover relative w-full shrink-0 snap-start overflow-hidden p-4"
+            className="yn-card yn-card-hover relative w-full shrink-0 snap-start overflow-hidden p-5"
           >
             {/* Mahkota di tengah */}
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="flex size-14 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_20px_-4px] shadow-gold/40">
-                <Crown className="size-7 text-gold" />
+            <div className="flex flex-col items-center gap-2">
+              <span className="flex size-16 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 shadow-[0_0_24px_-4px] shadow-gold/40">
+                <Crown className="size-9 text-gold" />
               </span>
-              <p className="text-base font-extrabold leading-tight text-white">{p.label}</p>
-              <p className="font-mono text-[10px] leading-tight text-zinc-500">
+              <p className="text-xl font-extrabold leading-tight text-white">{p.label}</p>
+              <p className="font-mono text-xs leading-tight text-zinc-500">
                 {p.days} hari · nonton tanpa iklan
               </p>
             </div>
 
             {/* Dua kotak: Sacret (berlian) + HD 1080p */}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="flex flex-col items-center gap-1 rounded-xl border border-primary/40 bg-gradient-to-b from-primary/25 to-primary/5 px-2 py-2.5">
-                <Gem className="size-6 text-primary" />
-                <p className="text-[11px] font-bold text-primary">
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
+              <div className="flex flex-col items-center gap-1.5 rounded-xl border border-primary/40 bg-gradient-to-b from-primary/25 to-primary/5 px-2 py-3.5">
+                <Gem className="size-7 text-primary" />
+                <p className="text-[13px] font-bold text-primary">
                   {typeof p.sacret === "number" && p.sacret > 0
                     ? `${p.sacret.toLocaleString("id-ID")} Sacret`
                     : "Tanpa bonus"}
                 </p>
               </div>
-              <div className="flex flex-col items-center gap-1 rounded-xl border border-sky-400/40 bg-gradient-to-b from-sky-400/25 to-sky-400/5 px-2 py-2.5">
-                <span className="flex size-6 items-center justify-center rounded-md border border-sky-300/60 font-mono text-[10px] font-black text-sky-200">HD</span>
-                <p className="text-[11px] font-bold text-sky-200">1080p</p>
+              <div className="flex flex-col items-center gap-1.5 rounded-xl border border-sky-400/40 bg-gradient-to-b from-sky-400/25 to-sky-400/5 px-2 py-3.5">
+                <span className="flex size-7 items-center justify-center rounded-md border border-sky-300/60 font-mono text-[11px] font-black text-sky-200">HD</span>
+                <p className="text-[13px] font-bold text-sky-200">1080p</p>
               </div>
             </div>
 
             {/* Harga + tombol */}
-            <div className="mt-3 text-center">
-              <p className="font-mono text-xl font-bold text-gold">
+            <div className="mt-4 text-center">
+              <p className="font-mono text-3xl font-bold tracking-wide text-gold">
                 RP {p.price.toLocaleString("id-ID")}
               </p>
               {typeof p.sacret === "number" && p.sacret > 0 && (
-                <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-bold text-primary">
-                  <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
+                <p className="mt-1 flex items-center justify-center gap-1 text-[13px] font-bold text-primary">
+                  <Gem className="size-3.5" /> +{p.sacret.toLocaleString("id-ID")} Sacret
                 </p>
               )}
             </div>
             <button
               disabled={busy !== null}
               onClick={() => void startOrder(p)}
-              className="mt-3 w-full rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-black shadow-[0_0_18px_-6px] shadow-gold/60 transition active:scale-[0.98] disabled:opacity-50"
+              className="mt-4 w-full rounded-2xl bg-gold px-4 py-3.5 text-base font-bold text-black shadow-[0_0_18px_-6px] shadow-gold/60 transition active:scale-[0.98] disabled:opacity-50"
             >
               {busy === "order" ? (
                 <>

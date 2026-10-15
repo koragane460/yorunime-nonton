@@ -18,6 +18,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Vote,
 } from "lucide-react";
 // Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
 // bahasa bentuk dengan iOS (garis tipis, sudut membulat, varian fill saat aktif).
@@ -154,6 +155,12 @@ export function AppLayout({
               Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
             )}
             diamonds={user.diamonds ?? 0}
+            // Jumlah Vote (T-V) = floor(totalMenitNonton / 2) − yang dipakai.
+            voteTokens={Math.max(
+              0,
+              Math.floor((myStats?.minutesWatched ?? 0) / 2) -
+                (user.voteSpent ?? 0),
+            )}
           />
         </div>
       )}
@@ -212,6 +219,7 @@ function AccountPanel({
   premium,
   premiumDays,
   diamonds,
+  voteTokens,
 }: {
   onOpen: () => void;
   name: string;
@@ -229,6 +237,8 @@ function AccountPanel({
   premium: boolean;
   premiumDays: number;
   diamonds: number;
+  /** Jumlah Token Vote (T-V) yang dimiliki. */
+  voteTokens: number;
 }) {
   const cost = xpForLevel(level);
   const inLevel = Math.max(0, Math.min(xp, cost));
@@ -315,8 +325,10 @@ function AccountPanel({
             </div>
           </div>
 
-          {/* Total Sacret + sisa hari premium — ikon & teks lebih besar */}
-          <div className="mt-2.5 flex items-center gap-5 text-sm">
+          {/* Total Sacret + sisa hari premium + Jumlah Vote — ikon & teks
+              lebih besar. Vote ada di KANAN Premium; kalau tidak premium,
+              langsung di samping Sacret. */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
             <span className="flex items-center gap-1.5 font-bold text-sky-300">
               <GemIcon className="size-5" /> {diamonds.toLocaleString("id-ID")} Sacret
             </span>
@@ -325,6 +337,12 @@ function AccountPanel({
                 <CrownIcon className="size-5" /> {premiumDays} hari
               </span>
             )}
+            <span
+              className="flex items-center gap-1.5 font-bold text-violet-300"
+              title="Jumlah Vote (Token Vote dari menit nonton)"
+            >
+              <Vote className="size-5" aria-hidden /> {voteTokens.toLocaleString("id-ID")} Vote
+            </span>
           </div>
         </div>
       </button>
@@ -829,6 +847,17 @@ function BottomNav({
     navigate(path);
   };
 
+  // Indeks tombol aktif — dipakai menentukan posisi kotak rounded glossy
+  // yang berpindah halus antar tombol. -1 = tidak ada yang aktif.
+  const activeIdx = items.findIndex((it) => {
+    const base = it.path.split("?")[0];
+    if (it.panel) return navPanel === it.panel;
+    if (navPanel) return false;
+    if (base === "/home")
+      return location.pathname === "/home" || location.pathname === "/";
+    return base !== "" && location.pathname.startsWith(base);
+  });
+
   return (
     <>
       {/* Pilihan Manga / Manhwa — muncul di atas tombol Home setelah ditekan lama */}
@@ -878,12 +907,34 @@ function BottomNav({
           </div>
         </>
       )}
-      {/* Navbar full width: 5 tombol (Home, Jadwal, History, Koleksi, Akun).
-          Tiap tombol punya teks di BAWAH ikonnya — sesuai permintaan: Home,
-          Jadwal, History, Koleksi, Akun. Teks aktif memakai warna primary. */}
-      <nav className="nav-bar fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto grid w-full grid-cols-5 md:max-w-2xl lg:max-w-4xl">
-          {items.map((it) => {
+      {/* Navbar 5 tombol: bentuknya BAR ROUNDED yang tidak full-width
+          (ada jarak kiri-kanan), dan tiap tombol aktif mendapat kotak
+          rounded KEDUA yang lebih kecil dari background navigasi — kotak
+          itu bergaya glossy/kaca dan berpindah HALUS antar tombol. */}
+      <nav className="nav-bar fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto w-full max-w-2xl px-3 lg:max-w-4xl">
+          <div className="relative grid grid-cols-5 rounded-3xl border border-white/12 bg-black/85 p-1.5 shadow-[0_10px_30px_-12px_rgba(0,0,0,.9)] backdrop-blur-xl">
+            {/* Indikator: kotak rounded ke-2 (lebih kecil dari bar) dengan
+                efek glossy — bergerak halus (transition left) mengikuti
+                tombol yang sedang aktif. */}
+            <span
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute bottom-1.5 top-1.5 rounded-2xl border border-white/25",
+                "bg-gradient-to-b from-white/22 via-white/10 to-white/5",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_6px_16px_-8px_rgba(255,255,255,.35)]",
+                "backdrop-blur-md transition-all duration-300 ease-out",
+                activeIdx < 0 && "opacity-0",
+              )}
+              style={{
+                width: "calc((100% - 12px) / 5)",
+                left:
+                  activeIdx < 0
+                    ? "6px"
+                    : `calc(6px + ${activeIdx} * (100% - 12px) / 5)`,
+              }}
+            />
+            {items.map((it, idx) => {
             const base = it.path.split("?")[0];
             // Panel "favorites" tidak punya rute: aktif selama layarnya
             // terbuka, supaya tombolnya terlihat terpilih.
@@ -901,9 +952,6 @@ function BottomNav({
             const isHome = base === "/home";
             // Ikon SELALU pakai varian outline, aktif maupun tidak — bobotnya
             // persis sama, jadi tombol tidak mendadak "tebel" saat dipencet.
-            // Dulu tab aktif berganti ke varian fill (blok tebal); yang
-            // menandai tab aktif sekarang hanya warna primary + label teks di
-            // bawah ikon + garis penanda di atas tombol.
             const Icon = it.icon;
             return (
               <button
@@ -932,7 +980,10 @@ function BottomNav({
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
                     : it.label
                 }
-                className="nav-item relative flex flex-col items-center justify-center pb-2 pt-2.5"
+                className={cn(
+                  "nav-item relative z-10 flex flex-col items-center justify-center rounded-2xl pb-2 pt-2.5 transition-colors duration-200",
+                  active && "text-primary",
+                )}
               >
                 <Icon
                   strokeWidth={1.7}
@@ -940,9 +991,9 @@ function BottomNav({
                     // 5 kolom: ikon dibuat besar supaya jelas dan mudah
                     // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
                     // supaya tidak terlihat tebel dan berat.
-                    "size-[25px] md:size-[28px]",
+                    "size-[25px] md:size-[28px] transition-colors duration-200",
                     active
-                      ? "text-primary"
+                      ? "text-white"
                       : it.dim
                         ? "text-zinc-700"
                         : "text-zinc-500",
@@ -952,9 +1003,9 @@ function BottomNav({
                     Akun). Muncul untuk SEMUA tombol; yang aktif lebih terang. */}
                 <span
                   className={cn(
-                    "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none",
+                    "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none transition-colors duration-200",
                     active
-                      ? "font-semibold text-primary"
+                      ? "font-semibold text-white"
                       : it.dim
                         ? "font-medium text-zinc-700"
                         : "font-medium text-zinc-500",
@@ -964,7 +1015,8 @@ function BottomNav({
                 </span>
               </button>
             );
-          })}
+            })}
+          </div>
         </div>
       </nav>
 

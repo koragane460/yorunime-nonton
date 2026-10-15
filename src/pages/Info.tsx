@@ -346,8 +346,8 @@ function LanjutTab() {
     <div className="pt-3">
       {groups.map((g) => (
         <div key={g.label} className="mb-4">
-          {/* Judul tanggal: kotak rounded biru muda, rata kiri. */}
-          <h3 className="mb-2 inline-flex rounded-lg bg-sky-500/15 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-sky-300">
+          {/* Judul tanggal: kotak rounded biru, teks putih supaya kontras. */}
+          <h3 className="mb-2 inline-flex rounded-lg bg-sky-600/70 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-white">
             {g.label}
           </h3>
           <div className="space-y-2">

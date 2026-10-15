@@ -333,14 +333,10 @@ function JadwalContent() {
 
   return (
     <div className="py-3">
-      <h1 className="mb-1 text-lg font-bold">Jadwal Rilis</h1>
-      <p className="mb-3 text-[11px] text-muted-foreground">
-        {tab === "anime"
-          ? "Jam tayang dalam waktu lokal kamu — dari jadwal tayang resmi AniList"
-          : tab === "donghua"
-            ? "Jadwal rilis donghua per hari dari sumber subtitle Indonesia (SankaVollerei)"
-            : "Proyeksi chapter berikutnya dari rata-rata jarak rilis chapter terakhir"}
-      </p>
+      {/* Judul ditengah + garis pembatas di bawahnya; teks kecil di
+          bawah judul dihapus (permintaan user). */}
+      <h1 className="text-center text-lg font-bold">Jadwal Rilis</h1>
+      <div className="mt-2 mb-3 h-px w-full bg-white/15" aria-hidden />
 
       {/* Switcher: anime di atas, pilihan manga & manhwa muncul saat diklik */}
       <div className="mb-3">

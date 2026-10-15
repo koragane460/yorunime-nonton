@@ -52,6 +52,9 @@ const schema = defineSchema(
       autoRejectFriendAction: v.optional(v.string()),
       defaultQuality: v.optional(v.string()),
       defaultSpeed: v.optional(v.number()),
+      /** Token Vote (T-V) yang sudah dibuang untuk voting karakter.
+          Saldo = floor(totalMenitNonton / 2) − voteSpent (4 menit = 2 T-V). */
+      voteSpent: v.optional(v.number()),
       theme: v.optional(v.string()),
       customColor: v.optional(v.string()),
       createdAt: v.optional(v.number()),
@@ -641,6 +644,31 @@ const schema = defineSchema(
       genres: v.optional(v.array(v.string())),
       createdAt: v.number(),
     }).index("slug", ["slug"]),
+
+    // ---- Voting karakter anime (fitur Vote) -------------------------------
+    // Satu event voting dimulai dari panel developer dan berjalan 7 hari.
+    voteEvents: defineTable({
+      startedAt: v.number(),
+      /** Batas akhir: 7 hari setelah dimulai. Lewat ini = voting selesai. */
+      endsAt: v.number(),
+      startedBy: v.optional(v.id("users")),
+    })
+      .index("by_startedAt", ["startedAt"]),
+
+    // Kandidat karakter dalam satu event voting — ditambahkan otomatis saat
+    // user membuka layar Vote untuk sebuah anime.
+    voteCandidates: defineTable({
+      eventId: v.id("voteEvents"),
+      animeId: v.string(),
+      animeTitle: v.string(),
+      characterId: v.string(),
+      name: v.string(),
+      image: v.optional(v.string()),
+      votes: v.number(),
+    })
+      .index("by_event", ["eventId"])
+      .index("by_event_char", ["eventId", "characterId"])
+      .index("by_event_votes", ["eventId", "votes"]),
   },
   {
     schemaValidation: false,

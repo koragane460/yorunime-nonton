@@ -1004,38 +1004,59 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       return;
     }
     let alive = true;
-    setAutoSubLoading(true);
-    subtitleIndo({ malId, ep: Number(epNo) || 1 })
-      .then((r: any) => {
-        if (!alive) return;
-        if (!r?.ok || !r.vtt) {
-          setAutoSubError(
-            r?.reason && r.reason !== "Subtitle tidak tersedia"
-              ? `Subtitle Indonesia gagal dibuat (${r.reason})`
-              : "Subtitle Indonesia belum tersedia untuk episode ini",
-          );
-          return;
-        }
-        try {
-          localStorage.setItem(key, r.vtt);
-        } catch {
-          /* storage penuh — subtitle tetap dipakai di session ini */
-        }
-        setAutoVtt(r.vtt);
-        setAutoSubSource(String(r.source ?? "auto"));
-        // Terjemahan gagal: teksnya masih bahasa aslinya. Tetap dipakai supaya
-        // tidak ada layar tanpa subtitle, tapi user diberi tahu + jalan coba lagi.
-        if (r.source === "raw")
-          setAutoSubError("Terjemahan subtitle gagal, dipakai subtitle asli");
-      })
-      .catch(() => {
-        if (alive) setAutoSubError("Subtitle Indonesia gagal dimuat");
-      })
-      .finally(() => {
-        if (alive) setAutoSubLoading(false);
-      });
+    // Auto-retry: kalau muat subtitle Indonesia gagal (jaringan/race dengan
+    // server MegaPlay), coba lagi sampai 3 kali dengan jeda 1.2s — supaya
+    // sebelum percakapan pertama mulai, subtitle Indonesia sudah termuat dan
+    // user tidak kejebak subtitle English milik server.
+    let attempt = 0;
+    let retryTimer: number | null = null;
+    const load = () => {
+      setAutoSubLoading(true);
+      subtitleIndo({ malId, ep: Number(epNo) || 1 })
+        .then((r: any) => {
+          if (!alive) return;
+          if (!r?.ok || !r.vtt) {
+            attempt += 1;
+            if (attempt < 3) {
+              retryTimer = window.setTimeout(load, 1200);
+              return;
+            }
+            setAutoSubError(
+              r?.reason && r.reason !== "Subtitle tidak tersedia"
+                ? `Subtitle Indonesia gagal dibuat (${r.reason})`
+                : "Subtitle Indonesia belum tersedia untuk episode ini",
+            );
+            return;
+          }
+          try {
+            localStorage.setItem(key, r.vtt);
+          } catch {
+            /* storage penuh — subtitle tetap dipakai di session ini */
+          }
+          setAutoVtt(r.vtt);
+          setAutoSubSource(String(r.source ?? "auto"));
+          // Terjemahan gagal: teksnya masih bahasa aslinya. Tetap dipakai supaya
+          // tidak ada layar tanpa subtitle, tapi user diberi tahu + jalan coba lagi.
+          if (r.source === "raw")
+            setAutoSubError("Terjemahan subtitle gagal, dipakai subtitle asli");
+        })
+        .catch(() => {
+          if (!alive) return;
+          attempt += 1;
+          if (attempt < 3) {
+            retryTimer = window.setTimeout(load, 1200);
+            return;
+          }
+          setAutoSubError("Subtitle Indonesia gagal dimuat");
+        })
+        .finally(() => {
+          if (alive) setAutoSubLoading(false);
+        });
+    };
+    load();
     return () => {
       alive = false;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epParam, animeId, isDonghua, bakedSubs, !!direct?.ok, subRetry]);
@@ -2271,7 +2292,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           <div
             className={cn(
               "pointer-events-auto flex items-center justify-center",
-              isFs ? "gap-12 pb-3" : "gap-6 pb-2",
+              isFs ? "gap-9 pb-3" : "gap-4 pb-2",
             )}
           >
             <button
@@ -2287,24 +2308,26 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 navigate(epUrl(epList[epIndex - 1].id));
               }}
               className={cn(
-                "rounded-full bg-black/50 p-2",
+                "rounded-full bg-black/50 p-1.5",
                 (room ? (currentEp?.number ?? 1) <= 1 : epIndex <= 0) && "opacity-30",
               )}
             >
-              <SkipBack className="size-5 text-white" />
+              <SkipBack className="size-4 text-white" />
             </button>
-            <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-2">
-              <RotateCcw className="size-6 text-white" />
+            <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-1.5">
+              <RotateCcw className="size-5 text-white" />
             </button>
-            <button onClick={togglePlay} className="rounded-full bg-primary p-4">
+            {/* Play/pause diperkecil supaya tombol Auto next di bawahnya
+                tidak ketutup dan tetap bisa dipencet. */}
+            <button onClick={togglePlay} className="rounded-full bg-primary p-2.5">
               {playing ? (
-                <Pause className="size-7 text-primary-foreground" />
+                <Pause className="size-6 text-primary-foreground" />
               ) : (
-                <Play className="size-7 text-primary-foreground" />
+                <Play className="size-6 text-primary-foreground" />
               )}
             </button>
-            <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-2">
-              <RotateCw className="size-6 text-white" />
+            <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-1.5">
+              <RotateCw className="size-5 text-white" />
             </button>
             <button
               disabled={room ? (currentEp?.number ?? 1) >= epList.length : epIndex >= epList.length - 1}
@@ -2319,13 +2342,13 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 navigate(epUrl(epList[epIndex + 1].id));
               }}
               className={cn(
-                "rounded-full bg-black/50 p-2",
+                "rounded-full bg-black/50 p-1.5",
                 (room
                   ? (currentEp?.number ?? 1) >= epList.length
                   : epIndex >= epList.length - 1) && "opacity-30",
               )}
             >
-              <SkipForward className="size-5 text-white" />
+              <SkipForward className="size-4 text-white" />
             </button>
             {/* Tombol keluar layar penuh yang posisinya tetap (di baris atas) */}
           </div>
@@ -2565,16 +2588,23 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             </button>
           )}
 
-        {/* Auto next: UI mengikuti kontrol — hilang saat layar player dipencet
-            (controlsOn) dan muncul lagi saat diketuk. */}
+        {/* Auto next: z-30 DI ATAS lapisan tap (z-10) supaya:
+            1) tombolnya benar-benar bisa dipencet, dan
+            2) menekannya TIDAK men-toggle kontrol — UI player tetap tampil.
+            Tanpa background: hanya teks + garis pinggir tipis. */}
         {!uiLocked && controlsOn && (
           <button
-            onClick={() => setAutoNext((v) => !v)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setAutoNext((v) => !v);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
             className={cn(
-              "absolute bottom-28 left-3 rounded-full border px-3 py-1.5 text-xs font-bold transition",
+              "absolute bottom-28 left-3 z-30 rounded-full border px-3 py-1.5 text-xs font-bold transition drop-shadow-[0_2px_6px_rgba(0,0,0,.9)]",
               autoNext
-                ? "border-white bg-white text-black"
-                : "border-white/50 bg-black/75 text-white hover:bg-white hover:text-black",
+                ? "border-white text-white"
+                : "border-white/45 text-white/85",
             )}
           >
             Auto next {autoNext ? "ON" : "OFF"}
@@ -2621,10 +2651,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
       {/* Like | dislike menyatu jadi SATU pill (garis pembatas tegak di
           tengah, dua sisanya sama-sama bisa dipencet) + Favorite tanpa
-          angka + Laporkan. Warna memakai palet tombol bersama. */}
+          angka + Laporkan. Semua tombol memakai KETEBALAN border yang sama
+          (2px, tidak berlebihan) dan state tekan yang CLEAN — tanpa ring /
+          glow mencolok di pinggir. */}
       <div className="w-full px-3 pt-2">
         <div className="grid grid-cols-3 gap-2">
-          <div className="flex items-stretch overflow-hidden rounded-xl border border-border bg-secondary/40">
+          <div className="flex items-stretch overflow-hidden rounded-xl border-2 border-white/15 bg-white/[0.04]">
             <button
               onClick={() => {
                 // Tombol Like menyatu: menekan lagi membatalkan, menekan saat
@@ -2635,7 +2667,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-semibold transition",
                 likeStats?.liked
-                  ? "yn-btn-warm"
+                  ? "bg-white/15 text-white"
                   : "text-muted-foreground hover:bg-white/5",
               )}
             >
@@ -2648,7 +2680,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               </span>
             </button>
             {/* Garis pembatas lurus ke atas, membelah dua sisi tombol */}
-            <span aria-hidden className="w-px shrink-0 self-stretch bg-white/15" />
+            <span aria-hidden className="w-px shrink-0 self-stretch bg-white/20" />
             <button
               onClick={() => {
                 void toggleLike({ animeId, value: -1 }).catch(() => {});
@@ -2657,7 +2689,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-semibold transition",
                 likeStats?.disliked
-                  ? "bg-white/10 text-white ring-1 ring-white/30 ring-inset"
+                  ? "bg-white/15 text-white"
                   : "text-muted-foreground hover:bg-white/5",
               )}
             >
@@ -2679,8 +2711,10 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }).catch(() => {});
             }}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition",
-              isFav ? "yn-btn-warm" : "yn-btn-quiet",
+              "flex items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2.5 text-xs font-semibold transition",
+              isFav
+                ? "border-white/25 bg-white/15 text-white"
+                : "border-white/15 bg-white/[0.04] text-muted-foreground hover:bg-white/5",
             )}
           >
             <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
@@ -2688,7 +2722,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </button>
           <button
             onClick={() => setReportOpen(true)}
-            className="yn-btn-quiet flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition"
+            className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-white/5"
           >
             <Flag className="size-4" aria-hidden />
             <span>Laporkan</span>
@@ -3270,8 +3304,10 @@ function ReportScreen({
   };
 
   return (
-    <div className="screen-enter fixed inset-0 z-[90] flex flex-col bg-background/95 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-y-auto thin-scroll px-4 pb-8 pt-4">
+    <div className="screen-enter fixed inset-0 z-[90] flex flex-col items-center justify-center bg-background/95 backdrop-blur-md">
+      {/* Konten ditengahkan vertikal & horizontal; tetap bisa di-scroll
+          kalau tinggi layar kecil (max-h + overflow-y-auto). */}
+      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto thin-scroll px-4 pb-8 pt-4">
         {/* Header */}
         <div className="flex items-center gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl yn-btn-warm">

@@ -29,6 +29,7 @@ import {
   Sparkles,
   Upload,
   UserPlus,
+  Vote,
   VolumeX,
   X,
 } from "lucide-react";
@@ -202,6 +203,13 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
               hint: "Total masuk, mutasi, tarik ke e-wallet",
               tone: "amber",
               render: () => <OrdersPanel tab="wallet" />,
+            },
+            {
+              key: "vote",
+              label: "Vote",
+              hint: "Mulai voting karakter (durasi 7 hari)",
+              tone: "amber",
+              render: () => <VoteControlPanel />,
             },
           ]}
         />
@@ -469,6 +477,68 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
  * Mode pembayaran manual (QRIS statis): developer menempelkan foto QRIS +
  * rekening, lalu menyetujui order yang sudah dibayar user.
  */
+/** Kontrol Voting karakter untuk developer: mulai vote (durasi 7 hari). */
+function VoteControlPanel() {
+  const status = useQuery(api.votes.status, {});
+  const top = useQuery(api.votes.topCharacters, {});
+  const start = useMutation(api.votes.start);
+  const [busy, setBusy] = useState(false);
+  const state = status?.state ?? "none";
+  const msLeft = status?.msLeft ?? 0;
+  const days = Math.floor(msLeft / 86_400_000);
+  const hours = Math.floor((msLeft % 86_400_000) / 3_600_000);
+
+  const doStart = async () => {
+    setBusy(true);
+    try {
+      await start({});
+      toast.success("Vote Character dimulai — durasi 7 hari");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memulai vote");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-background/60 p-3">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold">
+        <Vote className="size-3.5 text-primary" /> Vote Character
+      </p>
+      <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+        Voting muncul di tab Vote layar detail anime. Durasi 7 hari, token
+        dari menit nonton (4 menit = 2 T-V).
+      </p>
+
+      <div className="mt-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[11px]">
+        {state === "active" ? (
+          <span className="font-semibold text-emerald-300">
+            Sedang berjalan — {days > 0 ? `${days} hari ${hours} jam lagi` : `${hours} jam lagi`}
+          </span>
+        ) : state === "ended" ? (
+          <span className="font-semibold text-amber-300">
+            Selesai — {top?.items?.length ?? 0} kandidat (siap mulai putaran baru)
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Belum pernah dimulai</span>
+        )}
+      </div>
+
+      <button
+        onClick={() => void doStart()}
+        disabled={busy || state === "active"}
+        className="mt-2 h-9 w-full rounded-lg bg-primary text-xs font-bold text-primary-foreground transition disabled:opacity-45"
+      >
+        {busy
+          ? "Memulai…"
+          : state === "active"
+            ? "Vote masih berjalan"
+            : "Mulai vote (7 hari)"}
+      </button>
+    </div>
+  );
+}
+
 function ManualPaymentPanel() {
   const config = useQuery(api.payments.devSettings, {});
   const pending = useQuery(api.payments.pendingManualOrders, {});

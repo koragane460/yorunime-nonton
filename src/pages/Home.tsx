@@ -10,6 +10,7 @@ import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNam
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
+import { VoteScreen } from "@/components/VoteScreen";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
@@ -557,12 +558,14 @@ function HomeContent() {
                 style={
                   a.image
                     ? {
-                        // Layer 1: vignette vertikal gelap (gradient dari bawah ke atas) agar teks terbaca di bawah
-                        // Layer 2: gambar anime
-                        backgroundImage: `linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.55) 50%, rgba(0,0,0,.2) 100%), url(${a.image})`,
-                        backgroundSize: "100% 100%, cover",
-                        backgroundPosition: "center bottom, center",
-                        backgroundRepeat: "no-repeat, no-repeat",
+                        // Layer 1: vignette vertikal gelap + sorotan lembut di
+                        // pojok kiri atas supaya banner terasa lebih hidup
+                        // tapi teks tetap terbaca.
+                        backgroundImage:
+                          `linear-gradient(0deg, rgba(2,6,16,.95) 0%, rgba(2,6,16,.62) 48%, rgba(2,6,16,.18) 100%), radial-gradient(120% 70% at 8% -8%, rgba(120,160,255,.22) 0%, rgba(120,160,255,0) 55%), url(${a.image})`,
+                        backgroundSize: "100% 100%, 100% 100%, cover",
+                        backgroundPosition: "center bottom, left top, center",
+                        backgroundRepeat: "no-repeat, no-repeat, no-repeat",
                       }
                     : undefined
                 }
@@ -573,20 +576,21 @@ function HomeContent() {
                     sinopsis, judul, dan tombol tidak ada yang terlalu ke
                     atas / ke bawah. */}
                 <div className="relative flex h-full w-full flex-col justify-center gap-2.5 p-4 pb-9">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
+                  {/* Badge kaca (glass) — netral, tanpa warna mencolok. */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
                       {a.status ?? "Ongoing"}
                     </span>
                     {a.isDonghua && (
-                      <span className="rounded-md bg-sky-700 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">
+                      <span className="rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-black uppercase text-white backdrop-blur-sm">
                         Donghua
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1 rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-black text-gold-strong">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
                       <CrownIcon className="size-3" />
                       New
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
                       <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                         <path d="M4 12h16M12 4v16" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -596,17 +600,21 @@ function HomeContent() {
 
 
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black">{a.title}</h3>
-                    <p className="line-clamp-4 text-xs leading-relaxed text-zinc-300">
+                    <h3 className="text-xl font-black leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,.7)]">
+                      {a.title}
+                    </h3>
+                    <p className="line-clamp-4 text-xs leading-relaxed text-zinc-300/90">
                       {a.synopsis ?? "Sinopsis belum tersedia."}
                     </p>
                   </div>
-                  <div className="mt-1 flex gap-2">
+                  {/* Tombol clean: putih solid + kaca bening — tanpa gradasi
+                      amber/rose yang mencolok. */}
+                  <div className="mt-1.5 flex gap-2.5">
                     <button
                       onClick={() =>
                         openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
                       }
-                      className="yn-btn-warm rounded-full px-4 py-1.5 text-xs font-bold"
+                      className="rounded-full bg-white px-5 py-2 text-xs font-bold text-zinc-900 shadow-lg shadow-black/40 transition active:scale-95"
                     >
                       Lihat detail
                     </button>
@@ -622,7 +630,7 @@ function HomeContent() {
                           `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
                         );
                       }}
-                      className="yn-btn-quiet rounded-full px-4 py-1.5 text-xs font-semibold"
+                      className="rounded-full border border-white/30 bg-white/12 px-5 py-2 text-xs font-semibold text-white backdrop-blur-sm transition active:scale-95"
                     >
                       ▶ Tonton
                     </button>
@@ -665,14 +673,15 @@ function HomeContent() {
               </div>
             </button>
           </div>
-          {/* Geser pakai tangan saja — tanpa tombol panah */}
+          {/* Geser pakai tangan saja — tanpa tombol panah. Titik putih netral
+              (bukan merah) supaya tetap clean. */}
           <div className="absolute bottom-3 left-4 flex gap-1">
             {Array.from({ length: heroItems.length + 1 }).map((_, i) => (
               <span
                 key={i}
                 className={cn(
                   "h-1 rounded-full transition-all",
-                  i === heroIdx ? "w-5 bg-red-500" : "w-2 bg-white/30",
+                  i === heroIdx ? "w-5 bg-white" : "w-2 bg-white/35",
                 )}
               />
             ))}
@@ -788,13 +797,61 @@ function HomeContent() {
                     {a.timeLabel}
                   </p>
                 </button>
-              ))}
+              )              )}
             </div>
           )}
         </>
       )}
 
-
+      {/* 6b) ANIME HOT — tepat di bawah Update News. Tampilannya geser ke
+          kanan (mulai agak masuk) dan bisa digeser; angka 1-10 hanya teks
+          tanpa background kotak berwarna. */}
+      {!loading && topList.length > 0 && (
+        <div className="fade-enter mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
+              <span className="text-lg" aria-hidden>🔥</span> Anime Hot
+            </p>
+            <button
+              onClick={() =>
+                setCatalog({ kind: "popular", title: "Anime Hot", items: topList as unknown as CatalogCard[] })
+              }
+              className="text-xs font-semibold text-primary"
+            >
+              Lihat selengkap ›
+            </button>
+          </div>
+          <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1 pl-6">
+            {topList.slice(0, 10).map((a, i) => (
+              <button
+                key={a.id}
+                onClick={() => openAnime(a.id, a.title, a.source)}
+                className="group relative aspect-[2/3] w-28 shrink-0 overflow-hidden rounded-2xl border border-white/10"
+              >
+                {a.image ? (
+                  <img
+                    src={a.image}
+                    alt={a.title}
+                    loading="lazy"
+                    className="size-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="size-full bg-muted" />
+                )}
+                {/* Angka peringkat: teks polos + bayangan, TANPA background. */}
+                <span className="absolute left-1.5 top-1 text-lg font-black leading-none text-white drop-shadow-[0_2px_6px_rgba(0,0,0,.9)]">
+                  {i + 1}
+                </span>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-1.5 pt-4">
+                  <p className="line-clamp-2 text-left text-[10px] font-semibold leading-tight text-white">
+                    {a.title}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 6c) KATEGORI LENGKAP: Season Ini / Movie / OVA / Donghua / Upcoming */}
       <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
@@ -832,58 +889,6 @@ function HomeContent() {
           />
         )}
       </SectionRow>
-
-      {/* Anime Hot — Top 1-3 yang lagi panas */}
-      {!loading && topList.length > 0 && (
-        <div className="fade-enter mt-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
-              <span className="text-lg" aria-hidden>🔥</span> Anime Hot
-            </p>
-            <button
-              onClick={() =>
-                setCatalog({ kind: "popular", title: "Anime Hot", items: topList as unknown as CatalogCard[] })
-              }
-              className="text-xs font-semibold text-primary"
-            >
-              Lihat selengkap ›
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {topList.slice(0, 3).map((a, i) => (
-              <button
-                key={a.id}
-                onClick={() => openAnime(a.id, a.title, a.source)}
-                className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10"
-              >
-                {a.image ? (
-                  <img
-                    src={a.image}
-                    alt={a.title}
-                    loading="lazy"
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="size-full bg-muted" />
-                )}
-                <span
-                  className={cn(
-                    "absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-lg font-black text-black",
-                    i === 0 ? "bg-yellow-400" : i === 1 ? "bg-zinc-300" : "bg-amber-600",
-                  )}
-                >
-                  {i + 1}
-                </span>
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-1.5 pt-4">
-                  <p className="line-clamp-2 text-left text-[10px] font-semibold leading-tight text-white">
-                    {a.title}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <SectionRow
         title="Top Anime Hari Ini"
@@ -1856,9 +1861,10 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
         )}
       </div>
 
-      {/* Panel pilihan genre — muncul saat tombol Genre ditekan */}
+      {/* Panel pilihan genre — TANPA kotak latar, hanya chip-pill yang
+          langsung menempel di background halaman. */}
       {genresOpen && (
-        <div className="mt-2 rounded-2xl border border-border bg-card p-3">
+        <div className="mt-2">
           <p className="mb-2 text-xs font-bold text-muted-foreground">
             Pilih genre (bisa lebih dari satu)
           </p>
@@ -2403,10 +2409,11 @@ function AnimeDetailScreen({
   const [allEpisodes, setAllEpisodes] = useState(false);
   const [episodeOpen, setEpisodeOpen] = useState(true);
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
-  // Tab Info / Nonton / Character / Cuplikan — tombol tanpa background rounded,
+  // Tab Info / Nonton / Character / Vote — tombol tanpa background rounded,
   // hanya garis bawah pada teks yang aktif.
-  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "cuplikan">("info");
-  // Tab Cuplikan: karakter terpilih + daftar klip TikTok-nya.
+  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "vote">("info");
+  // Tab Cuplikan (dulu): karakter terpilih + daftar klip TikTok-nya — kini
+  // digantikan tab Vote, tapi state ini masih dipakai panel lamanya.
   const [cuplikanChar, setCuplikanChar] = useState<{ id: string; name: string } | null>(null);
   // Bagian Character: foto + detail gabungan dari AniList (paling ikonik dulu).
   // Panel info developer: menampilkan MAL id, URL poster, dan data teknis
@@ -2623,13 +2630,13 @@ function AnimeDetailScreen({
           </p>
 
           {/* Tab tanpa background rounded: hanya garis bawah pada teks aktif.
-              Info · Nonton · Character · Cuplikan */}
+              Info · Nonton · Character · Vote (dulunya Cuplikan) */}
           <div className="mt-3 flex gap-1">
             {([
               ["info", "Info"],
               ["nonton", "Nonton"],
               ["character", "Character"],
-              ["cuplikan", "Cuplikan"],
+              ["vote", "Vote"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -2710,13 +2717,12 @@ function AnimeDetailScreen({
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
           )}
 
-          {/* Cuplikan karakter (bukan trailer) — tampil di tab Cuplikan */}
-          {detailTab === "cuplikan" && (
-            <CuplikanPanel
-              chars={chars}
+          {/* Vote karakter (pengganti Cuplikan) — tampil di tab Vote */}
+          {detailTab === "vote" && (
+            <VoteScreen
+              animeId={String(animeId)}
               animeTitle={detail.title ?? animeTitle ?? ""}
-              selected={cuplikanChar}
-              onSelect={setCuplikanChar}
+              chars={chars}
             />
           )}
 

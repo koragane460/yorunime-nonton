@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Loader2, Search, Star, Tv, X } from "lucide-react";
+import { ChevronLeft, Loader2, Star, Tv } from "lucide-react";
 
 /**
  * Asal data kartu. "sanka" berarti id-nya slug SankaVollereii (donghua),
@@ -200,7 +200,8 @@ export function CardCarousel({
 }
 
 /* ====================================================================== *
- *  Layar penuh: daftar lengkap + kolom pencarian + tombol kembali.
+ *  Layar penuh: daftar lengkap + tombol kembali (TANPA kolom pencarian —
+ *  pencarian sudah tersedia di layar "Cari anime & donghua").
  * ====================================================================== */
 
 export function CatalogScreen({
@@ -217,13 +218,8 @@ export function CatalogScreen({
   onPick: (id: string, title?: string, source?: PickSource) => void;
 }) {
   const browse = useAction(api.anime.animeBrowse);
-  const searchAnime = useAction(api.anime.animeSearch);
-  const donghuaSearch = useAction(api.sanka.donghuaSearchCards);
-  const [q, setQ] = useState("");
   const [all, setAll] = useState<CardT[]>(seed);
   const [loading, setLoading] = useState(seed.length === 0);
-  const [results, setResults] = useState<CardT[] | null>(null);
-  const [searching, setSearching] = useState(false);
 
   // Muat beberapa halaman supaya "daftar lengkap" benar-benar punya isi.
   // Halaman 1 sudah diberikan lewat `seed`.
@@ -260,34 +256,7 @@ export function CatalogScreen({
     };
   }, [kind, browse, seed]);
 
-  // Pencarian: untuk donghua, kueri+donghua; untuk anime, animeSearch biasa.
-  const doSearch = async () => {
-    const term = q.trim();
-    if (term.length < 2) {
-      setResults(null);
-      return;
-    }
-    setSearching(true);
-    try {
-      // Donghua dicari lewat SankaVollereii (katalog terpisah, subtitle
-      // Indonesia). Menyaring daftar lokal saja akan salah, karena daftar
-      // lokal cuma halaman pertama.
-      const r =
-        kind === "donghua"
-          ? await donghuaSearch({ q: term, limit: 40 })
-          : await searchAnime({ q: term, page: 1 });
-      setResults(((r ?? []) as CardT[]).filter((c) => c?.id));
-    } catch {
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const list = useMemo(
-    () => results ?? all,
-    [results, all],
-  );
+  const list = all;
 
   return (
     <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-background">
@@ -306,54 +275,10 @@ export function CatalogScreen({
         {loading && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />}
       </header>
 
-      <div className="px-4 pt-3">
-        <div className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder={
-              kind === "donghua"
-                ? "Cari donghua… contoh: battle through"
-                : "Cari anime… contoh: ayanokoji"
-            }
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-          {q && (
-            <button
-              onClick={() => {
-                setQ("");
-                setResults(null);
-              }}
-              aria-label="Bersihkan pencarian"
-            >
-              <X className="size-4 text-muted-foreground" />
-            </button>
-          )}
-          <button
-            onClick={() => void doSearch()}
-            disabled={searching}
-            className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
-          >
-            {searching ? <Loader2 className="size-3 animate-spin" /> : "Cari"}
-          </button>
-        </div>
-        {results !== null && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {results.length} hasil untuk “{q.trim()}”
-          </p>
-        )}
-      </div>
-
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {list.length === 0 ? (
           <p className="py-10 text-center text-xs text-muted-foreground">
-            {loading
-              ? "Memuat katalog…"
-              : results !== null
-                ? "Tidak ditemukan."
-                : "Katalog kosong."}
+            {loading ? "Memuat katalog…" : "Katalog kosong."}
           </p>
         ) : (
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
