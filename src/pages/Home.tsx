@@ -46,8 +46,6 @@ import {
   BellIcon as Bell,
   ChevronLeftIcon as ChevronLeft,
   ChevronRightIcon as ChevronRight,
-  ChevronDownIcon as ChevronDown,
-  ChevronUpIcon as ChevronUp,
   TrophyIcon as Trophy,
   GiftIcon as Gift,
   SwipeIcon as ArrowLeftRight,
@@ -360,6 +358,10 @@ function HomeContent() {
     };
   }, []);
   const [searchGenre, setSearchGenre] = useState<string | null>(null);
+  // True saat layar pencarian dibuka lewat "Lihat semua ›" (Genre) —
+  // panel pilihan genre multi-select langsung terbuka. Tombol Cari biasa
+  // tidak menyalakan flag ini.
+  const [searchOpenGenres, setSearchOpenGenres] = useState(false);
   // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
   const [catalog, setCatalog] = useState<{
     kind: CatalogKind;
@@ -876,6 +878,7 @@ function HomeContent() {
         <button
           onClick={() => {
             setSearchGenre(null);
+            setSearchOpenGenres(false);
             setShowSearch(true);
           }}
           className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
@@ -973,6 +976,7 @@ function HomeContent() {
             <button
               onClick={() => {
                 setSearchGenre(null);
+                setSearchOpenGenres(true);
                 setShowSearch(true);
               }}
               className="text-xs font-semibold text-primary"
@@ -1144,6 +1148,7 @@ function HomeContent() {
       {showSearch && (
         <SearchScreen
           initialGenre={searchGenre}
+          openGenres={searchOpenGenres}
           onClose={() => setShowSearch(false)}
           onPick={openAnime}
           onOpenMusic={() => {
@@ -1733,10 +1738,12 @@ function SearchResultRow({
 
 // ------------------------------------------------------ search screen ----
 
-function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
+function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }: {
   onClose: () => void;
   onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
   initialGenre?: string | null;
+  /** Buka panel pilihan genre (multi-select) saat layar muncul. */
+  openGenres?: boolean;
   onOpenMusic: () => void;
 }) {
   useHideNavOnMount();
@@ -1760,7 +1767,10 @@ function SearchScreen({ onClose, onPick, initialGenre, onOpenMusic }: {
   const [list, setList] = useState<AnimeCardT[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [genresOpen, setGenresOpen] = useState(false);
+  // Layar genre (dibuka dari chip Genre di Home): panel pilihan genre
+  // langsung TERBUKA supaya user tinggal menambah/mengurangi genre
+  // (multi-select) tanpa harus menekan tombol Genre dulu.
+  const [genresOpen, setGenresOpen] = useState(!!initialGenre || !!openGenres);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   // Multi-select: kumpulan NAMA genre yang dipilih (irisannya dihitung server).
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
@@ -3034,14 +3044,17 @@ function AnimeDetailScreen({
                 ) : (
                   /* Mode List — kartu episode: nomor + tanggal + putar. */
                   <div className="mt-3 space-y-2">
-                    {filteredEps.map((e: any, idx: number) => {
-                      const released = e.released !== false;
-                      // "BARU" untuk episode tayang terakhir.
-                      const isNew =
-                        released &&
-                        eps.findIndex((x: any) => x.released !== false) ===
-                          eps.findIndex((x: any) => x.id === e.id) &&
-                        episodeOrder === "last";
+                    {/* Nomor episode tayang terakhir = kandidat "BARU". */}
+                    {(() => {
+                      const newest = eps
+                        .filter((x: any) => x.released !== false)
+                        .reduce(
+                          (m: number, x: any) => Math.max(m, Number(x.number) || 0),
+                          0,
+                        );
+                      return filteredEps.map((e: any) => {
+                        const released = e.released !== false;
+                        const isNew = released && Number(e.number) === newest;
                       return (
                         <button
                           key={e.id}
@@ -3084,12 +3097,10 @@ function AnimeDetailScreen({
                           >
                             <Play className="size-4 fill-current" />
                           </span>
-                          {/* Nomor urut kartu (kiri) — meniru gaya daftar
-                              referensi tanpa mengubah data. */}
-                          {idx < 0 && <span aria-hidden>{idx}</span>}
                         </button>
                       );
-                    })}
+                      });
+                    })()}
                   </div>
                 )}
 
@@ -3549,10 +3560,6 @@ function DonghuaDetailScreen({
   const shownParas = synopsisOpen ? synopsisLines : synopsisLines.slice(0, 5);
   const hiddenParas = Math.max(0, synopsisLines.length - 5);
   const canExpand = hiddenParas > 0 || synopsisLines.join(" ").length > 420;
-  const truncated =
-    !synopsisOpen &&
-    synopsisLines.length <= 5 &&
-    synopsisLines.join(" ").length > 420;
   const total = detail.episodes.length;
 
   return (

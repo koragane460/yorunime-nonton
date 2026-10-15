@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
@@ -34,7 +34,6 @@ import {
   BookmarkIcon,
   BookmarkIconFill,
   BookIcon,
-  PanelsIcon,
   GemIcon,
   CrownIcon,
 } from "@/components/ios-icons";
@@ -858,7 +857,7 @@ function BottomNav({
                     : `calc(6px + ${activeIdx} * (100% - 12px) / 6)`,
               }}
             />
-            {items.map((it, idx) => {
+            {items.map((it) => {
             const base = it.path.split("?")[0];
             // Panel "favorites" tidak punya rute: aktif selama layarnya
             // terbuka, supaya tombolnya terlihat terpilih.
@@ -873,7 +872,6 @@ function BottomNav({
                 : base === "/home"
                   ? location.pathname === "/home" || location.pathname === "/"
                   : base !== "" && location.pathname.startsWith(base);
-            const isHome = base === "/home";
             // Ikon SELALU pakai varian outline, aktif maupun tidak — bobotnya
             // persis sama, jadi tombol tidak mendadak "tebel" saat dipencet.
             const Icon = it.icon;

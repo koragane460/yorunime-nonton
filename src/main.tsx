@@ -107,11 +107,13 @@ function RouteSyncer() {
     );
   }, [location.pathname]);
 
-  // Ingat halaman terakhir yang BUKAN halaman nonton / pembaca. Dipakai
-  // tombol "kembali" di player supaya balik ke tempat user datang, bukan
-  // selalu ke Home. Path yang disimpan adalah sesungguhnya, termasuk query.
+  // Ingat halaman terakhir yang BUKAN halaman nonton / pembaca (reader).
+  // Tab Baca (/baca persis) halaman biasa jadi IKUT disimpan; reader
+  // (/baca/:slug/:chapter) yang dikecualikan. Dipakai tombol "kembali" di
+  // player supaya balik ke tempat user datang, bukan selalu ke Home.
   useEffect(() => {
-    if (location.pathname === "/nonton" || location.pathname === "/baca") return;
+    const p = location.pathname;
+    if (p === "/nonton" || p.startsWith("/baca/")) return;
     try {
       sessionStorage.setItem(
         "yn-return-to",
@@ -139,7 +141,7 @@ function RouteSyncer() {
         } catch {
           /* storage diblokir - tetap ke Home */
         }
-        if (target.startsWith("/nonton") || target.startsWith("/baca")) {
+        if (target.startsWith("/nonton") || target.split("?")[0].startsWith("/baca/")) {
           target = "/home";
         }
         const to = target.startsWith("?") ? "/home" + target : target;

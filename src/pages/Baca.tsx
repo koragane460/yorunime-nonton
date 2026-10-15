@@ -4,7 +4,6 @@
 // pindah ke sini: dua kartu Manga / Manhwa di paling atas, lalu katalog jenis
 // terpilih (ComicBrowsePage) langsung di bawahnya. "Lihat selengkap" Manga /
 // Manhwa di Home mengarah ke sini lewat ?jenis=manga|manhwa.
-import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { ComicBrowsePage, type ComicKind } from "@/components/ComicBrowsePage";
@@ -13,17 +12,11 @@ import { cn } from "@/lib/utils";
 
 export default function Baca() {
   const [params, setParams] = useSearchParams();
-  const initial: ComicKind = params.get("jenis") === "manhwa" ? "manhwa" : "manga";
-  const [kind, setKind] = useState<ComicKind>(initial);
-
-  // ?jenis=manga|manhwa dari tombol "Lihat selengkap" di Home.
-  useEffect(() => {
-    const j = params.get("jenis");
-    if (j === "manga" || j === "manhwa") setKind(j);
-  }, [params]);
+  // Sumber kebenaran = query ?jenis=… — tanpa state lokal, jadi tombol
+  // Back browser dan link "Lihat selengkap" dari Home langsung konsisten.
+  const kind: ComicKind = params.get("jenis") === "manhwa" ? "manhwa" : "manga";
 
   const pick = (k: ComicKind) => {
-    setKind(k);
     const next = new URLSearchParams(params);
     next.set("jenis", k);
     // replace supaya tombol Back browser tidak menumpuk query yang sama.

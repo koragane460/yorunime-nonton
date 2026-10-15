@@ -6,12 +6,10 @@ import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import {
   Check,
   ChevronLeft,
-  Crown,
   Gem,
   Loader2,
   QrCode,
   ShieldCheck,
-  Sparkles,
   Upload,
   Zap,
 } from "lucide-react";
@@ -264,17 +262,6 @@ function Plans() {
   // Toast bawah sudah dihapus permanen, jadi galat pembayaran tampil inline.
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // Penunjuk geser kartu paket.
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [activePlan, setActivePlan] = useState(0);
-  const planCount = plans?.length ?? 0;
-  const onCarouselScroll = () => {
-    const el = carouselRef.current;
-    if (!el) return;
-    const idx = Math.round(el.scrollLeft / (el.scrollWidth / Math.max(1, planCount)));
-    setActivePlan(Math.min(planCount - 1, Math.max(0, idx)));
-  };
 
   const ready = config?.ready === true;
   const image = config?.qrUrl || qrUrl || "";
