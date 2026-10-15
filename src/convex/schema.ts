@@ -604,7 +604,12 @@ const schema = defineSchema(
 
     contentReports: defineTable({
       reporterId: v.id("users"),
-      messageId: v.id("chatMessages"),
+      /** Opsional: laporan pesan chat memakai ini, laporan anime memakai
+          animeId/animeTitle di bawah. */
+      messageId: v.optional(v.id("chatMessages")),
+      /** Laporan judul anime (tombol Laporkan di layar nonton). */
+      animeId: v.optional(v.string()),
+      animeTitle: v.optional(v.string()),
       reason: v.string(),
       detail: v.optional(v.string()),
       text: v.optional(v.string()),

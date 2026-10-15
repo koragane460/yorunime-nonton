@@ -733,6 +733,48 @@ export const reportChatMessage = mutation({
   },
 });
 
+/** Lapor judul anime (tombol Laporkan di layar nonton) → notifikasi developer. */
+export const reportAnime = mutation({
+  args: {
+    animeId: v.string(),
+    animeTitle: v.string(),
+    reason: v.string(),
+    detail: v.optional(v.string()),
+  },
+  handler: async (ctx, { animeId, animeTitle, reason, detail }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const reporter = await ctx.db.get(userId);
+    await ctx.db.insert("contentReports", {
+      reporterId: userId,
+      animeId,
+      animeTitle,
+      reason,
+      detail,
+      createdAt: Date.now(),
+    });
+    // Notifikasi ke semua developer / moderator.
+    const staff = await ctx.db.query("users").collect();
+    for (const s of staff) {
+      const isDev =
+        s.role === "admin" || s.staffRole === "dev" || s.staffRole === "creator";
+      const isMod = isDev || s.staffRole === "mod";
+      if (!isDev && !isMod) continue;
+      await ctx.db.insert("notifications", {
+        userId: s._id,
+        type: "report",
+        title: `Laporan anime: ${reason}`,
+        body: `${reporter?.username ?? "Seseorang"} melaporkan ${animeTitle}${
+          detail ? ` — ${detail.slice(0, 100)}` : ""
+        }`,
+        refUserId: userId,
+        createdAt: Date.now(),
+      });
+    }
+    return { ok: true };
+  },
+});
+
 export const deleteComment = mutation({
   args: { commentId: v.id("animeComments") },
   handler: async (ctx, { commentId }) => {

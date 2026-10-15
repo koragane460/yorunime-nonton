@@ -256,7 +256,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary disabled:opacity-50"
+                className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold disabled:opacity-50"
               >
                 {isLoading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -312,7 +312,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="submit"
                 disabled={isLoading || otp.trim().length !== 6}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary disabled:opacity-40"
+                className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold disabled:opacity-40"
               >
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                 Verifikasi

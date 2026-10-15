@@ -442,12 +442,21 @@ function JadwalContent() {
       {/* timer hitung mundur + pengalihan hari */}
       {(tab === "anime" || tab === "donghua") && (
         <div className="mb-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-          <Clock className="size-4 shrink-0 text-primary" />
-          <div className="flex-1">
+          {/* Gambar anime yang bakal tayang selanjutnya */}
+          {nextUp?.image ? (
+            <img
+              src={nextUp.image}
+              alt=""
+              className="h-14 w-10 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <Clock className="size-4 shrink-0 text-primary" />
+          )}
+          <div className="min-w-0 flex-1">
             {nextUp ? (
               <>
-                <p className="text-sm font-semibold">{nextUp.title}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="line-clamp-2 text-sm font-semibold">{nextUp.title}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {diff > 0
                     ? `tayang dalam ${hrs > 0 ? `${hrs}j` : ""}${mins > 0 ? `${mins % 60}m` : ""}${secs > 0 && hrs === 0 ? `${secs}s` : ""}`
                     : "sudah tayang"}
@@ -460,7 +469,7 @@ function JadwalContent() {
               </p>
             )}
           </div>
-          <div className="flex-1 text-right text-[11px] font-semibold text-zinc-400">
+          <div className="shrink-0 text-right text-[11px] font-semibold text-zinc-400">
             {DAYS_ID[day]}, {weekDates()[day].getDate()} {MONTHS[weekDates()[day].getMonth()]}
           </div>
         </div>

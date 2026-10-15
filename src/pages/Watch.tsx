@@ -27,7 +27,11 @@ import {
   SkipForward,
   Sun,
   ThumbsUp,
+  ThumbsDown,
   Heart,
+  Flag,
+  Check,
+  X,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -456,6 +460,16 @@ function WatchContent() {
   const [speedNotice, setSpeedNotice] = useState("");
   const speedNoticeTimer = useRef<number | null>(null);
   const speedReadyRef = useRef(false);
+  // Notifikasi kecepatan dipanggil dari dua tempat: efek ganti speed dan
+  // tekan-lama di layar video (2x sementara).
+  const flashSpeedNotice = useCallback((text: string) => {
+    setSpeedNotice(text);
+    if (speedNoticeTimer.current) clearTimeout(speedNoticeTimer.current);
+    speedNoticeTimer.current = window.setTimeout(() => setSpeedNotice(""), 1400);
+  }, []);
+  // Tekan-lama layar player → kecepatan 2x sementara sampai jari diangkat.
+  const longPressTimer = useRef<number | null>(null);
+  const longPressFiredRef = useRef(false);
 
   // ------------------------------------------------------- kualitas ----
   // Resolusi yang benar-benar ada di stream HLS yang sedang diputar, supaya
@@ -1134,10 +1148,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
     animeId ? { animeId } : "skip",
   );
   const toggleFav = useMutation(api.activities.toggleFavorite);
-  const favCount = useQuery(
-    api.activities.favoriteCount,
-    animeId ? { animeId } : "skip",
-  );
+  // (Angka jumlah favorite tidak lagi ditampilkan sesuai permintaan.)
+  // Layar laporan anime (tombol Laporkan) — hasilnya masuk notifikasi dev.
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Ambil server streaming. Backend mengembalikan tepat satu server:
   // "Direct HLS - SUB".
@@ -1455,13 +1468,11 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       speedReadyRef.current = true;
       return;
     }
-    setSpeedNotice(`${speed}x speed`);
-    if (speedNoticeTimer.current) clearTimeout(speedNoticeTimer.current);
-    speedNoticeTimer.current = window.setTimeout(() => setSpeedNotice(""), 1400);
+    flashSpeedNotice(`${speed}x speed`);
     return () => {
       if (speedNoticeTimer.current) clearTimeout(speedNoticeTimer.current);
     };
-  }, [speed]);
+  }, [speed, flashSpeedNotice]);
 
   // Pengaturan → player: ikut berubah kalau user ubah kualitas di Pengaturan.
   useEffect(() => {
@@ -2005,10 +2016,14 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onEnded={() => {
-              // Auto next: sehabis episode selesai, langsung putar berikutnya.
+              // Auto next: sehabis episode selesai, episode berikutnya
+              // langsung diputar (autoplay dimulai begitu video baru siap).
               if (!autoNext) return;
               const nxt = epList[epIndex + 1];
-              if (nxt?.id) navigate(epUrl(nxt.id), { replace: true });
+              if (nxt?.id) {
+                autoplayNextRef.current = true;
+                navigate(epUrl(nxt.id), { replace: true });
+              }
             }}
             onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
             onLoadedMetadata={(e) => {
@@ -2111,13 +2126,55 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </div>
         )}
 
-        {/* Lapisan tap saja: sentuh singkat → kontrol tampil/sembunyi.
-            Geser kecerahan/volume TIDAK lagi berlaku di sini, supaya tidak
-            ada efek samping saat user cuma menggeser video. */}
+        {/* Lapisan tap saja: sentuh singkat → kontrol tampil/sembunyi;
+            tekan LAMA → kecepatan 2x sementara + notifikasi speed. */}
         {sourceType !== "embed" && (isHost || !room) && (
           <div
             className="absolute inset-0 z-10 touch-none"
-            onPointerUp={() => tapVideo()}
+            onPointerDown={() => {
+              longPressFiredRef.current = false;
+              if (longPressTimer.current) clearTimeout(longPressTimer.current);
+              longPressTimer.current = window.setTimeout(() => {
+                longPressFiredRef.current = true;
+                const boosted = Math.max(2, speed * 2);
+                const v = videoRef.current;
+                if (v) v.playbackRate = boosted;
+                flashSpeedNotice(`${boosted}x speed`);
+              }, 400);
+            }}
+            onPointerUp={() => {
+              if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+                longPressTimer.current = null;
+              }
+              if (longPressFiredRef.current) {
+                // Tekan-lama selesai: kecepatan balik ke settingan user dan
+                // kontrol TIDAK ikut ditoggle.
+                longPressFiredRef.current = false;
+                const v = videoRef.current;
+                if (v) v.playbackRate = speed;
+                return;
+              }
+              tapVideo();
+            }}
+            onPointerLeave={() => {
+              if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+                longPressTimer.current = null;
+              }
+              if (longPressFiredRef.current) {
+                longPressFiredRef.current = false;
+                const v = videoRef.current;
+                if (v) v.playbackRate = speed;
+              }
+            }}
+            onPointerCancel={() => {
+              if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+                longPressTimer.current = null;
+              }
+              longPressFiredRef.current = false;
+            }}
           />
         )}
 
@@ -2508,8 +2565,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             </button>
           )}
 
-        {/* Auto next: tombol aktif/nonaktif di pojok, putih bersih. */}
-        {!uiLocked && (
+        {/* Auto next: UI mengikuti kontrol — hilang saat layar player dipencet
+            (controlsOn) dan muncul lagi saat diketuk. */}
+        {!uiLocked && controlsOn && (
           <button
             onClick={() => setAutoNext((v) => !v)}
             className={cn(
@@ -2561,29 +2619,57 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         </div>
       )}
 
-      {/* Like (menyatu) + Favorite — memanjang ke samping, di bawah player */}
+      {/* Like | dislike menyatu jadi SATU pill (garis pembatas tegak di
+          tengah, dua sisanya sama-sama bisa dipencet) + Favorite tanpa
+          angka + Laporkan. Warna memakai palet tombol bersama. */}
       <div className="w-full px-3 pt-2">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              // Tombol Like menyatu: menekan lagi membatalkan, menekan saat
-              // sebelumnya tidak suka akan mengganti jadi suka.
-              void toggleLike({ animeId, value: 1 }).catch(() => {});
-            }}
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
-              likeStats?.liked
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            <ThumbsUp className="size-4" aria-hidden />
-            <span>{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
-            <span className="text-muted-foreground/60">·</span>
-            <span className="text-muted-foreground">
-              {(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}
-            </span>
-          </button>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="flex items-stretch overflow-hidden rounded-xl border border-border bg-secondary/40">
+            <button
+              onClick={() => {
+                // Tombol Like menyatu: menekan lagi membatalkan, menekan saat
+                // sebelumnya tidak suka akan mengganti jadi suka.
+                void toggleLike({ animeId, value: 1 }).catch(() => {});
+              }}
+              aria-label="Like"
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-semibold transition",
+                likeStats?.liked
+                  ? "yn-btn-warm"
+                  : "text-muted-foreground hover:bg-white/5",
+              )}
+            >
+              <ThumbsUp
+                className={cn("size-4", likeStats?.liked && "fill-current")}
+                aria-hidden
+              />
+              <span className="tabular-nums">
+                {(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}
+              </span>
+            </button>
+            {/* Garis pembatas lurus ke atas, membelah dua sisi tombol */}
+            <span aria-hidden className="w-px shrink-0 self-stretch bg-white/15" />
+            <button
+              onClick={() => {
+                void toggleLike({ animeId, value: -1 }).catch(() => {});
+              }}
+              aria-label="Tidak suka"
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-semibold transition",
+                likeStats?.disliked
+                  ? "bg-white/10 text-white ring-1 ring-white/30 ring-inset"
+                  : "text-muted-foreground hover:bg-white/5",
+              )}
+            >
+              <ThumbsDown
+                className={cn("size-4", likeStats?.disliked && "fill-current")}
+                aria-hidden
+              />
+              <span className="tabular-nums">
+                {(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}
+              </span>
+            </button>
+          </div>
           <button
             onClick={() => {
               void toggleFav({
@@ -2593,20 +2679,32 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }).catch(() => {});
             }}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
-              isFav
-                ? "border-red-500/60 bg-red-500/15 text-red-300"
-                : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+              "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition",
+              isFav ? "yn-btn-warm" : "yn-btn-quiet",
             )}
           >
             <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
             <span>Favorite</span>
-            {typeof favCount === "number" && favCount > 0 && (
-              <span className="text-muted-foreground">{favCount.toLocaleString("id-ID")}</span>
-            )}
+          </button>
+          <button
+            onClick={() => setReportOpen(true)}
+            className="yn-btn-quiet flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition"
+          >
+            <Flag className="size-4" aria-hidden />
+            <span>Laporkan</span>
           </button>
         </div>
       </div>
+
+      {/* Layar laporan anime — laporannya masuk ke notifikasi developer. */}
+      {reportOpen && (
+        <ReportScreen
+          animeId={animeId}
+          animeTitle={detailReady ? detailData.title : D.title}
+          image={detailReady ? detailData.image : D.image}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
 
       {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
       <div className="w-full p-3">
@@ -2664,13 +2762,35 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                     navigate(epUrl(e.id));
                   }}
                   className={cn(
-                    "rounded-md border py-2 text-xs font-semibold",
+                    "relative rounded-md border py-2 text-xs font-semibold transition",
                     e.id === epParam
-                      ? "border-foreground/40 bg-primary/20 text-red-200"
+                      ? // Aktif: TANPA warna merah — biru tua + outline putus
+                        // yang berjalan mengikuti kotak (lihat .yn-ep-outline).
+                        "border-blue-800/80 bg-blue-950/60 text-blue-100"
                       : "border-border bg-secondary/40 text-foreground hover:border-foreground/40",
                   )}
                 >
                   {e.number}
+                  {e.id === epParam && (
+                    <svg
+                      className="pointer-events-none absolute inset-0 size-full overflow-visible"
+                      aria-hidden
+                    >
+                      <rect
+                        x="0"
+                        y="0"
+                        width="100%"
+                        height="100%"
+                        rx="6"
+                        fill="none"
+                        stroke="#1e40af"
+                        strokeWidth="2"
+                        pathLength={100}
+                        strokeDasharray="66 34"
+                        className="yn-ep-outline"
+                      />
+                    </svg>
+                  )}
                 </button>
               ))}
             </div>
@@ -3097,6 +3217,177 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </div>
         </Popup>
       )}
+    </div>
+  );
+}
+
+/** Layar laporan anime — dibuka dari tombol Laporkan di bawah player.
+ *  Laporan dikirim ke backend lalu muncul sebagai notifikasi developer. */
+function ReportScreen({
+  animeId,
+  animeTitle,
+  image,
+  onClose,
+}: {
+  animeId: string;
+  animeTitle: string;
+  image?: string;
+  onClose: () => void;
+}) {
+  const reportAnime = useMutation(api.activities.reportAnime);
+  const REASONS = [
+    "Video error / tidak bisa diputar",
+    "Subtitle hilang atau salah",
+    "Gambar buram / kualitas jelek",
+    "Server mati atau iklan aneh",
+    "Judul / episode salah",
+    "Lainnya",
+  ] as const;
+  const [reason, setReason] = useState<string | null>(null);
+  const [detail, setDetail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const submit = async () => {
+    if (!reason) {
+      toast.error("Pilih dulu alasan laporannya");
+      return;
+    }
+    setSending(true);
+    try {
+      await reportAnime({
+        animeId,
+        animeTitle,
+        reason,
+        detail: detail.trim() || undefined,
+      });
+      setDone(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim laporan");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="screen-enter fixed inset-0 z-[90] flex flex-col bg-background/95 backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-y-auto thin-scroll px-4 pb-8 pt-4">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl yn-btn-warm">
+            <Flag className="size-5" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-black">Laporkan anime</p>
+            <p className="text-[11px] text-muted-foreground">
+              Masuk ke notifikasi developer untuk ditinjau
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-muted-foreground transition hover:text-white"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {done ? (
+          /* ---------------- Sukses ---------------- */
+          <div className="mt-10 flex flex-col items-center text-center">
+            <span className="flex size-16 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/40">
+              <Check className="size-8 text-emerald-300" />
+            </span>
+            <p className="mt-4 text-lg font-black">Laporan terkirim</p>
+            <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+              {animeTitle} sudah kami terima. Tim developer akan meninjau
+              laporanmu lewat notifikasi.
+            </p>
+            <button
+              onClick={onClose}
+              className="yn-btn-warm mt-6 w-full rounded-xl py-3 text-sm font-bold"
+            >
+              Selesai
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Kartu judul yang dilaporkan */}
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+              {image ? (
+                <img
+                  src={image}
+                  alt=""
+                  className="h-16 w-11 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                  <Flag className="size-4 text-muted-foreground" />
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-sm font-bold">{animeTitle}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Pilih alasan di bawah ini
+                </p>
+              </div>
+            </div>
+
+            {/* Alasan */}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {REASONS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setReason(r)}
+                  className={cn(
+                    "rounded-xl border px-3 py-2.5 text-left text-xs font-semibold leading-snug transition",
+                    reason === r
+                      ? "border-blue-700/70 bg-blue-950/60 text-blue-100"
+                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/25 hover:text-foreground",
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+
+            {/* Catatan tambahan */}
+            <textarea
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              rows={3}
+              maxLength={400}
+              placeholder="Ceritakan masalahnya (opsional)…"
+              className="mt-3 w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-white/25"
+            />
+            <p className="mt-1 text-right text-[10px] text-muted-foreground">
+              {detail.length}/400
+            </p>
+
+            {/* Aksi */}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={onClose}
+                className="yn-btn-quiet rounded-xl py-3 text-sm font-bold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => void submit()}
+                disabled={sending}
+                className="yn-btn-warm rounded-xl py-3 text-sm font-bold disabled:opacity-60"
+              >
+                {sending ? "Mengirim…" : "Kirim laporan"}
+              </button>
+            </div>
+
+            <p className="mt-3 text-center text-[10px] leading-relaxed text-muted-foreground">
+              Laporan membantu developer memperbaiki server, subtitle, dan
+              data judul lebih cepat.
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }

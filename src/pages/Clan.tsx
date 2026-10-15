@@ -104,7 +104,7 @@ function JoinScreen() {
           <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Clan</h1>
           <button
             onClick={() => (user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1"))}
-            className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-bold text-white"
+            className="yn-btn-warm shrink-0 rounded-full px-4 py-2 text-xs font-bold"
           >
             + Buat
           </button>
@@ -262,7 +262,7 @@ function ClanRow({
             "shrink-0 rounded-xl px-3.5 py-1.5 text-[11px] font-bold transition",
             c.isMine
               ? "border border-border text-muted-foreground"
-              : "bg-primary text-white active:scale-95 disabled:opacity-50",
+              : "yn-btn-warm active:scale-95 disabled:opacity-50",
           )}
         >
           {c.isMine ? "Milikmu" : c.isRequested ? "Diajukan" : busy ? "…" : user ? "Join" : "Login"}
@@ -441,7 +441,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           <button
             onClick={() => void submit()}
             disabled={busy}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-50"
+            className="yn-btn-warm w-full rounded-xl px-4 py-3 text-sm font-bold active:scale-[0.98] disabled:opacity-50"
           >
             {busy ? "Menyimpan…" : "Buat Clan"}
           </button>

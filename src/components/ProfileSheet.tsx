@@ -418,39 +418,80 @@ export function ProfileSheet({
                           `/nonton?anime=${encodeURIComponent(String(c.animeId).split("__ep")[0] ?? "")}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
                         );
                       }}
-                      className="flex w-full items-start gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+                      className="w-full rounded-xl border border-border/70 bg-secondary/30 p-3 text-left"
                     >
-                      {/* Poster anime yang dikomentari + judul + episode */}
-                      {c.animeImage ? (
-                        <img
-                          src={c.animeImage}
-                          alt=""
-                          className="h-16 w-11 shrink-0 rounded object-cover"
+                      {/* Kiri atas: foto profile. Di kanannya username,
+                          title staff, badge, centang biru, dan level pill
+                          (rounded seperti panel akun). Waktu di kanan atas. */}
+                      <div className="flex items-start gap-2.5">
+                        <Avatar
+                          src={profile.image}
+                          seed={profile.username}
+                          className="size-9"
                         />
-                      ) : (
-                        <span className="flex h-16 w-11 shrink-0 items-center justify-center rounded bg-white/5">
-                          <Tv className="size-4 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={cn(
+                                "text-sm font-black",
+                                usernameColor(profile.username),
+                              )}
+                            >
+                              {profile.username ?? "user"}
+                            </span>
+                            {profile.premium && <BlueCheck className="size-3.5" />}
+                            <TitleBadge
+                              role={profile.staffRole}
+                              seqId={profile.seqId}
+                              compact
+                            />
+                            <LevelBadge
+                              level={profile.level}
+                              className="rounded-full px-2"
+                            />
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {timeAgo(c.createdAt)}
                         </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">
-                          {c.animeTitle ?? "Anime"}
-                        </p>
-                        {c.episode !== undefined && (
-                          <p className="text-xs text-muted-foreground">
-                            Episode {c.episode}
-                          </p>
-                        )}
-                        <p className="mt-1 line-clamp-2 text-sm text-zinc-300">
-                          {c.text}
-                        </p>
-                        <p className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-                          <span>{timeAgo(c.createdAt)}</span>
-                          <span className="flex items-center gap-0.5">
-                            <Heart className="size-3 text-primary" /> {c.likeCount}
-                          </span>
-                        </p>
                       </div>
+
+                      {/* Agak ke kanan: poster anime, di kanan atasnya judul
+                          dan di bawahnya episode */}
+                      <div className="mt-2.5 flex gap-2.5 pl-5">
+                        {c.animeImage ? (
+                          <img
+                            src={c.animeImage}
+                            alt=""
+                            className="h-16 w-11 shrink-0 rounded object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-16 w-11 shrink-0 items-center justify-center rounded bg-white/5">
+                            <Tv className="size-4 text-muted-foreground" />
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">
+                            {c.animeTitle ?? "Anime"}
+                          </p>
+                          {c.episode !== undefined && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Episode {c.episode}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Teks komen: tidak ikut digeser ke kanan — rata
+                          dengan tepi kartu */}
+                      <p className="mt-2 line-clamp-3 text-sm text-zinc-300">
+                        {c.text}
+                      </p>
+                      <p className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-0.5">
+                          <Heart className="size-3 text-primary" /> {c.likeCount}
+                        </span>
+                      </p>
                     </button>
                   ))}
             </div>

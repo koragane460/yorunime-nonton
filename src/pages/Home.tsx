@@ -569,8 +569,11 @@ function HomeContent() {
               >
                 {!a.image && (
                   <div className="absolute inset-0 bg-hero-gradient" />
-                )}                <div className="relative flex h-full w-full flex-col p-4 pb-9">
-                  <div className="mb-1 flex items-center gap-2">
+                )}                {/* Konten ditengahkan vertikal dengan jarak seragam —
+                    sinopsis, judul, dan tombol tidak ada yang terlalu ke
+                    atas / ke bawah. */}
+                <div className="relative flex h-full w-full flex-col justify-center gap-2.5 p-4 pb-9">
+                  <div className="flex items-center gap-2">
                     <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
                       {a.status ?? "Ongoing"}
                     </span>
@@ -592,16 +595,18 @@ function HomeContent() {
                   </div>
 
 
-                  <h3 className="mt-1.5 text-lg font-black">{a.title}</h3>
-                  <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-zinc-300">
-                    {a.synopsis ?? "Sinopsis belum tersedia."}
-                  </p>
-                  <div className="mt-auto flex gap-2 pt-3">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black">{a.title}</h3>
+                    <p className="line-clamp-4 text-xs leading-relaxed text-zinc-300">
+                      {a.synopsis ?? "Sinopsis belum tersedia."}
+                    </p>
+                  </div>
+                  <div className="mt-1 flex gap-2">
                     <button
                       onClick={() =>
                         openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
                       }
-                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary"
+                      className="yn-btn-warm rounded-full px-4 py-1.5 text-xs font-bold"
                     >
                       Lihat detail
                     </button>
@@ -617,7 +622,7 @@ function HomeContent() {
                           `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
                         );
                       }}
-                      className="rounded-full border border-white/25 bg-black/40 px-4 py-1.5 text-xs font-semibold text-white transition hover:border-white/50"
+                      className="yn-btn-quiet rounded-full px-4 py-1.5 text-xs font-semibold"
                     >
                       ▶ Tonton
                     </button>
@@ -651,6 +656,11 @@ function HomeContent() {
                     supaya baris kotak top 4-5 tetap kelihatan di dalam
                     kotak banner tanpa haerd. */}
                 <h3 className="text-lg font-black">Leaderboard</h3>
+                {/* Subtitle singkat saja — jangan sampai mendorong baris
+                    kotak top 4-5 keluar dari kotak banner. */}
+                <p className="mb-1 text-[11px] leading-snug text-white/65">
+                  Peringkat pemain paling aktif minggu ini
+                </p>
                 <HomeLeaderboardPreview />
               </div>
             </button>
@@ -2107,7 +2117,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         onClose();
                         navigate("/clan");
                       }}
-                      className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 via-rose-500 to-primary px-3.5 py-1.5 text-[11px] font-black tracking-wide text-white shadow-[0_0_18px_-4px] shadow-rose-500/80 ring-1 ring-white/25 transition hover:brightness-110 active:scale-95"
+                      className="yn-btn-warm inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[11px] font-black tracking-wide"
                     >
                       <Users className="size-3" aria-hidden />
                       Lihat clan
@@ -2117,7 +2127,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         onClose();
                         navigate("/clan?buat=1");
                       }}
-                      className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-300 ring-1 ring-emerald-400/20 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-95"
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-300/90 ring-1 ring-emerald-400/15 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-95"
                     >
                       <Plus className="size-3" aria-hidden />
                       Buat clan

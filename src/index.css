@@ -493,3 +493,57 @@
   }
 }
 
+/* ------------------------------------------------------------------
+ * Palet tombol bersama — dipakai lintas halaman supaya warnanya konsisten
+ * (tidak berbeda-beda tiap tombol) dan tetap lembut / tidak mencolok:
+ *  .yn-btn-warm  — aksi utama, gradasi hangat amber → rose → merah tema
+ *                  (sama dengan gaya tombol clan yang disukai).
+ *  .yn-btn-quiet — aksi sekunder, latar gelap samar dengan aksen tipis.
+ * ------------------------------------------------------------------ */
+.yn-btn-warm {
+  background-image: linear-gradient(
+    100deg,
+    oklch(0.78 0.13 72 / 0.92) 0%,
+    oklch(0.62 0.19 18 / 0.94) 55%,
+    oklch(0.56 0.155 14 / 0.97) 100%
+  );
+  color: #fff;
+  border: 1px solid oklch(1 0 0 / 0.18);
+  box-shadow: 0 0 16px -6px oklch(0.62 0.19 18 / 0.75);
+  transition: filter 0.15s ease, transform 0.12s ease;
+}
+.yn-btn-warm:hover {
+  filter: brightness(1.07);
+}
+.yn-btn-warm:active {
+  transform: scale(0.97);
+}
+
+.yn-btn-quiet {
+  background-color: oklch(0.17 0.02 265 / 0.55);
+  border: 1px solid oklch(1 0 0 / 0.1);
+  color: oklch(0.87 0.01 260);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.yn-btn-quiet:hover {
+  border-color: oklch(1 0 0 / 0.28);
+  background-color: oklch(0.2 0.02 265 / 0.65);
+}
+
+/* Outline episode aktif: garis putus biru tua yang berjalan mengikuti
+   tepi kotaknya (stroke-dashoffset digerakkan terus menerus). */
+@keyframes yn-dash-run {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+.yn-ep-outline {
+  animation: yn-dash-run 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yn-ep-outline {
+    animation: none;
+  }
+}
+
