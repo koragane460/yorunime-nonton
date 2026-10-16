@@ -25,11 +25,21 @@ export function claimAmountForLevel(level: number) {
   return BASE_CLAIM + Math.max(0, level - 1) * CLAIM_PER_LEVEL;
 }
 
-export const CLAN_COLORS: Record<number, { name: string; cls: string }> = {
-  25: { name: "Merah", cls: "#f87171" },
-  100: { name: "Galaxy", cls: "galaxy" },
-  150: { name: "Oren", cls: "#fb923c" },
-  200: { name: "Golden", cls: "golden" },
+/** Warna clan berdasarkan level:
+ *   1-49    coklat (brown)
+ *   50-99   emas (gold)
+ *   100-149 merah (red)
+ *   150-200 rainbow
+ *
+ * `cls` ini dipakai di komponen Clan (daftar, detail, members) untuk warna
+ * nama clan, bukan tag. Warna nama mengikuti level clan seperti yang
+ * diminta.
+ */
+export const CLAN_COLORS: Record<number, { name: string; cls: string; tier: string }> = {
+  49: { name: "Brown", cls: "#8B4513", tier: "clan-tier-brown" },
+  99: { name: "Gold", cls: "#D4AF37", tier: "clan-tier-gold" },
+  149: { name: "Red", cls: "#DC143C", tier: "clan-tier-red" },
+  200: { name: "Rainbow", cls: "#ff69b4", tier: "clan-tier-rainbow" },
 };
 
 function dayString(offsetDays = 0) {

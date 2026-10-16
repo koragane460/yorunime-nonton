@@ -547,3 +547,11 @@
   }
 }
 
+/* Warna nama clan berdasarkan level (1-49 coklat, 50-99 emas,
+ * 100-149 merah, 150-200 rainbow). Konsisten dengan clanTextClass di
+ * lstream-ui.tsx & CLAN_COLORS di convex/clans.ts. */
+.clan-tier-brown { color: #8B4513; }
+.clan-tier-gold { color: #D4AF37; }
+.clan-tier-red { color: #DC143C; }
+.clan-tier-rainbow { color: #FF69B4; }
+

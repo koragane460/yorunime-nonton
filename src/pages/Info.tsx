@@ -358,7 +358,7 @@ function LanjutTab() {
           idx < g.items.length - 1 ? (
             <span
               aria-hidden
-              className="absolute -bottom-2 left-1/2 h-2 w-px -translate-x-1/2 bg-white/25"
+              className="absolute -bottom-1 left-1/4 h-1.5 w-20 -translate-x-1/2 bg-white/25"
             />
           ) : null;
         if (item.type === "comic") {

@@ -435,28 +435,28 @@ export function ClanLevelBar({
 /**
  * Warna nama clan berdasarkan level clannya.
  *
- * Ambang ini HARUS sama persis dengan yang dipakai di halaman Clan dan di
- * chat clan - kalau berbeda, tag clan akan tampil beda warna di layar lain
- * padahal clan-nya sama. Tingkatan yang dipakai:
- *   1-49    biru muda
- *   50-99   hijau muda
- *   100-149 ungu
- *   150-200 emas
+ * Aturan yang diminta:
+ *   1-49    coklat (brown)
+ *   50-99   emas (gold)
+ *   100-149 merah (red)
+ *   150-200 rainbow
  *
- * Semua warna terang sudah dipilih kontras terhadap latar gelap tag, jadi
- * tetap terbaca di atas banner apa pun.
+ * Warna tersebut IALAH warna namanya, belum termasuk shimmer. TAG-nya
+ * (teks [YRNM]) selalu PUTIH, bentuknya kotak tanpa sudut bulat, dengan
+ * segitiga lancip di kiri dan kanan (kiri menghadap kiri, kanan menghadap
+ * kanan).
  */
-export const CLAN_TIER_BLUE_MIN = 1;
-export const CLAN_TIER_GREEN_MIN = 50;
-export const CLAN_TIER_PURPLE_MIN = 100;
-export const CLAN_TIER_GOLD_MIN = 150;
+export const CLAN_TIER_BROWN_MIN = 1;
+export const CLAN_TIER_GOLD_MIN = 50;
+export const CLAN_TIER_RED_MIN = 100;
+export const CLAN_TIER_RAINBOW_MIN = 150;
 
 export function clanTextClass(level?: number) {
   const n = Number(level ?? 0);
+  if (n >= CLAN_TIER_RAINBOW_MIN) return "clan-tier-rainbow";
+  if (n >= CLAN_TIER_RED_MIN) return "clan-tier-red";
   if (n >= CLAN_TIER_GOLD_MIN) return "clan-tier-gold";
-  if (n >= CLAN_TIER_PURPLE_MIN) return "clan-tier-purple";
-  if (n >= CLAN_TIER_GREEN_MIN) return "clan-tier-green";
-  return "clan-tier-blue";
+  return "clan-tier-brown";
 }
 
 /**
@@ -501,7 +501,7 @@ export function ClanTag({
       className={cn(
         // Bentuk tag clan: persegi dengan dua sudut terpotong (sama seperti
         // preview saat bikin clan) + latar galaxy yang terus berkilau.
-        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-bold tracking-wide",
+        "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap border border-white/25 px-2 py-0.5 text-xs font-bold tracking-wide",
         className,
       )}
       style={
@@ -521,9 +521,28 @@ export function ClanTag({
         {/* Garis tipis 1.6 — logo tag tidak terlihat tebal/berat. */}
         <Icon strokeWidth={1.6} className="size-3.5" />
       </span>
-      {/* Tag clan (teks [TAG]) selalu PUTIH untuk semua clan. Warna per level
-          dipakai di NAMA clan (lihat clanNameClass), bukan di sini. */}
-      <span className="relative z-[2] text-white">[{tag}]</span>
+      {/* Tag clan (teks [TAG]) selalu PUTIH. Bentuk: kotak tanpa sudut
+          bulat, sisi kiri & kanan segitiga lancip (kiri menghadap kiri,
+          kanan menghadap kanan). */}
+      <span className="relative z-[2] flex items-center gap-1 px-2 text-xs font-bold tracking-wide">
+        <span
+          className="relative top-[2px] flex h-[7px] w-[7px] items-center justify-center"
+          aria-hidden
+        >
+          <svg width="7" height="7" viewBox="0 0 7 7" fill="white">
+            <path d="M0 0 L7 7 L0 7 Z" />
+          </svg>
+        </span>
+        <span className="text-white text-xs font-bold">[{tag}]</span>
+        <span
+          className="relative top-[2px] flex h-[7px] w-[7px] items-center justify-center"
+          aria-hidden
+        >
+          <svg width="7" height="7" viewBox="0 0 7 7" fill="white">
+            <path d="M0 0 L7 0 L7 7 Z" />
+          </svg>
+        </span>
+      </span>
     </span>
   );
 }

@@ -346,8 +346,7 @@ function Plans() {
     <section className="mt-6">
       <h2 className="text-[13px] font-bold text-gold">Paket</h2>
       {/* Kartu paket gaya 2 kolom: durasi, harga coret (harga satuan dasar),
-          harga besar, catatan per bulan, chip Sacret (biru), chip Hemat%
-          (hijau), dan tombol "Pilih paket". Paket paling hemat mendapat
+          harga besar, catatan per bulan, chip Sacret (biru), chip HD 1080P (hijau), dan tombol "Pilih paket". Paket paling hemat mendapat
           badge "Paling hemat" + aksen emas. */}
       {(() => {
         const sorted = [...(plans ?? [])].sort(
@@ -390,9 +389,9 @@ function Plans() {
                   <p className="text-[13px] font-bold text-white/90">
                     {p.label}
                   </p>
-                  {/* Harga coret = harga satuan dasar (tanpa diskon). */}
+                  {/* Harga utama: nominal asli Rp + ribuan. */}
                   {hemat > 0 && (
-                    <p className="mt-1 font-mono text-[13px] text-zinc-500 line-through">
+                    <p className="mt-1 font-mono text-[13px] text-zinc-500 line-through hidden">
                       Rp{Math.round((p.price / (1 - hemat / 100))).toLocaleString("id-ID")}
                     </p>
                   )}
@@ -408,10 +407,10 @@ function Plans() {
                       <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
                     </span>
                   )}
-                  {/* Chip Hemat% (hijau) */}
+                  {/* Chip HD 1080P (hijau) */}
                   {hemat > 0 && (
                     <span className="mt-1.5 inline-flex w-fit items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                      Hemat {hemat}%
+                      HD 1080P
                     </span>
                   )}
                   <button

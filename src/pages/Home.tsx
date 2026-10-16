@@ -39,6 +39,7 @@ import {
   Users,
   LayoutGrid,
   List,
+  Eye,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -836,13 +837,13 @@ function HomeContent() {
           {/* Geser pakai tangan saja — tanpa tombol panah. Titik indikator
               dipindah ke KANAN ATAS supaya tidak menabrak kotak judul di
               bawah banner. */}
-          <div className="absolute right-3 top-3 flex gap-1">
+          <div className="absolute right-3 top-3 flex gap-1 pointer-events-none" onPointerDown={(e) => { e.preventDefault(); }}>
             {Array.from({ length: heroItems.length + 1 }).map((_, i) => (
               <span
                 key={i}
                 className={cn(
                   "h-1 rounded-full transition-all",
-                  i === heroIdx ? "w-5 bg-white" : "w-2 bg-white/35",
+                  i === heroIdx ? "w-2.5 bg-white shadow-[0_0_6px_rgba(255,255,255,.85)]" : "bg-white/40",
                 )}
               />
             ))}
@@ -856,7 +857,7 @@ function HomeContent() {
         onClick={() => setShowChat(true)}
         className="fade-enter mt-3 flex w-full items-center gap-2 rounded-full border border-white/10 bg-card px-3 py-2 text-left transition hover:border-foreground/40"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+        <span className="flex size-8 shrink-0 items-center justify-center bg-primary/15">
           <MessageSquare className="size-4 text-primary" aria-hidden />
         </span>
         <span className="shrink-0 text-sm font-bold">Chat:</span>
@@ -883,7 +884,7 @@ function HomeContent() {
           <span className="flex-1 text-sm text-muted-foreground">
             contoh: ayanokoji adalah aku / battle through
           </span>
-          <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
+          <span className="px-3 py-1 text-xs font-bold text-white">
             Cari
           </span>
         </button>
@@ -1249,7 +1250,7 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
             Buat clan dan kumpulkan XP bersama teman
           </span>
         </span>
-        <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
+        <span className="px-3 py-1 text-xs font-bold text-white">
           Buat
         </span>
       </button>
@@ -1789,7 +1790,22 @@ function HeroLeaderboardPreview() {
       <p className="py-3 text-[11px] text-white/60">Belum ada data XP.</p>
     );
   return (
-    <div className="space-y-1">
+    <div className="relative space-y-1">
+      <div className="absolute right-2 top-1 flex gap-1 pointer-events-none">
+        {data.slice(0, 5).map((e: any) => {
+          const views = viewCountFor(String(e.userId ?? e.userId ?? 0));
+          return (
+            <span
+              key={e.userId ?? e.rank}
+              className="flex h-2 w-2 items-center justify-center pointer-events-auto"
+              style={{ zIndex: 2 }}
+            >
+              <Eye className="h-2.5 w-2.5 text-white/50" />
+              <span className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-[2px] border border-white/40 bg-[#0a0a0a]" />
+            </span>
+          );
+        })}
+      </div>
       {data.slice(0, 5).map((e: any) => (
         <LeaderboardRow key={e.userId ?? e.rank} e={e as LbEntry} dense />
       ))}
@@ -1872,7 +1888,7 @@ function TopAnimeCard({
   return (
     <button
       onClick={() => onPick(String(item.id), item.title)}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-card/50 text-left transition hover:border-white/25"
+      className="group flex flex-col overflow-hidden rounded-2xl bg-card text-left transition hover:border-white/25" onFocus={(e) => e.currentTarget.style.outline="none"}
     >
       <div
         className={cn(
@@ -1889,17 +1905,20 @@ function TopAnimeCard({
           />
         ) : null}
       </div>
-      {/* Kotak hitam opacity 50%: angka top di kiri, jumlah views di kanan. */}
-      <div className="flex w-full items-center gap-2 bg-black/50 px-2 py-1.5">
-        <span className="shrink-0 text-[11px] font-black text-white">
+      {/* Kotak hitam opacity 70%: #N kiri-atas, views kanan-atas (ikon mata). */}
+      <div className="relative flex w-full items-center gap-2 bg-black/70 px-2 py-1.5">
+        <span className="shrink-0 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-black text-white backdrop-blur-sm">
           #{rank}
         </span>
         <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-white/90">
           {item.title}
         </span>
-        <span className="shrink-0 text-[10px] font-bold text-white/75">
-          {views}
-        </span>
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+          <Eye className="h-3.5 w-3.5 text-white/70" />
+          <span className="text-[10px] font-bold text-white/90">
+            {views}
+          </span>
+        </div>
       </div>
     </button>
   );
@@ -2212,7 +2231,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           )}
           <button
             onClick={() => void doSearch()}
-            className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white"
+            className="px-3 py-1 text-xs font-bold text-white"
           >
             Cari
           </button>
