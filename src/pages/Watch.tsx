@@ -2845,11 +2845,13 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </>
         )}
 
-        {/* Garis pembatas di atas toolbar */}
-        <div className="my-3 h-px bg-white/15" />
-
-        {/* Toolbar: kecepatan, download, mini, kualitas — hanya di luar mode Nobar */}
+        {/* Toolbar dibungkus SATU kotak rounded — gaya sama seperti kartu
+            Premium di Home: sudut besar, aksen lembut, judul kecil di atas. */}
         {(isHost || !room) && (
+          <div className="mt-3 rounded-3xl border border-white/12 bg-gradient-to-r from-secondary/50 via-secondary/25 to-secondary/50 p-3 shadow-[0_0_26px_-16px] shadow-primary/70">
+          <p className="mb-2 flex items-center gap-1.5 px-0.5 font-mono text-[10px] font-bold tracking-[0.18em] text-white/45">
+            <Settings2 className="size-3" aria-hidden /> PENGATURAN TONTONAN
+          </p>
           <div className="grid grid-cols-4 gap-2">
             <ToolButton
               icon={<Gauge className="size-4" />}
@@ -2886,6 +2888,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 setQualityOpen(true);
               }}
             />
+          </div>
           </div>
         )}
 
@@ -3015,6 +3018,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                   await postComment({
                     animeId: `${animeId}__ep${epParam}`,
                     animeTitle: D.title,
+                    // Poster disimpan bersama komentar supaya feed komentar di
+                    // halaman Akun bisa menampilkan gambarnya.
+                    animeImage: D.image,
                     text,
                     replyToId: replyToId as never,
                   });

@@ -351,7 +351,16 @@ function LanjutTab() {
             {g.label}
           </h3>
           <div className="space-y-2">
-            {g.items.map((item) => {
+            {g.items.map((item, idx) => {
+        // Garis penghubung tipis di tengah bawah kartu — hanya antar kartu
+        // dalam satu kelompok hari (bukan di kartu terakhir).
+        const link =
+          idx < g.items.length - 1 ? (
+            <span
+              aria-hidden
+              className="absolute -bottom-2 left-1/2 h-2 w-px -translate-x-1/2 bg-white/25"
+            />
+          ) : null;
         if (item.type === "comic") {
           const c: any = item.data;
           return (
@@ -385,6 +394,7 @@ function LanjutTab() {
                 </p>
               </div>
               <BookOpen className="size-5 shrink-0 text-primary" />
+              {link}
             </button>
           );
         }
@@ -406,7 +416,7 @@ function LanjutTab() {
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
               )
             }
-            className="relative flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
+            className="relative flex w-full items-stretch gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
           >
             {/* Jam kapan terakhir ditonton — pojok kanan atas. */}
             <span className="absolute right-2.5 top-2 z-10 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
@@ -434,6 +444,7 @@ function LanjutTab() {
               </p>
             </div>
                 <PlayCircle className="size-5 shrink-0 self-center text-primary" />
+                {link}
               </button>
             );
           })}

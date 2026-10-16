@@ -657,7 +657,11 @@ export function ChatPanel({
                   ) : (
                     <>
                       {m.text && (
-                        <p className="mt-0.5 w-fit max-w-full break-words text-sm">{m.text}</p>
+                        /* Teks pesan ditebalkan (semibold) supaya terbaca kuat,
+                           tapi tidak full-bold agar tidak terlihat tebal/gemuk. */
+                        <p className="mt-0.5 w-fit max-w-full break-words text-sm font-semibold tracking-[0.01em]">
+                          {m.text}
+                        </p>
                       )}
                       {m.imageUrl && (
                         <img

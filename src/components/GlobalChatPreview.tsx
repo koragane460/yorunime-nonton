@@ -1,12 +1,18 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
+import { ClanTag, TitleBadge, BlueCheck } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import { avatarFallback, usernameColor } from "@/lib/lstream";
+import { cn } from "@/lib/utils";
 
 /**
- * Pratinjau chat global di kotak "Chat bareng" Home.
- * Satu pesan terbaru: foto profil bulat normal (tanpa latar hitam & tanpa
- * gepeng), nama, waktu, dan isi pesannya.
+ * Pratinjau chat global di kartu "Chat bareng" Home.
+ *
+ * Bentuknya SATU baris kecil & benar-benar rounded (bukan kartu tinggi):
+ * foto profil → username + title + badge + centang biru + tag clan + level →
+ * ":" → isi pesan. Pesannya diputar otomatis setiap 3 menit supaya kartu
+ * tetap terasa hidup tanpa membuka chat.
  */
 export function GlobalChatPreview() {
   const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 6 });
@@ -19,60 +25,54 @@ export function GlobalChatPreview() {
   }, []);
 
   if (!msgs) {
-    return <div className="mt-2 h-10 w-full rounded-lg bg-white/5" />;
+    return <span className="h-6 min-w-0 flex-1 animate-pulse rounded-full bg-white/5" />;
   }
 
   const visible = msgs.slice(-6);
   if (visible.length === 0) {
     return (
-      <p className="py-3 text-center text-xs text-muted-foreground">
-        Belum ada chat — jadi yang pertama!
-      </p>
+      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+        belum ada chat — jadi yang pertama!
+      </span>
     );
   }
 
   const m = visible[idx % visible.length] as any;
+  const body = m.premiumGive ? "Give premium" : (m.text ?? "[foto]");
 
   return (
-    <div className="mt-2 flex items-center gap-2.5 px-1 py-1">
-      <Avatar className="size-10 shrink-0">
-        {m.image ? (
-          <AvatarImage src={m.image} alt={m.username ?? ""} className="size-full rounded-full object-cover" />
-        ) : null}
-        <AvatarFallback className="bg-white/10 text-xs text-white">
-          {m.username?.[0]?.toUpperCase() ?? "?"}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-zinc-100">
-            {m.username}
-            {m.premium && (
-              <span className="ml-1 inline-block size-3 align-[-1px] rounded-full bg-blue-500 text-center text-[8px] font-bold leading-3 text-white">
-                ✓
-              </span>
-            )}
-          </p>
-          <span className="shrink-0 text-[10px] text-muted-foreground/70">
-            {timeAgo(m.createdAt)}
+    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+      <img
+        src={m.image ?? avatarFallback(m.username)}
+        alt=""
+        className={cn(
+          "size-6 shrink-0 rounded-full object-cover",
+          !m.image && "bg-white/[0.08]",
+        )}
+      />
+      <span className={cn("shrink-0 text-xs font-semibold", usernameColor(m.username))}>
+        {m.username}
+      </span>
+      <span className="flex shrink-0 items-center gap-1">
+        <TitleBadge role={m.staffRole} compact />
+        {m.premium && <BlueCheck className="size-3" />}
+        {m.clanTag && (
+          <ClanTag
+            icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
+            tag={m.clanTag}
+            color={m.clanNameColor}
+            level={m.clanLevel}
+            className="shrink-0 scale-75 px-1 py-0 text-[9px]"
+          />
+        )}
+        {typeof m.level === "number" && (
+          <span className="shrink-0 rounded bg-white/10 px-1 py-0 text-[9px] font-bold text-white/70">
+            Lv.{m.level}
           </span>
-        </div>
-        <p className="line-clamp-2 text-xs leading-snug text-zinc-400">
-          {m.premiumGive ? "Bagi premium…" : m.text ?? "[foto]"}
-        </p>
-      </div>
-    </div>
+        )}
+      </span>
+      <span className="shrink-0 text-xs font-bold text-white/70">:</span>
+      <span className="min-w-0 flex-1 truncate text-xs text-zinc-300">{body}</span>
+    </span>
   );
-}
-
-/** "Baru saja" / "X menit lalu" / "X jam lalu" / tanggal. */
-function timeAgo(at: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - at) / 1000));
-  if (s < 60) return "Baru saja";
-  if (s < 3600) return `${Math.floor(s / 60)} menit lalu`;
-  if (s < 86400) return `${Math.floor(s / 3600)} jam lalu`;
-  return new Date(at).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-  });
 }

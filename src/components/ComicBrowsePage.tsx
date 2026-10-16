@@ -102,6 +102,39 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
     setResults([]);
   };
 
+  // Pencarian hidup: begitu user mengetik (minimal 2 huruf) hasilnya langsung
+  // muncul tanpa menekan tombol. Debounce 320ms supaya tidak membanjiri
+  // backend, dan jawaban dari ketikan lama diabaikan kalau user sudah
+  // mengetik lagi — jadi hasilnya selalu cocok dengan kata yang terlihat.
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) {
+      setResults(null);
+      setSearching(false);
+      return;
+    }
+    let alive = true;
+    setSearching(true);
+    const t = setTimeout(() => {
+      searchComic({ q: term, kind, limit: 18 })
+        .then((r: any) => {
+          if (!alive) return;
+          setResults((r ?? []) as ComicItem[]);
+        })
+        .catch(() => {
+          if (alive) setResults([]);
+        })
+        .finally(() => {
+          if (alive) setSearching(false);
+        });
+    }, 320);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, kind]);
+
   // User tanpa Premium tetap boleh melihat seluruh katalog (dan tombol ganti
   // kategori tetap aktif) — hanya pembacaannya yang terkunci.
   const isPremium = (user?.premiumUntil ?? 0) > Date.now();
@@ -143,10 +176,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
           value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            if (!e.target.value) setResults(null);
-          }}
+          onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void doSearch()}
           placeholder={
             kind === "manga"

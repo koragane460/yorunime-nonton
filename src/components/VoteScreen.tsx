@@ -2,7 +2,6 @@
 // Tiga keadaan: belum dimulai (terpusat) · berjalan 7 hari · selesai.
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { motion } from "framer-motion";
 import { Clock, Vote as VoteIcon } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -117,18 +116,15 @@ export function VoteScreen({
         </p>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-          {items.map((c, i) => (
-            <motion.button
+          {items.map((c) => (
+            <button
               key={c.characterId}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i * 0.05, 0.5), duration: 0.4 }}
               onClick={() => setPicked(picked === c.characterId ? null : c.characterId)}
               className={cn(
                 "group overflow-hidden rounded-2xl border text-left transition",
                 picked === c.characterId
-                  ? "border-primary bg-primary/10 shadow-[0_0_18px_-6px] shadow-primary/70"
-                  : "border-white/12 bg-white/[0.04] hover:border-white/30",
+                  ? "border-primary/70 bg-primary/10"
+                  : "border-white/12 bg-white/[0.04] hover:border-white/25",
               )}
             >
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/40">
@@ -148,27 +144,22 @@ export function VoteScreen({
                   {c.votes.toLocaleString("id-ID")} vote
                 </span>
                 {picked === c.characterId && (
-                  <span className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-primary text-white shadow-lg">
-                    <VoteIcon className="size-3.5" aria-hidden />
+                  <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-white">
+                    <VoteIcon className="size-3" aria-hidden />
                   </span>
                 )}
               </div>
-              <p className="truncate px-2 py-1.5 text-[11px] font-bold text-white">
+              <p className="truncate px-2 py-1.5 text-[11px] font-semibold text-white">
                 {c.name}
               </p>
-            </motion.button>
+            </button>
           ))}
         </div>
       )}
 
       {/* Pilih nominal + tombol Vote — muncul halus saat karakter dipilih */}
       {pickedItem && (
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", bounce: 0.3, duration: 0.45 }}
-          className="sticky bottom-2 z-10 mt-4 rounded-2xl border border-white/15 bg-black/85 p-3 shadow-2xl backdrop-blur-xl"
-        >
+        <div className="sticky bottom-2 z-10 mt-4 rounded-2xl border border-white/15 bg-card/95 p-3 backdrop-blur-sm">
           <p className="mb-2 flex items-center justify-between text-[11px]">
             <span className="min-w-0 truncate font-bold text-white">
               Vote untuk {pickedItem.name}
@@ -213,7 +204,7 @@ export function VoteScreen({
             <VoteIcon className="size-4" aria-hidden />
             {busy ? "Mengirim…" : nominal > 0 ? `Vote ${nominal} T-V` : "Vote"}
           </button>
-        </motion.div>
+        </div>
       )}
     </div>
   );

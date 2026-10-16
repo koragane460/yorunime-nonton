@@ -411,6 +411,8 @@ const schema = defineSchema(
       animeId: v.string(),
       /** Judul anime saat komentar dibuat, biar tautan komentar tetap lengkap. */
       animeTitle: v.optional(v.string()),
+      /** Poster anime saat komentar dibuat — dipakai feed komentar di Akun. */
+      animeImage: v.optional(v.string()),
       userId: v.id("users"),
       text: v.string(),
       replyToId: v.optional(v.id("animeComments")),

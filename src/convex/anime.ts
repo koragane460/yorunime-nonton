@@ -315,6 +315,26 @@ function anilistStartAt(m: any): number | undefined {
  * ditampilkan sebagai "Ongoing" supaya tidak menggantung di kategori
  * Segera Rilis selamanya.
  */
+/**
+ * Tanggal rilis episode ke-n (YYYY-MM-DD) dari tanggal mulai series.
+ * Serial TV/ONA tayang mingguan → +7 hari per episode; movie/special hanya
+ * punya satu tanggal, jadi episode lain tidak diberi tanggal.
+ */
+function episodeAirDate(
+  startAt: number | undefined,
+  number: number,
+  format: string | undefined,
+): string | undefined {
+  if (startAt === undefined) return undefined;
+  const weekly = /TV|ONA/i.test(String(format ?? ""));
+  const n = Math.max(1, number);
+  // Movie/special cuma satu tanggal — episode setelahnya tidak diberi tanggal.
+  if (!weekly && n > 1) return undefined;
+  const at = weekly ? startAt + (n - 1) * 7 * 86_400_000 : startAt;
+  if (!Number.isFinite(at)) return undefined;
+  return new Date(at).toISOString().slice(0, 10);
+}
+
 function anilistDisplayStatus(m: any): string | undefined {
   if (m?.status === "RELEASING") return "Ongoing";
   if (m?.status === "FINISHED") return "Completed";
@@ -461,12 +481,17 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
     m.title.english !== m.title.romaji
       ? m.title.english
       : undefined;
+  // Tanggal rilis per episode. AniList tidak mengirim tanggal tiap episode,
+  // tapi sumbernya (startDate) ada — untuk serial TV satu episode per minggu,
+  // jadi tanggalnya bisa dihitung jujur tanpa mengarang angka acak.
+  const startAt = anilistStartAt(m);
   const episodeList: EpisodeItem[] = [];
   for (let i = 1; i <= listUpTo; i++) {
     episodeList.push({
       id: `${malId}__ep${i}`,
       number: i,
       title: `Episode ${i}`,
+      aired: episodeAirDate(startAt, i, m.format),
       released: true,
       duration: m.duration ? `${m.duration} menit` : undefined,
     });
@@ -782,7 +807,9 @@ async function aniList(
   // dan episode tidak nyambung. v3 = buang entri lama yang sudah tercemar.
   return (await cached(
     runCtx,
-    `${endpoint}:v3:${where || "-"}:${page}:${sort}`,
+    // `limit` ikut jadi bagian kunci: kalau tidak, permintaan 50 judul bisa
+    // memakai entri cache lama yang hanya berisi 10.
+    `${endpoint}:v3:${where || "-"}:${page}:${sort}:${limit}`,
     ttlMs,
     async () => {
       try {
@@ -840,17 +867,19 @@ export const animeCompleted = action({
 });
 
 export const animeTop = action({
-  args: {},
-  handler: async (runCtx) => {
-    const r = await aniList("top", LIST_TTL, runCtx, "", 1, 10, "SCORE_DESC");
-    if (r && r.length > 0) return r.slice(0, 10);
+  // Layar "Top anime" butuh sampai 50 judul; Home tetap boleh minta 10.
+  args: { limit: v.optional(v.number()) },
+  handler: async (runCtx, { limit }) => {
+    const n = Math.min(Math.max(Math.floor(limit ?? 10) || 10, 1), 50);
+    const r = await aniList("top", LIST_TTL, runCtx, "", 1, n, "SCORE_DESC");
+    if (r && r.length > 0) return r.slice(0, n);
     try {
-      const tv = await jikanList("top/anime?limit=10&type=tv&sfw");
-      if (tv.length > 0) return tv;
+      const tv = await jikanList(`top/anime?limit=${n}&type=tv&sfw`);
+      if (tv.length > 0) return tv.slice(0, n);
     } catch {
       /* fallback statis */
     }
-    return fbList(FALLBACK_TOP, 10);
+    return fbList(FALLBACK_TOP, n);
   },
 });
 

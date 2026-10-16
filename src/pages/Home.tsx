@@ -6,9 +6,9 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, clanNameClass } from "@/components/lstream-ui";
+import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, TitleBadge, clanNameClass } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
-import { STAFF_BADGE } from "@/lib/lstream";
+import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { VoteScreen } from "@/components/VoteScreen";
 import { CharacterRow } from "@/components/CharacterRow";
@@ -352,6 +352,8 @@ function HomeContent() {
   const [params] = useSearchParams();
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  // Layar Top anime (dibuka dari badge TOP di hero banner).
+  const [showTopAnime, setShowTopAnime] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
@@ -451,7 +453,9 @@ function HomeContent() {
   useEffect(() => {
     let alive = true;
     Promise.allSettled([
-      top({}),
+      // 50 judul: cukup untuk layar "Top anime" (badge TOP di hero banner),
+      // Home sendiri hanya menampilkan 12 kartu pertama.
+      top({ limit: 50 }),
       today({}),
       forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
@@ -742,69 +746,56 @@ function HomeContent() {
               >
                 {!a.image && (
                   <div className="absolute inset-0 bg-hero-gradient" />
-                )}                {/* Konten ditengahkan vertikal dengan jarak seragam —
-                    sinopsis, judul, dan tombol tidak ada yang terlalu ke
-                    atas / ke bawah. */}
-                <div className="relative flex h-full w-full flex-col justify-center gap-2.5 p-4 pb-9">
-                  {/* Badge kaca (glass) — netral, tanpa warna mencolok. */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
-                      {a.status ?? "Ongoing"}
-                    </span>
-                    {a.isDonghua && (
-                      <span className="rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-black uppercase text-white backdrop-blur-sm">
-                        Donghua
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
-                      <CrownIcon className="size-3" />
-                      New
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/12 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
-                      <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                        <path d="M4 12h16M12 4v16" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      {`${1200 + (((a.id as string).length * 137) % 4800)} nonton`}
-                    </span>
-                  </div>
-
-
-                  <div className="space-y-1">
-                    <h3 className="text-xl font-black leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,.7)]">
+                )}
+                {/* Menekan banner (bagian mana pun) membuka detail anime. */}
+                <button
+                  onClick={() =>
+                    openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
+                  }
+                  aria-label={`Detail ${a.title}`}
+                  className="absolute inset-0"
+                />
+                {/* Badge TOP #n — kiri atas, latar hitam rounded. Menekannya
+                    membuka layar Top anime. */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTopAnime(true);
+                  }}
+                  className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-xl bg-black/75 px-2.5 py-1 text-[11px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
+                >
+                  <Trophy className="size-3 text-gold" aria-hidden /> TOP #
+                  {i + 1}
+                </button>
+                {/* Kotak lurus full lebar di bawah banner: hitam 50% untuk
+                    menaruh judul anime. */}
+                <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/50 px-3 py-2.5 backdrop-blur-[2px]">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-white">
                       {a.title}
-                    </h3>
-                    <p className="line-clamp-4 text-xs leading-relaxed text-zinc-300/90">
-                      {a.synopsis ?? "Sinopsis belum tersedia."}
+                    </p>
+                    <p className="truncate text-[10px] text-white/70">
+                      {a.status ?? "Ongoing"}
+                      {a.isDonghua ? " · Donghua" : ""} ·{" "}
+                      {formatViews(viewCountFor(String(a.id)))} nonton
                     </p>
                   </div>
-                  {/* Tombol clean: putih solid + kaca bening — tanpa gradasi
-                      amber/rose yang mencolok. */}
-                  <div className="mt-1.5 flex gap-2.5">
-                    <button
-                      onClick={() =>
-                        openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
+                  <button
+                    onClick={() => {
+                      if (a.source === "sanka") {
+                        // Donghua: buka detail dulu karena slug episode
+                        // dibuat di layar detail, bukan di sini.
+                        openAnime(a.id, a.title, "sanka");
+                        return;
                       }
-                      className="rounded-full bg-white px-5 py-2 text-xs font-bold text-zinc-900 shadow-lg shadow-black/40 transition active:scale-95"
-                    >
-                      Lihat detail
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (a.source === "sanka") {
-                          // Donghua: buka detail dulu karena slug episode
-                          // dibuat di layar detail, bukan di sini.
-                          openAnime(a.id, a.title, "sanka");
-                          return;
-                        }
-                        navigate(
-                          `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
-                        );
-                      }}
-                      className="rounded-full border border-white/30 bg-white/12 px-5 py-2 text-xs font-semibold text-white backdrop-blur-sm transition active:scale-95"
-                    >
-                      ▶ Tonton
-                    </button>
-                  </div>
+                      navigate(
+                        `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
+                      );
+                    }}
+                    className="shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[11px] font-bold text-zinc-900 transition active:scale-95"
+                  >
+                    ▶ Tonton
+                  </button>
                 </div>
               </div>
             </div>
@@ -822,30 +813,30 @@ function HomeContent() {
           >
             <button
               onClick={() => setShowLeaderboard(true)}
-              className="relative flex h-full w-full flex-col overflow-hidden p-4 pb-9 text-left"
+              className="relative flex h-full w-full flex-col overflow-hidden p-3 pb-7 text-left"
               style={{
                 backgroundImage:
                   "linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.62) 55%, rgba(0,0,0,.42) 100%), radial-gradient(120% 90% at 12% -10%, rgba(255,45,45,.45) 0%, rgba(255,45,45,0) 55%), radial-gradient(100% 80% at 110% 5%, rgba(255,196,0,.3) 0%, rgba(255,196,0,0) 60%)",
               }}
             >
               <div className="relative min-h-0 flex-1 overflow-y-auto thin-scroll">
-                {/* Semua teks di atas podium dihapus (badge Live, deskripsi,
-                    nama & XP) — hanya judul "Leaderboard" yang dipertahankan,
-                    supaya baris kotak top 4-5 tetap kelihatan di dalam
-                    kotak banner tanpa haerd. */}
-                <h3 className="text-lg font-black">Leaderboard</h3>
-                {/* Subtitle singkat saja — jangan sampai mendorong baris
-                    kotak top 4-5 keluar dari kotak banner. */}
-                <p className="mb-1 text-[11px] leading-snug text-white/65">
+                {/* Di dalam banner TIDAK ADA podium; langsung baris top 1-5
+                    bergaya "#1 | identitas di tengah | total XP" supaya
+                    tingginya pas dengan kotak hero banner. */}
+                <h3 className="text-base font-black leading-tight">
+                  Leaderboard
+                </h3>
+                <p className="mb-1.5 text-[10px] leading-snug text-white/60">
                   Peringkat pemain paling aktif minggu ini
                 </p>
-                <HomeLeaderboardPreview />
+                <HeroLeaderboardPreview />
               </div>
             </button>
           </div>
-          {/* Geser pakai tangan saja — tanpa tombol panah. Titik putih netral
-              (bukan merah) supaya tetap clean. */}
-          <div className="absolute bottom-3 left-4 flex gap-1">
+          {/* Geser pakai tangan saja — tanpa tombol panah. Titik indikator
+              dipindah ke KANAN ATAS supaya tidak menabrak kotak judul di
+              bawah banner. */}
+          <div className="absolute right-3 top-3 flex gap-1">
             {Array.from({ length: heroItems.length + 1 }).map((_, i) => (
               <span
                 key={i}
@@ -859,20 +850,16 @@ function HomeContent() {
         </div>
       ) : null}
 
-      {/* 4) CHAT BARENG — rounded, tanpa garis pembatas */}
+      {/* 4) CHAT BARENG — satu baris kecil, benar-benar rounded:
+          ikon chat → "Chat:" → satu pesan orang (berputar tiap 3 menit). */}
       <button
         onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 w-full rounded-3xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-3 flex w-full items-center gap-2 rounded-full border border-white/10 bg-card px-3 py-2 text-left transition hover:border-foreground/40"
       >
-        <div className="flex items-center justify-between pb-2">
-          <p className="flex items-center gap-2 font-bold">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15">
-              <MessageSquare className="size-5 text-primary" aria-hidden />
-            </span>
-            Chat bareng
-          </p>
-          <span className="text-xs text-muted-foreground">buka ›</span>
-        </div>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+          <MessageSquare className="size-4 text-primary" aria-hidden />
+        </span>
+        <span className="shrink-0 text-sm font-bold">Chat:</span>
         <QueryBoundary label="Gagal memuat chat">
           <GlobalChatPreview />
         </QueryBoundary>
@@ -1159,6 +1146,16 @@ function HomeContent() {
 
       {/* Screens */}
       {showLeaderboard && <LeaderboardScreen onClose={() => setShowLeaderboard(false)} />}
+      {showTopAnime && (
+        <TopAnimeScreen
+          items={topList}
+          onClose={() => setShowTopAnime(false)}
+          onPick={(id, title) => {
+            setShowTopAnime(false);
+            openAnime(id, title, "anilist");
+          }}
+        />
+      )}
       {showSearch && (
         <SearchScreen
           initialGenre={searchGenre}
@@ -1454,6 +1451,34 @@ function PodiumCard({
                 : "ring-amber-600",
           )}
         />
+        {/* Outline berputar mengelilingi foto juara — warna mengikuti
+            peringkat (emas / perak / perunggu), pola yang sama seperti
+            outline episode yang sedang ditonton. */}
+        <svg
+          className={cn(
+            "pointer-events-none absolute -inset-[4px] overflow-visible",
+            rank === 1
+              ? "text-yellow-400"
+              : rank === 2
+                ? "text-zinc-300"
+                : "text-amber-500",
+          )}
+          viewBox="0 0 100 100"
+          aria-hidden
+        >
+          <circle
+            cx="50"
+            cy="50"
+            r="46"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="6"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray="55 45"
+            className="yn-ep-outline"
+          />
+        </svg>
         {rank === 1 && (
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-base" aria-hidden>
             👑
@@ -1510,29 +1535,34 @@ function LeaderboardList({ period }: { period: string }) {
           Belum ada data XP periode ini
         </p>
       )}
+      {/* Juara 1-3: podium + outline berputar tetap ada, dan dibungkus SATU
+          kotak latar supaya tiga besar itu terbaca sebagai satu grup. */}
       {data.length > 0 && (
-        <div className="grid grid-cols-3 items-end gap-2">
-          {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-20" />}
-          {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-28" />}
-          {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-16" />}
+        <div className="rounded-2xl border border-white/12 bg-white/[0.05] p-3">
+          <div className="grid grid-cols-3 items-end gap-2">
+            {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-20" />}
+            {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-28" />}
+            {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-16" />}
+          </div>
         </div>
       )}
-      {/* key memakai rank: kalau urutan berubah (XP masuk live), baris yang
-          naik peringkatnya di-remount sehingga animasi naiknya terputar. */}
+      {/* Top 4-50: tampilan SAMA seperti baris di hero banner (nomor kiri,
+          identitas di tengah, total XP di kanan). */}
       {rest.slice(0, 97).map((e) => (
-        <LeaderEntryRow
+        <LeaderboardRow
           key={`${e.rank}-${e.userId}`}
-          rank={e.rank}
-          username={e.username}
-          image={e.image}
-          xp={e.xp}
-          plain
-          level={e.level}
-          seqId={e.seqId}
-          staffRole={e.staffRole}
-          clanTag={e.clanTag}
-          clanTagIcon={e.clanTagIcon}
-          givePremiumCount={(e as any).givePremiumCount}
+          e={{
+            rank: e.rank,
+            username: e.username,
+            image: e.image,
+            xp: e.xp,
+            level: e.level,
+            staffRole: e.staffRole,
+            clanTag: e.clanTag,
+            clanTagIcon: e.clanTagIcon,
+            clanNameColor: (e as any).clanNameColor,
+            premium: (e as any).premium,
+          }}
         />
       ))}
     </div>
@@ -1626,41 +1656,252 @@ function LeaderboardScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-function HomeLeaderboardPreview() {
+/** Data satu baris leaderboard (dipakai hero banner & layar penuh). */
+type LbEntry = {
+  userId?: string;
+  rank: number;
+  username?: string;
+  image?: string;
+  xp: number;
+  level?: number;
+  staffRole?: string;
+  clanTag?: string;
+  clanTagIcon?: string;
+  clanNameColor?: string;
+  clanLevel?: number;
+  premium?: boolean;
+};
+
+/**
+ * Baris leaderboard: nomor peringkat di KIRI, identitas (foto, username,
+ * title, badge, centang biru, tag clan, level) di TENGAH supaya sejajar
+ * dengan angka peringkatnya, lalu TOTAL XP di paling kanan. Juara 1-3 dapat
+ * outline berputar mengelilingi foto (warna sesuai peringkat) seperti outline
+ * episode yang sedang ditonton.
+ */
+function LeaderboardRow({ e, dense }: { e: LbEntry; dense?: boolean }) {
+  const accent =
+    e.rank === 1
+      ? "text-yellow-400"
+      : e.rank === 2
+        ? "text-zinc-300"
+        : e.rank === 3
+          ? "text-amber-500"
+          : "text-white/70";
+  return (
+    <div
+      className={cn(
+        "flex w-full items-center gap-2 rounded-xl px-2",
+        dense ? "py-1" : "py-1.5",
+        // Hanya juara 1-3 yang diberi kotak latar; peringkat 4+ polos.
+        e.rank <= 3 && "bg-white/[0.07]",
+      )}
+    >
+      <span className={cn("w-6 shrink-0 text-center font-black", dense ? "text-[11px]" : "text-xs", accent)}>
+        #{e.rank}
+      </span>
+      <span className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
+        <span className="relative shrink-0">
+          {e.rank <= 3 && (
+            <svg
+              className={cn("pointer-events-none absolute -inset-[3px]", accent)}
+              viewBox="0 0 100 100"
+              aria-hidden
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="7"
+                strokeLinecap="round"
+                pathLength={100}
+                strokeDasharray="55 45"
+                className="yn-ep-outline"
+              />
+            </svg>
+          )}
+          <Avatar
+            src={e.image}
+            seed={e.username}
+            className={cn("relative rounded-full", dense ? "size-7" : "size-9")}
+          />
+        </span>
+        <span className="flex min-w-0 items-center gap-1">
+          <span
+            className={cn(
+              "truncate font-semibold text-white",
+              dense ? "text-[11px]" : "text-xs",
+            )}
+          >
+            {e.username ?? "user"}
+          </span>
+          {e.premium && <BlueCheck className={cn("shrink-0", dense ? "size-3" : "size-3.5")} />}
+          <TitleBadge role={e.staffRole} compact />
+          {e.clanTag && (
+            <ClanTag
+              icon={e.clanTagIcon ?? DEFAULT_CLAN_ICON}
+              tag={e.clanTag}
+              color={e.clanNameColor}
+              level={e.clanLevel}
+              className="shrink-0 scale-[0.72] px-1 py-0 text-[9px]"
+            />
+          )}
+          {typeof e.level === "number" && (
+            <span
+              className={cn(
+                "shrink-0 rounded bg-white/12 px-1 font-bold text-white/75",
+                dense ? "text-[9px]" : "text-[10px]",
+              )}
+            >
+              Lv.{e.level}
+            </span>
+          )}
+        </span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 font-black",
+          dense ? "text-[10px]" : "text-[11px]",
+          accent,
+        )}
+      >
+        {e.xp.toLocaleString("id-ID")} XP
+      </span>
+    </div>
+  );
+}
+
+/** Lima baris teratas di slide leaderboard dalam hero banner — TANPA podium. */
+function HeroLeaderboardPreview() {
   const data = useQuery(api.account.totalLeaderboard, { limit: 5 });
   if (!data)
     return (
-      <div className="mt-2 space-y-1.5">
-        <div className="skeleton h-16 w-full rounded-xl" />
-        <div className="skeleton h-10 w-full rounded-xl" />
+      <div className="space-y-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="skeleton h-8 w-full rounded-xl" />
+        ))}
       </div>
     );
-  const [t1, t2, t3, ...rest] = data;
-  // Preview ini hidup DI DALAM slide hero, jadi tingginya mengikuti ukuran
-  // banner: podium 3 besar tanpa teks nama/XP, lalu 2 baris kotak top 4-5.
-  // Daftar lengkap tetap di layar penuh LeaderboardScreen.
+  if (data.length === 0)
+    return (
+      <p className="py-3 text-[11px] text-white/60">Belum ada data XP.</p>
+    );
   return (
-    <div className="mt-1.5">
-      <div className="grid grid-cols-3 items-end gap-2">
-        {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-10" hideLabel />}
-        {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-12" hideLabel />}
-        {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-8" hideLabel />}
-      </div>
-      {rest.length > 0 && (
-        <div className="mt-1.5 space-y-1.5">
-          {rest.slice(0, 2).map((e) => (
-            <LeaderEntryRow
-              key={e.userId}
-              rank={e.rank}
-              username={e.username}
-              image={e.image}
-              xp={e.xp}
-              compact
-            />
-          ))}
-        </div>
-      )}
+    <div className="space-y-1">
+      {data.slice(0, 5).map((e: any) => (
+        <LeaderboardRow key={e.userId ?? e.rank} e={e as LbEntry} dense />
+      ))}
     </div>
+  );
+}
+
+/**
+ * Layar Top anime (dibuka dari badge TOP di hero banner).
+ * Tanpa judul di kiri atas — cukup tombol kembali. Top 1 di kiri dengan
+ * gambar besar, top 2 & 3 di kanannya dengan ukuran lebih kecil (tidak
+ * melebihi top 1), lalu top 4-50 dalam grid dua kolom ke bawah.
+ */
+function TopAnimeScreen({
+  items,
+  onClose,
+  onPick,
+}: {
+  items: AnimeCardT[];
+  onClose: () => void;
+  onPick: (id: string, title?: string) => void;
+}) {
+  const [t1, t2, t3, ...rest] = items;
+  const fifty = rest.slice(0, 47);
+  return (
+    <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
+      <div className="w-full p-3 pb-10">
+        <div className="mt-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+        </div>
+
+        {items.length === 0 ? (
+          <p className="py-16 text-center text-sm text-muted-foreground">
+            Data Top anime belum siap — coba lagi sebentar.
+          </p>
+        ) : (
+          <>
+            {/* Panggung 3 besar: top 1 besar di kiri, top 2 & 3 kecil di kanan. */}
+            <div className="mt-3 grid grid-cols-2 items-stretch gap-2.5">
+              {t1 && <TopAnimeCard item={t1} rank={1} big onPick={onPick} />}
+              <div className="grid grid-rows-2 gap-2.5">
+                {t2 && <TopAnimeCard item={t2} rank={2} onPick={onPick} />}
+                {t3 && <TopAnimeCard item={t3} rank={3} onPick={onPick} />}
+              </div>
+            </div>
+
+            {/* Top 4-50: dua kolom, urutan kiri-lalu-kanan seperti daftar. */}
+            {fifty.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                {fifty.map((a, i) => (
+                  <TopAnimeCard key={a.id} item={a} rank={i + 4} onPick={onPick} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TopAnimeCard({
+  item,
+  rank,
+  big,
+  onPick,
+}: {
+  item: AnimeCardT;
+  rank: number;
+  big?: boolean;
+  onPick: (id: string, title?: string) => void;
+}) {
+  const views = formatViews(viewCountFor(String(item.id)));
+  return (
+    <button
+      onClick={() => onPick(String(item.id), item.title)}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-card/50 text-left transition hover:border-white/25"
+    >
+      <div
+        className={cn(
+          "relative w-full overflow-hidden bg-black",
+          big ? "flex-1 min-h-0" : "aspect-[3/2]",
+        )}
+      >
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.title}
+            loading="lazy"
+            className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105"
+          />
+        ) : null}
+      </div>
+      {/* Kotak hitam opacity 50%: angka top di kiri, jumlah views di kanan. */}
+      <div className="flex w-full items-center gap-2 bg-black/50 px-2 py-1.5">
+        <span className="shrink-0 text-[11px] font-black text-white">
+          #{rank}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-white/90">
+          {item.title}
+        </span>
+        <span className="shrink-0 text-[10px] font-bold text-white/75">
+          {views}
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -1920,6 +2161,23 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
     void doSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adult]);
+
+  // Pencarian hidup: begitu satu kata (atau lebih) diketik, hasilnya langsung
+  // dicari — tanpa menekan tombol Cari. Debounce 320ms supaya backend tidak
+  // dibanjiri, dan kode rahasia pemutar musik tetap hanya aktif lewat tombol
+  // Cari / Enter supaya tidak kebuka tanpa sengaja saat mengetik.
+  useEffect(() => {
+    const term = query.trim();
+    if (!term) {
+      setResults(null);
+      setSearching(false);
+      return;
+    }
+    if (isMusicSecret(term)) return;
+    const t = setTimeout(() => void doSearch(), 320);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -2294,27 +2552,27 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   )}
                 </>
               ) : (
-                <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-                  <span className="flex size-16 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
-                    <svg className="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden>
+                /* Keadaan kosong diperbesar: ikon, judul, dan dua tombol yang
+                   kini tersusun ke BAWAH (grid), bukan berdampingan. */
+                <div className="flex flex-1 flex-col items-center justify-center gap-3.5 px-6 text-center">
+                  <span className="flex size-24 items-center justify-center rounded-3xl border border-border bg-card text-muted-foreground shadow-[0_0_40px_-18px] shadow-primary/60">
+                    <svg className="size-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} aria-hidden>
                       <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
                     </svg>
                   </span>
-                  <p className="text-sm font-semibold">Kamu belum join clan :(</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-lg font-bold">Kamu belum join clan :(</p>
+                  <p className="max-w-xs text-sm text-muted-foreground">
                     Join clan atau buat clan untuk bergabung
                   </p>
-                  {/* Tombol clan compact (sejajar, tidak melebar ke pinggir,
-                      text lebih kecil) dengan glow gradient biar lebih keren. */}
-                  <div className="mt-1 flex items-center justify-center gap-1.5">
+                  <div className="mt-2 grid w-full max-w-xs grid-cols-1 gap-2">
                     <button
                       onClick={() => {
                         onClose();
                         navigate("/clan");
                       }}
-                      className="yn-btn-warm inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[11px] font-black tracking-wide"
+                      className="yn-btn-warm inline-flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-black tracking-wide"
                     >
-                      <Users className="size-3" aria-hidden />
+                      <Users className="size-4" aria-hidden />
                       Lihat clan
                     </button>
                     <button
@@ -2322,9 +2580,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         onClose();
                         navigate("/clan?buat=1");
                       }}
-                      className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-300/90 ring-1 ring-emerald-400/15 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-95"
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 py-3 text-sm font-bold tracking-wide text-emerald-300/90 ring-1 ring-emerald-400/15 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-[0.98]"
                     >
-                      <Plus className="size-3" aria-hidden />
+                      <Plus className="size-4" aria-hidden />
                       Buat clan
                     </button>
                   </div>
@@ -2789,6 +3047,15 @@ function AnimeDetailScreen({
             </div>
           )}
 
+          {/* Jumlah favorite — kotak yang SAMA seperti chip genre, hanya
+              warnanya berbeda (rose) supaya langsung kelihatan bedanya. */}
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-rose-400/50 px-3 py-1 text-[11px] font-semibold text-rose-300">
+              <Heart className="size-3" aria-hidden />
+              {fmtFavoritCount(favCount ?? 0)}
+            </span>
+          </div>
+
           {/* Baris aksi: "Lanjut episode" + "Favorite" — kotak ROUNDED
               lurus (tanpa kemiringan skew), tinggi sama. */}
           <div className="mt-4 flex items-stretch gap-2.5">
@@ -2840,9 +3107,7 @@ function AnimeDetailScreen({
               {Math.floor(progress.durationSec / 60)}
             </p>
           )}
-          <p className="mt-1 text-center text-[11px] text-white/55">
-            {fmtFavoritCount(favCount ?? 0)}
-          </p>
+
 
           {/* Tab tanpa background rounded: hanya garis bawah pada teks aktif.
               Info · Nonton · Character · Vote (dulunya Cuplikan) */}
@@ -3037,6 +3302,13 @@ function AnimeDetailScreen({
                         <button
                           key={e.id}
                           disabled={!released}
+                          title={
+                            e.aired
+                              ? `Rilis ${fmtAired(e.aired)}`
+                              : released
+                                ? undefined
+                                : "Belum rilis"
+                          }
                           onClick={() =>
                             navigate(
                               `/nonton?anime=${animeId}&ep=${e.id}&judul=${encodeURIComponent(
@@ -3094,9 +3366,17 @@ function AnimeDetailScreen({
                                 Baru
                               </span>
                             )}
-                            {e.aired && (
-                              <p className="mt-0.5 text-[11px] text-white/55">
-                                {e.aired}
+                            {/* Tanggal rilis episode — biar jelas kapan
+                                episodenya tayang, bukan cuma nomornya. */}
+                            {released ? (
+                              e.aired ? (
+                                <p className="mt-0.5 text-[11px] text-white/55">
+                                  Rilis {fmtAired(e.aired)}
+                                </p>
+                              ) : null
+                            ) : (
+                              <p className="mt-0.5 text-[11px] text-white/40">
+                                Belum rilis
                               </p>
                             )}
                           </div>
@@ -3192,11 +3472,39 @@ function AnimeDetailScreen({
  * teks tidak ikut miring.
  */
 /**
+ * Jumlah "nonton" yang stabil untuk satu judul. Dipakai hero banner DAN layar
+ * Top anime supaya angka di dua tempat itu tidak pernah bertentangan.
+ */
+function viewCountFor(id: string): number {
+  let h = 7;
+  for (let i = 0; i < id.length; i++) {
+    h = (h * 31 + id.charCodeAt(i)) % 99991;
+  }
+  return 1200 + (h % 4800);
+}
+
+/**
  * Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
  * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999
  * dibulatkan ke puluhan/ratusan; ribuan pakai satuan k dengan satu desimal
  * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan.
  */
+/**
+ * Tanggal rilis episode yang enak dibaca: "5 Jan 2026". Menerima ISO penuh
+ * (Jikan) maupun "YYYY-MM-DD" (perhitungan AniList). Tanggal yang tidak bisa
+ * dibaca dikembalikan apa adanya supaya tidak pernah tampil kosong aneh.
+ */
+function fmtAired(aired?: string): string {
+  if (!aired) return "";
+  const at = Date.parse(aired);
+  if (!Number.isFinite(at)) return aired;
+  return new Date(at).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function fmtFavoritCount(n: number): string {
   const v = Math.max(0, Math.floor(n));
   if (v === 0) return "Belum ada Favorite";

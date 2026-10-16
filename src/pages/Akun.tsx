@@ -83,17 +83,15 @@ function AkunContent() {
 
   if (!user) return null;
   return (
-    <div className="relative">
-      {/* Satu-satunya kontrol di layar Akun: tombol Pengaturan. */}
-      <div className="flex justify-end pt-4">
-        <button
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Pengaturan"
-          className="flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-        >
-          <SettingsIcon className="size-[18px]" />
-        </button>
-      </div>
+    <div className="relative pb-6">
+      {/* Kotak profil full lebar di PALING ATAS: foto profil di kiri, lalu
+          username, tag clan, level, badge, dan title. Tombol pengaturan ada
+          di ujung kanan kotak yang sama. */}
+      <AkunProfileHeader user={user} onSettings={() => setSettingsOpen(true)} />
+
+      {/* Feed komentar: diri sendiri, teman, dan developer — grid ke bawah,
+          tanpa kotak latar. */}
+      <AkunCommentsFeed />
 
       {settingsOpen && (
         <SettingsScreen
@@ -106,6 +104,176 @@ function AkunContent() {
         />
       )}
       {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
+    </div>
+  );
+}
+
+/** Kotak profil di paling atas halaman Akun (full lebar). */
+function AkunProfileHeader({
+  user,
+  onSettings,
+}: {
+  user: any;
+  onSettings: () => void;
+}) {
+  const isPremium = (user.premiumUntil ?? 0) > Date.now();
+  return (
+    <div className="mt-4 rounded-2xl border border-white/10 bg-card p-3">
+      <div className="flex items-center gap-3">
+        <Avatar
+          src={user.image}
+          seed={user.username}
+          className="size-14 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="truncate text-sm font-bold">{user.username}</span>
+            {isPremium && <BlueCheck className="size-3.5" />}
+            <TitleBadge role={user.staffRole} compact />
+            {user.clanTag && (
+              <ClanTag
+                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                tag={user.clanTag}
+                color={user.clanNameColor}
+                level={user.clanLevel}
+              />
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-1.5">
+            <LevelBadge level={user.level ?? 1} />
+            <span className="truncate text-[11px] text-muted-foreground">
+              ID: {displayId(user.seqId, user._id)}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={onSettings}
+          aria-label="Pengaturan"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
+        >
+          <SettingsIcon className="size-[18px]" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Feed komentar di halaman Akun.
+ *
+ * Satu item: foto profil di kiri, di kanannya identitas (username, badge,
+ * title, centang biru, tag clan, level) dengan JAM di pojok kanan, lalu di
+ * bawahnya sedikit ke kanan ada gambar anime + judulnya (kanan atas) dan
+ * nomor episodenya, baru teks komentarnya. Semuanya mengalir ke BAWAH dan
+ * tanpa kotak latar.
+ */
+function AkunCommentsFeed() {
+  const rows = useQuery(api.activities.myFriendsComments, { limit: 30 });
+
+  if (rows === undefined) {
+    return (
+      <div className="mt-5 space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="skeleton h-24 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <p className="py-12 text-center text-xs text-muted-foreground">
+        Belum ada komentar dari kamu, teman, atau developer.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-5 space-y-5">
+      {rows.map((c: any) => (
+        <div key={c._id} className="fade-enter min-w-0">
+          {/* Banner profil komentator (kalau ada) tetap terlihat di sini. */}
+          {c.bannerUrl && (
+            <div
+              className="mb-2 h-12 w-full overflow-hidden rounded-xl border border-white/10 bg-cover bg-center"
+              style={{ backgroundImage: `url(${c.bannerUrl})` }}
+              aria-hidden
+            />
+          )}
+          <div className="flex items-start gap-2.5">
+            <Avatar src={c.image} seed={c.username} className="size-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              {/* Baris identitas + jam di pojok kanan. */}
+              <div className="flex items-start gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "truncate text-[13px] font-semibold",
+                      usernameColor(c.username),
+                    )}
+                  >
+                    {c.username}
+                  </span>
+                  {c.premium && <BlueCheck className="size-3.5 shrink-0" />}
+                  <TitleBadge role={c.staffRole} compact />
+                  {c.clanTag && (
+                    <ClanTag
+                      icon={c.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                      tag={c.clanTag}
+                      color={c.clanNameColor}
+                      level={c.clanLevel}
+                      className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
+                    />
+                  )}
+                  {typeof c.level === "number" && (
+                    <span className="shrink-0 rounded bg-white/10 px-1 text-[9px] font-bold text-white/70">
+                      Lv.{c.level}
+                    </span>
+                  )}
+                  {c.source === "dev" && (
+                    <span className="shrink-0 rounded bg-primary/20 px-1 text-[9px] font-bold text-primary">
+                      Dev
+                    </span>
+                  )}
+                </div>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {timeAgo(c.createdAt)}
+                </span>
+              </div>
+
+              {/* Gambar anime (agak ke kanan) + judul di kanan atas + episode. */}
+              <div className="mt-1.5 flex items-start gap-2.5 pl-1">
+                {c.animeImage ? (
+                  <img
+                    src={c.animeImage}
+                    alt=""
+                    loading="lazy"
+                    className="h-16 w-11 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-secondary/60 text-[10px] text-muted-foreground">
+                    Anime
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-bold text-white">
+                    {c.animeTitle ?? c.animeId}
+                  </p>
+                  {c.episode ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Episode {c.episode}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Teks komentar — rata kiri (tidak ikut ke kanan). */}
+              <p className="mt-1.5 whitespace-pre-line text-[13px] leading-snug text-zinc-200">
+                {c.text}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

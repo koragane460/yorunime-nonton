@@ -569,10 +569,11 @@ export const postComment = mutation({
   args: {
     animeId: v.string(),
     animeTitle: v.optional(v.string()),
+    animeImage: v.optional(v.string()),
     text: v.string(),
     replyToId: v.optional(v.id("animeComments")),
   },
-  handler: async (ctx, { animeId, animeTitle, text, replyToId }) => {
+  handler: async (ctx, { animeId, animeTitle, animeImage, text, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
@@ -582,6 +583,7 @@ export const postComment = mutation({
     const commentId = await ctx.db.insert("animeComments", {
       animeId,
       animeTitle,
+      animeImage,
       userId,
       text: text.trim(),
       replyToId,
@@ -637,7 +639,10 @@ export const toggleCommentLike = mutation({
   },
 });
 
-/** Komentar teman-teman di semua anime (untuk panel akun, terbaru dulu). */
+/**
+ * Feed komentar untuk halaman Akun: komentar SAYA sendiri, komentar TEMAN,
+ * dan komentar DEVELOPER/staff — terbaru dulu.
+ */
 export const myFriendsComments = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 30 }) => {
@@ -645,13 +650,27 @@ export const myFriendsComments = query({
     if (userId === null) return [];
     const me = await ctx.db.get(userId);
     if (!me) return [];
-    // Info page: hanya komentar dari developer/staff.
-    //
-    // Sebelumnya tiap komentar memanggil ctx.db.get satu per satu (ratusan
-    // pembacaan berurutan) sehingga halaman Info lama sekali muncul. Sekarang
-    // daftar akun staff diambil sekali saja, lalu komentar disaring pakai
-    // Map di memori.
-    const staff = new Map<string, any>();
+
+    // Daftar teman (dua arah) — dipakai untuk menyaring komentar yang boleh
+    // tampil di feed Akun.
+    const friendIds = new Set<string>();
+    const friendsA = await ctx.db
+      .query("friendships")
+      .withIndex("userA", (q) => q.eq("userA", userId))
+      .collect();
+    const friendsB = await ctx.db
+      .query("friendships")
+      .withIndex("userB", (q) => q.eq("userB", userId))
+      .collect();
+    for (const f of [...friendsA, ...friendsB]) {
+      friendIds.add(String(f.userA === userId ? f.userB : f.userA));
+    }
+
+    // Akun yang boleh muncul: saya, teman-teman, dan developer/staff.
+    // Daftar user diambil SEKALI (bukan per komentar) supaya halaman Akun
+    // tidak lambat saat dibuka.
+    const allowed = new Map<string, any>();
+    allowed.set(String(userId), me);
     const users = await ctx.db.query("users").take(600);
     for (const u of users) {
       const isStaff =
@@ -660,27 +679,47 @@ export const myFriendsComments = query({
         u.staffRole === "creator" ||
         u.staffRole === "mod" ||
         (u.seqId === 1 && !u.staffRole);
-      if (isStaff) staff.set(String(u._id), u);
+      if (isStaff || friendIds.has(String(u._id))) {
+        allowed.set(String(u._id), u);
+      }
     }
-    if (staff.size === 0) return [];
-    const rows = await ctx.db
-      .query("animeComments")
-      .order("desc")
-      .take(250);
+
+    const rows = await ctx.db.query("animeComments").order("desc").take(250);
     const out = [];
     for (const r of rows) {
       if (r.deleted) continue;
-      const u = staff.get(String(r.userId));
+      const u = allowed.get(String(r.userId));
       if (!u) continue;
+      // "me" = komentar sendiri, "friend" = teman, "dev" = developer/staff.
+      const source =
+        String(r.userId) === String(userId)
+          ? "me"
+          : u.staffRole === "dev" ||
+              u.staffRole === "creator" ||
+              u.role === "admin" ||
+              u.seqId === 1
+            ? "dev"
+            : "friend";
+      // Nomor episode diambil dari animeId (format "<id>__ep<n>").
+      const epMatch = /__ep(\d+)$/.exec(String(r.animeId));
       out.push({
         _id: r._id,
         animeId: r.animeId,
+        animeTitle: r.animeTitle,
+        animeImage: r.animeImage,
+        episode: epMatch ? Number(epMatch[1]) : undefined,
         userId: r.userId,
         username: u?.username ?? "user",
         image: u?.image,
         bannerUrl: u?.bannerUrl,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
         staffRole: u?.staffRole,
+        level: u?.level,
+        clanTag: u?.clanTag,
+        clanTagIcon: u?.clanTagIcon,
+        clanNameColor: u?.clanNameColor,
+        clanLevel: u?.clanLevel,
+        source,
         text: r.text,
         likeCount: (r.likes ?? []).length,
         createdAt: r.createdAt,
