@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+/** Warna latar tag clan — pastel lembut supaya ikon & tulisan [TAG] tetap
+ *  terbaca, tidak ngejreng. */
+const TAG_BG_COLORS = [
+  "#3b3f52", "#4a4560", "#5a4a5f", "#3f5163", "#45546a",
+  "#54503f", "#4c5a4a", "#5f4a4a", "#4a4f5a", "#5a5560",
+];
+
 /** Layar clan utama: kalau belum punya clan tampil Browse+Top; kalau sudah
  *  punya tampil ringkas clan-nya, dan layar Buat Clan terpisah (?create=1). */
 export default function Clan() {
@@ -212,28 +219,31 @@ function ClanRow({
       )}
     >
       <div className="flex items-center gap-3">
-        {rank !== undefined ? (
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg font-black",
-              rank === 1
-                ? "bg-yellow-400/20 text-yellow-300"
-                : rank === 2
-                  ? "bg-zinc-300/20 text-zinc-200"
-                  : rank === 3
-                    ? "bg-amber-600/25 text-amber-300"
-                    : "bg-secondary text-primary",
-            )}
-          >
-            {rank === 1 ? <Crown className="size-4" /> : rank}
-          </span>
-        ) : (
+        {/* Foto profil clan SELALU tampil; nomor peringkat jadi lencana
+            kecil di pojok foto supaya tetap enak dibaca. */}
+        <span className="relative shrink-0">
           <img
             src={c.avatarUrl || ""}
             alt=""
-            className="size-10 shrink-0 rounded-xl border border-white/10 object-cover"
+            className="size-10 rounded-xl border border-white/10 object-cover"
           />
-        )}
+          {rank !== undefined && (
+            <span
+              className={cn(
+                "absolute -bottom-1 -left-1 flex min-w-[18px] items-center justify-center rounded-full border px-1 py-px text-[9px] font-black leading-none",
+                rank === 1
+                  ? "border-yellow-300/50 bg-yellow-400 text-black"
+                  : rank === 2
+                    ? "border-zinc-200/60 bg-zinc-200 text-black"
+                    : rank === 3
+                      ? "border-amber-500/60 bg-amber-600 text-white"
+                      : "border-white/20 bg-black/80 text-white",
+              )}
+            >
+              {rank === 1 ? <Crown className="size-2.5" /> : rank}
+            </span>
+          )}
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
@@ -299,6 +309,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   const [tag, setTag] = useState("");
   // Icon tag clan + foto profil — dulu kosong terus; sekarang dipilih di form.
   const [tagIcon, setTagIcon] = useState(DEFAULT_CLAN_ICON);
+  // Background tag — warna pastel lembut (bukan ngejreng), opsional.
+  // Default null = tanpa background (transparan).
+  const [tagBg, setTagBg] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
@@ -314,6 +327,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         name: name.trim(),
         tag: tag.toUpperCase(),
         tagIcon,
+        tagBg: tagBg ?? undefined,
         avatarUrl: avatarUrl.trim(),
         description: desc.trim(),
       });
@@ -367,6 +381,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                   icon={tagIcon}
                   tag={tag.toUpperCase() || "TAG"}
                   level={1}
+                  bg={tagBg || undefined}
                   className="mt-1 px-1.5 py-0 text-[10px]"
                 />
               </div>
@@ -414,6 +429,41 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                 >
                   <ic.Icon className="size-5" style={{ color: ic.tone }} />
                 </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Background tag — warna pastel lembut, tidak ngejreng. */}
+          <div className="grid gap-2">
+            <Label>Background tag (opsional)</Label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setTagBg(null)}
+                aria-label="Tanpa background"
+                className={cn(
+                  "flex size-9 items-center justify-center rounded-full border text-[10px] transition",
+                  tagBg === null
+                    ? "border-primary ring-2 ring-primary/60"
+                    : "border-white/15 text-muted-foreground hover:border-foreground/40",
+                )}
+              >
+                ✕
+              </button>
+              {TAG_BG_COLORS.map((col) => (
+                <button
+                  key={col}
+                  type="button"
+                  onClick={() => setTagBg(col)}
+                  aria-label={`Background ${col}`}
+                  style={{ backgroundColor: col }}
+                  className={cn(
+                    "size-9 rounded-full border transition",
+                    tagBg === col
+                      ? "border-foreground/70 ring-2 ring-primary/60"
+                      : "border-white/15 hover:border-foreground/40",
+                  )}
+                />
               ))}
             </div>
           </div>
@@ -489,15 +539,16 @@ function MyClanScreen() {
               <img src={c.avatarUrl || ""} alt="" className="size-12 rounded-xl object-cover" />
               <div className="min-w-0 flex-1">
                 <p className={cn("truncate font-bold", clanNameClass(c.level))}>{c.name}</p>
-                <ClanTag
-                  icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
-                  tag={c.tag}
-                  color={c.color}
-                  level={c.level}
-                  className="px-1.5 py-0 text-[9px]"
-                />
-              </div>
-            </div>
+            <ClanTag
+              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={c.tag}
+              color={c.color}
+              level={c.level}
+              bg={c.tagBg}
+              className="px-1.5 py-0 text-[9px]"
+            />
+          </div>
+        </div>
             <div className="my-3 h-px bg-white/10" />
             <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-muted-foreground">
               <div>

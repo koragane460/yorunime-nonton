@@ -480,6 +480,7 @@ export function ClanTag({
   tag,
   color,
   level,
+  bg,
   className,
 }: {
   icon: string;
@@ -487,6 +488,10 @@ export function ClanTag({
   color?: string;
   /** Level clan — menentukan warna & animasi silau nama clan. */
   level?: number;
+  /** Warna latar tag (hex) yang dipilih saat bikin clan. Tanpa ini pakai
+   *  latar galaxy bawaan. Diterapkan sebagai overlay translusen di atas
+   *  animasi `.clan-tag` supaya tetap kelihatan hidup. */
+  bg?: string;
   className?: string;
 }) {
   const { Icon, tone } = resolveClanIcon(icon);
@@ -499,6 +504,14 @@ export function ClanTag({
         "clan-tag inline-flex select-none items-center gap-1 whitespace-nowrap rounded-lg rounded-tl-none rounded-br-none border border-white/25 px-2 py-0.5 text-xs font-bold tracking-wide",
         className,
       )}
+      style={
+        bg
+          ? {
+              // Overlay warna pilihan di atas latar galaxy bawaan.
+              backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), linear-gradient(${bg}, ${bg})`,
+            }
+          : undefined
+      }
     >
       <span
         className="relative z-[2] inline-flex size-3.5 shrink-0 items-center justify-center"

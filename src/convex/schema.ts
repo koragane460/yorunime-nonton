@@ -141,6 +141,8 @@ const schema = defineSchema(
       name: v.string(),
       tag: v.string(),
       tagIcon: v.string(),
+      /** Warna latar tag [TAG] (hex) — dipilih saat bikin clan. */
+      tagBg: v.optional(v.string()),
       avatarUrl: v.string(),
       backgroundUrl: v.optional(v.string()),
       description: v.optional(v.string()),

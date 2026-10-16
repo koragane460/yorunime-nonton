@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,6 +23,7 @@ const LABEL = { manga: "Manga", manhwa: "Manhwa" } as const;
 /** Halaman katalog manga / manhwa — tata letak mengikuti Home. */
 export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const { user } = useAuth();
   // `?komik=<slug>` dipakai halaman Jadwal untuk membuka detail langsung.
@@ -270,9 +271,21 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
 
       {/* Tombol ganti kategori. Selalu bisa diketuk (termasuk tanpa Premium),
           dan ikut membawa tag "Premium Only" supaya jelas halaman ini
-          konten Premium tanpa harus ditekan dulu untuk mengetahui. */}
+          konten Premium tanpa harus ditekan dulu untuk mengetahui.
+          Di tab Baca (/baca) tombol ini mengganti ?jenis=… supaya user
+          tetap di tab yang sama; di route /manga & /manhwa tetap pindah
+          route seperti biasa. */}
       <button
-        onClick={() => navigate(kind === "manga" ? "/manhwa" : "/manga")}
+        onClick={() => {
+          const next = kind === "manga" ? "manhwa" : "manga";
+          if (location.pathname === "/baca") {
+            const p = new URLSearchParams(params);
+            p.set("jenis", next);
+            setParams(p, { replace: true });
+            return;
+          }
+          navigate(next === "manga" ? "/manga" : "/manhwa");
+        }}
         className="fixed bottom-20 right-4 z-30 flex items-center gap-1.5 rounded-full border border-foreground/40 bg-primary/90 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-primary"
       >
         {kind === "manga" ? "Lihat Manhwa" : "Lihat Manga"}

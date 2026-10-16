@@ -23,9 +23,14 @@ type EventRow = Doc<"voteEvents">;
 
 /** Event terbaru (apapun statusnya berdasarkan waktu). */
 async function latestEvent(ctx: any): Promise<EventRow | null> {
+  // Urutan TURUN dilakukan lewat `.order("desc")` — fungsi range index hanya
+  // boleh eq/gt/gte/lt/lte, memanggil q.desc() di dalam withIndex membuat
+  // query melempar Server Error saat runtime (dulu bikin layar Vote & Koleksi
+  // crash padahal datanya hanya "belum dimulai").
   return (await ctx.db
     .query("voteEvents")
-    .withIndex("by_startedAt", (q: any) => q.desc())
+    .withIndex("by_startedAt", (q: any) => q)
+    .order("desc")
     .first()) as EventRow | null;
 }
 

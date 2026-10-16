@@ -67,6 +67,7 @@ function clanPublic(clan: any, memberCount: number) {
     name: clan.name,
     tag: clan.tag,
     tagIcon: clan.tagIcon,
+    tagBg: clan.tagBg,
     avatarUrl: clan.avatarUrl,
     backgroundUrl: clan.backgroundUrl,
     description: clan.description,
@@ -236,10 +237,12 @@ export const createClan = mutation({
     name: v.string(),
     tag: v.string(),
     tagIcon: v.string(),
+    /** Warna latar tag (hex) — opsional, pilihan "Default" tidak mengisi. */
+    tagBg: v.optional(v.string()),
     avatarUrl: v.string(),
     description: v.optional(v.string()),
   },
-  handler: async (ctx, { name, tag, tagIcon, avatarUrl, description }) => {
+  handler: async (ctx, { name, tag, tagIcon, tagBg, avatarUrl, description }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new ConvexError("Not signed in");
     const me = await ctx.db.get(userId);
@@ -272,6 +275,12 @@ export const createClan = mutation({
       name: name.trim(),
       tag: cleanTag,
       tagIcon,
+      // Validasi ringan: hanya hex 3/6 digit yang boleh tersimpan —
+      // argumen datang dari client, jangan biarkan string apa pun jadi CSS.
+      tagBg:
+        tagBg && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(tagBg)
+          ? tagBg
+          : undefined,
       avatarUrl,
       description,
       leaderId: userId,

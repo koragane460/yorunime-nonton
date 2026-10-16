@@ -37,6 +37,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+// Ikon mahkota Premium — gaya SF Symbols supaya konsisten dengan Home.
+import { CrownIcon } from "@/components/ios-icons";
 import { NobarDock } from "@/components/NobarDock";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -2885,6 +2887,32 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }}
             />
           </div>
+        )}
+
+        {/* Promo Premium di bawah toolbar — gaya sama dengan kartu Premium
+            di Home, tapi warnanya DITENANGKAN (tanpa gradasi emas menyala,
+            hanya aksen tipis) supaya tidak norak di tengah player. Muncul
+            hanya untuk akun yang belum Premium. */}
+        {!isPremiumUser && (
+          <button
+            onClick={() => navigate("/premium")}
+            className="mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-gold/25 bg-white/[0.04] p-3 text-left transition hover:border-gold/45 hover:bg-white/[0.06]"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-gold/35 bg-gold/10">
+              <CrownIcon className="size-5 text-gold/90" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-mono text-[10px] font-bold tracking-[0.2em] text-gold/80">
+                PREMIUM
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-zinc-400">
+                Nonton 1080p tanpa batas — mulai dari 7.000
+              </span>
+            </span>
+            <span className="shrink-0 rounded-lg border border-gold/40 bg-gold/15 px-3 py-1.5 text-[11px] font-bold text-gold/90">
+              Buka Premium
+            </span>
+          </button>
         )}
 
         {/* Kecerahan & volume HANYA ada di layar penuh. Di luar layar penuh

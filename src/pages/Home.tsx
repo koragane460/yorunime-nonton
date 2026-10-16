@@ -205,7 +205,16 @@ function ComicHomeRow({
   return (
     <div className="fade-enter mt-4">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        <h2
+          className={cn(
+            "bg-clip-text text-lg font-bold tracking-tight text-transparent",
+            variant === "manga"
+              ? "bg-gradient-to-r from-amber-200 via-orange-200 to-rose-300"
+              : "bg-gradient-to-r from-violet-300 via-fuchsia-200 to-pink-300",
+          )}
+        >
+          {title}
+        </h2>
         <button
           onClick={onMore}
           className="shrink-0 text-xs font-semibold text-primary"
@@ -972,7 +981,9 @@ function HomeContent() {
       {!loading && genreList.length > 0 && (
         <div className="fade-enter mt-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight">Genre</h2>
+            <h2 className="bg-gradient-to-r from-sky-300 via-teal-200 to-emerald-300 bg-clip-text text-lg font-bold tracking-tight text-transparent">
+              Genre
+            </h2>
             <button
               onClick={() => {
                 setSearchGenre(null);
@@ -984,15 +995,18 @@ function HomeContent() {
               Lihat semua ›
             </button>
           </div>
-          <div className="thin-scroll flex gap-2 overflow-x-auto pb-1">
+          {/* Chip WRAP ke beberapa baris (bukan cuma satu geser) — daftar
+              genre tampil lebih banyak ke bawah, warna aksen lembut. */}
+          <div className="flex flex-wrap gap-2">
             {genreList.map((g) => (
               <button
                 key={g.id}
                 onClick={() => {
                   setSearchGenre(g.id);
+                  setSearchOpenGenres(false);
                   setShowSearch(true);
                 }}
-                className="shrink-0 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-foreground/40 active:scale-95"
+                className="rounded-full border border-sky-400/35 bg-sky-400/10 px-3.5 py-1.5 text-xs font-semibold text-sky-100/90 transition hover:border-sky-300/60 hover:bg-sky-400/20 active:scale-95"
               >
                 {g.name}
               </button>
