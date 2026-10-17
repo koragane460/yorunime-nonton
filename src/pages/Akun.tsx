@@ -190,53 +190,36 @@ function AkunCommentsFeed() {
   return (
     <div className="mt-5 space-y-5">
       {rows.map((c: any) => (
-        <div key={c._id} className="fade-enter min-w-0">              {/* Banner profil komentator (kalau ada) — tampil di atas kotak chat,
-                  menutupi seluruh bingkai. */}
-          {c.bannerUrl && (
-            <div
-              className="mb-2 h-14 w-full overflow-hidden rounded-xl border border-white/10 bg-cover bg-center"
-              style={{ backgroundImage: `url(${c.bannerUrl})` }}
-              aria-hidden
-            />
+        <div
+          key={c._id}
+          className={cn(
+            "fade-enter min-w-0 overflow-hidden rounded-2xl",
+            // Kalau komentar punya banner profil, bannernya MENUTUPI SELURUH
+            // kotak komentar (bukan kotak kecil di atas username).
+            c.bannerUrl && "relative border border-white/10",
           )}
-          <div className="flex items-start gap-2.5">
-            {/* Gambar anime: penuh lebar atas (banner) agar jelas terlihat. */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start gap-2.5">
-                <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-                  {/* Judul + episode: satu baris, agak ke kanan. */}
-                  <div className="flex items-baseline gap-2">
-                    <span className="truncate text-[12px] font-bold text-white">
-                      {c.animeTitle ?? c.animeId}
-                    </span>
-                    {c.episode ? (
-                      <span className="shrink-0 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white/80 backdrop-blur-sm">
-                        Episode {c.episode}
-                      </span>
-                    ) : null}
-                  </div>
-                  {/* Teks komentar — rata kiri, tidak ikut ke kanan. */}
-                  <p className="mt-1.5 whitespace-pre-line text-[13px] leading-snug text-zinc-200">
-                    {c.text}
-                  </p>
-                </div>
-                {c.animeImage ? (
-                  <img
-                    src={c.animeImage}
-                    alt=""
-                    loading="lazy"
-                    className="mt-1.5 h-16 w-11 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="mt-1.5 flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-secondary/60 text-[10px] text-muted-foreground">
-                    Anime
-                  </div>
-                )}
-              </div>
-            </div>
+        >
+          {c.bannerUrl && (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${c.bannerUrl})` }}
+                aria-hidden
+              />
+              {/* Scrim gelap supaya teks tetap terbaca di atas banner. */}
+              <div className="absolute inset-0 bg-black/55" aria-hidden />
+            </>
+          )}
+          <div className={cn("relative flex items-start gap-2.5", c.bannerUrl && "p-2.5")}>
+            {/* Foto profil komentator — kiri. */}
+            <Avatar
+              src={c.image}
+              seed={c.username}
+              className="size-10 shrink-0"
+            />
             <div className="min-w-0 flex-1">
               {/* Baris identitas + jam di pojok kanan. */}
-              <div className="flex items-start gap-2">
+              <div className="flex min-w-0 items-start gap-2">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
                   <span
                     className={cn(
@@ -272,6 +255,44 @@ function AkunCommentsFeed() {
                   {timeAgo(c.createdAt)}
                 </span>
               </div>
+
+              {/* Garis pembatas ATAS grup gambar/judul/episode — sedikit ke
+                  kanan (tidak menyentuh tepi kiri kartu). */}
+              <div className="ml-3 mt-2 h-px bg-white/15" aria-hidden />
+
+              {/* Gambar anime + judul + episode. */}
+              <div className="ml-3 mt-2 flex items-center gap-2.5">
+                {c.animeImage ? (
+                  <img
+                    src={c.animeImage}
+                    alt=""
+                    loading="lazy"
+                    className="h-20 w-14 shrink-0 rounded-lg border border-white/10 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-14 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-secondary/60 text-[10px] text-muted-foreground">
+                    Anime
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-bold text-white">
+                    {c.animeTitle ?? c.animeId}
+                  </p>
+                  {c.episode ? (
+                    <span className="mt-1 inline-flex rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white/80 backdrop-blur-sm">
+                      Episode {c.episode}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Garis pembatas BAWAH grup gambar/judul/episode. */}
+              <div className="ml-3 mt-2 h-px bg-white/15" aria-hidden />
+
+              {/* Teks komentar — rata kiri, tidak ikut ke kanan. */}
+              <p className="ml-3 mt-2 whitespace-pre-line text-[13px] leading-snug text-zinc-200">
+                {c.text}
+              </p>
             </div>
           </div>
         </div>

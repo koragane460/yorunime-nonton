@@ -702,7 +702,7 @@ function HomeContent() {
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <div
-          className="fade-enter relative mt-3 h-[170px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
+          className="fade-enter relative mt-3 h-[140px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
           onPointerDown={(e) => {
             heroTouchX.current = e.clientX;
           }}
@@ -1848,7 +1848,7 @@ function TopAnimeCard({
   return (
     <button
       onClick={() => onPick(String(item.id), item.title)}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-card text-left transition hover:border-white/25" onFocus={(e) => e.currentTarget.style.outline="none"}
+      className="group flex flex-col overflow-hidden rounded-2xl text-left transition focus:outline-none"
     >
       <div
         className={cn(
@@ -1864,20 +1864,18 @@ function TopAnimeCard({
             className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : null}
-      </div>
-      {/* Kotak hitam opacity 70%: #N kiri-atas, views kanan-atas (ikon mata). */}
-      <div className="relative flex w-full items-center gap-2 bg-black/70 px-2 py-1.5">
-        <span className="shrink-0 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-black text-white backdrop-blur-sm">
+        {/* Badge #N — kiri atas, latar hitam rounded (sama seperti hero). */}
+        <span className="absolute left-2 top-2 z-10 rounded-lg bg-black/70 px-2 py-1 text-[11px] font-black text-white backdrop-blur-sm">
           #{rank}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-white/90">
-          {item.title}
+        {/* Jumlah views — benar-benar di KANAN ATAS, kotak rounded + ikon mata. */}
+        <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
+          <Eye className="size-3.5 text-white/80" aria-hidden />
+          {views}
         </span>
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-          <Eye className="h-3.5 w-3.5 text-white/70" />
-          <span className="text-[10px] font-bold text-white/90">
-            {views}
-          </span>
+        {/* Kotak hitam opacity 70% di bawah — isinya hanya judul. */}
+        <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1.5 text-center backdrop-blur-[2px]">
+          <p className="truncate text-[11px] font-semibold text-white">{item.title}</p>
         </div>
       </div>
     </button>

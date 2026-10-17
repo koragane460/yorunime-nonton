@@ -345,9 +345,10 @@ function Plans() {
   return (
     <section className="mt-6">
       <h2 className="text-[13px] font-bold text-gold">Paket</h2>
-      {/* Kartu paket gaya 2 kolom: durasi, harga coret (harga satuan dasar),
-          harga besar, catatan per bulan, chip Sacret (biru), chip HD 1080P (hijau), dan tombol "Pilih paket". Paket paling hemat mendapat
-          badge "Paling hemat" + aksen emas. */}
+      {/* Kartu paket gaya 2 kolom: durasi, harga besar, catatan per bulan,
+          chip Sacret (biru), chip HD 1080P (hijau), dan tombol "Pilih paket".
+          Tanpa harga coretan. Paket paling hemat mendapat badge "Paling
+          hemat" + aksen emas. */}
       {(() => {
         const sorted = [...(plans ?? [])].sort(
           (a, b) => (a.price ?? 0) - (b.price ?? 0),
@@ -389,12 +390,6 @@ function Plans() {
                   <p className="text-[13px] font-bold text-white/90">
                     {p.label}
                   </p>
-                  {/* Harga utama: nominal asli Rp + ribuan. */}
-                  {hemat > 0 && (
-                    <p className="mt-1 font-mono text-[13px] text-zinc-500 line-through hidden">
-                      Rp{Math.round((p.price / (1 - hemat / 100))).toLocaleString("id-ID")}
-                    </p>
-                  )}
                   <p className="mt-0.5 font-mono text-2xl font-black leading-tight tracking-tight text-white">
                     Rp{p.price.toLocaleString("id-ID")}
                   </p>

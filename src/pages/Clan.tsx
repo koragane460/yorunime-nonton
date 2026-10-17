@@ -140,7 +140,10 @@ function JoinScreen() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [pick, setPick] = useState<string | null>(null);
+  const [pick, setPick] = useState<{
+    id: string;
+    tab: "member" | "donate";
+  } | null>(null);
   const all = useQuery(api.clans.listClans, {});
   const requestJoin = useMutation(api.clans.requestJoin);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -175,14 +178,16 @@ function JoinScreen() {
     }
   };
 
-  // Layar detail terbuka di atas daftar.
+  // Layar detail terbuka di atas daftar, langsung di tab yang ditekan
+  // (tombol Member → tab Member, tombol Donate → tab Donate).
   if (pick) {
     return (
       <ClanDetailScreen
-        clanId={pick as never}
+        clanId={pick.id as never}
+        initialTab={pick.tab}
         onClose={() => setPick(null)}
-        onJoin={() => void join(pick)}
-        busy={busyId === pick}
+        onJoin={() => void join(pick.id)}
+        busy={busyId === pick.id}
       />
     );
   }
@@ -243,7 +248,7 @@ function JoinScreen() {
               <ClanRow
                 key={c._id}
                 clan={c}
-                onOpen={() => setPick(c._id)}
+                onOpen={(tab) => setPick({ id: c._id, tab })}
                 onJoin={() => void join(c._id)}
                 busy={busyId === c._id}
                 loggedIn={!!user}
@@ -269,7 +274,7 @@ function ClanRow({
   loggedIn,
 }: {
   clan: any;
-  onOpen: () => void;
+  onOpen: (tab: "member" | "donate") => void;
   onJoin: () => void;
   busy?: boolean;
   loggedIn: boolean;
@@ -279,7 +284,7 @@ function ClanRow({
   return (
     <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
       {/* Nama clan (kiri atas) + tag clan di kanannya */}
-      <button onClick={onOpen} className="flex w-full items-center gap-2 text-left">
+      <button onClick={() => onOpen("member")} className="flex w-full items-center gap-2 text-left">
         <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
         <ClanTag
           icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
@@ -331,16 +336,16 @@ function ClanRow({
         {c.isMine ? "Milikmu" : c.isRequested ? "Batalkan request" : busy ? "…" : loggedIn ? "Join Clan" : "Login untuk Join"}
       </button>
 
-      {/* 2 tombol: Member & Donate — buka detail di tab terkait */}
+      {/* 2 tombol: Member & Donate — buka detail langsung di tab terkait */}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button
-          onClick={onOpen}
+          onClick={() => onOpen("member")}
           className="rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[11px] font-bold transition hover:border-foreground/40"
         >
           Member
         </button>
         <button
-          onClick={onOpen}
+          onClick={() => onOpen("donate")}
           className="rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[11px] font-bold transition hover:border-foreground/40"
         >
           Donate
@@ -359,16 +364,18 @@ function ClanDetailScreen({
   onClose,
   onJoin,
   busy,
+  initialTab,
 }: {
   clanId: string;
   onClose: () => void;
   onJoin?: () => void;
   busy?: boolean;
+  initialTab?: "member" | "donate";
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId: clanId as never });
   const claimDaily = useMutation(api.clans.claimDaily);
   const donateMut = useMutation(api.clans.donate);
-  const [tab, setTab] = useState<"member" | "donate">("member");
+  const [tab, setTab] = useState<"member" | "donate">(initialTab ?? "member");
   const [donateOpen, setDonateOpen] = useState(false);
   const [amount, setAmount] = useState<number>(100);
   const [custom, setCustom] = useState("");
@@ -664,15 +671,8 @@ function MemberDonateList({
 
   return (
     <>
-      {/* Kotak ringkasan donasi hari ini (tab Donate) */}
-      {tab === "donate" && (
-        <div className="mt-2.5 rounded-xl border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-center text-[11px] font-bold text-sky-200">
-          Terkumpul {todayTotal.toLocaleString("id-ID")} Berlian Hari Ini Dari{" "}
-          {todayDonators} Member Donate
-        </div>
-      )}
-
-      {/* Kolom cari member (nama atau id akun) */}
+      {/* Kolom cari member (nama atau id akun) — SELALU di atas, termasuk
+          di tab Donate (kotak Terkumpul ada di bawahnya). */}
       <div className="mt-2.5 flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
@@ -687,6 +687,14 @@ function MemberDonateList({
           </button>
         )}
       </div>
+
+      {/* Kotak ringkasan donasi hari ini (tab Donate) — di BAWAH kolom cari */}
+      {tab === "donate" && (
+        <div className="mt-2.5 rounded-xl border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-center text-[11px] font-bold text-sky-200">
+          Terkumpul {todayTotal.toLocaleString("id-ID")} Berlian Hari Ini Dari{" "}
+          {todayDonators} Member Donate
+        </div>
+      )}
 
       {/* Grid ke bawah: satu baris per member */}
       <div className="mt-2.5 space-y-2 pb-6">
@@ -954,26 +962,14 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </div>
           </div>
 
-          {/* ===== KOTAK BACKGROUND TAG ===== */}
+          {/* ===== KOTAK BACKGROUND TAG — 10 kotak gradasi antar warna,
+              5 cerah di baris atas + 5 agak gelap di baris bawah ===== */}
           <div className="rounded-2xl border border-white/10 bg-card px-3 pb-3 pt-3">
             <p className="text-center text-[11px] font-bold text-muted-foreground">
               Background Tag
             </p>
             <ShortDivider />
-            <div className="grid grid-cols-6 gap-2">
-              <button
-                type="button"
-                onClick={() => setTagBg(null)}
-                aria-label="Tanpa background"
-                className={cn(
-                  "flex aspect-square items-center justify-center rounded-lg border text-[10px] transition",
-                  tagBg === null
-                    ? "border-primary ring-2 ring-primary/60"
-                    : "border-white/15 text-muted-foreground",
-                )}
-              >
-                ✕
-              </button>
+            <div className="grid grid-cols-5 gap-2">
               {TAG_BG_COLORS.map((col) => (
                 <button
                   key={col}

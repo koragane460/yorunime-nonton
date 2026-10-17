@@ -416,8 +416,16 @@ function LanjutTab() {
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
               )
             }
-            className="relative flex w-full items-stretch gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
+            className="relative flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
           >
+            {/* Garis progres memanjang SEPANJANG atas kartu (dari tepi kiri
+                ke tepi kanan) supaya tidak terpotong di tengah. */}
+            <div className="absolute inset-x-0 top-0 h-[3px] overflow-hidden bg-white/15">
+              <div
+                className="h-full bg-red-500"
+                style={{ width: `${dur > 0 ? pct : 0}%` }}
+              />
+            </div>
             {/* Jam kapan terakhir ditonton — pojok kanan atas. */}
             <span className="absolute right-2.5 top-2 z-10 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
               <Clock className="size-3" aria-hidden />
@@ -429,14 +437,6 @@ function LanjutTab() {
               className="h-16 w-11 shrink-0 rounded-lg object-cover"
             />
             <div className="min-w-0 flex-1">
-              {/* Garis merah tipis di atas judul, penanda progres yang
-                  sedang berjalan. */}
-              <div className="mb-1 h-[3px] w-full overflow-hidden rounded-full bg-white/15">
-                <div
-                  className="h-full rounded-full bg-red-500"
-                  style={{ width: `${dur > 0 ? pct : 0}%` }}
-                />
-              </div>
               <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
               <p className="text-xs text-muted-foreground">
                 Lanjutkan episode {h.episode} · Menit{" "}
