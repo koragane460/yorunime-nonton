@@ -12,6 +12,33 @@ const BASE_CLAIM = 100;
 const CLAIM_PER_LEVEL = 2;
 const CREATE_COST = 1000;
 
+/* ------------------------------------------------------------------ */
+/*  GRADE MEMBER (1-6, romawi di UI)                                   */
+/*  Naik grade berdasarkan TOTAL donasi member ke clan-nya:            */
+/*    grade 2 = 2.300, lalu tiap grade naik butuh +1.200 lagi           */
+/*    (3.500 / 4.700 / 5.900 / 7.100 untuk grade 3-6).                 */
+/*  Tiap grade di atas 1 memberi bonus +50 berlian saat claim harian.  */
+/* ------------------------------------------------------------------ */
+export const GRADES_MAX = 6;
+const GRADE_BASE = 2300;
+const GRADE_STEP = 1200;
+const CLAIM_PER_GRADE = 50;
+
+/** Total donasi minimal untuk mencapai grade tertentu. */
+export function gradeThreshold(grade: number) {
+  return GRADE_BASE + (grade - 2) * GRADE_STEP;
+}
+
+/** Grade (1-6) dari total donasi seorang member. */
+export function gradeForDonated(total: number) {
+  let grade = 1;
+  for (let g = 2; g <= GRADES_MAX; g++) {
+    if (total >= gradeThreshold(g)) grade = g;
+    else break;
+  }
+  return grade;
+}
+
 export function levelCost(level: number) {
   return BASE_LEVEL_COST + (level - 1) * COST_STEP;
 }
@@ -23,6 +50,11 @@ export function cleanClanTag(tag: string) {
 
 export function claimAmountForLevel(level: number) {
   return BASE_CLAIM + Math.max(0, level - 1) * CLAIM_PER_LEVEL;
+}
+
+/** Jumlah claim harian = dasar level + bonus +50 per grade di atas 1. */
+export function claimAmountFor(level: number, grade: number) {
+  return claimAmountForLevel(level) + Math.max(0, grade - 1) * CLAIM_PER_GRADE;
 }
 
 /** Warna clan berdasarkan level:
@@ -116,10 +148,15 @@ export const clanDetail = query({
       const u = await ctx.db.get(m.userId);
       memberViews.push({
         userId: m.userId,
+        seqId: u?.seqId,
         username: u?.username ?? "user",
         image: u?.image,
         bannerUrl: u?.bannerUrl,
+        level: u?.level,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
+        staffRole: u?.staffRole,
         role: m.role,
+        grade: gradeForDonated(m.donatedTotal),
         donatedTotal: m.donatedTotal,
         donatedToday: m.lastDonateDay === dayString() ? m.donatedToday : 0,
         joinedAt: m.joinedAt,
@@ -179,6 +216,9 @@ export const clanDetail = query({
         .slice(0, 50),
       myRole: me?.role,
       myDonatedTotal: me?.donatedTotal,
+      myGrade: gradeForDonated(me?.donatedTotal ?? 0),
+      myClaimedToday:
+        me?.lastClaimDay === dayString(),
       myLastClaimDay: me?.lastClaimDay,
       myRequestClanId: myRequest?.clanId,
       myRequestId: myRequest?._id,
@@ -503,7 +543,10 @@ export const claimDaily = mutation({
     const today = dayString();
     if (res.member.lastClaimDay === today)
       throw new Error("Sudah claim hari ini (reset 00:00)");
-    const amount = claimAmountForLevel(res.clan.level ?? 1);
+    const amount = claimAmountFor(
+      res.clan.level ?? 1,
+      gradeForDonated(res.member.donatedTotal),
+    );
     const me = await ctx.db.get(userId);
     await ctx.db.patch(userId, { diamonds: (me?.diamonds ?? 0) + amount });
     await ctx.db.patch(res.member._id, { lastClaimDay: today });

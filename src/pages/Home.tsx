@@ -444,7 +444,7 @@ function HomeContent() {
   }, []);
 
   // Total slide = anime + donghua + 1 slide leaderboard di ujung rotasi.
-  const heroTotal = heroItems.length + 1;
+  const heroTotal = heroItems.length;
   const heroSwipe = (dir: 1 | -1) => {
     if (heroTotal < 2) return;
     setHeroIdx((i) => (i + dir + heroTotal) % heroTotal);
@@ -613,11 +613,11 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favQuery?.length]);
 
-  // Auto-rotate hero
+  // Auto-rotate hero — hanya slide anime; leaderboard jadi kartu terpisah
+  // di bawah banner supaya banner tidak terlalu tinggi.
   useEffect(() => {
-    if (heroItems.length < 1) return;
-    // heroTotal selalu >= 2 (minimal 1 judul + slide leaderboard).
-    const t = setInterval(() => setHeroIdx((i) => (i + 1) % (heroItems.length + 1)), 6000);
+    if (heroItems.length < 2) return;
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroItems.length), 6000);
     return () => clearInterval(t);
   }, [heroItems.length]);
 
@@ -702,7 +702,7 @@ function HomeContent() {
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <div
-          className="fade-enter relative mt-3 h-[300px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
+          className="fade-enter relative mt-3 h-[170px] touch-pan-y overflow-hidden rounded-2xl border border-white/10"
           onPointerDown={(e) => {
             heroTouchX.current = e.clientX;
           }}
@@ -768,88 +768,42 @@ function HomeContent() {
                   <Trophy className="size-3 text-gold" aria-hidden /> TOP #
                   {i + 1}
                 </button>
-                {/* Kotak lurus full lebar di bawah banner: hitam 50% untuk
-                    menaruh judul anime. */}
-                <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/50 px-3 py-2.5 backdrop-blur-[2px]">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-white">
-                      {a.title}
-                    </p>
-                    <p className="truncate text-[10px] text-white/70">
-                      {a.status ?? "Ongoing"}
-                      {a.isDonghua ? " · Donghua" : ""} ·{" "}
-                      {formatViews(viewCountFor(String(a.id)))} nonton
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (a.source === "sanka") {
-                        // Donghua: buka detail dulu karena slug episode
-                        // dibuat di layar detail, bukan di sini.
-                        openAnime(a.id, a.title, "sanka");
-                        return;
-                      }
-                      navigate(
-                        `/nonton?anime=${encodeURIComponent(a.id)}&judul=${encodeURIComponent(a.title ?? "")}`,
-                      );
-                    }}
-                    className="shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[11px] font-bold text-zinc-900 transition active:scale-95"
-                  >
-                    ▶ Tonton
-                  </button>
+                {/* Jumlah views di KANAN ATAS — kotak rounded kecil, bukan garis. */}
+                <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                  <Eye className="size-3 text-white/80" aria-hidden />
+                  {formatViews(viewCountFor(String(a.id)))}
+                </span>
+                {/* Kotak hitam lurus full lebar di bawah banner (opacity 70%)
+                    — isinya HANYA judul anime di tengah, tanpa tambahan lain. */}
+                <div className="absolute inset-x-0 bottom-0 bg-black/70 px-3 py-2 text-center backdrop-blur-[2px]">
+                  <p className="truncate text-sm font-bold text-white">
+                    {a.title}
+                  </p>
                 </div>
               </div>
             </div>
           ))}
-          {/* Slide terakhir rotasi hero: leaderboard SATU dengan banner.
-              Memakai vignette + aksen merah/emas seperti slide anime lain,
-              jadi tidak ada lagi kartu leaderboard terpisah di bawah banner. */}
-          <div
-            className={cn(
-              "absolute inset-0 transition-opacity duration-700",
-              heroIdx === heroItems.length
-                ? "opacity-100"
-                : "pointer-events-none opacity-0",
-            )}
-          >
-            <button
-              onClick={() => setShowLeaderboard(true)}
-              className="relative flex h-full w-full flex-col overflow-hidden p-3 pb-7 text-left"
-              style={{
-                backgroundImage:
-                  "linear-gradient(0deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.62) 55%, rgba(0,0,0,.42) 100%), radial-gradient(120% 90% at 12% -10%, rgba(255,45,45,.45) 0%, rgba(255,45,45,0) 55%), radial-gradient(100% 80% at 110% 5%, rgba(255,196,0,.3) 0%, rgba(255,196,0,0) 60%)",
-              }}
-            >
-              <div className="relative min-h-0 flex-1 overflow-y-auto thin-scroll">
-                {/* Di dalam banner TIDAK ADA podium; langsung baris top 1-5
-                    bergaya "#1 | identitas di tengah | total XP" supaya
-                    tingginya pas dengan kotak hero banner. */}
-                <h3 className="text-base font-black leading-tight">
-                  Leaderboard
-                </h3>
-                <p className="mb-1.5 text-[10px] leading-snug text-white/60">
-                  Peringkat pemain paling aktif minggu ini
-                </p>
-                <HeroLeaderboardPreview />
-              </div>
-            </button>
-          </div>
           {/* Geser pakai tangan saja — tanpa tombol panah. Titik indikator
-              dipindah ke KANAN ATAS supaya tidak menabrak kotak judul di
-              bawah banner. */}
-          <div className="absolute right-3 top-3 flex gap-1 pointer-events-none" onPointerDown={(e) => { e.preventDefault(); }}>
-            {Array.from({ length: heroItems.length + 1 }).map((_, i) => (
+              di TENGAH ATAS, bentuk bulat (bukan garis), supaya tidak
+              menabrak jumlah views di kanan atas & kotak judul di bawah. */}
+          <div className="absolute left-1/2 top-3 flex -translate-x-1/2 gap-1.5 pointer-events-none" onPointerDown={(e) => { e.preventDefault(); }}>
+            {Array.from({ length: heroItems.length }).map((_, i) => (
               <span
                 key={i}
                 className={cn(
-                  "h-1 rounded-full transition-all",
-                  i === heroIdx ? "w-2.5 bg-white shadow-[0_0_6px_rgba(255,255,255,.85)]" : "bg-white/40",
+                  "size-1.5 rounded-full transition-all",
+                  i === heroIdx ? "scale-125 bg-white shadow-[0_0_6px_rgba(255,255,255,.85)]" : "bg-white/40",
                 )}
               />
             ))}
           </div>
         </div>
       ) : null}
+
+      {/* 3b) LEADERBOARD — kartu terpisah di bawah hero (tidak digabung
+          dengan banner). Top 1-3 podium berjejer (top 1 di tengah), lalu
+          top 4-5 di bawahnya. */}
+      {heroItems.length > 0 && <HomeLeaderboardCard onOpen={() => setShowLeaderboard(true)} />}
 
       {/* 4) CHAT BARENG — satu baris kecil, benar-benar rounded:
           ikon chat → "Chat:" → satu pesan orang (berputar tiap 3 menit). */}
@@ -1774,42 +1728,48 @@ function LeaderboardRow({ e, dense }: { e: LbEntry; dense?: boolean }) {
   );
 }
 
-/** Lima baris teratas di slide leaderboard dalam hero banner — TANPA podium. */
-function HeroLeaderboardPreview() {
+/**
+ * Kartu leaderboard di Home — TERPISAH dari hero banner.
+ * Top 1-3 berjejer sebagai podium (top 1 di tengah), lalu top 4-5
+ * di bawahnya sebagai baris biasa. Menekannya membuka layar penuh.
+ */
+function HomeLeaderboardCard({ onOpen }: { onOpen: () => void }) {
   const data = useQuery(api.account.totalLeaderboard, { limit: 5 });
-  if (!data)
-    return (
-      <div className="space-y-1">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="skeleton h-8 w-full rounded-xl" />
-        ))}
-      </div>
-    );
-  if (data.length === 0)
-    return (
-      <p className="py-3 text-[11px] text-white/60">Belum ada data XP.</p>
-    );
+  if (!data) return <div className="skeleton mt-3 h-56 w-full rounded-2xl" />;
+  if (data.length === 0) return null;
+  const [t1, t2, t3, ...rest] = data as LbEntry[];
   return (
-    <div className="relative space-y-1">
-      <div className="absolute right-2 top-1 flex gap-1 pointer-events-none">
-        {data.slice(0, 5).map((e: any) => {
-          const views = viewCountFor(String(e.userId ?? e.userId ?? 0));
-          return (
-            <span
-              key={e.userId ?? e.rank}
-              className="flex h-2 w-2 items-center justify-center pointer-events-auto"
-              style={{ zIndex: 2 }}
-            >
-              <Eye className="h-2.5 w-2.5 text-white/50" />
-              <span className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-[2px] border border-white/40 bg-[#0a0a0a]" />
-            </span>
-          );
-        })}
-      </div>
-      {data.slice(0, 5).map((e: any) => (
-        <LeaderboardRow key={e.userId ?? e.rank} e={e as LbEntry} dense />
-      ))}
-    </div>
+    <button
+      onClick={onOpen}
+      className="fade-enter mt-3 w-full overflow-hidden rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-foreground/30"
+    >
+      <h3 className="text-base font-black leading-tight">Leaderboard</h3>
+      <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
+        Peringkat pemain paling aktif minggu ini
+      </p>
+      {/* Podium top 1-3: top 1 di TENGAH, 2 & 3 di sampingnya. */}
+      {data.length >= 3 && (
+        <div className="grid grid-cols-3 items-end gap-2">
+          {t2 && (
+            <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-12" />
+          )}
+          {t1 && (
+            <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-16" />
+          )}
+          {t3 && (
+            <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-10" />
+          )}
+        </div>
+      )}
+      {/* Top 4-5 di bawah podium. */}
+      {rest.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {rest.slice(0, 2).map((e) => (
+            <LeaderboardRow key={e.userId ?? e.rank} e={e} dense />
+          ))}
+        </div>
+      )}
+    </button>
   );
 }
 

@@ -2845,14 +2845,10 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </>
         )}
 
-        {/* Toolbar dibungkus SATU kotak rounded — gaya sama seperti kartu
-            Premium di Home: sudut besar, aksen lembut, judul kecil di atas. */}
+        {/* Toolbar 4 tombol polos — tanpa kotak pembungkus, sesuai permintaan
+            (background rounded di sekitar keempat tombol dihapus). */}
         {(isHost || !room) && (
-          <div className="mt-3 rounded-3xl border border-white/12 bg-gradient-to-r from-secondary/50 via-secondary/25 to-secondary/50 p-3 shadow-[0_0_26px_-16px] shadow-primary/70">
-          <p className="mb-2 flex items-center gap-1.5 px-0.5 font-mono text-[10px] font-bold tracking-[0.18em] text-white/45">
-            <Settings2 className="size-3" aria-hidden /> PENGATURAN TONTONAN
-          </p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="mt-3 grid grid-cols-4 gap-2">
             <ToolButton
               icon={<Gauge className="size-4" />}
               label={`${speed}x`}
@@ -2889,30 +2885,27 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }}
             />
           </div>
-          </div>
         )}
 
-        {/* Promo Premium di bawah toolbar — gaya sama dengan kartu Premium
-            di Home, tapi warnanya DITENANGKAN (tanpa gradasi emas menyala,
-            hanya aksen tipis) supaya tidak norak di tengah player. Muncul
-            hanya untuk akun yang belum Premium. */}
+        {/* Kotak Premium di bawah toolbar — gaya & teks SAMA persis dengan
+            kartu Premium di Home. Muncul hanya untuk akun non-Premium. */}
         {!isPremiumUser && (
           <button
             onClick={() => navigate("/premium")}
-            className="mt-2.5 flex w-full items-center gap-3 rounded-2xl border border-gold/25 bg-white/[0.04] p-3 text-left transition hover:border-gold/45 hover:bg-white/[0.06]"
+            className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/15 via-secondary/40 to-secondary/40 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 transition hover:border-gold/60"
           >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-gold/35 bg-gold/10">
-              <CrownIcon className="size-5 text-gold/90" />
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/15 shadow-[0_0_16px_-4px] shadow-gold/50">
+              <CrownIcon className="size-7 text-gold" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-mono text-[10px] font-bold tracking-[0.2em] text-gold/80">
+              <span className="block font-mono text-[11px] font-bold tracking-[0.2em] text-gold">
                 PREMIUM
               </span>
-              <span className="mt-0.5 block text-[11px] leading-snug text-zinc-400">
-                Nonton 1080p tanpa batas — mulai dari 7.000
+              <span className="mt-0.5 block text-xs leading-snug text-zinc-300">
+                Premium mulai dari 7.000 — baca manga dan manhwa sepuasnya
               </span>
             </span>
-            <span className="shrink-0 rounded-lg border border-gold/40 bg-gold/15 px-3 py-1.5 text-[11px] font-bold text-gold/90">
+            <span className="flex shrink-0 items-center rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-black">
               Buka Premium
             </span>
           </button>
