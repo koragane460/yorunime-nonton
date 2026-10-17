@@ -303,6 +303,17 @@ function WatchContent() {
     } catch {
       /* abaikan */
     }
+    // Host TIDAK BOLEH keluar selama room masih ada — harus membubarkan
+    // room dulu lewat tombol "Bubarkan Room". Peserta biasa keluar otomatis.
+    if (room) {
+      if (isHost) {
+        toast.error(
+          'Host tidak bisa keluar sebelum room dibubarkan — tekan "Bubarkan Room" dulu',
+        );
+        return;
+      }
+      void leaveRoom({ roomId: room._id }).catch(() => {});
+    }
     // Navigasi client-side: ganti URL di history (replaceState) lalu
     // navigate replace tanpa memaksa full reload. Berpadu dengan RouteSyncer,
     // yang sudah menulis yn-return-to pada route biasa.
@@ -327,7 +338,7 @@ function WatchContent() {
       }
     }
     navigate(to, { replace: true });
-  }, [navigate]);
+  }, [navigate, room, isHost, leaveRoom]);
 
   useEffect(() => {
     if (roomInfo?.ended) {
@@ -407,15 +418,6 @@ function WatchContent() {
     { label: string; url: string; type: string; baked?: boolean }[]
   >([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
-  // Jalur suara: subtitle Indonesia (bawaan) atau dubbing Indonesia.
-  // Dub ID hanya memilih server yang labelnya benar-benar menyediakan jalur
-  // dub; kalau episode ini belum punya, pilihan dub menampilkan catatan dan
-  // tetap memutar subtitle Indonesia (tidak ada server dub yang dipaksakan).
-  const [audioMode, setAudioMode] = useState<"sub" | "dub">("sub");
-  const hasDub = useMemo(
-    () => sources.some((s) => /dub/i.test(s.label ?? "")),
-    [sources],
-  );
 
   // Pintu waktu sebelum video boleh diputar, sama seperti hitungan mundur
   // halaman di pembaca manga/manhwa. Video sudah dimuat di belakang layar;
@@ -2624,63 +2626,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       </div>
       </div>
 
-      {/* Audio: SUB ID / DUB ID — pemilih jalur suara di ATAS baris server. */}
-      {sources.length > 0 && (
-        <div className="flex items-center gap-1.5 px-3 pt-2">
-          <span className="shrink-0 text-[11px] text-muted-foreground">Audio:</span>
-          <button
-            onClick={() => setAudioMode("sub")}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold transition",
-              audioMode === "sub"
-                ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
-                : "border-border text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            SUB ID
-          </button>
-          <button
-            onClick={() => {
-              if (audioMode === "dub") return;
-              setAudioMode("dub");
-              const idx = sources.findIndex((s) => /dub/i.test(s.label ?? ""));
-              if (idx >= 0) {
-                resumeAtRef.current = videoRef.current?.currentTime ?? 0;
-                autoplayNextRef.current = true;
-                setSourceIdx(idx);
-                setSourceType(
-                  sources[idx].type === "hls"
-                    ? "hls"
-                    : sources[idx].type === "mp4"
-                      ? "mp4"
-                      : "embed",
-                );
-              } else {
-                toast.info(
-                  "Episode ini belum punya dubbing Indonesia — tetap memutar SUB ID",
-                );
-              }
-            }}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold transition",
-              audioMode === "dub"
-                ? "border-sky-400/60 bg-sky-500/15 text-sky-300"
-                : "border-border text-muted-foreground hover:border-foreground/40",
-            )}
-          >
-            DUB ID
-          </button>
-          {audioMode === "dub" && !hasDub && (
-            <span className="min-w-0 truncate text-[10px] text-amber-300/90">
-              dub Indonesia belum tersedia — memutar subtitle Indonesia
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Server: bisa dipilih manual, dan player otomatis pindah kalau error. */}
       {sources.length > 0 && (
-        <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-1 pb-1">
+        <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-2 pb-1">
           <span className="shrink-0 text-[11px] text-muted-foreground">Server:</span>
           {sources.map((s, i) => (
             <button

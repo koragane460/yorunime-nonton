@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import {
+  Camera,
   ChevronLeft,
   Crown,
   Gem,
-  Image as ImageIcon,
   Search,
   Tag as TagIcon,
   Timer,
@@ -265,9 +265,10 @@ function JoinScreen() {
 }
 
 /**
- * Satu baris clan di daftar: nama kiri-atas + tag clan di kanannya, stats
- * tengah (orang/berlian/timer), bar level dalam kotak, tombol Join, lalu
- * tombol Member & Donate. Menekan kartu membuka detail clan.
+ * Satu baris clan di daftar: FOTO clan + nama & tag di kanannya, stats
+ * tengah (orang/berlian/timer), bar level dalam kotak, lalu tombol Join
+ * saja (tombol Member/Donate hanya ada di DETAIL). Menekan kartu membuka
+ * detail clan.
  */
 function ClanRow({
   clan: c,
@@ -284,18 +285,37 @@ function ClanRow({
 }) {
   const levelCost = c.levelCost ?? 100000;
   const progress = Math.min(100, ((c.levelProgress ?? 0) / levelCost) * 100);
+  // Foto clan boleh gagal dimuat (link mati) — kalau gagal, langsung ganti
+  // dengan kotak ikon supaya tidak pernah tampil sebagai teks rusak.
+  const [imgOk, setImgOk] = useState(true);
   return (
     <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
-      {/* Nama clan (kiri atas) + tag clan di kanannya */}
-      <button onClick={() => onOpen("member")} className="flex w-full items-center gap-2 text-left">
-        <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
-        <ClanTag
-          icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
-          tag={c.tag}
-          color={c.color}
-          level={c.level}
-          className="shrink-0 scale-[0.85] px-1.5 py-0 text-[9px]"
-        />
+      {/* Foto clan (kiri) + nama & tag di kanannya */}
+      <button onClick={() => onOpen("member")} className="flex w-full items-center gap-2.5 text-left">
+        {c.avatarUrl && imgOk ? (
+          <img
+            src={c.avatarUrl}
+            alt=""
+            onError={() => setImgOk(false)}
+            className="size-11 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
+          />
+        ) : (
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-secondary/40 text-muted-foreground">
+            <Users className="size-5" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className={cn("truncate text-sm font-bold", clanNameClass(c.level))}>{c.name}</p>
+          <div className="mt-0.5">
+            <ClanTag
+              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={c.tag}
+              color={c.color}
+              level={c.level}
+              className="scale-[0.85] px-1.5 py-0 text-[9px]"
+            />
+          </div>
+        </div>
       </button>
 
       {/* Stats di tengah: orang · member, berlian · donate, timer · umur */}
@@ -339,23 +359,8 @@ function ClanRow({
         {c.isMine ? "Milikmu" : c.isRequested ? "Batalkan request" : busy ? "…" : loggedIn ? "Join Clan" : "Login untuk Join"}
       </button>
 
-      {/* 2 tombol: Member & Donate — buka detail langsung di tab terkait.
-          Tanpa background, hanya GARIS PUTIH yang jelas kelihatan walau
-          belum dipencet (sebelumnya terlalu tipis hampir tak terlihat). */}
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <button
-          onClick={() => onOpen("member")}
-          className="rounded-xl border border-white/50 bg-transparent py-1.5 text-[11px] font-bold text-white transition hover:border-white hover:bg-white/5"
-        >
-          Member
-        </button>
-        <button
-          onClick={() => onOpen("donate")}
-          className="rounded-xl border border-white/50 bg-transparent py-1.5 text-[11px] font-bold text-white transition hover:border-white hover:bg-white/5"
-        >
-          Donate
-        </button>
-      </div>
+      {/* Member/Donate TIDAK ditampilkan di daftar — hanya ada di detail
+          clan (permintaan user: jangan kelihatan di list). */}
     </div>
   );
 }
@@ -590,30 +595,36 @@ function ClanDetailScreen({
           </div>
         )}
 
-        {/* Tab Member | Donate — tanpa background rounded, hanya GARIS
-            PUTIH; tab aktif garisnya menyala penuh + isi sedikit terang. */}
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        {/* Tab Member | Donate — TANPA kotak rounded sama sekali: hanya
+            teks dengan GARIS PUTIH di bawahnya; tab aktif garisnya penuh. */}
+        <div className="mt-3 flex gap-5 border-b border-white/10">
           <button
             onClick={() => setTab("member")}
             className={cn(
-              "rounded-xl border py-2 text-xs font-bold transition",
+              "relative pb-2 text-xs font-bold transition",
               tab === "member"
-                ? "border-white bg-white/10 text-white"
-                : "border-white/45 text-white/80 hover:border-white",
+                ? "text-white"
+                : "text-muted-foreground hover:text-white/80",
             )}
           >
             Member
+            {tab === "member" && (
+              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white" />
+            )}
           </button>
           <button
             onClick={() => setTab("donate")}
             className={cn(
-              "rounded-xl border py-2 text-xs font-bold transition",
+              "relative pb-2 text-xs font-bold transition",
               tab === "donate"
-                ? "border-white bg-white/10 text-white"
-                : "border-white/45 text-white/80 hover:border-white",
+                ? "text-white"
+                : "text-muted-foreground hover:text-white/80",
             )}
           >
             Donate
+            {tab === "donate" && (
+              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white" />
+            )}
           </button>
         </div>
 
@@ -803,6 +814,37 @@ function MemberRow({
 /*  LAYAR BUAT CLAN                                                        */
 /* ====================================================================== */
 
+/** Perkecil foto clan sebelum di-upload — dokumen Convex maksimal 1MB. */
+async function shrinkClanAvatar(file: File, maxSide = 480): Promise<Blob> {
+  const raw = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Gagal baca file"));
+    reader.readAsDataURL(file);
+  });
+  if (raw.length < 300_000) return await (await fetch(raw)).blob();
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Gambar tidak bisa dibaca"));
+      el.src = raw;
+    });
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return await (await fetch(raw)).blob();
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b ?? new Blob()), "image/jpeg", 0.82),
+    );
+  } catch {
+    return await (await fetch(raw)).blob();
+  }
+}
+
 function CreateClan({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   useHideNavOnMount();
@@ -812,6 +854,18 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   const [tagIcon, setTagIcon] = useState(DEFAULT_CLAN_ICON);
   const [tagBg, setTagBg] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
+  // Foto clan dari GALERI: file di-upload ke penyimpanan Convex, lalu URL
+  // publiknya dipakai sebagai avatarUrl (bukan link PNG tempelan).
+  const [avatarSid, setAvatarSid] = useState<string | null>(null);
+  const [busyAvatar, setBusyAvatar] = useState(false);
+  const getUploadUrl = useMutation(api.storage.getUploadUrl);
+  const avatarPubUrl = useQuery(
+    api.storage.getUrl,
+    avatarSid ? { storageId: avatarSid } : "skip",
+  );
+  useEffect(() => {
+    if (avatarPubUrl) setAvatarUrl(avatarPubUrl);
+  }, [avatarPubUrl]);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
@@ -852,7 +906,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           <div>
             <h1 className="text-lg font-extrabold">Buat Clan</h1>
             <p className="text-[11px] text-muted-foreground">
-              Bikin tim bareng teman — gratis
+              Bikin tim bareng teman — biaya 1.000 Sacret
             </p>
           </div>
         </div>
@@ -904,21 +958,72 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
           {/* ===== 3 KOTAK INPUT — tiap kotak punya ikon warna sendiri ===== */}
           <div className="space-y-2.5">
+            {/* Ganti photo profile clan dari GALERI (bukan link PNG): foto
+                langsung di-upload ke penyimpanan dan tampil di preview. */}
             <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/15">
-                <ImageIcon className="size-[18px] text-sky-300" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <Label htmlFor="clan-avatar" className="mb-1.5 block text-xs">
-                  Ganti photo profile
-                </Label>
-                <Input
-                  id="clan-avatar"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://…/foto-clan.jpg"
+              <span className="relative block size-16 shrink-0">
+                <span
+                  aria-hidden
+                  className="yn-ring-spin absolute inset-0 rounded-2xl bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
                 />
-              </div>
+                <span className="absolute inset-[3px] overflow-hidden rounded-[13px] bg-background">
+                  {avatarUrl.trim() ? (
+                    <img
+                      src={avatarUrl.trim()}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-full items-center justify-center text-muted-foreground">
+                      <Users className="size-6" />
+                    </span>
+                  )}
+                </span>
+                <span className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-[3px] border-card bg-gradient-to-br from-gold to-amber-600 text-black">
+                  <Camera className="size-3.5" aria-hidden />
+                </span>
+              </span>
+              <label className="group min-w-0 flex-1 cursor-pointer">
+                <span className="block text-xs">Ganti photo profile</span>
+                <span className="mt-1.5 inline-flex rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-[11px] font-bold text-gold transition group-hover:bg-gold/20">
+                  {busyAvatar ? "Mengunggah…" : "Pilih dari galeri"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={busyAvatar}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    setBusyAvatar(true);
+                    void (async () => {
+                      try {
+                        const blob = await shrinkClanAvatar(f);
+                        const uploadUrl = await getUploadUrl();
+                        const res = await fetch(uploadUrl, {
+                          method: "POST",
+                          headers: { "Content-Type": blob.type || "image/jpeg" },
+                          body: blob,
+                        });
+                        if (!res.ok) throw new Error("Upload gagal");
+                        const { storageId } = (await res.json()) as {
+                          storageId: string;
+                        };
+                        setAvatarSid(storageId);
+                        toast.success("Foto clan terunggah ✨");
+                      } catch (err) {
+                        toast.error(
+                          err instanceof Error ? err.message : "Gagal unggah foto",
+                        );
+                      } finally {
+                        setBusyAvatar(false);
+                      }
+                    })();
+                  }}
+                />
+              </label>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">

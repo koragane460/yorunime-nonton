@@ -801,7 +801,7 @@ export function ChatPanel({
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
             placeholder={muted ? "Kamu sedang dimute…" : "Tulis pesan…"}
             disabled={muted}
-            className="h-11 flex-1 rounded-full text-[15px] focus-visible:border-white/20 focus-visible:ring-0 disabled:opacity-50"
+            className="h-11 flex-1 rounded-full border-white/25 bg-black/50 text-[15px] focus-visible:border-white/45 focus-visible:ring-0 disabled:opacity-50"
           />
           <Button
             size="icon"

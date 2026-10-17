@@ -305,7 +305,13 @@ function BrowseRow({
     browse({ kind, page })
       .then((r: any) => {
         if (!alive) return;
-        const list = (r ?? []) as AnimeCardT[];
+        let list = (r ?? []) as AnimeCardT[];
+        // Baris Upcoming: judul yang datang dari backend masih membawa status
+        // "Ongoing" + jumlah episode — padahal ini daftar SEGERA RILIS.
+        // Dipaksa tampil sebagai Upcoming dan tanpa jumlah episode.
+        if (kind === "upcoming") {
+          list = list.map((a) => ({ ...a, status: "Upcoming", episodes: undefined }));
+        }
         setItems((prev) => (page === 1 ? list : [...prev, ...list]));
       })
       .catch(() => {})
@@ -701,25 +707,13 @@ function HomeContent() {
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
+        <>
         <div
-          className="fade-enter relative mt-3 touch-pan-y overflow-hidden rounded-2xl border border-white/10"
-          onPointerDown={(e) => {
-            heroTouchX.current = e.clientX;
-          }}
-          onPointerUp={(e) => {
-            if (heroTouchX.current === null) return;
-            const dx = e.clientX - heroTouchX.current;
-            heroTouchX.current = null;
-            if (Math.abs(dx) > 48) heroSwipe(dx < 0 ? 1 : -1);
-          }}
-          onPointerCancel={() => {
-            heroTouchX.current = null;
-          }}
+          className="fade-enter relative mt-3 h-[140px] overflow-hidden rounded-2xl border border-white/10"
         >
-          {/* Area slide — tinggi 140px; di BAWAHNYA ada strip Leaderboard
-              yang menyatu dengan kartu hero (bukan kartu terpisah). */}
-          <div className="relative h-[140px] overflow-hidden">
-          {heroItems.map((a, i) => (
+          {/* HANYA SATU anime tampil di hero (top #1) — sisanya lihat lewat
+              strip Leaderboard / layar Top anime. */}
+          {heroItems.slice(0, 1).map((a, i) => (
             <div
               key={a.id}
               className={cn(
@@ -789,36 +783,22 @@ function HomeContent() {
               </div>
             </div>
           ))}
-          {/* Geser pakai tangan saja — tanpa tombol panah. Titik indikator
-              di TENGAH ATAS, bentuk bulat (bukan garis), supaya tidak
-              menabrak jumlah views di kanan atas & kotak judul di bawah. */}
-          <div className="absolute left-1/2 top-3 flex -translate-x-1/2 gap-1.5 pointer-events-none" onPointerDown={(e) => { e.preventDefault(); }}>
-            {Array.from({ length: heroItems.length }).map((_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "size-1.5 rounded-full transition-all",
-                  i === heroIdx ? "scale-125 bg-white shadow-[0_0_6px_rgba(255,255,255,.85)]" : "bg-white/40",
-                )}
-              />
-            ))}
-          </div>
-          </div>
-          {/* LEADERBOARD — digabung ke kartu banner yang sama (strip di
-              bawah slide), BUKAN kartu terpisah dengan podium. */}
-          <button
-            onClick={() => setShowLeaderboard(true)}
-            className="flex w-full items-center gap-2 border-t border-white/10 bg-black/40 px-4 py-2.5 text-left backdrop-blur-sm transition hover:bg-black/55"
-          >
-            <Trophy className="size-4 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs font-bold">Leaderboard</span>
-              <span className="block text-[10px] text-muted-foreground">
-                Top XP minggu ini — lihat semua ›
-              </span>
-            </span>
-          </button>
         </div>
+        {/* LEADERBOARD — baris polos SELEBAR halaman (ikut lebar hero
+            banner), tanpa kotak & tanpa garis: hanya trofi + teks. */}
+        <button
+          onClick={() => setShowLeaderboard(true)}
+          className="fade-enter mt-1 flex w-full items-center gap-2 px-1 py-1.5 text-left transition active:opacity-70"
+        >
+          <Trophy className="size-4 shrink-0 text-gold" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-bold">Leaderboard</span>
+            <span className="block text-[10px] text-muted-foreground">
+              Top XP minggu ini — lihat semua ›
+            </span>
+          </span>
+        </button>
+        </>
       ) : null}
 
       {/* 4) CHAT BARENG — satu baris kecil, benar-benar rounded:
@@ -1451,9 +1431,10 @@ function PodiumCard({
           />
         </svg>
         {rank === 1 && (
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-base" aria-hidden>
-            👑
-          </span>
+          <CrownIcon
+            className="absolute -top-3.5 left-1/2 size-4 -translate-x-1/2 text-gold drop-shadow-[0_0_6px_rgba(212,175,55,0.9)]"
+            aria-hidden
+          />
         )}
       </div>
       {!hideLabel && (
@@ -1840,9 +1821,12 @@ function TopAnimeCard({
             className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : null}
-        {/* Badge #N — kiri atas, latar hitam rounded (sama seperti hero). */}
-        <span className="absolute left-2 top-2 z-10 rounded-lg bg-black/70 px-2 py-1 text-[11px] font-black text-white backdrop-blur-sm">
-          #{rank}
+        {/* Badge #N — kiri atas, kotak hitam 45% + ANGKA emas gradasi
+            (sama seperti badge TOP #1 di hero banner). */}
+        <span className="absolute left-2 top-2 z-10 rounded-lg bg-black/45 px-2 py-1 text-[11px] font-black backdrop-blur-sm">
+          <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
+            #{rank}
+          </span>
         </span>
         {/* Jumlah views — benar-benar di KANAN ATAS, kotak rounded + ikon mata. */}
         <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
@@ -3020,11 +3004,10 @@ function AnimeDetailScreen({
             </div>
           )}
 
-          {/* Jumlah favorite — kotak di BAWAH chip genre dengan warna yang
-              JAUH berbeda dari chip genre (genre merah → favorite EMAS)
-              supaya tidak terlihat seperti bagian dari chip genre. */}
+          {/* Jumlah favorite — kotak di BAWAH chip genre dengan gradasi
+              ROSE (sesuai warna text genre) — bukan kuning mencolok. */}
           <div className="mt-2.5 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-gold/10 px-3 py-1 text-[11px] font-semibold text-gold">
+            <span className="inline-flex items-center gap-1 rounded-full border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-3 py-1 text-[11px] font-semibold text-rose-200">
               <Heart className="size-3 fill-current" aria-hidden />
               {fmtFavoritCount(favCount ?? 0)} favorite
             </span>
@@ -3051,7 +3034,7 @@ function AnimeDetailScreen({
             </button>
             <button
               aria-label="Favorite"
-              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-gold/45 bg-gold/10 px-4 text-sm font-bold text-gold transition hover:bg-gold/20 active:scale-[0.98]"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-bold text-rose-100 transition hover:from-rose-500/30 hover:via-primary/25 hover:to-pink-500/25 active:scale-[0.98]"
               onClick={async () => {
                 if (!user) return;
                 const r = await toggleFav({
@@ -3923,7 +3906,7 @@ function DonghuaDetailScreen({
             </button>
             <button
               aria-label="Favorite"
-              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-gold/45 bg-gold/10 px-4 text-sm font-bold text-gold transition hover:bg-gold/20 active:scale-[0.98]"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-bold text-rose-100 transition hover:from-rose-500/30 hover:via-primary/25 hover:to-pink-500/25 active:scale-[0.98]"
               onClick={async () => {
                 if (!user) return;
                 const r = await toggleFav({

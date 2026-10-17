@@ -499,45 +499,37 @@ export function ClanTag({
   return (
     <span
       className={cn(
-        // Bentuk tag clan BARU: segitiga lancip menghadap ke KIRI + badan
-        // tag yang sisi atas & bawahnya bergerigi (gerigi zigzag — lihat
-        // .clan-tag-jag di index.css).
+        // Tag clan gaya RIBBON: kiri bergerigi masuk, kanan runcing keluar
+        // (.clan-tag-ribbon di index.css), huruf miring tebal, dan garis
+        // tipis putih di dalam tepinya biar kelihatan tajam & cool.
         "clan-tag inline-flex select-none items-center whitespace-nowrap",
         className,
       )}
     >
-      {/* Segitiga lancip di kiri — putih, menyatu dengan badan tag. */}
-      <span
-        aria-hidden
-        className="mr-[-1px] h-[17px] w-[8px] shrink-0 bg-white/85"
-        style={{ clipPath: "polygon(100% 0, 100% 100%, 0 50%)" }}
-      />
-      {/* Badan tag: atas & bawah bergerigi, tepi kiri/kanan tegak. */}
       <span
         className={cn(
-          "clan-tag-jag inline-flex items-center gap-1 border-x border-white/25 px-2 py-1",
-          !bg && "bg-black/45",
+          "clan-tag-ribbon inline-flex items-center gap-1 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
+          !bg && "bg-gradient-to-r from-zinc-600 to-zinc-800",
         )}
         style={
           bg
             ? {
-                // Overlay warna pilihan di atas latar gelap supaya teks
-                // putih tetap terbaca.
-                backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), linear-gradient(${bg}, ${bg})`,
+                // Warna pilihan penuh di kiri, meredup ke gelap di ujung
+                // kanan — memberi kesan berkilau seperti logam.
+                backgroundImage: `linear-gradient(115deg, ${bg} 0%, ${bg} 55%, rgba(0,0,0,0.6) 100%)`,
               }
             : undefined
         }
       >
         <span
-          className="relative z-[2] inline-flex size-3.5 shrink-0 items-center justify-center"
+          className="inline-flex size-3.5 shrink-0 items-center justify-center"
           style={{ color: tone }}
           aria-hidden
         >
-          {/* Garis tipis 1.6 — logo tag tidak terlihat tebal/berat. */}
-          <Icon strokeWidth={1.6} className="size-3.5" />
+          <Icon strokeWidth={2} className="size-3.5" />
         </span>
-        {/* Tag clan (teks [TAG]) selalu PUTIH. */}
-        <span className="relative z-[2] text-white text-xs font-bold tracking-wide">
+        {/* Tag clan (teks [TAG]) selalu PUTIH, huruf miring tebal. */}
+        <span className="text-[11px] font-black italic tracking-wider text-white">
           [{tag}]
         </span>
       </span>

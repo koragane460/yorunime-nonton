@@ -564,17 +564,22 @@
   }
 }
 
-/* Tag clan bentuk baru: sisi ATAS & BAWAH bergerigi (zigzag) — mask ini
-   dipakai bersama segitiga lancip di kiri yang dibuat terpisah (lihat
-   ClanTag di lstream-ui.tsx). */
-.clan-tag-jag {
-  --zg: 8px; /* lebar satu gigi */
-  -webkit-mask:
-    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--zg) 51% repeat-x,
-    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--zg) 51% repeat-x;
-  mask:
-    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--zg) 51% repeat-x,
-    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--zg) 51% repeat-x;
+/* Tag clan gaya RIBBON esports: ujung kiri bergerigi masuk (sorban), ujung
+   kanan runcing keluar — satu clip-path bersih tanpa artefak mask, plus
+   garis tipis putih di dalam tepinya biar tajam (lihat ClanTag di
+   lstream-ui.tsx). */
+.clan-tag-ribbon {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%, 7px 50%);
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.55));
+}
+
+/* Kartu bawaan halaman Premium (Kegunaannya, Riwayat, dll). Kelas ini
+   sempat dipakai tanpa definisi sehingga kotak-kotaknya tidak terlihat
+   sama sekali — sekarang kartunya jelas: rounded + border + latar. */
+.yn-card {
+  border-radius: 1rem;
+  border: 1px solid oklch(1 0 0 / 0.12);
+  background-color: var(--color-card, oklch(0.21 0.02 265 / 0.7));
 }
 
 /* Warna nama clan berdasarkan level (1-49 coklat, 50-99 emas,

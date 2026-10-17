@@ -211,7 +211,7 @@ export function NobarDock({
       </div>
 
       {tab === "chat" ? (
-        <div className="flex h-[38vh] min-h-52 flex-col overflow-hidden bg-secondary/40 sm:h-[320px]">
+        <div className="flex h-[38vh] min-h-52 flex-col overflow-hidden bg-secondary/80 sm:h-[320px]">
           {!chatLoading && msgs ? (
             <ChatPanel
               kind="room"

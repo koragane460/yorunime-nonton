@@ -128,7 +128,10 @@ function AkunProfileHeader({
 }) {
   const isPremium = (user.premiumUntil ?? 0) > Date.now();
   return (
-    <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4">
+    /* Full-bleed: membatalkan padding wrapper (`px-4 md:px-6`) supaya
+       menempel ke kedua tepi layar tanpa celah — ukuran isi TIDAK
+       diperbesar lagi. */
+    <div className="-mx-4 rounded-none border-x-0 border-t-0 border-b border-white/10 bg-card px-4 pb-3 pt-1 md:-mx-6 md:px-6">
       <div className="flex items-center gap-4">
         <Avatar
           src={user.image}
