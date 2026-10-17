@@ -418,12 +418,12 @@ function LanjutTab() {
             }
             className="relative flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border/70 bg-secondary/30 p-2.5 pr-10 text-left transition hover:border-foreground/40"
           >
-            {/* Garis progres memanjang SEPANJANG atas kartu (dari tepi kiri
-                ke tepi kanan) supaya tidak terpotong di tengah. */}
-            <div className="absolute inset-x-0 top-0 h-[3px] overflow-hidden bg-white/15">
+            {/* Garis progres VERTIKAL — lurus ke ATAS di tepi kiri kartu:
+                tingginya = persentase tontonan, mengisi dari bawah ke atas. */}
+            <div className="absolute inset-y-1.5 left-0 w-[3px] overflow-hidden rounded-full bg-white/15">
               <div
-                className="h-full bg-red-500"
-                style={{ width: `${dur > 0 ? pct : 0}%` }}
+                className="absolute inset-x-0 bottom-0 bg-red-500"
+                style={{ height: `${dur > 0 ? pct : 0}%` }}
               />
             </div>
             {/* Jam kapan terakhir ditonton — pojok kanan atas. */}

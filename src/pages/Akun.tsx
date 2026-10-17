@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
+  Camera,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -84,10 +85,21 @@ function AkunContent() {
   if (!user) return null;
   return (
     <div className="relative pb-6">
-      {/* Kotak profil full lebar di PALING ATAS: foto profil di kiri, lalu
-          username, tag clan, level, badge, dan title. Tombol pengaturan ada
-          di ujung kanan kotak yang sama. */}
-      <AkunProfileHeader user={user} onSettings={() => setSettingsOpen(true)} />
+      {/* Kotak profil full lebar + rounded di PALING ATAS: foto profil
+          diperbesar, lalu username, tag clan, level, badge, dan title.
+          Tombol pengaturan tidak lagi di dalam kotak — sekarang jadi tombol
+          melayang (FAB) di pojok kanan bawah. */}
+      <AkunProfileHeader user={user} />
+
+      {/* Tombol Pengaturan versi FAB — melayang di pojok kanan bawah,
+          di atas bottom nav, selalu terjangkat oleh jempol. */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Pengaturan"
+        className="fixed bottom-24 right-4 z-40 flex size-14 items-center justify-center rounded-full border border-gold/40 bg-gradient-to-br from-gold/80 to-gold/50 text-black shadow-[0_8px_24px_-6px_rgba(212,175,55,0.7)] transition active:scale-90"
+      >
+        <SettingsIcon className="size-6" />
+      </button>
 
       {/* Feed komentar: diri sendiri, teman, dan developer — grid ke bawah,
           tanpa kotak latar. */}
@@ -108,27 +120,25 @@ function AkunContent() {
   );
 }
 
-/** Kotak profil di paling atas halaman Akun (full lebar). */
+/** Kotak profil di paling atas halaman Akun (full lebar, rounded, besar). */
 function AkunProfileHeader({
   user,
-  onSettings,
 }: {
   user: any;
-  onSettings: () => void;
 }) {
   const isPremium = (user.premiumUntil ?? 0) > Date.now();
   return (
-    <div className="mt-4 rounded-2xl border border-white/10 bg-card p-3">
-      <div className="flex items-center gap-3">
+    <div className="mt-4 rounded-3xl border border-white/10 bg-card p-4">
+      <div className="flex items-center gap-4">
         <Avatar
           src={user.image}
           seed={user.username}
-          className="size-14 shrink-0"
+          className="size-20 shrink-0 ring-2 ring-gold/40"
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="truncate text-sm font-bold">{user.username}</span>
-            {isPremium && <BlueCheck className="size-3.5" />}
+            <span className="truncate text-base font-bold">{user.username}</span>
+            {isPremium && <BlueCheck className="size-4" />}
             <TitleBadge role={user.staffRole} compact />
             {user.clanTag && (
               <ClanTag
@@ -139,20 +149,13 @@ function AkunProfileHeader({
               />
             )}
           </div>
-          <div className="mt-1 flex items-center gap-1.5">
+          <div className="mt-1.5 flex items-center gap-1.5">
             <LevelBadge level={user.level ?? 1} />
             <span className="truncate text-[11px] text-muted-foreground">
               ID: {displayId(user.seqId, user._id)}
             </span>
           </div>
         </div>
-        <button
-          onClick={onSettings}
-          aria-label="Pengaturan"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
-        >
-          <SettingsIcon className="size-[18px]" />
-        </button>
       </div>
     </div>
   );
@@ -256,12 +259,11 @@ function AkunCommentsFeed() {
                 </span>
               </div>
 
-              {/* Garis pembatas ATAS grup gambar/judul/episode — sedikit ke
-                  kanan (tidak menyentuh tepi kiri kartu). */}
-              <div className="ml-3 mt-2 h-px bg-white/15" aria-hidden />
+              {/* Tidak ada garis pembatas — gambar, judul, dan komentar
+                  mengalir langsung tanpa pemisah (permintaan user). */}
 
               {/* Gambar anime + judul + episode. */}
-              <div className="ml-3 mt-2 flex items-center gap-2.5">
+              <div className="ml-3 mt-2.5 flex items-center gap-2.5">
                 {c.animeImage ? (
                   <img
                     src={c.animeImage}
@@ -286,11 +288,8 @@ function AkunCommentsFeed() {
                 </div>
               </div>
 
-              {/* Garis pembatas BAWAH grup gambar/judul/episode. */}
-              <div className="ml-3 mt-2 h-px bg-white/15" aria-hidden />
-
-              {/* Teks komentar — rata kiri, tidak ikut ke kanan. */}
-              <p className="ml-3 mt-2 whitespace-pre-line text-[13px] leading-snug text-zinc-200">
+              {/* Teks komentar — rata kiri, tanpa garis pembatas. */}
+              <p className="ml-3 mt-2.5 whitespace-pre-line text-[13px] leading-snug text-zinc-200">
                 {c.text}
               </p>
             </div>
@@ -463,8 +462,30 @@ function SettingsScreen({
             </div>
           </div>
         </div>
-        <label className="mt-2.5 flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border text-[12px] text-muted-foreground transition hover:border-foreground/40 hover:text-foreground">
-          {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
+        {/* Ganti photo profile dari GALERI — tampilan jauh lebih keren:
+            foto besar dikelilingi cincin gradasi berputar pelan, plus tombol
+            kamera melayang di pojok kanan bawah. Sekali tekan langsung
+            membuka galeri; fotonya dikecilkan otomatis sebelum disimpan. */}
+        <label className="group mx-auto mt-4 flex w-fit cursor-pointer flex-col items-center">
+          <span className="relative block size-28">
+            {/* Cincin gradasi berputar di balik foto. */}
+            <span
+              aria-hidden
+              className="yn-ring-spin absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
+            />
+            {/* Foto profil sekarang — otomatis ter-update setelah galeri
+                dipilih (state user ikut reaktif dari Convex). */}
+            <span className="absolute inset-[4px] overflow-hidden rounded-full bg-background">
+              <Avatar src={user.image} seed={user.username} className="size-full" />
+            </span>
+            {/* Tombol kamera melayang — posisinya terlihat jelas di HP. */}
+            <span className="absolute -bottom-1 -right-1 flex size-9 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-gold to-amber-600 text-black shadow-[0_4px_12px_-2px_rgba(212,175,55,0.8)] transition group-active:scale-90">
+              <Camera className="size-4" aria-hidden />
+            </span>
+          </span>
+          <span className="mt-3 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-[12px] font-bold text-gold transition group-hover:bg-gold/20">
+            {busyPhoto ? "Memproses gambar…" : "Pilih dari galeri"}
+          </span>
           <input
             type="file"
             accept="image/*"
@@ -483,6 +504,7 @@ function SettingsScreen({
                   const small = await shrinkAvatar(f);
                   await updateProfile({ image: small });
                   setErr("");
+                  toast.success("Photo profile diganti ✨");
                 } catch (err2) {
                   setErr(
                     err2 instanceof Error ? err2.message : "Gagal mengganti photo",

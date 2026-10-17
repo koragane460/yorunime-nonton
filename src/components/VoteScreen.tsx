@@ -2,6 +2,7 @@
 // Tiga keadaan: belum dimulai (terpusat) · berjalan 7 hari · selesai.
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Vote as VoteIcon } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,8 @@ export function VoteScreen({
   const tokens = board?.tokens ?? null;
   const balance = tokens?.balance ?? 0;
   const items = board?.items ?? [];
+  /** Total vote semua kandidat — dasar menghitung bar perolehan. */
+  const totalVotes = items.reduce((s, c) => s + (c.votes ?? 0), 0);
   const pickedItem = items.find((c) => c.characterId === picked) ?? null;
   // amount >= 999999 = pilihan "Semua"
   const nominal = amount >= 999999 ? balance : amount;
@@ -109,57 +112,92 @@ export function VoteScreen({
         4 menit nonton = 2 T-V · total kamu {tokens?.minutes ?? 0} menit
       </p>
 
-      {/* Grid karakter anime ini */}
+      {/* Grid karakter anime ini — kartu masuk satu per satu (stagger),
+          bar perolehan vote bergerak halus saat angkanya berubah. */}
       {items.length === 0 ? (
         <p className="py-10 text-center text-xs text-muted-foreground">
           Karakter belum termuat — buka ulang layar ini sebentar lagi.
         </p>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-          {items.map((c) => (
-            <button
-              key={c.characterId}
-              onClick={() => setPicked(picked === c.characterId ? null : c.characterId)}
-              className={cn(
-                "group overflow-hidden rounded-2xl border text-left transition",
-                picked === c.characterId
-                  ? "border-primary/70 bg-primary/10"
-                  : "border-white/12 bg-white/[0.04] hover:border-white/25",
-              )}
-            >
-              <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/40">
-                {c.image ? (
-                  <img
-                    src={c.image}
-                    alt={c.name}
-                    loading="lazy"
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <VoteIcon className="size-6 text-muted-foreground" aria-hidden />
-                  </div>
+          {items.map((c, i) => {
+            const share =
+              totalVotes > 0
+                ? Math.max(3, Math.round((c.votes / totalVotes) * 100))
+                : 0;
+            const on = picked === c.characterId;
+            return (
+              <motion.button
+                key={c.characterId}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 50, 400), duration: 0.28 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => setPicked(on ? null : c.characterId)}
+                className={cn(
+                  "group overflow-hidden rounded-2xl border text-left transition",
+                  on
+                    ? "border-primary/70 bg-primary/10 shadow-[0_0_20px_-6px_var(--primary)]"
+                    : "border-white/12 bg-white/[0.04] hover:border-white/25",
                 )}
-                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
-                  {c.votes.toLocaleString("id-ID")} vote
-                </span>
-                {picked === c.characterId && (
-                  <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-white">
-                    <VoteIcon className="size-3" aria-hidden />
+              >
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/40">
+                  {c.image ? (
+                    <img
+                      src={c.image}
+                      alt={c.name}
+                      loading="lazy"
+                      className="size-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      <VoteIcon className="size-6 text-muted-foreground" aria-hidden />
+                    </div>
+                  )}
+                  <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
+                    {c.votes.toLocaleString("id-ID")} vote
                   </span>
-                )}
-              </div>
-              <p className="truncate px-2 py-1.5 text-[11px] font-semibold text-white">
-                {c.name}
-              </p>
-            </button>
-          ))}
+                  {on && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: [1, 1.25, 1] }}
+                      transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1.1 }}
+                      className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-white"
+                    >
+                      <VoteIcon className="size-3" aria-hidden />
+                    </motion.span>
+                  )}
+                </div>
+                {/* Bar perolehan vote — mengisi proporsional, bergerak
+                    halus (spring) saat angkanya berubah. */}
+                <div className="h-1 w-full bg-white/10">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-primary to-gold"
+                    initial={false}
+                    animate={{ width: `${share}%` }}
+                    transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                  />
+                </div>
+                <p className="truncate px-2 py-1.5 text-[11px] font-semibold text-white">
+                  {c.name}
+                </p>
+              </motion.button>
+            );
+          })}
         </div>
       )}
 
-      {/* Pilih nominal + tombol Vote — muncul halus saat karakter dipilih */}
+      {/* Pilih nominal + tombol Vote — SLIDE naik dari bawah dengan spring
+          saat karakter dipilih, dan turun lagi saat dibatalkan. */}
+      <AnimatePresence>
       {pickedItem && (
-        <div className="sticky bottom-2 z-10 mt-4 rounded-2xl border border-white/15 bg-card/95 p-3 backdrop-blur-sm">
+        <motion.div
+          key="nominal"
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 26 }}
+          transition={{ type: "spring", stiffness: 260, damping: 24 }}
+          className="sticky bottom-2 z-10 mt-4 rounded-2xl border border-white/15 bg-card/95 p-3 backdrop-blur-sm">
           <p className="mb-2 flex items-center justify-between text-[11px]">
             <span className="min-w-0 truncate font-bold text-white">
               Vote untuk {pickedItem.name}
@@ -196,16 +234,21 @@ export function VoteScreen({
               Semua ({balance.toLocaleString("id-ID")})
             </button>
           </div>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={() => void doVote()}
             disabled={!canVote}
-            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-white transition active:scale-[0.98] disabled:opacity-50"
+            className={cn(
+              "mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-white transition disabled:opacity-50",
+              busy && "animate-pulse",
+            )}
           >
             <VoteIcon className="size-4" aria-hidden />
             {busy ? "Mengirim…" : nominal > 0 ? `Vote ${nominal} T-V` : "Vote"}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

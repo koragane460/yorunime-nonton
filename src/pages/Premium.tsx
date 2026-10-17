@@ -402,12 +402,12 @@ function Plans() {
                       <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
                     </span>
                   )}
-                  {/* Chip HD 1080P (hijau) */}
-                  {hemat > 0 && (
-                    <span className="mt-1.5 inline-flex w-fit items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                      HD 1080P
-                    </span>
-                  )}
+                  {/* Chip HD 1080P (hijau) — SEMUA paket dapat chip ini.
+                      Dulu hanya muncul untuk paket yang dianggap "hemat"
+                      sehingga ada kartu yang kehilangan chip HD-nya. */}
+                  <span className="mt-1.5 inline-flex w-fit items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    HD 1080P
+                  </span>
                   <button
                     disabled={busy !== null}
                     onClick={() => void startOrder(p)}

@@ -547,6 +547,36 @@
   }
 }
 
+/* Cincin gradasi di sekitar foto profil (menu Ganti foto) — berputar
+   pelan supaya terasa hidup tapi tidak mengganggu. */
+@keyframes yn-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.yn-ring-spin {
+  animation: yn-ring-spin 5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yn-ring-spin {
+    animation: none;
+  }
+}
+
+/* Tag clan bentuk baru: sisi ATAS & BAWAH bergerigi (zigzag) — mask ini
+   dipakai bersama segitiga lancip di kiri yang dibuat terpisah (lihat
+   ClanTag di lstream-ui.tsx). */
+.clan-tag-jag {
+  --zg: 8px; /* lebar satu gigi */
+  -webkit-mask:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--zg) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--zg) 51% repeat-x;
+  mask:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--zg) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--zg) 51% repeat-x;
+}
+
 /* Warna nama clan berdasarkan level (1-49 coklat, 50-99 emas,
  * 100-149 merah, 150-200 rainbow). Konsisten dengan clanTextClass di
  * lstream-ui.tsx & CLAN_COLORS di convex/clans.ts. */

@@ -112,6 +112,33 @@ type ScheduleItem = {
 };
 
 type Tab = "anime" | "manga" | "manhwa" | "donghua";
+
+/**
+ * Timestamp tayang sebuah item (ms epoch), atau 0 kalau benar-benar tidak
+ * diketahui.
+ *
+ * Dua penjaga penting:
+ *  1) `airingAt || predictedMs` (bukan `??`) — nilai 0 dianggap kosong,
+ *     jadi item jadwal manual/komik yang `airingAt`-nya 0 tetap bisa
+ *     memakai perkiraan `predictedMs`.
+ *  2) Jam yang TAMPIL di kartu menang: kalau kartu menulis "08:00" tapi
+ *     timestamp datanya sudah lewat (data AniList basi atau salah zona),
+ *     status dihitung ulang dari jam itu untuk hari ini (zona WIB — jam
+ *     kartu memang ditulis dalam WIB). Dengan ini episode yang rilis jam
+ *     8 pagi tidak akan pernah ditandai "Sudah tayang" sebelum jam 8 pagi.
+ */
+function itemAiringMs(item: ScheduleItem, nowMs: number): number {
+  let at = item.airingAt || item.predictedMs || 0;
+  const m = (item.time ?? "").match(/(\d{1,2})[.:](\d{2})/);
+  if (m) {
+    const mark = Number(m[1]) * 3_600_000 + Number(m[2]) * 60_000;
+    const wib = new Date(nowMs + 7 * 60_000);
+    const nowMark =
+      wib.getUTCHours() * 3_600_000 + wib.getUTCMinutes() * 60_000;
+    if (mark > nowMark + 60_000) at = nowMs + (mark - nowMark);
+  }
+  return at;
+}
 export default function Jadwal() {
   return (
     <AppLayout hideAccountPanel>
@@ -319,11 +346,11 @@ function JadwalContent() {
   // jam rilisnya sudah lewat, otomatis berganti ke yang berikutnya
   // (permintaan user: "kalo udah di luar jam rilis ... jadi selanjutnya").
   const nextUp =
-    list.find((it) => (it.airingAt ?? it.predictedMs ?? 0) > now.getTime()) ??
+    list.find((it) => itemAiringMs(it, now.getTime()) > now.getTime()) ??
     list[0];
   const diff = Math.max(
     0,
-    (nextUp?.airingAt ?? nextUp?.predictedMs ?? 0) - now.getTime(),
+    (nextUp ? itemAiringMs(nextUp, now.getTime()) : 0) - now.getTime(),
   );
   const mins = Math.floor(diff / 60_000);
   const hrs = Math.floor(mins / 60);
@@ -517,7 +544,12 @@ function JadwalContent() {
           {shownList.map((item) => {
             // Hitung mundur per item: "x jam lagi" sampai jam rilis tiba,
             // lalu berubah jadi "Sudah tayang" dan itemnya sedikit redup.
-            const at = item.airingAt ?? item.predictedMs ?? 0;
+            // `itemAiringMs` menjaga KONSISTENSI dengan jam yang tampil di
+            // kartu: kalau kartu menulis "08:00" tapi timestamp datanya sudah
+            // lewat (data AniList basi / salah zona), status dihitung ulang
+            // dari jam itu — jadi episode jam 8 pagi TIDAK PERNAH ditandai
+            // "Sudah tayang" sebelum jam 8 pagi benar-benar tiba.
+            const at = itemAiringMs(item, Date.now());
             const leftMs = at - Date.now();
             const itemAired = at > 0 && leftMs <= 0;
             const ih = Math.floor(leftMs / 3_600_000);

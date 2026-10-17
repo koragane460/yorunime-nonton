@@ -215,7 +215,7 @@ export function ComicDetailScreen({
                   {[
                     ["Judul Alternatif", d.altTitle || "-"],
                     ["Pengarang", d.author || "-"],
-                    ["Tema", d.theme || d.genres.slice(0, 3).join(", ") || "-"],
+                    ["Tema", d.theme || d.genres.join(", ") || "-"],
                     ["Rating", d.rating || "13+"],
                     ["Arah Baca", d.readDir || (isManga ? "Kanan ke kiri" : "Atas ke bawah")],
                     ["Jumlah Chapter", `${d.chapterCount} chapter`],

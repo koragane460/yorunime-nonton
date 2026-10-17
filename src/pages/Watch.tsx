@@ -407,6 +407,15 @@ function WatchContent() {
     { label: string; url: string; type: string; baked?: boolean }[]
   >([]);
   const [sourceType, setSourceType] = useState<"mp4" | "embed" | "hls">("mp4");
+  // Jalur suara: subtitle Indonesia (bawaan) atau dubbing Indonesia.
+  // Dub ID hanya memilih server yang labelnya benar-benar menyediakan jalur
+  // dub; kalau episode ini belum punya, pilihan dub menampilkan catatan dan
+  // tetap memutar subtitle Indonesia (tidak ada server dub yang dipaksakan).
+  const [audioMode, setAudioMode] = useState<"sub" | "dub">("sub");
+  const hasDub = useMemo(
+    () => sources.some((s) => /dub/i.test(s.label ?? "")),
+    [sources],
+  );
 
   // Pintu waktu sebelum video boleh diputar, sama seperti hitungan mundur
   // halaman di pembaca manga/manhwa. Video sudah dimuat di belakang layar;
@@ -2615,9 +2624,63 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       </div>
       </div>
 
+      {/* Audio: SUB ID / DUB ID — pemilih jalur suara di ATAS baris server. */}
+      {sources.length > 0 && (
+        <div className="flex items-center gap-1.5 px-3 pt-2">
+          <span className="shrink-0 text-[11px] text-muted-foreground">Audio:</span>
+          <button
+            onClick={() => setAudioMode("sub")}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold transition",
+              audioMode === "sub"
+                ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-300"
+                : "border-border text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            SUB ID
+          </button>
+          <button
+            onClick={() => {
+              if (audioMode === "dub") return;
+              setAudioMode("dub");
+              const idx = sources.findIndex((s) => /dub/i.test(s.label ?? ""));
+              if (idx >= 0) {
+                resumeAtRef.current = videoRef.current?.currentTime ?? 0;
+                autoplayNextRef.current = true;
+                setSourceIdx(idx);
+                setSourceType(
+                  sources[idx].type === "hls"
+                    ? "hls"
+                    : sources[idx].type === "mp4"
+                      ? "mp4"
+                      : "embed",
+                );
+              } else {
+                toast.info(
+                  "Episode ini belum punya dubbing Indonesia — tetap memutar SUB ID",
+                );
+              }
+            }}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold transition",
+              audioMode === "dub"
+                ? "border-sky-400/60 bg-sky-500/15 text-sky-300"
+                : "border-border text-muted-foreground hover:border-foreground/40",
+            )}
+          >
+            DUB ID
+          </button>
+          {audioMode === "dub" && !hasDub && (
+            <span className="min-w-0 truncate text-[10px] text-amber-300/90">
+              dub Indonesia belum tersedia — memutar subtitle Indonesia
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Server: bisa dipilih manual, dan player otomatis pindah kalau error. */}
       {sources.length > 0 && (
-        <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-2 pb-1">
+        <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-1 pb-1">
           <span className="shrink-0 text-[11px] text-muted-foreground">Server:</span>
           {sources.map((s, i) => (
             <button
@@ -2667,7 +2730,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }}
               aria-label="Like"
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-semibold transition",
+                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-1.5 text-sm font-bold transition",
                 likeStats?.liked
                   ? "bg-white/15 text-white"
                   : "text-muted-foreground hover:bg-white/5",
@@ -2689,7 +2752,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }}
               aria-label="Tidak suka"
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-semibold transition",
+                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-1.5 text-sm font-bold transition",
                 likeStats?.disliked
                   ? "bg-white/15 text-white"
                   : "text-muted-foreground hover:bg-white/5",
@@ -2713,7 +2776,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               }).catch(() => {});
             }}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2.5 text-xs font-semibold transition",
+              "flex items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-1.5 text-xs font-bold transition",
               isFav
                 ? "border-white/25 bg-white/15 text-white"
                 : "border-white/15 bg-white/[0.04] text-muted-foreground hover:bg-white/5",
@@ -2724,7 +2787,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </button>
           <button
             onClick={() => setReportOpen(true)}
-            className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-white/5"
+            className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/5"
           >
             <Flag className="size-4" aria-hidden />
             <span>Laporkan</span>
@@ -2888,8 +2951,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         )}
 
         {/* Kotak Premium di bawah toolbar — gaya & teks SAMA persis dengan
-            kartu Premium di Home. Muncul hanya untuk akun non-Premium. */}
-        {!isPremiumUser && (
+            kartu Premium di Home. Selalu tampil (termasuk untuk akun
+            Premium), sama seperti kotak Premium di Home. */}
+        {(
           <button
             onClick={() => navigate("/premium")}
             className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/15 via-secondary/40 to-secondary/40 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 transition hover:border-gold/60"
@@ -3073,9 +3137,10 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               const locked = q === PREMIUM_QUALITY && !isPremium;
               // Resolusi yang benar-benar ada di stream episode ini: level HLS
               // untuk sumber HLS, atau tinggi file asli untuk server MP4.
-              // Kalau tidak ada, tombolnya TIDAK diklikable. Tombol yang bisa
-              // diklik tapi tidak mengubah apa-apa persis yang dikeluhkan user
-              // ("mencet hd ga memperbaiki apa-apa").
+              // Resolusi yang tidak ada di stream TETAP bisa dipilih: yang
+              // diputar otomatis resolusi terdekat yang tersedia (supaya semua
+              // pilihan kualitas selalu bisa dipakai — permintaan user), tapi
+              // tetap diberi label supaya tidak menyesatkan.
               const missing =
                 realQualities.length > 0 && !realQualities.includes(height);
               // Yang benar-benar diputar kalau tombol ini ditekan: level
@@ -3092,7 +3157,6 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               return (
                 <div key={q}>
                   <button
-                    disabled={missing && !locked}
                     onClick={() => {
                       if (locked) {
                         setPremiumTapHint(true);
@@ -3103,11 +3167,13 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                     }}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
-                      locked || missing
+                      locked
                         ? "cursor-not-allowed border-amber-500/40 bg-amber-500/5"
-                        : active
-                          ? "border-foreground/40 bg-primary/15"
-                          : "border-border hover:border-foreground/40",
+                        : missing
+                          ? "border-amber-500/25 bg-amber-500/5"
+                          : active
+                            ? "border-foreground/40 bg-primary/15"
+                            : "border-border hover:border-foreground/40",
                     )}
                   >
                     <span
@@ -3129,7 +3195,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                     )}
                     {missing && !locked && (
                       <span className="text-[9px] text-amber-300/90">
-                        episode ini tidak punya {height}p
+                        {nearest > 0 && nearest !== height
+                          ? `diputar ${nearest}p`
+                          : `tidak tersedia`}
                       </span>
                     )}
                     {active && !locked && (

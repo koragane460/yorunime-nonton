@@ -5,8 +5,11 @@ import {
   ChevronLeft,
   Crown,
   Gem,
+  Image as ImageIcon,
   Search,
+  Tag as TagIcon,
   Timer,
+  Type,
   Users,
   X,
 } from "lucide-react";
@@ -336,17 +339,19 @@ function ClanRow({
         {c.isMine ? "Milikmu" : c.isRequested ? "Batalkan request" : busy ? "…" : loggedIn ? "Join Clan" : "Login untuk Join"}
       </button>
 
-      {/* 2 tombol: Member & Donate — buka detail langsung di tab terkait */}
+      {/* 2 tombol: Member & Donate — buka detail langsung di tab terkait.
+          Tanpa background, hanya GARIS PUTIH yang jelas kelihatan walau
+          belum dipencet (sebelumnya terlalu tipis hampir tak terlihat). */}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button
           onClick={() => onOpen("member")}
-          className="rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[11px] font-bold transition hover:border-foreground/40"
+          className="rounded-xl border border-white/50 bg-transparent py-1.5 text-[11px] font-bold text-white transition hover:border-white hover:bg-white/5"
         >
           Member
         </button>
         <button
           onClick={() => onOpen("donate")}
-          className="rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[11px] font-bold transition hover:border-foreground/40"
+          className="rounded-xl border border-white/50 bg-transparent py-1.5 text-[11px] font-bold text-white transition hover:border-white hover:bg-white/5"
         >
           Donate
         </button>
@@ -585,15 +590,16 @@ function ClanDetailScreen({
           </div>
         )}
 
-        {/* Tab Member | Donate */}
+        {/* Tab Member | Donate — tanpa background rounded, hanya GARIS
+            PUTIH; tab aktif garisnya menyala penuh + isi sedikit terang. */}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             onClick={() => setTab("member")}
             className={cn(
               "rounded-xl border py-2 text-xs font-bold transition",
               tab === "member"
-                ? "border-primary bg-primary/15 text-foreground"
-                : "border-white/12 text-muted-foreground",
+                ? "border-white bg-white/10 text-white"
+                : "border-white/45 text-white/80 hover:border-white",
             )}
           >
             Member
@@ -603,8 +609,8 @@ function ClanDetailScreen({
             className={cn(
               "rounded-xl border py-2 text-xs font-bold transition",
               tab === "donate"
-                ? "border-sky-400/60 bg-sky-400/15 text-sky-300"
-                : "border-white/12 text-muted-foreground",
+                ? "border-white bg-white/10 text-white"
+                : "border-white/45 text-white/80 hover:border-white",
             )}
           >
             Donate
@@ -843,87 +849,111 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           >
             <ChevronLeft className="size-5" />
           </button>
-          <h1 className="text-lg font-extrabold">Buat Clan</h1>
+          <div>
+            <h1 className="text-lg font-extrabold">Buat Clan</h1>
+            <p className="text-[11px] text-muted-foreground">
+              Bikin tim bareng teman — gratis
+            </p>
+          </div>
         </div>
 
         <div className="space-y-4">
-          {/* ===== KOTAK PREVIEW ===== */}
-          <div className="rounded-2xl border border-white/10 bg-card px-3 pb-3 pt-3">
-            <p className="text-center text-[11px] font-bold text-muted-foreground">Preview</p>
-            <ShortDivider />
-            {/* Isi preview: foto di kiri pas tengah, garis lurus full di
-                kanannya, lalu nama clan + pill "Tag clan" + kotak tag */}
-            <div className="flex items-stretch gap-3">
-              {avatarUrl.trim() ? (
-                <img
-                  src={avatarUrl.trim()}
-                  alt=""
-                  className="my-auto size-14 shrink-0 rounded-xl object-cover"
-                />
-              ) : (
-                <span className="my-auto flex size-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-secondary/40 text-muted-foreground">
-                  <Users className="size-6" />
-                </span>
-              )}
-              <div className="w-px shrink-0 bg-white/12" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted-foreground">Nama Clan</p>
-                <p className={cn("truncate font-bold", clanNameClass(1))}>
-                  {name.trim() || "Nama clan"}
-                </p>
-                <span className="mt-1.5 inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-2 py-0.5 text-[9px] font-semibold text-zinc-300">
-                  Tag clan
-                </span>
-                <div className="mt-1">
-                  <ClanTag
-                    icon={tagIcon}
-                    tag={tag.toUpperCase() || "TAG"}
-                    level={1}
-                    bg={tagBg || undefined}
-                    className="px-1.5 py-0 text-[10px]"
+          {/* ===== KOTAK PREVIEW — bingkai gradasi, tampil lebih hidup ===== */}
+          <div className="rounded-2xl bg-gradient-to-r from-gold/40 via-primary/40 to-sky-400/40 p-px shadow-[0_0_24px_-12px_rgba(212,175,55,0.6)]">
+            <div className="rounded-[15px] bg-card px-3 pb-3 pt-3">
+              <p className="text-center text-[11px] font-bold tracking-[0.2em] text-muted-foreground">
+                PREVIEW
+              </p>
+              <ShortDivider />
+              {/* Isi preview: foto di kiri pas tengah, garis lurus full di
+                  kanannya, lalu nama clan + pill "Tag clan" + kotak tag */}
+              <div className="flex items-stretch gap-3">
+                {avatarUrl.trim() ? (
+                  <img
+                    src={avatarUrl.trim()}
+                    alt=""
+                    className="my-auto size-16 shrink-0 rounded-2xl object-cover ring-2 ring-gold/40"
                   />
+                ) : (
+                  <span className="my-auto flex size-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-secondary to-secondary/40 text-muted-foreground">
+                    <Users className="size-7" />
+                  </span>
+                )}
+                <div className="w-px shrink-0 bg-white/12" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-muted-foreground">Nama Clan</p>
+                  <p className={cn("truncate font-bold", clanNameClass(1))}>
+                    {name.trim() || "Nama clan"}
+                  </p>
+                  <span className="mt-1.5 inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-2 py-0.5 text-[9px] font-semibold text-zinc-300">
+                    Tag clan
+                  </span>
+                  <div className="mt-1.5">
+                    <ClanTag
+                      icon={tagIcon}
+                      tag={tag.toUpperCase() || "TAG"}
+                      level={1}
+                      bg={tagBg || undefined}
+                      className="px-1.5 py-0 text-[10px]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ===== 3 KOTAK INPUT ===== */}
+          {/* ===== 3 KOTAK INPUT — tiap kotak punya ikon warna sendiri ===== */}
           <div className="space-y-2.5">
-            <div className="rounded-xl border border-white/10 bg-card p-3">
-              <Label htmlFor="clan-avatar" className="mb-1.5 block text-xs">
-                Ganti photo profile
-              </Label>
-              <Input
-                id="clan-avatar"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://…/foto-clan.jpg"
-              />
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/15">
+                <ImageIcon className="size-[18px] text-sky-300" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="clan-avatar" className="mb-1.5 block text-xs">
+                  Ganti photo profile
+                </Label>
+                <Input
+                  id="clan-avatar"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…/foto-clan.jpg"
+                />
+              </div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-card p-3">
-              <Label htmlFor="clan-name" className="mb-1.5 block text-xs">
-                Isi nama clan
-              </Label>
-              <Input
-                id="clan-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="mis. YoruNime"
-                maxLength={28}
-              />
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+                <Type className="size-[18px] text-primary" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="clan-name" className="mb-1.5 block text-xs">
+                  Isi nama clan
+                </Label>
+                <Input
+                  id="clan-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="mis. YoruNime"
+                  maxLength={28}
+                />
+              </div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-card p-3">
-              <Label htmlFor="clan-tag" className="mb-1.5 block text-xs">
-                Isi tag clan (nama)
-              </Label>
-              <Input
-                id="clan-tag"
-                value={tag}
-                onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
-                placeholder="mis. YRNM"
-                maxLength={5}
-                className="font-mono"
-              />
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
+                <TagIcon className="size-[18px] text-emerald-300" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="clan-tag" className="mb-1.5 block text-xs">
+                  Isi tag clan (nama)
+                </Label>
+                <Input
+                  id="clan-tag"
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
+                  placeholder="mis. YRNM"
+                  maxLength={5}
+                  className="font-mono"
+                />
+              </div>
             </div>
           </div>
 
@@ -941,9 +971,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                   onClick={() => setTagIcon(ic.key)}
                   aria-label={ic.name}
                   className={cn(
-                    "flex aspect-square items-center justify-center rounded-full border transition",
+                    "flex aspect-square items-center justify-center rounded-full border transition hover:scale-110",
                     tagIcon === ic.key
-                      ? "border-primary ring-2 ring-primary/60"
+                      ? "scale-110 border-primary ring-2 ring-primary/60 shadow-[0_0_12px_-2px_var(--tw-shadow-color,rgba(244,63,94,0.6))]"
                       : "border-white/10",
                   )}
                   style={{
@@ -978,9 +1008,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                   aria-label={`Background ${col}`}
                   style={{ backgroundColor: col }}
                   className={cn(
-                    "aspect-square rounded-lg border transition",
+                    "aspect-square rounded-lg border transition hover:scale-110",
                     tagBg === col
-                      ? "border-foreground/80 ring-2 ring-primary/60"
+                      ? "scale-110 border-foreground/80 ring-2 ring-primary/60"
                       : "border-white/10",
                   )}
                 />
