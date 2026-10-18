@@ -9,8 +9,7 @@ import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BlueCheck } from "@/components/lstream-ui";
-import { FramedAvatar } from "@/components/FramedAvatar";
+import { Avatar, BlueCheck } from "@/components/lstream-ui";
 import { useModeration } from "@/components/ModerationGuard";
 import {
   Dialog,
@@ -27,8 +26,6 @@ export type ChatMsg = {
   userId: Id<"users">;
   username: string;
   image?: string;
-  /** Shop Border yang sedang dipakai pengirim pesan. */
-  avatarBorder?: string;
   level?: number;
   premium?: boolean;
   staffRole?: string;
@@ -587,11 +584,14 @@ export function ChatPanel({
             >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
-                <FramedAvatar
-                  border={m.avatarBorder}
-                  src={m.image}
-                  seed={m.username}
-                  className="size-9 shrink-0"
+                <img
+                  src={m.image ?? avatarFallback(m.username)}
+                  alt=""
+                  className={cn(
+                    "size-9 shrink-0 rounded-full object-cover",
+                    // Avatar cuma diberi garis tipis, tanpa blok hitam.
+                    !m.image && "bg-white/[0.08]",
+                  )}
                 />
               </button>
               <div className={cn("flex w-3/4 min-w-0 flex-col", mine ? "items-end" : "items-start")}>

@@ -16,12 +16,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import {
+  Avatar,
   BlueCheck,
   ClanTag,
   LevelBadge,
   TitleBadge,
 } from "@/components/lstream-ui";
-import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId, usernameColor } from "@/lib/lstream";
 
@@ -190,8 +190,7 @@ function Hero() {
   if (!user) return null;
   return (
     <header className="pop-enter yn-card flex items-center gap-3 rounded-2xl border border-gold/25 p-3">
-      <FramedAvatar
-        border={user.avatarBorder}
+      <Avatar
         src={user.image}
         seed={user.username}
         className="size-12 shrink-0 ring-2 ring-gold/40"

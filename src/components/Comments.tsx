@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
-import { FramedAvatar } from "@/components/FramedAvatar";
+import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { Heart, Reply, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -15,8 +14,6 @@ export type CommentT = {
   userId: string;
   username: string;
   image?: string;
-  /** Shop Border yang sedang dipakai pembuat komentar. */
-  avatarBorder?: string;
   bannerUrl?: string;
   premium?: boolean;
   staffRole?: string;
@@ -195,12 +192,7 @@ function ReplySheet({
         {/* Komentar yang dibalas */}
         <div className="thin-scroll max-h-[38vh] overflow-y-auto bg-black/30 px-4 py-3">
           <div className="flex gap-2.5">
-            <FramedAvatar
-              border={target.avatarBorder}
-              src={target.image}
-              seed={target.username}
-              className="size-8"
-            />
+            <Avatar src={target.image} seed={target.username} className="size-8" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
                 <p className="truncate text-xs font-bold">{target.username}</p>
@@ -295,12 +287,7 @@ function CommentRow({
         />
       )}
       <div className="flex items-center justify-between px-2.5 pt-2">
-        <FramedAvatar
-          border={c.avatarBorder}
-          src={c.image}
-          seed={c.username}
-          className="size-7"
-        />
+        <Avatar src={c.image} seed={c.username} className="size-7" />
         <div className="min-w-0 flex-1 pl-2">
           <div className="flex items-center gap-1">
             <p className="truncate text-xs font-bold">{c.username}</p>

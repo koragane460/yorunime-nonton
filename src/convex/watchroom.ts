@@ -158,7 +158,6 @@ export const roomDetail = query({
         userId: m.userId,
         username: u?.username ?? "user",
         image: u?.image,
-        avatarBorder: u?.avatarBorder,
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         staffRole: u?.staffRole,

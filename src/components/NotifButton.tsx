@@ -10,7 +10,6 @@ import {
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
-import { FramedAvatar } from "@/components/FramedAvatar";
 import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
 import {
@@ -203,7 +202,7 @@ function NotifSheet({
                       />
                     )}
                     <div className="flex gap-2.5 p-2.5">
-                      <FramedAvatar border={c.avatarBorder} src={c.image} seed={c.username} className="size-8" />
+                      <Avatar src={c.image} seed={c.username} className="size-8" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
                           <p className="truncate text-xs font-bold">{c.username}</p>

@@ -183,30 +183,6 @@ const schema = defineSchema(
       .index("clanId_status", ["clanId", "status"])
       .index("userId_status", ["userId", "status"]),
 
-    /**
-     * Like / Dislike karakter — pengganti sistem vote token.
-     * `key` = identitas karakter global (mis. "char:123" untuk anime/donghua,
-     * "cc:<comicId>:<nama>" untuk karakter manga/manhwa).
-     */
-    characterReactions: defineTable({
-      userId: v.id("users"),
-      key: v.string(),
-      dir: v.union(v.literal(1), v.literal(-1)),
-    })
-      .index("by_user", ["userId"])
-      .index("by_user_key", ["userId", "key"]),
-
-    /** Agregat like/dislike per karakter + meta ringkas buat papan top. */
-    characterStats: defineTable({
-      key: v.string(),
-      likes: v.number(),
-      dislikes: v.number(),
-      name: v.optional(v.string()),
-      image: v.optional(v.string()),
-      label: v.optional(v.string()),
-      updatedAt: v.number(),
-    }).index("by_key", ["key"]),
-
     clanLogs: defineTable({
       clanId: v.id("clans"),
       text: v.string(),

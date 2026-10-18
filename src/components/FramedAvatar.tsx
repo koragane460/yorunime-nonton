@@ -28,10 +28,6 @@ export function FramedAvatar({
   }
   return (
     <span className={cn("yn-frame", `yn-frame-${id}`, className)}>
-      {/* Aura: halo berpendar mengelilingi bingkai. */}
-      <span className="yn-aura" aria-hidden />
-      {/* Trail: ekor cahaya komet yang mengikuti karakter pengorbit. */}
-      <span className="yn-trail" aria-hidden />
       <span className="yn-frame-in">
         <Avatar src={src} seed={seed} online={online} className="size-full" />
       </span>

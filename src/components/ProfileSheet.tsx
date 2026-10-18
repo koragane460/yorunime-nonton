@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
-import { FramedAvatar } from "@/components/FramedAvatar";
 import { BlurBanner } from "@/components/BlurBanner";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
@@ -425,8 +424,7 @@ export function ProfileSheet({
                           centang, title, level pill — rata dalam satu baris,
                           waktu di ujung kanan. */}
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <FramedAvatar
-                          border={profile.avatarBorder}
+                        <Avatar
                           src={profile.image}
                           seed={profile.username}
                           className="size-7 shrink-0"

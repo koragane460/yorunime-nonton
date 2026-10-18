@@ -350,16 +350,18 @@ function LanjutTab() {
           <h3 className="mb-2 inline-flex rounded-lg bg-sky-600/70 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-white">
             {g.label}
           </h3>
-          <div className="space-y-5">
+          <div className="space-y-3">
             {g.items.map((item, idx) => {
-        // GARIS PENGGHUBUNG antar kartu Lanjutkan: tegak LURUS KE ATAS,
-        // pas di TENGAH (left-1/2), menyambungkan kartu di atas dengan
-        // kartu di bawahnya. Warna ABU-ABU dan lebih panjang (mengisi
-        // jarak antar kartu penuh) sesuai permintaan.
+        // GARIS PUTIH PENGGHUBUNG antar kartu Lanjutkan: tegak LURUS KE
+        // ATAS, pas di TENGAH (left-1/2), menyambungkan kartu di atas
+        // dengan kartu di bawahnya (mis. Jujutsu Kaisen → Yosuga no Sora).
+        // Dirender di dalam pembungkus `relative` tiap kartu supaya tepat
+        // mengisi jarak antar kartu — TIDAK mengganggu garis progress
+        // nonton yang tetap mendatar (ke samping) di tepi bawah kartu.
         const link = (
           <span
             aria-hidden
-            className="absolute -top-5 left-1/2 z-10 h-5 w-[3px] -translate-x-1/2 rounded-full bg-zinc-500"
+            className="absolute -top-3 left-1/2 z-10 h-3 w-0.5 -translate-x-1/2 rounded-full bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.5)]"
           />
         );
         if (item.type === "comic") {

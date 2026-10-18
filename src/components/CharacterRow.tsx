@@ -3,7 +3,6 @@ import { useAction } from "convex/react";
 import { X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { SectionTitle } from "@/components/lstream-ui";
-import { LikeButtons, charKey } from "@/components/CharacterLikes";
 import { avatarFallback } from "@/lib/lstream";
 
 type Char = {
@@ -50,11 +49,6 @@ export function CharacterRow({
   idMal?: string;
   title?: string;
 }) {
-  // Scope like/dislike: id anime untuk anime (SAMA dengan tab Like di detail
-  // supaya angkanya nyambung), judul untuk donghua/manga/manhwa.
-  const likeScope = idMal
-    ? String(idMal)
-    : `t-${(title ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80)}`;
   const fetchChars = useAction(api.anime.animeCharacters);
   const [chars, setChars] = useState<Char[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -141,18 +135,6 @@ export function CharacterRow({
                 <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
                   {openAge || (c.meta ?? "").split("·")[0]?.trim() || ""}
                 </p>
-                {/* Like / dislike karakter — berlaku untuk anime, donghua,
-                    manga & manhwa (satu akun satu reaksi per karakter). */}
-                <LikeButtons
-                  keys={[
-                    {
-                      key: charKey(likeScope, c.id),
-                      name: c.name,
-                      image: c.image || undefined,
-                      label: title,
-                    },
-                  ]}
-                />
                 <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-white/70">
                   {personalityOf(c.bio) || "Personalitas: belum tersedia."}
                 </p>

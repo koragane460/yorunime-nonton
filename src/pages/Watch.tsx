@@ -2978,18 +2978,18 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           />
         ) : (
           <>
-            {/* Komentar episode — gaya "full ke samping": blok melebar
-                sampai tepi layar, tapi isi (avatar, teks, tombol) tetap
-                punya padding supaya tidak ada yang kepotong tepi. */}
+            {/* Komentar episode — gaya baru. Dibungkus `-mx-7` (dan `md:-mx-9`)
+                supaya blok komentar MELEBAR penuh ke samping sampai tepi
+                layar (membatalkan padding halaman `p-3` + wrapper `px-4`),
+                sesuai permintaan "full ke samping". */}
             <div className="-mx-7 md:-mx-9">
-            <div className="flex items-baseline justify-between px-5 md:px-7">
+            <div className="flex items-baseline justify-between px-7 md:px-9">
               <SectionTitle>
                 <span className="normal-case">
                   {(shownComments?.length ?? 0).toLocaleString("id-ID")} Komentar
                 </span>
               </SectionTitle>
             </div>
-            <div className="px-5 md:px-7">
             <CommentsSection
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
               comments={shownComments}
@@ -3011,7 +3011,6 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                   userId: user._id as string,
                   username: user.username ?? "user",
                   image: user.image,
-                  avatarBorder: user.avatarBorder,
                   premium: (user.premiumUntil ?? 0) > Date.now(),
                   staffRole: user.staffRole,
                   clanTag: user.clanTag,
@@ -3046,7 +3045,6 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 }
               }}
             />
-            </div>
             </div>
           </>
         )}
