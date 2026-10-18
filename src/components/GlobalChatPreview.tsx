@@ -3,7 +3,8 @@ import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
 import { ClanTag, TitleBadge, BlueCheck } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
-import { avatarFallback, usernameColor } from "@/lib/lstream";
+import { usernameColor } from "@/lib/lstream";
+import { FramedAvatar } from "@/components/FramedAvatar";
 import { cn } from "@/lib/utils";
 
 /**
@@ -42,13 +43,11 @@ export function GlobalChatPreview() {
 
   return (
     <span className="flex min-w-0 flex-1 items-center gap-1.5">
-      <img
-        src={m.image ?? avatarFallback(m.username)}
-        alt=""
-        className={cn(
-          "size-6 shrink-0 rounded-full object-cover",
-          !m.image && "bg-white/[0.08]",
-        )}
+      <FramedAvatar
+        border={m.avatarBorder}
+        src={m.image}
+        seed={m.username}
+        className="size-6 shrink-0"
       />
       <span className={cn("shrink-0 text-xs font-semibold", usernameColor(m.username))}>
         {m.username}

@@ -144,6 +144,7 @@ export const listMessages = query({
         userId: r.userId,
         username: u?.username ?? "user",
         image: u?.image,
+        avatarBorder: u?.avatarBorder,
         level: u?.level ?? 1,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
         clanTag: u?.clanTag,

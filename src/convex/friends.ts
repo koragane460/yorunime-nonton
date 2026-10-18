@@ -26,6 +26,7 @@ export const listFriends = query({
         userId: friendId,
         username: u?.username ?? "user",
         image: u?.image,
+        avatarBorder: u?.avatarBorder,
         level: u?.level,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
       });
@@ -54,6 +55,7 @@ export const listRequests = query({
         fromUserId: r.fromUserId,
         username: u?.username ?? "user",
         image: u?.image,
+        avatarBorder: u?.avatarBorder,
         level: u?.level,
       });
     }

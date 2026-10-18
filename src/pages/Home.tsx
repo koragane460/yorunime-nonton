@@ -7,10 +7,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, TitleBadge, clanNameClass } from "@/components/lstream-ui";
+import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
-import { VoteScreen } from "@/components/VoteScreen";
+import { CharacterLikes } from "@/components/CharacterLikes";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
@@ -714,7 +715,7 @@ function HomeContent() {
         <div className="fade-enter mt-3 flex h-[178px] w-full overflow-hidden rounded-2xl border border-white/10">
           {/* ---- KIRI: banner anime (satu slide, pergantian fade) ---- */}
           <div className="relative min-w-0 flex-1">
-          {heroItems.slice(0, 1).map((a, i) => (
+          {heroItems.slice(0, 12).map((a, i) => (
             <div
               key={a.id}
               className={cn(
@@ -837,7 +838,8 @@ function HomeContent() {
                   >
                     #{e.rank}
                   </span>
-                  <Avatar
+                  <FramedAvatar
+                    border={e.avatarBorder}
                     src={e.image}
                     seed={e.username}
                     className="size-5 shrink-0"
@@ -1318,6 +1320,7 @@ function LeaderEntryRow({
   rank,
   username,
   image,
+  avatarBorder,
   xp,
   suffix = "XP",
   compact = false,
@@ -1332,6 +1335,7 @@ function LeaderEntryRow({
   rank: number;
   username?: string;
   image?: string;
+  avatarBorder?: string;
   xp: number;
   suffix?: string;
   compact?: boolean;
@@ -1383,7 +1387,7 @@ function LeaderEntryRow({
       >
         {rank}
       </span>
-      <Avatar src={image} seed={username} className={cn("shrink-0", compact ? "size-8" : "size-10")} />
+      <FramedAvatar border={avatarBorder} src={image} seed={username} className={cn("shrink-0", compact ? "size-8" : "size-10")} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p className={cn("truncate font-semibold", compact ? "text-xs" : "text-sm")}>{username ?? "user"}</p>
@@ -1415,6 +1419,7 @@ function PodiumCard({
   rank,
   username,
   image,
+  avatarBorder,
   xp,
   height,
   hideLabel,
@@ -1422,6 +1427,7 @@ function PodiumCard({
   rank: number;
   username?: string;
   image?: string;
+  avatarBorder?: string;
   xp: number;
   height: string;
   /** true = sembunyikan nama & XP di atas podium (preview hero yang compact). */
@@ -1445,7 +1451,8 @@ function PodiumCard({
                 : "bg-amber-600/50",
           )}
         />
-        <Avatar
+        <FramedAvatar
+          border={avatarBorder}
           src={image}
           seed={username}
           className={cn(
@@ -1547,9 +1554,9 @@ function LeaderboardList({ period }: { period: string }) {
       {data.length > 0 && (
         <div className="rounded-2xl border border-white/12 bg-white/[0.05] p-3">
           <div className="grid grid-cols-3 items-end gap-2">
-            {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-20" />}
-            {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-28" />}
-            {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-16" />}
+            {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} avatarBorder={t2.avatarBorder} xp={t2.xp} height="h-20" />}
+            {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} avatarBorder={t1.avatarBorder} xp={t1.xp} height="h-28" />}
+            {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} avatarBorder={t3.avatarBorder} xp={t3.xp} height="h-16" />}
           </div>
         </div>
       )}
@@ -1568,6 +1575,7 @@ function LeaderboardList({ period }: { period: string }) {
             clanTag: e.clanTag,
             clanTagIcon: e.clanTagIcon,
             clanNameColor: (e as any).clanNameColor,
+            avatarBorder: (e as any).avatarBorder,
             premium: (e as any).premium,
           }}
         />
@@ -1669,6 +1677,7 @@ type LbEntry = {
   rank: number;
   username?: string;
   image?: string;
+  avatarBorder?: string;
   xp: number;
   level?: number;
   staffRole?: string;
@@ -1729,10 +1738,11 @@ function LeaderboardRow({ e, dense }: { e: LbEntry; dense?: boolean }) {
               />
             </svg>
           )}
-          <Avatar
+          <FramedAvatar
+            border={e.avatarBorder}
             src={e.image}
             seed={e.username}
-            className={cn("relative rounded-full", dense ? "size-7" : "size-9")}
+            className={cn("relative", dense ? "size-7" : "size-9")}
           />
         </span>
         <span className="flex min-w-0 items-center gap-1">
@@ -2632,7 +2642,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         key={f.userId}
                         className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
                       >
-                        <Avatar src={f.image} seed={f.username} className="size-10" />
+                        <FramedAvatar border={f.avatarBorder} src={f.image} seed={f.username} className="size-10" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{f.username}</p>
                           <button
@@ -2662,7 +2672,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                         key={r.requestId}
                         className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
                       >
-                        <Avatar src={r.image} seed={r.username} className="size-10" />
+                        <FramedAvatar border={r.avatarBorder} src={r.image} seed={r.username} className="size-10" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{r.username}</p>
                           <p className="text-xs text-muted-foreground">Meminta request</p>
@@ -3122,13 +3132,13 @@ function AnimeDetailScreen({
 
 
           {/* Tab tanpa background rounded: hanya garis bawah pada teks aktif.
-              Info · Nonton · Character · Vote (dulunya Cuplikan) */}
+              Info · Nonton · Character · Like (pengganti Vote token) */}
           <div className="mt-3 flex gap-1">
             {([
               ["info", "Info"],
               ["nonton", "Nonton"],
               ["character", "Character"],
-              ["vote", "Vote"],
+              ["vote", "Like"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -3209,11 +3219,11 @@ function AnimeDetailScreen({
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
           )}
 
-          {/* Vote karakter (pengganti Cuplikan) — tampil di tab Vote */}
+          {/* Like karakter (pengganti Vote token) — tampil di tab Like */}
           {detailTab === "vote" && (
-            <VoteScreen
-              animeId={String(animeId)}
-              animeTitle={detail.title ?? animeTitle ?? ""}
+            <CharacterLikes
+              scope={String(animeId)}
+              title={detail.title ?? animeTitle ?? ""}
               chars={chars}
             />
           )}

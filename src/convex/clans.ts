@@ -151,6 +151,7 @@ export const clanDetail = query({
         seqId: u?.seqId,
         username: u?.username ?? "user",
         image: u?.image,
+        avatarBorder: u?.avatarBorder,
         bannerUrl: u?.bannerUrl,
         level: u?.level,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
@@ -198,6 +199,7 @@ export const clanDetail = query({
         userId: r.userId,
         username: u?.username ?? "user",
         image: u?.image,
+        avatarBorder: u?.avatarBorder,
         level: u?.level,
       });
     }

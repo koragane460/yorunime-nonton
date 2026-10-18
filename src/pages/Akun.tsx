@@ -222,7 +222,8 @@ function AkunCommentsFeed() {
           )}
           <div className={cn("relative flex items-start gap-2.5", c.bannerUrl && "p-2.5")}>
             {/* Foto profil komentator — kiri. */}
-            <Avatar
+            <FramedAvatar
+              border={c.avatarBorder}
               src={c.image}
               seed={c.username}
               className="size-10 shrink-0"

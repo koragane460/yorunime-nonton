@@ -17,13 +17,13 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import {
-  Avatar,
   BlueCheck,
   ClanTag,
   LevelBadge,
   TitleBadge,
   clanNameClass,
 } from "@/components/lstream-ui";
+import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON, PICKABLE_CLAN_ICONS } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -777,7 +777,12 @@ function MemberRow({
     <div className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-card/70 p-2.5">
       {/* Foto profil + title role di bawahnya */}
       <div className="flex shrink-0 flex-col items-center gap-1">
-        <Avatar src={m.image} seed={m.username} className="size-11" />
+        <FramedAvatar
+          border={m.avatarBorder}
+          src={m.image}
+          seed={m.username}
+          className="size-11"
+        />
         {isLeader ? (
           /* Chip LEADER: dulu outline saja tanpa latar — sekarang ada
              background emas gradasi + ring tipis supaya menonjol. */

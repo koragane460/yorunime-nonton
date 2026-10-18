@@ -195,17 +195,23 @@
   border-color: oklch(0.32 0.05 260);
 }
 
-/* Sender bubble (what I type) */
+/* Sender bubble (what I type) — warnanya JAUH lebih terang dari background
+   chat (0.14) supaya kotak pesan jelas terlihat, bukan menyatu. */
 .bubble-mine,
 .msg-in,
 .msg-own {
-  background-color: oklch(0.22 0.04 260);
+  background-color: oklch(0.34 0.05 263);
+  border-color: oklch(0.46 0.06 263);
+  box-shadow: 0 2px 10px -4px rgb(0 0 0 / 0.6);
 }
 
-/* Recipient bubble (what others type) */
+/* Recipient bubble (what others type) — terangkat dari background tapi
+   tetap beda dari bubble milik sendiri. */
 .bubble-other,
 .msg-other {
-  background-color: oklch(0.27 0.045 260);
+  background-color: oklch(0.25 0.035 260);
+  border-color: oklch(0.38 0.05 260);
+  box-shadow: 0 2px 10px -4px rgb(0 0 0 / 0.55);
 }
 
 /* Give-premium bubble: transparent, gold text */
@@ -222,9 +228,9 @@
 
 /* Kutipan reply di dalam bubble: lebih abu dari bubble biasa. */
 .bubble-reply {
-  background-color: oklch(0.32 0.02 260);
-  border-left: 2px solid oklch(0.45 0.03 260);
-  color: oklch(0.85 0.012 250);
+  background-color: oklch(0.42 0.03 263);
+  border-left: 2px solid oklch(0.6 0.04 263);
+  color: oklch(0.88 0.012 250);
 }
 .bubble-reply p {
   color: oklch(0.93 0.01 250);
@@ -622,8 +628,14 @@
  * ------------------------------------------------------------------ */
 .yn-frame {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  box-sizing: border-box;
+  /* SELALU persegi — mencegah foto profile memanjang ke bawah walau
+     tinggi induk menghitung dari konten. */
+  aspect-ratio: 1 / 1;
   padding: 3px;
   border-radius: 9999px;
   line-height: 0;
@@ -631,11 +643,14 @@
 .yn-frame-in {
   display: block;
   position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border-radius: 9999px;
   padding: 2px;
   background-color: var(--background);
   box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0.35);
+  z-index: 1;
 }
 .yn-frame-in > * {
   border-radius: 9999px;
@@ -776,6 +791,135 @@
   .yn-frame-holo,
   .yn-frame-ember::after,
   .yn-frame-royal::after {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Border interaktif — karakter kecil yang MENGORBIT foto profile,
+ * lengkap dengan AURA (halo berpendar) dan TRAIL (ekor komet).
+ * Dipasang di FramedAvatar: `.yn-aura` + `.yn-trail` sebagai anak,
+ * karakter sebagai `::before` bingkai.
+ * ------------------------------------------------------------------ */
+.yn-aura {
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(52, 211, 153, 0.55),
+    rgba(56, 189, 248, 0.55),
+    rgba(167, 139, 250, 0.55),
+    rgba(244, 114, 182, 0.55),
+    rgba(251, 191, 36, 0.55),
+    rgba(52, 211, 153, 0.55)
+  );
+  filter: blur(7px);
+  opacity: 0.45;
+  animation: yn-aura-breathe 3.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.yn-trail {
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  /* Ekor komet: sektor terang yang selalu berada DI BELAKANG arah
+     putaran karakter (cincin tipis hasil mask). */
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 86%,
+    rgba(255, 255, 255, 0.55) 99%,
+    transparent 100%
+  );
+  -webkit-mask: radial-gradient(closest-side, transparent 66%, #000 72%, #000 94%, transparent 99%);
+  mask: radial-gradient(closest-side, transparent 66%, #000 72%, #000 94%, transparent 99%);
+  animation: yn-spin 6s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 2;
+}
+/* Sprite karakter pengorbit. Posisi mengikuti offset-path lingkaran;
+   72% ≈ tepat di pinggir cincin bingkai. Ukurannya proporsional dengan
+   besar foto memakai satuan container (cqw) + fallback piksel. */
+.yn-frame::before {
+  content: "✨";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 13px;
+  height: 13px;
+  font-size: 11px;
+  line-height: 13px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+  offset-path: circle(72% at 50% 50%);
+  offset-rotate: 0deg;
+  offset-distance: 0%;
+  animation: yn-orbit 6s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+}
+@supports (container-type: size) {
+  .yn-frame { container-type: size; }
+  .yn-frame::before {
+    width: 30cqw;
+    height: 30cqw;
+    font-size: 26cqw;
+    line-height: 30cqw;
+  }
+}
+/* Browser tanpa offset-path: karakter jadi badge berkedip di pojok
+   kanan atas, bukan nempel kaku di sudut kiri. */
+@supports not (offset-path: circle(72% at 50% 50%)) {
+  .yn-frame::before {
+    left: auto;
+    right: -1px;
+    top: -1px;
+    animation: yn-twinkle 2.2s ease-in-out infinite;
+  }
+}
+@keyframes yn-orbit {
+  to { offset-distance: 100%; }
+}
+@keyframes yn-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes yn-aura-breathe {
+  0%, 100% { opacity: 0.32; transform: scale(1); }
+  50% { opacity: 0.62; transform: scale(1.08); }
+}
+
+/* Karakter khas tiap bingkai + kecepatan orbit masing-masing.
+   Trail ikut disamakan durasinya supaya ekor selalu menyatu dengan
+   karakternya. */
+.yn-frame-aurora::before { content: "🧚"; }
+.yn-frame-ember::before { content: "🔥"; animation-duration: 4.5s; }
+.yn-frame-tide::before { content: "🐬"; animation-duration: 7s; animation-direction: reverse; }
+.yn-frame-prisma::before { content: "💎"; animation-duration: 3.6s; }
+.yn-frame-royal::before { content: "👑"; animation-duration: 5.5s; }
+.yn-frame-nova::before { content: "🌠"; animation-duration: 8s; animation-direction: reverse; }
+.yn-frame-volt::before { content: "⚡"; animation-duration: 2.6s; }
+.yn-frame-bloom::before { content: "🌸"; animation-duration: 6.5s; animation-direction: reverse; }
+.yn-frame-storm::before { content: "🌩️"; animation-duration: 4.2s; }
+.yn-frame-magma::before { content: "🌋"; animation-duration: 5.8s; }
+.yn-frame-holo::before { content: "🌀"; animation-duration: 5s; animation-direction: reverse; }
+
+.yn-frame-ember .yn-trail { animation-duration: 4.5s; }
+.yn-frame-tide .yn-trail { animation-duration: 7s; animation-direction: reverse; }
+.yn-frame-prisma .yn-trail { animation-duration: 3.6s; }
+.yn-frame-royal .yn-trail { animation-duration: 5.5s; }
+.yn-frame-nova .yn-trail { animation-duration: 8s; animation-direction: reverse; }
+.yn-frame-volt .yn-trail { animation-duration: 2.6s; }
+.yn-frame-bloom .yn-trail { animation-duration: 6.5s; animation-direction: reverse; }
+.yn-frame-storm .yn-trail { animation-duration: 4.2s; }
+.yn-frame-magma .yn-trail { animation-duration: 5.8s; }
+.yn-frame-holo .yn-trail { animation-duration: 5s; animation-direction: reverse; }
+
+@media (prefers-reduced-motion: reduce) {
+  .yn-frame::before,
+  .yn-trail,
+  .yn-aura {
     animation: none !important;
   }
 }
