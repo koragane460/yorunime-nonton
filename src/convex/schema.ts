@@ -678,6 +678,28 @@ const schema = defineSchema(
       .index("by_event", ["eventId"])
       .index("by_event_char", ["eventId", "characterId"])
       .index("by_event_votes", ["eventId", "votes"]),
+
+    /**
+     * Like / Dislike karakter anime — pengganti sistem Vote.
+     *
+     * Satu baris per (user, karakter). `value` 1 = Like, -1 = Dislike.
+     * Papan per anime dihitung dari jumlah baris per karakter, jadi tidak
+     * perlu tabel agregat dan angkanya selalu konsisten.
+     */
+    characterLikes: defineTable({
+      userId: v.id("users"),
+      animeId: v.string(),
+      characterId: v.string(),
+      name: v.string(),
+      image: v.optional(v.string()),
+      /** 1 = Like, -1 = Dislike. */
+      value: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_character", ["characterId"])
+      .index("by_anime", ["animeId"])
+      .index("by_user_character", ["userId", "characterId"]),
   },
   {
     schemaValidation: false,

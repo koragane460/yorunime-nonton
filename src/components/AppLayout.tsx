@@ -19,7 +19,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Vote,
 } from "lucide-react";
 // Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
 // bahasa bentuk dengan iOS (garis tipis, sudut membulat, varian fill saat aktif).
@@ -156,12 +155,6 @@ export function AppLayout({
               Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
             )}
             diamonds={user.diamonds ?? 0}
-            // Jumlah Vote (T-V) = floor(totalMenitNonton / 2) − yang dipakai.
-            voteTokens={Math.max(
-              0,
-              Math.floor((myStats?.minutesWatched ?? 0) / 2) -
-                (user.voteSpent ?? 0),
-            )}
           />
         </div>
       )}
@@ -221,7 +214,6 @@ function AccountPanel({
   premium,
   premiumDays,
   diamonds,
-  voteTokens,
 }: {
   onOpen: () => void;
   name: string;
@@ -241,8 +233,6 @@ function AccountPanel({
   premium: boolean;
   premiumDays: number;
   diamonds: number;
-  /** Jumlah Token Vote (T-V) yang dimiliki. */
-  voteTokens: number;
 }) {
   const cost = xpForLevel(level);
   const inLevel = Math.max(0, Math.min(xp, cost));
@@ -340,24 +330,17 @@ function AccountPanel({
             </div>
           </div>
 
-          {/* Total Sacret + sisa hari premium + Jumlah Vote — ikon & teks
-              lebih besar. Vote ada di KANAN Premium; kalau tidak premium,
-              langsung di samping Sacret. */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-            <span className="flex items-center gap-1.5 font-bold text-sky-300">
-              <GemIcon className="size-5" /> {diamonds.toLocaleString("id-ID")} Sacret
+          {/* Total Sacret + sisa hari premium — ikon & teks KECIL supaya
+              rapat (permintaan user). Vote sudah dihapus dari panel akun. */}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11px]">
+            <span className="flex items-center gap-1 font-semibold text-sky-300">
+              <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
             </span>
             {premium && (
-              <span className="flex items-center gap-1.5 font-bold text-gold">
-                <CrownIcon className="size-5" /> {premiumDays} hari
+              <span className="flex items-center gap-1 font-semibold text-gold">
+                <CrownIcon className="size-3.5" /> {premiumDays} hari
               </span>
             )}
-            <span
-              className="flex items-center gap-1.5 font-bold text-violet-300"
-              title="Jumlah Vote (Token Vote dari menit nonton)"
-            >
-              <Vote className="size-5" aria-hidden /> {voteTokens.toLocaleString("id-ID")} Vote
-            </span>
           </div>
         </div>
       </button>

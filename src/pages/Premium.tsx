@@ -355,11 +355,18 @@ function Plans() {
         // paket 1 bulan). Hemat% dihitung terhadap baseline itu.
         const perDay = (p: Plan) => (p.days > 0 ? p.price / p.days : p.price);
         const baseline = Math.max(...sorted.map(perDay), 0);
-        const bestId = sorted.reduce<Plan | null>((best, p) => {
-          if (perDay(p) <= 0) return best;
-          if (!best) return p;
-          return perDay(p) < perDay(best) ? p : best;
-        }, null)?.id;
+        // Badge "Paling hemat" menempel di paket 1 BULAN (permintaan user),
+        // bukan lagi otomatis paket paling murah per hari. Kalau tidak ada
+        // paket 30 hari, jatuh ke paket yang durasinya paling mendekati 30
+        // hari, supaya labelnya tetap masuk akal.
+        const bestId =
+          sorted.length === 0
+            ? undefined
+            : sorted.reduce<Plan>(
+                (closest, p) =>
+                  Math.abs(p.days - 30) < Math.abs(closest.days - 30) ? p : closest,
+                sorted[0],
+              ).id;
         return (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             {sorted.map((p) => {
@@ -658,7 +665,7 @@ function Checkout({
           <button
             onClick={onPick}
             disabled={busy !== null}
-            className="flex min-h-11 items-center gap-2 rounded-lg border border-white/15 px-3.5 text-xs font-bold text-zinc-100 transition hover:border-gold/60 disabled:opacity-50"
+            className="flex min-h-11 items-center gap-2 rounded-lg border border-white/15 bg-white/[0.07] px-3.5 text-xs font-bold text-zinc-100 transition hover:border-gold/60 hover:bg-white/[0.12] disabled:opacity-50"
           >
             {busy === "proof" ? (
               <Loader2 className="size-4 animate-spin" />

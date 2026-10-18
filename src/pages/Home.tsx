@@ -704,16 +704,16 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) HERO BANNER + LEADERBOARD DIGABUNG — banner anime di KIRI dan
-          panel Leaderboard TEGAK (lurus ke atas) di KANAN dalam SATU kotak;
-          Top 1-5 langsung terlihat tanpa perlu membuka layar lain. */}
+      {/* 2) HERO BANNER — banner besar + grid thumbnail anime/donghua (TANPA
+          dot/paginasi). Leaderboard tidak lagi menyatu: tampil sebagai kartu
+          terpisah DI BAWAH hero dengan daftar Top ke bawah. */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <>
-        <div className="fade-enter mt-3 flex h-[178px] w-full overflow-hidden rounded-2xl border border-white/10">
-          {/* ---- KIRI: banner anime (satu slide, pergantian fade) ---- */}
-          <div className="relative min-w-0 flex-1">
+        <div className="fade-enter mt-3 w-full space-y-2.5">
+          {/* ---- Banner utama: slide besar, pergantian fade, TANPA dot ---- */}
+          <div className="relative h-[178px] w-full overflow-hidden rounded-2xl border border-white/10">
           {heroItems.slice(0, 1).map((a, i) => (
             <div
               key={a.id}
@@ -786,13 +786,44 @@ function HomeContent() {
           ))}
           </div>
 
-          {/* ---- KANAN: Leaderboard TEGAK — kotak lurus ke atas yang menyatu
-              dengan hero, langsung menampilkan Top 1-5. Menekan panel membuka
-              layar Leaderboard lengkap. ---- */}
+          {/* ---- GRID THUMBNAIL: sisa hero (anime + donghua) tampil semua
+              dalam grid, tanpa dot/paginasi. ---- */}
+          {heroItems.length > 1 && (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {heroItems.slice(1).map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() =>
+                    openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
+                  }
+                  className="group relative overflow-hidden rounded-xl border border-white/10 bg-black/40 text-left"
+                >
+                  <div className="relative aspect-[3/4] w-full overflow-hidden">
+                    {a.image ? (
+                      <img
+                        src={a.image}
+                        alt={a.title}
+                        loading="lazy"
+                        className="size-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="size-full bg-hero-gradient" />
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-[10px] font-bold text-white backdrop-blur-[2px]">
+                      <span className="line-clamp-1">{a.title}</span>
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ---- LEADERBOARD TERPISAH di bawah hero — daftar Top ke bawah,
+              menekan kartu membuka layar Leaderboard lengkap. ---- */}
           <button
             onClick={() => setShowLeaderboard(true)}
             aria-label="Lihat leaderboard lengkap"
-            className="group flex w-[46%] max-w-[196px] shrink-0 flex-col border-l border-white/15 bg-black/60 text-left backdrop-blur-md transition hover:bg-black/70"
+            className="group flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 text-left backdrop-blur-md transition hover:bg-black/60"
           >
             <span className="flex items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
               <Trophy className="size-3 shrink-0 text-gold" aria-hidden />
@@ -2498,7 +2529,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
               >
                 {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
                 {tab === t && (
-                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />
+                  <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-gradient-to-r from-gold via-amber-300 to-gold shadow-[0_0_10px_2px_oklch(0.86_0.18_88/0.45)]" />
                 )}
               </button>
             ))}
@@ -2509,7 +2540,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         <div className="flex min-h-0 w-full flex-1 flex-col pb-2 pt-3">
           {tab === "chat" && (
             /* Latar layar chat abu-abu — bubble pesan tetap warnanya sendiri. */
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-secondary/40">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/50 bg-black/35">
               {/* Nobar: daftar room nonton bareng */}
               <NobarBar
                 onJoined={(roomId) => {
@@ -2544,7 +2575,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           )}
 
           {tab === "clan" && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/60 bg-secondary/40">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/50 bg-black/35">
               {clanId ? (
                 <>
                   <ChatPanel
@@ -2618,7 +2649,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   >
                     {t === "teman" ? "Teman" : "Request"}
                     {friendTab === t && (
-                      <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />
+                      <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-gradient-to-r from-gold via-amber-300 to-gold shadow-[0_0_10px_2px_oklch(0.86_0.18_88/0.45)]" />
                     )}
                   </button>
                 ))}
@@ -3128,7 +3159,7 @@ function AnimeDetailScreen({
               ["info", "Info"],
               ["nonton", "Nonton"],
               ["character", "Character"],
-              ["vote", "Vote"],
+              ["vote", "Like"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
