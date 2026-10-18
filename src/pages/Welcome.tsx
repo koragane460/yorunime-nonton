@@ -628,20 +628,28 @@ function WelcomeFlow() {
                     <p className="mt-1.5 text-xs text-muted-foreground">
                       Hal penting sebelum kamu mulai:
                     </p>
-                    <ol className="mt-5 space-y-2.5">
+                    {/* Teks panjang kreatif — TANPA kotak background: tiap poin
+                        mengalir dengan nomor besar + garis aksen tipis di kiri. */}
+                    <ol className="mt-5 space-y-4">
                       {NOTICE_ITEMS.map((t, i) => (
                         <motion.li
                           key={i}
-                          className="flex items-start gap-2.5 rounded-xl border border-border/70 bg-card/60 p-3 text-[13px] leading-snug"
+                          className="relative flex items-start gap-3 pl-4"
                           initial={{ opacity: 0, x: -14 }}
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ delay: i * 0.05 }}
                         >
-                          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                            <t.icon className="size-3.5" aria-hidden />
+                          <span
+                            className="absolute left-0 top-1 h-[calc(100%-8px)] w-[2px] rounded-full bg-gradient-to-b from-primary via-primary/40 to-transparent"
+                            aria-hidden
+                          />
+                          <span className="mt-0.5 w-5 shrink-0 text-right font-mono text-[11px] font-black text-primary/70">
+                            {String(i + 1).padStart(2, "0")}
                           </span>
-                          <span className="min-w-0 flex-1 pt-0.5">{t.text}</span>
+                          <span className="min-w-0 flex-1 text-[13px] leading-relaxed text-foreground/85">
+                            {t.text}
+                          </span>
                         </motion.li>
                       ))}
                     </ol>
@@ -664,23 +672,29 @@ function WelcomeFlow() {
                     <p className="mt-1.5 text-xs text-muted-foreground">
                       Patuhi aturan ini supaya komunitas tetap nyaman:
                     </p>
-                    <div className="mt-5 space-y-2.5">
+                    {/* Peraturan sebagai teks panjang kreatif — judul + deskripsi
+                        mengalir, TANPA kotak background, dengan nomor besar. */}
+                    <div className="mt-5 space-y-4">
                       {RULE_ITEMS.map((r, i) => (
                         <motion.div
                           key={i}
-                          className="rounded-xl border border-border/70 bg-card/60 p-3"
+                          className="relative pl-9"
                           initial={{ opacity: 0, x: -14 }}
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ delay: i * 0.05 }}
                         >
-                          <p className="flex items-center gap-2 text-[13px] font-semibold">
-                            <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/20 text-primary">
-                              <r.icon className="size-3" aria-hidden />
-                            </span>
+                          <span
+                            className="absolute left-0 top-0 flex size-6 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-[11px] font-black text-primary"
+                            aria-hidden
+                          >
+                            {i + 1}
+                          </span>
+                          <p className="flex items-center gap-2 text-[14px] font-bold">
+                            <r.icon className="size-3.5 shrink-0 text-primary" aria-hidden />
                             {r.title}
                           </p>
-                          <p className="mt-0.5 pl-7 text-[11px] leading-snug text-muted-foreground">
+                          <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
                             {r.desc}
                           </p>
                         </motion.div>
@@ -728,6 +742,22 @@ function WelcomeFlow() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            {/* Latar imersif khusus layar login: orb gradasi bergerak pelan +
+                bintik berkilau — bukan cuma logo + animasi. */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+              <motion.span
+                className="absolute -left-24 top-4 size-72 rounded-full bg-primary/25 blur-3xl"
+                animate={{ x: [0, 30, 0], y: [0, 24, 0] }}
+                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <motion.span
+                className="absolute -right-24 bottom-10 size-72 rounded-full bg-gold/20 blur-3xl"
+                animate={{ x: [0, -28, 0], y: [0, -20, 0] }}
+                transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1.2px)] [background-size:22px_22px] opacity-30" />
+            </div>
+
             {/* Tombol Info akun perangkat — kanan atas */}
             <button
               aria-label="Akun yang pernah dipakai di perangkat ini"

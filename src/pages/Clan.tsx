@@ -388,11 +388,19 @@ function ClanDetailScreen({
   const detail = useQuery(api.clans.clanDetail, { clanId: clanId as never });
   const claimDaily = useMutation(api.clans.claimDaily);
   const donateMut = useMutation(api.clans.donate);
+  const respondReq = useMutation(api.clans.respondRequest);
+  const setRoleMut = useMutation(api.clans.setRole);
+  const setDescription = useMutation(api.clans.setDescription);
   const [tab, setTab] = useState<"member" | "donate">(initialTab ?? "member");
   const [donateOpen, setDonateOpen] = useState(false);
   const [amount, setAmount] = useState<number>(100);
   const [custom, setCustom] = useState("");
   const [busyAction, setBusyAction] = useState(false);
+  // Panel PENGATURAN CLAN (khusus leader/officer): request masuk + role +
+  // deskripsi. Terbuka lewat tombol gerigi di header.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"request" | "role">("request");
+  const [descDraft, setDescDraft] = useState<string | null>(null);
 
   if (!detail) {
     return (
@@ -406,6 +414,8 @@ function ClanDetailScreen({
 
   const c = detail.clan;
   const isMember = !!detail.myRole;
+  const canManage = detail.myRole === "leader" || detail.myRole === "officer";
+  const pending = (detail.requests ?? []) as any[];
   // Permintaan join yang masih menunggu — tombol berubah jadi "Batalkan
   // Request" (hijau) dan tetap bisa dipencet, sama seperti di daftar clan.
   const isRequested = detail.myRequestClanId === clanId;
@@ -458,11 +468,27 @@ function ClanDetailScreen({
             <ChevronLeft className="size-5" />
           </button>
           <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Detail Clan</h1>
+          {/* Tombol PENGATURAN CLAN — hanya untuk leader/officer: kelola
+              request masuk + role member + deskripsi clan. */}
+          {canManage && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Pengaturan clan"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold transition hover:bg-gold/20"
+            >
+              <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          )}
         </div>
 
-        {/* Kotak header clan: foto, nama, tag, bar level + level, stats */}
+        {/* Kotak header clan — DESAIN SESUAI REFERENSI: foto + nama + tag di
+            kiri, STATS (member/donasi/hari) dibungkus BACKGROUND KOTAK di
+            KANAN ATAS, lalu deskripsi clan, baru bar level di bawahnya. */}
         <div className="rounded-2xl border border-white/10 bg-card p-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             {c.avatarUrl ? (
               <img src={c.avatarUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
             ) : (
@@ -480,7 +506,26 @@ function ClanDetailScreen({
                 className="mt-1 px-1.5 py-0 text-[9px]"
               />
             </div>
+            {/* STATS dibungkus background kotak di KANAN ATAS */}
+            <div className="grid shrink-0 grid-cols-1 gap-1 rounded-xl border border-white/10 bg-black/30 px-2.5 py-2 text-[10px]">
+              <span className="inline-flex items-center justify-end gap-1.5 text-muted-foreground">
+                <Users className="size-3" /> {c.memberCount} member
+              </span>
+              <span className="inline-flex items-center justify-end gap-1.5 text-sky-300">
+                <Gem className="size-3 shrink-0" /> {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
+              </span>
+              <span className="inline-flex items-center justify-end gap-1.5 text-muted-foreground">
+                <Timer className="size-3" /> {c.ageDays ?? 0} hari
+              </span>
+            </div>
           </div>
+
+          {/* DESKRIPSI CLAN — berada DI ATAS bar level (sesuai permintaan) */}
+          {(c as any).description ? (
+            <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-400">
+              {(c as any).description}
+            </p>
+          ) : null}
 
           {/* Bar level dalam kotak satu baris, level di kiri */}
           <div className="mt-2.5 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
@@ -493,21 +538,6 @@ function ClanDetailScreen({
             </div>
             <span className="shrink-0 text-[9px] text-muted-foreground">
               {(c.levelProgress ?? 0).toLocaleString("id-ID")}/{levelCost.toLocaleString("id-ID")}
-            </span>
-          </div>
-
-          {/* Member · total donate · umur clan — grid 3 kolom supaya
-              total donasi (kolom TENGAH) selalu pas di tengah kartu. */}
-          <div className="mt-2 grid grid-cols-3 items-center text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center justify-center gap-1">
-              <Users className="size-3.5" /> {c.memberCount} member
-            </span>
-            <span className="inline-flex items-center justify-center gap-1 text-center">
-              <Gem className="size-3.5 shrink-0 text-sky-300" />{" "}
-              {Number(c.diamonds ?? 0).toLocaleString("id-ID")} donasi
-            </span>
-            <span className="inline-flex items-center justify-center gap-1">
-              <Timer className="size-3.5" /> {c.ageDays ?? 0} hari
             </span>
           </div>
         </div>
@@ -609,13 +639,13 @@ function ClanDetailScreen({
           </div>
         )}
 
-        {/* Tab Member | Donate — TANPA kotak rounded sama sekali: hanya
-            teks dengan GARIS PUTIH di bawahnya; tab aktif garisnya penuh. */}
-        <div className="mt-3 flex gap-5 border-b border-white/10">
+        {/* Tab Member | Donate — SPACING lebih lega (gap besar + padding),
+            garis bawah penuh & berwarna emas saat aktif. */}
+        <div className="mt-4 flex gap-8 border-b border-white/10">
           <button
             onClick={() => setTab("member")}
             className={cn(
-              "relative pb-2 text-xs font-bold transition",
+              "relative pb-2.5 text-sm font-bold transition",
               tab === "member"
                 ? "text-white"
                 : "text-muted-foreground hover:text-white/80",
@@ -623,13 +653,13 @@ function ClanDetailScreen({
           >
             Member
             {tab === "member" && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white" />
+              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-gold to-amber-400" />
             )}
           </button>
           <button
             onClick={() => setTab("donate")}
             className={cn(
-              "relative pb-2 text-xs font-bold transition",
+              "relative pb-2.5 text-sm font-bold transition",
               tab === "donate"
                 ? "text-white"
                 : "text-muted-foreground hover:text-white/80",
@@ -637,7 +667,7 @@ function ClanDetailScreen({
           >
             Donate
             {tab === "donate" && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white" />
+              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-gold to-amber-400" />
             )}
           </button>
         </div>
@@ -655,6 +685,179 @@ function ClanDetailScreen({
           clanLevel={c.level}
         />
       </div>
+
+      {/* ================= PENGATURAN CLAN (leader/officer) ================= */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end" role="dialog" aria-modal>
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+            onClick={() => setSettingsOpen(false)}
+          />
+          <div className="pop-enter relative w-full max-h-[85vh] overflow-hidden rounded-t-2xl border-t border-white/15 bg-card shadow-2xl">
+            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+              <Crown className="size-4 text-gold" />
+              <p className="text-sm font-bold">Pengaturan Clan</p>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                aria-label="Tutup"
+                className="ml-auto flex size-8 items-center justify-center rounded-full bg-white/10"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Sub-tab: Request masuk | Role & deskripsi */}
+            <div className="flex gap-6 border-b border-white/10 px-4">
+              {(["request", "role"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setSettingsTab(t)}
+                  className={cn(
+                    "relative flex items-center gap-1.5 py-2.5 text-[13px] font-bold transition",
+                    settingsTab === t ? "text-white" : "text-muted-foreground",
+                  )}
+                >
+                  {t === "request" ? "Request Masuk" : "Role & Deskripsi"}
+                  {t === "request" && pending.length > 0 && (
+                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
+                      {pending.length}
+                    </span>
+                  )}
+                  {settingsTab === t && (
+                    <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-gold to-amber-400" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="thin-scroll max-h-[65vh] overflow-y-auto p-4">
+              {settingsTab === "request" ? (
+                pending.length === 0 ? (
+                  <p className="py-8 text-center text-xs text-muted-foreground">
+                    Belum ada permintaan masuk.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {pending.map((r) => (
+                      <div
+                        key={r.requestId}
+                        className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2.5"
+                      >
+                        <Avatar src={r.image} seed={r.username} className="size-10" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">{r.username}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {r.level ? `Lv.${r.level}` : "Ingin bergabung"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await respondReq({ requestId: r.requestId, accept: true });
+                              toast.success(`${r.username} diterima masuk clan`);
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Gagal");
+                            }
+                          }}
+                          className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/30"
+                        >
+                          Terima
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await respondReq({ requestId: r.requestId, accept: false });
+                              toast.success("Permintaan ditolak");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Gagal");
+                            }
+                          }}
+                          className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-500/30"
+                        >
+                          Tolak
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div className="space-y-4">
+                  {/* Deskripsi clan */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Deskripsi clan</Label>
+                    <textarea
+                      value={descDraft ?? (c as any).description ?? ""}
+                      onChange={(e) => setDescDraft(e.target.value)}
+                      rows={3}
+                      placeholder="Ceritakan tentang clan kamu…"
+                      className="mt-1.5 w-full rounded-xl border border-white/12 bg-black/30 p-3 text-sm outline-none focus:border-gold/60"
+                    />
+                    <button
+                      onClick={async () => {
+                        try {
+                          await setDescription({ description: descDraft ?? "" });
+                          toast.success("Deskripsi clan disimpan");
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+                        }
+                      }}
+                      className="yn-btn-warm mt-2 w-full rounded-xl py-2.5 text-xs font-bold"
+                    >
+                      Simpan deskripsi
+                    </button>
+                  </div>
+
+                  {/* Role member */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Role member</Label>
+                    <div className="mt-2 space-y-2">
+                      {(detail.members as any[])
+                        .filter((m) => m.userId !== (detail as any).leaderId)
+                        .map((m) => (
+                          <div
+                            key={m.userId}
+                            className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2"
+                          >
+                            <Avatar src={m.image} seed={m.username} className="size-8" />
+                            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                              {m.username}
+                            </span>
+                            <select
+                              value={m.role}
+                              onChange={async (e) => {
+                                try {
+                                  await setRoleMut({
+                                    targetId: m.userId,
+                                    role: e.target.value as any,
+                                  });
+                                  toast.success(`Role ${m.username} → ${e.target.value}`);
+                                } catch (err) {
+                                  toast.error(err instanceof Error ? err.message : "Gagal");
+                                }
+                              }}
+                              className="rounded-lg border border-white/12 bg-black/40 px-2 py-1.5 text-[11px] font-bold text-white outline-none"
+                            >
+                              {[
+                                ["officer", "Officer"],
+                                ["victro", "Victro"],
+                                ["hydler", "Hydler"],
+                                ["member", "Member"],
+                              ].map(([v2, label]) => (
+                                <option key={v2} value={v2}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

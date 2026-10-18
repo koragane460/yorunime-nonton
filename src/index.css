@@ -669,17 +669,23 @@
  * `.yn-frame-in` (celah tipis + foto). Tiap `yn-frame-<id>` punya
  * identitas visual sendiri: gradasi, kilau berjalan, bintik, glow.
  * ------------------------------------------------------------------ */
+/* Bingkai WAJIB bulat sempurna: `aspect-ratio: 1` + `.yn-frame-in` yang
+   diposisikan absolut (inset) supaya tingginya mengikuti lebar — foto tidak
+   pernah memanjang ke bawah walau gambar sumbernya tinggi/lonjong. */
 .yn-frame {
   position: relative;
-  display: inline-block;
+  display: block;
   flex-shrink: 0;
   padding: 3px;
   border-radius: 9999px;
   line-height: 0;
+  aspect-ratio: 1 / 1;
 }
 .yn-frame-in {
   display: block;
-  position: relative;
+  position: absolute;
+  inset: 3px;
+  box-sizing: border-box;
   overflow: hidden;
   border-radius: 9999px;
   padding: 2px;
@@ -688,6 +694,8 @@
 }
 .yn-frame-in > * {
   border-radius: 9999px;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes yn-sheen {

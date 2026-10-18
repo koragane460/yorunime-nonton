@@ -10,6 +10,7 @@ import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, TitleBa
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
+import { FramedAvatar } from "@/components/FramedAvatar";
 import { VoteScreen } from "@/components/VoteScreen";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
@@ -924,6 +925,23 @@ function HomeContent() {
             Cari
           </span>
         </button>
+        {/* Tombol FILM — akses cepat ke halaman Film (bioskop & series) yang
+            memakai resolver stream TMDb + VidSrc/Cinepro. */}
+        <button
+          onClick={() => navigate("/film")}
+          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-gradient-to-r from-gold/12 via-card to-card px-4 py-3 text-left transition hover:border-gold/60"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/15">
+            <Film className="size-5 text-gold" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">Film & Series</span>
+            <span className="block text-[11px] text-muted-foreground">
+              Nonton film bioskop & series subtitle Indonesia
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-zinc-500" aria-hidden />
+        </button>
       </div>
 
 
@@ -1707,6 +1725,7 @@ type LbEntry = {
   clanTagIcon?: string;
   clanNameColor?: string;
   clanLevel?: number;
+  avatarBorder?: string;
   premium?: boolean;
 };
 
@@ -1760,11 +1779,20 @@ function LeaderboardRow({ e, dense }: { e: LbEntry; dense?: boolean }) {
               />
             </svg>
           )}
-          <Avatar
-            src={e.image}
-            seed={e.username}
-            className={cn("relative rounded-full", dense ? "size-7" : "size-9")}
-          />
+          {e.avatarBorder && e.avatarBorder !== "none" ? (
+            <FramedAvatar
+              border={e.avatarBorder}
+              src={e.image}
+              seed={e.username}
+              className={dense ? "size-7" : "size-9"}
+            />
+          ) : (
+            <Avatar
+              src={e.image}
+              seed={e.username}
+              className={cn("relative rounded-full", dense ? "size-7" : "size-9")}
+            />
+          )}
         </span>
         <span className="flex min-w-0 items-center gap-1">
           <span

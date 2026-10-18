@@ -114,6 +114,7 @@ export const leaderboard = query({
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,
+        avatarBorder: u?.avatarBorder,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
       };
     });

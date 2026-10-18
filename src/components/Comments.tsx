@@ -79,25 +79,25 @@ export function CommentsSection({
 
   return (
     <div>
-      {/* Kolom komentar utama: full width, sudut lurus, TANPA outline dan
-          nyaris tak terlihat — latar sangat samar supaya menyatu dengan
-          halaman, tapi tetap bisa dipakai. Tinggi juga dipendekkan. */}
-      <div className="flex w-full items-center gap-1 border-0 bg-white/[0.035] px-2 py-0.5 transition focus-within:bg-white/[0.06]">
+      {/* Kolom komentar utama: kotak pipih membulat dengan tinggi tetap.
+          Tombol kirim berukuran TETAP (shrink-0) sehingga tidak ikut melebar
+          saat kotak memanjang — hanya isinya yang melebar. */}
+      <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-4 pr-1 transition focus-within:border-primary/50 focus-within:bg-white/[0.07]">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void send()}
           placeholder={muted ? "Kamu sedang dimute…" : "Tulis komentar…"}
           disabled={muted}
-          className="h-8 flex-1 bg-transparent px-1 text-sm outline-none disabled:opacity-50"
+          className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none disabled:opacity-50"
         />
         <button
           onClick={() => void send()}
-          disabled={muted}
-          className="yn-btn-warm flex size-7 shrink-0 items-center justify-center rounded-lg transition disabled:opacity-50"
+          disabled={muted || !text.trim()}
+          className="yn-btn-warm flex size-8 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40"
           aria-label="Kirim komentar"
         >
-          <Send className="size-3.5" />
+          <Send className="size-4" />
         </button>
       </div>
 

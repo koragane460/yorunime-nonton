@@ -26,6 +26,7 @@ const Premium = lazy(() => import("./pages/Premium.tsx"));
 const Manga = lazy(() => import("./pages/Manga.tsx"));
 const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
 const Baca = lazy(() => import("./pages/Baca.tsx"));
+const Film = lazy(() => import("./pages/Film.tsx"));
 
 const ReadComic = lazy(() => import("./pages/ReadComic.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -284,6 +285,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Premium />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/film"
+                element={
+                  <RequireAuth>
+                    <Film />
                   </RequireAuth>
                 }
               />

@@ -7,6 +7,7 @@ import { avatarFallback, usernameColor } from "@/lib/lstream";
 import { ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { useAuth } from "@/hooks/use-auth";
+import { FramedAvatar } from "@/components/FramedAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
@@ -28,6 +29,8 @@ export type ChatMsg = {
   image?: string;
   level?: number;
   premium?: boolean;
+  /** SHOP BORDER — bingkai foto profil yang sedang dipakai user ini. */
+  avatarBorder?: string;
   staffRole?: string;
   clanTag?: string;
   clanTagIcon?: string;
@@ -584,15 +587,26 @@ export function ChatPanel({
             >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
-                <img
-                  src={m.image ?? avatarFallback(m.username)}
-                  alt=""
-                  className={cn(
-                    "size-9 shrink-0 rounded-full object-cover",
-                    // Avatar cuma diberi garis tipis, tanpa blok hitam.
-                    !m.image && "bg-white/[0.08]",
-                  )}
-                />
+                {m.avatarBorder && m.avatarBorder !== "none" ? (
+                  /* Border shop terpasang → bingkai kreatif mengikuti foto
+                      profil di chat (konsisten dengan halaman lain). */
+                  <FramedAvatar
+                    border={m.avatarBorder}
+                    src={m.image}
+                    seed={m.username}
+                    className="size-9 shrink-0"
+                  />
+                ) : (
+                  <img
+                    src={m.image ?? avatarFallback(m.username)}
+                    alt=""
+                    className={cn(
+                      "size-9 shrink-0 rounded-full object-cover",
+                      // Avatar cuma diberi garis tipis, tanpa blok hitam.
+                      !m.image && "bg-white/[0.08]",
+                    )}
+                  />
+                )}
               </button>
               <div className={cn("flex w-3/4 min-w-0 flex-col", mine ? "items-end" : "items-start")}>
                 <div
