@@ -2978,8 +2978,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           />
         ) : (
           <>
-            {/* Komentar episode — gaya baru */}
-            <div className="flex items-baseline justify-between">
+            {/* Komentar episode — gaya baru. Dibungkus `-mx-7` (dan `md:-mx-9`)
+                supaya blok komentar MELEBAR penuh ke samping sampai tepi
+                layar (membatalkan padding halaman `p-3` + wrapper `px-4`),
+                sesuai permintaan "full ke samping". */}
+            <div className="-mx-7 md:-mx-9">
+            <div className="flex items-baseline justify-between px-7 md:px-9">
               <SectionTitle>
                 <span className="normal-case">
                   {(shownComments?.length ?? 0).toLocaleString("id-ID")} Komentar
@@ -3041,6 +3045,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 }
               }}
             />
+            </div>
           </>
         )}
       </div>

@@ -359,6 +359,9 @@ function HomeContent() {
   const [params] = useSearchParams();
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  // Data Top XP minggu ini untuk panel Leaderboard yang MENYATU dengan hero
+  // banner (kotak tegak di kanan banner, langsung kelihatan Top 1-5).
+  const heroLb = useQuery(api.xp.leaderboard, { period: "mingguan", limit: 5 });
   // Layar Top anime (dibuka dari badge TOP di hero banner).
   const [showTopAnime, setShowTopAnime] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -701,18 +704,16 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) HERO BANNER — tinggi ditentukan OLEH BANNER (ukuran alami kartu
-          anime), bukan oleh slide leaderboard. Slide leaderboard yang
-          dipadatkan supaya muat di dalam kotak yang sama. */}
+      {/* 2) HERO BANNER + LEADERBOARD DIGABUNG — banner anime di KIRI dan
+          panel Leaderboard TEGAK (lurus ke atas) di KANAN dalam SATU kotak;
+          Top 1-5 langsung terlihat tanpa perlu membuka layar lain. */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <>
-        <div
-          className="fade-enter relative mt-3 h-[140px] overflow-hidden rounded-2xl border border-white/10"
-        >
-          {/* HANYA SATU anime tampil di hero (top #1) — sisanya lihat lewat
-              strip Leaderboard / layar Top anime. */}
+        <div className="fade-enter mt-3 flex h-[178px] w-full overflow-hidden rounded-2xl border border-white/10">
+          {/* ---- KIRI: banner anime (satu slide, pergantian fade) ---- */}
+          <div className="relative min-w-0 flex-1">
           {heroItems.slice(0, 1).map((a, i) => (
             <div
               key={a.id}
@@ -753,26 +754,26 @@ function HomeContent() {
                   aria-label={`Detail ${a.title}`}
                   className="absolute inset-0"
                 />
-                {/* Badge TOP #n — kiri atas, kotak hitam opacity 45% dan
-                    ANGKA peringkatnya bergradasi warna (emas→jingga).
-                    Menekannya membuka layar Top anime. */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowTopAnime(true);
-                  }}
-                  className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-xl bg-black/45 px-2.5 py-1 text-[11px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
-                >
-                  <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
-                  <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-                    #{i + 1}
+                {/* Badge TOP #n + jumlah views — digabung jadi SATU baris di
+                    kiri atas (kanan atas dipakai panel Leaderboard). */}
+                <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTopAnime(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg bg-black/50 px-2 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
+                  >
+                    <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
+                    <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
+                      #{i + 1}
+                    </span>
+                  </button>
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-black/70 px-1.5 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
+                    <Eye className="size-3 text-white/80" aria-hidden />
+                    {formatViews(viewCountFor(String(a.id)))}
                   </span>
-                </button>
-                {/* Jumlah views di KANAN ATAS — kotak rounded kecil, bukan garis. */}
-                <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                  <Eye className="size-3 text-white/80" aria-hidden />
-                  {formatViews(viewCountFor(String(a.id)))}
-                </span>
+                </div>
                 {/* Kotak hitam lurus full lebar di bawah banner (opacity 70%)
                     — isinya HANYA judul anime di tengah, tanpa tambahan lain. */}
                 <div className="absolute inset-x-0 bottom-0 bg-black/70 px-3 py-2 text-center backdrop-blur-[2px]">
@@ -783,21 +784,75 @@ function HomeContent() {
               </div>
             </div>
           ))}
-        </div>
-        {/* LEADERBOARD — baris polos SELEBAR halaman (ikut lebar hero
-            banner), tanpa kotak & tanpa garis: hanya trofi + teks. */}
-        <button
-          onClick={() => setShowLeaderboard(true)}
-          className="fade-enter mt-1 flex w-full items-center gap-2 px-1 py-1.5 text-left transition active:opacity-70"
-        >
-          <Trophy className="size-4 shrink-0 text-gold" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-xs font-bold">Leaderboard</span>
-            <span className="block text-[10px] text-muted-foreground">
-              Top XP minggu ini — lihat semua ›
+          </div>
+
+          {/* ---- KANAN: Leaderboard TEGAK — kotak lurus ke atas yang menyatu
+              dengan hero, langsung menampilkan Top 1-5. Menekan panel membuka
+              layar Leaderboard lengkap. ---- */}
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            aria-label="Lihat leaderboard lengkap"
+            className="group flex w-[46%] max-w-[196px] shrink-0 flex-col border-l border-white/15 bg-black/60 text-left backdrop-blur-md transition hover:bg-black/70"
+          >
+            <span className="flex items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
+              <Trophy className="size-3 shrink-0 text-gold" aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-[10px] font-black tracking-wide text-white">
+                Leaderboard
+              </span>
+              <ChevronRight
+                className="size-3 shrink-0 text-white/50 transition group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </span>
-          </span>
-        </button>
+            <span className="flex min-h-0 flex-1 flex-col justify-evenly px-1 py-1">
+              {heroLb === undefined &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="skeleton mx-1 h-4 rounded-md"
+                    aria-hidden
+                  />
+                ))}
+              {heroLb?.length === 0 && (
+                <span className="px-1.5 text-[9px] leading-tight text-muted-foreground">
+                  Belum ada data XP minggu ini
+                </span>
+              )}
+              {(heroLb ?? []).slice(0, 5).map((e) => (
+                <span
+                  key={`${e.rank}-${e.userId}`}
+                  className="flex items-center gap-1.5 rounded-md px-1 py-[3px]"
+                >
+                  <span
+                    className={cn(
+                      "w-5 shrink-0 text-center text-[10px] font-black",
+                      e.rank === 1
+                        ? "text-yellow-400"
+                        : e.rank === 2
+                          ? "text-zinc-300"
+                          : e.rank === 3
+                            ? "text-amber-500"
+                            : "text-white/60",
+                    )}
+                  >
+                    #{e.rank}
+                  </span>
+                  <Avatar
+                    src={e.image}
+                    seed={e.username}
+                    className="size-5 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-white/90">
+                    {e.username ?? "user"}
+                  </span>
+                  <span className="shrink-0 text-[9px] font-bold text-primary">
+                    {formatCompactXp(e.xp)}
+                  </span>
+                </span>
+              ))}
+            </span>
+          </button>
+        </div>
         </>
       ) : null}
 
@@ -3432,6 +3487,15 @@ function AnimeDetailScreen({
  * Jumlah "nonton" yang stabil untuk satu judul. Dipakai hero banner DAN layar
  * Top anime supaya angka di dua tempat itu tidak pernah bertentangan.
  */
+/** XP ringkas untuk panel leaderboard di hero: 950 → "950",
+ *  12.340 → "12,3rb", 1.250.000 → "1,3jt". */
+function formatCompactXp(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")}jt`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(".", ",")}rb`;
+  return String(Math.round(n));
+}
+
 function viewCountFor(id: string): number {
   let h = 7;
   for (let i = 0; i < id.length; i++) {

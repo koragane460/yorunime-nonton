@@ -475,6 +475,50 @@ export function clanNameClass(level?: number) {
   return `${clanTextClass(level)} yn-shimmer`;
 }
 
+/**
+ * Bentuk tag clan mengikuti TIER LEVEL clan (satu bentuk khusus tiap
+ * ambang naik level — permintaan user):
+ *   1-49    ribbon (bawaan, gaya yang sudah disukai)
+ *   50-99   cut    (tersayat diagonal, ring emas)
+ *   100-149 shield (perisai lancip bawah, ring merah)
+ *   150-199 hex    (ujung runcing kiri-kanan, ring rainbow)
+ *   200+    royal  (oktagon megah + glow emas)
+ * clip-path-nya ada di index.css (`.clan-tag-cut`, dst) dan dipasang di
+ * elemen RING sekaligus isi supaya tepinya ikut terpotong presisi.
+ */
+function clanTagShape(level?: number): "ribbon" | "cut" | "shield" | "hex" | "royal" {
+  const n = Number(level ?? 0);
+  if (n >= 200) return "royal";
+  if (n >= 150) return "hex";
+  if (n >= 100) return "shield";
+  if (n >= 50) return "cut";
+  return "ribbon";
+}
+
+const CLAN_TAG_SHAPE_CLS: Record<string, string> = {
+  cut: "clan-tag-cut",
+  shield: "clan-tag-shield",
+  hex: "clan-tag-hex",
+  royal: "clan-tag-royal",
+};
+
+/** Gradasi RING (garis tepi luar) per tier. */
+const CLAN_TAG_RING_CLS: Record<string, string> = {
+  cut: "bg-gradient-to-r from-amber-200 via-yellow-500 to-amber-700",
+  shield: "bg-gradient-to-r from-rose-300 via-red-500 to-rose-800",
+  hex: "bg-gradient-to-r from-fuchsia-300 via-sky-300 to-emerald-300",
+  royal: "bg-gradient-to-r from-yellow-200 via-amber-400 to-orange-500",
+};
+
+/** Gradasi BADAN (latar teks) per tier — dipakai kalau clan tidak
+ *  memilih warna background sendiri. */
+const CLAN_TAG_BODY_CLS: Record<string, string> = {
+  cut: "bg-gradient-to-r from-amber-800 to-zinc-900",
+  shield: "bg-gradient-to-r from-red-800 to-zinc-900",
+  hex: "bg-gradient-to-r from-fuchsia-700/90 via-indigo-800 to-emerald-700/90",
+  royal: "bg-gradient-to-r from-amber-600 via-amber-800 to-orange-900",
+};
+
 export function ClanTag({
   icon,
   tag,
@@ -486,7 +530,7 @@ export function ClanTag({
   icon: string;
   tag: string;
   color?: string;
-  /** Level clan — menentukan warna & animasi silau nama clan. */
+  /** Level clan — menentukan warna nama clan & BENTUK tag per tier. */
   level?: number;
   /** Warna latar tag (hex) yang dipilih saat bikin clan. Tanpa ini pakai
    *  latar galaxy bawaan. Diterapkan sebagai overlay translusen di atas
@@ -496,41 +540,84 @@ export function ClanTag({
 }) {
   const { Icon, tone } = resolveClanIcon(icon);
   void color;
+  const shape = clanTagShape(level);
+  const shapeCls = CLAN_TAG_SHAPE_CLS[shape];
+
+  const inner = (
+    <>
+      <span
+        className="inline-flex size-3.5 shrink-0 items-center justify-center"
+        style={{ color: tone }}
+        aria-hidden
+      >
+        <Icon strokeWidth={2} className="size-3.5" />
+      </span>
+      {/* Tag clan (teks [TAG]) selalu PUTIH, huruf miring tebal. */}
+      <span className="text-[11px] font-black italic tracking-wider text-white">
+        [{tag}]
+      </span>
+    </>
+  );
+
+  const bodyStyle = bg
+    ? {
+        // Warna pilihan penuh di kiri, meredup ke gelap di ujung kanan —
+        // memberi kesan berkilau seperti logam.
+        backgroundImage: `linear-gradient(115deg, ${bg} 0%, ${bg} 55%, rgba(0,0,0,0.6) 100%)`,
+      }
+    : undefined;
+
+  // Tier 1-49 (ribbon): bentuk yang sudah disukai user — dipertahankan
+  // persis seperti aslinya.
+  if (shape === "ribbon") {
+    return (
+      <span
+        className={cn(
+          // Tag clan gaya RIBBON: kiri bergerigi masuk, kanan runcing keluar
+          // (.clan-tag-ribbon di index.css), huruf miring tebal, dan garis
+          // tipis putih di dalam tepinya biar kelihatan tajam & cool.
+          "clan-tag inline-flex select-none items-center whitespace-nowrap",
+          className,
+        )}
+      >
+        <span
+          className={cn(
+            "clan-tag-ribbon inline-flex items-center gap-1 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
+            !bg && "bg-gradient-to-r from-zinc-600 to-zinc-800",
+          )}
+          style={bodyStyle}
+        >
+          {inner}
+        </span>
+      </span>
+    );
+  }
+
+  // Tier 50/100/150/200: ring berwarna mengikuti bentuk clip-path +
+  // badan dalam yang juga terpotong bentuk sama → tepinya presisi.
   return (
     <span
       className={cn(
-        // Tag clan gaya RIBBON: kiri bergerigi masuk, kanan runcing keluar
-        // (.clan-tag-ribbon di index.css), huruf miring tebal, dan garis
-        // tipis putih di dalam tepinya biar kelihatan tajam & cool.
         "clan-tag inline-flex select-none items-center whitespace-nowrap",
         className,
       )}
     >
       <span
         className={cn(
-          "clan-tag-ribbon inline-flex items-center gap-1 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
-          !bg && "bg-gradient-to-r from-zinc-600 to-zinc-800",
+          "inline-flex p-[2px]",
+          shapeCls,
+          CLAN_TAG_RING_CLS[shape],
         )}
-        style={
-          bg
-            ? {
-                // Warna pilihan penuh di kiri, meredup ke gelap di ujung
-                // kanan — memberi kesan berkilau seperti logam.
-                backgroundImage: `linear-gradient(115deg, ${bg} 0%, ${bg} 55%, rgba(0,0,0,0.6) 100%)`,
-              }
-            : undefined
-        }
       >
         <span
-          className="inline-flex size-3.5 shrink-0 items-center justify-center"
-          style={{ color: tone }}
-          aria-hidden
+          className={cn(
+            "inline-flex items-center gap-1 px-2.5 py-1",
+            shapeCls,
+            !bg && CLAN_TAG_BODY_CLS[shape],
+          )}
+          style={bodyStyle}
         >
-          <Icon strokeWidth={2} className="size-3.5" />
-        </span>
-        {/* Tag clan (teks [TAG]) selalu PUTIH, huruf miring tebal. */}
-        <span className="text-[11px] font-black italic tracking-wider text-white">
-          [{tag}]
+          {inner}
         </span>
       </span>
     </span>

@@ -7,21 +7,35 @@ import { useAuth } from "@/hooks/use-auth";
 import { APP_VERSION, UPDATE_BODY, UPDATE_VERSION } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowRight,
+  Ban,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
+  Crown,
+  Film,
+  Flag,
+  Gem,
+  Heart,
   Info,
   KeyRound,
   Loader2,
   Lock,
   LogIn,
   Mail,
+  Megaphone,
+  Play,
   ShieldCheck,
   Sparkles,
   UserPlus,
+  Users,
+  UserX,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ *
  * Akun yang pernah dipakai di perangkat ini (disimpan di localStorage)  *
@@ -35,6 +49,51 @@ type DeviceAcc = {
 };
 
 const DEV_KEY = "yorunime_device_accounts";
+
+/**
+ * Penanda onboard SELESAI — kunjungan berikutnya langsung loncat ke layar
+ * login (tidak mengulang splash + 2 slide perhatian/peraturan). Ini bagian
+ * dari redesign logika welcome: alur jadi intro → onboard (sekali saja) →
+ * login, dengan tombol eksplisit (bukan auto-advance saat scroll).
+ */
+const ONBOARD_KEY = "yorunime_onboarded_v1";
+
+function readOnboarded(): boolean {
+  try {
+    return localStorage.getItem(ONBOARD_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveOnboarded() {
+  try {
+    localStorage.setItem(ONBOARD_KEY, "1");
+  } catch {
+    /* localStorage diblokir — abaikan */
+  }
+}
+
+/** Isi slide 1 onboarding — poin penting sebelum mulai. */
+const NOTICE_ITEMS: { icon: LucideIcon; text: string }[] = [
+  { icon: Play, text: "YoruNime adalah platform streaming anime untuk komunitas." },
+  { icon: Users, text: "Progres nonton, XP, dan level tersimpan otomatis di akunmu." },
+  { icon: Gem, text: "Kumpulkan Sacret & naikkan level lewat aktivitas harian." },
+  { icon: Crown, text: "Buat clan atau join clan untuk chat bareng & donasi Sacret." },
+  { icon: Sparkles, text: "Premium membuka kualitas 1080p, banner, dan fitur lainnya." },
+  { icon: Film, text: "Semua episode memakai subtitle bahasa Indonesia." },
+  { icon: Heart, text: "Bawakan dirimu dengan sopan — toxic = banned." },
+];
+
+/** Isi slide 2 onboarding — peraturan wajib dibaca. */
+const RULE_ITEMS: { icon: LucideIcon; title: string; desc: string }[] = [
+  { icon: Ban, title: "Dilarang toxic", desc: "Rasisme & ujaran kebencian = banned permanen." },
+  { icon: Megaphone, title: "Dilarang spam", desc: "Jangan flood chat global, komentar, atau DM." },
+  { icon: Lock, title: "Dilarang link ilegal", desc: "Phishing, jualan akun, konten 18+ dilarang keras." },
+  { icon: Heart, title: "Hormati sesama", desc: "Clan yang toxic akan dibubarkan." },
+  { icon: UserX, title: "Satu akun per orang", desc: "Akun alt untuk keuntungan event dibekukan." },
+  { icon: Flag, title: "Laporkan pelanggaran", desc: "Tombol lapor tersedia di setiap pesan." },
+];
 
 function loadDevices(): DeviceAcc[] {
   try {
@@ -57,23 +116,6 @@ function saveDevice(acc: Omit<DeviceAcc, "at">) {
   } catch {
     /* localStorage penuh / diblokir — abaikan */
   }
-}
-
-/** Scroll-hint: siluet panah beranimasi + teks perintah scroll. */
-function ScrollHint({ dir }: { dir: "up" | "down" }) {
-  const Icon = dir === "up" ? ChevronUp : ChevronDown;
-  const label = dir === "up" ? "Gulir ke atas" : "Gulir ke bawah";
-  return (
-    <div className="flex flex-col items-center gap-1 pb-3 pt-4 text-muted-foreground">
-      <motion.div
-        animate={{ y: dir === "up" ? [-5, 5, -5] : [5, -5, 5] }}
-        transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <Icon className="size-5" />
-      </motion.div>
-      <span className="text-[11px] tracking-wide">{label}</span>
-    </div>
-  );
 }
 
 /**
@@ -100,7 +142,12 @@ function WelcomeFlow() {
   const loginAccount = useMutation(api.authAccounts.loginAccount);
   const registerAccount = useMutation(api.authAccounts.registerAccount);
 
-  const [stage, setStage] = useState<"intro" | "notice" | "rules" | "login">("intro");
+  // Alur baru: intro (splash) → onboard (2 slide: perhatian & peraturan,
+  // HANYA untuk kunjungan pertama) → login. Setelah onboard selesai,
+  // kunjungan berikutnya langsung ke login (ada tombol eksplisit, tidak
+  // lagi auto-advance saat scroll).
+  const [stage, setStage] = useState<"intro" | "onboard" | "login">("intro");
+  const [onbIdx, setOnbIdx] = useState<0 | 1>(0);
   const [testerOpen, setTesterOpen] = useState(false);
   const [testerId, setTesterId] = useState("#1");
   const [testerPass, setTesterPass] = useState("");
@@ -142,8 +189,6 @@ function WelcomeFlow() {
   const [dlPct, setDlPct] = useState(0);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const dlTimer = useRef<number | null>(null);
-  const noticeRef = useRef<HTMLDivElement>(null);
-  const rulesRef = useRef<HTMLDivElement>(null);
   const updateAvailable = UPDATE_VERSION !== "";
   const updatePending = updateAvailable && dlState !== "done";
 
@@ -206,38 +251,33 @@ function WelcomeFlow() {
       navigate("/home", { replace: true });
   }, [authLoading, isAuthenticated, navigate, registering, reopened, stage]);
 
+  /** Lanjut dari splash — dipanggil otomatis lewat timer ATAU saat user
+   *  menekan layar ("Ketuk untuk lanjut"). Kunjungan berikutnya (onboard
+   *  sudah pernah selesai) langsung menuju login. */
+  const advanceFromIntro = () => {
+    // Sudah login & hanya splash balik aplikasi → langsung ke beranda.
+    if (reopened && isAuthenticated) {
+      navigate("/home", { replace: true });
+      return;
+    }
+    setStage(readOnboarded() ? "login" : "onboard");
+  };
+
   useEffect(() => {
     if (stage !== "intro") return;
     // Kalau ada update yang belum di-download, tahan di intro dulu.
     if (updatePending) return;
-    const t = setTimeout(() => {
-      // Sudah login & hanya splash balik aplikasi → langsung ke beranda.
-      if (reopened && isAuthenticated) {
-        navigate("/home", { replace: true });
-        return;
-      }
-      setStage("notice");
-      // Splash ditahan lebih lama (3,2 detik vs 1,8): halaman notice/login
-      // butuh render besar di HP lama, dan tanpa jeda cukup Splash-nya
-      // berkedip sebentar lalu langsung hilang.
-    }, 3200);
+    // Splash cukup 2,4 detik — user bisa mempercepat dengan menekan layar.
+    const t = setTimeout(() => advanceFromIntro(), 2400);
     return () => clearTimeout(t);
-  }, [stage, updatePending, reopened, isAuthenticated, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, updatePending, reopened, isAuthenticated]);
 
   // Sudah login sejak awal → jangan tampilkan welcome sama sekali.
-  // CATATAN: early return ini harus SETELAH semua hook (lihat noticeRef/rulesRef
-  // di atas) — kalau tidak, urutan hook berubah antar render → React error #300.
+  // CATATAN: early return ini harus SETELAH semua hook di atas — kalau
+  // tidak, urutan hook berubah antar render → React error #300.
   if (!authLoading && isAuthenticated && !reopened)
     return <div className="fixed inset-0 z-50 bg-[#07060c]" />;
-
-  const onScrollProgress = (
-    ref: React.RefObject<HTMLDivElement | null>,
-    done: () => void,
-  ) => {
-    const el = ref.current;
-    if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 16) done();
-  };
 
   /** Masuk sesi + ke beranda. */
   const doAnonLogin = async () => {
@@ -381,21 +421,48 @@ function WelcomeFlow() {
 
   if (stage === "intro") {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]">
+      <div
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]"
+        // Ketuk layar kapan saja untuk langsung lanjut (tanpa menunggu
+        // timer) — kecuali kotak update sedang tampil.
+        onClick={() => {
+          if (!updatePending) advanceFromIntro();
+        }}
+      >
         <Starfield />
-        <motion.img
-          src="/logo-source.jpg"
-          alt="YoruNime"
-          className="mb-8 size-28 rounded-[2rem] object-cover"
+        {/* Dua noda cahaya aurora yang melayang pelan di belakang logo. */}
+        <motion.span
+          aria-hidden
+          className="absolute -left-20 top-10 size-56 rounded-full bg-primary/25 blur-3xl"
+          animate={{ y: [0, 26, 0], x: [0, 14, 0] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.span
+          aria-hidden
+          className="absolute -right-20 bottom-16 size-64 rounded-full bg-sky-500/15 blur-3xl"
+          animate={{ y: [0, -22, 0], x: [0, -16, 0] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* Logo dengan cincin glow lembut di belakangnya. */}
+        <motion.div
+          className="relative mb-7"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-        />
+        >
+          <span
+            aria-hidden
+            className="absolute -inset-4 rounded-[2.8rem] bg-primary/30 blur-2xl"
+          />
+          <img
+            src="/logo-source.jpg"
+            alt="YoruNime"
+            className="relative size-24 rounded-[2rem] object-cover ring-1 ring-white/15"
+          />
+        </motion.div>
         <motion.h1
-          // Wordmark penuh: memakai lebar layar (text-8xl → text-[22vw] di HP
-          // kecil) supaya YoruNime jadi elemen dominan layar, bukan sekadar
-          // judul di atas logo.
-          className="w-full px-4 text-center font-[family-name:var(--font-display)] text-[clamp(2.25rem,10vw,4.5rem)] font-black leading-[0.9] tracking-[-0.03em] text-foreground"
+          // Wordmark gradasi emas→putih: elemen dominan layar.
+          className="w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(2.25rem,10vw,4.5rem)] font-black leading-[0.9] tracking-[-0.03em] text-transparent"
           initial={{ opacity: 0, y: 10, filter: "blur(14px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.9, ease: "easeOut" }}
@@ -426,9 +493,24 @@ function WelcomeFlow() {
           {APP_VERSION}
         </motion.p>
 
+        {/* Petunjuk tap-to-skip — muncul setelah animasi utama selesai. */}
+        {!updateAvailable && (
+          <motion.button
+            type="button"
+            onClick={() => advanceFromIntro()}
+            className="mt-8 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold tracking-wide text-zinc-300 transition hover:border-white/30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5, duration: 0.5 }}
+          >
+            Ketuk untuk lanjut
+          </motion.button>
+        )}
+
         {/* Update tersedia → tombol download + changelog dalam kotak scrollable */}
         {updateAvailable && (
           <motion.div
+            onClick={(e) => e.stopPropagation()}
             className="absolute inset-x-6 bottom-10"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -488,138 +570,153 @@ function WelcomeFlow() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-background">
       <AnimatePresence mode="wait">
-        {stage === "notice" && (
+        {/* ONBOARD — gabungan layar "Mohon perhatiannya" + "Peraturan" jadi
+            satu layar 2 slide dengan indikator titik dan tombol EKSPLISIT
+            (Lanjut / Mulai & Masuk / Lewati). Tidak ada lagi auto-advance
+            saat scroll; setelah selesai (atau Lewati) tandai onboard selesai
+            di localStorage supaya kunjungan berikutnya langsung ke login. */}
+        {stage === "onboard" && (
           <motion.section
-            key="notice"
+            key="onboard"
             className="absolute inset-0 flex flex-col"
             initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -32 }}
             transition={{ duration: 0.28 }}
           >
-            <div
-              ref={noticeRef}
-              onScroll={() => onScrollProgress(noticeRef, () => setStage("rules"))}
-              className="h-full overflow-y-auto overscroll-contain"
-            >
-              <div className="flex min-h-full flex-col px-5 py-10">
-                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
-                  YoruNime
-                </p>
-                <h2 className="mt-2 text-2xl font-extrabold leading-tight">
-                  Mohon perhatiannya
-                </h2>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Hal penting sebelum kamu mulai:
-                </p>
-                <ol className="mt-5 space-y-2.5">
-                  {[
-                    "YoruNime adalah platform streaming anime untuk komunitas.",
-                    "Progres nonton, XP, dan level tersimpan otomatis di akunmu.",
-                    "Kumpulkan Sacret & naikkan level lewat aktivitas harian.",
-                    "Buat clan atau join clan untuk chat bareng & donasi Sacret.",
-                    "Premium membuka kualitas 1080p, banner, dan fitur lainnya.",
-                    "Semua episode memakai subtitle bahasa Indonesia.",
-                    "Bawakan dirimu dengan sopan — toxic = banned.",
-                  ].map((t, i) => (
-                    <motion.li
-                      key={i}
-                      className="flex items-start gap-2.5 rounded-xl border border-border/70 bg-card/60 p-3 text-[13px] leading-snug"
-                      initial={{ opacity: 0, x: -14 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                        {i + 1}
-                      </span>
-                      <span>{t}</span>
-                    </motion.li>
-                  ))}
-                </ol>
-                <div className="mt-auto pt-8">
-                  <ScrollHint dir="up" />
-                  {/* Tombol "Lanjut" dihapus di layar pertama: setelah membaca slide
-                      lalu gulir ke bawah sudah cukup. Scroll tetap
-                      memindahkan tahap berikutnya (lihat onScroll pada
-                      wrapper di atas), jadi tidak ada jalan buntu. */}
-                  {/* Ruang kosong di bawah supaya slide selalu bisa di-scroll
-                      walau isinya lebih pendek dari layar. */}
-                  <div className="h-32 shrink-0" aria-hidden />
-                </div>
+            {/* Header: indikator slide + tombol Lewati */}
+            <div className="flex items-center gap-3 px-5 pb-1 pt-6">
+              <div className="flex flex-1 items-center gap-1.5" aria-hidden>
+                {[0, 1].map((i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      onbIdx === i ? "w-7 bg-primary" : "w-3 bg-white/15",
+                    )}
+                  />
+                ))}
               </div>
+              <button
+                onClick={() => {
+                  saveOnboarded();
+                  setStage("login");
+                }}
+                className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                Lewati
+              </button>
             </div>
-            <button
-              onClick={() => setStage("rules")}
-              className="absolute right-4 top-4 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground"
-            >
-              Lewati
-            </button>
-          </motion.section>
-        )}
 
-        {stage === "rules" && (
-          <motion.section
-            key="rules"
-            className="absolute inset-0 flex flex-col"
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -32 }}
-            transition={{ duration: 0.28 }}
-          >
-            <div
-              ref={rulesRef}
-              onScroll={() => onScrollProgress(rulesRef, () => setStage("login"))}
-              className="h-full overflow-y-auto overscroll-contain"
-            >
-              <div className="flex min-h-full flex-col px-5 py-10">
-                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
-                  Wajib dibaca
-                </p>
-                <h2 className="mt-2 text-2xl font-extrabold leading-tight">
-                  Peraturan YoruNime
-                </h2>
-                <div className="mt-5 space-y-2.5">
-                  {[
-                    ["Dilarang toxic", "Rasisme & ujaran kebencian = banned permanen."],
-                    ["Dilarang spam", "Jangan flood chat global, komentar, atau DM."],
-                    ["Dilarang link ilegal", "Phishing, jualan akun, konten 18+ dilarang keras."],
-                    ["Hormati sesama", "Clan yang toxic akan dibubarkan."],
-                    ["Satu akun per orang", "Akun alt untuk keuntungan event dibekukan."],
-                    ["Laporkan pelanggaran", "Tombol lapor tersedia di setiap pesan."],
-                  ].map(([title, desc], i) => (
-                    <motion.div
-                      key={i}
-                      className="rounded-xl border border-border/70 bg-card/60 p-3"
-                      initial={{ opacity: 0, x: -14 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <p className="flex items-center gap-2 text-[13px] font-semibold">
-                        <span className="flex size-4 items-center justify-center rounded bg-primary/20 text-[9px] font-bold text-primary">
-                          {i + 1}
-                        </span>
-                        {title}
-                      </p>
-                      <p className="mt-0.5 pl-6 text-[11px] leading-snug text-muted-foreground">
-                        {desc}
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="mt-auto">
-                  <ScrollHint dir="up" />
-                  <div className="h-28 shrink-0" aria-hidden />
-                </div>
-              </div>
+            {/* Isi slide — bisa di-scroll, tapi navigasi memakai tombol */}
+            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+              <AnimatePresence mode="wait">
+                {onbIdx === 0 ? (
+                  <motion.div
+                    key="onb-perhatian"
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                    transition={{ duration: 0.22 }}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
+                      YoruNime
+                    </p>
+                    <h2 className="mt-2 text-2xl font-extrabold leading-tight">
+                      Mohon perhatiannya
+                    </h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Hal penting sebelum kamu mulai:
+                    </p>
+                    <ol className="mt-5 space-y-2.5">
+                      {NOTICE_ITEMS.map((t, i) => (
+                        <motion.li
+                          key={i}
+                          className="flex items-start gap-2.5 rounded-xl border border-border/70 bg-card/60 p-3 text-[13px] leading-snug"
+                          initial={{ opacity: 0, x: -14 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: i * 0.05 }}
+                        >
+                          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                            <t.icon className="size-3.5" aria-hidden />
+                          </span>
+                          <span className="min-w-0 flex-1 pt-0.5">{t.text}</span>
+                        </motion.li>
+                      ))}
+                    </ol>
+                    <div className="h-4 shrink-0" aria-hidden />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="onb-peraturan"
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                    transition={{ duration: 0.22 }}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
+                      Wajib dibaca
+                    </p>
+                    <h2 className="mt-2 text-2xl font-extrabold leading-tight">
+                      Peraturan YoruNime
+                    </h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Patuhi aturan ini supaya komunitas tetap nyaman:
+                    </p>
+                    <div className="mt-5 space-y-2.5">
+                      {RULE_ITEMS.map((r, i) => (
+                        <motion.div
+                          key={i}
+                          className="rounded-xl border border-border/70 bg-card/60 p-3"
+                          initial={{ opacity: 0, x: -14 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: i * 0.05 }}
+                        >
+                          <p className="flex items-center gap-2 text-[13px] font-semibold">
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/20 text-primary">
+                              <r.icon className="size-3" aria-hidden />
+                            </span>
+                            {r.title}
+                          </p>
+                          <p className="mt-0.5 pl-7 text-[11px] leading-snug text-muted-foreground">
+                            {r.desc}
+                          </p>
+                        </motion.div>
+                      ))}
+                    </div>
+                    <div className="h-4 shrink-0" aria-hidden />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <button
-              onClick={() => setStage("login")}
-              className="absolute right-4 top-4 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground"
-            >
-              Lewati
-            </button>
+
+            {/* Tombol bawah: Kembali (slide 2) + Lanjut / Mulai & Masuk */}
+            <div className="flex items-center gap-2 border-t border-white/10 bg-background/85 px-5 py-3 backdrop-blur">
+              {onbIdx === 1 && (
+                <button
+                  onClick={() => setOnbIdx(0)}
+                  aria-label="Kembali ke slide sebelumnya"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:text-foreground"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (onbIdx === 0) setOnbIdx(1);
+                  else {
+                    saveOnboarded();
+                    setStage("login");
+                  }
+                }}
+                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition hover:bg-primary/90 active:scale-[0.98]"
+              >
+                {onbIdx === 0 ? "Lanjut" : "Mulai & Masuk"}
+                <ArrowRight className="size-4" aria-hidden />
+              </button>
+            </div>
           </motion.section>
         )}
 
@@ -703,21 +800,35 @@ function WelcomeFlow() {
             </AnimatePresence>
 
             <div className="flex min-h-full flex-col items-center justify-center px-7 py-12">
+              {/* Logo app dengan glow lembut di belakangnya. */}
               <motion.div
-                className="flex size-16 items-center justify-center rounded-3xl bg-accent"
+                className="relative"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
               >
-                <Sparkles className="size-7 text-white" />
+                <span
+                  aria-hidden
+                  className="absolute -inset-3 rounded-3xl bg-primary/30 blur-xl"
+                />
+                <img
+                  src="/logo-source.jpg"
+                  alt="YoruNime"
+                  className="relative size-16 rounded-2xl object-cover ring-1 ring-white/15"
+                />
               </motion.div>
-              <h2 className="mt-5 text-xl font-black tracking-wide">YoruNime</h2>
+              <h2 className="mt-5 bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text text-xl font-black tracking-wide text-transparent">
+                YoruNime
+              </h2>
               <p className="mt-2 max-w-xs text-center text-[11px] font-bold uppercase leading-relaxed tracking-wider text-zinc-300">
                 Masuk untuk menyimpan data nonton kamu
               </p>
 
+              {/* Kartu kaca berisi semua pilihan masuk — tab, form,
+                  Google, dan tester — biar rapi dalam satu wadah. */}
+              <div className="mt-6 w-full max-w-[22rem] rounded-3xl border border-white/10 bg-card/60 p-5 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.9)] backdrop-blur">
               {/* ---- Tab Login / Register ---- */}
-              <div className="mt-7 flex w-full max-w-xs rounded-2xl border border-border bg-card/70 p-1">
+              <div className="flex w-full rounded-2xl border border-border bg-background/50 p-1">
                 {(["login", "register"] as const).map((m) => (
                   <button
                     key={m}
@@ -1015,6 +1126,7 @@ function WelcomeFlow() {
                   </motion.form>
                 )}
               </AnimatePresence>
+              </div>
             </div>
 
             {/* ---- Modal: pilih akun Google ---- */}

@@ -271,8 +271,10 @@ function CommentRow({
   };
 
   return (
+    /* Kartu komentar TANPA outline — garis tepinya dihapus total (permintaan
+       "outline nya jangan keliatan"), hanya latar samar yang memisahkan. */
     <div
-      className="border border-border/70 bg-secondary/30"
+      className="border-0 bg-white/[0.045]"
       style={{ borderRadius: "4px" }}
     >
       {c.bannerUrl && (

@@ -18,6 +18,8 @@ import {
 import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
 import { shrinkAvatar } from "@/lib/image";
+import { FramedAvatar } from "@/components/FramedAvatar";
+import { BORDERS } from "@/lib/borders";
 import {
   StoryAddButton,
   StoryComposer,
@@ -120,7 +122,8 @@ function AkunContent() {
   );
 }
 
-/** Kotak profil di paling atas halaman Akun (full lebar, rounded, besar). */
+/** Kotak profil di paling atas halaman Akun — kotak rounded dengan CELAH
+ *  kecil di kiri-kanan & atas (bukan full-bleed), ukuran isi ringkas. */
 function AkunProfileHeader({
   user,
 }: {
@@ -128,15 +131,16 @@ function AkunProfileHeader({
 }) {
   const isPremium = (user.premiumUntil ?? 0) > Date.now();
   return (
-    /* Full-bleed: membatalkan padding wrapper (`px-4 md:px-6`) supaya
-       menempel ke kedua tepi layar tanpa celah — ukuran isi TIDAK
-       diperbesar lagi. */
-    <div className="-mx-4 rounded-none border-x-0 border-t-0 border-b border-white/10 bg-card px-4 pb-3 pt-1 md:-mx-6 md:px-6">
-      <div className="flex items-center gap-4">
-        <Avatar
+    /* Ada celah sedikit dari tepi layar (padding wrapper) + sudut rounded,
+       sesuai permintaan; foto profile & isi diperkecil supaya tidak
+       terlalu besar. BORDER shop ikut dikenakan kalau ada yang dipakai. */
+    <div className="mt-3 rounded-2xl border border-white/10 bg-card px-3 py-3">
+      <div className="flex items-center gap-3">
+        <FramedAvatar
+          border={user.avatarBorder}
           src={user.image}
           seed={user.username}
-          className="size-20 shrink-0 ring-2 ring-gold/40"
+          className="size-14 shrink-0 rounded-full ring-1 ring-gold/30"
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -415,6 +419,10 @@ function SettingsScreen({
   const navigate = useNavigate();
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
+  // Shop border: beli pakai Sacret + pasang/lepas bingkai foto profile.
+  const buyBorder = useMutation(api.account.buyBorder);
+  const equipBorder = useMutation(api.account.equipBorder);
+  const [busyBorder, setBusyBorder] = useState<string | null>(null);
   const [name, setName] = useState(user?.username ?? "");
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
@@ -433,6 +441,9 @@ function SettingsScreen({
 
   if (!user) return null;
 
+  const ownedBorders = user.ownedBorders ?? [];
+  const equippedBorder = user.avatarBorder ?? "none";
+
   // Simpan tanpa nunggu server (fire & forget) → UI terasa instan
   const quickSave = (args: Record<string, unknown>) => {
     setErr("");
@@ -446,12 +457,45 @@ function SettingsScreen({
     if (color) document.documentElement.style.setProperty("--primary", color);
   };
 
+  /** Tekan kartu border di Shop: belum punya → BELI (langsung dipakai),
+   *  sudah punya → PAKAI, sedang dipakai → bisa LEPAS ("none"). */
+  const pickBorder = async (b: { id: string; name: string }) => {
+    if (busyBorder) return;
+    setBusyBorder(b.id);
+    try {
+      if (b.id === "none") {
+        await equipBorder({ borderId: "none" });
+        toast.success("Border dilepas");
+      } else if (ownedBorders.includes(b.id)) {
+        await equipBorder({ borderId: b.id });
+        toast.success(`Border "${b.name}" dipakai ✨`);
+      } else {
+        await buyBorder({ borderId: b.id });
+        toast.success(`Border "${b.name}" dibeli & langsung dipakai ✨`);
+      }
+      setErr("");
+    } catch (e2) {
+      setErr(
+        e2 instanceof Error
+          ? e2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
+          : "Gagal mengubah border",
+      );
+    } finally {
+      setBusyBorder(null);
+    }
+  };
+
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
       <BlockTitle>Akun</BlockTitle>
       <div className="rounded-xl border border-border bg-card p-3">
         <div className="flex items-center gap-2.5">
-          <Avatar src={user.image} seed={user.username} className="size-14" />
+          <FramedAvatar
+            border={user.avatarBorder}
+            src={user.image}
+            seed={user.username}
+            className="size-12"
+          />
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 text-[13px] font-bold">
               {user.username}
@@ -470,20 +514,34 @@ function SettingsScreen({
             kamera melayang di pojok kanan bawah. Sekali tekan langsung
             membuka galeri; fotonya dikecilkan otomatis sebelum disimpan. */}
         <label className="group mx-auto mt-4 flex w-fit cursor-pointer flex-col items-center">
-          <span className="relative block size-28">
-            {/* Cincin gradasi berputar di balik foto. */}
-            <span
-              aria-hidden
-              className="yn-ring-spin absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
-            />
-            {/* Foto profil sekarang — otomatis ter-update setelah galeri
-                dipilih (state user ikut reaktif dari Convex). */}
-            <span className="absolute inset-[4px] overflow-hidden rounded-full bg-background">
-              <Avatar src={user.image} seed={user.username} className="size-full" />
-            </span>
+          {/* Ukuran diperkecil (size-28 → size-20) sesuai permintaan
+              "photo profile jangan terlalu gede". Border shop yang sedang
+              dipakai menggantikan cincin gradasi berputar. */}
+          <span className="relative block size-20">
+            {equippedBorder !== "none" ? (
+              <FramedAvatar
+                border={equippedBorder}
+                src={user.image}
+                seed={user.username}
+                className="size-20"
+              />
+            ) : (
+              <>
+                {/* Cincin gradasi berputar di balik foto. */}
+                <span
+                  aria-hidden
+                  className="yn-ring-spin absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
+                />
+                {/* Foto profil sekarang — otomatis ter-update setelah galeri
+                    dipilih (state user ikut reaktif dari Convex). */}
+                <span className="absolute inset-[4px] overflow-hidden rounded-full bg-background">
+                  <Avatar src={user.image} seed={user.username} className="size-full" />
+                </span>
+              </>
+            )}
             {/* Tombol kamera melayang — posisinya terlihat jelas di HP. */}
-            <span className="absolute -bottom-1 -right-1 flex size-9 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-gold to-amber-600 text-black shadow-[0_4px_12px_-2px_rgba(212,175,55,0.8)] transition group-active:scale-90">
-              <Camera className="size-4" aria-hidden />
+            <span className="absolute -bottom-1 -right-1 z-10 flex size-8 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-gold to-amber-600 text-black shadow-[0_4px_12px_-2px_rgba(212,175,55,0.8)] transition group-active:scale-90">
+              <Camera className="size-3.5" aria-hidden />
             </span>
           </span>
           <span className="mt-3 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-[12px] font-bold text-gold transition group-hover:bg-gold/20">
@@ -546,7 +604,7 @@ function SettingsScreen({
                 setSavingName(false);
               }
             }}
-            className="h-11 shrink-0 rounded-lg bg-primary px-5 text-[13px] font-bold text-primary-foreground disabled:opacity-40"
+            className="h-10 shrink-0 rounded-lg bg-primary px-5 text-[13px] font-bold text-primary-foreground disabled:opacity-40"
           >
             {savingName ? "..." : "OK"}
           </button>
@@ -556,6 +614,77 @@ function SettingsScreen({
             {err}
           </p>
         )}
+      </div>
+
+      {/* ===== SHOP — BORDER foto profile (permintaan: "di bawahnya kotak
+          ganti photo profile … tambahan shop"). Banyak pilihan border
+          kreatif, dibeli pakai Sacret, dan langsung bisa dipakai/diatur
+          dari sini. ===== */}
+      <BlockTitle>Shop · Border</BlockTitle>
+      <div className="rounded-xl border border-border bg-card p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[13px] font-medium">Border photo profile</p>
+          <span className="inline-flex items-center gap-1 text-[12px] font-black text-sky-300">
+            <Gem className="size-3.5" aria-hidden />
+            {Number(user.diamonds ?? 0).toLocaleString("id-ID")}
+          </span>
+        </div>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Beli border dengan Sacret — begitu dipilih langsung terpasang di
+          foto profile kamu. Tekan lagi untuk melepas.
+        </p>
+        <div className="mt-2.5 grid grid-cols-3 gap-2">
+          {BORDERS.map((b) => {
+            const owned = b.id === "none" || ownedBorders.includes(b.id);
+            const active = equippedBorder === b.id;
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => void pickBorder(b)}
+                disabled={busyBorder !== null}
+                title={b.blurb}
+                className={cn(
+                  "flex flex-col items-center gap-1 rounded-xl border p-2 transition active:scale-[0.97] disabled:opacity-60",
+                  active
+                    ? "border-gold/70 bg-gold/10 shadow-[0_0_14px_-6px_rgba(212,175,55,0.7)]"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/30",
+                )}
+              >
+                <FramedAvatar
+                  border={b.id === "none" ? undefined : b.id}
+                  src={user.image}
+                  seed={user.username}
+                  className="size-12"
+                />
+                <span className="text-[10px] font-bold">{b.name}</span>
+                <span
+                  className={cn(
+                    "inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-black",
+                    active
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : owned
+                        ? "bg-white/10 text-zinc-300"
+                        : "bg-primary/20 text-primary",
+                  )}
+                >
+                  {active ? (
+                    "Dipakai"
+                  ) : b.id === "none" ? (
+                    "Lepas"
+                  ) : owned ? (
+                    "Pakai"
+                  ) : (
+                    <>
+                      <Gem className="size-2.5" aria-hidden />
+                      {b.price.toLocaleString("id-ID")}
+                    </>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <BlockTitle>Pengaturan</BlockTitle>

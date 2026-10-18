@@ -345,7 +345,8 @@ function ClanRow({
         </span>
       </div>
 
-      {/* Tombol join / un-join */}
+      {/* Tombol join / un-join — request tertunda memakai warna HIJAU
+          "Batalkan Request" (permintaan user), selain itu tombol hangat. */}
       <button
         onClick={onJoin}
         disabled={busy || c.isMine || !loggedIn}
@@ -353,10 +354,12 @@ function ClanRow({
           "mt-2.5 w-full rounded-xl px-3.5 py-2 text-xs font-bold transition active:scale-[0.98]",
           c.isMine
             ? "border border-border text-muted-foreground"
-            : "yn-btn-warm disabled:opacity-50",
+            : c.isRequested
+              ? "border border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_-6px_rgba(52,211,153,0.9)]"
+              : "yn-btn-warm disabled:opacity-50",
         )}
       >
-        {c.isMine ? "Milikmu" : c.isRequested ? "Batalkan request" : busy ? "…" : loggedIn ? "Join Clan" : "Login untuk Join"}
+        {c.isMine ? "Milikmu" : c.isRequested ? "Batalkan Request" : busy ? "…" : loggedIn ? "Join Clan" : "Login untuk Join"}
       </button>
 
       {/* Member/Donate TIDAK ditampilkan di daftar — hanya ada di detail
@@ -403,6 +406,9 @@ function ClanDetailScreen({
 
   const c = detail.clan;
   const isMember = !!detail.myRole;
+  // Permintaan join yang masih menunggu — tombol berubah jadi "Batalkan
+  // Request" (hijau) dan tetap bisa dipencet, sama seperti di daftar clan.
+  const isRequested = detail.myRequestClanId === clanId;
   const levelCost = c.levelCost ?? 100000;
   const progress = Math.min(100, ((c.levelProgress ?? 0) / levelCost) * 100);
   // Claim harian = dasar level + bonus +50 per grade.
@@ -490,29 +496,37 @@ function ClanDetailScreen({
             </span>
           </div>
 
-          {/* Member · total donate · umur clan */}
-          <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
+          {/* Member · total donate · umur clan — grid 3 kolom supaya
+              total donasi (kolom TENGAH) selalu pas di tengah kartu. */}
+          <div className="mt-2 grid grid-cols-3 items-center text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center justify-center gap-1">
               <Users className="size-3.5" /> {c.memberCount} member
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Gem className="size-3.5 text-sky-300" />{" "}
+            <span className="inline-flex items-center justify-center gap-1 text-center">
+              <Gem className="size-3.5 shrink-0 text-sky-300" />{" "}
               {Number(c.diamonds ?? 0).toLocaleString("id-ID")} donasi
             </span>
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center justify-center gap-1">
               <Timer className="size-3.5" /> {c.ageDays ?? 0} hari
             </span>
           </div>
         </div>
 
-        {/* Bukan member: tombol Join / Batalkan request */}
+        {/* Bukan member: tombol Join / Batalkan Request (hijau) — ikon
+            status request ikut diambil dari server, jadi tombol di detail
+            sama persis dengan yang di daftar dan tetap bisa dipencet. */}
         {!isMember && onJoin && (
           <button
             onClick={onJoin}
             disabled={busy}
-            className="yn-btn-warm mt-3 w-full rounded-xl py-2.5 text-sm font-bold active:scale-[0.98] disabled:opacity-50"
+            className={cn(
+              "mt-3 w-full rounded-xl py-2.5 text-sm font-bold active:scale-[0.98] disabled:opacity-50",
+              isRequested
+                ? "border border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_-6px_rgba(52,211,153,0.9)]"
+                : "yn-btn-warm",
+            )}
           >
-            {busy ? "…" : "Join Clan"}
+            {busy ? "…" : isRequested ? "Batalkan Request" : "Join Clan"}
           </button>
         )}
 
@@ -765,7 +779,9 @@ function MemberRow({
       <div className="flex shrink-0 flex-col items-center gap-1">
         <Avatar src={m.image} seed={m.username} className="size-11" />
         {isLeader ? (
-          <span className="inline-flex items-center gap-0.5 text-[8px] font-black text-yellow-400">
+          /* Chip LEADER: dulu outline saja tanpa latar — sekarang ada
+             background emas gradasi + ring tipis supaya menonjol. */
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-yellow-500/30 to-amber-600/30 px-1.5 py-0.5 text-[8px] font-black text-yellow-300 ring-1 ring-yellow-400/50">
             <Crown className="size-2.5" aria-hidden /> LEADER
           </span>
         ) : (
@@ -1124,7 +1140,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           </div>
 
           {/* ===== TOMBOL BUAT & BATAL ===== */}
-          <div className="grid grid-cols-2 gap-2 pb-6">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => void submit()}
               disabled={busy}
@@ -1139,9 +1155,10 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               Batal
             </button>
           </div>
-          <p className="pb-4 text-center text-[11px] leading-relaxed text-muted-foreground">
-            Membuat clan gratis. Wajib level 10+ kalau kembali ke fase pemula;
-            Sacret clan dikumpulkan dari donasi harian.
+          {/* Syarat "level 10+" DIHAPUS — satu-satunya biaya adalah
+              1.000 Sacret, ditulis jelas di paling bawah layar. */}
+          <p className="pb-6 pt-1 text-center text-[12px] font-bold text-gold/90">
+            Dengan 1.000 Sacret
           </p>
         </div>
       </div>

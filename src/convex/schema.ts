@@ -38,6 +38,11 @@ const schema = defineSchema(
       unlimitedSacret: v.optional(v.boolean()),
       unlimitedPremium: v.optional(v.boolean()),
       bannerUrl: v.optional(v.string()),
+      /** SHOP BORDER — bingkai foto profile yang sedang dipakai
+          (id dari BORDERS di src/lib/borders.ts, "none" = tanpa bingkai). */
+      avatarBorder: v.optional(v.string()),
+      /** Daftar border yang sudah dimiliki (hasil beli di Shop). */
+      ownedBorders: v.optional(v.array(v.string())),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
       

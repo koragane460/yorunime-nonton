@@ -153,19 +153,17 @@ export default function Premium() {
   const navigate = useNavigate();
   return (
     <AppLayout hideAccountPanel>
-      {/* Tombol balik — selalu terlihat di kiri atas */}
-      <button
-        onClick={() => {
-          let target = "";
-          if (!target || target.startsWith("/premium")) target = "/home";
-          navigate(target);
-        }}
-        className="fixed left-3 top-3 z-50 flex size-10 items-center justify-center rounded-full bg-black/60 backdrop-blur"
-        aria-label="Kembali"
-      >
-        <ChevronLeft className="size-5 text-white" />
-      </button>
       <div className="py-3">
+        {/* Tombol balik — sekarang di ALUR halaman (bukan fixed yang
+            menimpa kartu), jadi kotak akun di bawahnya punya celah dan
+            terlihat rapi. */}
+        <button
+          onClick={() => navigate("/home")}
+          className="mb-3 ml-1 flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur transition hover:border-white/30"
+          aria-label="Kembali"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
         <Hero />
         <Plans />
         <Perks />

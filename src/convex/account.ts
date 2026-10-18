@@ -295,4 +295,65 @@ export const totalLeaderboard = query({
   },
 });
 
+/* ============================================================ SHOP BORDER */
+
+/** Harga border — HARUS sama dengan daftar `BORDERS` di src/lib/borders.ts. */
+const BORDER_PRICES: Record<string, number> = {
+  aurora: 500,
+  tide: 700,
+  bloom: 900,
+  ember: 1000,
+  volt: 1300,
+  prisma: 1600,
+  royal: 2000,
+  storm: 2500,
+  nova: 3000,
+  magma: 4000,
+  holo: 5000,
+};
+
+/** Beli border foto profile pakai Sacret — begitu dibeli langsung dipakai. */
+export const buyBorder = mutation({
+  args: { borderId: v.string() },
+  handler: async (ctx, { borderId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const price = BORDER_PRICES[borderId];
+    if (price === undefined) throw new Error("Border tidak dikenal");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
+    const owned = me.ownedBorders ?? [];
+    if (owned.includes(borderId)) throw new Error("Kamu sudah punya border ini");
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < price)
+      throw new Error(
+        `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} — butuh ${price.toLocaleString("id-ID")} buat beli border ini`,
+      );
+    await ctx.db.patch(userId, {
+      diamonds: me.unlimitedSacret
+        ? (me.diamonds ?? 0)
+        : (me.diamonds ?? 0) - price,
+      ownedBorders: [...owned, borderId],
+      avatarBorder: borderId,
+    });
+    return { borderId, price };
+  },
+});
+
+/** Pakai border yang sudah dimilik — "none" berarti lepas bingkai. */
+export const equipBorder = mutation({
+  args: { borderId: v.string() },
+  handler: async (ctx, { borderId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
+    if (borderId !== "none" && BORDER_PRICES[borderId] === undefined)
+      throw new Error("Border tidak dikenal");
+    if (borderId !== "none" && !(me.ownedBorders ?? []).includes(borderId))
+      throw new Error("Belum punya border itu — beli dulu di Shop");
+    await ctx.db.patch(userId, { avatarBorder: borderId });
+    return { borderId };
+  },
+});
+
 export { xpForLevel, tierForLevel };

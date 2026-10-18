@@ -9,6 +9,7 @@ import {
   ContinuePanel,
 } from "@/components/HomeTopButtons";
 import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Maximize,
@@ -148,6 +149,7 @@ export function AppLayout({
             clanTagIcon={user.clanTagIcon}
             clanColor={user.clanNameColor}
             clanLevel={myStats?.clanLevel ?? 0}
+            avatarBorder={user.avatarBorder}
             premium={(user.premiumUntil ?? 0) > Date.now()}
             premiumDays={Math.max(
               0,
@@ -215,6 +217,7 @@ function AccountPanel({
   clanTagIcon,
   clanColor,
   clanLevel,
+  avatarBorder,
   premium,
   premiumDays,
   diamonds,
@@ -233,6 +236,8 @@ function AccountPanel({
   clanTagIcon?: string;
   clanColor?: string;
   clanLevel?: number;
+  /** SHOP BORDER — bingkai foto profile yang sedang dipakai. */
+  avatarBorder?: string;
   premium: boolean;
   premiumDays: number;
   diamonds: number;
@@ -275,11 +280,22 @@ function AccountPanel({
         {bannerUrl && <div className="yn-banner-veil" />}
         <div className="relative p-3">
           <div className="flex items-center gap-3">
-            <div className="yn-avatar-ring shrink-0">
-              <div className="rounded-full bg-background p-[2px]">
-                <Avatar src={image} seed={name} className="size-14" />
+            {avatarBorder && avatarBorder !== "none" ? (
+              /* Border shop terpasang → bingkai kreatif menggantikan ring
+                  biasa (lihat FramedAvatar + .yn-frame-* di index.css). */
+              <FramedAvatar
+                border={avatarBorder}
+                src={image}
+                seed={name}
+                className="size-14 shrink-0"
+              />
+            ) : (
+              <div className="yn-avatar-ring shrink-0">
+                <div className="rounded-full bg-background p-[2px]">
+                  <Avatar src={image} seed={name} className="size-14" />
+                </div>
               </div>
-            </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <p

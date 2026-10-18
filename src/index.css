@@ -590,3 +590,193 @@
 .clan-tier-red { color: #DC143C; }
 .clan-tier-rainbow { color: #FF69B4; }
 
+/* ------------------------------------------------------------------
+ * BENTUK TAG CLAN PER TIER LEVEL — satu bentuk khusus tiap ambang:
+ *   1-49   ribbon  (bawaan, dipakai saat bikin clan)
+ *   50-99  cut    (tersayat diagonal — emas)
+ *   100-149 shield (perisai lancip bawah — merah)
+ *   150-199 hex    (giok mengkilap ujung runcing kiri-kanan — rainbow)
+ *   200+   royal  (mahkota oktagon + glow emas)
+ * Bentuk diterapkan lewat clip-path di ELEMEN LUAR (ring) dan ELEMEN
+ * DALAM (isi) supaya garis tepi ikut terpotong mengikuti bentuknya.
+ * ------------------------------------------------------------------ */
+.clan-tag-cut {
+  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+.clan-tag-shield {
+  clip-path: polygon(0 0, 100% 0, 100% 75%, 50% 100%, 0 75%);
+}
+.clan-tag-hex {
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+}
+.clan-tag-royal {
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.55));
+}
+
+/* ------------------------------------------------------------------
+ * SHOP BORDER — bingkai foto profil kreatif (bukan sekadar garis).
+ * Dipakai komponen FramedAvatar: `.yn-frame` (ring luar) membungkus
+ * `.yn-frame-in` (celah tipis + foto). Tiap `yn-frame-<id>` punya
+ * identitas visual sendiri: gradasi, kilau berjalan, bintik, glow.
+ * ------------------------------------------------------------------ */
+.yn-frame {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 9999px;
+  line-height: 0;
+}
+.yn-frame-in {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  padding: 2px;
+  background-color: var(--background);
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0.35);
+}
+.yn-frame-in > * {
+  border-radius: 9999px;
+}
+
+@keyframes yn-sheen {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+@keyframes yn-twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.8) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(45deg); }
+}
+@keyframes yn-holo {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Aurora — cincin konik pelangi yang berputar pelan. */
+.yn-frame-aurora {
+  background: conic-gradient(from 0deg, #34d399, #38bdf8, #a78bfa, #f472b6, #fbbf24, #34d399);
+  animation: yn-ring-spin 5s linear infinite;
+  box-shadow: 0 0 14px -4px rgba(167, 139, 250, 0.85);
+}
+
+/* Ember — bara api dengan sapuan kilau yang menyapu foto. */
+.yn-frame-ember {
+  background: radial-gradient(130% 130% at 30% 0%, #fbbf24, #f97316 45%, #b91c1c 100%);
+  box-shadow: 0 0 16px -4px rgba(249, 115, 22, 0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+.yn-frame-ember::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: yn-sheen 3.2s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Tide — gelombang laut: gradasi biru + garis ombak miring. */
+.yn-frame-tide {
+  background:
+    repeating-linear-gradient(125deg, rgba(255, 255, 255, 0.35) 0 3px, transparent 3px 9px),
+    linear-gradient(140deg, #22d3ee, #2563eb 55%, #0ea5e9);
+  box-shadow: 0 0 14px -4px rgba(56, 189, 248, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+/* Prisma — pelangi konik berputar lebih cepat + cincin rambut putih. */
+.yn-frame-prisma {
+  background: conic-gradient(from 180deg, #f472b6, #fbbf24, #34d399, #38bdf8, #a78bfa, #f472b6);
+  animation: yn-ring-spin 3.4s linear infinite;
+  box-shadow: 0 0 16px -4px rgba(244, 114, 182, 0.85), inset 0 0 0 1.5px rgba(255, 255, 255, 0.75);
+}
+
+/* Royal — emas mahkota: rangkap dua + bintang berkedip di pojok. */
+.yn-frame-royal {
+  background: linear-gradient(160deg, #fde68a, #d97706 42%, #fbbf24 62%, #fef3c7);
+  box-shadow: 0 0 15px -4px rgba(251, 191, 36, 0.95), 0 0 34px -14px rgba(251, 191, 36, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.yn-frame-royal::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, #fff 0%, #fde68a 45%, transparent 72%);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  animation: yn-twinkle 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Nova — galaksi: ungu-pink berputar + hujan bintik di atas foto. */
+.yn-frame-nova {
+  background: conic-gradient(from 210deg, #4c1d95, #db2777, #6366f1, #312e81, #4c1d95);
+  animation: yn-ring-spin 7s linear infinite;
+  box-shadow: 0 0 16px -4px rgba(168, 85, 247, 0.9);
+}
+.yn-frame-nova::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.95) 1px, transparent 1.6px);
+  background-size: 8px 8px;
+  opacity: 0.4;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Volt — neon putus-putus berputar (orbit listrik). */
+.yn-frame-volt {
+  background: repeating-conic-gradient(from 0deg, #22d3ee 0deg 12deg, transparent 12deg 26deg);
+  animation: yn-ring-spin 4s linear infinite;
+  box-shadow: 0 0 13px -3px rgba(34, 211, 238, 0.95), inset 0 0 0 1px rgba(34, 211, 238, 0.5);
+}
+
+/* Bloom — sakura: gradasi pink lembut + cincin rambut putih. */
+.yn-frame-bloom {
+  background:
+    repeating-conic-gradient(from 40deg, rgba(255, 255, 255, 0.5) 0deg 8deg, transparent 8deg 40deg),
+    linear-gradient(150deg, #fbcfe8, #f472b6 55%, #fda4af);
+  box-shadow: 0 0 14px -4px rgba(244, 114, 182, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+/* Storm — badai: sambaran petir miring biru-putih. */
+.yn-frame-storm {
+  background: repeating-linear-gradient(115deg, #e0f2fe 0 3px, #0284c7 3px 7px, #bae6fd 7px 9px, #075985 9px 15px);
+  box-shadow: 0 0 15px -4px rgba(56, 189, 248, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+/* Magma — lahar menyala: konik merah-kuning + glow panas. */
+.yn-frame-magma {
+  background: conic-gradient(from 90deg, #7f1d1d, #f97316, #fde047, #ef4444, #7f1d1d);
+  animation: yn-ring-spin 6s linear infinite;
+  box-shadow: 0 0 18px -4px rgba(239, 68, 68, 0.95), 0 0 42px -14px rgba(249, 115, 22, 0.85), inset 0 0 0 1.5px rgba(255, 241, 242, 0.5);
+}
+
+/* Holo — holografik: iridescent bergerak + kilau lembut. */
+.yn-frame-holo {
+  background: linear-gradient(120deg, #a5f3fc, #c4b5fd, #fbcfe8, #fef9c3, #a7f3d0, #a5f3fc);
+  background-size: 320% 320%;
+  animation: yn-holo 4.5s ease infinite;
+  box-shadow: 0 0 16px -4px rgba(165, 243, 252, 0.9), inset 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yn-frame-aurora,
+  .yn-frame-prisma,
+  .yn-frame-nova,
+  .yn-frame-volt,
+  .yn-frame-magma,
+  .yn-frame-holo,
+  .yn-frame-ember::after,
+  .yn-frame-royal::after {
+    animation: none !important;
+  }
+}
+

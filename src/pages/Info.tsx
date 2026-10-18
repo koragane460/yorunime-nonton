@@ -350,22 +350,26 @@ function LanjutTab() {
           <h3 className="mb-2 inline-flex rounded-lg bg-sky-600/70 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-white">
             {g.label}
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {g.items.map((item, idx) => {
-        // Garis penghubung tipis di tengah bawah kartu — hanya antar kartu
-        // dalam satu kelompok hari (bukan di kartu terakhir).
-        const link =
-          idx < g.items.length - 1 ? (
-            <span
-              aria-hidden
-              className="absolute -bottom-1 left-1/4 h-1.5 w-20 -translate-x-1/2 bg-white/25"
-            />
-          ) : null;
+        // GARIS PUTIH PENGGHUBUNG antar kartu Lanjutkan: tegak LURUS KE
+        // ATAS, pas di TENGAH (left-1/2), menyambungkan kartu di atas
+        // dengan kartu di bawahnya (mis. Jujutsu Kaisen → Yosuga no Sora).
+        // Dirender di dalam pembungkus `relative` tiap kartu supaya tepat
+        // mengisi jarak antar kartu — TIDAK mengganggu garis progress
+        // nonton yang tetap mendatar (ke samping) di tepi bawah kartu.
+        const link = (
+          <span
+            aria-hidden
+            className="absolute -top-3 left-1/2 z-10 h-3 w-0.5 -translate-x-1/2 rounded-full bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+          />
+        );
         if (item.type === "comic") {
           const c: any = item.data;
           return (
+            <div key={item.key} className="relative">
+              {idx > 0 && link}
             <button
-              key={item.key}
               onClick={() =>
                 navigate(
                   `/baca/${encodeURIComponent(c.slug)}/${c.chapter}?jenis=${c.kind}`,
@@ -394,8 +398,8 @@ function LanjutTab() {
                 </p>
               </div>
               <BookOpen className="size-5 shrink-0 text-primary" />
-              {link}
             </button>
+            </div>
           );
         }
         const h: any = item.data;
@@ -409,8 +413,10 @@ function LanjutTab() {
         // tetap menampilkan "00/00" sampai user mulai nonton.
         const posM = pos > 0 ? Math.floor(pos / 60) : 0;
         const durM = dur > 0 ? Math.floor(dur / 60) : 0;
-        return (            <button
-              key={item.key}
+        return (
+          <div key={item.key} className="relative">
+            {idx > 0 && link}
+            <button
             onClick={() =>
               navigate(
                 `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(epId)}&t=${Math.floor(pos)}&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
@@ -428,14 +434,7 @@ function LanjutTab() {
               alt=""
               className="h-16 w-11 shrink-0 rounded-lg object-cover"
             />
-            {/* Garis progres VERTIKAL lurus ke ATAS, tepat di TENGAH kartu
-                (di antara gambar & teks): mengisi dari bawah sesuai persentase. */}
-            <div className="relative w-[3px] shrink-0 self-stretch overflow-hidden rounded-full bg-white/15">
-              <div
-                className="absolute inset-x-0 bottom-0 bg-red-500"
-                style={{ height: `${dur > 0 ? pct : 0}%` }}
-              />
-            </div>
+
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
               <p className="text-xs text-muted-foreground">
@@ -444,8 +443,19 @@ function LanjutTab() {
               </p>
             </div>
                 <PlayCircle className="size-5 shrink-0 self-center text-primary" />
-                {link}
+                {/* Progress nonton: garis MENDATAR (ke samping) di tepi
+                    bawah kartu — mengisi sesuai persentase episode. */}
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10"
+                >
+                  <span
+                    className="block h-full rounded-r-full bg-red-500"
+                    style={{ width: `${dur > 0 ? pct : 0}%` }}
+                  />
+                </span>
               </button>
+            </div>
             );
           })}
           </div>
