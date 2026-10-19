@@ -6,16 +6,25 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { StaffPanel } from "@/components/StaffPanel";
 import { BlurBanner } from "@/components/BlurBanner";
-import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import { DEFAULT_CLAN_ICON, resolveClanIcon } from "@/lib/clanIcons";
 import {
   Avatar,
   BlueCheck,
+  ClanLevelBar,
   ClanTag,
   LevelBadge,
   RedMark,
   TitleBadge,
 } from "@/components/lstream-ui";
-import { STAFF_BADGE, LEVEL_BADGE_TIERS, timeAgo, displayId, usernameColor } from "@/lib/lstream";
+import {
+  STAFF_BADGE,
+  LEVEL_BADGE_TIERS,
+  CLAN_ROLE_BADGE,
+  clanNameCls,
+  timeAgo,
+  displayId,
+  usernameColor,
+} from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
 import { shrinkAvatar } from "@/lib/image";
 import { FramedAvatar } from "@/components/FramedAvatar";
@@ -93,6 +102,10 @@ function AkunContent() {
           melayang (FAB) di pojok kanan bawah. */}
       <AkunProfileHeader user={user} />
 
+      {/* Detail clan milikmu (avatar, tag, role, level) + pintu ke layar
+          Clan. Belum punya clan → kotak berubah jadi ajakan bikin clan. */}
+      <AkunClanCard />
+
       {/* Tombol Pengaturan versi FAB — melayang di pojok kanan bawah,
           di atas bottom nav, selalu terjangkat oleh jempol. */}
       <button
@@ -163,6 +176,110 @@ function AkunProfileHeader({
             </span>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * DETAIL CLAN di halaman Akun — kotak ringkas berisi avatar clan + tag,
+ * badge role kamu (Leader/Officer/…), dan bar level clan, plus tombol
+ * untuk membuka layar Clan. Kalau user belum punya clan, kotak ini berubah
+ * jadi ajakan membuat/masuk clan.
+ */
+function AkunClanCard() {
+  const navigate = useNavigate();
+  const me = useQuery(api.clans.myMembership);
+
+  // Masih memuat — jangan render apa-apa supaya layout tidak kedip.
+  if (me === undefined) return null;
+
+  if (me === null) {
+    const { Icon, tone } = resolveClanIcon(DEFAULT_CLAN_ICON);
+    return (
+      <div className="mt-3 rounded-2xl border border-dashed border-white/15 bg-card px-3 py-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-secondary/60"
+            style={{ color: tone }}
+          >
+            <Icon className="size-6" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold">Belum punya clan</p>
+            <p className="text-[11px] text-muted-foreground">
+              Bikin clan sendiri atau gabung clan lain — dapat hadiah
+              harian &amp; naik level bersama.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/clan?create=1")}
+            className="shrink-0 rounded-full bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground transition active:scale-95"
+          >
+            Buat
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const c = me.clan;
+  const role = CLAN_ROLE_BADGE[me.role] ?? CLAN_ROLE_BADGE.member;
+  const { Icon, tone } = resolveClanIcon(c.tagIcon);
+  return (
+    <div className="mt-3 rounded-2xl border border-white/10 bg-card px-3 py-3">
+      <div className="flex items-center gap-3">
+        {/* Avatar clan: foto kalau ada, kalau tidak pakai ikon tag. */}
+        <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-secondary/60">
+          {c.avatarUrl ? (
+            <img
+              src={c.avatarUrl}
+              alt=""
+              className="size-full object-cover"
+            />
+          ) : (
+            <span style={{ color: tone }}>
+              <Icon className="size-6" aria-hidden />
+            </span>
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span
+              className={cn("truncate text-[13px] font-bold", clanNameCls(c.color))}
+            >
+              {c.name}
+            </span>
+            <ClanTag
+              icon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={c.tag}
+              bg={c.tagBg}
+              level={c.level}
+            />
+            <span
+              className={cn(
+                "rounded-full bg-gradient-to-r px-1.5 py-0.5 text-[9px] font-black text-white shadow-sm",
+                role.cls,
+              )}
+            >
+              {role.name}
+            </span>
+          </div>
+          <div className="mt-1.5">
+            <ClanLevelBar
+              level={c.level}
+              progress={c.levelProgress ?? 0}
+              cost={c.levelCost}
+            />
+          </div>
+        </div>
+        <button
+          onClick={() => navigate("/clan")}
+          aria-label="Buka layar Clan"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold transition active:scale-90"
+        >
+          <ChevronRight className="size-5" aria-hidden />
+        </button>
       </div>
     </div>
   );
@@ -616,20 +733,37 @@ function SettingsScreen({
         )}
       </div>
 
-      {/* ===== SHOP — BORDER foto profile (permintaan: "di bawahnya kotak
-          ganti photo profile … tambahan shop"). Banyak pilihan border
-          kreatif, dibeli pakai Sacret, dan langsung bisa dipakai/diatur
-          dari sini. ===== */}
-      <BlockTitle>Shop · Border</BlockTitle>
-      <div className="rounded-xl border border-border bg-card p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[13px] font-medium">Border photo profile</p>
-          <span className="inline-flex items-center gap-1 text-[12px] font-black text-sky-300">
+      {/* ===== SLEIX SHOP — BORDER foto profile (permintaan: "di bawahnya
+          kotak ganti photo profile … tambahan shop" dengan nama toko
+          "Sleix"). Kepala toko gradasi holografik, lalu grid border kreatif
+          yang dibeli pakai Sacret dan langsung bisa dipakai/diatur. ===== */}
+      <BlockTitle>Sleix Shop</BlockTitle>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {/* Kepala toko: pita holografik + logo + saldo Sacret. */}
+        <div className="relative flex items-center gap-2.5 overflow-hidden px-3 py-2.5">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(115deg,#22d3ee_0%,#818cf8_30%,#e879f9_60%,#fde68a_85%,#22d3ee_100%)] bg-[length:200%_100%]"
+          />
+          <div aria-hidden className="absolute inset-0 bg-black/35" />
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-black/40 ring-1 ring-white/30">
+            <Gem className="size-5 text-amber-300" aria-hidden />
+          </span>
+          <div className="relative min-w-0 flex-1">
+            <p className="text-[13px] font-black tracking-wide text-white">
+              SLEIX <span className="font-bold opacity-90">Shop</span>
+            </p>
+            <p className="text-[10px] font-medium text-white/80">
+              Border kreatif untuk photo profile kamu ✨
+            </p>
+          </div>
+          <span className="relative inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[12px] font-black text-sky-300 ring-1 ring-white/20">
             <Gem className="size-3.5" aria-hidden />
             {Number(user.diamonds ?? 0).toLocaleString("id-ID")}
           </span>
         </div>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <div className="p-3">
+        <p className="text-[11px] text-muted-foreground">
           Beli border dengan Sacret — begitu dipilih langsung terpasang di
           foto profile kamu. Tekan lagi untuk melepas.
         </p>
@@ -684,6 +818,7 @@ function SettingsScreen({
               </button>
             );
           })}
+          </div>
         </div>
       </div>
 

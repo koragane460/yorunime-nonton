@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
@@ -63,6 +64,14 @@ export function ProfileSheet({
     | { _id: string; createdAt: number }[]
     | undefined;
   const [viewStory, setViewStory] = useState(false);
+  // Intro sinematik fullscreen: awan + burung gagak menuju layar + kilau
+  // cahaya, lalu menghilang memperlihatkan detail akun. Hanya sekali saat
+  // layar dibuka, dan bisa dilewat dengan tap.
+  const [intro, setIntro] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setIntro(false), 2100);
+    return () => clearTimeout(t);
+  }, []);
 
   const cost = profile ? xpForLevel(profile.level) : 1;
   const inLevel = profile ? Math.max(0, Math.min(profile.xpInLevel, cost)) : 0;
@@ -84,6 +93,80 @@ export function ProfileSheet({
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
+      {/* ============ INTRO SINEMATIK FULLSCREEN ============ */}
+      <AnimatePresence>
+        {intro && (
+          <motion.div
+            key="profile-intro"
+            className="fixed inset-0 z-[120] overflow-hidden bg-black"
+            onClick={() => setIntro(false)}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            aria-hidden
+          >
+            {/* Latar gradasi malam yang bangun perlahan */}
+            <motion.span
+              className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_120%,#1a1030_0%,#050308_60%)]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+            />
+            {/* Awan berarak dua arah */}
+            <motion.span
+              className="absolute -left-1/3 top-1/4 h-40 w-[160%] rounded-full bg-white/10 blur-3xl"
+              initial={{ x: 0, opacity: 0 }}
+              animate={{ x: 120, opacity: [0, 0.5, 0.3] }}
+              transition={{ duration: 2.1, ease: "easeInOut" }}
+            />
+            <motion.span
+              className="absolute -right-1/3 top-1/2 h-32 w-[160%] rounded-full bg-white/[0.07] blur-3xl"
+              initial={{ x: 0, opacity: 0 }}
+              animate={{ x: -120, opacity: [0, 0.4, 0.2] }}
+              transition={{ duration: 2.1, ease: "easeInOut" }}
+            />
+            {/* Gagak terbang melintas — silhouette sayap bergerak */}
+            <motion.svg
+              viewBox="0 0 100 40"
+              className="absolute left-0 top-1/3 w-24 text-black drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
+              initial={{ x: -80, y: 0, opacity: 0 }}
+              animate={{ x: ["-20vw", "60vw", "120vw"], y: [0, -24, 8], opacity: [0, 1, 0] }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+              aria-hidden
+            >
+              <motion.path
+                d="M50 20 C40 14 28 10 14 12 C26 14 36 18 44 22 C36 22 26 24 18 30 C30 26 42 24 50 24 C58 24 70 26 82 30 C74 24 64 22 56 22 C64 18 74 14 86 12 C72 10 60 14 50 20 Z"
+                fill="currentColor"
+                animate={{ d: [
+                  "M50 20 C40 14 28 10 14 12 C26 14 36 18 44 22 C36 22 26 24 18 30 C30 26 42 24 50 24 C58 24 70 26 82 30 C74 24 64 22 56 22 C64 18 74 14 86 12 C72 10 60 14 50 20 Z",
+                  "M50 20 C42 8 32 4 20 6 C30 12 38 18 46 22 C38 22 28 26 22 34 C32 26 44 24 50 24 C56 24 68 26 78 34 C72 26 62 22 54 22 C62 18 70 12 80 6 C68 4 58 8 50 20 Z",
+                  "M50 20 C40 14 28 10 14 12 C26 14 36 18 44 22 C36 22 26 24 18 30 C30 26 42 24 50 24 C58 24 70 26 82 30 C74 24 64 22 56 22 C64 18 74 14 86 12 C72 10 60 14 50 20 Z",
+                ] }}
+                transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </motion.svg>
+            {/* Sorot cahaya menyapu dari tengah */}
+            <motion.span
+              className="absolute inset-y-0 left-1/2 w-40 -translate-x-1/2 bg-gradient-to-r from-transparent via-gold/25 to-transparent blur-xl"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: [0, 1.4, 0], opacity: [0, 0.9, 0] }}
+              transition={{ duration: 1.6, delay: 0.3, ease: "easeOut" }}
+            />
+            {/* Nama akun muncul di akhir intro */}
+            <motion.p
+              className="absolute inset-x-0 bottom-24 text-center text-lg font-black tracking-[0.3em] text-white/90"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.6 }}
+            >
+              {profile?.username ?? ""}
+            </motion.p>
+            <p className="absolute inset-x-0 bottom-16 text-center text-[10px] tracking-[0.4em] text-white/40">
+              KETUK UNTUK LEWATI
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {!profile ? (
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (

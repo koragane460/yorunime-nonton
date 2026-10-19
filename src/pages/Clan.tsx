@@ -795,7 +795,7 @@ function ClanDetailScreen({
                     <button
                       onClick={async () => {
                         try {
-                          await setDescription({ description: descDraft ?? "" });
+                          await setDescription({ text: descDraft ?? "" });
                           toast.success("Deskripsi clan disimpan");
                         } catch (e) {
                           toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
@@ -1113,7 +1113,15 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
-      <div className="w-full p-3">
+      {/* Latar kosmik khas referensi: bintik berkelip + orb gradasi ungu-biru
+          yang bergerak pelan di belakang formulir. */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1.3px)] [background-size:26px_26px] opacity-40" />
+        <span className="absolute -left-24 top-10 size-72 rounded-full bg-violet-600/20 blur-3xl" />
+        <span className="absolute -right-24 bottom-16 size-72 rounded-full bg-sky-500/15 blur-3xl" />
+        <span className="absolute left-1/2 top-1/3 size-56 -translate-x-1/2 rounded-full bg-gold/10 blur-3xl" />
+      </div>
+      <div className="relative w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button
             onClick={onDone}
@@ -1131,9 +1139,14 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         </div>
 
         <div className="space-y-4">
-          {/* ===== KOTAK PREVIEW — bingkai gradasi, tampil lebih hidup ===== */}
-          <div className="rounded-2xl bg-gradient-to-r from-gold/40 via-primary/40 to-sky-400/40 p-px shadow-[0_0_24px_-12px_rgba(212,175,55,0.6)]">
-            <div className="rounded-[15px] bg-card px-3 pb-3 pt-3">
+          {/* ===== KOTAK PREVIEW — bingkai gradasi HOLOGRAFIK bercahaya ===== */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-gold/50 via-fuchsia-400/40 to-sky-400/50 p-px shadow-[0_0_28px_-10px_rgba(212,175,55,0.7)]">
+            {/* Kilau holografik berjalan di atas bingkai */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 animate-[yn-holo_4.5s_ease_infinite] bg-[linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.35)_50%,transparent_65%)] bg-[length:300%_300%]"
+            />
+            <div className="relative rounded-[15px] bg-card/95 px-3 pb-3 pt-3 backdrop-blur">
               <p className="text-center text-[11px] font-bold tracking-[0.2em] text-muted-foreground">
                 PREVIEW
               </p>
