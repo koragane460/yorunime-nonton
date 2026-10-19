@@ -705,17 +705,17 @@ function HomeContent() {
         </span>
       </button>
 
-      {/* 2) HERO BANNER — banner besar + grid thumbnail anime/donghua (TANPA
-          dot/paginasi). Leaderboard tidak lagi menyatu: tampil sebagai kartu
-          terpisah DI BAWAH hero dengan daftar Top ke bawah. */}
+      {/* 2) HERO BANNER — SATU anime tampil (fade antar judul, selalu hanya
+          1 slide terlihat) + Leaderboard sebagai kolom DI KANAN banner. */}
       {loading ? (
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <>
-        <div className="fade-enter mt-3 w-full space-y-2.5">
-          {/* ---- Banner utama: slide besar, pergantian fade, TANPA dot ---- */}
-          <div className="relative h-[178px] w-full overflow-hidden rounded-2xl border border-white/10">
-          {heroItems.slice(0, 1).map((a, i) => (
+        <div className="fade-enter mt-3 flex w-full items-stretch gap-2">
+          {/* ---- Banner utama: SEMUA judul ditumpuk + fade, tapi selalu
+              hanya SATU slide yang terlihat (rotasi tiap 6 detik). ---- */}
+          <div className="relative h-[178px] min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10">
+          {heroItems.map((a, i) => (
             <div
               key={a.id}
               className={cn(
@@ -787,44 +787,12 @@ function HomeContent() {
           ))}
           </div>
 
-          {/* ---- GRID THUMBNAIL: sisa hero (anime + donghua) tampil semua
-              dalam grid, tanpa dot/paginasi. ---- */}
-          {heroItems.length > 1 && (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {heroItems.slice(1).map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() =>
-                    openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
-                  }
-                  className="group relative overflow-hidden rounded-xl border border-white/10 bg-black/40 text-left"
-                >
-                  <div className="relative aspect-[3/4] w-full overflow-hidden">
-                    {a.image ? (
-                      <img
-                        src={a.image}
-                        alt={a.title}
-                        loading="lazy"
-                        className="size-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="size-full bg-hero-gradient" />
-                    )}
-                    <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-[10px] font-bold text-white backdrop-blur-[2px]">
-                      <span className="line-clamp-1">{a.title}</span>
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* ---- LEADERBOARD TERPISAH di bawah hero — daftar Top ke bawah,
+          {/* ---- LEADERBOARD DI KANAN banner — kolom vertikal Top 5,
               menekan kartu membuka layar Leaderboard lengkap. ---- */}
           <button
             onClick={() => setShowLeaderboard(true)}
             aria-label="Lihat leaderboard lengkap"
-            className="group flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 text-left backdrop-blur-md transition hover:bg-black/60"
+            className="group flex w-[124px] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 text-left backdrop-blur-md transition hover:bg-black/60"
           >
             <span className="flex items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
               <Trophy className="size-3 shrink-0 text-gold" aria-hidden />

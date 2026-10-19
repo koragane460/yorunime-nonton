@@ -26,7 +26,7 @@ import {
   usernameColor,
 } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
-import { shrinkAvatar } from "@/lib/image";
+import { shrinkAvatar, shrinkBanner } from "@/lib/image";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { BORDERS } from "@/lib/borders";
 import {
@@ -194,34 +194,8 @@ function AkunClanCard() {
   // Masih memuat — jangan render apa-apa supaya layout tidak kedip.
   if (me === undefined) return null;
 
-  if (me === null) {
-    const { Icon, tone } = resolveClanIcon(DEFAULT_CLAN_ICON);
-    return (
-      <div className="mt-3 rounded-2xl border border-dashed border-white/15 bg-card px-3 py-3">
-        <div className="flex items-center gap-3">
-          <span
-            className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-secondary/60"
-            style={{ color: tone }}
-          >
-            <Icon className="size-6" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold">Belum punya clan</p>
-            <p className="text-[11px] text-muted-foreground">
-              Bikin clan sendiri atau gabung clan lain — dapat hadiah
-              harian &amp; naik level bersama.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/clan?create=1")}
-            className="shrink-0 rounded-full bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground transition active:scale-95"
-          >
-            Buat
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Belum punya clan → TIDAK tampil kotak apa pun (diminta dihapus).
+  if (me === null) return null;
 
   const c = me.clan;
   const role = CLAN_ROLE_BADGE[me.role] ?? CLAN_ROLE_BADGE.member;
@@ -560,6 +534,7 @@ function SettingsScreen({
 
   const ownedBorders = user.ownedBorders ?? [];
   const equippedBorder = user.avatarBorder ?? "none";
+  const isPremium = (user.premiumUntil ?? 0) > Date.now();
 
   // Simpan tanpa nunggu server (fire & forget) → UI terasa instan
   const quickSave = (args: Record<string, unknown>) => {
@@ -739,25 +714,24 @@ function SettingsScreen({
           yang dibeli pakai Sacret dan langsung bisa dipakai/diatur. ===== */}
       <BlockTitle>Sleix Shop</BlockTitle>
       <div className="overflow-hidden rounded-xl border border-border bg-card">
-        {/* Kepala toko: pita holografik + logo + saldo Sacret. */}
+        {/* Kepala toko: pita holografik CERAH + logo + saldo Sacret. */}
         <div className="relative flex items-center gap-2.5 overflow-hidden px-3 py-2.5">
           <div
             aria-hidden
-            className="absolute inset-0 bg-[linear-gradient(115deg,#22d3ee_0%,#818cf8_30%,#e879f9_60%,#fde68a_85%,#22d3ee_100%)] bg-[length:200%_100%]"
+            className="absolute inset-0 bg-[linear-gradient(115deg,#67e8f9_0%,#a5b4fc_30%,#f0abfc_60%,#fde68a_85%,#67e8f9_100%)] bg-[length:200%_100%]"
           />
-          <div aria-hidden className="absolute inset-0 bg-black/35" />
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-black/40 ring-1 ring-white/30">
-            <Gem className="size-5 text-amber-300" aria-hidden />
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/70 ring-1 ring-white/60 shadow-sm">
+            <Gem className="size-5 text-amber-500" aria-hidden />
           </span>
           <div className="relative min-w-0 flex-1">
-            <p className="text-[13px] font-black tracking-wide text-white">
+            <p className="text-[13px] font-black tracking-wide text-indigo-950 drop-shadow-sm">
               SLEIX <span className="font-bold opacity-90">Shop</span>
             </p>
-            <p className="text-[10px] font-medium text-white/80">
+            <p className="text-[10px] font-semibold text-indigo-950/75">
               Border kreatif untuk photo profile kamu ✨
             </p>
           </div>
-          <span className="relative inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[12px] font-black text-sky-300 ring-1 ring-white/20">
+          <span className="relative inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[12px] font-black text-sky-700 ring-1 ring-white/60 shadow-sm">
             <Gem className="size-3.5" aria-hidden />
             {Number(user.diamonds ?? 0).toLocaleString("id-ID")}
           </span>
@@ -893,25 +867,85 @@ function SettingsScreen({
           }}
         />
 
+        {/* GAMBAR FULLSCREEN AKUN — foto besar di layar detail akun.
+            Hanya Premium yang bisa mengaturnya (server juga menolak).
+            Foto dari galeri dikompres 1200px (HD, tidak pecah). */}
         <div className="rounded-xl border border-border bg-card p-3">
-          <p className="text-[13px] font-medium">Background gif akun</p>
-          <div className="mt-2 flex min-w-0 gap-2">
-            <input
-              value={banner}
-              onChange={(e) => setBanner(e.target.value)}
-              placeholder="URL gambar/gif background"
-              className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-[13px]"
-            />
-            <button
-              onClick={async () => {
-                await updateProfile({ bannerUrl: banner });
-                toast.success("Background diubah");
-              }}
-              className="shrink-0 rounded-lg bg-primary px-4 text-[13px] font-bold text-primary-foreground"
-            >
-              OK
-            </button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[13px] font-medium">Gambar fullscreen akun</p>
+            {!isPremium && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] font-bold text-gold">
+                <Crown className="size-3" aria-hidden /> Premium
+              </span>
+            )}
           </div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Muncul besar & tajam di layar detail akun kamu.
+          </p>
+          {isPremium ? (
+            <>
+              {banner && (
+                <img
+                  src={banner}
+                  alt=""
+                  className="mt-2 h-24 w-full rounded-lg border border-white/10 object-cover"
+                />
+              )}
+              <label className="group mt-2 flex w-fit cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-primary-foreground transition active:scale-95">
+                <Camera className="size-4" aria-hidden />
+                Pilih dari galeri
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    void (async () => {
+                      try {
+                        const hd = await shrinkBanner(f);
+                        setBanner(hd);
+                        await updateProfile({ bannerUrl: hd });
+                        toast.success("Gambar fullscreen diubah ✨");
+                      } catch (err2) {
+                        setErr(
+                          err2 instanceof Error
+                            ? err2.message
+                            : "Gagal mengunggah gambar",
+                        );
+                      }
+                    })();
+                  }}
+                />
+              </label>
+              <div className="mt-2 flex min-w-0 gap-2">
+                <input
+                  value={banner.startsWith("data:") ? "" : banner}
+                  onChange={(e) => setBanner(e.target.value)}
+                  placeholder="…atau URL gambar/gif"
+                  className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-[13px]"
+                />
+                <button
+                  onClick={async () => {
+                    await updateProfile({ bannerUrl: banner });
+                    toast.success("Background diubah");
+                  }}
+                  className="shrink-0 rounded-lg bg-primary px-4 text-[13px] font-bold text-primary-foreground"
+                >
+                  OK
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => navigate("/premium")}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-gold/40 bg-gold/10 py-2.5 text-[13px] font-bold text-gold transition active:scale-[0.98]"
+            >
+              <Lock className="size-3.5" aria-hidden />
+              Ambil Premium untuk mengatur gambar
+            </button>
+          )}
         </div>
 
         {panelLevel !== "none" && <StaffPanel level={panelLevel} />}

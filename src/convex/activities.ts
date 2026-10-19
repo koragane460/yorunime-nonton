@@ -372,8 +372,12 @@ export const toggleFavorite = mutation({
     animeId: v.string(),
     animeTitle: v.string(),
     animeImage: v.optional(v.string()),
+    /** "anime" (default) | "donghua" | "film" — tab layar Subscribe. */
+    kind: v.optional(v.string()),
+    /** "RELEASING" = ongoing, selain itu dianggap tamat. */
+    status: v.optional(v.string()),
   },
-  handler: async (ctx, { animeId, animeTitle, animeImage }) => {
+  handler: async (ctx, { animeId, animeTitle, animeImage, kind, status }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const existing = await ctx.db
@@ -391,6 +395,8 @@ export const toggleFavorite = mutation({
       animeId,
       animeTitle,
       animeImage,
+      kind: kind ?? "anime",
+      status,
       createdAt: Date.now(),
     });
     return { favorited: true };

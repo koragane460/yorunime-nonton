@@ -623,3 +623,31 @@ export function ClanTag({
     </span>
   );
 }
+
+/**
+ * Ikon SACRET — bintang 4 sudut (sacred star) yang bersinar, menggantikan
+ * ikon berlian/permata untuk mata uang Sacret. Vektor murni supaya tajam
+ * di layar mana pun dan bisa dipakai seukuran ikon navigasi.
+ */
+export function SacretIcon({
+  className,
+  strokeWidth: _strokeWidth,
+}: {
+  className?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 1.6c.85 5.15 3.25 8.05 8.4 8.9v.2c-5.15.85-7.55 3.75-8.4 8.9h-.2c-.85-5.15-3.25-8.05-8.4-8.9v-.2c5.15-.85 7.55-3.75 8.4-8.9h.2Z" />
+      <path
+        d="M18.8 15.4c.35 2.05 1.3 3.2 3.35 3.55v.15c-2.05.35-3 1.5-3.35 3.55h-.15c-.35-2.05-1.3-3.2-3.35-3.55v-.15c2.05-.35 3-1.5 3.35-3.55h.15Z"
+        opacity=".7"
+      />
+    </svg>
+  );
+}

@@ -43,6 +43,10 @@ const schema = defineSchema(
       avatarBorder: v.optional(v.string()),
       /** Daftar border yang sudah dimiliki (hasil beli di Shop). */
       ownedBorders: v.optional(v.array(v.string())),
+      /** TITLE yang sedang dipasang (key dari TITLE_DEFS di titles.ts). */
+      equippedTitle: v.optional(v.string()),
+      /** Kartu karakter GACHA yang sedang dipasang (id karakter roster). */
+      equippedCard: v.optional(v.string()),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
       
@@ -439,6 +443,11 @@ const schema = defineSchema(
       animeId: v.string(),
       animeTitle: v.string(),
       animeImage: v.optional(v.string()),
+      /** "anime" (default) | "donghua" | "film" — tab layar Subscribe. */
+      kind: v.optional(v.string()),
+      /** Status media saat di-subscribe: "RELEASING" (ongoing) atau lain
+          (tamat). Untuk pisah tab Ongoing/Tamat di layar Subscribe. */
+      status: v.optional(v.string()),
       createdAt: v.number(),
     })
       .index("userId_created", ["userId", "createdAt"])
@@ -505,6 +514,31 @@ const schema = defineSchema(
     })
       .index("userId_slug", ["userId", "slug"])
       .index("userId_created", ["userId", "createdAt"]),
+
+    /** State GACHA per user: pity, hitungan rank, koleksi kartu. */
+    gachaState: defineTable({
+      userId: v.id("users"),
+      /** Pull sejak SSS terakhir — di 75 dijamin SSS. */
+      pity: v.number(),
+      totalPulls: v.number(),
+      sssCount: v.number(),
+      ssCount: v.number(),
+      /** SSS berturut-turut saat ini. */
+      streak: v.number(),
+      /** SSS berturut-turut terpanjang (untuk title Unbreakable Streak). */
+      bestStreak: v.number(),
+      /** { [cardId]: jumlah dimiliki } */
+      owned: v.any(),
+    }).index("userId", ["userId"]),
+
+    /** TITLE yang sudah dimiliki user (earned). */
+    userTitles: defineTable({
+      userId: v.id("users"),
+      titleId: v.string(),
+      earnedAt: v.number(),
+    })
+      .index("userId", ["userId"])
+      .index("userId_title", ["userId", "titleId"]),
 
     premiumPurchases: defineTable({
       userId: v.id("users"),

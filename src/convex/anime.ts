@@ -1236,7 +1236,8 @@ export const animeCharacters = action({
     const id = String(idMal ?? "").trim();
     const t = String(title ?? "").trim();
     if (!id && !t) return [];
-    const key = `chars:v1:${id || t.toLowerCase()}`;
+    // v2: cache lama (v1) menyimpan hasil 1 karakter — dipaksa refetch.
+    const key = `chars:v2:${id || t.toLowerCase()}`;
     type Char = {
       id: string;
       name: string;

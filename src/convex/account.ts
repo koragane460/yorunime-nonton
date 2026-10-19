@@ -181,7 +181,16 @@ export const updateProfile = mutation({
       patch.username = clean;
     }
     if (image !== undefined) patch.image = image;
-    if (bannerUrl !== undefined) patch.bannerUrl = bannerUrl;
+    if (bannerUrl !== undefined) {
+      // Gambar fullscreen akun (banner) hanya untuk Premium — kecuali
+      // sedang MELEPAS (string kosong), itu selalu boleh.
+      if (bannerUrl.trim() !== "") {
+        const u = await ctx.db.get(userId);
+        if ((u?.premiumUntil ?? 0) <= Date.now())
+          throw new Error("Fitur ini khusus Premium");
+      }
+      patch.bannerUrl = bannerUrl;
+    }
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
   },

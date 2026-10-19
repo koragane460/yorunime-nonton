@@ -27,7 +27,6 @@ export function VoteScreen({
   const react = useMutation(api.characterLikes.react);
 
   const items = board?.items ?? [];
-  const totals = board?.totals ?? { likes: 0, dislikes: 0 };
   const loggedIn = board?.loggedIn ?? false;
   const busyFor = useRef<string | null>(null);
 
@@ -53,8 +52,6 @@ export function VoteScreen({
     }
     return [...map.values()];
   })();
-
-  const totalScore = totals.likes + totals.dislikes;
 
   const doReact = async (c: (typeof items)[number], value: 1 | -1) => {
     if (!loggedIn) {
@@ -93,29 +90,12 @@ export function VoteScreen({
     );
 
   return (
-    <div className="pb-6">
-      {/* Bar atas: total Like & Dislike semua karakter anime ini */}
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300">
-          <ThumbsUp className="size-3.5" aria-hidden />
-          {totals.likes.toLocaleString("id-ID")} Like
-        </span>
-        <span className="flex items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] font-bold text-rose-300">
-          <ThumbsDown className="size-3.5" aria-hidden />
-          {totals.dislikes.toLocaleString("id-ID")} Dislike
-        </span>
-      </div>
-      <p className="mt-1.5 text-[10px] text-muted-foreground">
-        Kasih penilaianmu ke karakter — tekan lagi untuk membatalkan
-      </p>
-
-      {/* Grid karakter — kartu masuk satu per satu (stagger). */}
-      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+    <div className="pb-6 pt-1">
+      {/* Grid karakter — HANYA foto, nama, dan tombol like/dislike (baris
+          total Like/Dislike di atas & teks panduan dihapus sesuai permintaan).
+          Warna lembut, tanpa glow neon. */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         {merged.map((c, i) => {
-          const share =
-            totalScore > 0
-              ? Math.max(3, Math.round((c.likes / totalScore) * 100))
-              : 0;
           const liked = c.mine === 1;
           const disliked = c.mine === -1;
           return (
@@ -127,10 +107,10 @@ export function VoteScreen({
               className={cn(
                 "group overflow-hidden rounded-2xl border transition",
                 liked
-                  ? "border-emerald-400/70 bg-emerald-500/10 shadow-[0_0_20px_-6px_rgba(52,211,153,0.7)]"
+                  ? "border-emerald-500/45 bg-emerald-500/[0.08]"
                   : disliked
-                    ? "border-rose-400/70 bg-rose-500/10 shadow-[0_0_20px_-6px_rgba(251,113,133,0.7)]"
-                    : "border-white/12 bg-white/[0.04]",
+                    ? "border-rose-400/45 bg-rose-500/[0.08]"
+                    : "border-white/10 bg-white/[0.03]",
               )}
             >
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-black/40">
@@ -146,39 +126,21 @@ export function VoteScreen({
                     <ImageOff className="size-6 text-muted-foreground" aria-hidden />
                   </div>
                 )}
-                {/* Badge Like/Dislike yang aktif di pojok foto */}
+                {/* Badge Like/Dislike yang aktif di pojok foto — lembut,
+                    tanpa pulse neon */}
                 {liked && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 0.45, repeat: Infinity, repeatDelay: 1.2 }}
-                    className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg"
-                  >
+                  <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-emerald-600/90 text-white shadow">
                     <ThumbsUp className="size-3.5" aria-hidden />
-                  </motion.span>
+                  </span>
                 )}
                 {disliked && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 0.45, repeat: Infinity, repeatDelay: 1.2 }}
-                    className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg"
-                  >
+                  <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-rose-500/90 text-white shadow">
                     <ThumbsDown className="size-3.5" aria-hidden />
-                  </motion.span>
+                  </span>
                 )}
               </div>
 
-              {/* Bar proporsi Like */}
-              <div className="h-1 w-full bg-white/10">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600"
-                  initial={false}
-                  animate={{ width: `${share}%` }}
-                  transition={{ type: "spring", stiffness: 120, damping: 20 }}
-                />
-              </div>
-
+              {/* Nama karakter */}
               <p className="truncate px-2 pt-1.5 text-[11px] font-semibold text-white">
                 {c.name}
               </p>
@@ -190,8 +152,8 @@ export function VoteScreen({
                   className={cn(
                     "flex min-h-8 flex-1 items-center justify-center gap-1 rounded-lg text-[11px] font-bold transition active:scale-95",
                     liked
-                      ? "bg-emerald-500 text-white"
-                      : "bg-white/[0.06] text-emerald-300 hover:bg-emerald-500/20",
+                      ? "bg-emerald-600 text-white"
+                      : "bg-white/[0.05] text-emerald-200/80 hover:bg-emerald-500/15",
                   )}
                   aria-label={`Like ${c.name}`}
                 >
@@ -204,7 +166,7 @@ export function VoteScreen({
                     "flex min-h-8 flex-1 items-center justify-center gap-1 rounded-lg text-[11px] font-bold transition active:scale-95",
                     disliked
                       ? "bg-rose-500 text-white"
-                      : "bg-white/[0.06] text-rose-300 hover:bg-rose-500/20",
+                      : "bg-white/[0.05] text-rose-200/80 hover:bg-rose-500/15",
                   )}
                   aria-label={`Dislike ${c.name}`}
                 >

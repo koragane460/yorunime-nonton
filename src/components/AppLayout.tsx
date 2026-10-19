@@ -8,7 +8,7 @@ import {
   ForYouPanel,
   ContinuePanel,
 } from "@/components/HomeTopButtons";
-import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge, SacretIcon } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
@@ -19,6 +19,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Star as StarIcon,
+  Award as AwardIcon,
 } from "lucide-react";
 // Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
 // bahasa bentuk dengan iOS (garis tipis, sudut membulat, varian fill saat aktif).
@@ -769,6 +771,41 @@ function BottomNav({
   const location = useLocation();
   const overlay = useAppOverlayOpen();
 
+  // ---- GACHA & TITLE di balik tombol History & Subscribe ----
+  // Tekan-lama (±0,55 detik) tombol History berpindah jadi Gacha, dan
+  // tombol Subscribe berpindah jadi Title — dengan fade in/out halus ala
+  // anime. Pilihan tersimpan di localStorage supaya bertahan setelah reload.
+  const [navGacha, setNavGacha] = useState(
+    () => localStorage.getItem("yn-nav-gacha") === "1",
+  );
+  const [navTitle, setNavTitle] = useState(
+    () => localStorage.getItem("yn-nav-title") === "1",
+  );
+  const [fadeA, setFadeA] = useState(false); // fade History ↔ Gacha
+  const [fadeB, setFadeB] = useState(false); // fade Subscribe ↔ Title
+  const pressTimer = useRef<number | null>(null);
+  const longFired = useRef(false);
+
+  /** Fade out → ganti isi tombol → fade in. */
+  const swapBtn = (which: "a" | "b") => {
+    const setFade = which === "a" ? setFadeA : setFadeB;
+    setFade(true);
+    window.setTimeout(() => {
+      if (which === "a") {
+        setNavGacha((v) => {
+          localStorage.setItem("yn-nav-gacha", v ? "0" : "1");
+          return !v;
+        });
+      } else {
+        setNavTitle((v) => {
+          localStorage.setItem("yn-nav-title", v ? "0" : "1");
+          return !v;
+        });
+      }
+      setFade(false);
+    }, 220);
+  };
+
   if (overlay) return null;
   const items: {
     path: string;
@@ -779,6 +816,8 @@ function BottomNav({
     iconFill?: ComponentType<{ className?: string; strokeWidth?: number }>;
     panel?: Exclude<TopPanel, null>;
     dim?: boolean;
+    /** Tombol ini punya pasangan (tekan-lama berpindah dengan fade). */
+    swaps?: "a" | "b";
   }[] = [
     { path: "/home", label: "Home", icon: HomeIcon, iconFill: HomeIconFill },
     {
@@ -787,21 +826,35 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    { path: "/info", label: "History", icon: InfoIcon, iconFill: InfoIconFill },
+    // History ↔ GACHA — tekan-lama tombolnya untuk berpindah (fade in/out).
+    navGacha
+      ? {
+          path: "/gacha",
+          label: "Gacha",
+          icon: SacretIcon,
+          swaps: "a",
+        }
+      : {
+          path: "/info",
+          label: "History",
+          icon: InfoIcon,
+          iconFill: InfoIconFill,
+          swaps: "a",
+        },
     // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
     // Home). Ikon buku, di kanan History.
     { path: "/baca", label: "Baca", icon: BookIcon },
-    // Favorit: tombol Ke-5. Membuka layar Favorit (bukan fullscreen), dan di
-    // paling atas layar itu ada tiga tombol Download / Paling sering /
-    // Untuk kamu. Ikon bookmark kotak, bukan love/hat — ini penanda
-    // "disimpan", bukan "disukai".
-    {
-      path: "",
-      label: "Koleksi",
-      icon: BookmarkIcon,
-      iconFill: BookmarkIconFill,
-      panel: "favorites",
-    },
+    // SUBSCRIBE (dulu "Koleksi") — layar favorite berlabel Subscribe.
+    // Tekan-lama tombolnya berpindah ke tombol TITLE (fade in/out).
+    navTitle
+      ? { path: "/title", label: "Title", icon: AwardIcon, swaps: "b" }
+      : {
+          path: "",
+          label: "Subscribe",
+          icon: StarIcon,
+          panel: "favorites",
+          swaps: "b",
+        },
     {
       path: "/akun",
       label: "Akun",
@@ -874,10 +927,40 @@ function BottomNav({
             // Ikon SELALU pakai varian outline, aktif maupun tidak — bobotnya
             // persis sama, jadi tombol tidak mendadak "tebel" saat dipencet.
             const Icon = it.icon;
+            const fading =
+              it.swaps === "a" ? fadeA : it.swaps === "b" ? fadeB : false;
             return (
               <button
                 key={it.path || `panel-${it.label}`}
+                // Tekan-lama: ganti History↔Gacha / Subscribe↔Title dengan
+                // fade in/out. Klik biasa setelah tekan-lama DIBATALKAN.
+                onPointerDown={() => {
+                  if (!it.swaps) return;
+                  longFired.current = false;
+                  pressTimer.current = window.setTimeout(() => {
+                    longFired.current = true;
+                    swapBtn(it.swaps!);
+                  }, 550);
+                }}
+                onPointerUp={() => {
+                  if (pressTimer.current !== null) {
+                    clearTimeout(pressTimer.current);
+                    pressTimer.current = null;
+                  }
+                }}
+                onPointerLeave={() => {
+                  if (pressTimer.current !== null) {
+                    clearTimeout(pressTimer.current);
+                    pressTimer.current = null;
+                  }
+                }}
                 onClick={() => {
+                  // Setelah tekan-lama berpindah mode, klik pertama tidak
+                  // ikut navigasi — hanya mengakhiri gestur.
+                  if (longFired.current) {
+                    longFired.current = false;
+                    return;
+                  }
                   // Tombol panel tidak punya rute: dia membuka layar penuh
                   // yang dirender AppLayout (bukan di sini — lihat catatan
                   // pada state navPanel).
@@ -894,13 +977,23 @@ function BottomNav({
                 title={
                   it.dim
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
-                    : it.label
+                    : it.swaps
+                      ? `${it.label} — tekan lama untuk ganti`
+                      : it.label
                 }
                 className={cn(
-                  "nav-item relative z-10 flex flex-col items-center justify-center rounded-2xl pb-2 pt-2.5 transition-colors duration-200",
+                  "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-2xl pb-2 pt-2.5 transition-colors duration-200",
                   active && "text-primary",
                 )}
               >
+                {/* Isi tombol (ikon + label) — fade in/out halus saat tombol
+                    berpindah mode Gacha/History atau Title/Subscribe. */}
+                <span
+                  className={cn(
+                    "flex flex-col items-center transition-opacity duration-200",
+                    fading && "opacity-0",
+                  )}
+                >
                 <Icon
                   strokeWidth={1.7}
                   className={cn(
@@ -915,7 +1008,7 @@ function BottomNav({
                         : "text-zinc-500",
                   )}
                 />
-                {/* Teks label di bawah ikon (Home, Jadwal, History, Koleksi,
+                {/* Teks label di bawah ikon (Home, Jadwal, Gacha, Subscribe,
                     Akun). Muncul untuk SEMUA tombol; yang aktif lebih terang. */}
                 <span
                   className={cn(
@@ -928,6 +1021,7 @@ function BottomNav({
                   )}
                 >
                   {it.label}
+                </span>
                 </span>
               </button>
             );
