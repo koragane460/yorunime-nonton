@@ -6,12 +6,14 @@ import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/c
 import { BlurBanner } from "@/components/BlurBanner";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
+  Award,
   ChevronLeft,
   MessageSquare,
   History as HistoryIcon,
   Heart,
   LogIn,
   Send,
+  Sparkles,
   Tv,
   UserPlus,
 } from "lucide-react";
@@ -67,6 +69,8 @@ export function ProfileSheet({
   // menampilkan detail akun dengan banner foto yang bisa diatur di
   // Pengaturan (premium).
 
+  // Title + kartu GACHA yang sedang dipasang — tampil di bawah stat akun.
+  const cosmetics = useQuery(api.titles.publicOf, { userId });
   const cost = profile ? xpForLevel(profile.level) : 1;
   const inLevel = profile ? Math.max(0, Math.min(profile.xpInLevel, cost)) : 0;
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
@@ -238,6 +242,34 @@ export function ProfileSheet({
               />
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
+
+            {/* TITLE + KARTU GACHA terpasang — di bawah stat */}
+            {(cosmetics?.title || cosmetics?.card) && (
+              <div className="mx-auto mt-3 flex max-w-sm flex-wrap items-center justify-center gap-1.5">
+                {cosmetics?.title && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/45 bg-gold/10 px-2.5 py-1 text-[11px] font-bold text-gold">
+                    <Award className="size-3" aria-hidden />
+                    {cosmetics.title.name}
+                  </span>
+                )}
+                {cosmetics?.card && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold",
+                      cosmetics.card.rank === "SSS"
+                        ? "border-amber-400/60 bg-amber-400/10 text-amber-300"
+                        : cosmetics.card.rank === "SS"
+                          ? "border-fuchsia-400/50 bg-fuchsia-400/10 text-fuchsia-300"
+                          : "border-sky-400/50 bg-sky-400/10 text-sky-300",
+                    )}
+                  >
+                    <Sparkles className="size-3" aria-hidden />
+                    {cosmetics.card.name}
+                    <span className="opacity-70">{cosmetics.card.rank}</span>
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Tab tanpa background: garis bawah, bisa pindah */}
             <div className="mt-5 flex border-b border-white/15">

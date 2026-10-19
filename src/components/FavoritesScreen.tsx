@@ -1,69 +1,225 @@
-// Layar Koleksi (tombol "Koleksi" di navigasi bawah).
+// LAYAR SUBSCRIBE (tombol "Subscribe" di navigasi bawah).
 //
-// Hanya DUA blok dengan judul besar: Favorite dan Download. Tidak ada
-// chip kuota, subjudul kecil, maupun blok Info — diminta supaya layar
-// bersih dan tidak ramai tulisan kecil.
+// Judul besar + garis, lalu tab kategori Anime / Manga / Manhwa /
+// Donghua / Film, dan filter status Ongoing / Tamat untuk kategori yang
+// punya status. Daftar = koleksi yang pernah di-subscribe (favorite).
+// Di bawahnya tetap ada blok Download dan TOP VOTE CHARACTER.
 
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
 import { DownloadsPanel } from "@/components/HomeTopButtons";
-import { Crown, Heart, Tv, Vote as VoteIcon } from "lucide-react";
+import { ComicDetailScreen } from "@/components/ComicDetailScreen";
+import { cn } from "@/lib/utils";
+import { Clapperboard, Crown, Heart, Tv, Vote as VoteIcon } from "lucide-react";
+
+type SubTab = "anime" | "manga" | "manhwa" | "donghua" | "film";
+type StatusFilter = "semua" | "ongoing" | "tamat";
+
+const TABS: { key: SubTab; label: string }[] = [
+  { key: "anime", label: "Anime" },
+  { key: "manga", label: "Manga" },
+  { key: "manhwa", label: "Manhwa" },
+  { key: "donghua", label: "Donghua" },
+  { key: "film", label: "Film" },
+];
 
 export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
+  const comicFavorites = useQuery(api.comics.myFavorites, user ? {} : "skip");
   // Top 10 hasil voting karakter — hanya terisi setelah event (7 hari) selesai.
   const top = useQuery(api.votes.topCharacters, {});
 
-  const favRows = (favorites ?? []) as {
-    _id: string;
-    animeId: string;
-    animeTitle: string;
-    animeImage?: string;
-    createdAt: number;
-  }[];
+  const [tab, setTab] = useState<SubTab>("anime");
+  const [status, setStatus] = useState<StatusFilter>("semua");
+  // Detail manga/manhwa dibuka sebagai layar penuh (sama seperti di Baca).
+  const [pick, setPick] = useState<{ slug: string; kind: "manga" | "manhwa" } | null>(
+    null,
+  );
+
+  const animeRows = useMemo(
+    () =>
+      (favorites ?? []) as {
+        _id: string;
+        animeId: string;
+        animeTitle: string;
+        animeImage?: string;
+        kind?: string;
+        status?: string;
+        createdAt: number;
+      }[],
+    [favorites],
+  );
+  const comicRows = useMemo(
+    () =>
+      (comicFavorites ?? []) as {
+        _id: string;
+        slug: string;
+        comicTitle: string;
+        comicImage?: string;
+        kind: string;
+        createdAt: number;
+      }[],
+    [comicFavorites],
+  );
+
+  /** Anime / Donghua / Film punya status RELEASING = ongoing. */
+  const animeItems = useMemo(() => {
+    const wanted = tab === "donghua" ? "donghua" : tab === "film" ? "film" : "anime";
+    let rows = animeRows.filter((f) => (f.kind ?? "anime") === wanted);
+    if (status !== "semua") {
+      rows = rows.filter((f) =>
+        status === "ongoing"
+          ? f.status === "RELEASING"
+          : f.status != null && f.status !== "RELEASING",
+      );
+    }
+    return rows;
+  }, [animeRows, tab, status]);
+
+  const comicItems = useMemo(() => {
+    if (tab !== "manga" && tab !== "manhwa") return [];
+    return comicRows.filter((c) => c.kind === tab);
+  }, [comicRows, tab]);
+
+  const showStatus = tab === "anime" || tab === "donghua";
+  const items =
+    tab === "manga" || tab === "manhwa" ? comicItems : animeItems;
+
+  const emptyText =
+    tab === "film"
+      ? "Belum ada film yang di-subscribe. Buka halaman Film lalu tekan tombol Subscribe."
+      : tab === "manga" || tab === "manhwa"
+        ? `Belum ada ${tab} yang di-subscribe. Tekan tombol hati di detail ${tab}.`
+        : "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
 
   return (
     <div className="screen-enter pb-24">
       <div className="px-1 pt-4">
-        {/* ---------------- 1) FAVORITE — rata kiri, geser ke kanan -------- */}
-        <h2 className="text-left text-lg font-bold tracking-tight">Favorite</h2>
-        {favRows.length > 0 && (
-          <div className="thin-scroll -mx-1 mt-2 flex gap-2.5 overflow-x-auto px-1 pb-1">
-            {favRows.map((f) => (
+        {/* ---------------- JUDUL + GARIS ---------------- */}
+        <h1 className="text-left text-2xl font-black tracking-tight">Subscribe</h1>
+        <div className="mt-2 h-px w-full bg-gradient-to-r from-gold/70 via-border to-transparent" />
+
+        {/* ---------------- TAB KATEGORI ---------------- */}
+        <div className="thin-scroll -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition",
+                tab === t.key
+                  ? "border-gold bg-gold/15 text-gold"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ---------------- FILTER STATUS ---------------- */}
+        {showStatus && (
+          <div className="mt-2 flex gap-1.5">
+            {(
+              [
+                { key: "semua", label: "Semua" },
+                { key: "ongoing", label: "Ongoing" },
+                { key: "tamat", label: "Tamat" },
+              ] as { key: StatusFilter; label: string }[]
+            ).map((s) => (
               <button
-                key={f._id}
-                onClick={() => navigate(`/info?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`)}
-                className="w-28 shrink-0 text-left"
+                key={s.key}
+                onClick={() => setStatus(s.key)}
+                className={cn(
+                  "rounded-lg border px-3 py-1 text-[11px] font-semibold transition",
+                  status === s.key
+                    ? "border-foreground/40 bg-white/[0.08] text-white"
+                    : "border-border text-muted-foreground",
+                )}
               >
-                <div className="relative overflow-hidden rounded-xl border border-border/60">
-                  {f.animeImage ? (
-                    <img
-                      src={f.animeImage}
-                      alt=""
-                      loading="lazy"
-                      className="aspect-[2/3] w-full bg-black/30 object-cover"
-                    />
-                  ) : (
-                    <div className="flex aspect-[2/3] w-full items-center justify-center bg-muted">
-                      <Tv className="size-6 text-muted-foreground" aria-hidden />
-                    </div>
-                  )}
-                  <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
-                </div>
-                <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
-                  {f.animeTitle}
-                </p>
+                {s.label}
               </button>
             ))}
           </div>
         )}
 
-        {/* ---------------- 2) DOWNLOAD — di bawah Favorite ---------------- */}
+        {/* ---------------- DAFTAR SUBSCRIBE ---------------- */}
+        {items.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            {emptyText}
+          </p>
+        ) : (
+          <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+            {items.map((f, i) => {
+              const key = "slug" in f ? f.slug : f.animeId;
+              const title = "slug" in f ? f.comicTitle : f.animeTitle;
+              const image = "slug" in f ? f.comicImage : f.animeImage;
+              return (
+                <motion.button
+                  key={key}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
+                  onClick={() => {
+                    if ("slug" in f) {
+                      setPick({
+                        slug: f.slug,
+                        kind: f.kind === "manhwa" ? "manhwa" : "manga",
+                      });
+                    } else if (tab === "film") {
+                      // status menyimpan jenis film (movie/tv) — lihat Film.tsx
+                      navigate(
+                        `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
+                      );
+                    } else {
+                      navigate(
+                        `/info?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`,
+                      );
+                    }
+                  }}
+                  className="group text-left"
+                >
+                  <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                    {image ? (
+                      <img
+                        src={image}
+                        alt={title}
+                        loading="lazy"
+                        className="size-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center">
+                        {tab === "film" ? (
+                          <Clapperboard className="size-6 text-muted-foreground" />
+                        ) : (
+                          <Tv className="size-6 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
+                    {tab === "film" ? (
+                      <Clapperboard className="absolute right-1.5 top-1.5 size-4 fill-gold text-gold drop-shadow" />
+                    ) : (
+                      <Heart className="absolute right-1.5 top-1.5 size-4 fill-white/85 text-white/85 drop-shadow" />
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
+                      <span className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
+                        {title}
+                      </span>
+                    </span>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ---------------- 2) DOWNLOAD ---------------- */}
         <div className="mt-6">
           <h2 className="text-left text-lg font-bold tracking-tight">Download</h2>
           <div className="mt-2">
@@ -71,10 +227,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* -------- 3) TOP VOTE CHARACTER ANIME — setelah voting 7 hari --------
-            Muncul HANYA kalau event voting sudah selesai. Satu kotak lurus
-            per karakter (gambar + nama + total vote + judul anime), ditumpuk
-            ke bawah, dengan animasi masuk berjenjang. */}
+        {/* -------- 3) TOP VOTE CHARACTER ANIME — setelah voting 7 hari -------- */}
         {top?.ready && top.items.length > 0 && (
           <div className="mt-6">
             <h2 className="flex items-center gap-2 text-left text-lg font-bold tracking-tight">
@@ -157,6 +310,16 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </div>
+
+      {/* Layar detail manga/manhwa yang di-subscribe */}
+      {pick && (
+        <ComicDetailScreen
+          slug={pick.slug}
+          fallbackKind={pick.kind}
+          onClose={() => setPick(null)}
+          onPick={(slug) => setPick({ slug, kind: pick.kind })}
+        />
+      )}
     </div>
   );
 }

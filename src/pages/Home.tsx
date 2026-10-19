@@ -54,7 +54,6 @@ import {
   SlidersIcon as SlidersHorizontal,
   InfoIcon as Info,
   SparklesIcon as Sparkles,
-  GemIcon as Gem,
   CrownIcon,
 } from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
@@ -897,7 +896,7 @@ function HomeContent() {
             memakai resolver stream TMDb + VidSrc/Cinepro. */}
         <button
           onClick={() => navigate("/film")}
-          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-gradient-to-r from-gold/12 via-card to-card px-4 py-3 text-left transition hover:border-gold/60"
+          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-transparent px-4 py-3 text-left transition hover:border-gold/60 hover:bg-gold/5"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/15">
             <Film className="size-5 text-gold" aria-hidden />

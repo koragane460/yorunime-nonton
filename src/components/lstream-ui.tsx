@@ -417,7 +417,7 @@ export function ClanLevelBar({
           Level <b className="text-foreground">{level}</b> / 200
         </span>
         <span>
-          {progress} / {cost} <Gem className="inline size-3 -translate-y-px" aria-hidden />
+          {progress} / {cost} <SacretIcon className="inline size-3 -translate-y-px" aria-hidden />
         </span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">

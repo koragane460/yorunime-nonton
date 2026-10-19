@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useAction } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   ChevronLeft,
   Clapperboard,
   Clock,
   Film as FilmIcon,
+  Heart,
   Loader2,
   Search,
   Star,
@@ -55,8 +57,30 @@ export default function Film() {
   const [params] = useSearchParams();
   const [q, setQ] = useState("");
   const [genreId, setGenreId] = useState<string | null>(null);
-  const [kind, setKind] = useState<"movie" | "tv">("movie");
+  const [kind, setKind] = useState<"movie" | "tv">(
+    params.get("t") === "tv" ? "tv" : "movie",
+  );
   const [openId, setOpenId] = useState<string | null>(params.get("film"));
+
+  // Koleksi film yang di-subscribe (favorite kind="film") — tampil sebagai
+  // strip "Koleksi Saya" di atas grid.
+  const myFavs = useQuery(
+    api.activities.myFavorites,
+    openId ? "skip" : {},
+  ) as
+    | {
+        _id: string;
+        animeId: string;
+        animeTitle: string;
+        animeImage?: string;
+        kind?: string;
+        status?: string;
+      }[]
+    | undefined;
+  const koleksi = useMemo(
+    () => (myFavs ?? []).filter((f) => (f.kind ?? "anime") === "film"),
+    [myFavs],
+  );
 
   const searchFilms = useAction(api.films.search);
   const getGenres = useAction(api.films.genres);
@@ -196,6 +220,54 @@ export default function Film() {
           </div>
         )}
 
+        {/* Strip KOLEKSI SAYA — film yang pernah di-subscribe */}
+        {!q && !genreId && koleksi.length > 0 && !loading && (
+          <div className="mt-4">
+            <h2 className="flex items-center gap-2 text-base font-bold tracking-tight">
+              <Heart className="size-4 fill-gold text-gold" aria-hidden />
+              Koleksi Saya
+              <span className="text-[11px] font-semibold text-muted-foreground">
+                {koleksi.length} film
+              </span>
+            </h2>
+            <div className="thin-scroll -mx-1 mt-2 flex gap-2.5 overflow-x-auto px-1 pb-1">
+              {koleksi.map((f) => (
+                <button
+                  key={f._id}
+                  onClick={() => {
+                    setKind(f.status === "tv" ? "tv" : "movie");
+                    setOpenId(f.animeId);
+                    navigate(
+                      `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
+                      { replace: true },
+                    );
+                  }}
+                  className="w-28 shrink-0 text-left"
+                >
+                  <div className="relative overflow-hidden rounded-xl border border-gold/25 bg-black/30">
+                    {f.animeImage ? (
+                      <img
+                        src={f.animeImage}
+                        alt={f.animeTitle}
+                        loading="lazy"
+                        className="aspect-[2/3] w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-[2/3] w-full items-center justify-center">
+                        <FilmIcon className="size-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <Heart className="absolute right-1 top-1 size-4 fill-gold text-gold drop-shadow" />
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
+                    {f.animeTitle}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Grid poster */}
         {loading ? (
           <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
@@ -218,7 +290,7 @@ export default function Film() {
                 onClick={() => {
                   setKind(f.kind);
                   setOpenId(f.id);
-                  navigate(`/film?film=${f.id}`, { replace: true });
+                  navigate(`/film?film=${f.id}&t=${f.kind}`, { replace: true });
                 }}
                 className="group text-left"
               >
@@ -271,6 +343,11 @@ function FilmDetail({
 }) {
   const getDetail = useAction(api.films.detail);
   const resolve = useAction(api.films.resolveStream);
+  const toggleFav = useMutation(api.activities.toggleFavorite);
+  const myFavs = useQuery(api.activities.myFavorites, {});
+  const favorited = (
+    (myFavs ?? []) as { animeId: string; kind?: string }[]
+  ).some((f) => (f.kind ?? "anime") === "film" && f.animeId === id);
   const [d, setD] = useState<FilmDetailT | null>(null);
   const [sources, setSources] = useState<FilmSource[]>([]);
   const [srcIdx, setSrcIdx] = useState(0);
@@ -318,6 +395,27 @@ function FilmDetail({
 
   const src = sources[srcIdx];
 
+  /** Tombol SUBSCRIBE — masukkan/keluarkan film dari koleksi Subscribe. */
+  const onSubscribe = async () => {
+    if (!d) return;
+    try {
+      const res = await toggleFav({
+        animeId: id,
+        animeTitle: d.title,
+        animeImage: d.image,
+        kind: "film",
+        status: kind,
+      });
+      toast.success(
+        res.favorited
+          ? "Ditambahkan ke Subscribe ✨"
+          : "Dihapus dari Subscribe",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+    }
+  };
+
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background">
       {/* Backdrop sinematik full-bleed khas FILM (beda dari anime) */}
@@ -343,6 +441,20 @@ function FilmDetail({
             <span className="rounded-full border border-gold/40 bg-black/40 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gold backdrop-blur">
               {kind === "tv" ? "Series" : "Film"}
             </span>
+            {/* SUBSCRIBE (favorite film) */}
+            <button
+              onClick={() => void onSubscribe()}
+              aria-label={favorited ? "Hapus dari Subscribe" : "Subscribe"}
+              className="ml-auto flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur transition active:scale-90"
+            >
+              <Heart
+                className={cn(
+                  "size-5 transition-colors",
+                  favorited ? "fill-gold text-gold" : "text-white",
+                )}
+                aria-hidden
+              />
+            </button>
           </div>
           {/* Poster + judul menempel di bawah backdrop */}
           <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">

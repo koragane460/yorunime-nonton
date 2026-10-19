@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
+import { SacretIcon } from "@/components/lstream-ui";
 import { APP_VERSION, UPDATE_BODY, UPDATE_VERSION } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -15,7 +16,6 @@ import {
   Crown,
   Film,
   Flag,
-  Gem,
   Heart,
   Info,
   KeyRound,
@@ -75,10 +75,10 @@ function saveOnboarded() {
 }
 
 /** Isi slide 1 onboarding — poin penting sebelum mulai. */
-const NOTICE_ITEMS: { icon: LucideIcon; text: string }[] = [
+const NOTICE_ITEMS: { icon: LucideIcon | typeof SacretIcon; text: string }[] = [
   { icon: Play, text: "YoruNime adalah platform streaming anime untuk komunitas." },
   { icon: Users, text: "Progres nonton, XP, dan level tersimpan otomatis di akunmu." },
-  { icon: Gem, text: "Kumpulkan Sacret & naikkan level lewat aktivitas harian." },
+  { icon: SacretIcon, text: "Kumpulkan Sacret & naikkan level lewat aktivitas harian." },
   { icon: Crown, text: "Buat clan atau join clan untuk chat bareng & donasi Sacret." },
   { icon: Sparkles, text: "Premium membuka kualitas 1080p, banner, dan fitur lainnya." },
   { icon: Film, text: "Semua episode memakai subtitle bahasa Indonesia." },

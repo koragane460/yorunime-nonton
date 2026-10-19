@@ -5,7 +5,6 @@ import {
   Camera,
   ChevronLeft,
   Crown,
-  Gem,
   Search,
   Tag as TagIcon,
   Timer,
@@ -21,6 +20,7 @@ import {
   BlueCheck,
   ClanTag,
   LevelBadge,
+  SacretIcon,
   TitleBadge,
   clanNameClass,
 } from "@/components/lstream-ui";
@@ -324,7 +324,7 @@ function ClanRow({
           <Users className="size-3" /> {c.memberCount}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Gem className="size-3 text-sky-300" /> {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
+          <SacretIcon className="size-3 text-sky-300" /> {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
         </span>
         <span className="inline-flex items-center gap-1">
           <Timer className="size-3" /> {c.ageDays ?? 0} hari
@@ -512,7 +512,7 @@ function ClanDetailScreen({
                 <Users className="size-3" /> {c.memberCount} member
               </span>
               <span className="inline-flex items-center justify-end gap-1.5 text-sky-300">
-                <Gem className="size-3 shrink-0" /> {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
+                <SacretIcon className="size-3 shrink-0" /> {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
               </span>
               <span className="inline-flex items-center justify-end gap-1.5 text-muted-foreground">
                 <Timer className="size-3" /> {c.ageDays ?? 0} hari
@@ -563,7 +563,7 @@ function ClanDetailScreen({
         {/* Member: kotak claim harian + tombol donate */}
         {isMember && (
           <div className="mt-3 rounded-2xl border border-gold/25 bg-white/[0.03] p-4 text-center">
-            <Gem className="mx-auto size-8 text-sky-300" aria-hidden />
+            <SacretIcon className="mx-auto size-8 text-sky-300" aria-hidden />
             <p className="mt-1.5 text-[11px] text-muted-foreground">
               Total berlian harian yang bisa di-claim
             </p>
@@ -1016,7 +1016,7 @@ function MemberRow({
       {/* Donasi di paling kanan */}
       <div className="shrink-0 text-right">
         <span className="inline-flex items-center gap-1 text-[11px] font-black text-sky-300">
-          <Gem className="size-3.5" aria-hidden />
+          <SacretIcon className="size-3.5" aria-hidden />
           {Number(m.donatedTotal ?? 0).toLocaleString("id-ID")}
         </span>
         {tab === "donate" && m.donatedToday > 0 && (

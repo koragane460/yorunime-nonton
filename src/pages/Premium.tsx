@@ -6,7 +6,6 @@ import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import {
   Check,
   ChevronLeft,
-  Gem,
   Loader2,
   QrCode,
   ShieldCheck,
@@ -20,6 +19,7 @@ import {
   BlueCheck,
   ClanTag,
   LevelBadge,
+  SacretIcon,
   TitleBadge,
 } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
@@ -404,7 +404,7 @@ function Plans() {
                   {/* Chip Sacret (berlian biru) */}
                   {typeof p.sacret === "number" && p.sacret > 0 && (
                     <span className="mt-2 inline-flex w-fit items-center gap-1 rounded-full border border-sky-400/40 bg-sky-400/15 px-2 py-0.5 text-[10px] font-bold text-sky-200">
-                      <Gem className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
+                      <SacretIcon className="size-3" /> +{p.sacret.toLocaleString("id-ID")} Sacret
                     </span>
                   )}
                   {/* Chip HD 1080P (hijau) — SEMUA paket dapat chip ini.

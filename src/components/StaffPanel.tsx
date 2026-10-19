@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";import {
-  Avatar, ClanTag, TitleBadge } from "@/components/lstream-ui";
+  Avatar, ClanTag, SacretIcon, TitleBadge } from "@/components/lstream-ui";
 import { CsBadge, CsScreen } from "@/components/CsDevScreens";
 import { ContentToolsFab } from "@/components/ContentTools";
 import { OrdersPanel } from "@/components/OrdersPanel";
@@ -19,7 +19,6 @@ import {
   ChevronRight,
   ChevronUp,
   Crown,
-  Gem,
   Headset,
   Infinity as InfinityIcon,
   RefreshCw,
@@ -1064,7 +1063,7 @@ function UserActions({
                     : "border-border text-muted-foreground hover:border-cyan-400",
                 )}
               >
-                <Gem className="size-3" /> Unlimited Sacret
+                <SacretIcon className="size-3" /> Unlimited Sacret
               </button>
               <button
                 onClick={() => onUnlimited("premium")}

@@ -27,6 +27,8 @@ const Manga = lazy(() => import("./pages/Manga.tsx"));
 const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
 const Baca = lazy(() => import("./pages/Baca.tsx"));
 const Film = lazy(() => import("./pages/Film.tsx"));
+const Gacha = lazy(() => import("./pages/Gacha.tsx"));
+const Title = lazy(() => import("./pages/Title.tsx"));
 
 const ReadComic = lazy(() => import("./pages/ReadComic.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -293,6 +295,24 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Film />
+                  </RequireAuth>
+                }
+              />
+              {/* GACHA & TITLE — dibuka lewat tombol navigasi bawah
+                  (tekan-lama History↔Gacha / Subscribe↔Title). */}
+              <Route
+                path="/gacha"
+                element={
+                  <RequireAuth>
+                    <Gacha />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/title"
+                element={
+                  <RequireAuth>
+                    <Title />
                   </RequireAuth>
                 }
               />

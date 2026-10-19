@@ -52,8 +52,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Award,
   Crown,
-  Gem,
   Heart,
   Bookmark,
   Headset,
@@ -73,6 +73,11 @@ import {
   setAntiLag as setAntiLagPref,
 } from "@/lib/antilag";
 import { toast } from "sonner";
+import { SacretIcon } from "@/components/lstream-ui";
+import {
+  GACHA_ROSTER,
+  type GachaRank,
+} from "@/lib/gachaRoster";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export default function Akun() {
@@ -514,6 +519,11 @@ function SettingsScreen({
   const buyBorder = useMutation(api.account.buyBorder);
   const equipBorder = useMutation(api.account.equipBorder);
   const [busyBorder, setBusyBorder] = useState<string | null>(null);
+  // TITLE & KARTU GACHA — pasang dari koleksi yang sudah dimiliki.
+  const myCosmetics = useQuery(api.titles.myTitles, {});
+  const equipTitle = useMutation(api.titles.equip);
+  const equipCard = useMutation(api.gacha.equipCard);
+  const [busyCosmetic, setBusyCosmetic] = useState<string | null>(null);
   const [name, setName] = useState(user?.username ?? "");
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
@@ -551,6 +561,42 @@ function SettingsScreen({
 
   /** Tekan kartu border di Shop: belum punya → BELI (langsung dipakai),
    *  sudah punya → PAKAI, sedang dipakai → bisa LEPAS ("none"). */
+  /** Pasang / lepas TITLE dari Pengaturan. */
+  const pickTitle = async (titleId: string | null) => {
+    if (busyCosmetic) return;
+    setBusyCosmetic(titleId ?? "none");
+    try {
+      await equipTitle({ titleId });
+      toast.success(titleId ? "Title dipasang ✨" : "Title dilepas");
+    } catch (e2) {
+      setErr(
+        e2 instanceof Error
+          ? e2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
+          : "Gagal mengubah title",
+      );
+    } finally {
+      setBusyCosmetic(null);
+    }
+  };
+
+  /** Pasang / lepas KARTU GACHA dari Pengaturan. */
+  const pickCard = async (cardId: string) => {
+    if (busyCosmetic) return;
+    setBusyCosmetic(cardId);
+    try {
+      await equipCard({ cardId });
+      toast.success(cardId === "none" ? "Kartu dilepas" : "Kartu dipasang ✨");
+    } catch (e2) {
+      setErr(
+        e2 instanceof Error
+          ? e2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
+          : "Gagal mengubah kartu",
+      );
+    } finally {
+      setBusyCosmetic(null);
+    }
+  };
+
   const pickBorder = async (b: { id: string; name: string }) => {
     if (busyBorder) return;
     setBusyBorder(b.id);
@@ -721,7 +767,7 @@ function SettingsScreen({
             className="absolute inset-0 bg-[linear-gradient(115deg,#67e8f9_0%,#a5b4fc_30%,#f0abfc_60%,#fde68a_85%,#67e8f9_100%)] bg-[length:200%_100%]"
           />
           <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/70 ring-1 ring-white/60 shadow-sm">
-            <Gem className="size-5 text-amber-500" aria-hidden />
+            <SacretIcon className="size-5 text-amber-500" aria-hidden />
           </span>
           <div className="relative min-w-0 flex-1">
             <p className="text-[13px] font-black tracking-wide text-indigo-950 drop-shadow-sm">
@@ -732,7 +778,7 @@ function SettingsScreen({
             </p>
           </div>
           <span className="relative inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[12px] font-black text-sky-700 ring-1 ring-white/60 shadow-sm">
-            <Gem className="size-3.5" aria-hidden />
+            <SacretIcon className="size-3.5" aria-hidden />
             {Number(user.diamonds ?? 0).toLocaleString("id-ID")}
           </span>
         </div>
@@ -784,7 +830,7 @@ function SettingsScreen({
                     "Pakai"
                   ) : (
                     <>
-                      <Gem className="size-2.5" aria-hidden />
+                      <SacretIcon className="size-2.5" aria-hidden />
                       {b.price.toLocaleString("id-ID")}
                     </>
                   )}
@@ -793,6 +839,108 @@ function SettingsScreen({
             );
           })}
           </div>
+        </div>
+      </div>
+
+      {/* -------- TITLE & KARTU GACHA — equip dari koleksi -------- */}
+      <BlockTitle>Title & Kartu</BlockTitle>
+      <div className="rounded-xl border border-border bg-card p-3">
+        <p className="text-[13px] font-medium">Title aktif</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Muncul di bawah nama kamu di layar detail akun. Kelola semua di
+          tombol Title (tekan lama tombol Subscribe).
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(myCosmetics?.defs ?? [])
+            .filter((d) => !!myCosmetics?.earnedAt[d.id])
+            .map((d) => {
+              const active = myCosmetics?.equippedTitle === d.id;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  disabled={busyCosmetic !== null}
+                  onClick={() => void pickTitle(active ? null : d.id)}
+                  title={d.desc}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-[11px] font-bold transition active:scale-95 disabled:opacity-60",
+                    active
+                      ? "border-gold/70 bg-gold/15 text-gold shadow-[0_0_12px_-5px_rgba(212,175,55,.8)]"
+                      : "border-white/15 bg-white/[0.04] text-white/85",
+                  )}
+                >
+                  <Award className="mr-1 inline size-3" aria-hidden />
+                  {d.name}
+                </button>
+              );
+            })}
+          {myCosmetics?.equippedTitle && (
+            <button
+              type="button"
+              disabled={busyCosmetic !== null}
+              onClick={() => void pickTitle(null)}
+              className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
+            >
+              Lepas title
+            </button>
+          )}
+          {(myCosmetics?.defs ?? []).every(
+            (d) => !myCosmetics?.earnedAt[d.id],
+          ) && (
+            <p className="text-[11px] text-muted-foreground">
+              Belum ada title — tonton anime atau menangkan gacha!
+            </p>
+          )}
+        </div>
+
+        <p className="mt-4 text-[13px] font-medium">Kartu anime (Gacha)</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Kartu hasil pull di Gacha — pasang untuk dipamerkan di profil.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(myCosmetics?.ownedCards ?? []).map((cardId) => {
+            const c = GACHA_ROSTER.find((r) => r.id === cardId);
+            if (!c) return null;
+            const active = myCosmetics?.equippedCard === c.id;
+            const ring: Record<GachaRank, string> = {
+              SSS: "border-amber-400/70 bg-amber-400/10 text-amber-300",
+              SS: "border-fuchsia-400/60 bg-fuchsia-400/10 text-fuchsia-300",
+              S: "border-sky-400/60 bg-sky-400/10 text-sky-300",
+            };
+            return (
+              <button
+                key={c.id}
+                type="button"
+                disabled={busyCosmetic !== null}
+                onClick={() => void pickCard(active ? "none" : c.id)}
+                title={`${c.name} — ${c.anime} (${c.rank})`}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[11px] font-bold transition active:scale-95 disabled:opacity-60",
+                  active ? ring[c.rank] : "border-white/15 bg-white/[0.04] text-white/85",
+                  active && "shadow-[0_0_12px_-5px_rgba(255,255,255,.5)]",
+                )}
+              >
+                {c.name}
+                <span className="ml-1 opacity-70">{c.rank}</span>
+              </button>
+            );
+          })}
+          {myCosmetics?.equippedCard && (
+            <button
+              type="button"
+              disabled={busyCosmetic !== null}
+              onClick={() => void pickCard("none")}
+              className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
+            >
+              Lepas kartu
+            </button>
+          )}
+          {(myCosmetics?.ownedCards ?? []).length === 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              Belum punya kartu — buka tombol Gacha (tekan lama History) lalu
+              pull!
+            </p>
+          )}
         </div>
       </div>
 
