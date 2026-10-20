@@ -230,9 +230,7 @@ export const publicOf = query({
       : null;
     return {
       title: title ? { id: title.id, name: title.name, group: title.group } : null,
-      card: card
-        ? { id: card.id, name: card.name, rank: card.rank, anime: card.anime }
-        : null,
+      card: card ? { id: card.id, name: card.name, rank: card.rank } : null,
     };
   },
 });

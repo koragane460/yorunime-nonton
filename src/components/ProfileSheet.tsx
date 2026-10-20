@@ -245,19 +245,28 @@ export function ProfileSheet({
 
             {/* TITLE + KARTU GACHA terpasang — di bawah stat */}
             {(cosmetics?.title || cosmetics?.card) && (
-              <div className="mx-auto mt-3 flex max-w-sm flex-col items-center gap-2">
+              <div className="mx-auto mt-3 flex max-w-sm flex-wrap items-center justify-center gap-1.5">
                 {cosmetics?.title && (
-                  <TitleRibbon name={cosmetics.title.name} size="md" />
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/45 bg-gold/10 px-2.5 py-1 text-[11px] font-bold text-gold">
+                    <Award className="size-3" aria-hidden />
+                    {cosmetics.title.name}
+                  </span>
                 )}
                 {cosmetics?.card && (
-                  <div className="w-28">
-                    <CharacterCard
-                      name={cosmetics.card.name}
-                      anime={(cosmetics.card as { anime?: string }).anime}
-                      rank={cosmetics.card.rank as "SSS" | "SS" | "S"}
-                      image={rosterImages[cosmetics.card.id]}
-                    />
-                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold",
+                      cosmetics.card.rank === "SSS"
+                        ? "border-amber-400/60 bg-amber-400/10 text-amber-300"
+                        : cosmetics.card.rank === "SS"
+                          ? "border-fuchsia-400/50 bg-fuchsia-400/10 text-fuchsia-300"
+                          : "border-sky-400/50 bg-sky-400/10 text-sky-300",
+                    )}
+                  >
+                    <Sparkles className="size-3" aria-hidden />
+                    {cosmetics.card.name}
+                    <span className="opacity-70">{cosmetics.card.rank}</span>
+                  </span>
                 )}
               </div>
             )}

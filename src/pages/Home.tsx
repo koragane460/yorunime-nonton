@@ -896,7 +896,7 @@ function HomeContent() {
             memakai resolver stream TMDb + VidSrc/Cinepro. */}
         <button
           onClick={() => navigate("/film")}
-          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/40 bg-gradient-to-r from-gold/15 via-card to-card px-4 py-3 text-left shadow-[0_0_20px_-10px] shadow-gold/40 transition hover:border-gold/70 hover:bg-gold/10 active:scale-[0.99]"
+          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-transparent px-4 py-3 text-left transition hover:border-gold/60 hover:bg-gold/5"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/15">
             <Film className="size-5 text-gold" aria-hidden />

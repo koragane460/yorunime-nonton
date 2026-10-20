@@ -122,7 +122,6 @@ export const getPublicProfile = query({
       staffRole: u.staffRole,
       devTagged: (u.devTagUntil ?? 0) > now,
       hideOnline: u.hideOnline,
-      profileAnim: u.profileAnim ?? "none",
       clanTag: clan?.tag,
       clanTagIcon: clan?.tagIcon,
       clanLevel: u.clanLevel ?? clan?.level ?? 0,
@@ -206,7 +205,6 @@ export const updateSettings = mutation({
     defaultSpeed: v.optional(v.number()),
     theme: v.optional(v.string()),
     customColor: v.optional(v.string()),
-    profileAnim: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

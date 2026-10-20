@@ -241,7 +241,7 @@ function AccountPanel({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="yn-banner-box pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-3xl border border-white/15 shadow-[0_0_28px_-6px] shadow-primary/25">
+    <div className="yn-banner-box pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] rounded-3xl border border-white/15 shadow-[0_0_28px_-6px] shadow-primary/25">
       {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
           Keduanya di luar area teks supaya tidak saling nimpa. */}
       <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1.5">
@@ -255,7 +255,7 @@ function AccountPanel({
         <NotifButton />
       </div>
 
-      <button onClick={onOpen} className="block w-full overflow-hidden text-left"
+      <button onClick={onOpen} className="block w-full text-left"
         style={
           bannerUrl
             ? {
