@@ -197,6 +197,9 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
   const [phase, setPhase] = useState<"comet" | "results">("comet");
   const [rankTab, setRankTab] = useState<GachaRank>("SSS");
   const [historyOpen, setHistoryOpen] = useState(false);
+  /** INDEX — kotak overlay (sheet) yang menutupi layar, bukan langsung
+      terbuka di bawah (permintaan pemilik). */
+  const [indexOpen, setIndexOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
   const [reduceMotion] = useState(
     () =>
@@ -283,11 +286,20 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
     setPhase("comet");
   };
 
-  const showIndex = () => {
-    document
-      .getElementById("koleksi-gacha")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const showIndex = () => setIndexOpen(true);
+
+  /** Tanggal lengkap "20 Okt 2026" + jam "17.58" untuk history. */
+  const fmtDate = (ts: number) =>
+    new Date(ts).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  const fmtClock = (ts: number) =>
+    new Date(ts).toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   const onPickCard = async (c: GachaChar) => {
     if (!owned[c.id]) {

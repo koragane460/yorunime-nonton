@@ -128,12 +128,30 @@ export const ensureUser = internalMutation({
     }
     if (user.xp === undefined) patch.xp = 0;
     if (user.level === undefined) patch.level = 1;
-    if (user.diamonds === undefined) patch.diamonds = 45000;
+    if (user.diamonds === undefined) patch.diamonds = 200000;
     if (user.createdAt === undefined) patch.createdAt = Date.now();
     if (user.nsfwStrikes === undefined) patch.nsfwStrikes = 0;
     if (user.theme === undefined) patch.theme = "dark";
     if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
     return await ctx.db.get(userId);
+  },
+});
+
+/** START SACRET — pastikan SEMUA user benar-benar punya 200.000 Sacret.
+ *  Naikkan hanya yang di bawah 200.000 (tidak pernah mengurangi), jadi
+ *  aman dijalankan berulang. */
+export const grantAllStartSacret = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    let raised = 0;
+    for (const u of users) {
+      if ((u.diamonds ?? 0) < 200000) {
+        await ctx.db.patch(u._id, { diamonds: 200000 });
+        raised++;
+      }
+    }
+    return { total: users.length, raised };
   },
 });
 
@@ -409,7 +427,7 @@ export const internalEnsureUser = internalMutation({
     if (user.username === undefined) patch.username = `user${userId.slice(0, 6)}`;
     if (user.xp === undefined) patch.xp = 0;
     if (user.level === undefined) patch.level = 1;
-    if (user.diamonds === undefined) patch.diamonds = 45000;
+    if (user.diamonds === undefined) patch.diamonds = 200000;
     if (user.createdAt === undefined) patch.createdAt = Date.now();
     if (user.nsfwStrikes === undefined) patch.nsfwStrikes = 0;
     if (user.uidCode === undefined) patch.uidCode = randomUid();

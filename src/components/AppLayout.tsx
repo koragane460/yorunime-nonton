@@ -134,6 +134,9 @@ export function AppLayout({
 
   return (
     <div className="yn-app-bg flex min-h-dvh w-full flex-col items-center">
+      {/* LATAR HOME KUSTOM — gambar 9:16 dari galeri (Pengaturan › Ganti
+          Home Screen). Fixed, di belawah semua konten (z negatif). */}
+      <HomeBgLayer />
       {/* Panel akun hanya muncul di Home dan TIDAK saat layar Koleksi (Favorit)
           terbuka. Dulu panel ini tetap tampil di atas layar Koleksi sehingga
           terlihat seperti layar yang salah - tombol Favorit di navigasi
@@ -265,7 +268,9 @@ function AccountPanel({
         {/* Banner profil TIDAK tampil di panel akun (hanya di profil &
             komentar); latar panel memakai background 45% + blur. */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-transparent to-gold/[0.05]" aria-hidden />
-        <div className="relative p-3">
+        {/* pb-12: ruang khusus tombol YoruVerse di kanan bawah supaya
+            tidak pernah menimpa bar level / baris Sacret. */}
+        <div className="relative p-3 pb-12">
           <div className="flex items-center gap-3">
             {avatarBorder && avatarBorder !== "none" ? (
               /* Border shop terpasang → bingkai kreatif menggantikan ring
@@ -341,14 +346,51 @@ function AccountPanel({
           </div>
         </div>
       </button>
-      {/* YORUVERSE — tombol kuning tua di pojok KANAN BAWAH panel akun.
-          Outline TEBAL tapi TANPA neon/glow sesuai permintaan. */}
+      {/* YORUVERSE — tombol di pojok KANAN BAWAH panel akun. Outline TIPIS
+          dan warnanya ikut warna teks (amber-300), tanpa neon/glow. */}
       <button
         onClick={onOpenYoruVerse}
-        className="absolute bottom-2.5 right-2.5 z-10 rounded-2xl border-[3px] border-amber-700/80 bg-yellow-900/40 px-3 py-1.5 text-[11px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition active:scale-95 hover:bg-yellow-800/60"
+        className="absolute bottom-2.5 right-2.5 z-10 rounded-2xl border border-amber-300/70 bg-yellow-900/30 px-3 py-1.5 text-[11px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition active:scale-95 hover:bg-yellow-800/50"
       >
         YoruVerse
       </button>
+    </div>
+  );
+}
+
+// ------------------------------------------------------ latar home ----
+
+/** localStorage key gambar latar Home (9:16, dari galeri). */
+export const HOME_BG_KEY = "yn:home-bg";
+export const HOME_BG_EVENT = "yn-home-bg-change";
+
+/** LAYER LATAR HOME — gambar pilihan user (Pengaturan › Ganti Home Screen)
+ *  dipasang sebagai latar paling belakang seluruh app. Tanpa gambar, tidak
+ *  merender apa pun (tampilan lama tetap persis). */
+function HomeBgLayer() {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () => {
+      try {
+        setSrc(window.localStorage.getItem(HOME_BG_KEY));
+      } catch {
+        setSrc(null);
+      }
+    };
+    load();
+    window.addEventListener(HOME_BG_EVENT, load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener(HOME_BG_EVENT, load);
+      window.removeEventListener("storage", load);
+    };
+  }, []);
+  if (!src) return null;
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+      <img src={src} alt="" className="size-full object-cover object-top" />
+      {/* Supaya teks/kartu tetap terbaca di atas foto. */}
+      <div className="absolute inset-0 bg-black/45" />
     </div>
   );
 }

@@ -20,6 +20,25 @@ import {
 } from "../lib/gachaRoster";
 
 const ANILIST_URL = "https://graphql.anilist.co";
+const JIKAN_URL = "https://api.jikan.moe/v4";
+const KITSU_URL = "https://kitsu.io/api/edge";
+
+/** Ambil JSON dengan timeout — dipakai fallback sumber gambar. */
+async function jget(url: string, ms = 9000): Promise<any | null> {
+  try {
+    const r = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "YoruNime/1.0",
+      },
+      signal: AbortSignal.timeout(ms),
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
 
 async function aniGraphql(
   query: string,
@@ -55,28 +74,95 @@ async function cached(
   return payload;
 }
 
-/** Gambar semua karakter roster — SATU query AniList (alias per karakter),
- *  di-cache 30 hari. Dipanggil frontend saat membuka layar Gacha. */
+/** Cari gambar karakter di Jikan (MyAnimeList) — tanpa API key. */
+async function jikanImage(name: string): Promise<string> {
+  const d = await jget(
+    `${JIKAN_URL}/characters?q=${encodeURIComponent(name)}&limit=1&order_by=favorites&sort=desc`,
+  );
+  return String(d?.data?.[0]?.images?.jpg?.image_url ?? "");
+}
+
+/** Cari gambar karakter di Kitsu — tanpa API key. */
+async function kitsuImage(name: string): Promise<string> {
+  const d = await jget(
+    `${KITSU_URL}/characters?filter[name]=${encodeURIComponent(name)}&page[limit]=1`,
+  );
+  return String(d?.data?.[0]?.attributes?.image?.original ?? "");
+}
+
+/** Tarik semua gambar roster dari sumber berlapis. Hasil dibungkus
+ *  timestamp + tanda "lengkap" supaya cache sebagian tidak dipakai lama. */
+type RosterPayload = { at: number; full: boolean; images: Record<string, string> };
+
+async function fetchRosterImages(): Promise<RosterPayload> {
+  const out: Record<string, string> = {};
+  // --- 1) AniList: satu query untuk semua karakter ---
+  try {
+    const parts = GACHA_ROSTER.map(
+      (c, i) =>
+        `c${i}: Character(search: ${JSON.stringify(charQueryName(c))}){ id name{full} image{large} }`,
+    );
+    const data = await aniGraphql(`query{ ${parts.join(" ")} }`);
+    GACHA_ROSTER.forEach((c, i) => {
+      out[c.id] = String(data?.[`c${i}`]?.image?.large ?? "");
+    });
+  } catch {
+    /* AniList gagal → lanjut ke fallback */
+  }
+
+  // --- 2) & 3) fallback per karakter yang masih kosong ---
+  const missing = GACHA_ROSTER.filter((c) => !out[c.id]);
+  for (const c of missing) {
+    let url = "";
+    try {
+      url = await jikanImage(c.name);
+    } catch {
+      url = "";
+    }
+    if (!url) {
+      try {
+        url = await kitsuImage(c.name);
+      } catch {
+        url = "";
+      }
+    }
+    out[c.id] = url;
+    // jeda kecil — Jikan membatasi ~3 request/detik.
+    await new Promise((r) => setTimeout(r, 350));
+  }
+
+  const full = GACHA_ROSTER.every((c) => !!out[c.id]);
+  return { at: Date.now(), full, images: out };
+}
+
+/**
+ * Gambar semua karakter roster — SUMBER BERLAPIS supaya gambar tidak pernah
+ * kosong dan TIDAK seragam:
+ *   1. AniList (satu query alias per karakter) — paling lengkap.
+ *   2. Jikan / MyAnimeList — untuk yang kosong di AniList.
+ *   3. Kitsu — untuk yang masih kosong.
+ * Cache 30 hari kalau LENGKAP; hasil sebagian cuma dipakai 1 hari lalu
+ * ditarik ulang (kesalahan lama: hasil gagal di-cache 30 hari penuh,
+ * makanya kartu cuma huruf doang).
+ */
 export const rosterImages = action({
   args: {},
   handler: async (ctx) => {
-    return (await cached(
+    const payload = (await cached(
       ctx,
-      "gacha:roster:v1",
+      "gacha:roster:v2",
       30 * 86400 * 1000,
-      async () => {
-        const parts = GACHA_ROSTER.map(
-          (c, i) =>
-            `c${i}: Character(search: ${JSON.stringify(charQueryName(c))}){ id name{full} image{large} }`,
-        );
-        const data = await aniGraphql(`query{ ${parts.join(" ")} }`);
-        const out: Record<string, string> = {};
-        GACHA_ROSTER.forEach((c, i) => {
-          out[c.id] = String(data?.[`c${i}`]?.image?.large ?? "");
-        });
-        return out;
-      },
-    )) as Record<string, string>;
+      fetchRosterImages,
+    )) as RosterPayload;
+    // Hasil kosong total → langsung tarik ulang. Hasil sebagian yang sudah
+    // tua (>1 hari) → tarik ulang sekali tanpa cache.
+    const cachedOk = Object.values(payload.images ?? {}).filter(Boolean).length;
+    if (cachedOk === 0 || (!payload.full && Date.now() - payload.at > 86400 * 1000)) {
+      const fresh = await fetchRosterImages();
+      const okCount = Object.values(fresh.images).filter(Boolean).length;
+      if (okCount > 0) return fresh.images;
+    }
+    return payload.images;
   },
 });
 

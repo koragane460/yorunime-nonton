@@ -273,8 +273,11 @@ function JoinScreen() {
  * tengah (orang/berlian/timer), bar level dalam kotak, lalu tombol Join
  * saja (tombol Member/Donate hanya ada di DETAIL). Menekan kartu membuka
  * detail clan.
+ *
+ * EXPORT — dipakai juga oleh YoruVerse › Clan supaya tampilannya persis
+ * sama dengan daftar clan di sini (permintaan pemilik).
  */
-function ClanRow({
+export function ClanRow({
   clan: c,
   onOpen,
   onJoin,
