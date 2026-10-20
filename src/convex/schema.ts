@@ -47,6 +47,8 @@ const schema = defineSchema(
       equippedTitle: v.optional(v.string()),
       /** Kartu karakter GACHA yang sedang dipasang (id karakter roster). */
       equippedCard: v.optional(v.string()),
+      /** Animasi intro layar profil ("gagak" | "bintang" | "none"). */
+      profileAnim: v.optional(v.string()),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
       
@@ -529,6 +531,14 @@ const schema = defineSchema(
       bestStreak: v.number(),
       /** { [cardId]: jumlah dimiliki } */
       owned: v.any(),
+    }).index("userId", ["userId"]),
+
+    /** RIWAYAT PULL GACHA — satu baris per kali menekan tombol pull. */
+    gachaPulls: defineTable({
+      userId: v.id("users"),
+      createdAt: v.number(),
+      /** [{ id, name, rank }] — hasil pull pada sesi ini. */
+      cards: v.any(),
     }).index("userId", ["userId"]),
 
     /** TITLE yang sudah dimiliki user (earned). */

@@ -1,19 +1,29 @@
 // YoruNime — HALAMAN GACHA.
 //
 // Tarik karakter anime pakai Sacret: 1 pull = 160, 10 pull = 1600.
-// Pity 75 menjamin SSS. Kartu hasil pull masuk koleksi dan bisa dipasang
-// (equip) supaya tampil di detail akun. Logika angka ada di
+// Pity 75 menjamin SSS dan SETELAH dapat SSS pity balik ke 0 (guaranteed).
+// Alur animasi: menekan Pull → komet meluncur dari bawah ke atas → hasil
+// reveal satu per satu dengan kartu besar lalu mengecil. Logika angka ada di
 // src/convex/gacha.ts — halaman ini hanya tampilan + animasi.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ChevronLeft, Loader2, Lock, Sparkles } from "lucide-react";
+import {
+  ChevronLeft,
+  History as HistoryIcon,
+  Loader2,
+  Lock,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { SacretIcon } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
+import { useRosterImages } from "@/hooks/use-roster-images";
+import { CharacterCard } from "@/components/Cosmetics";
 import {
   GACHA_ROSTER,
   PITY_MAX,
@@ -24,7 +34,6 @@ import {
   type GachaRank,
 } from "@/lib/gachaRoster";
 
-/** Warna rank — dipakai di banner, kartu reveal, dan koleksi. */
 const RANK_STYLE: Record<
   GachaRank,
   { chip: string; card: string; glow: string; text: string }
@@ -54,34 +63,39 @@ type PullCard = { id: string; name: string; anime: string; rank: string };
 export default function Gacha() {
   const navigate = useNavigate();
   const state = useQuery(api.gacha.myState, {});
-  const rosterImages = useAction(api.gacha.rosterImages);
+  const pulls = useQuery(api.gacha.myPulls, {});
+  const images = useRosterImages();
   const pull = useMutation(api.gacha.pull);
   const equipCard = useMutation(api.gacha.equipCard);
 
-  const [images, setImages] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<null | 1 | 10>(null);
-  const [reveal, setReveal] = useState<PullCard[] | null>(null);
+  const [phase, setPhase] = useState<null | "comet" | "results">(null);
+  const [reveal, setReveal] = useState<PullCard[]>([]);
   const [rankTab, setRankTab] = useState<GachaRank>("SSS");
+  const [showIndex, setShowIndex] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Gambar karakter dari AniList (di-cache server 30 hari).
-  useEffect(() => {
-    let alive = true;
-    rosterImages()
-      .then((r) => alive && setImages(r ?? {}))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Bersihkan timer saat unmount supaya tidak setState setelah lepas.
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   const sacret = state?.sacret ?? 0;
   const pity = state?.pity ?? 0;
   const owned = (state?.owned ?? {}) as Record<string, number>;
   const equipped = state?.equippedCard ?? null;
 
-  const bannerChars = useMemo(
-    () => GACHA_ROSTER.filter((c) => c.rank === "SSS").slice(0, 6),
+  // Banner: 1 karakter SSS besar + 3 karakter SS di sebelahnya.
+  const bannerSss = useMemo(
+    () => GACHA_ROSTER.find((c) => c.rank === "SSS"),
+    [],
+  );
+  const bannerSs = useMemo(
+    () => GACHA_ROSTER.filter((c) => c.rank === "SS").slice(0, 3),
     [],
   );
   const rankPool = useMemo(
@@ -90,22 +104,27 @@ export default function Gacha() {
   );
 
   const doPull = async (count: 1 | 10) => {
-    if (busy) return;
+    if (busy || phase) return;
     const cost = count === 1 ? PULL_COST_1 : PULL_COST_10;
     if (sacret < cost) {
       toast.error(`Sacret tidak cukup — butuh ${cost.toLocaleString("id-ID")}`);
       return;
     }
     setBusy(count);
+    setPhase("comet");
     try {
       const res = await pull({ count });
-      setReveal(res.results as PullCard[]);
-      if (res.sssInPull > 0) {
-        toast.success(`Dapat SSS ×${res.sssInPull}! 🎉`);
-      }
+      const results = res.results as PullCard[];
+      // Tunggu animasi komet selesai dulu (~1.6s) sebelum reveal hasil.
+      timerRef.current = setTimeout(() => {
+        setReveal(results);
+        setPhase("results");
+        setBusy(null);
+        if (res.sssInPull > 0) toast.success(`Dapat SSS ×${res.sssInPull}! 🎉`);
+      }, 1600);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal melakukan pull");
-    } finally {
+      setPhase(null);
       setBusy(null);
     }
   };
@@ -149,57 +168,64 @@ export default function Gacha() {
           </span>
         </div>
 
-        {/* ------------------------- banner SSS showcase ------------------ */}
+        {/* ------------------------- BANNER: 1 SSS + 3 SS ---------------- */}
         <div className="relative mt-4 overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-br from-[#1b1430] via-[#120d22] to-[#0b0714] p-4">
           <div
             aria-hidden
             className="absolute -right-16 -top-16 size-52 rounded-full bg-gold/15 blur-3xl"
           />
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-gold/90">
-            Banner Rate Up — SSS
-          </p>
-          <p className="mt-0.5 text-sm font-bold text-white/90">
-            Karakter paling ikonik, paling susah didapat
-          </p>
-          <div className="thin-scroll mt-3 flex gap-2.5 overflow-x-auto pb-1">
-            {bannerChars.map((c) => (
-              <div key={c.id} className="w-24 shrink-0 text-center">
-                <div
-                  className={cn(
-                    "relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b",
-                    RANK_STYLE[c.rank].card,
-                    RANK_STYLE[c.rank].glow,
-                  )}
-                >
-                  {images[c.id] ? (
-                    <img
-                      src={images[c.id]}
-                      alt={c.name}
-                      loading="lazy"
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center text-3xl font-black text-white/70">
-                      {c.name.slice(0, 1)}
-                    </div>
-                  )}
-                  <span
-                    className={cn(
-                      "absolute left-1 top-1 rounded-md px-1.5 py-0.5 text-[9px] font-black",
-                      RANK_STYLE[c.rank].chip,
-                    )}
-                  >
-                    {c.rank}
-                  </span>
-                </div>
-                <p className="mt-1 line-clamp-1 text-[11px] font-bold text-white/90">
-                  {c.name}
-                </p>
-                <p className="line-clamp-1 text-[9px] text-muted-foreground">
-                  {c.anime}
-                </p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-gold/90">
+                Banner Rate Up
+              </p>
+              <p className="mt-0.5 text-sm font-bold text-white/90">
+                1 SSS + 3 SS siap menemani pull kamu
+              </p>
+            </div>
+            {/* Tombol buka INDEKS + RIWAYAT pull */}
+            <div className="flex shrink-0 gap-1.5">
+              <button
+                onClick={() => setShowIndex(true)}
+                className="rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-[10px] font-black text-gold transition active:scale-95"
+              >
+                Indeks
+              </button>
+              <button
+                onClick={() => setShowHistory(true)}
+                aria-label="Riwayat pull"
+                className="rounded-full border border-white/15 bg-white/[0.06] p-1.5 text-white/80 transition active:scale-95"
+              >
+                <HistoryIcon className="size-3.5" aria-hidden />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-end gap-2.5">
+            {/* 1 kartu SSS besar di kiri */}
+            {bannerSss && (
+              <div className="w-28 shrink-0">
+                <CharacterCard
+                  name={bannerSss.name}
+                  anime={bannerSss.anime}
+                  rank="SSS"
+                  image={images[bannerSss.id]}
+                />
               </div>
-            ))}
+            )}
+            {/* 3 kartu SS kecil bertumpuk di kanan */}
+            <div className="grid flex-1 grid-cols-3 gap-2">
+              {bannerSs.map((c) => (
+                <div key={c.id}>
+                  <CharacterCard
+                    name={c.name}
+                    anime={c.anime}
+                    rank="SS"
+                    image={images[c.id]}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -221,6 +247,9 @@ export default function Gacha() {
               className="h-full rounded-full bg-gradient-to-r from-gold to-amber-400"
             />
           </div>
+          <p className="mt-1.5 text-[10px] font-semibold text-muted-foreground">
+            Dapat SSS → pity langsung balik ke 0 (guaranteed tiap 75 pull)
+          </p>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-bold">
             <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-muted-foreground">
               Total pull: {(state?.totalPulls ?? 0).toLocaleString("id-ID")}
@@ -239,13 +268,9 @@ export default function Gacha() {
           <button
             onClick={() => void doPull(1)}
             disabled={busy !== null}
-            className={cn(
-              "rounded-2xl border border-gold/50 bg-gradient-to-b from-gold/20 to-gold/5 py-3.5 text-center transition active:scale-[0.98] disabled:opacity-60",
-            )}
+            className="rounded-2xl border border-gold/50 bg-gradient-to-b from-gold/20 to-gold/5 py-3.5 text-center transition active:scale-[0.98] disabled:opacity-60"
           >
-            <span className="block text-sm font-black text-gold">
-              Pull ×1
-            </span>
+            <span className="block text-sm font-black text-gold">Pull ×1</span>
             <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-gold/80">
               <SacretIcon className="size-3" />
               {PULL_COST_1.toLocaleString("id-ID")}
@@ -254,9 +279,7 @@ export default function Gacha() {
           <button
             onClick={() => void doPull(10)}
             disabled={busy !== null}
-            className={cn(
-              "relative rounded-2xl border border-gold bg-gradient-to-b from-gold to-amber-500 py-3.5 text-center transition active:scale-[0.98] disabled:opacity-60",
-            )}
+            className="relative rounded-2xl border border-gold bg-gradient-to-b from-gold to-amber-500 py-3.5 text-center transition active:scale-[0.98] disabled:opacity-60"
           >
             <span className="block text-sm font-black text-black">
               Pull ×10
@@ -274,107 +297,93 @@ export default function Gacha() {
           </button>
         </div>
 
-        {/* ---------------------------- koleksi --------------------------- */}
-        <div className="mt-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight">Koleksi Kartu</h2>
+        {/* CTA buka indeks koleksi (jalan dari tombol atas juga) */}
+        <button
+          onClick={() => setShowIndex(true)}
+          className="mt-4 flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left transition hover:border-gold/40"
+        >
+          <span className="text-sm font-bold">Koleksi Kartu</span>
           <span className="text-[11px] font-semibold text-muted-foreground">
-            {Object.keys(owned).length}/{GACHA_ROSTER.length} kartu
+            {Object.keys(owned).length}/{GACHA_ROSTER.length} kartu · buka indeks
           </span>
-        </div>
-
-        {/* Tab indeks rank: SSS / SS / S */}
-        <div className="mt-2 flex rounded-full border border-border bg-card p-0.5">
-          {RANK_ORDER.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRankTab(r)}
-              className={cn(
-                "flex-1 rounded-full py-1.5 text-[12px] font-black transition",
-                rankTab === r
-                  ? cn(RANK_STYLE[r].chip, "shadow-sm")
-                  : "text-muted-foreground",
-              )}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-          {rankPool.map((c) => {
-            const count = owned[c.id] ?? 0;
-            const has = count > 0;
-            const isActive = equipped === c.id;
-            return (
-              <motion.button
-                key={c.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                onClick={() => void onPickCard(c)}
-                className="text-left"
-              >
-                <div
-                  className={cn(
-                    "relative aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b",
-                    RANK_STYLE[c.rank].card,
-                    has ? RANK_STYLE[c.rank].glow : "opacity-45 grayscale",
-                    isActive && "ring-2 ring-gold ring-offset-2 ring-offset-background",
-                  )}
-                >
-                  {images[c.id] ? (
-                    <img
-                      src={images[c.id]}
-                      alt={c.name}
-                      loading="lazy"
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center text-2xl font-black text-white/70">
-                      {c.name.slice(0, 1)}
-                    </div>
-                  )}
-                  {!has && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/55">
-                      <Lock className="size-5 text-white/80" aria-hidden />
-                    </span>
-                  )}
-                  {has && count > 1 && (
-                    <span className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-white">
-                      ×{count}
-                    </span>
-                  )}
-                  {isActive && (
-                    <span className="absolute inset-x-0 bottom-0 bg-gold px-1 py-0.5 text-center text-[9px] font-black text-black">
-                      TERPASANG
-                    </span>
-                  )}
-                </div>
-                <p
-                  className={cn(
-                    "mt-1 line-clamp-1 text-[11px] font-bold",
-                    has ? "text-white/90" : "text-muted-foreground",
-                  )}
-                >
-                  {c.name}
-                </p>
-                <p className="line-clamp-1 text-[9px] text-muted-foreground">
-                  {c.anime}
-                </p>
-              </motion.button>
-            );
-          })}
-        </div>
+        </button>
       </div>
 
-      {/* --------------------------- overlay reveal ---------------------- */}
+      {/* --------------------- overlay: animasi komet -------------------- */}
       <AnimatePresence>
-        {reveal && (
+        {phase === "comet" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-black/92 px-4 backdrop-blur-md"
+            className="fixed inset-0 z-[95] overflow-hidden bg-black"
+          >
+            {/* Bintang latar berkelip */}
+            {Array.from({ length: 26 }).map((_, i) => (
+              <motion.span
+                key={i}
+                aria-hidden
+                className="absolute size-1 rounded-full bg-white"
+                style={{
+                  left: `${(i * 37) % 100}%`,
+                  top: `${(i * 53) % 100}%`,
+                }}
+                animate={{ opacity: [0.15, 0.9, 0.15] }}
+                transition={{
+                  duration: 1.4 + (i % 4) * 0.3,
+                  repeat: Infinity,
+                  delay: (i % 7) * 0.12,
+                }}
+              />
+            ))}
+            {/* KOMET meluncur dari bawah ke atas */}
+            <motion.div
+              aria-hidden
+              className="absolute left-1/2 bottom-0 h-40 w-1.5 -translate-x-1/2"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(251,191,36,0) 0%, rgba(251,191,36,.7) 60%, #fff 100%)",
+                filter: "blur(1px)",
+              }}
+              initial={{ y: "100vh", opacity: 0, scaleY: 0.6 }}
+              animate={{ y: "-20vh", opacity: 1, scaleY: 1 }}
+              transition={{ duration: 1.35, ease: [0.4, 0, 0.2, 1] }}
+            />
+            {/* Kepala komet (titik terang) + kilau saat sampai puncak */}
+            <motion.div
+              aria-hidden
+              className="absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_30px_10px_rgba(251,191,36,.9)]"
+              initial={{ top: "100%", opacity: 0 }}
+              animate={{ top: ["100%", "18%"], opacity: [0, 1, 1] }}
+              transition={{ duration: 1.35, ease: [0.4, 0, 0.2, 1] }}
+            />
+            <motion.div
+              aria-hidden
+              className="absolute left-1/2 top-[18%] h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/40 blur-2xl"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: [0, 1.2, 0.9], opacity: [0, 0.9, 0] }}
+              transition={{ duration: 0.7, delay: 1.2 }}
+            />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="absolute inset-x-0 top-1/2 text-center text-sm font-black uppercase tracking-[0.35em] text-gold"
+            >
+              Menarik nasib…
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --------------------- overlay: hasil reveal --------------------- */}
+      <AnimatePresence>
+        {phase === "results" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[95] flex flex-col items-center justify-center overflow-y-auto bg-black/95 px-4 py-8 backdrop-blur-md"
           >
             <motion.p
               initial={{ y: -12, opacity: 0 }}
@@ -385,55 +394,38 @@ export default function Gacha() {
             </motion.p>
             <div
               className={cn(
-                "mt-4 grid w-full max-w-lg gap-2",
-                reveal.length > 1 ? "grid-cols-5" : "grid-cols-1 justify-items-center",
+                "mt-5 grid w-full max-w-lg gap-2.5",
+                reveal.length > 1
+                  ? "grid-cols-5"
+                  : "grid-cols-1 justify-items-center",
               )}
             >
               {reveal.map((card, i) => {
-                const style =
-                  RANK_STYLE[card.rank as GachaRank] ?? RANK_STYLE.S;
+                const style = RANK_STYLE[card.rank as GachaRank] ?? RANK_STYLE.S;
                 return (
                   <motion.div
                     key={`${card.id}-${i}`}
-                    initial={{ rotateY: 180, opacity: 0, scale: 0.7 }}
-                    animate={{ rotateY: 0, opacity: 1, scale: 1 }}
+                    // Kartu muncul BESAR lalu mengecil ke tempatnya, satu per satu.
+                    initial={{ scale: 2.6, opacity: 0, rotateY: 180 }}
+                    animate={{ scale: 1, opacity: 1, rotateY: 0 }}
                     transition={{
-                      delay: 0.15 + i * 0.13,
+                      delay: 0.15 + i * 0.28,
                       duration: 0.5,
                       type: "spring",
-                      bounce: 0.3,
+                      bounce: 0.32,
                     }}
                     className={cn(
-                      "relative overflow-hidden rounded-xl border border-white/20 bg-gradient-to-b",
-                      style.card,
-                      style.glow,
-                      reveal.length > 1 ? "aspect-[3/4]" : "w-40 aspect-[3/4]",
+                      "relative",
+                      reveal.length > 1 ? "" : "w-44",
                     )}
                   >
-                    {images[card.id] ? (
-                      <img
-                        src={images[card.id]}
-                        alt={card.name}
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center text-2xl font-black text-white/80">
-                        {card.name.slice(0, 1)}
-                      </div>
-                    )}
-                    <span
-                      className={cn(
-                        "absolute left-1 top-1 rounded px-1 py-0.5 text-[8px] font-black",
-                        style.chip,
-                      )}
-                    >
-                      {card.rank}
-                    </span>
-                    {reveal.length <= 5 && (
-                      <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1 py-0.5 text-center text-[9px] font-bold text-white">
-                        {card.name}
-                      </span>
-                    )}
+                    <CharacterCard
+                      name={card.name}
+                      anime={card.anime}
+                      rank={(card.rank as GachaRank) ?? "S"}
+                      image={images[card.id]}
+                      className={style.glow}
+                    />
                   </motion.div>
                 );
               })}
@@ -441,12 +433,176 @@ export default function Gacha() {
             <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + reveal.length * 0.13 }}
-              onClick={() => setReveal(null)}
-              className="mt-6 rounded-full bg-gold px-8 py-2.5 text-sm font-black text-black transition active:scale-95"
+              transition={{ delay: 0.2 + reveal.length * 0.28 }}
+              onClick={() => {
+                setPhase(null);
+                setReveal([]);
+              }}
+              className="mt-7 rounded-full bg-gold px-10 py-2.5 text-sm font-black text-black transition active:scale-95"
             >
               Lanjut
             </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------- overlay: INDEKS ----------------------- */}
+      <AnimatePresence>
+        {showIndex && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            className="fixed inset-0 z-[92] overflow-y-auto overscroll-contain bg-background"
+          >
+            <div className="mx-auto w-full max-w-2xl px-3 pb-24 pt-3">
+              <div className="flex items-center gap-2">
+                <h2 className="flex-1 text-lg font-extrabold tracking-tight">
+                  Indeks Kartu
+                </h2>
+                <span className="text-[11px] font-semibold text-muted-foreground">
+                  {Object.keys(owned).length}/{GACHA_ROSTER.length} kartu
+                </span>
+                <button
+                  onClick={() => setShowIndex(false)}
+                  aria-label="Tutup"
+                  className="flex size-9 items-center justify-center rounded-full border border-border"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <div className="mt-3 flex rounded-full border border-border bg-card p-0.5">
+                {RANK_ORDER.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRankTab(r)}
+                    className={cn(
+                      "flex-1 rounded-full py-1.5 text-[12px] font-black transition",
+                      rankTab === r
+                        ? cn(RANK_STYLE[r].chip, "shadow-sm")
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+                {rankPool.map((c) => {
+                  const count = owned[c.id] ?? 0;
+                  const has = count > 0;
+                  const isActive = equipped === c.id;
+                  return (
+                    <motion.button
+                      key={c.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25 }}
+                      onClick={() => void onPickCard(c)}
+                      className="text-left"
+                    >
+                      <div className="relative">
+                        <CharacterCard
+                          name={c.name}
+                          anime={c.anime}
+                          rank={c.rank}
+                          image={images[c.id]}
+                          locked={!has}
+                        />
+                        {!has && (
+                          <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/55">
+                            <Lock className="size-5 text-white/80" aria-hidden />
+                          </span>
+                        )}
+                        {has && count > 1 && (
+                          <span className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-white">
+                            ×{count}
+                          </span>
+                        )}
+                        {isActive && (
+                          <span className="absolute inset-x-0 bottom-6 rounded-t-md bg-gold py-0.5 text-center text-[9px] font-black text-black">
+                            TERPASANG
+                          </span>
+                        )}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------ overlay: RIWAYAT ----------------------- */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            className="fixed inset-0 z-[92] overflow-y-auto overscroll-contain bg-background"
+          >
+            <div className="mx-auto w-full max-w-2xl px-3 pb-24 pt-3">
+              <div className="flex items-center gap-2">
+                <h2 className="flex-1 text-lg font-extrabold tracking-tight">
+                  Riwayat Pull
+                </h2>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  aria-label="Tutup"
+                  className="flex size-9 items-center justify-center rounded-full border border-border"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              {(pulls ?? []).length === 0 ? (
+                <p className="py-16 text-center text-sm text-muted-foreground">
+                  Belum ada pull — coba tarik di altar!
+                </p>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {(pulls ?? []).map((p) => (
+                    <div
+                      key={p._id}
+                      className="rounded-2xl border border-border bg-card p-3"
+                    >
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-muted-foreground">
+                          {new Date(p.createdAt).toLocaleString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        <span className="font-bold text-gold">
+                          {(p.cards as PullCard[]).length} kartu
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {(p.cards as PullCard[]).map((c, i) => (
+                          <span
+                            key={`${c.id}-${i}`}
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                              c.rank === "SSS"
+                                ? "border-amber-400/60 bg-amber-400/10 text-amber-300"
+                                : c.rank === "SS"
+                                  ? "border-fuchsia-400/50 bg-fuchsia-400/10 text-fuchsia-300"
+                                  : "border-sky-400/50 bg-sky-400/10 text-sky-300",
+                            )}
+                          >
+                            {c.name}
+                            <span className="ml-1 opacity-70">{c.rank}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

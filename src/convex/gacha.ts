@@ -62,7 +62,7 @@ export const rosterImages = action({
   handler: async (ctx) => {
     return (await cached(
       ctx,
-      "gacha:roster:v1",
+      "gacha:roster:v2",
       30 * 86400 * 1000,
       async () => {
         const parts = GACHA_ROSTER.map(
@@ -186,6 +186,13 @@ export const pull = mutation({
     const sssCount = st.sssCount + sssInPull;
     const ssCount = st.ssCount + ssInPull;
 
+    // Catat riwayat pull (untuk layar History Gacha).
+    await ctx.db.insert("gachaPulls", {
+      userId,
+      createdAt: Date.now(),
+      cards: results.map((c) => ({ id: c.id, name: c.name, rank: c.rank })),
+    });
+
     await ctx.db.patch(st._id, {
       pity,
       totalPulls: st.totalPulls + count,
@@ -218,6 +225,21 @@ export const pull = mutation({
       ssInPull,
       sacret: (u.diamonds ?? 0) - cost,
     };
+  },
+});
+
+/** Riwayat pull terakhir (untuk layar History Gacha). */
+export const myPulls = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const rows = await ctx.db
+      .query("gachaPulls")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(20);
+    return rows.map((r) => ({ _id: r._id, createdAt: r.createdAt, cards: r.cards }));
   },
 });
 

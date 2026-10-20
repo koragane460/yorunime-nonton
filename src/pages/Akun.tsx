@@ -29,6 +29,8 @@ import { xpForLevel } from "@/lib/level";
 import { shrinkAvatar, shrinkBanner } from "@/lib/image";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { BORDERS } from "@/lib/borders";
+import { TitleRibbon, CharacterCard } from "@/components/Cosmetics";
+import { useRosterImages } from "@/hooks/use-roster-images";
 import {
   StoryAddButton,
   StoryComposer,
@@ -524,6 +526,7 @@ function SettingsScreen({
   const equipTitle = useMutation(api.titles.equip);
   const equipCard = useMutation(api.gacha.equipCard);
   const [busyCosmetic, setBusyCosmetic] = useState<string | null>(null);
+  const rosterImages = useRosterImages();
   const [name, setName] = useState(user?.username ?? "");
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
@@ -863,14 +866,11 @@ function SettingsScreen({
                   onClick={() => void pickTitle(active ? null : d.id)}
                   title={d.desc}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-[11px] font-bold transition active:scale-95 disabled:opacity-60",
-                    active
-                      ? "border-gold/70 bg-gold/15 text-gold shadow-[0_0_12px_-5px_rgba(212,175,55,.8)]"
-                      : "border-white/15 bg-white/[0.04] text-white/85",
+                    "transition active:scale-95 disabled:opacity-60",
+                    active && "drop-shadow-[0_0_10px_rgba(212,175,55,.7)]",
                   )}
                 >
-                  <Award className="mr-1 inline size-3" aria-hidden />
-                  {d.name}
+                  <TitleRibbon name={d.name} size="sm" dim={!active} />
                 </button>
               );
             })}
@@ -897,16 +897,11 @@ function SettingsScreen({
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Kartu hasil pull di Gacha — pasang untuk dipamerkan di profil.
         </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {(myCosmetics?.ownedCards ?? []).map((cardId) => {
             const c = GACHA_ROSTER.find((r) => r.id === cardId);
             if (!c) return null;
             const active = myCosmetics?.equippedCard === c.id;
-            const ring: Record<GachaRank, string> = {
-              SSS: "border-amber-400/70 bg-amber-400/10 text-amber-300",
-              SS: "border-fuchsia-400/60 bg-fuchsia-400/10 text-fuchsia-300",
-              S: "border-sky-400/60 bg-sky-400/10 text-sky-300",
-            };
             return (
               <button
                 key={c.id}
@@ -914,14 +909,19 @@ function SettingsScreen({
                 disabled={busyCosmetic !== null}
                 onClick={() => void pickCard(active ? "none" : c.id)}
                 title={`${c.name} — ${c.anime} (${c.rank})`}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-[11px] font-bold transition active:scale-95 disabled:opacity-60",
-                  active ? ring[c.rank] : "border-white/15 bg-white/[0.04] text-white/85",
-                  active && "shadow-[0_0_12px_-5px_rgba(255,255,255,.5)]",
-                )}
+                className="relative text-left transition active:scale-[0.97] disabled:opacity-60"
               >
-                {c.name}
-                <span className="ml-1 opacity-70">{c.rank}</span>
+                <CharacterCard
+                  name={c.name}
+                  anime={c.anime}
+                  rank={c.rank}
+                  image={rosterImages[c.id]}
+                />
+                {active && (
+                  <span className="absolute inset-x-1 bottom-1 rounded-md bg-gold/95 py-0.5 text-center text-[9px] font-black text-black">
+                    Dipakai
+                  </span>
+                )}
               </button>
             );
           })}

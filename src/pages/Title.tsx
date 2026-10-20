@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Award, ChevronLeft, Crown, Lock } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
+import { TitleRibbon } from "@/components/Cosmetics";
 import { cn } from "@/lib/utils";
 
 type TitleDef = {
@@ -39,7 +40,45 @@ const GROUPS: { key: TitleDef["group"]; label: string; blurb: string }[] = [
   },
 ];
 
-/** Kotak title berdekorasi: gradasi emas bila dimiliki, abu bila belum. */
+/** Ornamen partikel melayang (bintang kecil) — hanya untuk title yang sudah
+ *  dimiliki. Dibuat deterministik dari index supaya tidak kacau tiap render. */
+function Particles({ seed }: { seed: number }) {
+  const dots = Array.from({ length: 6 });
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {dots.map((_, i) => {
+        const left = ((seed * 37 + i * 53) % 90) + 5;
+        const dur = 2.4 + ((seed + i) % 5) * 0.4;
+        const delay = ((seed + i * 3) % 7) * 0.35;
+        return (
+          <span
+            key={i}
+            className="absolute bottom-2 size-1 rounded-full bg-gold/70"
+            style={{ left: `${left}%` }}
+          >
+            <span
+              className="block size-full animate-ping rounded-full bg-gold/60"
+              style={{ animationDuration: `${dur}s`, animationDelay: `${delay}s` }}
+            />
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** Bentuk kotak bervariasi per grup — supaya tidak seragam rounded. */
+const GROUP_SHAPE: Record<TitleDef["group"], string> = {
+  // Nonton: membulat besar di kiri, tumpul di kanan.
+  nonton: "rounded-l-[28px] rounded-r-lg",
+  // Menit: membulat besar di kanan, tumpul di kiri (kebalikan Nonton).
+  menit: "rounded-r-[28px] rounded-l-lg",
+  // Collection: bentuk perisai (rounded atas lebar, bawah runcing).
+  collection: "rounded-b-[30px] rounded-t-lg",
+};
+
+/** Kotak title berdekorasi: gradasi emas bila dimiliki, abu bila belum.
+ *  Sudut, ornamen, dan partikelnya berbeda-beda tiap grup. */
 function TitleBox({
   def,
   earnedAt,
@@ -63,32 +102,41 @@ function TitleBox({
       viewport={{ once: true, margin: "-30px" }}
       transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.35 }}
       className={cn(
-        "relative overflow-hidden rounded-2xl border p-3 transition",
+        "relative overflow-hidden border p-3.5 transition",
+        GROUP_SHAPE[def.group],
         owned
-          ? "border-gold/45 bg-gradient-to-br from-gold/12 via-card to-card"
+          ? "border-gold/50 bg-gradient-to-br from-gold/15 via-card to-card shadow-[0_0_24px_-10px_rgba(212,175,55,.6)]"
           : "border-border bg-card/60",
       )}
     >
-      {/* Sudut berdekorasi (orname emas kecil) untuk title yang dimiliki */}
+      {/* Partikel melayang untuk title yang sudah dimiliki */}
+      {owned && <Particles seed={index + def.id.length} />}
+
+      {/* Orname emas: sudut berlian kiri-atas + garis lengkung kanan-bawah */}
       {owned && (
         <>
           <span
             aria-hidden
-            className="pointer-events-none absolute -left-6 -top-6 size-16 rotate-45 rounded-2xl bg-gold/15"
+            className="pointer-events-none absolute -left-5 -top-5 size-12 rotate-45 rounded-xl bg-gold/20"
           />
           <span
             aria-hidden
-            className="pointer-events-none absolute -bottom-6 -right-6 size-16 rotate-45 rounded-2xl bg-gold/10"
+            className="pointer-events-none absolute -bottom-8 -right-4 size-16 rounded-full border-2 border-gold/20"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-6 -right-10 size-16 rounded-full border border-gold/10"
           />
         </>
       )}
+
       <div className="relative flex items-start gap-3">
         <span
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+            "flex size-10 shrink-0 items-center justify-center",
             owned
-              ? "bg-gradient-to-b from-gold to-amber-500 text-black shadow-[0_0_16px_-6px_rgba(212,175,55,.8)]"
-              : "bg-white/[0.05] text-zinc-600",
+              ? "rounded-xl bg-gradient-to-b from-gold to-amber-500 text-black shadow-[0_0_16px_-6px_rgba(212,175,55,.8)]"
+              : "rounded-lg bg-white/[0.05] text-zinc-600",
           )}
         >
           {def.group === "collection" ? (
@@ -99,21 +147,15 @@ function TitleBox({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p
-              className={cn(
-                "truncate text-sm font-black tracking-wide",
-                owned ? "text-white" : "text-zinc-500",
-              )}
-            >
-              {def.name}
-            </p>
+            {/* Nama title tampil sebagai PITA medali (bukan kotak teks) */}
+            <TitleRibbon name={def.name} size="sm" dim={!owned} />
             {!owned && (
               <Lock className="size-3.5 shrink-0 text-zinc-600" aria-hidden />
             )}
           </div>
           <p
             className={cn(
-              "mt-0.5 text-[11px]",
+              "mt-1 text-[11px]",
               owned ? "text-muted-foreground" : "text-zinc-600",
             )}
           >

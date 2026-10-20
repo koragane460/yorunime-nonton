@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
+import { CommentsSection, type CommentT } from "@/components/Comments";
+import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -341,6 +343,7 @@ function FilmDetail({
   kind: "movie" | "tv";
   onClose: () => void;
 }) {
+  const { user } = useAuth();
   const getDetail = useAction(api.films.detail);
   const resolve = useAction(api.films.resolveStream);
   const toggleFav = useMutation(api.activities.toggleFavorite);
@@ -355,6 +358,18 @@ function FilmDetail({
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [tab, setTab] = useState<"sinopsis" | "cast">("sinopsis");
+  // Komentar film — key memakai awalan "film-" supaya tidak bentrok dengan
+  // komentar anime yang pk-nya angka / slug.
+  const filmKey = `film-${id}`;
+  const filmComments = useQuery(api.activities.listComments, {
+    animeId: filmKey,
+    sort: "terbaru",
+  });
+  const postComment = useMutation(api.activities.postComment);
+  const shownComments = useMemo(
+    () => (filmComments ?? []) as unknown as CommentT[],
+    [filmComments],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -646,6 +661,35 @@ function FilmDetail({
             )}
           </div>
         )}
+
+        {/* Komentar film — sama seperti halaman nonton anime */}
+        <div className="mt-8">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-base font-bold tracking-tight">
+              {(shownComments?.length ?? 0).toLocaleString("id-ID")} Komentar
+            </h2>
+          </div>
+          <div className="mt-3">
+            <CommentsSection
+              animeId={filmKey}
+              comments={shownComments}
+              meId={user?._id}
+              onSend={async (text, replyToId) => {
+                if (!user) {
+                  toast.error("Masuk akun dulu untuk komentar");
+                  return;
+                }
+                await postComment({
+                  animeId: filmKey,
+                  animeTitle: d?.title ?? "",
+                  animeImage: d?.image,
+                  text,
+                  replyToId: replyToId as never,
+                });
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -23,10 +23,13 @@ export type GachaChar = {
 
 export const GACHA_ROSTER: GachaChar[] = [
   // ---------------- SSS — paling populer, paling susah didapat ----------------
+  // Cowok & cewek campur (permintaan: SSS jangan cuman cowok).
   { id: "gojo-satoru", name: "Gojo Satoru", anime: "Jujutsu Kaisen", rank: "SSS" },
-  { id: "levi-ackerman", name: "Levi Ackerman", anime: "Attack on Titan", rank: "SSS" },
+  { id: "makima", name: "Makima", anime: "Chainsaw Man", rank: "SSS" },
+  { id: "yor-forger", name: "Yor Forger", anime: "Spy x Family", rank: "SSS" },
+  { id: "zero-two", name: "Zero Two", anime: "Darling in the Franxx", rank: "SSS" },
+  { id: "fubuki", name: "Fubuki", anime: "One Punch Man", rank: "SSS" },
   { id: "monkey-d-luffy", name: "Monkey D. Luffy", anime: "One Piece", rank: "SSS" },
-  { id: "son-goku", name: "Son Goku", anime: "Dragon Ball", rank: "SSS" },
   { id: "naruto-uzumaki", name: "Naruto Uzumaki", anime: "Naruto", rank: "SSS" },
   { id: "saitama", name: "Saitama", anime: "One Punch Man", rank: "SSS" },
 
@@ -39,6 +42,8 @@ export const GACHA_ROSTER: GachaChar[] = [
   { id: "rimuru-tempest", name: "Rimuru Tempest", anime: "Tensei Shitara Slime Datta Ken", rank: "SS" },
   { id: "sasuke-uchiha", name: "Sasuke Uchiha", anime: "Naruto", rank: "SS" },
   { id: "kakashi-hatake", name: "Kakashi Hatake", anime: "Naruto", rank: "SS" },
+  { id: "hinata-hyuga", name: "Hinata Hyuga", anime: "Naruto", rank: "SS" },
+  { id: "raiden-shogun", name: "Raiden Shogun", anime: "Genshin Impact", rank: "SS" },
 
   // ---------------- S — kurang populer, paling mudah didapat ----------------
   { id: "zenitsu-agatsuma", name: "Zenitsu Agatsuma", anime: "Demon Slayer", rank: "S" },
