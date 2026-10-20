@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { motion } from "framer-motion";
+import { getAntiLag } from "@/lib/antilag";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
 import { BlurBanner } from "@/components/BlurBanner";
+import { CharacterCard, TitleRibbon, type CosmeticRank } from "@/components/Cosmetics";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Award,
@@ -71,6 +74,32 @@ export function ProfileSheet({
 
   // Title + kartu GACHA yang sedang dipasang — tampil di bawah stat akun.
   const cosmetics = useQuery(api.titles.publicOf, { userId });
+  // Gambar kartu karakter dari AniList (cache server) — potret berfoto.
+  const rosterImages = useAction(api.gacha.rosterImages);
+  const [cardImages, setCardImages] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!cosmetics?.card) return;
+    rosterImages()
+      .then((r) => setCardImages(r ?? {}))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cosmetics?.card?.id]);
+
+  // Animasi intro FULLSCREEN (awan/gagak) — pilihan dari Pengaturan >
+  // Animasi profil. Mengganti pengaturan di sana mengubah animasi INI,
+  // bukan banner. Sekali tampil per pembukaan layar, bisa di-skip ketuk.
+  const [introPlaying, setIntroPlaying] = useState(false);
+  const introStarted = useRef(false);
+  useEffect(() => {
+    if (!profile || introStarted.current) return;
+    introStarted.current = true;
+    const style = profile.introStyle ?? "none";
+    if ((style === "awan" || style === "gagak") && !getAntiLag()) {
+      setIntroPlaying(true);
+      const t = window.setTimeout(() => setIntroPlaying(false), 2600);
+      return () => window.clearTimeout(t);
+    }
+  }, [profile]);
   const cost = profile ? xpForLevel(profile.level) : 1;
   const inLevel = profile ? Math.max(0, Math.min(profile.xpInLevel, cost)) : 0;
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
@@ -91,6 +120,13 @@ export function ProfileSheet({
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
+      {/* Intro fullscreen: awan berarak / gagak melintas */}
+      {introPlaying && (
+        <ProfileIntro
+          style={profile?.introStyle ?? "awan"}
+          onSkip={() => setIntroPlaying(false)}
+        />
+      )}
       {!profile ? (
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (
@@ -243,30 +279,24 @@ export function ProfileSheet({
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
 
-            {/* TITLE + KARTU GACHA terpasang — di bawah stat */}
+            {/* PITA TITLE + KARTU KARAKTER BERGAMBAR — di bawah stat */}
             {(cosmetics?.title || cosmetics?.card) && (
-              <div className="mx-auto mt-3 flex max-w-sm flex-wrap items-center justify-center gap-1.5">
+              <div className="mx-auto mt-3 flex max-w-sm flex-col items-center gap-2.5">
                 {cosmetics?.title && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/45 bg-gold/10 px-2.5 py-1 text-[11px] font-bold text-gold">
-                    <Award className="size-3" aria-hidden />
-                    {cosmetics.title.name}
-                  </span>
+                  <TitleRibbon
+                    name={cosmetics.title.name}
+                    size="md"
+                  />
                 )}
                 {cosmetics?.card && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold",
-                      cosmetics.card.rank === "SSS"
-                        ? "border-amber-400/60 bg-amber-400/10 text-amber-300"
-                        : cosmetics.card.rank === "SS"
-                          ? "border-fuchsia-400/50 bg-fuchsia-400/10 text-fuchsia-300"
-                          : "border-sky-400/50 bg-sky-400/10 text-sky-300",
-                    )}
-                  >
-                    <Sparkles className="size-3" aria-hidden />
-                    {cosmetics.card.name}
-                    <span className="opacity-70">{cosmetics.card.rank}</span>
-                  </span>
+                  <CharacterCard
+                    name={cosmetics.card.name}
+                    anime={(cosmetics.card as { anime?: string }).anime}
+                    rank={cosmetics.card.rank as CosmeticRank}
+                    image={cardImages[cosmetics.card.id]}
+                    active
+                    className="w-28"
+                  />
                 )}
               </div>
             )}
@@ -553,5 +583,147 @@ function StatCell({ label, value }: { label: string; value: number | string }) {
       <p className="text-base font-bold text-white">{value}</p>
       <p className="text-[10px] text-zinc-400">{label}</p>
     </div>
+  );
+}
+
+/* --------------------------------------------------------------
+ * Animasi intro FULLSCREEN — pilihan Pengaturan > Animasi profil.
+ *   • "awan"  — awan lembut melayang di langit senja.
+ *   • "gagak" — siluet gagak melintas dengan kepakan sayap.
+ * Ketuk untuk melewati; otomatis selesai dalam 2.6 detik.
+ * ------------------------------------------------------------- */
+const CLOUDS = [
+  { l: -8, t: 12, w: 62, h: 15, delay: 0, dur: 7 },
+  { l: 30, t: 30, w: 55, h: 13, delay: -2, dur: 8 },
+  { l: -4, t: 50, w: 70, h: 17, delay: -4, dur: 9 },
+  { l: 40, t: 66, w: 58, h: 14, delay: -1, dur: 7.5 },
+  { l: 6, t: 82, w: 66, h: 16, delay: -5, dur: 8.5 },
+];
+
+const RAVENS = [
+  { t: 12, delay: 0, dur: 2.3, scale: 1 },
+  { t: 30, delay: 0.35, dur: 2.0, scale: 0.7 },
+  { t: 47, delay: 0.12, dur: 2.5, scale: 1.3 },
+  { t: 64, delay: 0.5, dur: 2.1, scale: 0.85 },
+  { t: 79, delay: 0.28, dur: 2.4, scale: 0.6 },
+];
+
+function ProfileIntro({
+  style,
+  onSkip,
+}: {
+  style: string;
+  onSkip: () => void;
+}) {
+  useEffect(() => {
+    const t = window.setTimeout(onSkip, 2600);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const ravens = style === "gagak";
+  return (
+    <motion.button
+      type="button"
+      aria-label="Lewati animasi pembuka"
+      onClick={onSkip}
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      className="absolute inset-0 z-[95] block w-full overflow-hidden"
+      style={
+        ravens
+          ? {
+              background:
+                "radial-gradient(120% 90% at 50% 15%, #1b1230 0%, #0a0714 65%, #05040a 100%)",
+            }
+          : { background: "linear-gradient(180deg,#0a1022 0%,#152443 48%,#2b3d63 100%)" }
+      }
+    >
+      {ravens ? (
+        <span aria-hidden className="absolute inset-0">
+          {/* Kabut gelap di bawah */}
+          <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 to-transparent" />
+          {RAVENS.map((b, i) => (
+            <span
+              key={i}
+              className="absolute left-0"
+              style={{
+                top: `${b.t}%`,
+                animation: `yn-raven-fly ${b.dur}s ease-in ${b.delay}s both`,
+              }}
+            >
+              <svg
+                viewBox="0 0 40 16"
+                width={46 * b.scale}
+                height={20 * b.scale}
+                className="drop-shadow-[0_2px_6px_rgba(0,0,0,.85)]"
+                style={{
+                  animation: `yn-flap ${0.32 + i * 0.05}s ease-in-out ${b.delay}s infinite alternate`,
+                }}
+              >
+                <path
+                  d="M1 11 C9 11 12 5 15 4 C17 3.4 19 5 20 8 C21 5 23 3.4 25 4 C28 5 31 11 39 11 C31 9.6 28 8 25 7.2 C23 6.6 21 7.6 20 10 C19 7.6 17 6.6 15 7.2 C12 8 9 9.6 1 11 Z"
+                  fill="#04030a"
+                />
+              </svg>
+            </span>
+          ))}
+          {/* Bulan samar */}
+          <span className="absolute right-[14%] top-[16%] size-16 rounded-full bg-white/10 blur-md" />
+        </span>
+      ) : (
+        <span aria-hidden className="absolute inset-0">
+          {/* Bintang kecil */}
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <span
+              key={i}
+              className="absolute size-1 rounded-full bg-white/70"
+              style={{
+                left: `${(i * 29 + 7) % 92}%`,
+                top: `${(i * 17 + 6) % 40}%`,
+                animation: `yn-twinkle ${2.2 + (i % 3) * 0.6}s ease-in-out ${i * 0.3}s infinite`,
+              }}
+            />
+          ))}
+          {/* Awan melayang */}
+          {CLOUDS.map((c, i) => (
+            <span
+              key={i}
+              className="absolute rounded-full bg-white/20 blur-2xl"
+              style={{
+                left: `${c.l}%`,
+                top: `${c.t}%`,
+                width: `${c.w}%`,
+                height: `${c.h}%`,
+                animation: `yn-cloud-drift ${c.dur}s ease-in-out ${c.delay}s infinite alternate`,
+              }}
+            />
+          ))}
+        </span>
+      )}
+
+      {/* Teks pembuka */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.55 }}
+        className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center"
+      >
+        <p
+          className={cn(
+            "text-[11px] font-black uppercase tracking-[0.4em]",
+            ravens ? "text-white/45" : "text-white/55",
+          )}
+        >
+          {ravens ? "Gagak melintas…" : "Awan berarak…"}
+        </p>
+        <p className="mt-2 text-2xl font-black tracking-tight text-white">
+          Membuka profil
+        </p>
+        <p className="mt-1 text-[11px] font-semibold text-white/55">
+          Ketuk untuk melewati
+        </p>
+      </motion.div>
+    </motion.button>
   );
 }

@@ -118,6 +118,8 @@ export default function Clan() {
   useHideNavOnMount();
 
   const wantCreate = searchParams.get("create") === "1";
+  /** YoruVerse › Clan membuka detail clan langsung lewat ?clan=<id>. */
+  const wantClan = searchParams.get("clan");
   const membership = useQuery(api.clans.myMembership, user ? {} : "skip");
 
   if (wantCreate) return <CreateClan onDone={() => setSearchParams({})} />;
@@ -130,6 +132,8 @@ export default function Clan() {
       </div>
     );
   }
+  if (wantClan)
+    return <ClanDetailScreen clanId={wantClan} onClose={() => setSearchParams({})} />;
   if (membership?.clanId)
     return <ClanDetailScreen clanId={membership.clanId} onClose={() => navigate("/")} />;
   return <JoinScreen />;

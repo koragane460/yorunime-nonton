@@ -38,6 +38,9 @@ const schema = defineSchema(
       unlimitedSacret: v.optional(v.boolean()),
       unlimitedPremium: v.optional(v.boolean()),
       bannerUrl: v.optional(v.string()),
+      /** Animasi intro FULLSCREEN saat detail profil dibuka:
+          "awan" | "gagak" | "none" (diatur di Pengaturan). */
+      introStyle: v.optional(v.string()),
       /** SHOP BORDER — bingkai foto profile yang sedang dipakai
           (id dari BORDERS di src/lib/borders.ts, "none" = tanpa bingkai). */
       avatarBorder: v.optional(v.string()),
@@ -744,6 +747,27 @@ const schema = defineSchema(
       .index("by_character", ["characterId"])
       .index("by_anime", ["animeId"])
       .index("by_user_character", ["userId", "characterId"]),
+
+    /** YORUPET — kebun binatang virtual di YoruVerse. */
+    petState: defineTable({
+      userId: v.id("users"),
+      /** Jumlah Telur Misteri yang dimiliki (hasil gacha). */
+      eggs: v.number(),
+      /** Pet yang sudah ditetaskan. uid = kunci unik per ekor. */
+      owned: v.array(
+        v.object({ uid: v.string(), petId: v.string(), at: v.number() }),
+      ),
+      /** uid pet yang sedang dipasang (berjalan di panggung). */
+      equippedUid: v.optional(v.string()),
+      /** Waktu klaim Sacret terakhir — klaim berikutnya 24 jam kemudian. */
+      claimAt: v.number(),
+      /** Crystal hasil menjual pet (nilai = harga pet). */
+      crystals: v.number(),
+      /** Scene/background yang sudah dimiliki. */
+      scenes: v.array(v.string()),
+      /** Scene aktif (mengubah panggung DAN latar layar). */
+      scene: v.string(),
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

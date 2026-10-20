@@ -111,6 +111,7 @@ export const getPublicProfile = query({
       username: u.username,
       image: u.image,
       bannerUrl: u.bannerUrl,
+      introStyle: u.introStyle ?? null,
       level: u.level ?? 1,
       xp: u.xp ?? 0,
       xpInLevel: xpIn,
@@ -205,6 +206,8 @@ export const updateSettings = mutation({
     defaultSpeed: v.optional(v.number()),
     theme: v.optional(v.string()),
     customColor: v.optional(v.string()),
+    /** Animasi intro profil: "awan" | "gagak" | "none". */
+    introStyle: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

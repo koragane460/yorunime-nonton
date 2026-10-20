@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
 import { StaffPanel } from "@/components/StaffPanel";
 import { BlurBanner } from "@/components/BlurBanner";
+import {
+  CharacterCard,
+  TitleRibbon,
+  type CosmeticRank,
+} from "@/components/Cosmetics";
 import { DEFAULT_CLAN_ICON, resolveClanIcon } from "@/lib/clanIcons";
 import {
   Avatar,
@@ -152,7 +157,7 @@ function AkunProfileHeader({
     /* Ada celah sedikit dari tepi layar (padding wrapper) + sudut rounded,
        sesuai permintaan; foto profile & isi diperkecil supaya tidak
        terlalu besar. BORDER shop ikut dikenakan kalau ada yang dipakai. */
-    <div className="mt-3 rounded-2xl border border-white/10 bg-card px-3 py-3">
+    <div className="mt-3 rounded-2xl border border-white/10 bg-card/45 px-3 py-3 backdrop-blur-md">
       <div className="flex items-center gap-3">
         <FramedAvatar
           border={user.avatarBorder}
@@ -524,12 +529,24 @@ function SettingsScreen({
   const equipTitle = useMutation(api.titles.equip);
   const equipCard = useMutation(api.gacha.equipCard);
   const [busyCosmetic, setBusyCosmetic] = useState<string | null>(null);
+  // Gambar kartu karakter dari AniList (cache server) — preview berfoto.
+  const rosterImages = useAction(api.gacha.rosterImages);
+  const [cardImages, setCardImages] = useState<Record<string, string>>({});
+  useEffect(() => {
+    rosterImages()
+      .then((r) => setCardImages(r ?? {}))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [name, setName] = useState(user?.username ?? "");
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
+  // Animasi intro profil (fullscreen) — pengaturan ini yang mengatur
+  // animasi awan/gagak, BUKAN banner.
+  const [introStyle, setIntroStyle] = useState(user?.introStyle ?? "awan");
   // Anti lag: status lokal (tidak perlu server), langsung diterapkan ke <html>.
   const [antiLag, setAntiLagState] = useState(() => getAntiLag());
   // Toast bawah sudah dihapus permanen, jadi galat pengaturan tampil inline.
@@ -862,15 +879,15 @@ function SettingsScreen({
                   disabled={busyCosmetic !== null}
                   onClick={() => void pickTitle(active ? null : d.id)}
                   title={d.desc}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-[11px] font-bold transition active:scale-95 disabled:opacity-60",
-                    active
-                      ? "border-gold/70 bg-gold/15 text-gold shadow-[0_0_12px_-5px_rgba(212,175,55,.8)]"
-                      : "border-white/15 bg-white/[0.04] text-white/85",
-                  )}
+                  className="transition active:scale-95 disabled:opacity-60"
                 >
-                  <Award className="mr-1 inline size-3" aria-hidden />
-                  {d.name}
+                  {/* Preview pita title — bentuk medali, bukan teks polos */}
+                  <TitleRibbon
+                    name={d.name}
+                    size="sm"
+                    dim={!active}
+                    className={active ? "ring-1 ring-gold/70" : ""}
+                  />
                 </button>
               );
             })}
@@ -897,51 +914,42 @@ function SettingsScreen({
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Kartu hasil pull di Gacha — pasang untuk dipamerkan di profil.
         </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        {/* KARTU BERGAMBAR ASLI — grid potret karakter, bukan teks pil */}
+        <div className="mt-2.5 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
           {(myCosmetics?.ownedCards ?? []).map((cardId) => {
             const c = GACHA_ROSTER.find((r) => r.id === cardId);
             if (!c) return null;
             const active = myCosmetics?.equippedCard === c.id;
-            const ring: Record<GachaRank, string> = {
-              SSS: "border-amber-400/70 bg-amber-400/10 text-amber-300",
-              SS: "border-fuchsia-400/60 bg-fuchsia-400/10 text-fuchsia-300",
-              S: "border-sky-400/60 bg-sky-400/10 text-sky-300",
-            };
             return (
-              <button
+              <CharacterCard
                 key={c.id}
-                type="button"
+                name={c.name}
+                anime={c.anime}
+                rank={c.rank as CosmeticRank}
+                image={cardImages[c.id]}
+                active={active}
                 disabled={busyCosmetic !== null}
                 onClick={() => void pickCard(active ? "none" : c.id)}
-                title={`${c.name} — ${c.anime} (${c.rank})`}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-[11px] font-bold transition active:scale-95 disabled:opacity-60",
-                  active ? ring[c.rank] : "border-white/15 bg-white/[0.04] text-white/85",
-                  active && "shadow-[0_0_12px_-5px_rgba(255,255,255,.5)]",
-                )}
-              >
-                {c.name}
-                <span className="ml-1 opacity-70">{c.rank}</span>
-              </button>
+              />
             );
           })}
-          {myCosmetics?.equippedCard && (
-            <button
-              type="button"
-              disabled={busyCosmetic !== null}
-              onClick={() => void pickCard("none")}
-              className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
-            >
-              Lepas kartu
-            </button>
-          )}
-          {(myCosmetics?.ownedCards ?? []).length === 0 && (
-            <p className="text-[11px] text-muted-foreground">
-              Belum punya kartu — buka tombol Gacha (tekan lama History) lalu
-              pull!
-            </p>
-          )}
         </div>
+        {myCosmetics?.equippedCard && (
+          <button
+            type="button"
+            disabled={busyCosmetic !== null}
+            onClick={() => void pickCard("none")}
+            className="mt-2 rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
+          >
+            Lepas kartu
+          </button>
+        )}
+        {(myCosmetics?.ownedCards ?? []).length === 0 && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Belum punya kartu — buka tombol Gacha (tekan lama History) lalu
+            pull!
+          </p>
+        )}
       </div>
 
       <BlockTitle>Pengaturan</BlockTitle>
@@ -956,6 +964,41 @@ function SettingsScreen({
             toast.success(v ? "Anti lag aktif" : "Anti lag dimatikan");
           }}
         />
+        {/* ANIMASI PROFIL (fullscreen) — mengganti pilihan di sini hanya
+            mengubah animasi pembuka profil, banner tidak ikut berubah. */}
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-[13px] font-bold">Animasi profil</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Diputar fullscreen saat detail profil dibuka. Berganti di sini =
+            animasi yang berganti (bukan banner).
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {([
+              ["awan", "Awan"],
+              ["gagak", "Gagak"],
+              ["none", "Tanpa animasi"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setIntroStyle(value);
+                  void update({ introStyle: value }).catch(() =>
+                    toast.error("Gagal menyimpan animasi"),
+                  );
+                }}
+                className={cn(
+                  "rounded-xl border px-2 py-2 text-[11px] font-black transition active:scale-95",
+                  introStyle === value
+                    ? "border-gold/70 bg-gold/15 text-gold shadow-[0_0_14px_-7px_rgba(251,191,36,.9)]"
+                    : "border-white/15 bg-white/[0.04] text-white/80",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[13px] font-medium">Tema</p>
           <div className="mt-2 flex min-w-0 gap-2">

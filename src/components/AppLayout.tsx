@@ -48,6 +48,7 @@ import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { MOST_MIN_TITLES, type TopPanel } from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { MusicMiniBar } from "@/components/MusicMiniBar";
+import { YoruVerseScreen } from "@/components/YoruVerse";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -79,6 +80,9 @@ export function AppLayout({
   // BottomNav (dan dirinya sendiri) unmount.
   const [navPanel, setNavPanel] = useState<TopPanel>(null);
   const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  // YORUVERSE — hub virtual (tombol kuning di panel akun). Layar penuh
+  // yang dirender di atas segalanya (z-[70]).
+  const [yvOpen, setYvOpen] = useState(false);
   const openTopPanel = useCallback((p: TopPanel) => setTopPanel(p), []);
   const closeTopPanel = useCallback(() => setTopPanel(null), []);
 
@@ -156,6 +160,7 @@ export function AppLayout({
               Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
             )}
             diamonds={user.diamonds ?? 0}
+            onOpenYoruVerse={() => setYvOpen(true)}
           />
         </div>
       )}
@@ -191,6 +196,7 @@ export function AppLayout({
 
       <OverlayScrollLock />
       <AnnouncementPopup />
+      {yvOpen && <YoruVerseScreen onClose={() => setYvOpen(false)} />}
     </div>
   );
 }
@@ -214,6 +220,7 @@ function AccountPanel({
   premium,
   premiumDays,
   diamonds,
+  onOpenYoruVerse,
 }: {
   onOpen: () => void;
   name: string;
@@ -232,6 +239,8 @@ function AccountPanel({
   premium: boolean;
   premiumDays: number;
   diamonds: number;
+  /** Tombol masuk YORUVERSE (pojok kanan bawah). */
+  onOpenYoruVerse: () => void;
 }) {
   const cost = xpForLevel(level);
   const inLevel = Math.max(0, Math.min(xp, cost));
@@ -331,6 +340,14 @@ function AccountPanel({
             )}
           </div>
         </div>
+      </button>
+      {/* YORUVERSE — tombol kuning tua di pojok KANAN BAWAH panel akun.
+          Outline TEBAL tapi TANPA neon/glow sesuai permintaan. */}
+      <button
+        onClick={onOpenYoruVerse}
+        className="absolute bottom-2.5 right-2.5 z-10 rounded-2xl border-[3px] border-amber-700/80 bg-yellow-900/40 px-3 py-1.5 text-[11px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition active:scale-95 hover:bg-yellow-800/60"
+      >
+        YoruVerse
       </button>
     </div>
   );
@@ -757,41 +774,9 @@ function BottomNav({
   const location = useLocation();
   const overlay = useAppOverlayOpen();
 
-  // ---- GACHA & TITLE di balik tombol History & Subscribe ----
-  // Tekan-lama (±0,55 detik) tombol History berpindah jadi Gacha, dan
-  // tombol Subscribe berpindah jadi Title — dengan fade in/out halus ala
-  // anime. Pilihan tersimpan di localStorage supaya bertahan setelah reload.
-  const [navGacha, setNavGacha] = useState(
-    () => localStorage.getItem("yn-nav-gacha") === "1",
-  );
-  const [navTitle, setNavTitle] = useState(
-    () => localStorage.getItem("yn-nav-title") === "1",
-  );
-  const [fadeA, setFadeA] = useState(false); // fade History ↔ Gacha
-  const [fadeB, setFadeB] = useState(false); // fade Subscribe ↔ Title
-  const pressTimer = useRef<number | null>(null);
-  const longFired = useRef(false);
-
-  /** Fade out → ganti isi tombol → fade in. */
-  const swapBtn = (which: "a" | "b") => {
-    const setFade = which === "a" ? setFadeA : setFadeB;
-    setFade(true);
-    window.setTimeout(() => {
-      if (which === "a") {
-        setNavGacha((v) => {
-          localStorage.setItem("yn-nav-gacha", v ? "0" : "1");
-          return !v;
-        });
-      } else {
-        setNavTitle((v) => {
-          localStorage.setItem("yn-nav-title", v ? "0" : "1");
-          return !v;
-        });
-      }
-      setFade(false);
-    }, 220);
-  };
-
+  // GACHA & TITLE tidak lagi ada di navigasi — keduanya pindah ke
+  // YORUVERSE (Tombol kuning di panel akun): Shop berisi Gacha, dan
+  // kotak Title membuka layar Title yang sama.
   if (overlay) return null;
   const items: {
     path: string;
@@ -812,35 +797,16 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    // History ↔ GACHA — tekan-lama tombolnya untuk berpindah (fade in/out).
-    navGacha
-      ? {
-          path: "/gacha",
-          label: "Gacha",
-          icon: SacretIcon,
-          swaps: "a",
-        }
-      : {
-          path: "/info",
-          label: "History",
-          icon: InfoIcon,
-          iconFill: InfoIconFill,
-          swaps: "a",
-        },
+    { path: "/info", label: "History", icon: InfoIcon, iconFill: InfoIconFill },
     // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
     // Home). Ikon buku, di kanan History.
     { path: "/baca", label: "Baca", icon: BookIcon },
-    // SUBSCRIBE (dulu "Koleksi") — layar favorite berlabel Subscribe.
-    // Tekan-lama tombolnya berpindah ke tombol TITLE (fade in/out).
-    navTitle
-      ? { path: "/title", label: "Title", icon: AwardIcon, swaps: "b" }
-      : {
-          path: "",
-          label: "Subscribe",
-          icon: StarIcon,
-          panel: "favorites",
-          swaps: "b",
-        },
+    {
+      path: "",
+      label: "Subscribe",
+      icon: StarIcon,
+      panel: "favorites",
+    },
     {
       path: "/akun",
       label: "Akun",
@@ -913,40 +879,10 @@ function BottomNav({
             // Ikon SELALU pakai varian outline, aktif maupun tidak — bobotnya
             // persis sama, jadi tombol tidak mendadak "tebel" saat dipencet.
             const Icon = it.icon;
-            const fading =
-              it.swaps === "a" ? fadeA : it.swaps === "b" ? fadeB : false;
             return (
               <button
                 key={it.path || `panel-${it.label}`}
-                // Tekan-lama: ganti History↔Gacha / Subscribe↔Title dengan
-                // fade in/out. Klik biasa setelah tekan-lama DIBATALKAN.
-                onPointerDown={() => {
-                  if (!it.swaps) return;
-                  longFired.current = false;
-                  pressTimer.current = window.setTimeout(() => {
-                    longFired.current = true;
-                    swapBtn(it.swaps!);
-                  }, 550);
-                }}
-                onPointerUp={() => {
-                  if (pressTimer.current !== null) {
-                    clearTimeout(pressTimer.current);
-                    pressTimer.current = null;
-                  }
-                }}
-                onPointerLeave={() => {
-                  if (pressTimer.current !== null) {
-                    clearTimeout(pressTimer.current);
-                    pressTimer.current = null;
-                  }
-                }}
                 onClick={() => {
-                  // Setelah tekan-lama berpindah mode, klik pertama tidak
-                  // ikut navigasi — hanya mengakhiri gestur.
-                  if (longFired.current) {
-                    longFired.current = false;
-                    return;
-                  }
                   // Tombol panel tidak punya rute: dia membuka layar penuh
                   // yang dirender AppLayout (bukan di sini — lihat catatan
                   // pada state navPanel).
@@ -963,23 +899,15 @@ function BottomNav({
                 title={
                   it.dim
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
-                    : it.swaps
-                      ? `${it.label} — tekan lama untuk ganti`
-                      : it.label
+                    : it.label
                 }
                 className={cn(
                   "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-2xl pb-2 pt-2.5 transition-colors duration-200",
                   active && "text-primary",
                 )}
               >
-                {/* Isi tombol (ikon + label) — fade in/out halus saat tombol
-                    berpindah mode Gacha/History atau Title/Subscribe. */}
-                <span
-                  className={cn(
-                    "flex flex-col items-center transition-opacity duration-200",
-                    fading && "opacity-0",
-                  )}
-                >
+                {/* Isi tombol (ikon + label). */}
+                <span className="flex flex-col items-center">
                 <Icon
                   strokeWidth={1.7}
                   className={cn(

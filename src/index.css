@@ -706,6 +706,19 @@
   0%, 100% { opacity: 0.35; transform: scale(0.8) rotate(0deg); }
   50% { opacity: 1; transform: scale(1.15) rotate(45deg); }
 }
+/* Intro profil: awan melayang + gagak melintas + kepakan sayap. */
+@keyframes yn-cloud-drift {
+  from { transform: translateX(-7%) translateY(0); }
+  to { transform: translateX(9%) translateY(-5%); }
+}
+@keyframes yn-raven-fly {
+  from { transform: translateX(-35vw); }
+  to { transform: translateX(125vw); }
+}
+@keyframes yn-flap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.58); }
+}
 @keyframes yn-holo {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -837,3 +850,36 @@
   }
 }
 
+
+/* ================================================================ STRONG FONT
+   Semua bobot teks dinaikkan SATU TINGKAT supaya tulisan terlihat kuat dan
+   tegas (permintaan: text strong). Utilitas Tailwind dipakai seperti biasa
+   di mana saja; file ini hanya mengangkat hasilnya seragam di seluruh app. */
+body {
+  font-weight: 600;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 800;
+}
+/* Angkat satu tingkat: light→medium, normal→semibold, medium→bold, dst. */
+.font-light {
+  font-weight: 500;
+}
+.font-normal {
+  font-weight: 600;
+}
+.font-medium {
+  font-weight: 700;
+}
+.font-semibold {
+  font-weight: 800;
+}
+.font-bold {
+  font-weight: 900;
+}
+.font-black {
+  font-weight: 950;
+}

@@ -184,8 +184,7 @@ function CometLayer({ reduce, onSkip }: { reduce: boolean; onSkip: () => void })
   );
 }
 
-export default function Gacha() {
-  const navigate = useNavigate();
+export function GachaScreen({ onBack }: { onBack: () => void }) {
   const state = useQuery(api.gacha.myState, {});
   const rosterImages = useAction(api.gacha.rosterImages);
   const pull = useMutation(api.gacha.pull);
@@ -311,12 +310,12 @@ export default function Gacha() {
   const step = reveal && reveal.length > 5 ? 0.14 : 0.3;
 
   return (
-    <AppLayout hideAccountPanel>
+    <>
       <div className="mx-auto w-full max-w-2xl px-3 pb-28 pt-3">
         {/* ------------------------------- kepala ------------------------ */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate("/home")}
+            onClick={onBack}
             aria-label="Kembali"
             className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
           >
@@ -824,6 +823,17 @@ export default function Gacha() {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+  );
+}
+
+/** Rute /gacha — layar Gacha penuh. Versi yang sama juga di-embed di
+ *  YoruVerse › Shop (tanpa AppLayout — lihat GachaScreen). */
+export default function Gacha() {
+  const navigate = useNavigate();
+  return (
+    <AppLayout hideAccountPanel>
+      <GachaScreen onBack={() => navigate("/home")} />
     </AppLayout>
   );
 }

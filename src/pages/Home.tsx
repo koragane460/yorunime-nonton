@@ -686,7 +686,7 @@ function HomeContent() {
       {/* 1) YORUNIME PREMIUM — card ke /premium */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/15 via-secondary/40 to-secondary/40 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 transition hover:border-gold/60"
+        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/20 via-secondary/45 to-secondary/45 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 backdrop-blur-md transition hover:border-gold/60"
       >
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/15 shadow-[0_0_16px_-4px] shadow-gold/50">
           <CrownIcon className="size-7 text-gold" />
@@ -882,7 +882,7 @@ function HomeContent() {
             setSearchOpenGenres(false);
             setShowSearch(true);
           }}
-          className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
+          className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card/45 px-4 py-3 text-left backdrop-blur-md"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-sm text-muted-foreground">
