@@ -277,15 +277,6 @@ function CommentRow({
       className="border-0 bg-white/[0.045]"
       style={{ borderRadius: "4px" }}
     >
-      {c.bannerUrl && (
-        // Banner profil ditarik ke dalam (tidak menyentuh tepi kartu) dan
-        // diberi sudut membulat supaya tidak terlihat seperti gambar yang
-        // dipaksa melebar penuh.
-        <div
-          className="mx-2 mt-2 h-8 rounded-md bg-cover bg-center opacity-70"
-          style={{ backgroundImage: `url(${c.bannerUrl})` }}
-        />
-      )}
       <div className="flex items-center justify-between px-2.5 pt-2">
         <Avatar src={c.image} seed={c.username} className="size-7" />
         <div className="min-w-0 flex-1 pl-2">
@@ -341,6 +332,15 @@ function CommentRow({
           </button>
         )}
       </div>
+      {c.bannerUrl && (
+        // Banner profil diletakkan di PALING BAWAH kartu komentar
+        // (permintaan: "banner di detail itu paling ke bawah lagi"),
+        // ditarik ke dalam dengan sudut membulat.
+        <div
+          className="mx-2 mb-2 h-8 rounded-md bg-cover bg-center opacity-70"
+          style={{ backgroundImage: `url(${c.bannerUrl})` }}
+        />
+      )}
     </div>
   );
 }

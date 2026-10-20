@@ -145,7 +145,6 @@ export function AppLayout({
             level={user.level ?? 1}
             xp={user.xp ?? 0}
             staffRole={user.staffRole}
-            bannerUrl={user.bannerUrl}
             clanTag={user.clanTag}
             clanTagIcon={user.clanTagIcon}
             clanColor={user.clanNameColor}
@@ -207,7 +206,6 @@ function AccountPanel({
   level,
   xp,
   staffRole,
-  bannerUrl,
   clanTag,
   clanTagIcon,
   clanColor,
@@ -225,7 +223,6 @@ function AccountPanel({
   level: number;
   xp: number;
   staffRole?: string;
-  bannerUrl?: string;
   clanTag?: string;
   clanTagIcon?: string;
   clanColor?: string;
@@ -241,7 +238,7 @@ function AccountPanel({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="yn-banner-box pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] rounded-3xl border border-white/15 shadow-[0_0_28px_-6px] shadow-primary/25">
+    <div className="pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-3xl border border-white/15 bg-background/45 shadow-[0_0_28px_-6px] shadow-primary/25 backdrop-blur-xl">
       {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
           Keduanya di luar area teks supaya tidak saling nimpa. */}
       <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1.5">
@@ -255,21 +252,10 @@ function AccountPanel({
         <NotifButton />
       </div>
 
-      <button onClick={onOpen} className="block w-full text-left"
-        style={
-          bannerUrl
-            ? {
-                backgroundImage: `url(${bannerUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : undefined
-        }
-      >
-        {!bannerUrl && <div className="yn-banner absolute inset-0" />}
-        {/* Banner terpasang: lapisan gelap penuh di atas foto, jadi tidak ada
-            sisa warna cerah yang menerawang dari kiri. */}
-        {bannerUrl && <div className="yn-banner-veil" />}
+      <button onClick={onOpen} className="block w-full text-left">
+        {/* Banner profil TIDAK tampil di panel akun (hanya di profil &
+            komentar); latar panel memakai background 45% + blur. */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-transparent to-gold/[0.05]" aria-hidden />
         <div className="relative p-3">
           <div className="flex items-center gap-3">
             {avatarBorder && avatarBorder !== "none" ? (

@@ -529,6 +529,16 @@ const schema = defineSchema(
       bestStreak: v.number(),
       /** { [cardId]: jumlah dimiliki } */
       owned: v.any(),
+      /** Riwayat pull terakhir (paling baru di depan) — untuk layar History. */
+      pullHistory: v.optional(
+        v.array(
+          v.object({
+            id: v.string(),
+            rank: v.string(),
+            at: v.number(),
+          }),
+        ),
+      ),
     }).index("userId", ["userId"]),
 
     /** TITLE yang sudah dimiliki user (earned). */

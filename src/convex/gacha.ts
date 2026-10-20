@@ -99,6 +99,11 @@ export const myState = query({
       ssCount: st?.ssCount ?? 0,
       owned: (st?.owned ?? {}) as Record<string, number>,
       equippedCard: u?.equippedCard ?? null,
+      history: (st?.pullHistory ?? []) as {
+        id: string;
+        rank: string;
+        at: number;
+      }[],
     };
   },
 });
@@ -186,6 +191,16 @@ export const pull = mutation({
     const sssCount = st.sssCount + sssInPull;
     const ssCount = st.ssCount + ssInPull;
 
+    // Riwayat pull terbaru disimpan (paling baru di depan, maksimal 100).
+    const now = Date.now();
+    const historyEntries = results
+      .map((c) => ({ id: c.id, rank: c.rank as string, at: now }))
+      .reverse();
+    const pullHistory = [
+      ...historyEntries,
+      ...((st.pullHistory ?? []) as { id: string; rank: string; at: number }[]),
+    ].slice(0, 100);
+
     await ctx.db.patch(st._id, {
       pity,
       totalPulls: st.totalPulls + count,
@@ -194,6 +209,7 @@ export const pull = mutation({
       streak,
       bestStreak,
       owned,
+      pullHistory,
     });
     await ctx.db.patch(userId, { diamonds: (u.diamonds ?? 0) - cost });
 

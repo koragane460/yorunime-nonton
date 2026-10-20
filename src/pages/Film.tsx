@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useHideNavOnMount } from "@/components/AppLayout";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -12,44 +10,30 @@ import {
   Film as FilmIcon,
   Heart,
   Loader2,
+  Play,
   Search,
+  Send,
   Star,
   X,
 } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import { useHideNavOnMount } from "@/components/AppLayout";
+import { useAuth } from "@/hooks/use-auth";
+import { CommentsSection, type CommentT } from "@/components/Comments";
+import { SectionTitle } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
-
-type FilmCardT = {
-  id: string;
-  title: string;
-  image?: string;
-  year?: string;
-  rating?: number;
-  kind: "movie" | "tv";
-};
-type FilmDetailT = {
-  id: string;
-  title: string;
-  image?: string;
-  backdrop?: string;
-  year?: string;
-  rating?: number;
-  kind: "movie" | "tv";
-  synopsis: string;
-  genres: { id: string; name: string }[];
-  runtime?: number;
-  tagline?: string;
-  director?: string;
-  cast: string[];
-  seasons?: number;
-  episodes?: number;
-};
-type FilmSource = { label: string; url: string; type: "embed" | "hls" | "mp4" };
+import type {
+  FilmCard as FilmCardT,
+  FilmDetail as FilmDetailT,
+  FilmSource,
+} from "@/convex/films";
 
 /**
- * HALAMAN FILM — tampilan khas bioskop, BERBEDA dari anime/manga/manhwa/
- * donghua: latar backdrop sinematik full-bleed, kartu poster Lebar 16:9 untuk
- * banner + portrait untuk grid, chip genre, dan pemutar stream resolver
- * (TMDb + VidSrc/Cinepro) di layar detail.
+ * HALAMAN FILM — tampilan khas bioskop, dengan DETAIL mengikuti pola
+ * detail anime: banner sinematik + judul besar, chip meta & genre, baris
+ * aksi (Putar + Subscribe), pemutar, lalu tab Info · Pemeran · Komentar
+ * plus deretan "Film Serupa". Data berlapis (TMDb / iTunes RSS / TVmaze /
+ * IMDb + Wikipedia) supaya daftar film tidak pernah kosong.
  */
 export default function Film() {
   useHideNavOnMount();
@@ -62,8 +46,7 @@ export default function Film() {
   );
   const [openId, setOpenId] = useState<string | null>(params.get("film"));
 
-  // Koleksi film yang di-subscribe (favorite kind="film") — tampil sebagai
-  // strip "Koleksi Saya" di atas grid.
+  // Koleksi film yang di-subscribe (favorite kind="film").
   const myFavs = useQuery(
     api.activities.myFavorites,
     openId ? "skip" : {},
@@ -124,11 +107,18 @@ export default function Film() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, genreId, kind]);
 
+  const openFilm = (id: string, k: "movie" | "tv") => {
+    setKind(k);
+    setOpenId(id);
+    navigate(`/film?film=${encodeURIComponent(id)}&t=${k}`, { replace: true });
+  };
+
   if (openId) {
     return (
       <FilmDetail
         id={openId}
         kind={kind}
+        onOpen={openFilm}
         onClose={() => {
           setOpenId(null);
           navigate("/film", { replace: true });
@@ -149,12 +139,12 @@ export default function Film() {
           >
             <ChevronLeft className="size-5" />
           </button>
-          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-lg font-extrabold tracking-tight">
+          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-lg font-black tracking-tight">
             <Clapperboard className="size-5 text-gold" aria-hidden />
             Film
           </h1>
           {/* Toggle Movie / Series */}
-          <div className="flex rounded-full border border-border bg-card p-0.5 text-[11px] font-bold">
+          <div className="flex rounded-full border border-border bg-card p-0.5 text-[11px] font-black">
             {(["movie", "tv"] as const).map((k) => (
               <button
                 key={k}
@@ -180,7 +170,7 @@ export default function Film() {
               setGenreId(null);
             }}
             placeholder="Cari film / series…"
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground"
           />
           {q && (
             <button onClick={() => setQ("")} aria-label="Bersihkan">
@@ -195,7 +185,7 @@ export default function Film() {
             <button
               onClick={() => setGenreId(null)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition",
                 genreId === null
                   ? "border-gold bg-gold/15 text-gold"
                   : "border-border text-muted-foreground",
@@ -208,7 +198,7 @@ export default function Film() {
                 key={g.id}
                 onClick={() => setGenreId(g.id)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition",
                   genreId === g.id
                     ? "border-gold bg-gold/15 text-gold"
                     : "border-border text-muted-foreground",
@@ -220,13 +210,13 @@ export default function Film() {
           </div>
         )}
 
-        {/* Strip KOLEKSI SAYA — film yang pernah di-subscribe */}
+        {/* Strip KOLEKSI SAYA */}
         {!q && !genreId && koleksi.length > 0 && !loading && (
           <div className="mt-4">
-            <h2 className="flex items-center gap-2 text-base font-bold tracking-tight">
+            <h2 className="flex items-center gap-2 text-base font-black tracking-tight">
               <Heart className="size-4 fill-gold text-gold" aria-hidden />
               Koleksi Saya
-              <span className="text-[11px] font-semibold text-muted-foreground">
+              <span className="text-[11px] font-bold text-muted-foreground">
                 {koleksi.length} film
               </span>
             </h2>
@@ -234,14 +224,9 @@ export default function Film() {
               {koleksi.map((f) => (
                 <button
                   key={f._id}
-                  onClick={() => {
-                    setKind(f.status === "tv" ? "tv" : "movie");
-                    setOpenId(f.animeId);
-                    navigate(
-                      `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
-                      { replace: true },
-                    );
-                  }}
+                  onClick={() =>
+                    openFilm(f.animeId, f.status === "tv" ? "tv" : "movie")
+                  }
                   className="w-28 shrink-0 text-left"
                 >
                   <div className="relative overflow-hidden rounded-xl border border-gold/25 bg-black/30">
@@ -259,7 +244,7 @@ export default function Film() {
                     )}
                     <Heart className="absolute right-1 top-1 size-4 fill-gold text-gold drop-shadow" />
                   </div>
-                  <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
+                  <p className="mt-1 line-clamp-2 text-[11px] font-bold leading-tight">
                     {f.animeTitle}
                   </p>
                 </button>
@@ -276,7 +261,7 @@ export default function Film() {
             ))}
           </div>
         ) : items.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">
+          <p className="py-16 text-center text-sm font-bold text-muted-foreground">
             Film tidak ditemukan.
           </p>
         ) : (
@@ -287,11 +272,7 @@ export default function Film() {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
-                onClick={() => {
-                  setKind(f.kind);
-                  setOpenId(f.id);
-                  navigate(`/film?film=${f.id}&t=${f.kind}`, { replace: true });
-                }}
+                onClick={() => openFilm(f.id, f.kind)}
                 className="group text-left"
               >
                 <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
@@ -308,16 +289,18 @@ export default function Film() {
                     </div>
                   )}
                   {typeof f.rating === "number" && f.rating > 0 && (
-                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold text-gold backdrop-blur-sm">
+                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-gold backdrop-blur-sm">
                       <Star className="size-2.5 fill-current" /> {f.rating.toFixed(1)}
                     </span>
                   )}
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
-                    <span className="line-clamp-1 text-[11px] font-bold text-white">
+                    <span className="line-clamp-1 text-[11px] font-black text-white">
                       {f.title}
                     </span>
                     {f.year && (
-                      <span className="text-[9px] text-white/60">{f.year}</span>
+                      <span className="text-[9px] font-semibold text-white/60">
+                        {f.year}
+                      </span>
                     )}
                   </span>
                 </div>
@@ -335,29 +318,44 @@ export default function Film() {
 function FilmDetail({
   id,
   kind,
+  onOpen,
   onClose,
 }: {
   id: string;
   kind: "movie" | "tv";
+  onOpen: (id: string, kind: "movie" | "tv") => void;
   onClose: () => void;
 }) {
   const getDetail = useAction(api.films.detail);
   const resolve = useAction(api.films.resolveStream);
   const toggleFav = useMutation(api.activities.toggleFavorite);
+  const postComment = useMutation(api.activities.postComment);
   const myFavs = useQuery(api.activities.myFavorites, {});
+  const { user } = useAuth();
+
   const favorited = (
     (myFavs ?? []) as { animeId: string; kind?: string }[]
   ).some((f) => (f.kind ?? "anime") === "film" && f.animeId === id);
+
+  const comments = useQuery(api.activities.listComments, {
+    animeId: `film:${id}`,
+    sort: "terbaru",
+  }) as unknown as CommentT[] | undefined;
+
   const [d, setD] = useState<FilmDetailT | null>(null);
   const [sources, setSources] = useState<FilmSource[]>([]);
   const [srcIdx, setSrcIdx] = useState(0);
   const [resolving, setResolving] = useState(true);
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
-  const [tab, setTab] = useState<"sinopsis" | "cast">("sinopsis");
+  const [tab, setTab] = useState<"info" | "cast" | "komen">("info");
+  const [synopsisOpen, setSynopsisOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let alive = true;
+    setD(null);
+    scrollRef.current?.scrollTo({ top: 0 });
     getDetail({ id, kind })
       .then((r: any) => alive && setD(r as FilmDetailT))
       .catch(() => {});
@@ -394,8 +392,9 @@ function FilmDetail({
   }, [d?.runtime]);
 
   const src = sources[srcIdx];
+  const longSynopsis = (d?.synopsis ?? "").length > 220;
 
-  /** Tombol SUBSCRIBE — masukkan/keluarkan film dari koleksi Subscribe. */
+  /** Tombol SUBSCRIBE — masukkan/keluarkan film dari koleksi. */
   const onSubscribe = async () => {
     if (!d) return;
     try {
@@ -416,32 +415,39 @@ function FilmDetail({
     }
   };
 
+  const scrollToPlayer = () =>
+    document
+      .getElementById("film-player")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+
   return (
-    <div className="screen-enter fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background">
-      {/* Backdrop sinematik full-bleed khas FILM (beda dari anime) */}
+    <div
+      ref={scrollRef}
+      className="screen-enter fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background"
+    >
+      {/* ===================== BANNER SINEMATIK ===================== */}
       <div className="relative">
         <div
           className="relative h-72 w-full overflow-hidden bg-cover bg-center"
           style={
             d?.backdrop || d?.image
               ? {
-                  backgroundImage: `linear-gradient(0deg, var(--background) 4%, rgba(10,7,16,.55) 55%, rgba(10,7,16,.35) 100%), url(${d?.backdrop ?? d?.image})`,
+                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, var(--background) 96%), linear-gradient(90deg, rgba(0,0,0,.5), transparent 55%), url(${d?.backdrop ?? d?.image})`,
                 }
               : { background: "linear-gradient(135deg,#1a1030,#0b0714)" }
           }
         >
-          <div className="absolute inset-x-0 top-0 flex items-center gap-2 p-3">
+          <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 p-3">
             <button
               onClick={onClose}
               aria-label="Kembali"
-              className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur"
+              className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur transition active:scale-90"
             >
               <ChevronLeft className="size-5 text-white" />
             </button>
             <span className="rounded-full border border-gold/40 bg-black/40 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gold backdrop-blur">
               {kind === "tv" ? "Series" : "Film"}
             </span>
-            {/* SUBSCRIBE (favorite film) */}
             <button
               onClick={() => void onSubscribe()}
               aria-label={favorited ? "Hapus dari Subscribe" : "Subscribe"}
@@ -456,52 +462,55 @@ function FilmDetail({
               />
             </button>
           </div>
-          {/* Poster + judul menempel di bawah backdrop */}
-          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-3 pb-3">
-            {d?.image && (
-              <img
-                src={d.image}
-                alt=""
-                className="h-28 w-20 shrink-0 rounded-lg border border-white/15 object-cover shadow-lg"
-              />
+
+          {/* Judul menempel di bawah banner — gaya sama seperti detail anime */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
+            <h1 className="text-2xl font-black leading-tight tracking-tight text-white yn-outline">
+              {d?.title ?? "…"}
+            </h1>
+            {d?.tagline && (
+              <p className="mt-0.5 line-clamp-1 text-[11px] font-semibold italic text-gold/80">
+                “{d.tagline}”
+              </p>
             )}
-            <div className="min-w-0 flex-1 pb-1">
-              <h1 className="line-clamp-2 text-xl font-black leading-tight text-white">
-                {d?.title ?? "…"}
-              </h1>
-              {d?.tagline && (
-                <p className="mt-0.5 line-clamp-1 text-[11px] italic text-gold/80">
-                  “{d.tagline}”
-                </p>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
       <div className="mx-auto w-full max-w-2xl px-3 pb-24">
-        {/* Chip meta */}
+        {/* Chip meta — pil seperti detail anime */}
         <div className="mt-3 flex flex-wrap gap-2">
           {d?.rating ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-[11px] font-bold text-gold">
-              <Star className="size-3 fill-current" /> {d.rating.toFixed(1)}
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-black text-white">
+              <Star className="size-3 fill-current text-yellow-400" aria-hidden />
+              {d.rating.toFixed(1)}
             </span>
           ) : null}
           {d?.year && (
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
               {d.year}
             </span>
           )}
           {runtimeLabel && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
               <Clock className="size-3" /> {runtimeLabel}
             </span>
           )}
           {kind === "tv" && d?.seasons ? (
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
               {d.seasons} season
             </span>
           ) : null}
+          {kind === "tv" && d?.episodes ? (
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
+              {d.episodes} episode
+            </span>
+          ) : null}
+          {d?.director && (
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
+              Sutradara: {d.director}
+            </span>
+          )}
         </div>
 
         {/* Genre */}
@@ -510,7 +519,7 @@ function FilmDetail({
             {d!.genres.map((g) => (
               <span
                 key={g.id}
-                className="rounded-full border border-gold/30 px-3 py-1 text-[11px] font-semibold text-gold/90"
+                className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-bold text-primary"
               >
                 {g.name}
               </span>
@@ -518,13 +527,36 @@ function FilmDetail({
           </div>
         )}
 
-        {/* Pemutar stream resolver */}
-        <div className="mt-4">
+        {/* Baris aksi: Putar + Subscribe — pola sama seperti detail anime */}
+        <div className="mt-4 flex items-stretch gap-2.5">
+          <button
+            onClick={scrollToPlayer}
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 text-sm font-black text-white transition hover:bg-sky-600 active:scale-[0.98]"
+          >
+            <Play className="size-4 fill-current" aria-hidden />
+            {kind === "tv" ? "Putar Episode" : "Putar Film"}
+          </button>
+          <button
+            onClick={() => void onSubscribe()}
+            className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-black text-rose-100 transition active:scale-[0.98]"
+          >
+            <Heart
+              className={cn("size-4", favorited && "fill-current text-gold")}
+              aria-hidden
+            />
+            {favorited ? "Subscribed" : "Subscribe"}
+          </button>
+        </div>
+
+        {/* ======================= PEMUTAR ======================= */}
+        <div id="film-player" className="mt-4 scroll-mt-4">
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
             {resolving ? (
               <div className="flex size-full flex-col items-center justify-center gap-2 text-white/70">
                 <Loader2 className="size-6 animate-spin text-gold" />
-                <p className="text-[11px]">Mencari server streaming…</p>
+                <p className="text-[11px] font-bold">
+                  Mencari server streaming…
+                </p>
               </div>
             ) : src?.type === "embed" ? (
               <iframe
@@ -545,7 +577,9 @@ function FilmDetail({
             ) : (
               <div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-white/60">
                 <FilmIcon className="size-8" />
-                <p className="text-[12px]">Server sedang tidak tersedia. Coba lagi nanti.</p>
+                <p className="text-[12px] font-bold">
+                  Server sedang tidak tersedia. Coba lagi nanti.
+                </p>
               </div>
             )}
           </div>
@@ -558,7 +592,7 @@ function FilmDetail({
                   key={s.url}
                   onClick={() => setSrcIdx(i)}
                   className={cn(
-                    "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition",
+                    "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black transition",
                     i === srcIdx
                       ? "border-gold bg-gold text-black"
                       : "border-border text-muted-foreground",
@@ -573,13 +607,18 @@ function FilmDetail({
           {/* Pemilih season/episode untuk series */}
           {kind === "tv" && d?.seasons ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold text-muted-foreground">Season</span>
+              <span className="text-[11px] font-black text-muted-foreground">
+                Season
+              </span>
               {Array.from({ length: Math.min(d.seasons, 12) }).map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => setSeason(i + 1)}
+                  onClick={() => {
+                    setSeason(i + 1);
+                    setEpisode(1);
+                  }}
                   className={cn(
-                    "size-8 rounded-lg border text-[11px] font-bold transition",
+                    "size-8 rounded-lg border text-[11px] font-black transition",
                     season === i + 1
                       ? "border-gold bg-gold text-black"
                       : "border-border text-muted-foreground",
@@ -588,17 +627,21 @@ function FilmDetail({
                   {i + 1}
                 </button>
               ))}
-              <span className="ml-2 text-[11px] font-bold text-muted-foreground">Ep</span>
+              <span className="ml-2 text-[11px] font-black text-muted-foreground">
+                Ep
+              </span>
               <button
                 onClick={() => setEpisode((e) => Math.max(1, e - 1))}
-                className="size-8 rounded-lg border border-border text-muted-foreground"
+                className="size-8 rounded-lg border border-border font-black text-muted-foreground"
               >
                 −
               </button>
-              <span className="min-w-6 text-center text-sm font-bold">{episode}</span>
+              <span className="min-w-6 text-center text-sm font-black">
+                {episode}
+              </span>
               <button
                 onClick={() => setEpisode((e) => e + 1)}
-                className="size-8 rounded-lg border border-border text-muted-foreground"
+                className="size-8 rounded-lg border border-border font-black text-muted-foreground"
               >
                 +
               </button>
@@ -606,44 +649,172 @@ function FilmDetail({
           ) : null}
         </div>
 
-        {/* Tab Sinopsis / Cast */}
-        <div className="mt-4 flex gap-6 border-b border-white/10">
-          {(["sinopsis", "cast"] as const).map((t) => (
+        {/* ============== TAB: Info · Pemeran · Komentar ============== */}
+        <div className="mt-5 flex gap-1">
+          {([
+            ["info", "Info"],
+            ["cast", "Pemeran"],
+            ["komen", "Komentar"],
+          ] as const).map(([t, label]) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "relative pb-2.5 text-sm font-bold capitalize transition",
-                tab === t ? "text-white" : "text-muted-foreground",
+                "relative flex-1 px-1 pb-2 pt-1 text-sm font-black transition",
+                tab === t ? "text-white" : "text-white/55 hover:text-white/80",
               )}
             >
-              {t === "sinopsis" ? "Sinopsis" : "Pemeran"}
+              {label}
               {tab === t && (
-                <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-gold to-amber-400" />
+                <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-white/90" />
               )}
             </button>
           ))}
         </div>
 
-        {tab === "sinopsis" ? (
-          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/85">
-            {d?.synopsis || "Sinopsis belum tersedia."}
-          </p>
-        ) : (
-          <div className="mt-3 space-y-2 text-sm">
-            {d?.director && (
-              <p className="text-white/85">
-                <span className="font-bold text-gold">Sutradara:</span> {d.director}
+        {/* ---------- TAB INFO: sinopsis + trailer + film serupa ------- */}
+        {tab === "info" && (
+          <>
+            <SectionTitle>Sinopsis</SectionTitle>
+            <div
+              className={cn(
+                "thin-scroll rounded-xl border border-border bg-secondary/40 p-3",
+                synopsisOpen ? "" : "max-h-64 overflow-y-auto",
+              )}
+            >
+              <p className="whitespace-pre-line text-sm font-medium leading-6 text-white">
+                {d?.synopsis || "Sinopsis belum tersedia."}
+              </p>
+            </div>
+            {longSynopsis && (
+              <button
+                onClick={() => setSynopsisOpen((v) => !v)}
+                className="mt-2 inline-flex h-8 items-center text-[13px] font-bold text-white/70 transition hover:text-white"
+              >
+                {synopsisOpen ? "Tutup (balik ke kotak)" : "Baca selengkapnya"}
+              </button>
+            )}
+
+            {/* Trailer (hanya tersedia lewat TMDb) */}
+            {d?.trailer && (
+              <>
+                <SectionTitle>Trailer</SectionTitle>
+                <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${d.trailer}`}
+                    title={`Trailer ${d.title}`}
+                    allowFullScreen
+                    className="size-full border-0"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Film serupa */}
+            {(d?.similar ?? []).length > 0 && (
+              <>
+                <SectionTitle>Film Serupa</SectionTitle>
+                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+                  {d!.similar.map((s) => (
+                    <button
+                      key={`${s.kind}-${s.id}`}
+                      onClick={() => onOpen(s.id, s.kind)}
+                      className="group text-left"
+                    >
+                      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                        {s.image ? (
+                          <img
+                            src={s.image}
+                            alt={s.title}
+                            loading="lazy"
+                            className="size-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center">
+                            <FilmIcon className="size-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1 pt-4">
+                          <span className="line-clamp-1 text-[10px] font-black text-white">
+                            {s.title}
+                          </span>
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ------------------ TAB PEMERAN ------------------ */}
+        {tab === "cast" && (
+          <>
+            <SectionTitle>Pemeran</SectionTitle>
+            {(d?.castFull ?? []).length > 0 ? (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {d!.castFull.map((c, i) => (
+                  <div key={`${c.name}-${i}`} className="text-center">
+                    <div className="mx-auto size-16 overflow-hidden rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03]">
+                      {c.image ? (
+                        <img
+                          src={c.image}
+                          alt={c.name}
+                          loading="lazy"
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex size-full items-center justify-center text-xl font-black text-white/60">
+                          {c.name.slice(0, 1)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1.5 line-clamp-1 text-[11px] font-black text-white/90">
+                      {c.name}
+                    </p>
+                    {c.character && (
+                      <p className="line-clamp-1 text-[10px] text-muted-foreground">
+                        {c.character}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm font-bold text-muted-foreground">
+                Data pemeran belum tersedia.
               </p>
             )}
-            {(d?.cast ?? []).length > 0 && (
-              <p className="leading-6 text-white/80">
-                <span className="font-bold text-gold">Pemeran:</span> {d!.cast.join(", ")}
-              </p>
-            )}
-            {(d?.cast ?? []).length === 0 && !d?.director && (
-              <p className="text-muted-foreground">Data pemeran belum tersedia.</p>
-            )}
+          </>
+        )}
+
+        {/* ------------------ TAB KOMENTAR ------------------ */}
+        {tab === "komen" && (
+          <div className="mt-3">
+            <SectionTitle>
+              <span className="normal-case">
+                {(comments?.length ?? 0).toLocaleString("id-ID")} Komentar
+              </span>
+            </SectionTitle>
+            <CommentsSection
+              animeId={`film:${id}`}
+              comments={comments}
+              meId={user?._id}
+              onSend={async (text, replyToId) => {
+                if (!user) {
+                  toast.error("Masuk akun dulu untuk komentar");
+                  return;
+                }
+                await postComment({
+                  animeId: `film:${id}`,
+                  animeTitle: d?.title ?? "Film",
+                  animeImage: d?.image,
+                  text,
+                  replyToId: replyToId as never,
+                });
+              }}
+            />
           </div>
         )}
       </div>

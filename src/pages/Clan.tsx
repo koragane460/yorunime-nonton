@@ -639,36 +639,30 @@ function ClanDetailScreen({
           </div>
         )}
 
-        {/* Tab Member | Donate — SPACING lebih lega (gap besar + padding),
-            garis bawah penuh & berwarna emas saat aktif. */}
-        <div className="mt-4 flex gap-8 border-b border-white/10">
+        {/* Tab Member | Donate — DUA TOMBOL TERPISAH jelas (bukan teks
+            berdempetan): pill penuh berjeda, aktif bergaris emas. */}
+        <div className="mt-5 flex items-stretch gap-3">
           <button
             onClick={() => setTab("member")}
             className={cn(
-              "relative pb-2.5 text-sm font-bold transition",
+              "flex-1 rounded-2xl border px-4 py-2.5 text-sm font-black transition active:scale-[0.98]",
               tab === "member"
-                ? "text-white"
-                : "text-muted-foreground hover:text-white/80",
+                ? "border-gold/60 bg-gold/15 text-gold shadow-[0_0_18px_-10px_rgba(251,191,36,.8)]"
+                : "border-white/12 bg-white/[0.03] text-muted-foreground hover:text-white/85",
             )}
           >
             Member
-            {tab === "member" && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-gold to-amber-400" />
-            )}
           </button>
           <button
             onClick={() => setTab("donate")}
             className={cn(
-              "relative pb-2.5 text-sm font-bold transition",
+              "flex-1 rounded-2xl border px-4 py-2.5 text-sm font-black transition active:scale-[0.98]",
               tab === "donate"
-                ? "text-white"
-                : "text-muted-foreground hover:text-white/80",
+                ? "border-sky-400/60 bg-sky-400/15 text-sky-300 shadow-[0_0_18px_-10px_rgba(56,189,248,.7)]"
+                : "border-white/12 bg-white/[0.03] text-muted-foreground hover:text-white/85",
             )}
           >
             Donate
-            {tab === "donate" && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-gold to-amber-400" />
-            )}
           </button>
         </div>
 

@@ -29,11 +29,16 @@ export const GACHA_ROSTER: GachaChar[] = [
   { id: "son-goku", name: "Son Goku", anime: "Dragon Ball", rank: "SSS" },
   { id: "naruto-uzumaki", name: "Naruto Uzumaki", anime: "Naruto", rank: "SSS" },
   { id: "saitama", name: "Saitama", anime: "One Punch Man", rank: "SSS" },
+  // SSS bukan cuma cowok — ikonik perempuan juga masuk rate-up teratas.
+  { id: "zero-two", name: "Zero Two", anime: "Darling in the Franxx", rank: "SSS" },
+  { id: "rem-rezero", name: "Rem", anime: "Re:Zero", rank: "SSS" },
+  { id: "mikasa-ackerman", name: "Mikasa Ackerman", anime: "Attack on Titan", rank: "SSS" },
 
   // ---------------- SS — populer menengah ----------------
   { id: "tanjiro-kamado", name: "Tanjiro Kamado", anime: "Demon Slayer", rank: "SS" },
   { id: "nezuko-kamado", name: "Nezuko Kamado", anime: "Demon Slayer", rank: "SS" },
-  { id: "mikasa-ackerman", name: "Mikasa Ackerman", anime: "Attack on Titan", rank: "SS" },
+  { id: "hinata-hyuga", name: "Hinata Hyuga", anime: "Naruto", rank: "SS" },
+  { id: "asuka-langley", name: "Asuka Langley Soryu", anime: "Neon Genesis Evangelion", rank: "SS" },
   { id: "light-yagami", name: "Light Yagami", anime: "Death Note", rank: "SS" },
   { id: "kirito", name: "Kirito", anime: "Sword Art Online", rank: "SS" },
   { id: "rimuru-tempest", name: "Rimuru Tempest", anime: "Tensei Shitara Slime Datta Ken", rank: "SS" },
