@@ -1,7 +1,8 @@
-// YoruNime — KOSMETIK PROFIL: pita TITLE + KARTU KARAKTER.
+// YoruNime — KOSMETIK PROFIL: tag TITLE + pita + KARTU KARAKTER.
 //
 // Dua komponen tampilan dipakai di banyak layar (Pengaturan, detail akun /
 // ProfileSheet, halaman Title) supaya konsisten:
+//   • TitleTag     — tag title BENTUK BERAGAM + effect (kayak tag clan).
 //   • TitleRibbon   — pita bergaris emas berbentuk medali (bukan sekadar teks).
 //   • CharacterCard — kartu potret karakter dengan GAMBAR ASLI + chip rank.
 import { Award, Crown, Sparkles } from "lucide-react";
@@ -32,6 +33,100 @@ const RANK_STYLE: Record<
     glow: "shadow-[0_0_15px_-8px_rgba(56,189,248,.7)]",
   },
 };
+
+/** Bentuk tag title — BERAGAM, dipilih dari nama title (kayak tag clan):
+ *  pita bergerigi, potong miring, perisai, heksagon, dan royal. */
+const TITLE_SHAPES = [
+  "clan-tag-ribbon",
+  "clan-tag-cut",
+  "clan-tag-shield",
+  "clan-tag-hex",
+  "clan-tag-royal",
+] as const;
+
+/** Gradasi RING (garis tepi luar) per bentuk. */
+const TITLE_RING = [
+  "from-amber-200 via-yellow-400 to-amber-600",
+  "from-rose-300 via-red-400 to-rose-600",
+  "from-sky-300 via-cyan-400 to-emerald-400",
+  "from-fuchsia-300 via-purple-400 to-indigo-400",
+  "from-yellow-200 via-amber-400 to-orange-500",
+];
+
+/** Gradasi BADAN (latar teks) per bentuk. */
+const TITLE_BODY = [
+  "from-amber-700 to-zinc-900",
+  "from-rose-700 to-zinc-900",
+  "from-sky-700 to-zinc-900",
+  "from-fuchsia-700 to-indigo-900",
+  "from-amber-600 via-amber-800 to-orange-900",
+];
+
+function titleShapeIdx(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return h % TITLE_SHAPES.length;
+}
+
+/**
+ * TAG TITLE — kotak title terpasang dengan BENTUK BERAGAM + EFEK:
+ * ring gradien, outline tipis putih, drop-shadow, dan kilau yang menyapu.
+ * Menggantikan pita miring polos di layar Title.
+ */
+export function TitleTag({
+  name,
+  size = "md",
+  className,
+}: {
+  name: string;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const i = titleShapeIdx(name);
+  const shape = TITLE_SHAPES[i];
+  const pad = size === "lg" ? "px-4 py-2 text-sm" : "px-2.5 py-1 text-[11px]";
+  return (
+    <span
+      className={cn(
+        "clan-tag inline-flex select-none items-center whitespace-nowrap",
+        className,
+      )}
+    >
+      {/* ring luar — bentuk yang sama supaya tepinya presisi */}
+      <span
+        className={cn(
+          "inline-flex p-[2px]",
+          shape,
+          "bg-gradient-to-r",
+          TITLE_RING[i],
+        )}
+      >
+        <span
+          className={cn(
+            "relative inline-flex items-center gap-1.5 overflow-hidden font-black uppercase tracking-wide text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
+            shape,
+            "bg-gradient-to-r",
+            TITLE_BODY[i],
+            pad,
+          )}
+        >
+          <Award className="size-3.5 shrink-0" aria-hidden />
+          <span className="line-clamp-1">{name}</span>
+          <Sparkles className="size-3.5 shrink-0 opacity-80" aria-hidden />
+          {/* kilau emas yang menyapu tag */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent"
+            style={{
+              backgroundSize: "200% 100%",
+              animation: "yn-sheen 3.2s ease-in-out infinite",
+            }}
+          />
+        </span>
+      </span>
+    </span>
+  );
+}
 
 /**
  * Pita TITLE — bentuk pita/medali (ujung terpotong miring), gradasi emas,

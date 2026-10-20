@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Award, ChevronLeft, Crown, Lock, Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
-import { TitleRibbon } from "@/components/Cosmetics";
+import { TitleTag } from "@/components/Cosmetics";
 import { cn } from "@/lib/utils";
 
 type TitleDef = {
@@ -298,7 +298,7 @@ export function TitleScreen({ onBack }: { onBack: () => void }) {
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-gold/80">
                 Sedang dipakai
               </span>
-              <TitleRibbon name={equippedName} size="lg" />
+              <TitleTag name={equippedName} size="lg" />
             </div>
           </div>
         )}

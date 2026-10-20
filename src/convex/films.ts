@@ -158,6 +158,20 @@ const MOVIE_GENRES: { id: string; name: string }[] = [
   { id: "4418", name: "Western" },
 ];
 
+/** Feed iTunes yang digabung: katalog lengkap di layar awal + dipakai
+ *  juga saat mencari detail film supaya semua id yang tampil terpetakan. */
+const RSS_GENRE_IDS = [
+  undefined,
+  "4401",
+  "4404",
+  "4406",
+  "4408",
+  "4413",
+  "4416",
+  "4412",
+  "4410",
+] as const;
+
 /** Cache sederhana lewat tabel animeCache. */
 async function cached(
   runCtx: any,
@@ -213,7 +227,11 @@ function rssCard(entry: any): FilmCard & { synopsis?: string; genre?: string; di
 
 /** Ambil feed iTunes (top / per genre), di-cache 6–12 jam. */
 async function rssMovies(ctx: any, genreId?: string): Promise<any[]> {
-  const ep = genreId ? `films:rss:g:${genreId}` : "films:rss:top";
+  // Kunci baru (v2) — kunci lama pernah menyimpan hasil rusak/nyaris
+  // kosong, makanya layar awal film cuma menampilkan 1 film.
+  const ep = genreId
+    ? `films:rss:g:${genreId}:v2`
+    : "films:rss:top:v2";
   const feed = (await cached(
     ctx,
     ep,
@@ -359,7 +377,18 @@ export const search = action({
     }
 
     // ---- Jalur tanpa key: film (iTunes RSS + IMDb suggestion) ----
-    const feedCards = (await rssMovies(ctx)).map(rssCard);
+    // LAYAR AWAL HARUS MEMUNCUKAN SEMUA FILM: gabung feed populer + feed
+    // beberapa genre (masing-masing 30 judul), dedupe, lalu tampilkan.
+    const gids = RSS_GENRE_IDS;
+    const feeds = await Promise.all(gids.map((g) => rssMovies(ctx, g)));
+    const feedCards: ReturnType<typeof rssCard>[] = [];
+    const seenFeed = new Set<string>();
+    for (const entry of feeds.flat()) {
+      const card = rssCard(entry);
+      if (!card.title || seenFeed.has(card.id)) continue;
+      seenFeed.add(card.id);
+      feedCards.push(card);
+    }
     if (term) {
       const local = feedCards.filter((c) =>
         c.title.toLowerCase().includes(term.toLowerCase()),
@@ -382,7 +411,7 @@ export const search = action({
       );
       return merged.slice(0, 30);
     }
-    if (feedCards.length) return feedCards.slice(0, 30);
+    if (feedCards.length) return feedCards.slice(0, 60);
     return FALLBACK;
   },
 });
@@ -548,7 +577,7 @@ export const detail = action({
 
     // ---- Jalur tanpa key: film dari katalog iTunes / daftar statis ----
     if (id.startsWith("it")) {
-      const gids = [undefined, "4401", "4404", "4406", "4408", "4413", "4416"] as const;
+      const gids = RSS_GENRE_IDS;
       const feeds = await Promise.all(gids.map((g) => rssMovies(ctx, g)));
       const feed = feeds.flat();
       const entry = feed.find(
@@ -603,7 +632,7 @@ export const detail = action({
           .filter(Boolean);
         const synopsis = await wikiSummary(ctx, title);
         // Padankan dengan katalog RSS agar genre/sutradara ikut terisi.
-        const gids = [undefined, "4401", "4404", "4406", "4408", "4413", "4416"] as const;
+        const gids = RSS_GENRE_IDS;
         const feeds = await Promise.all(gids.map((g) => rssMovies(ctx, g)));
         const entry = feeds
           .flat()
@@ -680,7 +709,7 @@ export const resolveStream = action({
         `films:ext:${id}`,
         7 * 86400_000,
         async () => {
-          const gids = [undefined, "4401", "4404", "4406", "4408", "4413", "4416"] as const;
+          const gids = RSS_GENRE_IDS;
           const feeds = await Promise.all(gids.map((g) => rssMovies(ctx, g)));
           const entry = feeds
             .flat()

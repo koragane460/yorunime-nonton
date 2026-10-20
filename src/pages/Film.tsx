@@ -288,6 +288,10 @@ export default function Film() {
                       <FilmIcon className="size-6 text-muted-foreground" />
                     </div>
                   )}
+                  {/* Genre Film Movie — ada di SETIAP film */}
+                  <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-gold backdrop-blur-sm">
+                    Film Movie
+                  </span>
                   {typeof f.rating === "number" && f.rating > 0 && (
                     <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-gold backdrop-blur-sm">
                       <Star className="size-2.5 fill-current" /> {f.rating.toFixed(1)}
@@ -327,7 +331,6 @@ function FilmDetail({
   onClose: () => void;
 }) {
   const getDetail = useAction(api.films.detail);
-  const resolve = useAction(api.films.resolveStream);
   const toggleFav = useMutation(api.activities.toggleFavorite);
   const postComment = useMutation(api.activities.postComment);
   const myFavs = useQuery(api.activities.myFavorites, {});
@@ -343,13 +346,10 @@ function FilmDetail({
   }) as unknown as CommentT[] | undefined;
 
   const [d, setD] = useState<FilmDetailT | null>(null);
-  const [sources, setSources] = useState<FilmSource[]>([]);
-  const [srcIdx, setSrcIdx] = useState(0);
-  const [resolving, setResolving] = useState(true);
-  const [season, setSeason] = useState(1);
-  const [episode, setEpisode] = useState(1);
   const [tab, setTab] = useState<"info" | "cast" | "komen">("info");
   const [synopsisOpen, setSynopsisOpen] = useState(false);
+  /** NONTON → layar TERPISAH (pemutar + komentar saja), bukan di detail. */
+  const [watching, setWatching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -365,25 +365,6 @@ function FilmDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, kind]);
 
-  useEffect(() => {
-    let alive = true;
-    setResolving(true);
-    resolve({ id, kind, season, episode })
-      .then((r: any) => {
-        if (!alive) return;
-        setSources((r?.sources ?? []) as FilmSource[]);
-        setSrcIdx(0);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (alive) setResolving(false);
-      });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, kind, season, episode]);
-
   const runtimeLabel = useMemo(() => {
     if (!d?.runtime) return null;
     const h = Math.floor(d.runtime / 60);
@@ -391,7 +372,6 @@ function FilmDetail({
     return h > 0 ? `${h}j ${m}m` : `${m}m`;
   }, [d?.runtime]);
 
-  const src = sources[srcIdx];
   const longSynopsis = (d?.synopsis ?? "").length > 220;
 
   /** Tombol SUBSCRIBE — masukkan/keluarkan film dari koleksi. */
@@ -414,11 +394,6 @@ function FilmDetail({
       toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
     }
   };
-
-  const scrollToPlayer = () =>
-    document
-      .getElementById("film-player")
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   return (
     <div
@@ -513,28 +488,30 @@ function FilmDetail({
           )}
         </div>
 
-        {/* Genre */}
-        {(d?.genres ?? []).length > 0 && (
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            {d!.genres.map((g) => (
-              <span
-                key={g.id}
-                className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-bold text-primary"
-              >
-                {g.name}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Genre — Film Movie selalu jadi genre pertama tiap film */}
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <span className="rounded-full border border-gold/45 bg-gold/10 px-3 py-1 text-[11px] font-bold text-gold">
+            Film Movie
+          </span>
+          {(d?.genres ?? []).map((g) => (
+            <span
+              key={g.id}
+              className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-bold text-primary"
+            >
+              {g.name}
+            </span>
+          ))}
+        </div>
 
-        {/* Baris aksi: Putar + Subscribe — pola sama seperti detail anime */}
+        {/* Baris aksi: Nonton + Subscribe — Nonton membuka LAYAR TERPISAH
+            berisi pemutar + komentar (bukan pemutar di halaman detail). */}
         <div className="mt-4 flex items-stretch gap-2.5">
           <button
-            onClick={scrollToPlayer}
+            onClick={() => setWatching(true)}
             className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 text-sm font-black text-white transition hover:bg-sky-600 active:scale-[0.98]"
           >
             <Play className="size-4 fill-current" aria-hidden />
-            {kind === "tv" ? "Putar Episode" : "Putar Film"}
+            {kind === "tv" ? "Nonton Episode" : "Nonton"}
           </button>
           <button
             onClick={() => void onSubscribe()}
@@ -548,106 +525,13 @@ function FilmDetail({
           </button>
         </div>
 
-        {/* ======================= PEMUTAR ======================= */}
-        <div id="film-player" className="mt-4 scroll-mt-4">
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
-            {resolving ? (
-              <div className="flex size-full flex-col items-center justify-center gap-2 text-white/70">
-                <Loader2 className="size-6 animate-spin text-gold" />
-                <p className="text-[11px] font-bold">
-                  Mencari server streaming…
-                </p>
-              </div>
-            ) : src?.type === "embed" ? (
-              <iframe
-                key={src.url}
-                src={src.url}
-                title={src.label}
-                allowFullScreen
-                className="size-full border-0"
-              />
-            ) : src ? (
-              <video
-                key={src.url}
-                src={src.url}
-                controls
-                playsInline
-                className="size-full bg-black"
-              />
-            ) : (
-              <div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-white/60">
-                <FilmIcon className="size-8" />
-                <p className="text-[12px] font-bold">
-                  Server sedang tidak tersedia. Coba lagi nanti.
-                </p>
-              </div>
-            )}
-          </div>
+        {/* LAYAR NONTON — pemutar + komentar saja, menutupi detail */}
+        {watching && (
+          <FilmWatch id={id} kind={kind} onClose={() => setWatching(false)} />
+        )}
 
-          {/* Pemilih server */}
-          {sources.length > 1 && (
-            <div className="thin-scroll mt-2 flex gap-2 overflow-x-auto pb-1">
-              {sources.map((s, i) => (
-                <button
-                  key={s.url}
-                  onClick={() => setSrcIdx(i)}
-                  className={cn(
-                    "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black transition",
-                    i === srcIdx
-                      ? "border-gold bg-gold text-black"
-                      : "border-border text-muted-foreground",
-                  )}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Pemilih season/episode untuk series */}
-          {kind === "tv" && d?.seasons ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-black text-muted-foreground">
-                Season
-              </span>
-              {Array.from({ length: Math.min(d.seasons, 12) }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setSeason(i + 1);
-                    setEpisode(1);
-                  }}
-                  className={cn(
-                    "size-8 rounded-lg border text-[11px] font-black transition",
-                    season === i + 1
-                      ? "border-gold bg-gold text-black"
-                      : "border-border text-muted-foreground",
-                  )}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <span className="ml-2 text-[11px] font-black text-muted-foreground">
-                Ep
-              </span>
-              <button
-                onClick={() => setEpisode((e) => Math.max(1, e - 1))}
-                className="size-8 rounded-lg border border-border font-black text-muted-foreground"
-              >
-                −
-              </button>
-              <span className="min-w-6 text-center text-sm font-black">
-                {episode}
-              </span>
-              <button
-                onClick={() => setEpisode((e) => e + 1)}
-                className="size-8 rounded-lg border border-border font-black text-muted-foreground"
-              >
-                +
-              </button>
-            </div>
-          ) : null}
-        </div>
+        {/* PEMUTAR tidak ada di detail — tekan Nonton untuk membuka
+            layar terpisah (pemutar + komentar). */}
 
         {/* ============== TAB: Info · Pemeran · Komentar ============== */}
         <div className="mt-5 flex gap-1">
@@ -817,6 +701,226 @@ function FilmDetail({
             />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------- nonton ---- */
+
+/**
+ * LAYAR NONTON — hanya PEMUTAR + KOMENTAR (permintaan pemilik: nonton bukan
+ * di halaman detail, tapi terbuka sendiri setelah tombol Nonton ditekan,
+ * kayak layar nonton anime). KOTAK KOMENTAR TINGGI TETAP (stabil) dan judul
+ * "Komentar" memuat jumlahnya.
+ */
+function FilmWatch({
+  id,
+  kind,
+  onClose,
+}: {
+  id: string;
+  kind: "movie" | "tv";
+  onClose: () => void;
+}) {
+  const getDetail = useAction(api.films.detail);
+  const resolve = useAction(api.films.resolveStream);
+  const postComment = useMutation(api.activities.postComment);
+  const { user } = useAuth();
+  const comments = useQuery(api.activities.listComments, {
+    animeId: `film:${id}`,
+    sort: "terbaru",
+  }) as unknown as CommentT[] | undefined;
+
+  const [d, setD] = useState<FilmDetailT | null>(null);
+  const [sources, setSources] = useState<FilmSource[]>([]);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const [resolving, setResolving] = useState(true);
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+
+  useEffect(() => {
+    let alive = true;
+    getDetail({ id, kind })
+      .then((r: any) => alive && setD(r as FilmDetailT))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, kind]);
+
+  useEffect(() => {
+    let alive = true;
+    setResolving(true);
+    resolve({ id, kind, season, episode })
+      .then((r: any) => {
+        if (!alive) return;
+        setSources((r?.sources ?? []) as FilmSource[]);
+        setSrcIdx(0);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setResolving(false);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, kind, season, episode]);
+
+  const src = sources[srcIdx];
+  const commentCount = (comments?.length ?? 0).toLocaleString("id-ID");
+
+  return (
+    <div className="screen-enter fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background/90 px-3 py-3 backdrop-blur">
+        <button
+          onClick={onClose}
+          aria-label="Kembali ke detail film"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border transition active:scale-90"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black">{d?.title ?? "…"}</p>
+          <p className="text-[10px] font-bold text-muted-foreground">
+            {kind === "tv" ? "Series" : "Film"} · Nonton
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-[10px] font-black text-gold">
+          Film Movie
+        </span>
+      </div>
+
+      <div className="mx-auto w-full max-w-2xl px-3 pb-12 pt-3">
+        {/* ======================= PEMUTAR ======================= */}
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
+          {resolving ? (
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-white/70">
+              <Loader2 className="size-6 animate-spin text-gold" />
+              <p className="text-[11px] font-bold">Mencari server streaming…</p>
+            </div>
+          ) : src?.type === "embed" ? (
+            <iframe
+              key={src.url}
+              src={src.url}
+              title={src.label}
+              allowFullScreen
+              className="size-full border-0"
+            />
+          ) : src ? (
+            <video
+              key={src.url}
+              src={src.url}
+              controls
+              playsInline
+              className="size-full bg-black"
+            />
+          ) : (
+            <div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-white/60">
+              <FilmIcon className="size-8" />
+              <p className="text-[12px] font-bold">
+                Server sedang tidak tersedia. Coba lagi nanti.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Pemilih server */}
+        {sources.length > 1 && (
+          <div className="thin-scroll mt-2 flex gap-2 overflow-x-auto pb-1">
+            {sources.map((s, i) => (
+              <button
+                key={s.url}
+                onClick={() => setSrcIdx(i)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black transition",
+                  i === srcIdx
+                    ? "border-gold bg-gold text-black"
+                    : "border-border text-muted-foreground",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Pemilih season/episode untuk series */}
+        {kind === "tv" && d?.seasons ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-black text-muted-foreground">
+              Season
+            </span>
+            {Array.from({ length: Math.min(d.seasons, 12) }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setSeason(i + 1);
+                  setEpisode(1);
+                }}
+                className={cn(
+                  "size-8 rounded-lg border text-[11px] font-black transition",
+                  season === i + 1
+                    ? "border-gold bg-gold text-black"
+                    : "border-border text-muted-foreground",
+                )}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <span className="ml-2 text-[11px] font-black text-muted-foreground">
+              Ep
+            </span>
+            <button
+              onClick={() => setEpisode((e) => Math.max(1, e - 1))}
+              className="size-8 rounded-lg border border-border font-black text-muted-foreground"
+            >
+              −
+            </button>
+            <span className="min-w-6 text-center text-sm font-black">
+              {episode}
+            </span>
+            <button
+              onClick={() => setEpisode((e) => e + 1)}
+              className="size-8 rounded-lg border border-border font-black text-muted-foreground"
+            >
+              +
+            </button>
+          </div>
+        ) : null}
+
+        {/* ============ KOMENTAR — TINGGI TETAP (stabil) ============ */}
+        <div className="mt-5">
+          <h2 className="flex items-center gap-2 text-base font-black tracking-tight">
+            Komentar
+            <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-black text-gold">
+              {commentCount}
+            </span>
+          </h2>
+          <div className="thin-scroll mt-2 h-[48vh] overflow-y-auto rounded-2xl border border-border bg-card/40 p-3">
+            <CommentsSection
+              animeId={`film:${id}`}
+              comments={comments}
+              meId={user?._id}
+              onSend={async (text, replyToId) => {
+                if (!user) {
+                  toast.error("Masuk akun dulu untuk komentar");
+                  return;
+                }
+                await postComment({
+                  animeId: `film:${id}`,
+                  animeTitle: d?.title ?? "Film",
+                  animeImage: d?.image,
+                  text,
+                  replyToId: replyToId as never,
+                });
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -54,3 +54,41 @@ export function shrinkAvatar(file: File): Promise<string> {
 export function shrinkBanner(file: File): Promise<string> {
   return shrinkImageFile(file, 1200, 0.78);
 }
+
+/**
+ * LATAR HOME — dipotong jadi 9:16 (720×1280, rata atas) supaya tampil
+ * lurus ke atas tanpa terpotong aneh di HP. Disimpan sebagai WebP kecil
+ * (muat jauh di bawah batas localStorage).
+ */
+export function shrinkHomeBg(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const TW = 720;
+      const TH = 1280;
+      // cover: gambar menutupi seluruh kanvas 9:16, lebih besar = dipotong.
+      const scale = Math.max(TW / img.naturalWidth, TH / img.naturalHeight);
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+      const ox = Math.round((w - TW) / 2); // rata tengah horizontal
+      const canvas = document.createElement("canvas");
+      canvas.width = TW;
+      canvas.height = TH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Browser tidak bisa memproses gambar"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, -ox, 0, w, h);
+      const out = canvas.toDataURL("image/webp", 0.75);
+      resolve(out.startsWith("data:image/webp") ? out : canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("File gambar tidak bisa dibaca"));
+    };
+    img.src = url;
+  });
+}

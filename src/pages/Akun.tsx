@@ -3,7 +3,12 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
+import {
+  AppLayout,
+  HOME_BG_EVENT,
+  HOME_BG_KEY,
+  useHideNavOnMount,
+} from "@/components/AppLayout";
 import { StaffPanel } from "@/components/StaffPanel";
 import { BlurBanner } from "@/components/BlurBanner";
 import {
@@ -31,7 +36,7 @@ import {
   usernameColor,
 } from "@/lib/lstream";
 import { xpForLevel } from "@/lib/level";
-import { shrinkAvatar, shrinkBanner } from "@/lib/image";
+import { shrinkAvatar, shrinkBanner, shrinkHomeBg } from "@/lib/image";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { BORDERS } from "@/lib/borders";
 import {
@@ -542,6 +547,15 @@ function SettingsScreen({
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
+  // LATAR HOME — gambar 9:16 dari galeri, disimpan di perangkat ini.
+  const [homeBg, setHomeBg] = useState<string | null>(() => {
+    try {
+      return window.localStorage.getItem(HOME_BG_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [busyHomeBg, setBusyHomeBg] = useState(false);
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
   // Animasi intro profil (fullscreen) — pengaturan ini yang mengatur
@@ -1137,6 +1151,82 @@ function SettingsScreen({
               Ambil Premium untuk mengatur gambar
             </button>
           )}
+        </div>
+
+        {/* LATAR HOME — ganti background Home (yang hitam) dari GALERI,
+            dipotong 9:16 rata atas supaya lurus ke atas dan tetap kelihatan
+            di seluruh layar YoruNime. */}
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-[13px] font-medium">Ganti Home Screen (9:16)</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Background Home diganti gambar dari galeri — otomatis dipotong
+            9:16 (lurus ke atas).
+          </p>
+          {homeBg && (
+            <div className="mt-2 overflow-hidden rounded-lg border border-white/10">
+              <img
+                src={homeBg}
+                alt="Pratinjau latar Home"
+                className="h-40 w-full object-cover object-top"
+              />
+            </div>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label
+              className={cn(
+                "group flex w-fit cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-primary-foreground transition active:scale-95",
+                busyHomeBg && "pointer-events-none opacity-60",
+              )}
+            >
+              <Camera className="size-4" aria-hidden />
+              {homeBg ? "Ganti dari galeri" : "Pilih dari galeri"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  setBusyHomeBg(true);
+                  void (async () => {
+                    try {
+                      const hd = await shrinkHomeBg(f);
+                      window.localStorage.setItem(HOME_BG_KEY, hd);
+                      window.dispatchEvent(new Event(HOME_BG_EVENT));
+                      setHomeBg(hd);
+                      toast.success("Background Home diubah ✨");
+                    } catch (er2) {
+                      setErr(
+                        er2 instanceof Error
+                          ? er2.message
+                          : "Gagal mengunggah gambar",
+                      );
+                    } finally {
+                      setBusyHomeBg(false);
+                    }
+                  })();
+                }}
+              />
+            </label>
+            {homeBg && (
+              <button
+                onClick={() => {
+                  try {
+                    window.localStorage.removeItem(HOME_BG_KEY);
+                    window.dispatchEvent(new Event(HOME_BG_EVENT));
+                  } catch {
+                    /* abaikan */
+                  }
+                  setHomeBg(null);
+                  toast.success("Background Home dikembalikan");
+                }}
+                className="rounded-lg border border-border px-3 py-2 text-[13px] font-bold text-muted-foreground transition hover:text-foreground"
+              >
+                Kembalikan
+              </button>
+            )}
+          </div>
         </div>
 
         {panelLevel !== "none" && <StaffPanel level={panelLevel} />}

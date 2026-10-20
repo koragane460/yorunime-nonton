@@ -60,18 +60,6 @@ const RANK_STYLE: Record<
 
 type PullCard = { id: string; name: string; anime: string; rank: string };
 
-/** Waktu relatif ringkas untuk riwayat pull. */
-function timeAgo(ts: number): string {
-  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return "baru saja";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} menit lalu`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} jam lalu`;
-  const d = Math.floor(h / 24);
-  return `${d} hari lalu`;
-}
-
 /** Bintang berkelip latar selama animasi komet. */
 function StarField() {
   const stars = useMemo(
@@ -529,102 +517,8 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
           </button>
         </div>
 
-        {/* ---------------------------- koleksi / INDEX ------------------ */}
-        <div
-          id="koleksi-gacha"
-          className="mt-6 flex items-center justify-between scroll-mt-20"
-        >
-          <h2 className="text-lg font-black tracking-tight">
-            Index Kartu <span className="text-gold">·</span> Koleksi
-          </h2>
-          <span className="text-[11px] font-bold text-muted-foreground">
-            {Object.keys(owned).length}/{GACHA_ROSTER.length} kartu
-          </span>
-        </div>
-
-        {/* Tab indeks rank: SSS / SS / S */}
-        <div className="mt-2 flex rounded-full border border-border bg-card p-0.5">
-          {RANK_ORDER.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRankTab(r)}
-              className={cn(
-                "flex-1 rounded-full py-1.5 text-[12px] font-black transition",
-                rankTab === r
-                  ? cn(RANK_STYLE[r].chip, "shadow-sm")
-                  : "text-muted-foreground",
-              )}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-          {rankPool.map((c) => {
-            const count = owned[c.id] ?? 0;
-            const has = count > 0;
-            const isActive = equipped === c.id;
-            return (
-              <motion.button
-                key={c.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                onClick={() => void onPickCard(c)}
-                className="text-left"
-              >
-                <div
-                  className={cn(
-                    "relative aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b",
-                    RANK_STYLE[c.rank].card,
-                    has ? RANK_STYLE[c.rank].glow : "opacity-45 grayscale",
-                    isActive && "ring-2 ring-gold ring-offset-2 ring-offset-background",
-                  )}
-                >
-                  {images[c.id] ? (
-                    <img
-                      src={images[c.id]}
-                      alt={c.name}
-                      loading="lazy"
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center text-2xl font-black text-white/70">
-                      {c.name.slice(0, 1)}
-                    </div>
-                  )}
-                  {!has && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/55">
-                      <Lock className="size-5 text-white/80" aria-hidden />
-                    </span>
-                  )}
-                  {has && count > 1 && (
-                    <span className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-white">
-                      ×{count}
-                    </span>
-                  )}
-                  {isActive && (
-                    <span className="absolute inset-x-0 bottom-0 bg-gold px-1 py-0.5 text-center text-[9px] font-black text-black">
-                      TERPASANG
-                    </span>
-                  )}
-                </div>
-                <p
-                  className={cn(
-                    "mt-1 line-clamp-1 text-[11px] font-bold",
-                    has ? "text-white/90" : "text-muted-foreground",
-                  )}
-                >
-                  {c.name}
-                </p>
-                <p className="line-clamp-1 text-[9px] text-muted-foreground">
-                  {c.anime}
-                </p>
-              </motion.button>
-            );
-          })}
-        </div>
+        {/* Koleksi / INDEX tidak lagi tampil inline di bawah — sekarang
+            muncul sebagai KOTAK (sheet overlay) lewat tombol Index. */}
       </div>
 
       {/* ------------- overlay: menunggu server (sebelum komet) ---------- */}
@@ -742,6 +636,135 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
         )}
       </AnimatePresence>
 
+      {/* ----------------------- overlay INDEX (kotak) ----------------- */}
+      <AnimatePresence>
+        {indexOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[92] flex flex-col justify-end"
+            onClick={() => setIndexOpen(false)}
+          >
+            {/* area kosong di atas kotak — ketuk untuk menutup */}
+            <div className="flex-1 bg-black/60 backdrop-blur-[2px]" />
+            <motion.div
+              initial={{ y: 44 }}
+              animate={{ y: 0 }}
+              exit={{ y: 44 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="thin-scroll mx-auto max-h-[82%] w-full max-w-2xl overflow-y-auto rounded-t-3xl border-t border-border bg-background p-3 pb-8"
+            >
+              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/25" aria-hidden />
+
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black tracking-tight">
+                  Index Kartu <span className="text-gold">·</span> Koleksi
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-muted-foreground">
+                    {Object.keys(owned).length}/{GACHA_ROSTER.length} kartu
+                  </span>
+                  <button
+                    onClick={() => setIndexOpen(false)}
+                    aria-label="Tutup index"
+                    className="flex size-8 items-center justify-center rounded-full border border-border transition active:scale-90"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab indeks rank: SSS / SS / S */}
+              <div className="mt-2 flex rounded-full border border-border bg-card p-0.5">
+                {RANK_ORDER.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRankTab(r)}
+                    className={cn(
+                      "flex-1 rounded-full py-1.5 text-[12px] font-black transition",
+                      rankTab === r
+                        ? cn(RANK_STYLE[r].chip, "shadow-sm")
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+                {rankPool.map((c) => {
+                  const count = owned[c.id] ?? 0;
+                  const has = count > 0;
+                  const isActive = equipped === c.id;
+                  return (
+                    <motion.button
+                      key={c.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25 }}
+                      onClick={() => void onPickCard(c)}
+                      className="text-left"
+                    >
+                      <div
+                        className={cn(
+                          "relative aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b",
+                          RANK_STYLE[c.rank].card,
+                          has ? RANK_STYLE[c.rank].glow : "opacity-45 grayscale",
+                          isActive && "ring-2 ring-gold ring-offset-2 ring-offset-background",
+                        )}
+                      >
+                        {images[c.id] ? (
+                          <img
+                            src={images[c.id]}
+                            alt={c.name}
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center text-2xl font-black text-white/70">
+                            {c.name.slice(0, 1)}
+                          </div>
+                        )}
+                        {!has && (
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/55">
+                            <Lock className="size-5 text-white/80" aria-hidden />
+                          </span>
+                        )}
+                        {has && count > 1 && (
+                          <span className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-white">
+                            ×{count}
+                          </span>
+                        )}
+                        {isActive && (
+                          <span className="absolute inset-x-0 bottom-0 bg-gold px-1 py-0.5 text-center text-[9px] font-black text-black">
+                            TERPASANG
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={cn(
+                          "mt-1 line-clamp-1 text-[11px] font-bold",
+                          has ? "text-white/90" : "text-muted-foreground",
+                        )}
+                      >
+                        {c.name}
+                      </p>
+                      <p className="line-clamp-1 text-[9px] text-muted-foreground">
+                        {c.anime}
+                      </p>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* --------------------------- overlay history -------------------- */}
       <AnimatePresence>
         {historyOpen && (
@@ -778,7 +801,9 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                // GESER KE KANAN — kartu tanpa kotak, lengkap dengan
+                // jam + tanggal (hari bulan tahun).
+                <div className="thin-scroll -mx-3 flex gap-3 overflow-x-auto px-3 pb-3">
                   {history.map((h, i) => {
                     const c = GACHA_ROSTER.find((x) => x.id === h.id);
                     const style =
@@ -789,11 +814,11 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
                         initial={{ opacity: 0, x: -12 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: Math.min(i * 0.03, 0.4) }}
-                        className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2"
+                        className="w-24 shrink-0 text-center"
                       >
                         <div
                           className={cn(
-                            "size-11 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b",
+                            "relative aspect-[3/4] overflow-hidden rounded-xl border border-white/15 bg-gradient-to-b",
                             style.card,
                           )}
                         >
@@ -805,27 +830,28 @@ export function GachaScreen({ onBack }: { onBack: () => void }) {
                               className="size-full object-cover"
                             />
                           ) : (
-                            <span className="flex size-full items-center justify-center text-sm font-black text-white/80">
+                            <span className="flex size-full items-center justify-center text-xl font-black text-white/80">
                               {(c?.name ?? "?").slice(0, 1)}
                             </span>
                           )}
+                          <span
+                            className={cn(
+                              "absolute left-1 top-1 rounded px-1 py-0.5 text-[8px] font-black",
+                              style.chip,
+                            )}
+                          >
+                            {h.rank}
+                          </span>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-1 text-[13px] font-black text-white/90">
-                            {c?.name ?? h.id}
-                          </p>
-                          <p className="line-clamp-1 text-[10px] text-muted-foreground">
-                            {c?.anime ?? "—"} · {timeAgo(h.at)}
-                          </p>
-                        </div>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-lg px-2 py-1 text-[10px] font-black",
-                            style.chip,
-                          )}
-                        >
-                          {h.rank}
-                        </span>
+                        <p className="mt-1 line-clamp-1 text-[11px] font-black text-white/90">
+                          {c?.name ?? h.id}
+                        </p>
+                        <p className="text-[9px] font-semibold text-muted-foreground">
+                          {fmtClock(h.at)} WIB
+                        </p>
+                        <p className="text-[9px] font-semibold text-gold/80">
+                          {fmtDate(h.at)}
+                        </p>
                       </motion.div>
                     );
                   })}
