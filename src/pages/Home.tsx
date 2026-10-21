@@ -113,6 +113,103 @@ function HeroSkeleton() {
   );
 }
 
+/**
+ * BANNER HERO YANG DIPEISOLASI (performa).
+ *
+ * State rotasi (`idx`) + interval 6 detik dimiliki komponen KECIL ini, jadi
+ * tiap pergantian slide hanya banner ini yang re-render — bukan seluruh Home
+ * (4.000+ baris, belasan useQuery). Sebelumnya seluruh halaman render ulang
+ * tiap 6 detik, cukup berat untuk HP kelas menengah.
+ *
+ * Slide ditumpuk absolute + opacity supaya pergantian benar-benar FADE.
+ * Judul di tengah; badge TOP #n + jumlah views di KANAN (bukan di kiri).
+ */
+function HeroSlides({
+  items,
+  onPick,
+  onTop,
+}: {
+  items: AnimeCardT[];
+  onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
+  onTop: () => void;
+}) {
+  const [idx, setIdx] = useState(0);
+  const total = items.length;
+
+  // Jaga indeks tetap valid saat daftar item berubah (mis. load ulang).
+  useEffect(() => {
+    if (idx >= total) setIdx(0);
+  }, [total, idx]);
+
+  // Auto-rotate tiap 6 detik — hanya menggerakkan state komponen ini.
+  useEffect(() => {
+    if (total < 2) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % total), 6000);
+    return () => clearInterval(t);
+  }, [total]);
+
+  return (
+    <div className="relative h-[178px] min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10">
+      {items.map((a, i) => (
+        <div
+          key={a.id}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-700",
+            i === idx ? "opacity-100" : "pointer-events-none opacity-0",
+          )}
+        >
+          <div
+            className="relative h-full overflow-hidden bg-cover bg-center"
+            style={
+              a.image
+                ? {
+                    backgroundImage:
+                      `linear-gradient(0deg, rgba(2,6,16,.95) 0%, rgba(2,6,16,.62) 48%, rgba(2,6,16,.18) 100%), radial-gradient(120% 70% at 8% -8%, rgba(120,160,255,.22) 0%, rgba(120,160,255,0) 55%), url(${a.image})`,
+                    backgroundSize: "100% 100%, 100% 100%, cover",
+                    backgroundPosition: "center bottom, left top, center",
+                    backgroundRepeat: "no-repeat, no-repeat, no-repeat",
+                  }
+                : undefined
+            }
+          >
+            {!a.image && <div className="absolute inset-0 bg-hero-gradient" />}
+            <button
+              onClick={() =>
+                onPick(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
+              }
+              aria-label={`Detail ${a.title}`}
+              className="absolute inset-0"
+            />
+            {/* Kotak hitam lurus full lebar di bawah banner (opacity 70%):
+                judul di tengah, badge TOP #n + jumlah views di KANAN. */}
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/70 px-3 py-2 backdrop-blur-[2px]">
+              <p className="min-w-0 flex-1 truncate text-center text-sm font-bold text-white">
+                {a.title}
+              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTop();
+                }}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
+              >
+                <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
+                <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
+                  #{i + 1}
+                </span>
+              </button>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/60 px-1.5 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
+                <Eye className="size-3 text-white/80" aria-hidden />
+                {formatViews(viewCountFor(String(a.id)))}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function GridSkeleton({ count = 10 }: { count?: number }) {
   return (
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
@@ -269,14 +366,18 @@ function ComicHomeRow({
                   </span>
                 )}
               </div>
-              <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
-                {c.title}
-              </p>
-              {views && (
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  {views} dibaca
+              {/* Kotak semi-opaque di belakang judul — "screen home" tidak
+                  bolong di balik teks kartu manga/manhwa. */}
+              <div className="mt-1 rounded-lg bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+                <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
+                  {c.title}
                 </p>
-              )}
+                {views && (
+                  <p className="mt-0.5 text-[10px] text-white/60">
+                    {views} dibaca
+                  </p>
+                )}
+              </div>
             </button>
           );
         })}
@@ -340,7 +441,7 @@ function BrowseRow({
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={busy || page >= 6}
-              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
+              className="rounded-full border border-border bg-black/55 px-4 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur-md transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
             >
               {busy ? "Memuat…" : page >= 6 ? "Semua item sudah tampil" : "Muat lebih banyak"}
             </button>
@@ -418,9 +519,7 @@ function HomeContent() {
   const [manhwaList, setManhwaList] = useState<ComicItem[]>([]);
   const [loadingComics, setLoadingComics] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [heroIdx, setHeroIdx] = useState(0);
   const [heroItems, setHeroItems] = useState<AnimeCardT[]>([]);
-  const heroTouchX = useRef<number | null>(null);
 
   // Hero data is fetched at load time and must update the same hero tiles the
   // swipe and auto-rotate logic reads. Only the first successful payload wins
@@ -452,12 +551,8 @@ function HomeContent() {
     tick().catch(() => {});
   }, []);
 
-  // Total slide = anime + donghua + 1 slide leaderboard di ujung rotasi.
-  const heroTotal = heroItems.length;
-  const heroSwipe = (dir: 1 | -1) => {
-    if (heroTotal < 2) return;
-    setHeroIdx((i) => (i + dir + heroTotal) % heroTotal);
-  };
+  // Total slide hero dihitung di dalam <HeroSlides /> (state rotasi sudah
+  // dipisah supaya halaman utama tidak render ulang tiap 6 detik).
 
   // Muat data katalog (backend punya fallback statis, jadi selalu ada hasil)
   useEffect(() => {
@@ -622,13 +717,8 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favQuery?.length]);
 
-  // Auto-rotate hero — hanya slide anime; leaderboard jadi kartu terpisah
-  // di bawah banner supaya banner tidak terlalu tinggi.
-  useEffect(() => {
-    if (heroItems.length < 2) return;
-    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroItems.length), 6000);
-    return () => clearInterval(t);
-  }, [heroItems.length]);
+  // Rotasi hero (interval + indeks) sekarang dimiliki <HeroSlides /> —
+  // lihat komponen itu. Tidak ada lagi setState di Home tiap 6 detik.
 
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
@@ -712,79 +802,17 @@ function HomeContent() {
         <>
         <div className="fade-enter mt-3 flex w-full items-stretch gap-2">
           {/* ---- Banner utama: SEMUA judul ditumpuk + fade, tapi selalu
-              hanya SATU slide yang terlihat (rotasi tiap 6 detik). ---- */}
-          <div className="relative h-[178px] min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10">
-          {heroItems.map((a, i) => (
-            <div
-              key={a.id}
-              className={cn(
-                // Semua slide ditumpuk absolute + opacity supaya pergantian
-                // slide benar-benar FADE (bukan langsung hilang/tampil).
-                "absolute inset-0 transition-opacity duration-700",
-                i === heroIdx
-                  ? "opacity-100"
-                  : "pointer-events-none opacity-0",
-              )}
-            >
-              <div
-                className="relative h-full overflow-hidden bg-cover bg-center"
-                style={
-                  a.image
-                    ? {
-                        // Layer 1: vignette vertikal gelap + sorotan lembut di
-                        // pojok kiri atas supaya banner terasa lebih hidup
-                        // tapi teks tetap terbaca.
-                        backgroundImage:
-                          `linear-gradient(0deg, rgba(2,6,16,.95) 0%, rgba(2,6,16,.62) 48%, rgba(2,6,16,.18) 100%), radial-gradient(120% 70% at 8% -8%, rgba(120,160,255,.22) 0%, rgba(120,160,255,0) 55%), url(${a.image})`,
-                        backgroundSize: "100% 100%, 100% 100%, cover",
-                        backgroundPosition: "center bottom, left top, center",
-                        backgroundRepeat: "no-repeat, no-repeat, no-repeat",
-                      }
-                    : undefined
-                }
-              >
-                {!a.image && (
-                  <div className="absolute inset-0 bg-hero-gradient" />
-                )}
-                {/* Menekan banner (bagian mana pun) membuka detail anime. */}
-                <button
-                  onClick={() =>
-                    openAnime(a.id, a.title, a.source === "sanka" ? "sanka" : "anilist")
-                  }
-                  aria-label={`Detail ${a.title}`}
-                  className="absolute inset-0"
-                />
-                {/* Badge TOP #n + jumlah views — digabung jadi SATU baris di
-                    kiri atas (kanan atas dipakai panel Leaderboard). */}
-                <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowTopAnime(true);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg bg-black/50 px-2 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
-                  >
-                    <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
-                    <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-                      #{i + 1}
-                    </span>
-                  </button>
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-black/70 px-1.5 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
-                    <Eye className="size-3 text-white/80" aria-hidden />
-                    {formatViews(viewCountFor(String(a.id)))}
-                  </span>
-                </div>
-                {/* Kotak hitam lurus full lebar di bawah banner (opacity 70%)
-                    — isinya HANYA judul anime di tengah, tanpa tambahan lain. */}
-                <div className="absolute inset-x-0 bottom-0 bg-black/70 px-3 py-2 text-center backdrop-blur-[2px]">
-                  <p className="truncate text-sm font-bold text-white">
-                    {a.title}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-          </div>
+              hanya SATU slide yang terlihat (rotasi tiap 6 detik).
+              PENTING (performa): state rotasi + interval-nya DIPEISOLASI di
+              dalam <HeroSlides /> — jadi tiap 6 detik hanya banner kecil ini
+              yang re-render, BUKAN seluruh Home (4.000+ baris). Sebelumnya
+              HP user sampai restart sendiri karena render ulang raksasa
+              tiap 6 detik. ---- */}
+          <HeroSlides
+            items={heroItems}
+            onPick={openAnime}
+            onTop={() => setShowTopAnime(true)}
+          />
 
           {/* ---- LEADERBOARD DI KANAN banner — kolom vertikal Top 5,
               menekan kartu membuka layar Leaderboard lengkap. ---- */}
@@ -859,7 +887,7 @@ function HomeContent() {
           ikon chat → "Chat:" → satu pesan orang (berputar tiap 3 menit). */}
       <button
         onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 flex w-full items-center gap-2 rounded-full border border-white/10 bg-card px-3 py-2 text-left transition hover:border-foreground/40"
+        className="fade-enter mt-3 flex w-full items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3 py-2 text-left backdrop-blur-md transition hover:border-foreground/40"
       >
         <span className="flex size-8 shrink-0 items-center justify-center bg-primary/15">
           <MessageSquare className="size-4 text-primary" aria-hidden />
@@ -882,7 +910,7 @@ function HomeContent() {
             setSearchOpenGenres(false);
             setShowSearch(true);
           }}
-          className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-card/45 px-4 py-3 text-left backdrop-blur-md"
+          className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-black/55 px-4 py-3 text-left backdrop-blur-md"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-sm text-muted-foreground">
@@ -896,7 +924,7 @@ function HomeContent() {
             memakai resolver stream TMDb + VidSrc/Cinepro. */}
         <button
           onClick={() => navigate("/film")}
-          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-transparent px-4 py-3 text-left transition hover:border-gold/60 hover:bg-gold/5"
+          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-black/55 px-4 py-3 text-left backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/15">
             <Film className="size-5 text-gold" aria-hidden />
@@ -969,13 +997,17 @@ function HomeContent() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 line-clamp-2 min-h-8 text-[11px] font-medium leading-4">
-                    {a.title}
-                  </p>
-                  {/* Jam rilis di bawah judul, mengikuti zona waktu device. */}
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    {a.timeLabel}
-                  </p>
+                  {/* Kotak semi-opaque di belakang judul + jam rilis supaya
+                      "screen home" tidak bolong di balik teks. */}
+                  <div className="mt-1 rounded-lg bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+                    <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
+                      {a.title}
+                    </p>
+                    {/* Jam rilis di bawah judul, mengikuti zona waktu device. */}
+                    <p className="font-mono text-[10px] text-white/60">
+                      {a.timeLabel}
+                    </p>
+                  </div>
                 </button>
               )              )}
             </div>
@@ -1015,7 +1047,7 @@ function HomeContent() {
                   setSearchOpenGenres(false);
                   setShowSearch(true);
                 }}
-                className="rounded-full border border-sky-400/35 bg-sky-400/10 px-3.5 py-1.5 text-xs font-semibold text-sky-100/90 transition hover:border-sky-300/60 hover:bg-sky-400/20 active:scale-95"
+                className="rounded-full border border-sky-400/35 bg-black/55 px-3.5 py-1.5 text-xs font-semibold text-sky-100/90 backdrop-blur-md transition hover:border-sky-300/60 hover:bg-black/75 active:scale-95"
               >
                 {g.name}
               </button>

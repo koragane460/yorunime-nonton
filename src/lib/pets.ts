@@ -8,6 +8,13 @@ export type PetDef = {
   id: string;
   name: string;
   emoji: string;
+  /**
+   * FOTO/GAMBAR hewan (permintaan: "hewan tolong pake foto aja").
+   * File asli disimpan di `public/pets/<id>.jpg` supaya tampil instan dan
+   * tidak bergantung pada layanan luar. Kalau gagal dimuat, UI otomatis
+   * jatuh kembali ke ilustrasi SVG (PetArt).
+   */
+  image?: string;
   rarity: PetRarity;
   /** Peluang drop dalam persen — total tepat 100. */
   rate: number;
@@ -17,18 +24,25 @@ export type PetDef = {
   claim: number;
 };
 
-/** Sepuluh pet — makin tinggi rarity, makin bagus tampilannya. */
+/**
+ * Sepuluh pet — makin tinggi rarity, makin bagus tampilannya.
+ * `image` menunjuk ke foto asli di `public/pets/`:
+ *   - 7 hewan nyata  → foto realistis (pollinations, sudah diunduh sekali)
+ *   - Unikorn & Naga → seni fantasi AI
+ *   - Tetrix Spirit  → "lebih wow": burung phoenix cair dari emas + starlight
+ * Semua sudah berupa file lokal jadi tampil instan tanpa rate-limit luar.
+ */
 export const PETS: PetDef[] = [
-  { id: "kunai", name: "Kunai", emoji: "🐣", rarity: "Common", rate: 22, crystal: 40, claim: 50 },
-  { id: "penyu", name: "Kura-Kura", emoji: "🐢", rarity: "Common", rate: 20, crystal: 35, claim: 40 },
-  { id: "kenari", name: "Kenari", emoji: "🐦", rarity: "Uncommon", rate: 16, crystal: 120, claim: 120 },
-  { id: "rubah", name: "Rubah Api", emoji: "🦊", rarity: "Uncommon", rate: 14, crystal: 140, claim: 140 },
-  { id: "serigala", name: "Serigala", emoji: "🐺", rarity: "Rare", rate: 10, crystal: 300, claim: 300 },
-  { id: "rusa", name: "Rusa Suci", emoji: "🦌", rarity: "Rare", rate: 8, crystal: 350, claim: 350 },
-  { id: "merak", name: "Merak", emoji: "🦜", rarity: "Rare", rate: 5, crystal: 320, claim: 320 },
-  { id: "unikorn", name: "Unikorn", emoji: "🦄", rarity: "Divine", rate: 3, crystal: 800, claim: 750 },
-  { id: "naga", name: "Naga", emoji: "🐉", rarity: "Divine", rate: 1.6, crystal: 900, claim: 800 },
-  { id: "tetrix", name: "Tetrix Spirit", emoji: "🌟", rarity: "Tetrix", rate: 0.4, crystal: 3000, claim: 2000 },
+  { id: "kunai", name: "Kunai", emoji: "🐣", image: "/pets/kunai.jpg", rarity: "Common", rate: 22, crystal: 40, claim: 50 },
+  { id: "penyu", name: "Kura-Kura", emoji: "🐢", image: "/pets/penyu.jpg", rarity: "Common", rate: 20, crystal: 35, claim: 40 },
+  { id: "kenari", name: "Kenari", emoji: "🐦", image: "/pets/kenari.jpg", rarity: "Uncommon", rate: 16, crystal: 120, claim: 120 },
+  { id: "rubah", name: "Rubah Api", emoji: "🦊", image: "/pets/rubah.jpg", rarity: "Uncommon", rate: 14, crystal: 140, claim: 140 },
+  { id: "serigala", name: "Serigala", emoji: "🐺", image: "/pets/serigala.jpg", rarity: "Rare", rate: 10, crystal: 300, claim: 300 },
+  { id: "rusa", name: "Rusa Suci", emoji: "🦌", image: "/pets/rusa.jpg", rarity: "Rare", rate: 8, crystal: 350, claim: 350 },
+  { id: "merak", name: "Merak", emoji: "🦜", image: "/pets/merak.jpg", rarity: "Rare", rate: 5, crystal: 320, claim: 320 },
+  { id: "unikorn", name: "Unikorn", emoji: "🦄", image: "/pets/unikorn.jpg", rarity: "Divine", rate: 3, crystal: 800, claim: 750 },
+  { id: "naga", name: "Naga", emoji: "🐉", image: "/pets/naga.jpg", rarity: "Divine", rate: 1.6, crystal: 900, claim: 800 },
+  { id: "tetrix", name: "Tetrix Spirit", emoji: "🌟", image: "/pets/tetrix.jpg", rarity: "Tetrix", rate: 0.4, crystal: 3000, claim: 2000 },
 ];
 
 /** Gaya visual per rarity — makin tinggi, makin mewah. */

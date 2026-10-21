@@ -91,25 +91,29 @@ export function ComicCard({
           </span>
         )}
       </div>
-      <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight">
-        {item.title}
-      </p>
-      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
-        <span className="max-w-[55%] truncate font-semibold text-foreground/70">
-          {COMIC_KIND_LABEL[item.kind]}
-        </span>
-        <span className="truncate">
-          {item.latestChapter ?? item.genres[0] ?? ""}
-          {item.updatedAgo ? ` · ${item.updatedAgo}` : ""}
-        </span>
-        {typeof item.score === "number" && item.score > 0 && (
-          <>
-            <span className="text-muted-foreground/40">·</span>
-            <Star className="size-3 shrink-0 fill-gold-strong text-gold-strong" />
-            <span>{item.score.toFixed(1)}</span>
-          </>
-        )}
-      </p>
+      {/* Kotak SEMI-OPAQUE di belakang judul + meta — saat "screen home"
+          dipasang, teks kartu tetap terbaca dan tidak membuat bolong. */}
+      <div className="mt-1 rounded-lg bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+        <p className="line-clamp-2 text-[11px] font-medium leading-tight text-white">
+          {item.title}
+        </p>
+        <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/60">
+          <span className="max-w-[55%] truncate font-semibold text-white/75">
+            {COMIC_KIND_LABEL[item.kind]}
+          </span>
+          <span className="truncate">
+            {item.latestChapter ?? item.genres[0] ?? ""}
+            {item.updatedAgo ? ` · ${item.updatedAgo}` : ""}
+          </span>
+          {typeof item.score === "number" && item.score > 0 && (
+            <>
+              <span className="text-white/40">·</span>
+              <Star className="size-3 shrink-0 fill-gold-strong text-gold-strong" />
+              <span>{item.score.toFixed(1)}</span>
+            </>
+          )}
+        </p>
+      </div>
     </button>
   );
 }
@@ -269,7 +273,7 @@ export function ComicBrowseRow({
             <button
               onClick={() => void loadMore()}
               disabled={busy || page >= 8}
-              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
+              className="rounded-full border border-border bg-black/55 px-4 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur-md transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
             >
               {busy ? "Memuat…" : page >= 8 ? "Semua item sudah tampil" : "Muat lebih banyak"}
             </button>

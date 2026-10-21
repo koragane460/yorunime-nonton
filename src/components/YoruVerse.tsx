@@ -70,9 +70,9 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
     view === "music" ? <MusicScreen onClose={() => setView(null)} /> :
     null;
 
-  // ---- ukur garis penghubung: dari TITIK BAWAH kotak kiri ke TITIK ATAS
-  // kotak kanan berikutnya (dan sebaliknya), jadi garis benar-benar
-  // menyentuh kotak tujuan, bukan garis pendek yang mengambang. ----
+  // ---- ukur garis penghubung: dari TITIK SISAN KANAN kotak kiri ke TITIK
+  // SISAN KIRI kotak kanan berikutnya (dan sebaliknya) — garis jadi berada
+  // DI SAMPING kotak (kiri/kanan), bukan menyeberang DI ATASnya. ----
   const wrapRef = useRef<HTMLDivElement>(null);
   const boxRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [lines, setLines] = useState<LinkLine[]>([]);
@@ -87,12 +87,12 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
         const el = boxRefs.current[i];
         if (!el) return;
         const r = el.getBoundingClientRect();
-        const cx = r.left + r.width / 2 - wb.left;
-        // kotak kiri → titik bawah (ujung bawah ketupat); kanan → titik atas
+        const cy = r.top + r.height / 2 - wb.top;
+        // kotak kiri → titik sisi KANAN ketupat; kanan → titik sisi KIRI
         pts.push(
           i % 2 === 0
-            ? { x: cx, y: r.bottom - wb.top }
-            : { x: cx, y: r.top - wb.top },
+            ? { x: r.right - wb.left, y: cy }
+            : { x: r.left - wb.left, y: cy },
         );
       });
       const out: LinkLine[] = [];
@@ -254,7 +254,7 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                           }}
                           onClick={() => setView(b.key)}
                           className={cn(
-                            "flex h-28 w-52 flex-col items-center justify-center gap-1 bg-gradient-to-br",
+                            "flex h-24 w-40 flex-col items-center justify-center gap-1 bg-gradient-to-br",
                             b.grad,
                             "shadow-[0_14px_28px_-16px_rgba(0,0,0,.95)] transition active:scale-95",
                             "[clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]",

@@ -279,25 +279,39 @@ export function ProfileSheet({
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
 
-            {/* PITA TITLE + KARTU KARAKTER BERGAMBAR — di bawah stat */}
+            {/* PITA TITLE + KARTU KARAKTER — satu kotak rapi sejajar
+                (kartu di kiri, pita + nama di kanan). Layout kolom lama
+                membuat pita lebar di atas kartu kecil = terlihat canggung. */}
             {(cosmetics?.title || cosmetics?.card) && (
-              <div className="mx-auto mt-3 flex max-w-sm flex-col items-center gap-2.5">
-                {cosmetics?.title && (
-                  <TitleRibbon
-                    name={cosmetics.title.name}
-                    size="md"
-                  />
-                )}
-                {cosmetics?.card && (
+              <div className="mx-auto mt-4 flex max-w-sm items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] p-3">
+                {cosmetics?.card ? (
                   <CharacterCard
                     name={cosmetics.card.name}
                     anime={(cosmetics.card as { anime?: string }).anime}
                     rank={cosmetics.card.rank as CosmeticRank}
                     image={cardImages[cosmetics.card.id]}
                     active
-                    className="w-28"
+                    className="w-20 shrink-0"
                   />
+                ) : (
+                  <span className="flex aspect-[3/4] w-20 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-bold text-zinc-500">
+                    Tanpa kartu
+                  </span>
                 )}
+                <div className="min-w-0 flex-1">
+                  {cosmetics?.title ? (
+                    <TitleRibbon name={cosmetics.title.name} size="sm" />
+                  ) : (
+                    <p className="text-[12px] font-bold text-zinc-400">
+                      Tanpa title
+                    </p>
+                  )}
+                  <p className="mt-1.5 line-clamp-2 text-[11px] leading-tight text-zinc-400">
+                    {cosmetics?.card
+                      ? `${cosmetics.card.name}${(cosmetics.card as { anime?: string }).anime ? ` · ${(cosmetics.card as { anime?: string }).anime}` : ""}`
+                      : "Pasang title & kartu karakter di YoruVerse › Shop"}
+                  </p>
+                </div>
               </div>
             )}
 

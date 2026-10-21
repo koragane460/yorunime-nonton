@@ -155,9 +155,10 @@ export function AnimeCard({
         )}
       </div>
       {!imageOnly && (
-        <div className="p-2">
-          {/* Judul TRANSPARENT, tanpa background gelap. */}
-          <p className="line-clamp-2 text-xs font-medium leading-4 text-foreground/95">
+        <div className="rounded-b-xl bg-black/55 p-2 backdrop-blur-sm">
+          {/* Judul di atas kotak SEMI-OPAQUE — gambar "screen home" masih
+              sedikit kelihatan, tapi tidak ada "bolong" di balik teks. */}
+          <p className="line-clamp-2 text-xs font-medium leading-4 text-white">
             {title}
           </p>
           {/* Baris meta meniru persis bagian "Yang serupa": bintang kuning

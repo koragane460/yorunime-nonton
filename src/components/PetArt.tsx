@@ -3,8 +3,9 @@
 // Permintaan pemilik: pet jangan cuma emoji, pakai gambar dan ada badannya,
 // harus hewan yang jelas. Semua gambar digambar inline (offline, tidak pernah
 // gagal load), gaya chibi: kepala besar, badan kecil, ekor/kaki jelas.
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { cn } from "@/lib/utils";
+import { petById } from "@/lib/pets";
 
 /** Satu hewan = kumpulan bentuk SVG sederhana di kanvas 0 0 100 100. */
 function Chick() {
@@ -344,8 +345,13 @@ const ART: Record<string, () => ReactElement> = {
 };
 
 /**
- * Gambar hewan untuk satu pet. `uid` boleh apa pun (id pet milik user atau
- * id definisi) — yang dipakai adalah prefix id definisi bila berupa string.
+ * Gambar hewan untuk satu pet. `petId` boleh apa pun (id pet milik user
+ * atau id definisi) — yang dipakai adalah prefix id definisi bila string.
+ *
+ * FOTO ASLI dulu (permintaan: "hewan tolong pake foto aja"): kalau definisi
+ * pet punya `image` (file di `public/pets/`), tampilkan foto itu. Bila
+ * gagal dimuat (offline / file belum ada), otomatis jatuh kembali ke
+ * ilustrasi SVG di bawah — jadi tampilan tidak pernah kosong.
  */
 export function PetArt({
   petId,
@@ -354,7 +360,28 @@ export function PetArt({
   petId: string;
   className?: string;
 }) {
+  const def = petById(petId);
+  const photo = def?.image;
+  // `failed` per instance supaya fallback SVG tidak mengganggu instance lain.
+  const [failed, setFailed] = useState(false);
   const Art = ART[petId] ?? Chick;
+
+  if (photo && !failed) {
+    return (
+      <img
+        src={photo}
+        alt={def?.name ?? petId}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+        className={cn(
+          "size-full rounded-full object-cover object-center",
+          className,
+        )}
+      />
+    );
+  }
+
   return (
     <svg
       viewBox="0 0 100 100"
