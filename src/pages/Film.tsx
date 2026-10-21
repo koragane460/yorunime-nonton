@@ -346,7 +346,7 @@ function FilmDetail({
   }) as unknown as CommentT[] | undefined;
 
   const [d, setD] = useState<FilmDetailT | null>(null);
-  const [tab, setTab] = useState<"info" | "cast">("info");
+  const [tab, setTab] = useState<"info" | "cast" | "komen">("info");
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   /** NONTON → layar TERPISAH (pemutar + komentar saja), bukan di detail. */
   const [watching, setWatching] = useState(false);
@@ -533,13 +533,12 @@ function FilmDetail({
         {/* PEMUTAR tidak ada di detail — tekan Nonton untuk membuka
             layar terpisah (pemutar + komentar). */}
 
-        {/* ============== TAB: Info · Pemeran ================
-            Komentar TIDAK disembunyikan di tab — langsung tampil di
-            bawah (permintaan: "di detail film itu gak ada komen"). */}
+        {/* ============== TAB: Info · Pemeran · Komentar ============== */}
         <div className="mt-5 flex gap-1">
           {([
             ["info", "Info"],
             ["cast", "Pemeran"],
+            ["komen", "Komentar"],
           ] as const).map(([t, label]) => (
             <button
               key={t}
@@ -674,32 +673,34 @@ function FilmDetail({
           </>
         )}
 
-        {/* ---------- KOMENTAR — selalu tampil di bawah ---------- */}
-        <div className="mt-6">
-          <SectionTitle>
-            <span className="normal-case">
-              {(comments?.length ?? 0).toLocaleString("id-ID")} Komentar
-            </span>
-          </SectionTitle>
-          <CommentsSection
-            animeId={`film:${id}`}
-            comments={comments}
-            meId={user?._id}
-            onSend={async (text, replyToId) => {
-              if (!user) {
-                toast.error("Masuk akun dulu untuk komentar");
-                return;
-              }
-              await postComment({
-                animeId: `film:${id}`,
-                animeTitle: d?.title ?? "Film",
-                animeImage: d?.image,
-                text,
-                replyToId: replyToId as never,
-              });
-            }}
-          />
-        </div>
+        {/* ------------------ TAB KOMENTAR ------------------ */}
+        {tab === "komen" && (
+          <div className="mt-3">
+            <SectionTitle>
+              <span className="normal-case">
+                {(comments?.length ?? 0).toLocaleString("id-ID")} Komentar
+              </span>
+            </SectionTitle>
+            <CommentsSection
+              animeId={`film:${id}`}
+              comments={comments}
+              meId={user?._id}
+              onSend={async (text, replyToId) => {
+                if (!user) {
+                  toast.error("Masuk akun dulu untuk komentar");
+                  return;
+                }
+                await postComment({
+                  animeId: `film:${id}`,
+                  animeTitle: d?.title ?? "Film",
+                  animeImage: d?.image,
+                  text,
+                  replyToId: replyToId as never,
+                });
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -793,10 +794,9 @@ function FilmWatch({
         </span>
       </div>
 
-      {/* ================= PEMUTAR — FULL BLEED KE SAMPING =================
-          Tidak ada padding & TIDAK rounded (permintaan: "full ke samping
-          ga rounded") — menempel penuh ke tepi kiri/kanan layar. */}
-      <div className="relative aspect-video w-full bg-black">
+      <div className="mx-auto w-full max-w-2xl px-3 pb-12 pt-3">
+        {/* ======================= PEMUTAR ======================= */}
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
           {resolving ? (
             <div className="flex size-full flex-col items-center justify-center gap-2 text-white/70">
               <Loader2 className="size-6 animate-spin text-gold" />
@@ -828,7 +828,6 @@ function FilmWatch({
           )}
         </div>
 
-      <div className="mx-auto w-full max-w-2xl px-3 pb-12 pt-3">
         {/* Pemilih server */}
         {sources.length > 1 && (
           <div className="thin-scroll mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -893,15 +892,15 @@ function FilmWatch({
           </div>
         ) : null}
 
-        {/* ====== KOMENTAR — gaya sama persis nonton anime: full ke
-            samping, tanpa kotak terpisah. ====== */}
-        <div className="-mx-3 mt-5">
-          <div className="flex items-baseline justify-between px-3">
-            <SectionTitle>
-              <span className="normal-case">{commentCount} Komentar</span>
-            </SectionTitle>
-          </div>
-          <div className="px-0">
+        {/* ============ KOMENTAR — TINGGI TETAP (stabil) ============ */}
+        <div className="mt-5">
+          <h2 className="flex items-center gap-2 text-base font-black tracking-tight">
+            Komentar
+            <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-black text-gold">
+              {commentCount}
+            </span>
+          </h2>
+          <div className="thin-scroll mt-2 h-[48vh] overflow-y-auto rounded-2xl border border-border bg-card/40 p-3">
             <CommentsSection
               animeId={`film:${id}`}
               comments={comments}
