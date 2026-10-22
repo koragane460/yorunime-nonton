@@ -5,8 +5,8 @@
 // punya status. Daftar = koleksi yang pernah di-subscribe (favorite).
 // Di bawahnya tetap ada blok Download dan TOP VOTE CHARACTER.
 
-import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { useAction, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,10 +14,23 @@ import { useNavigate } from "react-router";
 import { DownloadsPanel } from "@/components/HomeTopButtons";
 import { ComicDetailScreen } from "@/components/ComicDetailScreen";
 import { cn } from "@/lib/utils";
-import { Clapperboard, Crown, Heart, Tv, Vote as VoteIcon } from "lucide-react";
+import { Clapperboard, Crown, Filter, Heart, List, Tv, Vote as VoteIcon } from "lucide-react";
 
 type SubTab = "anime" | "manga" | "manhwa" | "donghua" | "film";
-type StatusFilter = "semua" | "ongoing" | "tamat";
+
+/**
+ * Status tayang → kelompok Ongoing. Terima snapshot AniList (RELEASING),
+ * label tampilan (Ongoing/Berjalan), maupun teks bebas sumber donghua —
+ * asal bukan tamat/completed/movie/tv.
+ */
+function isOngoingStatus(s?: string): boolean {
+  if (!s) return false;
+  const v = s.toLowerCase();
+  if (/(tamat|completed|selesai|finished|ended|end|movie|tv|hiatus)/.test(v)) {
+    return false;
+  }
+  return /(releasing|ongoing|berjalan|airing|airing|belum tamat|publishing|jalan)/.test(v);
+}
 
 const TABS: { key: SubTab; label: string }[] = [
   { key: "anime", label: "Anime" },
@@ -26,6 +39,32 @@ const TABS: { key: SubTab; label: string }[] = [
   { key: "donghua", label: "Donghua" },
   { key: "film", label: "Film" },
 ];
+
+/** Baris favorite anime/donghua/film (tabel animeFavorites). */
+type AnimeRow = {
+  _id: string;
+  animeId: string;
+  animeTitle: string;
+  animeImage?: string;
+  kind?: string;
+  /** Snapshot status tayang — diisi & disegarkan oleh aksi refresh. */
+  status?: string;
+  createdAt: number;
+};
+
+/** Baris favorite manga/manhwa (tabel comicFavorites). */
+type ComicRow = {
+  _id: string;
+  slug: string;
+  comicTitle: string;
+  comicImage?: string;
+  kind: string;
+  /** Masih berjalan atau sudah tamat — disegarkan oleh aksi refresh. */
+  ongoing?: boolean;
+  createdAt: number;
+};
+
+type SubRow = AnimeRow | ComicRow;
 
 export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
@@ -36,60 +75,76 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   const top = useQuery(api.votes.topCharacters, {});
 
   const [tab, setTab] = useState<SubTab>("anime");
-  const [status, setStatus] = useState<StatusFilter>("semua");
+  // "filter" (DEFAULT) = daftar otomatis dikelompokkan Ongoing → garis
+  // pembatas → Completed, tanpa satu pun tombol status.
+  // "single" = kartu berbaris polos sesuai urutan terakhir di-favorite.
+  const [mode, setMode] = useState<"single" | "filter">("filter");
   // Detail manga/manhwa dibuka sebagai layar penuh (sama seperti di Baca).
   const [pick, setPick] = useState<{ slug: string; kind: "manga" | "manhwa" } | null>(
     null,
   );
 
   const animeRows = useMemo(
-    () =>
-      (favorites ?? []) as {
-        _id: string;
-        animeId: string;
-        animeTitle: string;
-        animeImage?: string;
-        kind?: string;
-        status?: string;
-        createdAt: number;
-      }[],
+    () => (favorites ?? []) as AnimeRow[],
     [favorites],
   );
   const comicRows = useMemo(
-    () =>
-      (comicFavorites ?? []) as {
-        _id: string;
-        slug: string;
-        comicTitle: string;
-        comicImage?: string;
-        kind: string;
-        createdAt: number;
-      }[],
+    () => (comicFavorites ?? []) as ComicRow[],
     [comicFavorites],
   );
 
-  /** Anime / Donghua / Film punya status RELEASING = ongoing. */
+  // Segarkan status tayang yang kadaluarsa — favorite menyimpan snapshot,
+  // jadi anime/komik yang kelar beberapa minggu lalu harus pindah sendiri ke
+  // kelompok Completed. Dibatasi tiap 3 jam (anime) / 6 jam (komik) per device.
+  const refreshAnimeStatuses = useAction(api.activities.refreshStatuses);
+  const refreshComicStatuses = useAction(api.comics.refreshStatuses);
+  useEffect(() => {
+    if (!user) return;
+    const now = Date.now();
+    try {
+      const lastA = Number(window.localStorage.getItem("yn-sub-ref-a") ?? 0);
+      if (now - lastA > 3 * 3600_000) {
+        window.localStorage.setItem("yn-sub-ref-a", String(now));
+        void refreshAnimeStatuses().catch(() => {});
+      }
+      const lastC = Number(window.localStorage.getItem("yn-sub-ref-c") ?? 0);
+      if (now - lastC > 6 * 3600_000) {
+        window.localStorage.setItem("yn-sub-ref-c", String(now));
+        void refreshComicStatuses().catch(() => {});
+      }
+    } catch {
+      /* localStorage ditolak — refresh manual tidak masalah */
+    }
+  }, [user, refreshAnimeStatuses, refreshComicStatuses]);
+
+  /** Anime / Donghua / Film punya status tayang — dipakai pemisahan
+      Ongoing / Completed (tanpa tombol filter lagi). */
   const animeItems = useMemo(() => {
     const wanted = tab === "donghua" ? "donghua" : tab === "film" ? "film" : "anime";
-    let rows = animeRows.filter((f) => (f.kind ?? "anime") === wanted);
-    if (status !== "semua") {
-      rows = rows.filter((f) =>
-        status === "ongoing"
-          ? f.status === "RELEASING"
-          : f.status != null && f.status !== "RELEASING",
-      );
-    }
-    return rows;
-  }, [animeRows, tab, status]);
+    return animeRows.filter((f) => (f.kind ?? "anime") === wanted);
+  }, [animeRows, tab]);
 
   const comicItems = useMemo(() => {
     if (tab !== "manga" && tab !== "manhwa") return [];
     return comicRows.filter((c) => c.kind === tab);
   }, [comicRows, tab]);
 
-  const showStatus = tab === "anime" || tab === "donghua";
   const items =
     tab === "manga" || tab === "manhwa" ? comicItems : animeItems;
+
+  /** Pecah daftar aktif jadi dua kelompok — dipakai mode "filter". */
+  const { ongoingItems, doneItems } = useMemo(() => {
+    const ongoing: SubRow[] = [];
+    const done: SubRow[] = [];
+    for (const f of items) {
+      const flag =
+        "slug" in f
+          ? f.ongoing !== false
+          : isOngoingStatus(f.status);
+      (flag ? ongoing : done).push(f);
+    }
+    return { ongoingItems: ongoing, doneItems: done };
+  }, [items]);
 
   const emptyText =
     tab === "film"
@@ -98,8 +153,74 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
         ? `Belum ada ${tab} yang di-subscribe. Tekan tombol hati di detail ${tab}.`
         : "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
 
+  /** Satu grid kartu — dipakai mode single & tiap kelompok (Ongoing/Completed). */
+  const renderGrid = (list: SubRow[]) => (
+    <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+      {list.map((f, i) => {
+        const key = "slug" in f ? f.slug : f.animeId;
+        const title = "slug" in f ? f.comicTitle : f.animeTitle;
+        const image = "slug" in f ? f.comicImage : f.animeImage;
+        return (
+          <motion.button
+            key={key}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
+            onClick={() => {
+              if ("slug" in f) {
+                setPick({
+                  slug: f.slug,
+                  kind: f.kind === "manhwa" ? "manhwa" : "manga",
+                });
+              } else if (tab === "film") {
+                // status menyimpan jenis film (movie/tv) — lihat Film.tsx
+                navigate(
+                  `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
+                );
+              } else {
+                navigate(
+                  `/info?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`,
+                );
+              }
+            }}
+            className="group text-left"
+          >
+            <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+              {image ? (
+                <img
+                  src={image}
+                  alt={title}
+                  loading="lazy"
+                  className="size-full object-cover transition duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center">
+                  {tab === "film" ? (
+                    <Clapperboard className="size-6 text-muted-foreground" />
+                  ) : (
+                    <Tv className="size-6 text-muted-foreground" />
+                  )}
+                </div>
+              )}
+              {tab === "film" ? (
+                <Clapperboard className="absolute right-1.5 top-1.5 size-4 fill-gold text-gold drop-shadow" />
+              ) : (
+                <Heart className="absolute right-1.5 top-1.5 size-4 fill-white/85 text-white/85 drop-shadow" />
+              )}
+              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
+                <span className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
+                  {title}
+                </span>
+              </span>
+            </div>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className="screen-enter pb-24">
+    <div className="fade-enter pb-24">
       <div className="px-1 pt-4">
         {/* ---------------- JUDUL + GARIS ---------------- */}
         <h1 className="text-left text-2xl font-black tracking-tight">Subscribe</h1>
@@ -123,99 +244,58 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        {/* ---------------- FILTER STATUS ---------------- */}
-        {showStatus && (
-          <div className="mt-2 flex gap-1.5">
-            {(
-              [
-                { key: "semua", label: "Semua" },
-                { key: "ongoing", label: "Ongoing" },
-                { key: "tamat", label: "Tamat" },
-              ] as { key: StatusFilter; label: string }[]
-            ).map((s) => (
-              <button
-                key={s.key}
-                onClick={() => setStatus(s.key)}
-                className={cn(
-                  "rounded-lg border px-3 py-1 text-[11px] font-semibold transition",
-                  status === s.key
-                    ? "border-foreground/40 bg-white/[0.08] text-white"
-                    : "border-border text-muted-foreground",
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* ---------------- DAFTAR SUBSCRIBE ---------------- */}
         {items.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             {emptyText}
           </p>
+        ) : mode === "single" ? (
+          /* Tanpa filter: kartu berbaris sesuai urutan di-favorite. */
+          renderGrid(items)
         ) : (
-          <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-            {items.map((f, i) => {
-              const key = "slug" in f ? f.slug : f.animeId;
-              const title = "slug" in f ? f.comicTitle : f.animeTitle;
-              const image = "slug" in f ? f.comicImage : f.animeImage;
-              return (
-                <motion.button
-                  key={key}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
-                  onClick={() => {
-                    if ("slug" in f) {
-                      setPick({
-                        slug: f.slug,
-                        kind: f.kind === "manhwa" ? "manhwa" : "manga",
-                      });
-                    } else if (tab === "film") {
-                      // status menyimpan jenis film (movie/tv) — lihat Film.tsx
-                      navigate(
-                        `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
-                      );
-                    } else {
-                      navigate(
-                        `/info?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`,
-                      );
-                    }
-                  }}
-                  className="group text-left"
-                >
-                  <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
-                    {image ? (
-                      <img
-                        src={image}
-                        alt={title}
-                        loading="lazy"
-                        className="size-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center">
-                        {tab === "film" ? (
-                          <Clapperboard className="size-6 text-muted-foreground" />
-                        ) : (
-                          <Tv className="size-6 text-muted-foreground" />
-                        )}
-                      </div>
-                    )}
-                    {tab === "film" ? (
-                      <Clapperboard className="absolute right-1.5 top-1.5 size-4 fill-gold text-gold drop-shadow" />
-                    ) : (
-                      <Heart className="absolute right-1.5 top-1.5 size-4 fill-white/85 text-white/85 drop-shadow" />
-                    )}
-                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
-                      <span className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
-                        {title}
-                      </span>
-                    </span>
-                  </div>
-                </motion.button>
-              );
-            })}
+          /* Otomatis terbagi: Ongoing → garis pembatas → Completed. */
+          <div>
+            {ongoingItems.length > 0 && (
+              <>
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_1px_rgba(52,211,153,.8)]" aria-hidden />
+                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">
+                    Ongoing
+                  </h2>
+                  <span className="text-[11px] font-semibold text-muted-foreground">
+                    {ongoingItems.length} masih jalan
+                  </span>
+                </div>
+                {renderGrid(ongoingItems)}
+              </>
+            )}
+
+            {/* Garis pembatas antar kelompok — tetap ada walau salah satu
+                kelompok kosong, supaya strukturnya tidak loncat-loncat. */}
+            {items.length > 0 && (
+              <div className="my-4 flex items-center gap-3" aria-hidden>
+                <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/25 to-white/25" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  selesai
+                </span>
+                <span className="h-px flex-1 bg-gradient-to-l from-transparent via-white/25 to-white/25" />
+              </div>
+            )}
+
+            {doneItems.length > 0 && (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-zinc-400" aria-hidden />
+                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-zinc-300">
+                    Completed
+                  </h2>
+                  <span className="text-[11px] font-semibold text-muted-foreground">
+                    {doneItems.length} tamat
+                  </span>
+                </div>
+                {renderGrid(doneItems)}
+              </>
+            )}
           </div>
         )}
 
@@ -309,6 +389,41 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Saklar tampilan di pojok kanan bawah — kotak rounded, biru muda,
+          ada garis pembatas di tengah: kiri SINGLE (kartu sesuai urutan
+          favorite), kanan FILTER (otomatis Ongoing → Completed). */}
+      <div className="fixed bottom-24 right-4 z-40 flex items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.9)]">
+        <button
+          type="button"
+          onClick={() => setMode("single")}
+          aria-pressed={mode === "single"}
+          className={cn(
+            "flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-black transition active:scale-95",
+            mode === "single"
+              ? "bg-white text-sky-700"
+              : "text-sky-950/75 hover:bg-white/30",
+          )}
+        >
+          <List className="size-3.5" aria-hidden />
+          Single
+        </button>
+        <span className="w-px shrink-0 bg-sky-950/25" aria-hidden />
+        <button
+          type="button"
+          onClick={() => setMode("filter")}
+          aria-pressed={mode === "filter"}
+          className={cn(
+            "flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-black transition active:scale-95",
+            mode === "filter"
+              ? "bg-white text-sky-700"
+              : "text-sky-950/75 hover:bg-white/30",
+          )}
+        >
+          <Filter className="size-3.5" aria-hidden />
+          Filter
+        </button>
       </div>
 
       {/* Layar detail manga/manhwa yang di-subscribe */}

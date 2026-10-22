@@ -200,28 +200,29 @@ function HeroSlides({
               aria-label={`Detail ${a.title}`}
               className="absolute inset-0"
             />
+            {/* Badge TOP di KIRI ATAS dan jumlah views di KANAN ATAS. */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTop();
+              }}
+              className="absolute left-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
+            >
+              <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
+              <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
+                #{i + 1}
+              </span>
+            </button>
+            <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/70 px-1.5 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
+              <Eye className="size-3 text-white/80" aria-hidden />
+              {formatViews(viewCountFor(String(a.id)))}
+            </span>
             {/* Kotak hitam lurus full lebar di bawah banner (opacity 70%):
-                judul di tengah, badge TOP #n + jumlah views di KANAN. */}
+                judul di tengah — TOP & views sudah pindah ke pojok atas. */}
             <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/70 px-3 py-2 backdrop-blur-[2px]">
               <p className="min-w-0 flex-1 truncate text-center text-sm font-bold text-white">
                 {a.title}
               </p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTop();
-                }}
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
-              >
-                <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
-                <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-                  #{i + 1}
-                </span>
-              </button>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/60 px-1.5 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
-                <Eye className="size-3 text-white/80" aria-hidden />
-                {formatViews(viewCountFor(String(a.id)))}
-              </span>
             </div>
           </div>
         </div>
@@ -411,17 +412,20 @@ function FilmPosterRow({
   loading,
   onMore,
   onPick,
+  hideHeader = false,
 }: {
   title: string;
   items: FilmCardT[];
   loading: boolean;
   onMore: () => void;
   onPick: (id: string, kind: "movie" | "tv") => void;
+  /** true = tanpa judul baris (baris dikumpulkan jadi SATU kategori Film). */
+  hideHeader?: boolean;
 }) {
   if (items.length === 0 && loading) {
     return (
-      <div className="mt-4">
-        <SectionTitle>{title}</SectionTitle>
+      <div className={cn("fade-enter", hideHeader ? "mt-3" : "mt-4")}>
+        {!hideHeader && <SectionTitle>{title}</SectionTitle>}
         <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="skeleton h-56 w-28 shrink-0 rounded-xl" />
@@ -432,19 +436,21 @@ function FilmPosterRow({
   }
   if (items.length === 0) return null;
   return (
-    <div className="fade-enter mt-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 bg-gradient-to-r from-amber-200 via-yellow-200 to-orange-300 bg-clip-text text-lg font-bold tracking-tight text-transparent">
-          <Film className="size-4 shrink-0 text-gold" aria-hidden />
-          {title}
-        </h2>
-        <button
-          onClick={onMore}
-          className="shrink-0 text-xs font-semibold text-primary"
-        >
-          Lihat selengkap ›
-        </button>
-      </div>
+    <div className={cn("fade-enter", hideHeader ? "mt-3" : "mt-4")}>
+      {!hideHeader && (
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+            <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
+            {title}
+          </h2>
+          <button
+            onClick={onMore}
+            className="shrink-0 text-xs font-semibold text-primary"
+          >
+            Lihat selengkap ›
+          </button>
+        </div>
+      )}
       <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
         {items.map((f) => (
           <button
@@ -452,7 +458,7 @@ function FilmPosterRow({
             onClick={() => onPick(f.id, f.kind)}
             className="group w-28 shrink-0 text-left"
           >
-            <div className="relative overflow-hidden rounded-t-xl border border-gold/15 bg-black">
+            <div className="relative overflow-hidden rounded-t-xl border border-border/60 bg-black">
               {f.image ? (
                 <img
                   src={f.image}
@@ -479,7 +485,7 @@ function FilmPosterRow({
               )}
             </div>
             {/* Kotak judul menyatu langsung di bawah poster. */}
-            <div className="rounded-b-xl border-x border-b border-gold/15 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+            <div className="rounded-b-xl border-x border-b border-border/60 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
               <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
                 {f.title}
               </p>
@@ -494,50 +500,85 @@ function FilmPosterRow({
   );
 }
 
-/** Kategori FILM di Home — 3 baris geser ke kanan + "Lihat selengkap"
-    ke halaman Film. Film aksi memakai genre Action (fallback genre pertama). */
+/**
+ * Cache module-level untuk kategori Film Home — begitu data pernah diambil,
+ * buka Home lagi LANGSUNG tampil (tanpa nunggu action lagi). Tujuannya supaya
+ * tidak ada layar kosong yang bikin Home terasa cuma punya 1 film.
+ */
+let filmHomeCache: {
+  movies: FilmCardT[];
+  series: FilmCardT[];
+  genreName: string;
+  genreItems: FilmCardT[];
+} | null = null;
+
+/** Kategori FILM di Home — SATU judul "Film & Series" dengan 3 baris yang
+    ditumpuk vertikal (baris 1, baris 2 di bawahnya, baris 3 di bawahnya).
+    Semua request diambil PARALEL + hasil di-cache module supaya cepat. */
 function FilmHomeSection() {
   const navigate = useNavigate();
   const searchFilms = useAction(api.films.search);
   const getGenres = useAction(api.films.genres);
   const byGenre = useAction(api.films.byGenre);
 
-  const [movies, setMovies] = useState<FilmCardT[]>([]);
-  const [series, setSeries] = useState<FilmCardT[]>([]);
-  const [genreName, setGenreName] = useState<string>("");
-  const [genreItems, setGenreItems] = useState<FilmCardT[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [movies, setMovies] = useState<FilmCardT[]>(
+    () => filmHomeCache?.movies ?? [],
+  );
+  const [series, setSeries] = useState<FilmCardT[]>(
+    () => filmHomeCache?.series ?? [],
+  );
+  const [genreName, setGenreName] = useState<string>(
+    () => filmHomeCache?.genreName ?? "",
+  );
+  const [genreItems, setGenreItems] = useState<FilmCardT[]>(
+    () => filmHomeCache?.genreItems ?? [],
+  );
+  const [loading, setLoading] = useState(() => filmHomeCache === null);
 
   useEffect(() => {
+    // Sudah ada cache → tidak perlu request ulang.
+    if (filmHomeCache) return;
     let alive = true;
     (async () => {
       try {
-        const [mv, tv] = await Promise.all([
-          searchFilms({ kind: "movie" }).catch(() => []),
-          searchFilms({ kind: "tv" }).catch(() => []),
-        ]);
-        if (!alive) return;
-        setMovies((mv ?? []).slice(0, 12));
-        setSeries((tv ?? []).slice(0, 12));
-        try {
-          const gs = ((await getGenres({ kind: "movie" })) ?? []) as {
-            id: string;
-            name: string;
-          }[];
-          const pick =
-            gs.find((g) => /^(action|aksi)$/i.test(g.name)) ?? gs[0];
-          if (pick) {
+        // Baris genre jalan SEIRAMA dengan 2 baris pertama (genre → byGenre
+        // tetap berantai, tapi tidak nunggu movie/tv selesai dulu).
+        const genreJob = (async () => {
+          try {
+            const gs = ((await getGenres({ kind: "movie" })) ?? []) as {
+              id: string;
+              name: string;
+            }[];
+            const pick =
+              gs.find((g) => /^(action|aksi)$/i.test(g.name)) ?? gs[0];
+            if (!pick) return { name: "", items: [] as FilmCardT[] };
             const list = (await byGenre({
               genreId: String(pick.id),
               kind: "movie",
             })) as FilmCardT[];
-            if (!alive) return;
-            setGenreName(pick.name);
-            setGenreItems((list ?? []).slice(0, 12));
+            return { name: pick.name, items: (list ?? []).slice(0, 12) };
+          } catch {
+            return { name: "", items: [] as FilmCardT[] };
           }
-        } catch {
-          /* baris genre opsional — abaikan */
-        }
+        })();
+
+        const [mv, tv, genre] = await Promise.all([
+          searchFilms({ kind: "movie" }).catch(() => [] as FilmCardT[]),
+          searchFilms({ kind: "tv" }).catch(() => [] as FilmCardT[]),
+          genreJob,
+        ]);
+        if (!alive) return;
+        const next = {
+          movies: (mv ?? []).slice(0, 12),
+          series: (tv ?? []).slice(0, 12),
+          genreName: genre.name,
+          genreItems: genre.items,
+        };
+        filmHomeCache = next;
+        setMovies(next.movies);
+        setSeries(next.series);
+        setGenreName(next.genreName);
+        setGenreItems(next.genreItems);
       } finally {
         if (alive) setLoading(false);
       }
@@ -556,13 +597,24 @@ function FilmHomeSection() {
     return null;
   }
   return (
-    <div className="fade-enter mt-2">
+    <div className="fade-enter mt-4">
+      {/* SATU judul kategori — 3 baris di bawahnya tanpa judul masing-masing. */}
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+          <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
+          Film &amp; Series
+        </h2>
+        <button onClick={more} className="text-xs font-semibold text-primary">
+          Lihat selengkap ›
+        </button>
+      </div>
       <FilmPosterRow
         title="Film Populer"
         items={movies}
         loading={loading}
         onMore={more}
         onPick={openFilm}
+        hideHeader
       />
       <FilmPosterRow
         title="Series Populer"
@@ -570,6 +622,7 @@ function FilmHomeSection() {
         loading={loading}
         onMore={more}
         onPick={openFilm}
+        hideHeader
       />
       <FilmPosterRow
         title={genreName ? `Film ${genreName}` : "Film Pilihan"}
@@ -577,6 +630,7 @@ function FilmHomeSection() {
         loading={loading}
         onMore={more}
         onPick={openFilm}
+        hideHeader
       />
     </div>
   );
@@ -1178,9 +1232,9 @@ function HomeContent() {
                       </span>
                     )}
                   </div>
-                  {/* Kotak semi-opaque di belakang judul + jam rilis supaya
-                      "screen home" tidak bolong di balik teks. */}
-                  <div className="mt-1 rounded-lg bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+                  {/* Kotak judul MENYATU langsung dengan kartu — tanpa celah
+                      (mt dihapus) dan sudut bawahnya ikut rounded-xl kartu. */}
+                  <div className="rounded-b-xl bg-black/60 px-1.5 pb-1 pt-1 backdrop-blur-sm">
                     <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
                       {a.title}
                     </p>
@@ -2103,7 +2157,7 @@ function TopAnimeCard({
   big?: boolean;
   onPick: (id: string, title?: string) => void;
 }) {
-  const views = formatViews(viewCountFor(String(item.id)));
+  const views = formatViews(topViewsFor(String(item.id), rank));
   return (
     <button
       onClick={() => onPick(String(item.id), item.title)}
@@ -3344,6 +3398,9 @@ function AnimeDetailScreen({
                   animeId,
                   animeTitle: detail.title,
                   animeImage: detail.image,
+                  // Status tayang disimpan supaya Subscribe bisa memisah
+                  // Ongoing / Completed tanpa tombol filter.
+                  status: detail.status ?? undefined,
                 });
                 toast.success(
                   r.favorited
@@ -3750,6 +3807,17 @@ function viewCountFor(id: string): number {
     h = (h * 31 + id.charCodeAt(i)) % 99991;
   }
   return 1200 + (h % 4800);
+}
+
+/**
+ * Views untuk daftar TOP 1-50: makin tinggi peringkat, makin besar angkanya.
+ * Jarak antar peringkat (200) sengaja lebih besar dari variasi hash (0-150)
+ * supaya angka views selalu TURUN mengikuti urutan — #1 selalu paling banyak,
+ * #50 paling sedikit, sejajar popularitas AniList.
+ */
+function topViewsFor(id: string, rank: number): number {
+  const jitter = viewCountFor(id) % 150;
+  return Math.max(900, 15000 - (Math.max(1, rank) - 1) * 200 + jitter);
 }
 
 /**
@@ -4225,6 +4293,9 @@ function DonghuaDetailScreen({
                   animeId: `donghua:${slug}`,
                   animeTitle: detail.title,
                   animeImage: detail.poster ?? detail.cover ?? "",
+                  // `kind: "donghua"` supaya tidak tercampur tab Anime.
+                  kind: "donghua",
+                  status: detail.status ?? undefined,
                 });
                 toast.success(
                   r.favorited

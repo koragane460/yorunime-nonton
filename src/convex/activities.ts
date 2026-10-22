@@ -1,7 +1,8 @@
 // YoruNime — history, komentar anime (like/reply/populer), favorite, notifikasi.
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { addXpInternal } from "./xp";
 import { requireActive } from "./moderation";
 
@@ -408,10 +409,96 @@ export const myFavorites = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return [];
+    // Urut createdAt (terbaru dulu): layar Subscribe mode "single" harus
+    // menampilkan kartu SESUAI urutan terakhir di-favorite.
     return await ctx.db
       .query("animeFavorites")
-      .withIndex("userId_anime", (q) => q.eq("userId", userId))
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .order("desc")
       .collect();
+  },
+});
+
+/** Baris favorite mentah — hanya untuk aksi refresh status (internal). */
+export const favoritesRaw = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) =>
+    await ctx.db
+      .query("animeFavorites")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .collect(),
+});
+
+/** Timpa status 1 baris favorite dengan status terbaru dari AniList. */
+export const setFavoriteStatus = internalMutation({
+  args: { id: v.id("animeFavorites"), status: v.string() },
+  handler: async (ctx, { id, status }) => {
+    await ctx.db.patch(id, { status });
+  },
+});
+
+/**
+ * Segarkan status ONGOING/TAMAT semua favorite milik user (1 batch AniList).
+ *
+ * Status yang tersimpan di favorite adalah SNAPSHOT saat ditekan hati —
+ * tanpa refresh ini, anime yang tadinya Ongoing lalu selesai tetap terus
+ * nongol di kelompok Ongoing layar Subscribe. Dipanggil saat layar Subscribe
+ * dibuka (client membatasi agar tidak lebih sering dari tiap 3 jam).
+ */
+export const refreshStatuses = action({
+  args: {},
+  handler: async (runCtx) => {
+    const userId = await getAuthUserId(runCtx);
+    if (!userId) return 0;
+    const rows = (await runCtx.runQuery(internal.activities.favoritesRaw, {
+      userId,
+    })) as {
+      _id: any;
+      animeId: string;
+      kind?: string;
+      status?: string;
+    }[];
+    // Hanya anime (id MAL murni). Film: status-nya "movie"/"tv" (bukan
+    // status tayang) dan id-nya berprefiks — jangan ditimpa.
+    const targets = rows.filter((r) => {
+      const kind = r.kind ?? "anime";
+      if (kind !== "anime") return false;
+      if (r.status === "tv" || r.status === "movie") return false;
+      return /^\d+$/.test(String(r.animeId));
+    });
+    if (targets.length === 0) return 0;
+    let updated = 0;
+    try {
+      const res = await fetch("https://graphql.anilist.co", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          query:
+            "query($ids:[Int]){ Page(page:1, perPage:50){ media(idMal_in:$ids, type:ANIME){ idMal status } } }",
+          variables: { ids: targets.slice(0, 50).map((r) => Number(r.animeId)) },
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const json = await res.json();
+      const byMal = new Map<number, string>(
+        ((json?.data?.Page?.media ?? []) as { idMal: number; status: string }[]).map(
+          (m) => [Number(m.idMal), String(m.status)],
+        ),
+      );
+      for (const r of targets.slice(0, 50)) {
+        const s = byMal.get(Number(r.animeId));
+        if (s && s !== r.status) {
+          await runCtx.runMutation(internal.activities.setFavoriteStatus, {
+            id: r._id,
+            status: s,
+          });
+          updated++;
+        }
+      }
+    } catch {
+      /* AniList lagi gagal/limit — biarkan, refresh berikutnya yang urus */
+    }
+    return updated;
   },
 });
 

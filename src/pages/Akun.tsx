@@ -304,15 +304,18 @@ function AkunCommentsFeed() {
   }
 
   return (
-    <div className="mt-5 space-y-5">
+    // -mx-4 / md:-mx-6: kotak komentar MELEBAR mentok ke tepi kiri-kanan
+    // (membatalkan padding px-4 / px-6 halaman) tanpa keluar dari jalur.
+    <div className="mt-5 -mx-4 space-y-2 md:-mx-6">
       {rows.map((c: any) => (
         <div
           key={c._id}
           className={cn(
-            "fade-enter min-w-0 overflow-hidden rounded-2xl",
+            // KOTAK LURUS (tanpa rounded) sesuai permintaan.
+            "fade-enter relative min-w-0 overflow-hidden border-y border-white/10 bg-black/45 backdrop-blur-sm",
             // Kalau komentar punya banner profil, bannernya MENUTUPI SELURUH
             // kotak komentar (bukan kotak kecil di atas username).
-            c.bannerUrl && "relative border border-white/10",
+            c.bannerUrl && "relative",
           )}
         >
           {c.bannerUrl && (
@@ -326,7 +329,7 @@ function AkunCommentsFeed() {
               <div className="absolute inset-0 bg-black/55" aria-hidden />
             </>
           )}
-          <div className={cn("relative flex items-start gap-2.5", c.bannerUrl && "p-2.5")}>
+          <div className="relative flex items-start gap-2.5 p-2.5">
             {/* Foto profil komentator — kiri. */}
             <Avatar
               src={c.image}
@@ -561,9 +564,7 @@ function SettingsScreen({
   const [busyHomeBg, setBusyHomeBg] = useState(false);
   const [theme, setTheme] = useState(user?.theme ?? "dark");
   const [customColor, setCustomColor] = useState(user?.customColor ?? "#e11d48");
-  // Animasi intro profil (fullscreen) — pengaturan ini yang mengatur
-  // animasi awan/gagak, BUKAN banner.
-  const [introStyle, setIntroStyle] = useState(user?.introStyle ?? "awan");
+  // "Animasi profil" DIHAPUS permanen — state-nya ikut dihapus.
   // Anti lag: status lokal (tidak perlu server), langsung diterapkan ke <html>.
   const [antiLag, setAntiLagState] = useState(() => getAntiLag());
   // Toast bawah sudah dihapus permanen, jadi galat pengaturan tampil inline.
@@ -1012,41 +1013,7 @@ function SettingsScreen({
             toast.success(v ? "Anti lag aktif" : "Anti lag dimatikan");
           }}
         />
-        {/* ANIMASI PROFIL (fullscreen) — mengganti pilihan di sini hanya
-            mengubah animasi pembuka profil, banner tidak ikut berubah. */}
-        <div className="rounded-xl border border-border bg-card p-3">
-          <p className="text-[13px] font-bold">Animasi profil</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Diputar fullscreen saat detail profil dibuka. Berganti di sini =
-            animasi yang berganti (bukan banner).
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {([
-              ["awan", "Awan"],
-              ["gagak", "Gagak"],
-              ["none", "Tanpa animasi"],
-            ] as const).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  setIntroStyle(value);
-                  void update({ introStyle: value }).catch(() =>
-                    toast.error("Gagal menyimpan animasi"),
-                  );
-                }}
-                className={cn(
-                  "rounded-xl border px-2 py-2 text-[11px] font-black transition active:scale-95",
-                  introStyle === value
-                    ? "border-gold/70 bg-gold/15 text-gold shadow-[0_0_14px_-7px_rgba(251,191,36,.9)]"
-                    : "border-white/15 bg-white/[0.04] text-white/80",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* "Animasi profil" DIHAPUS permanen sesuai permintaan. */}
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[13px] font-medium">Tema</p>
           <div className="mt-2 flex min-w-0 gap-2">
@@ -1106,86 +1073,7 @@ function SettingsScreen({
           }}
         />
 
-        {/* GAMBAR FULLSCREEN AKUN — foto besar di layar detail akun.
-            Hanya Premium yang bisa mengaturnya (server juga menolak).
-            Foto dari galeri dikompres 1200px (HD, tidak pecah). */}
-        <div className="rounded-xl border border-border bg-card p-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[13px] font-medium">Gambar fullscreen akun</p>
-            {!isPremium && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] font-bold text-gold">
-                <Crown className="size-3" aria-hidden /> Premium
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Muncul besar & tajam di layar detail akun kamu.
-          </p>
-          {isPremium ? (
-            <>
-              {banner && (
-                <img
-                  src={banner}
-                  alt=""
-                  className="mt-2 h-24 w-full rounded-lg border border-white/10 object-cover"
-                />
-              )}
-              <label className="group mt-2 flex w-fit cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-primary-foreground transition active:scale-95">
-                <Camera className="size-4" aria-hidden />
-                Pilih dari galeri
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!f) return;
-                    void (async () => {
-                      try {
-                        const hd = await shrinkBanner(f);
-                        setBanner(hd);
-                        await updateProfile({ bannerUrl: hd });
-                        toast.success("Gambar fullscreen diubah ✨");
-                      } catch (err2) {
-                        setErr(
-                          err2 instanceof Error
-                            ? err2.message
-                            : "Gagal mengunggah gambar",
-                        );
-                      }
-                    })();
-                  }}
-                />
-              </label>
-              <div className="mt-2 flex min-w-0 gap-2">
-                <input
-                  value={banner.startsWith("data:") ? "" : banner}
-                  onChange={(e) => setBanner(e.target.value)}
-                  placeholder="…atau URL gambar/gif"
-                  className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 py-2 text-[13px]"
-                />
-                <button
-                  onClick={async () => {
-                    await updateProfile({ bannerUrl: banner });
-                    toast.success("Background diubah");
-                  }}
-                  className="shrink-0 rounded-lg bg-primary px-4 text-[13px] font-bold text-primary-foreground"
-                >
-                  OK
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              onClick={() => navigate("/premium")}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-gold/40 bg-gold/10 py-2.5 text-[13px] font-bold text-gold transition active:scale-[0.98]"
-            >
-              <Lock className="size-3.5" aria-hidden />
-              Ambil Premium untuk mengatur gambar
-            </button>
-          )}
-        </div>
+        {/* "Gambar fullscreen akun" DIHAPUS permanen sesuai permintaan. */}
 
         {/* LATAR HOME — ganti background Home (yang hitam) dari GALERI,
             dipotong 9:16 rata atas supaya lurus ke atas dan tetap kelihatan

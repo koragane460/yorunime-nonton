@@ -1,7 +1,8 @@
 // YoruNime — history & favorite manga/manhwa (terpisah dari anime).
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 const kindArg = v.union(v.literal("manga"), v.literal("manhwa"));
 
@@ -110,8 +111,11 @@ export const toggleFavorite = mutation({
     comicTitle: v.string(),
     comicImage: v.optional(v.string()),
     kind: kindArg,
+    /** Status saat di-subscribe (true = masih jalan) — dipakai pengelompokan
+     *  Ongoing/Tamat di layar Subscribe, lalu disegarkan oleh aksi refresh. */
+    ongoing: v.optional(v.boolean()),
   },
-  handler: async (ctx, { slug, comicTitle, comicImage, kind }) => {
+  handler: async (ctx, { slug, comicTitle, comicImage, kind, ongoing }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const existing = await ctx.db
@@ -128,9 +132,68 @@ export const toggleFavorite = mutation({
       comicTitle,
       comicImage,
       kind: requireKind(kind),
+      ongoing,
       createdAt: Date.now(),
     });
     return { favorited: true };
+  },
+});
+
+/** Baris favorite komik mentah — untuk aksi refresh status (internal). */
+export const favoritesRaw = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) =>
+    await ctx.db
+      .query("comicFavorites")
+      .withIndex("userId_created", (q) => q.eq("userId", userId))
+      .collect(),
+});
+
+/** Perbarui bendera ongoing 1 favorite komik. */
+export const setOngoing = internalMutation({
+  args: { id: v.id("comicFavorites"), ongoing: v.boolean() },
+  handler: async (ctx, { id, ongoing }) => {
+    await ctx.db.patch(id, { ongoing });
+  },
+});
+
+/**
+ * Segarkan status ONGOING/TAMAT favorite manga & manhwa.
+ *
+ * Sama seperti versi anime: status disimpan saat favorite ditekan, jadi
+ * komik yang keluar dari katalog "berjalan" lalu tamat harus dipindah ke
+ * kelompok Completed di layar Subscribe. Maksimal 12 judul per panggilan
+ * (detail sudah di-cache server), dan dipanggil paling sering tiap 6 jam
+ * oleh client.
+ */
+export const refreshStatuses = action({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return 0;
+    const rows = (await ctx.runQuery(internal.comics.favoritesRaw, {
+      userId,
+    })) as { _id: any; slug: string; ongoing?: boolean }[];
+    const targets = rows.slice(0, 12);
+    let updated = 0;
+    for (const r of targets) {
+      try {
+        const d = (await ctx.runAction(api.manga.detail, {
+          slug: r.slug,
+        })) as { ongoing?: boolean } | null;
+        if (!d || typeof d.ongoing !== "boolean") continue;
+        if (d.ongoing !== r.ongoing) {
+          await ctx.runMutation(internal.comics.setOngoing, {
+            id: r._id,
+            ongoing: d.ongoing,
+          });
+          updated++;
+        }
+      } catch {
+        /* satu judul gagal tidak menghentikan sisanya */
+      }
+    }
+    return updated;
   },
 });
 

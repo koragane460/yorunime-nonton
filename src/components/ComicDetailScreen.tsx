@@ -150,6 +150,9 @@ export function ComicDetailScreen({
                   comicTitle: d.title,
                   comicImage: d.image,
                   kind: d.kind,
+                  // Status berjalan/tamat ikut disimpan untuk pengelompokan
+                  // Ongoing / Completed di layar Subscribe.
+                  ongoing: d.ongoing,
                 });
                 toast.success(r.favorited ? "Masuk favorite" : "Dihapus dari favorite");
               }}

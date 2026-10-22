@@ -85,21 +85,8 @@ export function ProfileSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cosmetics?.card?.id]);
 
-  // Animasi intro FULLSCREEN (awan/gagak) — pilihan dari Pengaturan >
-  // Animasi profil. Mengganti pengaturan di sana mengubah animasi INI,
-  // bukan banner. Sekali tampil per pembukaan layar, bisa di-skip ketuk.
-  const [introPlaying, setIntroPlaying] = useState(false);
-  const introStarted = useRef(false);
-  useEffect(() => {
-    if (!profile || introStarted.current) return;
-    introStarted.current = true;
-    const style = profile.introStyle ?? "none";
-    if ((style === "awan" || style === "gagak") && !getAntiLag()) {
-      setIntroPlaying(true);
-      const t = window.setTimeout(() => setIntroPlaying(false), 2600);
-      return () => window.clearTimeout(t);
-    }
-  }, [profile]);
+  // Animasi intro FULLSCREEN (awan/gagak) DIHAPUS permanen sesuai permintaan
+  // — profil langsung tampil tanpa pembuka animasi.
   const cost = profile ? xpForLevel(profile.level) : 1;
   const inLevel = profile ? Math.max(0, Math.min(profile.xpInLevel, cost)) : 0;
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
@@ -120,13 +107,6 @@ export function ProfileSheet({
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
-      {/* Intro fullscreen: awan berarak / gagak melintas */}
-      {introPlaying && (
-        <ProfileIntro
-          style={profile?.introStyle ?? "awan"}
-          onSkip={() => setIntroPlaying(false)}
-        />
-      )}
       {!profile ? (
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (

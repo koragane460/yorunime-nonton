@@ -40,7 +40,7 @@ export function ContinueReadingCard() {
   if (!user || rows.length === 0) return null;
 
   return (
-    <section className="mt-4">
+    <section className="mt-1">
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-base font-bold tracking-tight">Lanjutkan baca</h2>
       </div>

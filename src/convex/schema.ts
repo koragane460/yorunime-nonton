@@ -519,6 +519,9 @@ const schema = defineSchema(
       comicTitle: v.string(),
       comicImage: v.optional(v.string()),
       kind: v.string(),
+      /** Masih berjalan atau sudah tamat — dipakai pengelompokan Ongoing /
+          Completed di layar Subscribe (disegarkan oleh aksi refresh). */
+      ongoing: v.optional(v.boolean()),
       createdAt: v.number(),
     })
       .index("userId_slug", ["userId", "slug"])

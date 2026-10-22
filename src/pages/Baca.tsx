@@ -16,7 +16,7 @@ export default function Baca() {
 
   return (
     <AppLayout hideAccountPanel>
-      <div className="pb-6 pt-3">
+      <div className="pb-6 pt-0">
         {/* Judul "Baca" di paling atas DIHAPUS sesuai permintaan — kategorinya
             sudah jelas dari kartu hero dan tombol ganti jenis di kanan bawah. */}
         {/* key supaya state dalam (hero, hasil cari) di-reset saat kategori

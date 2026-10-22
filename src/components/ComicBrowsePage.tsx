@@ -145,7 +145,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
           kategori dan kotak pencarian tetap aktif; hanya tag kecil ini yang
           memberi tahu bahwa bacaannya perlu Premium. */}
       {!isPremium && (
-        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card/60 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/60 px-3 py-2">
           <PremiumOnlyChip />
           <p className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
             Katalog tetap bisa dilihat, baca chapter perlu Premium

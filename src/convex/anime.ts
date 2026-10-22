@@ -38,7 +38,17 @@ async function cached(
   const row = await runCtx.runQuery(internal.anime.cacheGet, { endpoint });
   if (row && Date.now() - row.updatedAt < ttlMs) return row.payload;
   const payload = await fetcher();
-  await runCtx.runMutation(internal.anime.cacheSet, { endpoint, payload });
+  // Hasil KOSONG / null TIDAK ikut di-cache: sekali upstream (AniList/Jikan)
+  // gagal atau kena rate limit, kartu anime boleh jadi abu-abu tanpa gambar
+  // selama berjam-jam karena entri kosong itu menempel di cache. Tanpa ini,
+  // baris Movie/OVA/Season di Home bisa kosong terus sampai TTL habis.
+  const empty =
+    payload === null ||
+    payload === undefined ||
+    (Array.isArray(payload) && payload.length === 0);
+  if (!empty) {
+    await runCtx.runMutation(internal.anime.cacheSet, { endpoint, payload });
+  }
   return payload;
 }
 
@@ -871,7 +881,9 @@ export const animeTop = action({
   args: { limit: v.optional(v.number()) },
   handler: async (runCtx, { limit }) => {
     const n = Math.min(Math.max(Math.floor(limit ?? 10) || 10, 1), 50);
-    const r = await aniList("top", LIST_TTL, runCtx, "", 1, n, "SCORE_DESC");
+    // Urut POPULARITY_DESC (paling populer di AniList di atas) — bukan skor
+    // rating — supaya Top 1-50 = yang paling banyak ditonton/ditambahkan.
+    const r = await aniList("top", LIST_TTL, runCtx, "", 1, n, "POPULARITY_DESC");
     if (r && r.length > 0) return r.slice(0, n);
     try {
       const tv = await jikanList(`top/anime?limit=${n}&type=tv&sfw`);
@@ -1396,7 +1408,9 @@ export const animeBrowse = action({
   },
   handler: async (runCtx, { kind, page }) => {
     const p = Math.max(1, Math.min(6, Math.round(page ?? 1)));
-    return cached(runCtx, `browse:v3:${kind}:${p}`, 6 * 60 * 60 * 1000, async () => {
+    // v4: buang entri lama — kunci v3 pernah menyimpan hasil KOSONG saat
+    // AniList kena rate limit, sehingga kartu anime tampil tanpa gambar.
+    return cached(runCtx, `browse:v4:${kind}:${p}`, 6 * 60 * 60 * 1000, async () => {
       const now = new Date();
       const year = now.getUTCFullYear();
       const season = ["WINTER", "SPRING", "SUMMER", "FALL"][
@@ -1414,13 +1428,14 @@ export const animeBrowse = action({
         }
         const where = BROWSE_WHERE[kind as keyof typeof BROWSE_WHERE];
         const d = await aniGraphql(browseQuery(p, where));
-        // Donghua: TIDAK ada fallback statis (lihat catatan di `donghuaList`).
-        // Kalau AniList tidak mengembalikan apa-apa, hasilnya kosong — itu
-        // lebih jujur daripada menampilkan judul anime berlabel "Donghua".
-        return only(d?.Page?.media);
+        const list = only(d?.Page?.media);
+        if (list.length > 0) return list;
+        // AniList kosong/gagal → pakai katalog statis yang GAMBARNYA sudah
+        // pasti ada, supaya baris tidak pernah jadi kartu abu-abu tanpa poster.
+        return await fbList([...FALLBACK_TOP, ...FALLBACK_SEASON], 12);
       } catch {
         if (kind === "season") return fbList(FALLBACK_SEASON, 12);
-        return [];
+        return await fbList([...FALLBACK_TOP, ...FALLBACK_SEASON], 12);
       }
     });
   },

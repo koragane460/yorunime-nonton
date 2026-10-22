@@ -1177,9 +1177,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
     animeId ? { animeId } : "skip",
   );
   const toggleLike = useMutation(api.activities.toggleAnimeLike);
+  // Id favorite DONGHUA harus sama dengan yang dipakai layar detail donghua
+  // (`donghua:<slug>`) — kalau berbeda, satu judul jadi dua baris Subscribe.
+  const favId = isDonghua ? `donghua:${animeId}` : animeId;
   const isFav = useQuery(
     api.activities.isFavorite,
-    animeId ? { animeId } : "skip",
+    animeId ? { animeId: favId } : "skip",
   );
   const toggleFav = useMutation(api.activities.toggleFavorite);
   // (Angka jumlah favorite tidak lagi ditampilkan sesuai permintaan.)
@@ -2718,9 +2721,14 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           <button
             onClick={() => {
               void toggleFav({
-                animeId,
+                animeId: favId,
                 animeTitle: detailReady ? detailData.title : D.title,
                 animeImage: detailReady ? detailData.image : D.image,
+                // Jenis + status tayang ikut tersimpan supaya layar Subscribe
+                // bisa memisahkan Ongoing / Completed tanpa tombol filter.
+                kind: isDonghua ? "donghua" : "anime",
+                status:
+                  (detailReady ? detailData.status : D.status) ?? undefined,
               }).catch(() => {});
             }}
             className={cn(
@@ -2978,12 +2986,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           />
         ) : (
           <>
-            {/* Komentar episode — gaya baru. Dibungkus `-mx-7` (dan `md:-mx-9`)
-                supaya blok komentar MELEBAR penuh ke samping sampai tepi
-                layar (membatalkan padding halaman `p-3` + wrapper `px-4`),
-                sesuai permintaan "full ke samping". */}
-            <div className="-mx-7 md:-mx-9">
-            <div className="flex items-baseline justify-between px-7 md:px-9">
+            {/* Komentar episode — MELEBAR ke samping sampai mentok tepi
+                layar TANPA keluar jalur: `-mx-3` persis membatalkan padding
+                `p-3` kotak induk, jadi tidak ada satu piksel pun yang
+                terpotong di kiri/kanan (sebelumnya `-mx-7` kelebihan 16px). */}
+            <div className="-mx-3">
+            <div className="flex items-baseline justify-between px-3">
               <SectionTitle>
                 <span className="normal-case">
                   {(shownComments?.length ?? 0).toLocaleString("id-ID")} Komentar

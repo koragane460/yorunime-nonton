@@ -32,7 +32,6 @@ import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { GachaScreen } from "@/pages/Gacha";
 import { TitleScreen } from "@/pages/Title";
 import { YoruPetScreen } from "@/components/YoruPet";
-import { PetArt } from "@/components/PetArt";
 import MusicScreen from "@/pages/Music";
 import { ClanRow } from "@/pages/Clan";
 import { BORDERS } from "@/lib/borders";
@@ -268,18 +267,18 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                           }}
                           onClick={() => setView(b.key)}
                           className={cn(
-                            "flex h-20 w-32 flex-col items-center justify-center gap-1 bg-gradient-to-br",
+                            "flex h-16 w-24 flex-col items-center justify-center gap-0.5 bg-gradient-to-br",
                             b.grad,
                             "shadow-[0_14px_28px_-16px_rgba(0,0,0,.95)] transition active:scale-95",
                             "[clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]",
                           )}
                         >
                           <b.Icon
-                            className="size-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.8)]"
+                            className="size-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.8)]"
                             strokeWidth={1.8}
                             aria-hidden
                           />
-                          <span className="text-[12px] font-black tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,.9)]">
+                          <span className="text-[11px] font-black tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,.9)]">
                             {b.label}
                           </span>
                         </button>
@@ -289,35 +288,7 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                 })}
               </div>
 
-              {/* ------------------------ podium 3D --------------------- */}
-              <div className="relative mx-auto mt-12 w-48">
-                {/* pantulan cahaya di lantai */}
-                <div className="absolute -bottom-3 left-1/2 h-4 w-44 -translate-x-1/2 rounded-[50%] bg-black/50 blur-md" aria-hidden />
-                {/* pet yang sedang dipasang, berdiri di podium */}
-                {petState?.equipped && (
-                  <div className="relative z-10 flex flex-col items-center">
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ duration: 2.2, repeat: Infinity }}
-                      className="size-16 drop-shadow-[0_6px_10px_rgba(0,0,0,.8)]"
-                    >
-                      <PetArt petId={petState.equipped.petId} />
-                    </motion.div>
-                    <span className="mb-1 rounded-full bg-black/50 px-2 py-0.5 text-[9px] font-black text-white backdrop-blur-sm">
-                      {petState.equipped.name}
-                    </span>
-                  </div>
-                )}
-                {/* piringan atas */}
-                <div className="mx-auto h-5 w-48 rounded-[50%] bg-gradient-to-b from-zinc-200 via-zinc-400 to-zinc-500 shadow-[inset_0_2px_4px_rgba(255,255,255,.6)]" aria-hidden />
-                {/* badan silinder */}
-                <div className="mx-auto -mt-2 h-8 w-44 rounded-b-[30px] bg-gradient-to-b from-zinc-500 via-zinc-600 to-zinc-900" aria-hidden />
-                {!petState?.equipped && (
-                  <p className="mt-2 text-center text-[10px] font-bold text-zinc-500">
-                    Pasang pet di YoruPet untuk pajang di podium ✨
-                  </p>
-                )}
-              </div>
+              {/* Podium 3D DIHAPUS permanen sesuai permintaan. */}
             </div>
           </motion.div>
         )}
