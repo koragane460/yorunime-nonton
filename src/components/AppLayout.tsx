@@ -268,9 +268,10 @@ function AccountPanel({
         {/* Banner profil TIDAK tampil di panel akun (hanya di profil &
             komentar); latar panel memakai background 45% + blur. */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-transparent to-gold/[0.05]" aria-hidden />
-        {/* pb-12: ruang khusus tombol YoruVerse di kanan bawah supaya
+        {/* pb-9: ruang khusus tombol YoruVerse di kanan bawah — cukup rapat
+            supaya TIDAK menambah ruang ke bawah yang gede, tapi tombol tetap
             tidak pernah menimpa bar level / baris Sacret. */}
-        <div className="relative p-3 pb-12">
+        <div className="relative p-3 pb-9">
           <div className="flex items-center gap-3">
             {avatarBorder && avatarBorder !== "none" ? (
               /* Border shop terpasang → bingkai kreatif menggantikan ring
@@ -346,12 +347,14 @@ function AccountPanel({
           </div>
         </div>
       </button>
-      {/* YORUVERSE — tombol di pojok KANAN BAWAH panel akun. Outline TIPIS
-          dan warnanya ikut warna teks (amber-300), tanpa neon/glow. */}
+      {/* YORUVERSE — tombol kecil di pojok KANAN BAWAH panel akun.
+          Dibalut ringkas, memanjang secukupnya ke samping (dengan ikon gem),
+          tanpa menambah tinggi panel dan tanpa menghalangi baris lain. */}
       <button
         onClick={onOpenYoruVerse}
-        className="absolute bottom-2.5 right-2.5 z-10 rounded-2xl border border-amber-300/70 bg-yellow-900/30 px-3 py-1.5 text-[11px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition active:scale-95 hover:bg-yellow-800/50"
+        className="absolute bottom-2 right-2.5 z-10 flex items-center gap-1 rounded-full border border-amber-300/60 bg-yellow-900/35 px-3.5 py-1 text-[10px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition active:scale-95 hover:bg-yellow-800/50"
       >
+        <GemIcon className="size-3" aria-hidden />
         YoruVerse
       </button>
     </div>

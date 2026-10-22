@@ -425,7 +425,7 @@ function FilmDetail({
       {/* ===================== BANNER SINEMATIK ===================== */}
       <div className="relative">
         <div
-          className="relative h-72 w-full overflow-hidden bg-cover bg-center"
+          className="relative h-80 w-full overflow-hidden bg-cover bg-center"
           style={
             d?.backdrop || d?.image
               ? {

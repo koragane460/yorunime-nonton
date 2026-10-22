@@ -44,12 +44,12 @@ type HubView = null | "teman" | "clan" | "shop" | "title" | "pet" | "music";
 /** Kotak ketupat + gradien lembut per kotak (gaya sama kayak judul baris
  *  "Manga / Manhwa Terbaru & Populer" di Home — bukan neon). */
 const BOXES = [
-  { key: "teman", label: "Teman", Icon: Users, grad: "from-amber-200/45 via-orange-200/25 to-rose-300/40" },
-  { key: "clan", label: "Clan", Icon: Shield, grad: "from-violet-300/45 via-fuchsia-200/25 to-pink-300/40" },
-  { key: "shop", label: "Shop", Icon: ShoppingBag, grad: "from-sky-300/45 via-cyan-200/25 to-teal-300/40" },
-  { key: "title", label: "Title", Icon: Award, grad: "from-emerald-300/45 via-lime-200/25 to-yellow-200/40" },
-  { key: "pet", label: "YoruPet", Icon: Bone, grad: "from-rose-300/45 via-red-200/25 to-orange-300/40" },
-  { key: "music", label: "Music", Icon: Music, grad: "from-indigo-300/45 via-purple-200/25 to-fuchsia-300/40" },
+  { key: "teman", label: "Teman", Icon: Users, grad: "from-amber-300/70 via-orange-200/45 to-rose-300/60" },
+  { key: "clan", label: "Clan", Icon: Shield, grad: "from-violet-400/70 via-fuchsia-300/45 to-pink-400/60" },
+  { key: "shop", label: "Shop", Icon: ShoppingBag, grad: "from-sky-400/70 via-cyan-300/45 to-teal-400/60" },
+  { key: "title", label: "Title", Icon: Award, grad: "from-emerald-400/70 via-lime-300/45 to-yellow-300/60" },
+  { key: "pet", label: "YoruPet", Icon: Bone, grad: "from-rose-400/70 via-red-300/45 to-orange-400/60" },
+  { key: "music", label: "Music", Icon: Music, grad: "from-indigo-400/70 via-purple-300/45 to-fuchsia-400/60" },
 ] as const;
 
 /** Potongan garis penghubung antar kotak (dihitung dari posisi nyata). */
@@ -76,12 +76,15 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const boxRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [lines, setLines] = useState<LinkLine[]>([]);
+  /** Lebar wrap — dipakai lane tengah garis penghubung (elbow). */
+  const [wrapW, setWrapW] = useState(0);
   useEffect(() => {
     if (view) return;
     const measure = () => {
       const wrap = wrapRef.current;
       if (!wrap) return;
       const wb = wrap.getBoundingClientRect();
+      setWrapW(wb.width);
       const pts: { x: number; y: number }[] = [];
       BOXES.forEach((_, i) => {
         const el = boxRefs.current[i];
@@ -213,33 +216,44 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                 ref={wrapRef}
                 className="relative mx-auto mt-8 flex w-[94%] flex-col gap-6"
               >
-                {/* garis penghubung: dari kotak satu ke kotak berikutnya */}
+                {/* garis penghubung: LURUS ke arah yang benar — dari titik
+                    sisi tiap ketupat ke lane TENGAH (di sela dua ketupat,
+                    tidak menyentuh kotak), lalu lurus ke titik sisi kotak
+                    berikutnya. Tidak ada lagi garis menyeberang di atas kotak. */}
                 <svg
                   className="pointer-events-none absolute inset-0 h-full w-full"
                   aria-hidden
                 >
-                  {lines.map((l, i) => (
-                    <g key={i}>
-                      <line
-                        x1={l.x1}
-                        y1={l.y1}
-                        x2={l.x2}
-                        y2={l.y2}
-                        stroke="rgba(255,255,255,0.55)"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                      />
-                      {/* titik belah ketupat kecil di ujung garis */}
-                      <rect
-                        x={l.x2 - 2.5}
-                        y={l.y2 - 2.5}
-                        width="5"
-                        height="5"
-                        transform={`rotate(45 ${l.x2} ${l.y2})`}
-                        fill="rgba(255,255,255,0.75)"
-                      />
-                    </g>
-                  ))}
+                  {lines.map((l, i) => {
+                    // Lane tengah = 50% lebar wrap; kalau belum terukur,
+                    // garis lurus biasa.
+                    const cx = wrapW > 0 ? wrapW / 2 : l.x2;
+                    const d =
+                      wrapW > 0
+                        ? `M ${l.x1} ${l.y1} L ${cx} ${l.y1} L ${cx} ${l.y2} L ${l.x2} ${l.y2}`
+                        : `M ${l.x1} ${l.y1} L ${l.x2} ${l.y2}`;
+                    return (
+                      <g key={i}>
+                        <path
+                          d={d}
+                          fill="none"
+                          stroke="rgba(255,255,255,0.55)"
+                          strokeWidth="1.3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {/* titik belah ketupat kecil di ujung garis */}
+                        <rect
+                          x={l.x2 - 2.5}
+                          y={l.y2 - 2.5}
+                          width="5"
+                          height="5"
+                          transform={`rotate(45 ${l.x2} ${l.y2})`}
+                          fill="rgba(255,255,255,0.75)"
+                        />
+                      </g>
+                    );
+                  })}
                 </svg>
 
                 {BOXES.map((b, i) => {
@@ -254,18 +268,18 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                           }}
                           onClick={() => setView(b.key)}
                           className={cn(
-                            "flex h-24 w-40 flex-col items-center justify-center gap-1 bg-gradient-to-br",
+                            "flex h-20 w-32 flex-col items-center justify-center gap-1 bg-gradient-to-br",
                             b.grad,
                             "shadow-[0_14px_28px_-16px_rgba(0,0,0,.95)] transition active:scale-95",
                             "[clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]",
                           )}
                         >
                           <b.Icon
-                            className="size-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.8)]"
+                            className="size-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.8)]"
                             strokeWidth={1.8}
                             aria-hidden
                           />
-                          <span className="text-[13px] font-black tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,.9)]">
+                          <span className="text-[12px] font-black tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,.9)]">
                             {b.label}
                           </span>
                         </button>

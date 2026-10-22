@@ -78,7 +78,7 @@ export function ProfileSheet({
   const rosterImages = useAction(api.gacha.rosterImages);
   const [cardImages, setCardImages] = useState<Record<string, string>>({});
   useEffect(() => {
-    if (!cosmetics?.card) return;
+    if (!cosmetics?.card && !(cosmetics?.cards?.length)) return;
     rosterImages()
       .then((r) => setCardImages(r ?? {}))
       .catch(() => {});
@@ -138,7 +138,7 @@ export function ProfileSheet({
                   (premium) atau foto profile sebagai fallback. HD (1200px). */}
               <BlurBanner
                 src={profile.bannerUrl ?? profile.image}
-                className="h-52 w-full"
+                className="h-64 w-full"
               />
               {/* Bilah sambung warna tipis di bawah banner */}
               <div aria-hidden className="yn-banner-fade" />
@@ -279,41 +279,50 @@ export function ProfileSheet({
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
 
-            {/* PITA TITLE + KARTU KARAKTER — satu kotak rapi sejajar
-                (kartu di kiri, pita + nama di kanan). Layout kolom lama
-                membuat pita lebar di atas kartu kecil = terlihat canggung. */}
-            {(cosmetics?.title || cosmetics?.card) && (
-              <div className="mx-auto mt-4 flex max-w-sm items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] p-3">
-                {cosmetics?.card ? (
-                  <CharacterCard
-                    name={cosmetics.card.name}
-                    anime={(cosmetics.card as { anime?: string }).anime}
-                    rank={cosmetics.card.rank as CosmeticRank}
-                    image={cardImages[cosmetics.card.id]}
-                    active
-                    className="w-20 shrink-0"
-                  />
-                ) : (
-                  <span className="flex aspect-[3/4] w-20 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-bold text-zinc-500">
-                    Tanpa kartu
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  {cosmetics?.title ? (
-                    <TitleRibbon name={cosmetics.title.name} size="sm" />
-                  ) : (
-                    <p className="text-[12px] font-bold text-zinc-400">
-                      Tanpa title
-                    </p>
-                  )}
-                  <p className="mt-1.5 line-clamp-2 text-[11px] leading-tight text-zinc-400">
-                    {cosmetics?.card
-                      ? `${cosmetics.card.name}${(cosmetics.card as { anime?: string }).anime ? ` · ${(cosmetics.card as { anime?: string }).anime}` : ""}`
-                      : "Pasang title & kartu karakter di YoruVerse › Shop"}
-                  </p>
+            {/* KARTU (maks 4, kecil-kecil) di kiri — TITLE (maks 3) di
+                kanan kartu. Satu kotak rapi, tidak menambah tinggi gede. */}
+            {(() => {
+              const cards =
+                cosmetics?.cards ?? (cosmetics?.card ? [cosmetics.card] : []);
+              const titles =
+                cosmetics?.titles ??
+                (cosmetics?.title ? [cosmetics.title] : []);
+              if (cards.length === 0 && titles.length === 0) return null;
+              return (
+                <div className="mx-auto mt-4 flex max-w-sm items-stretch gap-2.5 rounded-2xl border border-white/12 bg-white/[0.05] p-2.5">
+                  {/* Kiri: kartu karakter terpasang — kecil supaya 4 muat */}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {cards.slice(0, 4).map((c) => (
+                      <CharacterCard
+                        key={c.id}
+                        name={c.name}
+                        anime={(c as { anime?: string }).anime}
+                        rank={c.rank as CosmeticRank}
+                        image={cardImages[c.id]}
+                        active
+                        className="w-14 shrink-0"
+                      />
+                    ))}
+                  </div>
+                  {/* Kanan: title yang terpasang — maksimal 3 */}
+                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                    {titles.slice(0, 3).map((t) => (
+                      <TitleRibbon key={t.id} name={t.name} size="sm" />
+                    ))}
+                    {cards[0] ? (
+                      <p className="line-clamp-2 text-[10px] leading-tight text-zinc-400">
+                        {`${cards[0].name}${(cards[0] as { anime?: string }).anime ? ` · ${(cards[0] as { anime?: string }).anime}` : ""}`}
+                        {cards.length > 1 ? ` +${cards.length - 1} kartu lagi` : ""}
+                      </p>
+                    ) : (
+                      <p className="line-clamp-2 text-[10px] leading-tight text-zinc-400">
+                        Pasang title &amp; kartu karakter di YoruVerse › Shop
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Tab tanpa background: garis bawah, bisa pindah */}
             <div className="mt-5 flex border-b border-white/15">

@@ -214,16 +214,24 @@
   box-shadow: 0 10px 22px -18px oklch(0 0 0 / 90%);
 }
 
-/* Give-premium bubble: transparent, gold text */
-.bubble-give,
+/* Give-premium bubble: KOTAK AMBER khas — jelas BEDA dari background chat
+ * (dulu transparan sehingga menyatu dengan latar chat, permintaan pemilik:
+ * "kotak pesan premium dibuat kayak beda dari background chat"). */
+.bubble-give {
+  background: linear-gradient(160deg, oklch(0.58 0.14 85 / 0.30), oklch(0.44 0.10 65 / 0.16)) !important;
+  border: 1px solid oklch(0.82 0.14 88 / 0.55) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 12px 26px -18px oklch(0 0 0 / 88%);
+  color: oklch(0.96 0.05 92) !important;
+}
+/* Tag kecil "give" di luar bubble tetap teks emas */
 .give-tag {
-  background-color: transparent !important;
   color: var(--gold-strong) !important;
 }
 .bubble-give .bubble-top,
 .bubble-give .bubble-body {
   background-color: transparent !important;
-  color: var(--gold-strong) !important;
+  color: inherit !important;
 }
 
 /* Kutipan reply di dalam bubble: lebih abu dari bubble biasa. */

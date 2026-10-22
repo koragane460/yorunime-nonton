@@ -148,9 +148,11 @@ async function fetchRosterImages(): Promise<RosterPayload> {
 export const rosterImages = action({
   args: {},
   handler: async (ctx) => {
+    // v3: buang cache lama yang bisa berisi URL kosong (hasil gagal dulu),
+    // biar semua kartu karakter langsung berfoto lagi.
     const payload = (await cached(
       ctx,
-      "gacha:roster:v2",
+      "gacha:roster:v3",
       30 * 86400 * 1000,
       fetchRosterImages,
     )) as RosterPayload;

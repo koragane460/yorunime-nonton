@@ -63,6 +63,25 @@ import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import type { Id } from "@/convex/_generated/dataModel";
 
 
+/**
+ * Palet chip GENRE — berwarna lembut (BUKAN neon), diputar per judul genre
+ * supaya deretan chip tidak monoton satu warna. Dipakai di section Genre
+ * Home DAN di panel pilihan genre di layar Search (konsisten, permintaan).
+ */
+const GENRE_HUES = [
+  "border-sky-400/40 bg-sky-400/15 text-sky-100 hover:bg-sky-400/25",
+  "border-rose-400/40 bg-rose-400/15 text-rose-100 hover:bg-rose-400/25",
+  "border-emerald-400/40 bg-emerald-400/15 text-emerald-100 hover:bg-emerald-400/25",
+  "border-amber-400/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25",
+  "border-violet-400/40 bg-violet-400/15 text-violet-100 hover:bg-violet-400/25",
+  "border-teal-400/40 bg-teal-400/15 text-teal-100 hover:bg-teal-400/25",
+  "border-orange-400/40 bg-orange-400/15 text-orange-100 hover:bg-orange-400/25",
+  "border-fuchsia-400/40 bg-fuchsia-400/15 text-fuchsia-100 hover:bg-fuchsia-400/25",
+] as const;
+function genreHue(i: number) {
+  return GENRE_HUES[i % GENRE_HUES.length];
+}
+
 type AnimeCardT = CatalogCard & {
   source?: CatalogPickSource;
   isDonghua?: boolean;
@@ -1198,10 +1217,10 @@ function HomeContent() {
               Lihat semua ›
             </button>
           </div>
-          {/* Chip WRAP ke beberapa baris (bukan cuma satu geser) — daftar
-              genre tampil lebih banyak ke bawah, warna aksen lembut. */}
+          {/* Chip WRAP ke beberapa baris — BERWARNA lembut per genre
+              (bukan satu warna doang, juga bukan neon). */}
           <div className="flex flex-wrap gap-2">
-            {genreList.map((g) => (
+            {genreList.map((g, gi) => (
               <button
                 key={g.id}
                 onClick={() => {
@@ -1209,7 +1228,10 @@ function HomeContent() {
                   setSearchOpenGenres(false);
                   setShowSearch(true);
                 }}
-                className="rounded-full border border-sky-400/35 bg-black/55 px-3.5 py-1.5 text-xs font-semibold text-sky-100/90 backdrop-blur-md transition hover:border-sky-300/60 hover:bg-black/75 active:scale-95"
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition active:scale-95",
+                  genreHue(gi),
+                )}
               >
                 {g.name}
               </button>
@@ -2544,17 +2566,17 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             >
               Semua
             </button>
-            {genreList.map((g) => {
+            {genreList.map((g, gi) => {
               const on = activeGenres.includes(g.name);
+              // Gaya chip PERSIS seperti chip Genre di Home (berwarna lembut).
               return (
                 <button
                   key={g.id}
                   onClick={() => toggleGenre(g.name)}
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                    on
-                      ? "border-gold-strong bg-gold-soft text-gold-strong"
-                      : "border-border bg-secondary/40 text-muted-foreground hover:border-foreground/40",
+                    genreHue(gi),
+                    on && "font-black ring-1 ring-gold-strong",
                   )}
                 >
                   {g.name}
@@ -3184,9 +3206,10 @@ function AnimeDetailScreen({
             Banner + poster tampil di SEMUA tab (Info/Nonton/Character/
             Cuplikan) supaya judul, rating, studio, dan status tidak hilang. */}
         <div className="relative">
-          {/* Banner: background anime full lebar sampai pinggir (kesamping panjang) */}
+          {/* Banner: background anime full lebar sampai pinggir (kesamping panjang)
+              — diperpanjang sedikit ke bawah (permintaan pemilik). */}
           <div
-            className="relative h-64 w-full shrink-0 overflow-hidden bg-cover bg-center"
+            className="relative h-72 w-full shrink-0 overflow-hidden bg-cover bg-center"
             style={
               detail.image
                 ? {
@@ -4135,7 +4158,7 @@ function DonghuaDetailScreen({
       <div className="w-full pb-24">
         <div className="relative">
           <div
-            className="h-64 w-full shrink-0 bg-cover bg-center"
+            className="h-72 w-full shrink-0 bg-cover bg-center"
             style={
               banner
                 ? {
