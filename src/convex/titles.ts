@@ -192,9 +192,29 @@ export const myTitles = query({
         (st?.owned ?? {}) as Record<string, number>,
       ),
       equippedCard: u?.equippedCard ?? null,
+      // MULTI-EQUIP — daftar title (maks 3) & kartu (maks 4) yang tampil
+      // di detail akun; field single di atas tetap jadi "utama".
+      equippedTitles: equippedTitleList(u),
+      equippedCards: equippedCardList(u),
     };
   },
 });
+
+/** Daftar title terpasang — dukung field baru (array) + fallback field lama. */
+export function equippedTitleList(u: any): string[] {
+  const arr = Array.isArray(u?.equippedTitles) ? u.equippedTitles : [];
+  const legacy = u?.equippedTitle ? [u.equippedTitle as string] : [];
+  const merged = [...new Set([...arr, ...legacy])].slice(0, 3);
+  return merged;
+}
+
+/** Daftar kartu terpasang — dukung field baru (array) + fallback field lama. */
+export function equippedCardList(u: any): string[] {
+  const arr = Array.isArray(u?.equippedCards) ? u.equippedCards : [];
+  const legacy = u?.equippedCard ? [u.equippedCard as string] : [];
+  const merged = [...new Set([...arr, ...legacy])].slice(0, 4);
+  return merged;
+}
 
 /** Pasang title (harus dimiliki). null = lepas. */
 export const equip = mutation({
@@ -212,6 +232,46 @@ export const equip = mutation({
       if (!hit) throw new Error("Title belum dimiliki");
     }
     await ctx.db.patch(userId, { equippedTitle: titleId ?? undefined });
+    // Sinkronkan daftar multi-equip (equippedTitles) supaya layar detail
+    // akun tetap menampilkan title yang dipasang dari layar Title.
+    const u2 = (await ctx.db.get(userId)) as any;
+    const prev = equippedTitleList(u2);
+    const next =
+      titleId === null
+        ? []
+        : [titleId, ...prev.filter((t) => t !== titleId)].slice(0, 3);
+    await ctx.db.patch(userId, { equippedTitles: next });
+  },
+});
+
+/** Toggle title untuk MULTI-EQUIP — maksimal 3 title terpasang. */
+export const toggleTitle = mutation({
+  args: { titleId: v.string() },
+  handler: async (ctx, { titleId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Masuk akun dulu");
+    const hit = await ctx.db
+      .query("userTitles")
+      .withIndex("userId_title", (q) =>
+        q.eq("userId", userId).eq("titleId", titleId),
+      )
+      .first();
+    if (!hit) throw new Error("Title belum dimiliki");
+    const u = (await ctx.db.get(userId)) as any;
+    const cur = equippedTitleList(u);
+    let next: string[];
+    if (cur.includes(titleId)) {
+      next = cur.filter((t) => t !== titleId);
+    } else {
+      if (cur.length >= 3)
+        throw new Error("Maksimal 3 title — lepas salah satu dulu");
+      next = [...cur, titleId];
+    }
+    await ctx.db.patch(userId, {
+      equippedTitles: next,
+      // "Title utama" untuk tampilan lama = title pertama (atau kosong).
+      equippedTitle: next[0] ?? undefined,
+    });
   },
 });
 
@@ -220,19 +280,30 @@ export const publicOf = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const u = await ctx.db.get(userId);
-    const titleId = u?.equippedTitle;
-    const cardId = u?.equippedCard;
-    const title = titleId
-      ? (TITLE_DEFS.find((t) => t.id === titleId) ?? null)
-      : null;
-    const card = cardId
-      ? (GACHA_ROSTER.find((c) => c.id === cardId) ?? null)
-      : null;
+    const titleIds = equippedTitleList(u);
+    const cardIds = equippedCardList(u);
+    const titles = titleIds
+      .map((id) => TITLE_DEFS.find((t) => t.id === id))
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((t: any) => ({ id: t.id, name: t.name, group: t.group }));
+    const cards = cardIds
+      .map((id) => GACHA_ROSTER.find((c) => c.id === id))
+      .filter(Boolean)
+      .slice(0, 4)
+      .map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        rank: c.rank,
+        anime: c.anime,
+      }));
     return {
-      title: title ? { id: title.id, name: title.name, group: title.group } : null,
-      card: card
-        ? { id: card.id, name: card.name, rank: card.rank, anime: card.anime }
-        : null,
+      // Field single lama — tetap "utama" (kartu/title pertama).
+      title: titles[0] ?? null,
+      card: cards[0] ?? null,
+      // MULTI-EQUIP: semua yang terpasang (maks 3 title / 4 kartu).
+      titles,
+      cards,
     };
   },
 });

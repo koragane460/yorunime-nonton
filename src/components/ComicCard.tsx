@@ -69,7 +69,7 @@ export function ComicCard({
       onClick={() => onPick(item.slug)}
       className="group relative w-full text-left"
     >
-      <div className="relative overflow-hidden rounded-xl border border-border/60 transition group-hover:border-foreground/40">
+      <div className="relative overflow-hidden rounded-t-xl border border-border/60 transition group-hover:border-foreground/40">
         <img
           src={item.image}
           alt=""
@@ -91,9 +91,9 @@ export function ComicCard({
           </span>
         )}
       </div>
-      {/* Kotak SEMI-OPAQUE di belakang judul + meta — saat "screen home"
-          dipasang, teks kartu tetap terbaca dan tidak membuat bolong. */}
-      <div className="mt-1 rounded-lg bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+      {/* Kotak judul semi-opaque MENYATU dengan poster (tanpa jarak) —
+          gaya sama seperti kartu anime. */}
+      <div className="rounded-b-xl border-x border-b border-border/60 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
         <p className="line-clamp-2 text-[11px] font-medium leading-tight text-white">
           {item.title}
         </p>

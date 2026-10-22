@@ -1569,83 +1569,172 @@ export const animeDetail = action({
  * yang sedang airing (nextAiringEpisode.airingAt), jadi kita tahu hari DAN jam
  * episodenya tayang, bukan cuma "hari apa".
  */
-export const animeAiringSchedule = action({
-  args: {},
-  handler: async () => {
-    const query = `query ($page:Int){
-      Page(page:$page, perPage:50){
-        pageInfo{ hasNextPage }
-        media(type:ANIME, status:RELEASING, sort:POPULARITY_DESC, isAdult:false, countryOfOrigin:JP){
-          id idMal
-          title{ romaji english native }
-          coverImage{ extraLarge large }
-          averageScore
-          episodes
-          format
-          status
-          nextAiringEpisode{ episode airingAt timeUntilAiring }
-        }
+const DAY_ID = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];
+
+type AiringDay = {
+  id: string;
+  title: string;
+  image: string;
+  episode: number;
+  airingAt: number;
+  day: string;
+  time: string;
+  score?: number;
+};
+
+function emptyAiring(): Record<string, AiringDay[]> {
+  const out: Record<string, AiringDay[]> = {};
+  for (const key of DAY_ID) out[key] = [];
+  return out;
+}
+
+/** Jadwal mingguan dari AniList (nextAiringEpisode per judul releasing). */
+async function airingFromAniList(): Promise<Record<string, AiringDay[]>> {
+  const query = `query ($page:Int){
+    Page(page:$page, perPage:50){
+      pageInfo{ hasNextPage }
+      media(type:ANIME, status:RELEASING, sort:POPULARITY_DESC, isAdult:false, countryOfOrigin:JP){
+        id idMal
+        title{ romaji english native }
+        coverImage{ extraLarge large }
+        averageScore
+        episodes
+        format
+        status
+        nextAiringEpisode{ episode airingAt timeUntilAiring }
       }
-    }`;
-    const all: any[] = [];
+    }
+  }`;
+  const all: any[] = [];
+  try {
+    for (let page = 1; page <= 3; page++) {
+      const d: any = await aniGraphql(query, { page });
+      const media = d?.Page?.media ?? [];
+      all.push(...media);
+      if (!d?.Page?.pageInfo?.hasNextPage) break;
+    }
+  } catch {
+    return emptyAiring();
+  }
+
+  const out = emptyAiring();
+  for (const m of all) {
+    const ep = m?.nextAiringEpisode;
+    if (!ep?.airingAt) continue;
+    // Convex berjalan di UTC, jadi jam & hari harus dihitung sendiri dalam
+    // zona WIB (UTC+7) supaya yang tampil benar di perangkat user.
+    const d = new Date(ep.airingAt * 1000 + 7 * 3600_000);
+    const day = DAY_ID[d.getUTCDay()];
+    const hh = String(d.getUTCHours()).padStart(2, "0");
+    const mm = String(d.getUTCMinutes()).padStart(2, "0");
+    out[day].push({
+      id: String(m?.idMal ?? m?.id ?? ""),
+      title:
+        m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "Tanpa judul",
+      image: m?.coverImage?.extraLarge ?? m?.coverImage?.large ?? "",
+      episode: Number(ep.episode ?? 0),
+      airingAt: Number(ep.airingAt) * 1000,
+      day,
+      time: `${hh}:${mm}`,
+      score: m?.averageScore ? Math.round(m.averageScore / 10) : undefined,
+    });
+  }
+  for (const key of DAY_ID) out[key].sort((a, b) => a.airingAt - b.airingAt);
+  return out;
+}
+
+/** Fallback Jikan (MyAnimeList) — dipakai kalau AniList gagal/rate-limit,
+    supaya layar Jadwal tidak pernah kosong. */
+async function airingFromJikan(): Promise<Record<string, AiringDay[]>> {
+  const out = emptyAiring();
+  for (const filter of DAY_FILTER) {
     try {
-      for (let page = 1; page <= 3; page++) {
-        const d: any = await aniGraphql(query, { page });
-        const media = d?.Page?.media ?? [];
-        all.push(...media);
-        if (!d?.Page?.pageInfo?.hasNextPage) break;
+      const data = await jikanEnqueue(() =>
+        fetchJson(`https://api.jikan.moe/v4/schedules?filter=${filter}&limit=100&sfw=true`),
+      );
+      for (const a of data?.data ?? []) {
+        const startMs = Date.parse(String(a.airing_start ?? ""));
+        if (Number.isNaN(startMs)) continue;
+        const d = new Date(startMs + 7 * 3600_000);
+        const day = DAY_ID[d.getUTCDay()];
+        const hh = String(d.getUTCHours()).padStart(2, "0");
+        const mm = String(d.getUTCMinutes()).padStart(2, "0");
+        out[day].push({
+          id: String(a.mal_id ?? ""),
+          title: a.title ?? "Tanpa judul",
+          image:
+            a.images?.webp?.large_image_url ?? a.images?.jpg?.large_image_url ?? "",
+          episode: Number(a.episodes ?? 0),
+          airingAt: startMs,
+          day,
+          time: `${hh}:${mm}`,
+          score: typeof a.score === "number" ? a.score : undefined,
+        });
       }
     } catch {
-      return [];
+      /* lanjut ke hari berikutnya */
     }
+  }
+  for (const key of DAY_ID) out[key].sort((a, b) => a.airingAt - b.airingAt);
+  return out;
+}
 
-    const DAY_ID = [
-      "Minggu",
-      "Senin",
-      "Selasa",
-      "Rabu",
-      "Kamis",
-      "Jumat",
-      "Sabtu",
-    ];
-    const out: Record<
-      string,
-      {
-        id: string;
-        title: string;
-        image: string;
-        episode: number;
-        airingAt: number;
-        day: string;
-        time: string;
-        score?: number;
-      }[]
-    > = {};
-    for (const key of DAY_ID) out[key] = [];
+// Cache payload jadwal — `runCtx` sengaja dianotasikan `any` supaya tipe
+// `internal` (yang menyertakan aksi ini sendiri) tidak bikin inferensi
+// melingkar (TS7022).
+async function scheduleCacheGet(
+  runCtx: any,
+  endpoint: string,
+): Promise<{ updatedAt: number; payload: any } | null> {
+  try {
+    return await runCtx.runQuery(internal.anime.cacheGet, { endpoint });
+  } catch {
+    return null;
+  }
+}
+async function scheduleCacheSet(
+  runCtx: any,
+  endpoint: string,
+  payload: unknown,
+) {
+  try {
+    await runCtx.runMutation(internal.anime.cacheSet, { endpoint, payload });
+  } catch {
+    /* cache tidak wajib */
+  }
+}
 
-    for (const m of all) {
-      const ep = m?.nextAiringEpisode;
-      if (!ep?.airingAt) continue;
-      // Convex berjalan di UTC, jadi jam & hari harus dihitung sendiri dalam
-      // zona WIB (UTC+7) supaya yang tampil benar di perangkat user.
-      const d = new Date(ep.airingAt * 1000 + 7 * 3600_000);
-      const day = DAY_ID[d.getUTCDay()];
-      const hh = String(d.getUTCHours()).padStart(2, "0");
-      const mm = String(d.getUTCMinutes()).padStart(2, "0");
-      out[day].push({
-        id: String(m?.idMal ?? m?.id ?? ""),
-        title:
-          m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "Tanpa judul",
-        image: m?.coverImage?.extraLarge ?? m?.coverImage?.large ?? "",
-        episode: Number(ep.episode ?? 0),
-        airingAt: Number(ep.airingAt) * 1000,
-        day,
-        time: `${hh}:${mm}`,
-        score: m?.averageScore ? Math.round(m.averageScore / 10) : undefined,
-      });
-    }
-    for (const key of DAY_ID)
-      out[key].sort((a, b) => a.airingAt - b.airingAt);
+export const animeAiringSchedule = action({
+  args: {},
+  handler: async (runCtx): Promise<Record<string, AiringDay[]>> => {
+    // Cache 2 jam supaya layar Jadwal tidak menembak AniList/Jikan tiap
+    // dibuka (dulu tanpa cache → rawan rate-limit → "0 judul" terus).
+    // Hasil KOSONG tidak pernah di-cache supaya kegagalan sesaat tidak
+    // menempel dua jam.
+    const KEY = "airing-schedule-weekly:v1";
+    const TTL = 2 * 60 * 60 * 1000;
+    const row = await scheduleCacheGet(runCtx, KEY);
+    const full =
+      row &&
+      Object.values(row.payload ?? {}).some(
+        (v: any) => Array.isArray(v) && v.length > 0,
+      );
+    if (row && full && Date.now() - row.updatedAt < TTL) return row.payload;
+
+    let out = await airingFromAniList();
+    const empty = Object.values(out).every((v) => v.length === 0);
+    if (empty) out = await airingFromJikan();
+
+    const anyData = Object.values(out).some((v) => v.length > 0);
+    if (anyData) await scheduleCacheSet(runCtx, KEY, out);
     return out;
   },
 });
@@ -1756,7 +1845,7 @@ export const animeTodayAiring = action({
           if (!d?.Page?.pageInfo?.hasNextPage) break;
         }
       } catch {
-        return [] as TodayAiring[];
+        all.length = 0;
       }
       const seen = new Set<string>();
       const out: TodayAiring[] = [];
@@ -1777,6 +1866,37 @@ export const animeTodayAiring = action({
           timeLabel: airingLabel(airingAt),
           score: m?.averageScore ? Math.round(m.averageScore / 10) : undefined,
         });
+      }
+      // Fallback Jikan: kalau AniList gagal/rate-limit (all kosong), ambil
+      // jadwal tayang hari ini dari MyAnimeList supaya tidak pernah kosong.
+      if (all.length === 0) {
+        try {
+          const data = await jikanEnqueue(() =>
+            fetchJson("https://api.jikan.moe/v4/schedules?limit=100&sfw=true"),
+          );
+          for (const a of data?.data ?? []) {
+            const startMs = Date.parse(String(a.airing_start ?? ""));
+            if (Number.isNaN(startMs) || startMs < dayStart || startMs >= dayEnd)
+              continue;
+            const key = `${a.mal_id}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            out.push({
+              id: String(a.mal_id ?? ""),
+              title: a.title ?? "Tanpa judul",
+              image:
+                a.images?.webp?.large_image_url ??
+                a.images?.jpg?.large_image_url ??
+                "",
+              episode: Number(a.episodes ?? 0),
+              airingAt: startMs,
+              timeLabel: airingLabel(startMs),
+              score: typeof a.score === "number" ? a.score : undefined,
+            });
+          }
+        } catch {
+          /* jaring pengaman */
+        }
       }
       out.sort((a, b) => a.airingAt - b.airingAt);
       return out.slice(0, Math.max(1, limit ?? 12));

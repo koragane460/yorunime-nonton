@@ -361,18 +361,11 @@ function FilmDetail({
 }) {
   const getDetail = useAction(api.films.detail);
   const toggleFav = useMutation(api.activities.toggleFavorite);
-  const postComment = useMutation(api.activities.postComment);
   const myFavs = useQuery(api.activities.myFavorites, {});
-  const { user } = useAuth();
 
   const favorited = (
     (myFavs ?? []) as { animeId: string; kind?: string }[]
   ).some((f) => (f.kind ?? "anime") === "film" && f.animeId === id);
-
-  const comments = useQuery(api.activities.listComments, {
-    animeId: `film:${id}`,
-    sort: "terbaru",
-  }) as unknown as CommentT[] | undefined;
 
   const [d, setD] = useState<FilmDetailT | null>(null);
   const [tab, setTab] = useState<"info" | "cast">("info");
@@ -562,8 +555,8 @@ function FilmDetail({
         {/* PEMUTAR tidak ada di detail — tekan Nonton untuk membuka
             layar terpisah (pemutar + komentar). */}
 
-        {/* ============== TAB: Info · Pemeran — Komentar selalu tampil
-            di bawah (permintaan: "di detail film gak ada komen") ====== */}
+        {/* ============== TAB: Info · Pemeran. KOMENTAR DIHAPUS PERMANEN
+            dari detail film — diganti "Film Terkait". ====== */}
         <div className="mt-5 flex gap-1">
           {([
             ["info", "Info"],
@@ -623,10 +616,10 @@ function FilmDetail({
               </>
             )}
 
-            {/* Film serupa */}
+            {/* Film Terkait — film yang sama/serupa dengan judul ini */}
             {(d?.similar ?? []).length > 0 && (
               <>
-                <SectionTitle>Film Serupa</SectionTitle>
+                <SectionTitle>Film Terkait</SectionTitle>
                 <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
                   {d!.similar.map((s) => (
                     <button
@@ -702,32 +695,8 @@ function FilmDetail({
           </>
         )}
 
-        {/* ------------------ KOMENTAR (selalu tampil) ------------------ */}
-        <div className="mt-3">
-          <SectionTitle>
-            <span className="normal-case">
-              {(comments?.length ?? 0).toLocaleString("id-ID")} Komentar
-            </span>
-          </SectionTitle>
-          <CommentsSection
-              animeId={`film:${id}`}
-              comments={comments}
-              meId={user?._id}
-              onSend={async (text, replyToId) => {
-                if (!user) {
-                  toast.error("Masuk akun dulu untuk komentar");
-                  return;
-                }
-                await postComment({
-                  animeId: `film:${id}`,
-                  animeTitle: d?.title ?? "Film",
-                  animeImage: d?.image,
-                  text,
-                  replyToId: replyToId as never,
-                });
-              }}
-            />
-        </div>
+        {/* KOMENTAR DIHAPUS PERMANEN dari detail film — penggantinya
+            adalah "Film Terkait" di tab Info (permintaan pemilik). */}
       </div>
     </div>
   );
@@ -921,11 +890,14 @@ function FilmWatch({
           </div>
         ) : null}
 
-        {/* ============ KOMENTAR — gaya sama seperti nonton anime ============ */}
-        <div className="mt-5">
-          <SectionTitle>
-            <span className="normal-case">{commentCount} Komentar</span>
-          </SectionTitle>
+        {/* ============ KOMENTAR — kotak LURUS (tanpa rounded) yang
+            MELEBAR penuh ke samping sampai mentok tepi layar ============ */}
+        <div className="-mx-3 mt-5">
+          <div className="px-3">
+            <SectionTitle>
+              <span className="normal-case">{commentCount} Komentar</span>
+            </SectionTitle>
+          </div>
           <CommentsSection
             animeId={`film:${id}`}
             comments={comments}

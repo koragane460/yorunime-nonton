@@ -185,6 +185,12 @@ export const myState = query({
       ssCount: st?.ssCount ?? 0,
       owned: (st?.owned ?? {}) as Record<string, number>,
       equippedCard: u?.equippedCard ?? null,
+      // MULTI-EQUIP: maksimal 4 kartu terpasang (detail akun).
+      equippedCards: (Array.isArray(u?.equippedCards) && u.equippedCards.length
+        ? u.equippedCards
+        : u?.equippedCard
+          ? [u.equippedCard]
+          : []) as string[],
       history: (st?.pullHistory ?? []) as {
         id: string;
         rank: string;
@@ -337,8 +343,60 @@ export const equipCard = mutation({
       if (!((st?.owned ?? {}) as Record<string, number>)[cardId])
         throw new Error("Kartu belum dimiliki");
     }
+    const u = (await ctx.db.get(userId)) as any;
+    const prevCards: string[] = Array.isArray(u?.equippedCards)
+      ? (u.equippedCards as string[])
+      : u?.equippedCard
+        ? [u.equippedCard as string]
+        : [];
+    const nextCards =
+      cardId === "none"
+        ? []
+        : [cardId, ...prevCards.filter((c) => c !== cardId)].slice(0, 4);
     await ctx.db.patch(userId, {
       equippedCard: cardId === "none" ? undefined : cardId,
+      // Sinkronkan daftar multi-equip: kartu baru jadi utama + ikut tampil
+      // di detail akun (maks 4).
+      equippedCards: nextCards,
+    });
+  },
+});
+
+/**
+ * Toggle kartu untuk MULTI-EQUIP — maksimal 4 kartu terpasang di akun.
+ * Menambah/mengeluarkan kartu dari daftar tampilan profil; kartu pertama
+ * selalu jadi "kartu utama" (field lama equippedCard).
+ */
+export const toggleCard = mutation({
+  args: { cardId: v.string() },
+  handler: async (ctx, { cardId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Masuk akun dulu");
+    const st = await ctx.db
+      .query("gachaState")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .first();
+    if (!((st?.owned ?? {}) as Record<string, number>)[cardId])
+      throw new Error("Kartu belum dimiliki");
+    const u = (await ctx.db.get(userId)) as any;
+    const prev = ((Array.isArray(u?.equippedCards)
+      ? u.equippedCards
+      : u?.equippedCard
+        ? [u.equippedCard]
+        : []) as string[]).filter(Boolean);
+    const cur = [...new Set(prev)];
+    let next: string[];
+    if (cur.includes(cardId)) {
+      next = cur.filter((c) => c !== cardId);
+    } else {
+      if (cur.length >= 4)
+        throw new Error("Maksimal 4 kartu — lepas salah satu dulu");
+      next = [...cur, cardId];
+    }
+    await ctx.db.patch(userId, {
+      equippedCards: next,
+      // "Kartu utama" untuk tampilan lama = kartu pertama (atau kosong).
+      equippedCard: next[0] ?? undefined,
     });
   },
 });

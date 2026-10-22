@@ -18,6 +18,7 @@ import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { NobarBar } from "@/components/NobarBar";
 import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { formatViews, type ComicItem } from "@/components/ComicCard";
+import type { FilmCard as FilmCardT } from "@/convex/films";
 import { isMusicSecret } from "@/lib/musicSecret";
 
 // Layar musik muat saat dibutuhkan saja: penuh dengan player, browse, dan
@@ -329,12 +330,9 @@ function ComicHomeRow({
               onClick={() => onPick(c.slug)}
               className="group w-28 shrink-0 text-left"
             >
-              <div
-                className={cn(
-                  "relative overflow-hidden rounded-xl border border-border/60",
-                  variant === "manhwa" && "rounded-b-none",
-                )}
-              >
+              <div className="relative overflow-hidden rounded-t-xl border border-border/60">
+                {/* Poster + kotak judul MENYATU (tanpa jarak) — gaya sama
+                    seperti kartu anime. */}
                 {c.image ? (
                   <img
                     src={c.image}
@@ -366,9 +364,8 @@ function ComicHomeRow({
                   </span>
                 )}
               </div>
-              {/* Kotak semi-opaque di belakang judul — "screen home" tidak
-                  bolong di balik teks kartu manga/manhwa. */}
-              <div className="mt-1 rounded-lg bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+              {/* Kotak judul semi-opaque MENYATU dengan poster. */}
+              <div className="rounded-b-xl border-x border-b border-border/60 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
                 <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
                   {c.title}
                 </p>
@@ -382,6 +379,186 @@ function ComicHomeRow({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ film home ----
+/** Baris kartu poster film geser ke kanan — kotak judul MENYATU dengan
+    poster (tanpa jarak), semi-opaque biar screen home tidak bolong. */
+function FilmPosterRow({
+  title,
+  items,
+  loading,
+  onMore,
+  onPick,
+}: {
+  title: string;
+  items: FilmCardT[];
+  loading: boolean;
+  onMore: () => void;
+  onPick: (id: string, kind: "movie" | "tv") => void;
+}) {
+  if (items.length === 0 && loading) {
+    return (
+      <div className="mt-4">
+        <SectionTitle>{title}</SectionTitle>
+        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton h-56 w-28 shrink-0 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (items.length === 0) return null;
+  return (
+    <div className="fade-enter mt-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 bg-gradient-to-r from-amber-200 via-yellow-200 to-orange-300 bg-clip-text text-lg font-bold tracking-tight text-transparent">
+          <Film className="size-4 shrink-0 text-gold" aria-hidden />
+          {title}
+        </h2>
+        <button
+          onClick={onMore}
+          className="shrink-0 text-xs font-semibold text-primary"
+        >
+          Lihat selengkap ›
+        </button>
+      </div>
+      <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+        {items.map((f) => (
+          <button
+            key={`${f.kind}-${f.id}`}
+            onClick={() => onPick(f.id, f.kind)}
+            className="group w-28 shrink-0 text-left"
+          >
+            <div className="relative overflow-hidden rounded-t-xl border border-gold/15 bg-black">
+              {f.image ? (
+                <img
+                  src={f.image}
+                  alt={f.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex aspect-[2/3] w-full items-center justify-center bg-muted">
+                  <Film className="size-6 text-muted-foreground" aria-hidden />
+                </div>
+              )}
+              {typeof f.rating === "number" && f.rating > 0 && (
+                <span className="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-amber-300 backdrop-blur-sm">
+                  <Star className="size-2.5 fill-amber-300" aria-hidden />
+                  {f.rating.toFixed(1)}
+                </span>
+              )}
+              {f.kind === "tv" && (
+                <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase text-white backdrop-blur-sm">
+                  Series
+                </span>
+              )}
+            </div>
+            {/* Kotak judul menyatu langsung di bawah poster. */}
+            <div className="rounded-b-xl border-x border-b border-gold/15 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
+              <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
+                {f.title}
+              </p>
+              {f.year && (
+                <p className="mt-0.5 text-[10px] text-white/60">{f.year}</p>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Kategori FILM di Home — 3 baris geser ke kanan + "Lihat selengkap"
+    ke halaman Film. Film aksi memakai genre Action (fallback genre pertama). */
+function FilmHomeSection() {
+  const navigate = useNavigate();
+  const searchFilms = useAction(api.films.search);
+  const getGenres = useAction(api.films.genres);
+  const byGenre = useAction(api.films.byGenre);
+
+  const [movies, setMovies] = useState<FilmCardT[]>([]);
+  const [series, setSeries] = useState<FilmCardT[]>([]);
+  const [genreName, setGenreName] = useState<string>("");
+  const [genreItems, setGenreItems] = useState<FilmCardT[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [mv, tv] = await Promise.all([
+          searchFilms({ kind: "movie" }).catch(() => []),
+          searchFilms({ kind: "tv" }).catch(() => []),
+        ]);
+        if (!alive) return;
+        setMovies((mv ?? []).slice(0, 12));
+        setSeries((tv ?? []).slice(0, 12));
+        try {
+          const gs = ((await getGenres({ kind: "movie" })) ?? []) as {
+            id: string;
+            name: string;
+          }[];
+          const pick =
+            gs.find((g) => /^(action|aksi)$/i.test(g.name)) ?? gs[0];
+          if (pick) {
+            const list = (await byGenre({
+              genreId: String(pick.id),
+              kind: "movie",
+            })) as FilmCardT[];
+            if (!alive) return;
+            setGenreName(pick.name);
+            setGenreItems((list ?? []).slice(0, 12));
+          }
+        } catch {
+          /* baris genre opsional — abaikan */
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openFilm = (id: string, kind: "movie" | "tv") =>
+    navigate(`/film?film=${encodeURIComponent(id)}&t=${kind}`);
+  const more = () => navigate("/film");
+
+  if (!loading && movies.length === 0 && series.length === 0 && genreItems.length === 0) {
+    return null;
+  }
+  return (
+    <div className="fade-enter mt-2">
+      <FilmPosterRow
+        title="Film Populer"
+        items={movies}
+        loading={loading}
+        onMore={more}
+        onPick={openFilm}
+      />
+      <FilmPosterRow
+        title="Series Populer"
+        items={series}
+        loading={loading}
+        onMore={more}
+        onPick={openFilm}
+      />
+      <FilmPosterRow
+        title={genreName ? `Film ${genreName}` : "Film Pilihan"}
+        items={genreItems}
+        loading={loading}
+        onMore={more}
+        onPick={openFilm}
+      />
     </div>
   );
 }
@@ -920,23 +1097,8 @@ function HomeContent() {
             Cari
           </span>
         </button>
-        {/* Tombol FILM — akses cepat ke halaman Film (bioskop & series) yang
-            memakai resolver stream TMDb + VidSrc/Cinepro. */}
-        <button
-          onClick={() => navigate("/film")}
-          className="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-gold/30 bg-black/55 px-4 py-3 text-left backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/15">
-            <Film className="size-5 text-gold" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold">Film & Series</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Nonton film bioskop & series subtitle Indonesia
-            </span>
-          </span>
-          <ChevronRight className="size-5 shrink-0 text-zinc-500" aria-hidden />
-        </button>
+        {/* Tombol "Film & Series" lama DIHAPUS — akses film sekarang lewat
+            kategori "Film" (3 baris geser) di bawah baris Manhwa. */}
       </div>
 
 
@@ -1077,6 +1239,11 @@ function HomeContent() {
         onMore={() => navigate("/baca?jenis=manhwa")}
         onPick={(slug) => navigate(`/baca?jenis=manhwa&komik=${encodeURIComponent(slug)}`)}
       />
+
+      {/* 6d-2) KATEGORI FILM — 3 baris kartu poster geser ke kanan
+          (Film Populer · Series Populer · Film Aksi) + "Lihat selengkap"
+          ke halaman Film. Menggantikan tombol Film & Series di atas. */}
+      <FilmHomeSection />
 
       {/* 6e) KATEGORI LENGKAP: Movie / OVA / Donghua / Upcoming */}
       <BrowseRow kind="movie" title="Movie" onPick={openAnime} />

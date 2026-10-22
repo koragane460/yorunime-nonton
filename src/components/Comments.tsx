@@ -79,10 +79,9 @@ export function CommentsSection({
 
   return (
     <div>
-      {/* Kolom komentar utama: kotak pipih membulat dengan tinggi tetap.
-          Tombol kirim berukuran TETAP (shrink-0) sehingga tidak ikut melebar
-          saat kotak memanjang — hanya isinya yang melebar. */}
-      <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-4 pr-1 transition focus-within:border-primary/50 focus-within:bg-white/[0.07]">
+      {/* Kolom komentar utama: KOTAK LURUS (tanpa rounded) yang melebar
+          penuh ke samping sampai mentok tepi — permintaan pemilik. */}
+      <div className="flex w-full items-center gap-2 border-y border-white/10 bg-white/[0.06] py-1.5 pl-4 pr-2 transition focus-within:border-primary/50 focus-within:bg-white/[0.09]">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

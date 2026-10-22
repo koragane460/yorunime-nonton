@@ -533,6 +533,9 @@ function SettingsScreen({
   const myCosmetics = useQuery(api.titles.myTitles, {});
   const equipTitle = useMutation(api.titles.equip);
   const equipCard = useMutation(api.gacha.equipCard);
+  // MULTI-EQUIP — maksimal 4 kartu & 3 title tampil di detail akun.
+  const toggleTitleM = useMutation(api.titles.toggleTitle);
+  const toggleCardM = useMutation(api.gacha.toggleCard);
   const [busyCosmetic, setBusyCosmetic] = useState<string | null>(null);
   // Gambar kartu karakter dari AniList (cache server) — preview berfoto.
   const rosterImages = useAction(api.gacha.rosterImages);
@@ -592,13 +595,25 @@ function SettingsScreen({
 
   /** Tekan kartu border di Shop: belum punya → BELI (langsung dipakai),
    *  sudah punya → PAKAI, sedang dipakai → bisa LEPAS ("none"). */
-  /** Pasang / lepas TITLE dari Pengaturan. */
+  /** Pasang / lepas TITLE dari Pengaturan.
+      - `null` = LEPAS SEMUA title (mengosongkan daftar multi-equip).
+      - id title = toggle (maksimal 3 title terpasang). */
   const pickTitle = async (titleId: string | null) => {
     if (busyCosmetic) return;
     setBusyCosmetic(titleId ?? "none");
     try {
-      await equipTitle({ titleId });
-      toast.success(titleId ? "Title dipasang ✨" : "Title dilepas");
+      if (titleId === null) {
+        await equipTitle({ titleId: null });
+        toast.success("Title dilepas");
+      } else {
+        const eq =
+          myCosmetics?.equippedTitles ??
+          (myCosmetics?.equippedTitle ? [myCosmetics.equippedTitle] : []);
+        await toggleTitleM({ titleId });
+        toast.success(
+          eq.includes(titleId) ? "Title dilepas" : "Title dipasang ✨",
+        );
+      }
     } catch (e2) {
       setErr(
         e2 instanceof Error
@@ -610,13 +625,23 @@ function SettingsScreen({
     }
   };
 
-  /** Pasang / lepas KARTU GACHA dari Pengaturan. */
+  /** Pasang / lepas KARTU GACHA dari Pengaturan.
+      - `"none"` = LEPAS SEMUA kartu.
+      - id kartu = toggle (maksimal 4 kartu terpasang). */
   const pickCard = async (cardId: string) => {
     if (busyCosmetic) return;
     setBusyCosmetic(cardId);
     try {
-      await equipCard({ cardId });
-      toast.success(cardId === "none" ? "Kartu dilepas" : "Kartu dipasang ✨");
+      if (cardId === "none") {
+        await equipCard({ cardId: "none" });
+        toast.success("Kartu dilepas");
+      } else {
+        const eq =
+          myCosmetics?.equippedCards ??
+          (myCosmetics?.equippedCard ? [myCosmetics.equippedCard] : []);
+        await toggleCardM({ cardId });
+        toast.success(eq.includes(cardId) ? "Kartu dilepas" : "Kartu dipasang ✨");
+      }
     } catch (e2) {
       setErr(
         e2 instanceof Error
@@ -876,7 +901,7 @@ function SettingsScreen({
       {/* -------- TITLE & KARTU GACHA — equip dari koleksi -------- */}
       <BlockTitle>Title & Kartu</BlockTitle>
       <div className="rounded-xl border border-border bg-card p-3">
-        <p className="text-[13px] font-medium">Title aktif</p>
+        <p className="text-[13px] font-medium">Title aktif (maks 3)</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Muncul di bawah nama kamu di layar detail akun. Kelola semua di
           tombol Title (tekan lama tombol Subscribe).
@@ -885,13 +910,18 @@ function SettingsScreen({
           {(myCosmetics?.defs ?? [])
             .filter((d) => !!myCosmetics?.earnedAt[d.id])
             .map((d) => {
-              const active = myCosmetics?.equippedTitle === d.id;
+              const eq =
+                myCosmetics?.equippedTitles ??
+                (myCosmetics?.equippedTitle
+                  ? [myCosmetics.equippedTitle]
+                  : []);
+              const active = eq.includes(d.id);
               return (
                 <button
                   key={d.id}
                   type="button"
                   disabled={busyCosmetic !== null}
-                  onClick={() => void pickTitle(active ? null : d.id)}
+                  onClick={() => void pickTitle(d.id)}
                   title={d.desc}
                   className="transition active:scale-95 disabled:opacity-60"
                 >
@@ -912,7 +942,7 @@ function SettingsScreen({
               onClick={() => void pickTitle(null)}
               className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
             >
-              Lepas title
+              Lepas semua title
             </button>
           )}
           {(myCosmetics?.defs ?? []).every(
@@ -924,16 +954,20 @@ function SettingsScreen({
           )}
         </div>
 
-        <p className="mt-4 text-[13px] font-medium">Kartu anime (Gacha)</p>
+        <p className="mt-4 text-[13px] font-medium">Kartu anime (Gacha) — maks 4</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Kartu hasil pull di Gacha — pasang untuk dipamerkan di profil.
+          Kartu hasil pull di Gacha — pasang sampai 4 kartu untuk dipamerkan
+          di profil.
         </p>
-        {/* KARTU BERGAMBAR ASLI — grid potret karakter, bukan teks pil */}
-        <div className="mt-2.5 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
+        {/* KARTU BERGAMBAR ASLI — grid 4 kolom supaya 4 kartu muat satu baris */}
+        <div className="mt-2.5 grid grid-cols-4 gap-2 sm:grid-cols-6">
           {(myCosmetics?.ownedCards ?? []).map((cardId) => {
             const c = GACHA_ROSTER.find((r) => r.id === cardId);
             if (!c) return null;
-            const active = myCosmetics?.equippedCard === c.id;
+            const eq =
+              myCosmetics?.equippedCards ??
+              (myCosmetics?.equippedCard ? [myCosmetics.equippedCard] : []);
+            const active = eq.includes(c.id);
             return (
               <CharacterCard
                 key={c.id}
@@ -943,7 +977,7 @@ function SettingsScreen({
                 image={cardImages[c.id]}
                 active={active}
                 disabled={busyCosmetic !== null}
-                onClick={() => void pickCard(active ? "none" : c.id)}
+                onClick={() => void pickCard(c.id)}
               />
             );
           })}
@@ -955,7 +989,7 @@ function SettingsScreen({
             onClick={() => void pickCard("none")}
             className="mt-2 rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
           >
-            Lepas kartu
+            Lepas semua kartu
           </button>
         )}
         {(myCosmetics?.ownedCards ?? []).length === 0 && (

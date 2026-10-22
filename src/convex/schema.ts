@@ -46,10 +46,16 @@ const schema = defineSchema(
       avatarBorder: v.optional(v.string()),
       /** Daftar border yang sudah dimiliki (hasil beli di Shop). */
       ownedBorders: v.optional(v.array(v.string())),
-      /** TITLE yang sedang dipasang (key dari TITLE_DEFS di titles.ts). */
+      /** TITLE yang sedang dipasang (key dari TITLE_DEFS di titles.ts).
+          Field lama (single) — tetap dipakai sebagai "title utama". */
       equippedTitle: v.optional(v.string()),
-      /** Kartu karakter GACHA yang sedang dipasang (id karakter roster). */
+      /** Kartu karakter GACHA yang sedang dipasang (id karakter roster).
+          Field lama (single) — tetap dipakai sebagai "kartu utama". */
       equippedCard: v.optional(v.string()),
+      /** MULTI-EQUIP: maksimal 4 kartu yang tampil di detail akun. */
+      equippedCards: v.optional(v.array(v.string())),
+      /** MULTI-EQUIP: maksimal 3 title yang tampil di detail akun. */
+      equippedTitles: v.optional(v.array(v.string())),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
       
