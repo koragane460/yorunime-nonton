@@ -721,6 +721,9 @@ function FilmWatch({
 }) {
   const getDetail = useAction(api.films.detail);
   const resolve = useAction(api.films.resolveStream);
+  // Cadangan streaming CONSUMET (flixhq) — bebas iklan, disertakan bersama
+  // server utama supaya pilihannya langsung ada di pemilih server.
+  const consumetResolve = useAction(api.consumet.resolve);
   const postComment = useMutation(api.activities.postComment);
   const { user } = useAuth();
   const comments = useQuery(api.activities.listComments, {
@@ -732,6 +735,9 @@ function FilmWatch({
   const [sources, setSources] = useState<FilmSource[]>([]);
   const [srcIdx, setSrcIdx] = useState(0);
   const [resolving, setResolving] = useState(true);
+  // Subtitle Indonesia hasil Consumet — dipasang sebagai <track> native.
+  const [csSubUrl, setCsSubUrl] = useState<string>("");
+  const [csUrls, setCsUrls] = useState<Set<string>>(() => new Set());
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
 
@@ -749,13 +755,36 @@ function FilmWatch({
   useEffect(() => {
     let alive = true;
     setResolving(true);
-    resolve({ id, kind, season, episode })
-      .then((r: any) => {
+    const title = d?.title ?? "";
+    Promise.allSettled([
+      resolve({ id, kind, season, episode }),
+      title.trim().length > 1
+        ? consumetResolve({ kind: "film", title, episode })
+        : Promise.resolve(null),
+    ])
+      .then(([a, b]) => {
         if (!alive) return;
-        setSources((r?.sources ?? []) as FilmSource[]);
+        const base =
+          a.status === "fulfilled"
+            ? (((a.value as any)?.sources ?? []) as FilmSource[])
+            : [];
+        const c: any = b.status === "fulfilled" ? b.value : null;
+        const extra =
+          c?.ok && Array.isArray(c.sources)
+            ? ((c.sources as any[]).map((s) => ({
+                label: `Consumet ${s.label}`,
+                url: String(s.url),
+                type: String(s.type) as FilmSource["type"],
+              })) as FilmSource[])
+            : [];
+        const have = new Set(base.map((s) => String((s as any).url ?? "")));
+        const add = extra.filter((s) => !have.has(String((s as any).url ?? "")));
+        setSources(add.length ? [...base, ...add] : base);
+        setCsUrls(new Set(extra.map((s) => String((s as any).url ?? ""))));
+        const sub = (c?.subtitles ?? []).find((s: any) => s?.lang === "id");
+        setCsSubUrl(sub?.url ? String(sub.url) : "");
         setSrcIdx(0);
       })
-      .catch(() => {})
       .finally(() => {
         if (alive) setResolving(false);
       });
@@ -763,7 +792,7 @@ function FilmWatch({
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, kind, season, episode]);
+  }, [id, kind, season, episode, d?.title]);
 
   const src = sources[srcIdx];
   const commentCount = (comments?.length ?? 0).toLocaleString("id-ID");
@@ -814,7 +843,18 @@ function FilmWatch({
               controls
               playsInline
               className="size-full bg-black"
-            />
+            >
+              {/* Subtitle Indonesia (Consumet) — menu bawaan browser. */}
+              {csSubUrl && csUrls.has(String(src.url)) && (
+                <track
+                  kind="subtitles"
+                  src={csSubUrl}
+                  srcLang="id"
+                  label="Indonesia"
+                  default
+                />
+              )}
+            </video>
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-white/60">
               <FilmIcon className="size-8" />

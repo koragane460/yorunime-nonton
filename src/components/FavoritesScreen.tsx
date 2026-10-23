@@ -270,9 +270,8 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
               </>
             )}
 
-            {/* Garis pembatas antar kelompok — tetap ada walau salah satu
-                kelompok kosong, supaya strukturnya tidak loncat-loncat. */}
-            {items.length > 0 && (
+            {/* Garis pembatas antar kelompok — hanya saat keduanya ada. */}
+            {ongoingItems.length > 0 && doneItems.length > 0 && (
               <div className="my-4 flex items-center gap-3" aria-hidden>
                 <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/25 to-white/25" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">

@@ -355,6 +355,16 @@ function WatchContent() {
   // bukan MAL id, jadi resolveEpisode biasa tidak akan menemukan apa pun.
   const resolveDonghua = useAction(api.sanka.resolveEpisode);
   const sankaDetail = useAction(api.sanka.detail);
+  // Cadangan streaming CONSUMET (flixhq / gogoanime) — bebas iklan. Hasilnya
+  // ditambahkan ke daftar server, bukan menggantikan server utama, jadi kalau
+  // Consumet sedang mati layar nonton tetap berjalan seperti biasa.
+  const consumetResolve = useAction(api.consumet.resolve);
+  const csRef = useRef<{
+    key: string;
+    sources: { label: string; url: string; type: string }[];
+    subUrl?: string;
+  } | null>(null);
+  const [csTick, setCsTick] = useState(0);
   // Halaman ini dipakai untuk dua sumber: anime (AniList/Jikan) dan donghua
   // (SankaVollereii). Penandanya ada di URL, jadi tidak perlu tebakan dari
   // bentuk id — yang bisa sama-sama berupa slug.
@@ -1171,6 +1181,104 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
   // Detail anime sudah siap (dipakai sebagai sumber nomor episode & judul).
   const detailReady = !!detailData && !detailData.error;
 
+  // ------------------------------------------------- CONSUMET (cadangan) ----
+  // Judul untuk pencarian Consumet: dari detail yang sudah dimuat, atau dari
+  // query URL (?judul=) supaya tidak perlu menunggu detail selesai.
+  const judulParam = params.get("judul") ?? "";
+  const consumetTitle = detailReady
+    ? String(detailData?.title ?? "")
+    : judulParam;
+  const epNoForCs = (() => {
+    const m = epParam?.match(/__ep(\d+)$/);
+    return m ? Number(m[1]) : (currentEp?.number ?? 1);
+  })();
+  const csKey = `${animeId}__ep${epNoForCs}`;
+
+  /** Gabungkan sumber Consumet ke daftar server (tanpa duplikat URL, hanya
+      untuk episode yang sedang aktif). */
+  const mergeCs = (base: any) => {
+    const list = Array.isArray(base) ? base : [];
+    const csNow = csRef.current;
+    if (!csNow || csNow.key !== csKey) return list;
+    const have = new Set(list.map((s: any) => String(s?.url ?? "")));
+    const add = csNow.sources.filter((s) => !have.has(s.url));
+    return add.length ? [...list, ...add] : list;
+  };
+
+  // Ambil sumber streaming Consumet untuk episode ini (fire & forget).
+  useEffect(() => {
+    if (!epParam || consumetTitle.trim().length < 2) return;
+    let alive = true;
+    consumetResolve({ kind: "anime", title: consumetTitle, episode: epNoForCs })
+      .then((r: any) => {
+        if (!alive || !r?.ok) return;
+        const srcs = (r.sources ?? []) as any[];
+        if (srcs.length === 0) return;
+        const sub = (r.subtitles ?? []).find(
+          (s: any) => String(s?.lang ?? "") === "id",
+        )?.url;
+        csRef.current = {
+          key: `${animeId}__ep${epNoForCs}`,
+          sources: srcs.map((s: any) => ({
+            label: `Consumet ${s.label}`,
+            url: String(s.url),
+            type: String(s.type),
+          })),
+          subUrl: sub ? String(sub) : undefined,
+        };
+        setCsTick((t) => t + 1);
+      })
+      .catch(() => {
+        /* Consumet tidak terjangkau — server utama tetap dipakai */
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animeId, epParam, consumetTitle, epNoForCs]);
+
+  // Sumber Consumet sampai SEBELUM/AFTER server utama → selalu digabung,
+  // dan kalau server utama gagal total, Consumet yang diputar sebagai cadangan.
+  useEffect(() => {
+    if (csTick === 0 && !directErr) return;
+    const csNow = csRef.current;
+    if (!csNow || csNow.key !== csKey) return;
+    setSources((prev) => {
+      if (prev.length === 0) {
+        // Server utama belum siap → tunggu; gagal → Consumet dipakai.
+        return directErr ? csNow.sources : prev;
+      }
+      const have = new Set(prev.map((s) => String(s.url ?? "")));
+      const add = csNow.sources.filter((s) => !have.has(s.url));
+      return add.length ? [...prev, ...add] : prev;
+    });
+  }, [csTick, csKey, directErr]);
+
+  // Subtitle Indonesia dari Consumet (VTT) → cue untuk gambar sendiri.
+  const csSubActive =
+    csTick > 0 &&
+    !!csRef.current?.subUrl &&
+    (csRef.current?.sources ?? []).some((s) => s.url === streamUrl);
+  useEffect(() => {
+    if (!csSubActive || !csRef.current?.subUrl) return;
+    const url = csRef.current.subUrl;
+    let alive = true;
+    fetch(url)
+      .then((r) => (r.ok ? r.text() : ""))
+      .then((t) => {
+        if (!alive || !t) return;
+        setCues(parseVtt(t));
+        if (!subTouched) setActiveSub("Indonesia");
+      })
+      .catch(() => {
+        /* subtitle cadangan tidak wajib */
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [csSubActive, streamUrl, subTouched]);
+
   // Like (menyatu) + Favorite untuk judul ini.
   const likeStats = useQuery(
     api.activities.animeLikeStats,
@@ -1211,7 +1319,8 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         setDirectErr(null);
         setDirect(d);
         setSubTouched(false);
-        setSources(d.sources);
+        // Sumber Consumet (bila sudah ada) ikut digabungkan.
+        setSources(mergeCs(d.sources));
         setSourceType("embed");
         setSourceIdx(0);
         // Sama seperti anime: hitungan mundur dimulai setelah sumber siap.
@@ -1260,7 +1369,8 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       setDirectErr(null);
       setDirect(d);
       setSubTouched(false);
-      setSources(d.sources);
+      // Sumber Consumet (bila sudah ada) ikut digabungkan ke daftar server.
+      setSources(mergeCs(d.sources));
       // MP4 diutamakan sebagai sumber awal: langsung diputar tanpa baca
       // manifest, jadi frame pertama jauh lebih cepat dan tidak mungkin
       // macet di "Memuat episode...". Kalau file-nya rusak, failover tetap

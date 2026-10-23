@@ -337,6 +337,10 @@ const ART: Record<string, () => ReactElement> = {
   kenari: Canary,
   rubah: Fox,
   serigala: Wolf,
+  // Belum ada ilustrasi khusus untuk dua pet baru — pakai fallback terdekat
+  // (foto asli tetap yang tampil; ilustrasi hanya muncul kalau foto gagal).
+  "harimau-putih": Wolf,
+  "macan-tutul-salju": Fox,
   rusa: Deer,
   merak: Peacock,
   unikorn: Unicorn,
