@@ -62,6 +62,15 @@ const QUALITY_INFO: Record<string, string> = {
   "1080p": "Full HD+. Detail paling tajam, khusus Premium.",
 };
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+/** Warna teks tiap resolusi di popup Kualitas — makin tinggi makin "premium". */
+const QUALITY_COLOR: Record<string, string> = {
+  "144p": "text-zinc-400",
+  "240p": "text-zinc-300",
+  "360p": "text-sky-300",
+  "480p": "text-emerald-300",
+  "720p": "text-amber-300",
+  "1080p": "text-orange-300",
+};
 // Label track subtitle yang dibuat otomatis (diterjemahkan ke Indonesia).
 const AUTO_SUB = "Indonesia (otomatis)";
 
@@ -355,16 +364,8 @@ function WatchContent() {
   // bukan MAL id, jadi resolveEpisode biasa tidak akan menemukan apa pun.
   const resolveDonghua = useAction(api.sanka.resolveEpisode);
   const sankaDetail = useAction(api.sanka.detail);
-  // Cadangan streaming CONSUMET (flixhq / gogoanime) — bebas iklan. Hasilnya
-  // ditambahkan ke daftar server, bukan menggantikan server utama, jadi kalau
-  // Consumet sedang mati layar nonton tetap berjalan seperti biasa.
-  const consumetResolve = useAction(api.consumet.resolve);
-  const csRef = useRef<{
-    key: string;
-    sources: { label: string; url: string; type: string }[];
-    subUrl?: string;
-  } | null>(null);
-  const [csTick, setCsTick] = useState(0);
+  // Cadangan streaming CONSUMET sudah DIHAPUS — daftar server kini hanya
+  // berisi MegaPlay (lihat src/convex/megaplay.ts).
   // Halaman ini dipakai untuk dua sumber: anime (AniList/Jikan) dan donghua
   // (SankaVollereii). Penandanya ada di URL, jadi tidak perlu tebakan dari
   // bentuk id — yang bisa sama-sama berupa slug.
@@ -677,64 +678,25 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
    * beban decode dan HP tidak jadi panas.
    */
   const liftAmount = brightness > 0.5 ? (brightness - 0.5) * 2 : 0;
-  /** Toggle "HD" — hanya tampil di layar penuh lanskap. */
-  const [hdBoost, setHdBoost] = useState(false);
   /**
    * Filter video. Naikkan kecerahan (lift) memang boleh mengubah kontras dan
-   * saturasi — itu memang efek "lebih terang". Tombol HD dipisah penuh:
-   * HANYA ketajaman lewat filter SVG (feConvolveMatrix / unsharp mask),
-   * tanpa menyentuh warna, saturasi, atau kecerahan gambar.
+   * saturasi — itu memang efek "lebih terang".
+   *
+   * Ketajaman (unsharp mask lewat filter SVG) otomatis menyala saat resolusi
+   * yang dipakai 1080p. Tombol "HD" sudah dihapus permanen, jadi satu-satunya
+   * cara mengaktifkan ini adalah memilih 1080p di popup Kualitas.
    */
+  const hdOn = quality === PREMIUM_QUALITY;
   const videoFilter = [
     `contrast(${(1.06 + liftAmount * 0.18).toFixed(3)})`,
     `saturate(${(1.04 + liftAmount * 0.22).toFixed(3)})`,
     // Naikkan kecerahan sedikit tanpa menutupi gambar dengan cat putih.
     liftAmount > 0 ? `brightness(${(1 + liftAmount * 0.24).toFixed(3)})` : "",
-    // HD = ketajaman murni, bukan koreksi warna.
-    hdBoost ? "url(#yn-sharpen)" : "",
+    // Ketajaman murni, bukan koreksi warna.
+    hdOn ? "url(#yn-sharpen)" : "",
   ]
     .filter(Boolean)
     .join(" ");
-  /**
-   * Tombol HD.lywood DULU hanya menyalakan filter CSS (unsharp mask) — itu
-   * hanya night's sharpening, tidak menambah detail sama sekali, jadi video
-   * yang benar-benar buram tetap buram dan tombolnya terasa tidak berfungsi.
-   * Sekarang tombol ini benar-benar mengganti LEVEL HLS ke resolusi
-   * tertinggi yang tersedia di stream (dibatasi 1080p untuk Premium, 720p
-   * untuk akun biasa sesuai aturan yang sudah ada di app). Filter CSS tetap
-   * dipakai sebagai penyempurnaan, bukan satu-satunya effector.
-   */
-  /**
-   * Tombol HD.
-   *
-   * Dulu tombol ini hanya menyalakan filter CSS (unsharp mask). Itu cuma
-   * night's sharpening: detail yang hilang tetap hilang, jadi video 480p tetap
-   * buram dan tombolnya terasa tidak berfungsi sama sekali. Sekarang tombol ini
-   * benar-benar mengganti SUMBER VIDEO ke resolusi tertinggi yang tersedia di
-   * episode ini (level HLS tertinggi, atau server MP4 dengan file tertinggi),
-   * lalu mengunci pilihan itu. Filter CSS tetap dipakai sebagai penyempurnan,
-   * bukan satu-satunya effector.
-   */
-  const toggleHd = useCallback(() => {
-    setHdBoost((v) => {
-      const next = !v;
-      // Akun non-Premium tetap tertahan di 720p sesuai aturan app.
-      const cap = (user?.premiumUntil ?? 0) > Date.now() ? 1080 : 720;
-      if (next) {
-        // Resolusi tertinggi yang benar-benar ada di stream ini.
-        const avail = sourceType === "hls" ? levels : Object.values(srcHeights);
-        const top = avail.reduce((a, b) => (b > a ? b : a), 0);
-        const want = top > 0 ? Math.min(top, cap) : cap;
-        applyQuality(`${want}p`);
-        setQualityTouched(true);
-        setQuality(`${want}p`);
-      } else {
-        // Mati lagi: kembali ke resolusi sesuai pilihan kualitas di bawah.
-        applyQuality(quality);
-      }
-      return next;
-    });
-  }, [quality, user?.premiumUntil, sourceType, levels, srcHeights, applyQuality]);
 
   const [volumeLevel, setVolumeLevel] = useState(0.5);
   const gestureRef = useRef<{
@@ -1181,103 +1143,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
   // Detail anime sudah siap (dipakai sebagai sumber nomor episode & judul).
   const detailReady = !!detailData && !detailData.error;
 
-  // ------------------------------------------------- CONSUMET (cadangan) ----
-  // Judul untuk pencarian Consumet: dari detail yang sudah dimuat, atau dari
-  // query URL (?judul=) supaya tidak perlu menunggu detail selesai.
-  const judulParam = params.get("judul") ?? "";
-  const consumetTitle = detailReady
-    ? String(detailData?.title ?? "")
-    : judulParam;
-  const epNoForCs = (() => {
-    const m = epParam?.match(/__ep(\d+)$/);
-    return m ? Number(m[1]) : (currentEp?.number ?? 1);
-  })();
-  const csKey = `${animeId}__ep${epNoForCs}`;
-
-  /** Gabungkan sumber Consumet ke daftar server (tanpa duplikat URL, hanya
-      untuk episode yang sedang aktif). */
-  const mergeCs = (base: any) => {
-    const list = Array.isArray(base) ? base : [];
-    const csNow = csRef.current;
-    if (!csNow || csNow.key !== csKey) return list;
-    const have = new Set(list.map((s: any) => String(s?.url ?? "")));
-    const add = csNow.sources.filter((s) => !have.has(s.url));
-    return add.length ? [...list, ...add] : list;
-  };
-
-  // Ambil sumber streaming Consumet untuk episode ini (fire & forget).
-  useEffect(() => {
-    if (!epParam || consumetTitle.trim().length < 2) return;
-    let alive = true;
-    consumetResolve({ kind: "anime", title: consumetTitle, episode: epNoForCs })
-      .then((r: any) => {
-        if (!alive || !r?.ok) return;
-        const srcs = (r.sources ?? []) as any[];
-        if (srcs.length === 0) return;
-        const sub = (r.subtitles ?? []).find(
-          (s: any) => String(s?.lang ?? "") === "id",
-        )?.url;
-        csRef.current = {
-          key: `${animeId}__ep${epNoForCs}`,
-          sources: srcs.map((s: any) => ({
-            label: `Consumet ${s.label}`,
-            url: String(s.url),
-            type: String(s.type),
-          })),
-          subUrl: sub ? String(sub) : undefined,
-        };
-        setCsTick((t) => t + 1);
-      })
-      .catch(() => {
-        /* Consumet tidak terjangkau — server utama tetap dipakai */
-      });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animeId, epParam, consumetTitle, epNoForCs]);
-
-  // Sumber Consumet sampai SEBELUM/AFTER server utama → selalu digabung,
-  // dan kalau server utama gagal total, Consumet yang diputar sebagai cadangan.
-  useEffect(() => {
-    if (csTick === 0 && !directErr) return;
-    const csNow = csRef.current;
-    if (!csNow || csNow.key !== csKey) return;
-    setSources((prev) => {
-      if (prev.length === 0) {
-        // Server utama belum siap → tunggu; gagal → Consumet dipakai.
-        return directErr ? csNow.sources : prev;
-      }
-      const have = new Set(prev.map((s) => String(s.url ?? "")));
-      const add = csNow.sources.filter((s) => !have.has(s.url));
-      return add.length ? [...prev, ...add] : prev;
-    });
-  }, [csTick, csKey, directErr]);
-
-  // Subtitle Indonesia dari Consumet (VTT) → cue untuk gambar sendiri.
-  const csSubActive =
-    csTick > 0 &&
-    !!csRef.current?.subUrl &&
-    (csRef.current?.sources ?? []).some((s) => s.url === streamUrl);
-  useEffect(() => {
-    if (!csSubActive || !csRef.current?.subUrl) return;
-    const url = csRef.current.subUrl;
-    let alive = true;
-    fetch(url)
-      .then((r) => (r.ok ? r.text() : ""))
-      .then((t) => {
-        if (!alive || !t) return;
-        setCues(parseVtt(t));
-        if (!subTouched) setActiveSub("Indonesia");
-      })
-      .catch(() => {
-        /* subtitle cadangan tidak wajib */
-      });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [csSubActive, streamUrl, subTouched]);
+  /** Daftar sumber dari backend. Consumet sudah DIHAPUS — hanya MegaPlay
+      yang dipakai, sesuai permintaan. */
+  const mergeCs = (base: any) => (Array.isArray(base) ? base : []);
 
   // Like (menyatu) + Favorite untuk judul ini.
   const likeStats = useQuery(
@@ -1543,8 +1411,6 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
   // diakses: 1080p hanya kalau akun punya Premium.
   const isPremiumNow = (user?.premiumUntil ?? 0) > Date.now();
   useEffect(() => {
-    // HD aktif = pilihan user yang menang, jangan ditimpa aturan otomatis.
-    if (hdBoost) return;
     const wanted =
       isFs && isPremiumNow
         ? PREMIUM_QUALITY
@@ -1555,19 +1421,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             : quality;
     applyQuality(wanted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quality, isFs, isPremiumNow, hdBoost, applyQuality]);
-
-  // HD aktif: setiap kali level/stream dikenal (termasuk level HLS yang datang
-  // belakangan setelah tombol HD ditekan), paksakan ke resolusi tertinggi yang
-  // boleh — inilah bagian "ningkatin kualitas" dari tombol HD.
-  useEffect(() => {
-    if (!hdBoost) return;
-    const avail = sourceType === "hls" ? levels : Object.values(srcHeights);
-    const top = avail.reduce((a, b) => (b > a ? b : a), 0);
-    if (top <= 0) return; // level belum diketahui; toggleHd sudah menerapkan cap
-    const cap = isPremiumNow ? 1080 : 720;
-    applyQuality(`${Math.min(top, cap)}p`);
-  }, [hdBoost, levels, srcHeights, sourceType, isPremiumNow, applyQuality]);
+  }, [quality, isFs, isPremiumNow, applyQuality]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -2332,26 +2186,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         {/* Tombol keluar layar penuh — tetap ada walau kontrol disembunyikan */}
         {isFs && (
           <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
-            {/* Selama terkunci, HD & tombol keluar ikut disembunyikan:
-                gembok adalah satu-satunya UI yang kelihatan. */}
+            {/* Selama terkunci, tombol keluar ikut disembunyikan: gembok
+                adalah satu-satunya UI yang kelihatan. Tombol "HD" di kanan
+                atas DIHAPUS permanen — pemilih kualitas sekarang ada di bar
+                kontrol (tombol "Kualitas"). */}
             {!uiLocked && (
               <>
-                {/* Perjelas gambar: naikkan level HLS ke resolusi tertinggi yang
-                    tersedia (1080p khusus Premium) + pengasahan halus.
-                    Hanya tampil di layar penuh (landscape). */}
-                <button
-                  onClick={toggleHd}
-                  aria-pressed={hdBoost}
-                  aria-label="Perjelas gambar"
-                  className={cn(
-                    "rounded-full px-3 py-1.5 text-xs font-bold",
-                    hdBoost
-                      ? "bg-white text-black"
-                      : "bg-black/55 text-white backdrop-blur",
-                  )}
-                >
-                  HD
-                </button>
                 <button
                   onClick={exitFullscreen}
                   className="rounded-full bg-black/55 p-2"
@@ -2541,6 +2381,20 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 {fmt(scrub ?? currentTime)} / {fmt(duration)}
               </span>
               <div className="flex items-center gap-2">
+                {/* Tombol Kualitas (label "HD") — di KIRI tombol 1x, persis
+                    seperti permintaan. Membuka popup pemilih resolusi; tiap
+                    pilihan langsung mengganti kualitas video sungguhan (level
+                    HLS / pindah server MP4), tanpa opsi palsu 360-only. */}
+                <button
+                  onClick={() => {
+                    setQualityDraft(quality);
+                    setQualityOpen(true);
+                  }}
+                  className="rounded bg-white/15 px-2 py-1 text-[11px] font-bold"
+                  aria-label="Kualitas"
+                >
+                  HD
+                </button>
                 <button
                   onClick={() => setSpeedOpen((v) => !v)}
                   className="rounded bg-white/15 px-2 py-1"
@@ -2739,8 +2593,11 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       </div>
       </div>
 
-      {/* Server: bisa dipilih manual, dan player otomatis pindah kalau error. */}
-      {sources.length > 0 && (
+      {/* Server: tampil SEJAK AWAL (sebelum video siap) supaya user langsung
+          tahu memakai server apa — permintaan "server nya harus kek udah
+          muncul duluan". Selama resolve berjalan, chip MegaPlay tampil dalam
+          keadaan memuat; kalau gagal ia dicoret otomatis. */}
+      {epParam && (
         <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-2 pb-1">
           <span className="shrink-0 text-[11px] text-muted-foreground">Server:</span>
           {sources.map((s, i) => (
@@ -2772,6 +2629,22 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               )}
             </button>
           ))}
+          {/* Belum ada sumber sama sekali → tampilkan chip MegaPlay memuat. */}
+          {sources.length === 0 && (
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
+                directErr
+                  ? "border-border text-muted-foreground/50 line-through"
+                  : "border-foreground/40 bg-primary/15 text-primary",
+              )}
+            >
+              MegaPlay
+              {!directErr && (
+                <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+              )}
+            </span>
+          )}
         </div>
       )}
 
@@ -3007,7 +2880,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             />
             <ToolButton
               icon={<Settings2 className="size-4" />}
-              label={hdBoost ? "HD" : quality}
+              label="Kualitas"
               onClick={() => {
                 setQualityDraft(quality);
                 setQualityOpen(true);
@@ -3172,37 +3045,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       {qualityOpen && (
         <Popup onClose={cancelQuality} title="Kualitas">
           <div className="space-y-1.5">
-            {/* HD digabung ke menu Kualitas (dulu cuma tombol terpisah di
-                layar penuh): sekali tekan = resolusi tertinggi episode ini +
-                filter perjelas (hilangkan burem & blur). */}
-            <button
-              onClick={toggleHd}
-              aria-pressed={hdBoost}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
-                hdBoost
-                  ? "border-foreground/40 bg-primary/15"
-                  : "border-border hover:border-foreground/40",
-              )}
-            >
-              <span
-                className={cn(
-                  "w-14 text-sm font-bold",
-                  hdBoost ? "text-primary" : "",
-                )}
-              >
-                HD
-              </span>
-              <span className="text-[11px] leading-snug text-muted-foreground">
-                Resolusi tertinggi episode ini + perjelas gambar (hilangkan burem
-                & blur)
-              </span>
-              {hdBoost && (
-                <span className="ml-auto text-[10px] font-bold text-primary">
-                  dipakai
-                </span>
-              )}
-            </button>
+            {/* Opsi "HD" DIHAPUS permanen. Yang tersisa hanya daftar resolusi:
+                tiap pilihan langsung mengganti kualitas video sungguhan, dan
+                warna teksnya mengikuti resolusinya. */}
             {QUALITIES.map((q) => {
               const height = parseInt(q, 10);
               const locked = q === PREMIUM_QUALITY && !isPremium;
@@ -3235,6 +3080,14 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                         return;
                       }
                       setQualityDraft(q);
+                      // Langsung diterapkan ke player begitu dipencet —
+                      // tidak perlu tekan Simpan dulu. Resolusi yang dipilih
+                      // benar-benar mengganti sumber video (level HLS, atau
+                      // pindah ke server MP4 dengan tinggi file paling cocok),
+                      // jadi tidak ada pilihan "360-only" yang palsu.
+                      setQuality(q);
+                      setQualityTouched(true);
+                      applyQuality(q);
                     }}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
@@ -3252,9 +3105,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                         "w-14 text-sm font-bold",
                         locked || missing
                           ? "text-amber-300"
-                          : active
-                            ? "text-primary"
-                            : "",
+                          : cn(QUALITY_COLOR[q], active && "underline"),
                       )}
                     >
                       {q}
@@ -3308,18 +3159,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               onClick={cancelQuality}
               className="flex-1 rounded-full border border-border py-2 text-xs font-semibold text-muted-foreground"
             >
-              Batal
-            </button>
-            <button
-              onClick={saveQuality}
-              disabled={
-                !qualityDraft ||
-                qualityDraft === quality ||
-                (qualityDraft === PREMIUM_QUALITY && !isPremium)
-              }
-              className="flex-1 rounded-full bg-primary py-2 text-xs font-bold text-white disabled:opacity-40"
-            >
-              Simpan
+              Tutup
             </button>
           </div>
         </Popup>

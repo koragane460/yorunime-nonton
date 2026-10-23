@@ -87,48 +87,23 @@ const HLS_LABEL = "MegaPlay · SUB";
 const resultCache = new Map<string, { value: any; at: number }>();
 const RESULT_TTL = 30 * 60_000;
 
-/** Bentuk hasil yang sama dengan resolveEpisode, dirakit dari sumber Indo saja. */
-async function resolveByTitle(
-  ep: number,
-  title: string | undefined,
-  fast: boolean,
-): Promise<Record<string, any> | { ok: false; reason: string }> {
-  if (!title) return { ok: false as const, reason: "Episode belum tersedia" };
-  const indo = await resolveIndo(title, ep, { max: fast ? 2 : 5 }).catch(
-    () => [],
-  );
-  // `baked` = server ini sudah punya subtitle Bahasa Indonesia sendiri (di dalam
-  // video atau di dalam player embed-nya), jadi player tidak perlu menggambar
-  // subtitle sendiri untuk server ini.
-  // Server direct (HLS/MP4) selalu diutamakan karena subtitle Indonesia-nya
-  // menempel di video dan player kita sendiri yang mengendalikan subtitle.
-  // Embed hanya dipakai kalau tidak ada satu pun server direct.
-  const directIndo = indo.filter((s) => s.type === "hls" || s.type === "mp4");
-  const sources = (directIndo.length > 0 ? directIndo : indo).map((s) => ({
-    label: s.label,
-    url: s.url,
-    type: s.type,
-    // Semua server di sini berasal dari penyedia subtitle Indonesia, jadi
-    // subtitle-nya sudah ada di dalam video atau di dalam player embed-nya.
-    baked: true,
-  }));
-  if (sources.length === 0) {
-    return { ok: false as const, reason: "Episode belum tersedia" };
+/** Bentuk hasil yang sama dengan resolveEpisode, dirakit dari sumber Indo saja. */  // Anime tanpa MAL id (mis. Otakudesu) tidak punya MAL id sama sekali, jadi
+  // HLS MegaPlay tidak bisa dibangun untuk episode itu. Karena semua server
+  // lain sudah dihapus, episode seperti ini dilaporkan belum tersedia — bukan
+  // diam-diam dijatuhkan ke server lain yang sudah tidak ada.
+  async function resolveByTitle(
+    ep: number,
+    title: string | undefined,
+    fast: boolean,
+  ): Promise<Record<string, any> | { ok: false; reason: string }> {
+    void ep;
+    void title;
+    void fast;
+    return {
+      ok: false as const,
+      reason: "Episode ini belum tersedia di server MegaPlay",
+    };
   }
-  return {
-    ok: true as const,
-    sources,
-    subtitle: null,
-    subtitles: [],
-    subTracks: [],
-    hasIndonesian: true,
-    bakedSubs: true,
-    intro: null,
-    outro: null,
-    megaM3u8: null,
-    megaRef: REF,
-  };
-}
 
 export const resolveEpisode = action({
   args: {
@@ -163,32 +138,26 @@ export const resolveEpisode = action({
         ? resolveIndo(title, ep, { max: fast ? 2 : 5 }).catch(() => [])
         : Promise.resolve([]);
       const [sub, indo] = await Promise.all([subPromise, indoPromise]);
-      // HLS/MP4 Sub Indo selalu didahulukan: subtitle Indonesia sudah menempel di
-      // video, jadi player kita sendiri bisa memainkannya.
+      // Daftar server DIBATASI hanya MegaPlay (permintaan: server lain seperti
+      // sumber Indonesia / embed dihapus semua). `indo` tetap diambil untuk
+      // menentukan apakah subtitle Indonesia sudah menempel pada video
+      // (bakedSubs), tapi URL-nya tidak pernah dikirim ke player lagi.
+      void indo;
       const indoDirect = indo.filter((s) => s.type === "hls" || s.type === "mp4");
-      const indoEmbed =
-        indoDirect.length === 0
-          ? indo.filter((s) => s.type === "embed")
-          : [];
+      const indoHasBaked = indoDirect.length > 0;
 
-      // Urutan sumber (semua server dikembalikan, bukan hanya satu):
-      //   1) HLS/MP4 Sub Indo — subtitle Indonesia sudah menempel di video.
-      //   2) Embed Sub Indo  — kalau sumber Indonesia hanya punya player embed.
-      //   3) HLS MegaPlay SUB — cadangan terakhir supaya episode tidak ditolak.
-      // Player memakai daftar ini untuk otomatis pindah server saat error.
-      // `baked` dihitung per server, bukan per episode: semua server Indonesia
-      // sudah membawa subtitle-nya sendiri (di dalam video, atau di dalam
-      // player embed-nya), sedangkan MegaPlay tidak — di situ subtitle
-      // Indonesia hasil terjemahan kita yang dipakai.
+      // Urutan sumber: HANYA HLS MegaPlay SUB — server lain (sumber Indonesia
+      // langsung & embed) sudah dihapus sesuai permintaan. Artinya tiap episode
+      // selalu memakai satu server yang sama, dan kualitas ditentukan oleh
+      // level HLS di dalamnya (bukan oleh pindah server).
+      // `baked` false: subtitle Indonesia tidak menempel di video MegaPlay,
+      // jadi overlay subtitle buatan kita yang dipakai.
       const sources: {
         label: string;
         url: string;
         type: "hls" | "mp4" | "embed";
         baked: boolean;
-      }[] = [
-        ...indoDirect.map((s) => ({ label: s.label, url: s.url, type: s.type, baked: true })),
-        ...indoEmbed.map((s) => ({ label: s.label, url: s.url, type: s.type, baked: true })),
-      ];
+      }[] = [];
       if (sub) {
         sources.push({ label: HLS_LABEL, url: sub.m3u8, type: "hls", baked: false });
       }
@@ -200,7 +169,6 @@ export const resolveEpisode = action({
       // Track subtitle MegaPlay selalu dikirim. Player cuma memakainya saat server
       // yang diputar tidak punya subtitle sendiri, jadi tidak mungkin doabel —
       // dan tetap jadi cadangan kalau terjemahan kita gagal dibuat.
-      const usingIndoHls = sources[0]?.type === "hls" || sources[0]?.type === "mp4";
       const allTracks: Track[] = sub?.tracks ?? [];
       // Prioritas subtitle: Indonesia > English > track pertama.
       const isEn = (t: Track) =>
@@ -218,11 +186,11 @@ export const resolveEpisode = action({
         subtitles: allTracks,
         // Track subtitle versi SUB (untuk pemilih subtitle di player)
         subTracks: allTracks,
-        hasIndonesian: usingIndoHls || allTracks.some((t) => t.lang === "id"),
-        // true kalau subtitle Indonesia sudah menempel di video (sumber xtwap)
-        bakedSubs: usingIndoHls,
-        intro: usingIndoHls ? null : (sub?.intro ?? null),
-        outro: usingIndoHls ? null : (sub?.outro ?? null),
+        hasIndonesian: indoHasBaked || allTracks.some((t) => t.lang === "id"),
+        // false: subtitle Indonesia tidak menempel di video MegaPlay.
+        bakedSubs: false,
+        intro: sub?.intro ?? null,
+        outro: sub?.outro ?? null,
         // Versi HLS MegaPlay — dipakai mini player.
         megaM3u8: sub?.m3u8 ?? null,
         megaRef: REF,
