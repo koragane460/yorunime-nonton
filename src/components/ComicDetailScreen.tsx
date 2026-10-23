@@ -9,7 +9,7 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BookOpen, ChevronLeft, Eye, Heart, List, Lock, X } from "lucide-react";
+import { BookOpen, ChevronLeft, Eye, Heart, Lock } from "lucide-react";
 
 type Chapter = {
   number: number;
@@ -71,7 +71,6 @@ export function ComicDetailScreen({
   const [openSynopsis, setOpenSynopsis] = useState(false);
   const [asc, setAsc] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [showChapters, setShowChapters] = useState(false);
   // Layer "Premium Only" muncul kalau user tanpa Premium mencoba membaca.
   const [showGate, setShowGate] = useState(false);
   const isPremium = (user?.premiumUntil ?? 0) > Date.now();
@@ -440,23 +439,9 @@ export function ComicDetailScreen({
         </div>
       </div>
 
-      {/* Sheet daftar chapter */}
-      {showChapters && d && (
-        <ChapterSheet
-          chapters={chapters}
-          onClose={() => setShowChapters(false)}
-          onPick={(ch) => {
-            setShowChapters(false);
-            read(ch);
-          }}
-        />
-      )}
-      <button
-        onClick={() => setShowChapters(true)}
-        className="fixed bottom-4 right-4 z-[55] flex items-center gap-1.5 rounded-full border border-white/20 bg-black/70 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur"
-      >
-        <List className="size-3.5" /> Daftar Chapter
-      </button>
+      {/* Tombol mengambang "Daftar Chapter" DIHAPUS — daftar chapter sudah
+          tampil inline di halaman ini, jadi tombol itu hanya menutupi
+          konten (permintaan user: "daftar nya kenapa keliatan"). */}
 
       {/* Gate modal: muncul saat user tanpa Premium menekan tombol baca /
           chapter. Isinya pita miring Premium Only + tombol menuju halaman
@@ -482,38 +467,4 @@ export function ComicDetailScreen({
   );
 }
 
-function ChapterSheet({
-  chapters,
-  onClose,
-  onPick,
-}: {
-  chapters: Chapter[];
-  onClose: () => void;
-  onPick: (ch: Chapter) => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black/70 backdrop-blur-sm">
-      <div className="mt-auto max-h-[80%] w-full overflow-hidden rounded-t-2xl border-t border-white/15 bg-background">
-        <div className="flex items-center justify-between border-b border-border p-3">
-          <h3 className="text-sm font-bold">Daftar Chapter ({chapters.length})</h3>
-          <button onClick={onClose} className="rounded-full border border-border p-1.5">
-            <X className="size-4" />
-          </button>
-        </div>
-        <div className="thin-scroll max-h-[65vh] overflow-y-auto p-3">
-          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
-            {chapters.map((ch) => (
-              <button
-                key={ch.url}
-                onClick={() => onPick(ch)}
-                className="rounded-lg border border-border bg-secondary/40 py-2 text-xs font-bold transition hover:border-foreground/40"
-              >
-                {ch.number}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+

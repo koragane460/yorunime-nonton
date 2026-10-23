@@ -1050,7 +1050,7 @@ function HomeContent() {
         <HeroSkeleton />
       ) : heroItems.length > 0 ? (
         <>
-        <div className="fade-enter mt-3 flex w-full items-stretch gap-2">
+        <div className="fade-enter mt-3 flex w-full items-stretch gap-1">
           {/* ---- Banner utama: SEMUA judul ditumpuk + fade, tapi selalu
               hanya SATU slide yang terlihat (rotasi tiap 6 detik).
               PENTING (performa): state rotasi + interval-nya DIPEISOLASI di
@@ -1065,11 +1065,13 @@ function HomeContent() {
           />
 
           {/* ---- LEADERBOARD DI KANAN banner — kolom vertikal Top 5,
-              menekan kartu membuka layar Leaderboard lengkap. ---- */}
+              DILEBARKAN & dirapatkan ke banner (celah diminimalkan,
+              permintaan user) — menekan kartu membuka layar Leaderboard
+              lengkap. ---- */}
           <button
             onClick={() => setShowLeaderboard(true)}
             aria-label="Lihat leaderboard lengkap"
-            className="group flex w-[124px] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 text-left backdrop-blur-md transition hover:bg-black/60"
+            className="group flex w-[152px] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 text-left backdrop-blur-md transition hover:bg-black/60"
           >
             <span className="flex items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
               <Trophy className="size-3 shrink-0 text-gold" aria-hidden />

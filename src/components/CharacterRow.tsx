@@ -22,9 +22,24 @@ function ageOf(meta?: string): string {
   return seg ? seg.replace(/\btahun\b/i, "").trim() : "";
 }
 
-/** Personalitas: `bio` dari AniList, dipotong supaya kotak tidak terlalu tinggi. */
+/** Personalitas: `bio` dari AniList, dipotong supaya kotak tidak terlalu tinggi.
+ *  Sumber sering membawa formatting markdown (`__Height:__ 172 cm`, `**tebal**`)
+ *  — simbol-simbol itu DIBERSIHKAN di sini supaya penjelasan terbaca wajar
+ *  (permintaan user: "gausah ada kek simbol simbol"). */
+function cleanMd(t: string): string {
+  return t
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/(__|\*\*|~~)(.+?)\1/g, "$2")
+    .replace(/(^|[^*])\*([^*]+)\*/g, "$1$2")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function personalityOf(bio?: string): string {
-  const t = (bio ?? "").trim();
+  const t = cleanMd(bio ?? "");
   if (!t) return "";
   return t.length > 220 ? `${t.slice(0, 217).trimEnd()}…` : t;
 }
@@ -108,7 +123,7 @@ export function CharacterRow({
               type="button"
               onClick={() => setOpenId(active ? null : c.id)}
               aria-pressed={active}
-              className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-card/50 p-2 text-left transition active:scale-[0.99]"
+              className="flex h-full items-start gap-2.5 rounded-xl border border-border/60 bg-card/50 p-2 text-left transition active:scale-[0.99]"
             >
               <div
                 className={
@@ -123,10 +138,10 @@ export function CharacterRow({
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <p
                   className={
-                    "line-clamp-2 text-[11px] font-bold leading-tight " +
+                    "line-clamp-2 min-h-7 text-[11px] font-bold leading-tight " +
                     (active ? "text-primary" : "")
                   }
                 >

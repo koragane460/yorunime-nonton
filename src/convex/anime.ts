@@ -1249,7 +1249,8 @@ export const animeCharacters = action({
     const t = String(title ?? "").trim();
     if (!id && !t) return [];
     // v2: cache lama (v1) menyimpan hasil 1 karakter — dipaksa refetch.
-    const key = `chars:v2:${id || t.toLowerCase()}`;
+    // v3: cache v2 masih menyimpan penjelasan berformat markdown (__Height:__).
+    const key = `chars:v3:${id || t.toLowerCase()}`;
     type Char = {
       id: string;
       name: string;
@@ -1329,6 +1330,29 @@ export const animeCharacters = action({
             .then((d: any) => d?.Media?.characters?.edges)
             .catch(() => null)) ?? [];
       }
+      // Donghua / judul bercampur: kalau judul mentah tidak ditemukan, coba
+      // judul yang DISIHKAN — tanda kurung ((Dub), Season 2) dan karakter
+      // non-Latin dibuang dulu, karena AniList sering tidak cocok dengan judul
+      // sumber donghua apa adanya.
+      if (edges.length === 0 && t) {
+        const t2 = t
+          .replace(/\([^)]*\)/g, " ")
+          .replace(/\[[^\]]*\]/g, " ")
+          .replace(/[^\x20-\x7E]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (t2 && t2.toLowerCase() !== t.toLowerCase()) {
+          for (const ty of ["ANIME", "MANGA"] as const) {
+            edges =
+              (await aniGraphql(queryByTitle.replace("type:ANIME", `type:${ty}`), {
+                s: t2,
+              })
+                .then((d: any) => d?.Media?.characters?.edges)
+                .catch(() => null)) ?? [];
+            if (edges.length > 0) break;
+          }
+        }
+      }
       try {
         const out: Char[] = [];
         for (const e of edges) {
@@ -1349,6 +1373,13 @@ export const animeCharacters = action({
             .join(" · ");
           const bio = String(n?.description ?? "")
             .replace(/<[^>]+>/g, " ")
+            // Penjelasan karakter dari AniList kadang membawa formatting
+            // markdown (`__Height:__ 172 cm`, `**tebal**`) — simbolnya
+            // dibersihkan supaya penjelasan terbaca wajar di UI.
+            .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+            .replace(/(__|\*\*|~~)(.+?)\1/g, "$2")
+            .replace(/(^|[^*])\*([^*]+)\*/g, "$1$2")
+            .replace(/^#{1,6}\s*/gm, "")
             .replace(/\s+/g, " ")
             .trim()
             .slice(0, 320);

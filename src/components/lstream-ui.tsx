@@ -583,7 +583,7 @@ export function ClanTag({
       >
         <span
           className={cn(
-            "clan-tag-ribbon inline-flex items-center gap-1 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
+            "clan-tag-ribbon inline-flex items-center gap-1 px-2 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
             !bg && "bg-gradient-to-r from-zinc-600 to-zinc-800",
           )}
           style={bodyStyle}
@@ -612,7 +612,7 @@ export function ClanTag({
       >
         <span
           className={cn(
-            "inline-flex items-center gap-1 px-2.5 py-1",
+            "inline-flex items-center gap-1 px-2 py-1",
             shapeCls,
             !bg && CLAN_TAG_BODY_CLS[shape],
           )}

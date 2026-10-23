@@ -6,16 +6,6 @@ import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Clock,
-  PanelsTopLeft,
-  Sparkles,
-  Tv,
-} from "lucide-react";
 
 const DAYS_ID = [
   "Minggu",
@@ -94,10 +84,8 @@ type ComicSlot = {
   time: string;
 };
 
-// Tipe gabungan untuk semua tab: tiap cabang (anime/donghua/comic) punya
-// field berbeda, jadi dinormalisasi ke satu tipe longgar supaya render kartu,
-// deteksi duplikat, dan timer hitung mundur bisa mengakses field apa pun
-// tanpa error union.
+// Satu tipe gabungan untuk SEMUA sumber jadwal (anime, manga, manhwa,
+// donghua) supaya daftar bisa dicampur jadi satu tanpa pilihan tipe.
 type ScheduleItem = {
   id?: string;
   slug?: string;
@@ -109,9 +97,8 @@ type ScheduleItem = {
   estimated?: boolean;
   time?: string;
   day?: string;
+  source: "anime" | "donghua" | "manga" | "manhwa";
 };
-
-type Tab = "anime" | "manga" | "manhwa" | "donghua";
 
 /**
  * Timestamp tayang sebuah item (ms epoch), atau 0 kalau benar-benar tidak
@@ -124,8 +111,7 @@ type Tab = "anime" | "manga" | "manhwa" | "donghua";
  *  2) Jam yang TAMPIL di kartu menang: kalau kartu menulis "08:00" tapi
  *     timestamp datanya sudah lewat (data AniList basi atau salah zona),
  *     status dihitung ulang dari jam itu untuk hari ini (zona WIB — jam
- *     kartu memang ditulis dalam WIB). Dengan ini episode yang rilis jam
- *     8 pagi tidak akan pernah ditandai "Sudah tayang" sebelum jam 8 pagi.
+ *     kartu memang ditulis dalam WIB).
  */
 function itemAiringMs(item: ScheduleItem, nowMs: number): number {
   let at = item.airingAt || item.predictedMs || 0;
@@ -139,6 +125,7 @@ function itemAiringMs(item: ScheduleItem, nowMs: number): number {
   }
   return at;
 }
+
 export default function Jadwal() {
   return (
     <AppLayout hideAccountPanel>
@@ -154,18 +141,14 @@ function JadwalContent() {
   const todayAiring = useAction(api.anime.animeTodayAiring);
   const comicSchedule = useAction(api.manga.schedule);
   const donghuaSchedule = useAction(api.sanka.donghuaWeeklySchedule);
-  // Anime yang ditambahkan developer lewat tools konten. Episodenya real-time,
-  // tapi jadwal episodenya mengikuti hari yang diisi developer saat menambah.
+  // Anime yang ditambahkan developer lewat tools konten.
   const customAnime = useQuery(api.content.listCustomAnime, {});
-  const [tab, setTab] = useState<Tab>("anime");
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [sched, setSched] = useState<Record<string, AiringItem[]>>({});
-  const [comics, setComics] = useState<Record<string, Record<string, ComicSlot[]>>>({});
+  const [comics, setComics] = useState<Record<string, ComicSlot[]>>({});
   const [donghuaByDay, setDonghuaByDay] = useState<Record<string, DonghuaRow[]>>({});
-  const [donghuaAcak, setDonghuaAcak] = useState<DonghuaRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [comicLoading, setComicLoading] = useState(false);
-  const [duplicates, setDuplicates] = useState<Record<string, Record<string, number>>>({});
+  const [comicLoading, setComicLoading] = useState(true);
+  const [donghuaLoading, setDonghuaLoading] = useState(true);
   const todayIdx = new Date().getDay();
   const [day, setDay] = useState(todayIdx);
   // "Lihat semua" menampilkan seluruh rilis hari itu; tanpa ini daftar
@@ -173,14 +156,10 @@ function JadwalContent() {
   const [showAll, setShowAll] = useState(false);
   useEffect(() => {
     setShowAll(false);
-  }, [tab, day]);
+  }, [day]);
 
   useEffect(() => {
-    // Jadwal mingguan AniList (lengkap per hari) digabung dengan daftar
-    // "Update News" hari ini. Keduanya dari sumber yang sama, tapi
-    // `animeTodayAiring` memakai airingSchedules sehingga sudut-sudut yang
-    // tidak masuk 3 halaman paling populer tetap ikut terlihat — tanpa ini
-    // ada judul yang tayang hari ini tapi tidak muncul di Jadwal.
+    // Jadwal mingguan AniList digabung dengan "Update News" hari ini.
     Promise.allSettled([schedule({}), todayAiring({ limit: 60 })]).then(
       ([weekRes, todayRes]) => {
         const base = (weekRes.status === "fulfilled" ? weekRes.value : {}) ?? {};
@@ -219,33 +198,34 @@ function JadwalContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Manga & manhwa dimuat saat tabnya dibuka (hemat request).
+  // Manga & manhwa dimuat sekali di awal — semuanya langsung dicampur ke
+  // satu daftar (permintaan user: pilihan tipe dihapus, jadi satu saja).
   useEffect(() => {
-    if (tab === "anime" || comics[tab]) return;
     let alive = true;
     setComicLoading(true);
-    comicSchedule({ kind: tab as "manga" | "manhwa" })
-      .then((r: any) => {
+    Promise.all([
+      comicSchedule({ kind: "manga" }),
+      comicSchedule({ kind: "manhwa" }),
+    ])
+      .then(([mangaR, manhwaR]: any[]) => {
         if (!alive) return;
-        const list = (r ?? []) as Omit<ComicSlot, "day" | "time">[];
-        const byDay: Record<string, ComicSlot[]> = {};
-        for (const c of list) {
-          // Tanggal sumber sudah WIB -> Geser ke UTC supaya hari lokal benar.
-          const d = new Date(c.predictedMs + 7 * 3600_000);
-          const key = DAYS_ID[d.getUTCDay()];
-          const hh = String(d.getUTCHours()).padStart(2, "0");
-          const mm = String(d.getUTCMinutes()).padStart(2, "0");
-          const slot: ComicSlot = {
-            ...c,
-            day: key,
-            time: `${hh}:${mm}`,
-          };
-          (byDay[key] ??= []).push(slot);
+        const out: Record<string, ComicSlot[]> = {};
+        const ingest = (list: any[]) => {
+          for (const c of (list ?? []) as Omit<ComicSlot, "day" | "time">[]) {
+            // Tanggal sumber sudah WIB -> geser ke UTC supaya hari lokal benar.
+            const d = new Date(c.predictedMs + 7 * 3600_000);
+            const key = DAYS_ID[d.getUTCDay()];
+            const hh = String(d.getUTCHours()).padStart(2, "0");
+            const mm = String(d.getUTCMinutes()).padStart(2, "0");
+            (out[key] ??= []).push({ ...c, day: key, time: `${hh}:${mm}` });
+          }
+        };
+        ingest(mangaR);
+        ingest(manhwaR);
+        for (const k of Object.keys(out)) {
+          out[k].sort((a, b) => a.predictedMs - b.predictedMs);
         }
-        for (const k of Object.keys(byDay)) {
-          byDay[k].sort((a, b) => a.predictedMs - b.predictedMs);
-        }
-        setComics((prev) => ({ ...prev, [tab]: byDay }));
+        setComics(out);
       })
       .catch(() => {})
       .finally(() => alive && setComicLoading(false));
@@ -253,28 +233,24 @@ function JadwalContent() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, []);
 
-  // Donghua dimuat saat tabnya dibuka. Sekarang memakai jadwal resmi per hari
-  // (`/anime/donghua/schedule`), bukan daftar "sedang jalan" tanpa hari.
-  // `day` ikut dikirim supaya poster hari itu saja yang melengkapi.
+  // Donghua dimuat mengikuti hari yang dipilih (poster hari itu saja).
   useEffect(() => {
-    if (tab !== "donghua") return;
     let alive = true;
-    setComicLoading(true);
+    setDonghuaLoading(true);
     donghuaSchedule({ day: DAYS_ID[day] })
       .then((r: any) => {
         if (!alive) return;
         setDonghuaByDay(r?.byDay ?? {});
-        setDonghuaAcak(r?.acak ?? []);
       })
       .catch(() => {})
-      .finally(() => alive && setComicLoading(false));
+      .finally(() => alive && setDonghuaLoading(false));
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, day]);
+  }, [day]);
 
   // Hitung mundur tiap 30 detik.
   const [, force] = useState(0);
@@ -283,80 +259,91 @@ function JadwalContent() {
     return () => clearInterval(t);
   }, []);
 
-  const animeTotal = useMemo(
-    () =>
-      Object.values(sched).reduce((s, v) => s + v.length, 0) +
-      (customAnime ?? []).filter((c: any) => !!c.airingDay).length,
-    [sched, customAnime],
-  );
-  const donghuaTotal = useMemo(
-    () =>
-      Object.values(donghuaByDay).reduce((s, v) => s + v.length, 0) +
-      donghuaAcak.length,
-    [donghuaByDay, donghuaAcak],
-  );
-  const comicCounts: Record<string, number> = {};
-  for (const t of ["manga", "manhwa"] as const) {
-    comicCounts[t] = Object.values(comics[t] ?? {}).reduce((s, v) => s + (v?.length ?? 0), 0);
-  }
+  // Daftar gabungan untuk hari terpilih: anime + manga + manhwa + donghua,
+  // diurutkan dari jam rilis paling awal.
+  const list: ScheduleItem[] = useMemo(() => {
+    const dayKey = DAYS_ID[day];
+    const animeItems: ScheduleItem[] = [
+      ...(sched[dayKey] ?? []).map((a) => ({ ...a, source: "anime" as const })),
+      ...(customAnime ?? [])
+        .filter((c: any) => c.airingDay === dayKey)
+        .map((c: any) => ({
+          id: c.slug,
+          title: c.title,
+          image: c.poster ?? "",
+          episode: 0,
+          airingAt: 0,
+          day: dayKey,
+          time: c.airingTime ?? "",
+          source: "anime" as const,
+        })),
+    ];
+    const comicItems: ScheduleItem[] = (comics[dayKey] ?? []).map((c) => ({
+      slug: c.slug,
+      id: c.slug,
+      title: c.title,
+      image: c.image,
+      episode: c.nextChapter,
+      predictedMs: c.predictedMs,
+      time: c.time,
+      day: c.day,
+      source: c.kind,
+    }));
+    const donghuaItems: ScheduleItem[] = (donghuaByDay[dayKey] ?? []).map(
+      (d) => ({
+        id: d.id,
+        title: d.title,
+        image: d.image,
+        episode: d.episode,
+        estimated: d.estimated,
+        source: "donghua" as const,
+      }),
+    );
+    const all = [...animeItems, ...comicItems, ...donghuaItems];
+    const nowMs = Date.now();
+    return all.sort(
+      (a, b) =>
+        (itemAiringMs(a, nowMs) || Number.MAX_SAFE_INTEGER) -
+        (itemAiringMs(b, nowMs) || Number.MAX_SAFE_INTEGER),
+    );
+  }, [day, sched, comics, donghuaByDay, customAnime]);
 
-  const tabs: { key: Tab; label: string; icon: typeof Tv; count: number }[] = [
-    { key: "anime", label: "Anime", icon: Tv, count: animeTotal },
-    { key: "manga", label: "Manga", icon: BookOpen, count: comicCounts.manga },
-    { key: "manhwa", label: "Manhwa", icon: PanelsTopLeft, count: comicCounts.manhwa },
-    // Donghua di sebelah kanan Manhwa, jadi total 4 pilihan jadwal.
-    { key: "donghua", label: "Donghua", icon: Sparkles, count: donghuaTotal },
-  ];
-  const active = tabs.find((t) => t.key === tab) ?? tabs[0];
-  const ActiveIcon = active.icon;
-  const list: ScheduleItem[] =
-    tab === "anime"
-      ? [
-          ...(sched[DAYS_ID[day]] ?? []),
-          // Anime tambahan ikut muncul di hari yang diisi developer.
-          ...(customAnime ?? [])
-            .filter((c: any) => c.airingDay === DAYS_ID[day])
-            .map((c: any) => ({
-              id: c.slug,
-              title: c.title,
-              image: c.poster ?? "",
-              episode: 0,
-              airingAt: 0,
-              day: DAYS_ID[day],
-              time: c.airingTime ?? "",
-            })),
-        ]
-      : tab === "donghua"
-        ? (donghuaByDay[DAYS_ID[day]] ?? [])
-        : (comics[tab]?.[DAYS_ID[day]] ?? []);
-  const totalShown = tab === "anime" ? animeTotal : comicCounts[tab];
+  const loadingAll = loading || comicLoading || donghuaLoading;
 
   // deteksi duplikat hari ini (sama id+episode)
   const dupCounts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const item of list) {
-      const key = `${item.id}-${item.episode}`;
+      const key = `${item.id}-${item.episode ?? 0}`;
       map[key] = (map[key] ?? 0) + 1;
     }
     return map;
   }, [list]);
 
-  const now = new Date();
-  // Kartu hitung mundur menunjuk anime berikutnya yang BELUM tayang — kalau
-  // jam rilisnya sudah lewat, otomatis berganti ke yang berikutnya
-  // (permintaan user: "kalo udah di luar jam rilis ... jadi selanjutnya").
-  const nextUp =
-    list.find((it) => itemAiringMs(it, now.getTime()) > now.getTime()) ??
-    list[0];
-  const diff = Math.max(
-    0,
-    (nextUp ? itemAiringMs(nextUp, now.getTime()) : 0) - now.getTime(),
-  );
-  const mins = Math.floor(diff / 60_000);
-  const hrs = Math.floor(mins / 60);
-  const secs = diff % 60;
   // Daftar yang dirender: default dipotong, "Lihat semua" menampilkan semua.
-  const shownList = showAll ? list : list.slice(0, 6);
+  const shownList = showAll ? list : list.slice(0, 8);
+
+  /** Buka item sesuai jenisnya: nonton (anime/donghua) atau baca (komik). */
+  function openItem(item: ScheduleItem) {
+    if (item.source === "anime") {
+      const id = String(item.id ?? "");
+      const ep = item.episode != null ? String(item.episode) : "0";
+      navigate(
+        `/nonton?anime=${encodeURIComponent(id)}&ep=${encodeURIComponent(`${id}__ep${ep}`)}&judul=${encodeURIComponent(item.title ?? "")}`,
+      );
+    } else if (item.source === "donghua") {
+      const donghuaId = String(item.id ?? "");
+      const donghuaEp = item.episode != null ? String(item.episode) : "1";
+      navigate(
+        `/nonton?anime=${encodeURIComponent(donghuaId)}&ep=${encodeURIComponent(`sanka__${donghuaId}__ep${donghuaEp}`)}&judul=${encodeURIComponent(item.title ?? "")}&donghua=1`,
+      );
+    } else {
+      // Manga / manhwa -> halaman Baca dengan detail langsung terbuka.
+      navigate(
+        `/baca?jenis=${item.source}&komik=${encodeURIComponent(String(item.slug ?? item.id ?? ""))}`,
+      );
+    }
+  }
 
   return (
     <div className="py-3">
@@ -365,66 +352,9 @@ function JadwalContent() {
       <h1 className="text-center text-lg font-bold">Jadwal Rilis</h1>
       <div className="mt-2 mb-3 h-px w-full bg-white/15" aria-hidden />
 
-      {/* Switcher: anime di atas, pilihan manga & manhwa muncul saat diklik */}
-      <div className="mb-3">
-        <button
-          onClick={() => setPickerOpen((v) => !v)}
-          className={cn(
-            "flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.07] to-white/[0.02] px-4 py-3 text-sm font-semibold text-foreground",
-            pickerOpen ? "border-primary/50" : "",
-          )}
-        >
-          <ActiveIcon className="size-4 shrink-0 text-primary" />
-          <span className="flex-1">{active.label}</span>
-          {tab === "anime" ? (
-            <>
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                {totalShown} judul
-              </span>
-              <ChevronDown className="size-4 shrink-0 text-zinc-500" />
-            </>
-          ) : (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              {totalShown} item
-            </span>
-          )}
-        </button>
-
-        {pickerOpen && (
-          <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02]">
-            {tabs
-              .filter((t) => t.key !== tab)
-              .map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => {
-                    setTab(t.key);
-                    setPickerOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 border-b border-white/10 px-4 py-3 text-left transition last:border-b-0 hover:bg-white/5"
-                >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-                    <t.icon className="size-4 text-primary" />
-                  </span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">{t.label}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t.key === "anime"
-                        ? `${t.count} judul · ${Object.keys(sched).length} hari`
-                        : t.key === "donghua"
-                          ? `${t.count} item · ${Object.keys(donghuaByDay).length} hari`
-                          : `${t.count} chapter`}
-                    </p>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-zinc-500" />
-                </button>
-              ))}
-          </div>
-        )}
-      </div>
-
       {/* Pilih hari: tulisan hari + angka tanggal sesuai tanggal berjalan.
-          Berlaku untuk SEMUA tab (anime, manga, manhwa, donghua). */}
+          Semua tipe (anime, manga, manhwa, donghua) tampil dalam SATU
+          daftar tanpa pilihan tipe lagi. */}
       <div className="mb-3 grid grid-cols-7 gap-1.5">
         {weekDates().map((d, i) => {
           const active = i === day;
@@ -462,60 +392,26 @@ function JadwalContent() {
         })}
       </div>
 
-      {/* timer hitung mundur + pengalihan hari */}
-      {(tab === "anime" || tab === "donghua") && (
-        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-          {/* Gambar anime yang bakal tayang selanjutnya */}
-          {nextUp?.image ? (
-            <img
-              src={nextUp.image}
-              alt=""
-              className="h-14 w-10 shrink-0 rounded-lg object-cover"
-            />
-          ) : (
-            <Clock className="size-4 shrink-0 text-primary" />
-          )}
-          <div className="min-w-0 flex-1">
-            {nextUp ? (
-              <>
-                <p className="line-clamp-2 text-sm font-semibold">{nextUp.title}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {diff > 0
-                    ? `tayang dalam ${hrs > 0 ? `${hrs}j` : ""}${mins > 0 ? `${mins % 60}m` : ""}${secs > 0 && hrs === 0 ? `${secs}s` : ""}`
-                    : "sudah tayang"}
-                  {nextUp.episode ? ` · Ep ${nextUp.episode}` : ""}
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Tidak ada jadwal hari ini
-              </p>
-            )}
-          </div>
-          <div className="shrink-0 text-right text-[11px] font-semibold text-zinc-400">
-            {DAYS_ID[day]}, {weekDates()[day].getDate()} {MONTHS[weekDates()[day].getMonth()]}
-          </div>
-        </div>
-      )}
-
-      {/* list item: sisa duplikat kayak di foto katalog */}
+      {/* Info jumlah rilis hari terpilih */}
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[11px] text-muted-foreground">
-          {list.length === 0
-            ? tabs.find((t) => t.key === tab)?.label
-            : `${list.length} item`}{" "}
-          hari ini
+          {loadingAll
+            ? "Memuat jadwal…"
+            : list.length === 0
+              ? `Tidak ada rilis pada ${DAYS_ID[day]}`
+              : `${list.length} rilis pada ${DAYS_ID[day]}, ${weekDates()[day].getDate()} ${MONTHS[weekDates()[day].getMonth()]}`}
         </span>
-        {list.length > 0 && (
-          <span className="text-[11px] text-muted-foreground">
-            {Object.values(dupCounts).filter((c) => c > 1).length > 0
-              ? `${Object.values(dupCounts).filter((c) => c > 1).length} judul duplikat`
-              : ""}
-          </span>
-        )}
+        {!loadingAll &&
+          list.length > 0 &&
+          Object.values(dupCounts).filter((c) => c > 1).length > 0 && (
+            <span className="text-[11px] text-muted-foreground">
+              {Object.values(dupCounts).filter((c) => c > 1).length} judul
+              duplikat
+            </span>
+          )}
       </div>
 
-      {loading ? (
+      {loadingAll ? (
         <div className="mb-2 flex flex-col gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
@@ -532,23 +428,13 @@ function JadwalContent() {
         </div>
       ) : list.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          Tidak ada jadwal{" "}
-          {tab === "anime"
-            ? "hari ini"
-            : tab === "donghua"
-              ? "pada hari ini"
-              : "dalam minggu ini"}.
+          Tidak ada jadwal rilis hari ini.
         </p>
       ) : (
         <div className="space-y-2 pb-2">
           {shownList.map((item) => {
             // Hitung mundur per item: "x jam lagi" sampai jam rilis tiba,
             // lalu berubah jadi "Sudah tayang" dan itemnya sedikit redup.
-            // `itemAiringMs` menjaga KONSISTENSI dengan jam yang tampil di
-            // kartu: kalau kartu menulis "08:00" tapi timestamp datanya sudah
-            // lewat (data AniList basi / salah zona), status dihitung ulang
-            // dari jam itu — jadi episode jam 8 pagi TIDAK PERNAH ditandai
-            // "Sudah tayang" sebelum jam 8 pagi benar-benar tiba.
             const at = itemAiringMs(item, Date.now());
             const leftMs = at - Date.now();
             const itemAired = at > 0 && leftMs <= 0;
@@ -566,90 +452,77 @@ function JadwalContent() {
                     ? `${im}m ${is}s lagi`
                     : `${is}s lagi`;
             return (
-            <button
-              key={`${item.id ?? item.slug}-${item.episode ?? 0}-${item.slug ?? ""}`}
-              onClick={() => {
-                if (tab === "anime") {
-                  const id = String(item.id ?? "");
-                  const ep = item.episode != null ? String(item.episode) : "0";
-                  navigate(
-                    `/nonton?anime=${encodeURIComponent(id)}&ep=${encodeURIComponent(`${id}__ep${ep}`)}&judul=${encodeURIComponent(item.title ?? "")}`,
-                  );
-                } else if (tab === "donghua") {
-                  const donghuaId = String(item.id ?? "");
-                  const donghuaEp = item.episode != null ? String(item.episode) : "1";
-                  navigate(
-                    `/nonton?anime=${encodeURIComponent(donghuaId)}&ep=${encodeURIComponent(`sanka__${donghuaId}__ep${donghuaEp}`)}&judul=${encodeURIComponent(item.title ?? "")}&donghua=1`,
-                  );
-                }
-              }}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition hover:border-primary/40",
-                itemAired && "opacity-60",
-              )}
-            >
-              {/* Gambar + badge episode */}
-              <div className="relative w-16 shrink-0">
-                <div className="aspect-[2/3] overflow-hidden rounded-xl bg-black">
-                  <img
-                    src={item.image}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                {typeof item.episode === "number" &&
-                  item.episode !== 0 && (
+              <button
+                key={`${item.source}-${item.id ?? item.slug ?? ""}-${item.episode ?? 0}`}
+                onClick={() => openItem(item)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition hover:border-primary/40",
+                  itemAired && "opacity-60",
+                )}
+              >
+                {/* Gambar + badge episode */}
+                <div className="relative w-16 shrink-0">
+                  <div className="aspect-[2/3] overflow-hidden rounded-xl bg-black">
+                    <img
+                      src={item.image}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  {typeof item.episode === "number" && item.episode !== 0 && (
                     <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
                       Ep {item.episode}
                     </span>
                   )}
-                {item.id != null &&
-                  (dupCounts[`${item.id}-${item.episode ?? 0}`] ?? 0) > 1 && (
-                    <span className="absolute -right-1.5 top-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
-                      {dupCounts[`${item.id}-${item.episode ?? 0}`]}
-                    </span>
-                  )}
-              </div>
-
-              {/* Judul + jam rilis + hitung mundur */}
-              <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-sm font-semibold leading-5">
-                  {item.title}
-                </p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  {item.time && (
-                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-white/75">
-                      {item.time}
-                    </span>
-                  )}
-                  {itemCountdown && (
-                    <span
-                      className={cn(
-                        "rounded-md px-1.5 py-0.5 font-bold",
-                        itemAired
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-primary/15 text-primary",
-                      )}
-                    >
-                      {itemCountdown}
-                    </span>
-                  )}
-                  {item.estimated && (
-                    <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-300">
-                      Estimasi
-                    </span>
-                  )}
+                  {item.id != null &&
+                    (dupCounts[`${item.id}-${item.episode ?? 0}`] ?? 0) > 1 && (
+                      <span className="absolute -right-1.5 top-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                        {dupCounts[`${item.id}-${item.episode ?? 0}`]}
+                      </span>
+                    )}
                 </div>
-              </div>
-            </button>
+
+                {/* Judul + jam rilis + hitung mundur + tipe sumber */}
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm font-semibold leading-5">
+                    {item.title}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-medium uppercase text-white/60">
+                      {item.source}
+                    </span>
+                    {item.time && (
+                      <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-white/75">
+                        {item.time}
+                      </span>
+                    )}
+                    {itemCountdown && (
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 font-bold",
+                          itemAired
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-primary/15 text-primary",
+                        )}
+                      >
+                        {itemCountdown}
+                      </span>
+                    )}
+                    {item.estimated && (
+                      <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                        Estimasi
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
             );
           })}
         </div>
       )}
 
-      {/* "Lihat semua" menampilkan seluruh rilis hari itu (permintaan user);
-          disclaimer lama sudah dihapus. */}
-      {list.length > 0 && (
+      {/* "Lihat semua" menampilkan seluruh rilis hari itu (permintaan user). */}
+      {list.length > shownList.length && (
         <div className="mt-5 flex items-center justify-between gap-3 pb-6">
           <button
             onClick={() => {
@@ -658,9 +531,7 @@ function JadwalContent() {
             }}
             className="flex-1 rounded-2xl border border-primary/50 bg-primary/10 px-4 py-3 text-xs font-bold text-primary transition hover:bg-primary/20"
           >
-            {showAll
-              ? `Semua ${list.length} rilis hari ini ditampilkan`
-              : `Lihat semua (${list.length} rilis hari ini)`}
+            {`Lihat semua (${list.length} rilis hari ini)`}
           </button>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

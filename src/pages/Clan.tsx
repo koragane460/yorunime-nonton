@@ -319,7 +319,7 @@ export function ClanRow({
               tag={c.tag}
               color={c.color}
               level={c.level}
-              className="scale-[0.85] px-1.5 py-0 text-[9px]"
+              className="zoom-[0.85] px-1.5 py-0 text-[9px]"
             />
           </div>
         </div>
@@ -646,30 +646,42 @@ function ClanDetailScreen({
           </div>
         )}
 
-        {/* Tab Member | Donate — DUA TOMBOL TERPISAH jelas (bukan teks
-            berdempetan): pill penuh berjeda, aktif bergaris emas. */}
-        <div className="mt-5 flex items-stretch gap-3">
+        {/* Tab Member | Donate — TANPA background, hanya tulisan putih
+            dengan GARIS PUTIH DI BAWAH tab aktif (permintaan user). */}
+        <div className="mt-5 flex items-stretch gap-6 border-b border-white/15">
           <button
             onClick={() => setTab("member")}
             className={cn(
-              "flex-1 rounded-2xl border px-4 py-2.5 text-sm font-black transition active:scale-[0.98]",
+              "relative flex-1 pb-2.5 pt-1 text-center text-sm font-black transition",
               tab === "member"
-                ? "border-gold/60 bg-gold/15 text-gold shadow-[0_0_18px_-10px_rgba(251,191,36,.8)]"
-                : "border-white/12 bg-white/[0.03] text-muted-foreground hover:text-white/85",
+                ? "text-white"
+                : "text-muted-foreground hover:text-white/85",
             )}
           >
             Member
+            {tab === "member" && (
+              <span
+                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,.6)]"
+                aria-hidden
+              />
+            )}
           </button>
           <button
             onClick={() => setTab("donate")}
             className={cn(
-              "flex-1 rounded-2xl border px-4 py-2.5 text-sm font-black transition active:scale-[0.98]",
+              "relative flex-1 pb-2.5 pt-1 text-center text-sm font-black transition",
               tab === "donate"
-                ? "border-sky-400/60 bg-sky-400/15 text-sky-300 shadow-[0_0_18px_-10px_rgba(56,189,248,.7)]"
-                : "border-white/12 bg-white/[0.03] text-muted-foreground hover:text-white/85",
+                ? "text-white"
+                : "text-muted-foreground hover:text-white/85",
             )}
           >
             Donate
+            {tab === "donate" && (
+              <span
+                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,.6)]"
+                aria-hidden
+              />
+            )}
           </button>
         </div>
 
@@ -1001,13 +1013,15 @@ function MemberRow({
           <TitleBadge role={m.staffRole} compact />
           {m.premium && <BlueCheck className="size-3.5 shrink-0" />}
         </div>
-        <div className="mt-1 flex items-center gap-1.5">
+        <div className="mt-1 flex items-center gap-1">
           {clanTag && (
+            /* zoom (bukan scale) — zoom ikut mengubah layout, jadi jarak ke
+               badge Grade tidak menyisakan sisa ruang tak terpakai. */
             <ClanTag
               icon={clanTagIcon ?? DEFAULT_CLAN_ICON}
               tag={clanTag}
               level={clanLevel}
-              className="scale-[0.8] px-1.5 py-0 text-[9px]"
+              className="zoom-[0.85] px-2 py-0 text-[9px]"
             />
           )}
           <GradeBadge grade={m.grade ?? 1} />

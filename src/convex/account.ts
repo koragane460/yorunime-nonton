@@ -197,6 +197,38 @@ export const updateProfile = mutation({
   },
 });
 
+/**
+ * REFRESH PHOTO PROFILE — photo sudah diganti tapi kadang belum kelihatan
+ * di orang lain (browser masih menampilkan versi lamanya dari cache / klien
+ * belum menerima update). Mutasi ini menambah penanda segar (query/fragment)
+ * ke string image sehingga SEMUA klien ikut ter-update dan memuat photo
+ * yang benar.
+ */
+export const refreshPhoto = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk");
+    const u = await ctx.db.get(userId);
+    const img = String(u?.image ?? "");
+    if (!img) throw new Error("Belum ada photo profile — ganti dulu lewat tombol kamera");
+    const stamp = Date.now();
+    let next: string;
+    if (img.startsWith("data:")) {
+      // Data URL (hasil upload galeri): fragment #r=… memaksa render ulang
+      // di semua klien tanpa merusak isi datanya.
+      next = `${img.split("#")[0]}#r=${stamp}`;
+    } else {
+      // URL eksternal (foto dari login Google dsb.): parameter query baru
+      // membuat browser mengambil ulang gambarnya dari server.
+      const base = img.split("#")[0].replace(/([?&])yn_v=\d+(&)?/, "$1").replace(/[?&]+$/, "");
+      next = `${base}${base.includes("?") ? "&" : "?"}yn_v=${stamp}`;
+    }
+    await ctx.db.patch(userId, { image: next });
+    return { ok: true };
+  },
+});
+
 export const updateSettings = mutation({
   args: {
     hideOnline: v.optional(v.boolean()),

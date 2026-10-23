@@ -10,6 +10,7 @@ import {
   useHideNavOnMount,
 } from "@/components/AppLayout";
 import { StaffPanel } from "@/components/StaffPanel";
+import { ProfileSheet } from "@/components/ProfileSheet";
 import { BlurBanner } from "@/components/BlurBanner";
 import {
   CharacterCard,
@@ -107,15 +108,17 @@ function AkunContent() {
     params.get("tab") === "settings",
   );
   const [csOpen, setCsOpen] = useState(false);
+  // Detail akun (layar penuh) — dibuka dengan menekan header profil di atas.
+  const [detailOpen, setDetailOpen] = useState(false);
 
   if (!user) return null;
   return (
     <div className="relative pb-6">
       {/* Kotak profil full lebar + rounded di PALING ATAS: foto profil
           diperbesar, lalu username, tag clan, level, badge, dan title.
-          Tombol pengaturan tidak lagi di dalam kotak — sekarang jadi tombol
-          melayang (FAB) di pojok kanan bawah. */}
-      <AkunProfileHeader user={user} />
+          SELURUH header bisa ditekan → membuka DETAIL AKUN (permintaan
+          user); tombol pengaturan tetap jadi FAB di pojok kanan bawah. */}
+      <AkunProfileHeader user={user} onOpen={() => setDetailOpen(true)} />
 
       {/* Detail clan milikmu (avatar, tag, role, level) + pintu ke layar
           Clan. Belum punya clan → kotak berubah jadi ajakan bikin clan. */}
@@ -146,6 +149,13 @@ function AkunContent() {
         />
       )}
       {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
+      {/* DETAIL AKUN — dibuka dari header profil di atas. */}
+      {detailOpen && (
+        <ProfileSheet
+          userId={user._id}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -154,15 +164,23 @@ function AkunContent() {
  *  kecil di kiri-kanan & atas (bukan full-bleed), ukuran isi ringkas. */
 function AkunProfileHeader({
   user,
+  onOpen,
 }: {
   user: any;
+  onOpen: () => void;
 }) {
   const isPremium = (user.premiumUntil ?? 0) > Date.now();
   return (
     /* Ada celah sedikit dari tepi layar (padding wrapper) + sudut rounded,
        sesuai permintaan; foto profile & isi diperkecil supaya tidak
-       terlalu besar. BORDER shop ikut dikenakan kalau ada yang dipakai. */
-    <div className="mt-3 rounded-2xl border border-white/10 bg-card/45 px-3 py-3 backdrop-blur-md">
+       terlalu besar. BORDER shop ikut dikenakan kalau ada yang dipakai.
+       SELURUH header bisa ditekan → membuka detail akun. */
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Buka detail akun"
+      className="mt-3 block w-full rounded-2xl border border-white/10 bg-card/45 px-3 py-3 text-left backdrop-blur-md transition hover:border-foreground/30 active:scale-[0.995]"
+    >
       <div className="flex items-center gap-3">
         <FramedAvatar
           border={user.avatarBorder}
@@ -192,7 +210,7 @@ function AkunProfileHeader({
           </div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -704,74 +722,9 @@ function SettingsScreen({
             </div>
           </div>
         </div>
-        {/* Ganti photo profile dari GALERI — tampilan jauh lebih keren:
-            foto besar dikelilingi cincin gradasi berputar pelan, plus tombol
-            kamera melayang di pojok kanan bawah. Sekali tekan langsung
-            membuka galeri; fotonya dikecilkan otomatis sebelum disimpan. */}
-        <label className="group mx-auto mt-4 flex w-fit cursor-pointer flex-col items-center">
-          {/* Ukuran diperkecil (size-28 → size-20) sesuai permintaan
-              "photo profile jangan terlalu gede". Border shop yang sedang
-              dipakai menggantikan cincin gradasi berputar. */}
-          <span className="relative block size-20">
-            {equippedBorder !== "none" ? (
-              <FramedAvatar
-                border={equippedBorder}
-                src={user.image}
-                seed={user.username}
-                className="size-20"
-              />
-            ) : (
-              <>
-                {/* Cincin gradasi berputar di balik foto. */}
-                <span
-                  aria-hidden
-                  className="yn-ring-spin absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
-                />
-                {/* Foto profil sekarang — otomatis ter-update setelah galeri
-                    dipilih (state user ikut reaktif dari Convex). */}
-                <span className="absolute inset-[4px] overflow-hidden rounded-full bg-background">
-                  <Avatar src={user.image} seed={user.username} className="size-full" />
-                </span>
-              </>
-            )}
-            {/* Tombol kamera melayang — posisinya terlihat jelas di HP. */}
-            <span className="absolute -bottom-1 -right-1 z-10 flex size-8 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-gold to-amber-600 text-black shadow-[0_4px_12px_-2px_rgba(212,175,55,0.8)] transition group-active:scale-90">
-              <Camera className="size-3.5" aria-hidden />
-            </span>
-          </span>
-          <span className="mt-3 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-[12px] font-bold text-gold transition group-hover:bg-gold/20">
-            {busyPhoto ? "Memproses gambar…" : "Pilih dari galeri"}
-          </span>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            disabled={busyPhoto}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (!f) return;
-              setBusyPhoto(true);
-              void (async () => {
-                try {
-                  // Foto HP bisa berukuran 5 MB. Kalau dikirim mentah, dokumen
-                  // melebihi batas 1 MiB Convex dan server menolak. Jadi
-                  // dikecilkan dulu sebelum dikirim.
-                  const small = await shrinkAvatar(f);
-                  await updateProfile({ image: small });
-                  setErr("");
-                  toast.success("Photo profile diganti ✨");
-                } catch (err2) {
-                  setErr(
-                    err2 instanceof Error ? err2.message : "Gagal mengganti photo",
-                  );
-                } finally {
-                  setBusyPhoto(false);
-                }
-              })();
-            }}
-          />
-        </label>
+        {/* Tombol "Ganti photo profile" di Pengaturan DIHAPUS (permintaan
+            user) — ganti photo & refresh photo sekarang lewat tombol kamera
+            di pojok kanan bawah foto profil (layar Akun). */}
         <div className="mt-2 flex min-w-0 gap-2">
           <input
             value={name}
@@ -811,93 +764,9 @@ function SettingsScreen({
         )}
       </div>
 
-      {/* ===== SLEIX SHOP — BORDER foto profile (permintaan: "di bawahnya
-          kotak ganti photo profile … tambahan shop" dengan nama toko
-          "Sleix"). Kepala toko gradasi holografik, lalu grid border kreatif
-          yang dibeli pakai Sacret dan langsung bisa dipakai/diatur. ===== */}
-      <BlockTitle>Sleix Shop</BlockTitle>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        {/* Kepala toko: pita holografik CERAH + logo + saldo Sacret. */}
-        <div className="relative flex items-center gap-2.5 overflow-hidden px-3 py-2.5">
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[linear-gradient(115deg,#67e8f9_0%,#a5b4fc_30%,#f0abfc_60%,#fde68a_85%,#67e8f9_100%)] bg-[length:200%_100%]"
-          />
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/70 ring-1 ring-white/60 shadow-sm">
-            <SacretIcon className="size-5 text-amber-500" aria-hidden />
-          </span>
-          <div className="relative min-w-0 flex-1">
-            <p className="text-[13px] font-black tracking-wide text-indigo-950 drop-shadow-sm">
-              SLEIX <span className="font-bold opacity-90">Shop</span>
-            </p>
-            <p className="text-[10px] font-semibold text-indigo-950/75">
-              Border kreatif untuk photo profile kamu ✨
-            </p>
-          </div>
-          <span className="relative inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[12px] font-black text-sky-700 ring-1 ring-white/60 shadow-sm">
-            <SacretIcon className="size-3.5" aria-hidden />
-            {Number(user.diamonds ?? 0).toLocaleString("id-ID")}
-          </span>
-        </div>
-        <div className="p-3">
-        <p className="text-[11px] text-muted-foreground">
-          Beli border dengan Sacret — begitu dipilih langsung terpasang di
-          foto profile kamu. Tekan lagi untuk melepas.
-        </p>
-        <div className="mt-2.5 grid grid-cols-3 gap-2">
-          {BORDERS.map((b) => {
-            const owned = b.id === "none" || ownedBorders.includes(b.id);
-            const active = equippedBorder === b.id;
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => void pickBorder(b)}
-                disabled={busyBorder !== null}
-                title={b.blurb}
-                className={cn(
-                  "flex flex-col items-center gap-1 rounded-xl border p-2 transition active:scale-[0.97] disabled:opacity-60",
-                  active
-                    ? "border-gold/70 bg-gold/10 shadow-[0_0_14px_-6px_rgba(212,175,55,0.7)]"
-                    : "border-white/10 bg-white/[0.02] hover:border-white/30",
-                )}
-              >
-                <FramedAvatar
-                  border={b.id === "none" ? undefined : b.id}
-                  src={user.image}
-                  seed={user.username}
-                  className="size-12"
-                />
-                <span className="text-[10px] font-bold">{b.name}</span>
-                <span
-                  className={cn(
-                    "inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-black",
-                    active
-                      ? "bg-emerald-500/20 text-emerald-300"
-                      : owned
-                        ? "bg-white/10 text-zinc-300"
-                        : "bg-primary/20 text-primary",
-                  )}
-                >
-                  {active ? (
-                    "Dipakai"
-                  ) : b.id === "none" ? (
-                    "Lepas"
-                  ) : owned ? (
-                    "Pakai"
-                  ) : (
-                    <>
-                      <SacretIcon className="size-2.5" aria-hidden />
-                      {b.price.toLocaleString("id-ID")}
-                    </>
-                  )}
-                </span>
-              </button>
-            );
-          })}
-          </div>
-        </div>
-      </div>
+      {/* ===== SLEIX SHOP DIHAPUS dari Pengaturan (permintaan user:
+          "sleix shop nya hapus — yang dipengaturan, bukan YoruVerse").
+          Border foto profile tetap ada di YoruVerse › Shop. ===== */}
 
       {/* -------- TITLE & KARTU GACHA — equip dari koleksi -------- */}
       <BlockTitle>Title & Kartu</BlockTitle>

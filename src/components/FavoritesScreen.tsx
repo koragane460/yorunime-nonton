@@ -1,8 +1,10 @@
 // LAYAR SUBSCRIBE (tombol "Subscribe" di navigasi bawah).
 //
-// Judul besar + garis, lalu tab kategori Anime / Manga / Manhwa /
-// Donghua / Film, dan filter status Ongoing / Tamat untuk kategori yang
-// punya status. Daftar = koleksi yang pernah di-subscribe (favorite).
+// Judul besar + garis, lalu SATU daftar gabungan semua kategori (tab
+// Anime/Manga/Manhwa/Donghua/Film di atas DIHAPUS — permintaan user).
+// Mode SINGLE = semua favorite tampil polos; mode FILTER = otomatis
+// dikelompokkan Ongoing (dengan chip tipe anime/manga/manhwa/donghua)
+// → garis pembatas → Completed, dua-duanya berjudul putih tanpa dot.
 // Di bawahnya tetap ada blok Download dan TOP VOTE CHARACTER.
 
 import { useEffect, useMemo, useState } from "react";
@@ -16,7 +18,8 @@ import { ComicDetailScreen } from "@/components/ComicDetailScreen";
 import { cn } from "@/lib/utils";
 import { Clapperboard, Crown, Filter, Heart, List, Tv, Vote as VoteIcon } from "lucide-react";
 
-type SubTab = "anime" | "manga" | "manhwa" | "donghua" | "film";
+// Chip tipe di dalam kelompok Ongoing (mode filter saja).
+type OngoingFilter = "semua" | "anime" | "manga" | "manhwa" | "donghua";
 
 /**
  * Status tayang → kelompok Ongoing. Terima snapshot AniList (RELEASING),
@@ -32,13 +35,20 @@ function isOngoingStatus(s?: string): boolean {
   return /(releasing|ongoing|berjalan|airing|airing|belum tamat|publishing|jalan)/.test(v);
 }
 
-const TABS: { key: SubTab; label: string }[] = [
+const ONGOING_CHIPS: { key: OngoingFilter; label: string }[] = [
+  { key: "semua", label: "Semua" },
   { key: "anime", label: "Anime" },
   { key: "manga", label: "Manga" },
   { key: "manhwa", label: "Manhwa" },
   { key: "donghua", label: "Donghua" },
-  { key: "film", label: "Film" },
 ];
+
+/** Tipe baris favorite untuk chip Ongoing. */
+function rowType(f: SubRow): OngoingFilter {
+  if ("slug" in f) return f.kind === "manhwa" ? "manhwa" : "manga";
+  const k = f.kind ?? "anime";
+  return k === "donghua" ? "donghua" : k === "anime" ? "anime" : k as OngoingFilter;
+}
 
 /** Baris favorite anime/donghua/film (tabel animeFavorites). */
 type AnimeRow = {
@@ -74,10 +84,11 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   // Top 10 hasil voting karakter — hanya terisi setelah event (7 hari) selesai.
   const top = useQuery(api.votes.topCharacters, {});
 
-  const [tab, setTab] = useState<SubTab>("anime");
+  // Chip tipe di dalam kelompok Ongoing (mode filter saja).
+  const [ongoingType, setOngoingType] = useState<OngoingFilter>("semua");
   // "filter" (DEFAULT) = daftar otomatis dikelompokkan Ongoing → garis
   // pembatas → Completed, tanpa satu pun tombol status.
-  // "single" = kartu berbaris polos sesuai urutan terakhir di-favorite.
+  // "single" = SEMUA kategori dicampur, kartu berbaris polos urut favorite.
   const [mode, setMode] = useState<"single" | "filter">("filter");
   // Detail manga/manhwa dibuka sebagai layar penuh (sama seperti di Baca).
   const [pick, setPick] = useState<{ slug: string; kind: "manga" | "manhwa" } | null>(
@@ -117,22 +128,14 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
     }
   }, [user, refreshAnimeStatuses, refreshComicStatuses]);
 
-  /** Anime / Donghua / Film punya status tayang — dipakai pemisahan
-      Ongoing / Completed (tanpa tombol filter lagi). */
-  const animeItems = useMemo(() => {
-    const wanted = tab === "donghua" ? "donghua" : tab === "film" ? "film" : "anime";
-    return animeRows.filter((f) => (f.kind ?? "anime") === wanted);
-  }, [animeRows, tab]);
+  /** SEMUA kategori dicampur jadi satu daftar (permintaan user). */
+  const items = useMemo(
+    () =>
+      [...animeRows, ...comicRows].sort((a, b) => b.createdAt - a.createdAt),
+    [animeRows, comicRows],
+  );
 
-  const comicItems = useMemo(() => {
-    if (tab !== "manga" && tab !== "manhwa") return [];
-    return comicRows.filter((c) => c.kind === tab);
-  }, [comicRows, tab]);
-
-  const items =
-    tab === "manga" || tab === "manhwa" ? comicItems : animeItems;
-
-  /** Pecah daftar aktif jadi dua kelompok — dipakai mode "filter". */
+  /** Pecah daftar jadi dua kelompok — dipakai mode "filter". */
   const { ongoingItems, doneItems } = useMemo(() => {
     const ongoing: SubRow[] = [];
     const done: SubRow[] = [];
@@ -146,12 +149,17 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
     return { ongoingItems: ongoing, doneItems: done };
   }, [items]);
 
+  // Chip tipe menyaring kelompok Ongoing saja (sesuai permintaan).
+  const ongoingShown =
+    ongoingType === "semua"
+      ? ongoingItems
+      : ongoingItems.filter((f) => {
+          const t = rowType(f);
+          return t === ongoingType;
+        });
+
   const emptyText =
-    tab === "film"
-      ? "Belum ada film yang di-subscribe. Buka halaman Film lalu tekan tombol Subscribe."
-      : tab === "manga" || tab === "manhwa"
-        ? `Belum ada ${tab} yang di-subscribe. Tekan tombol hati di detail ${tab}.`
-        : "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
+    "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
 
   /** Satu grid kartu — dipakai mode single & tiap kelompok (Ongoing/Completed). */
   const renderGrid = (list: SubRow[]) => (
@@ -172,7 +180,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
                   slug: f.slug,
                   kind: f.kind === "manhwa" ? "manhwa" : "manga",
                 });
-              } else if (tab === "film") {
+              } else if ((f.kind ?? "anime") === "film") {
                 // status menyimpan jenis film (movie/tv) — lihat Film.tsx
                 navigate(
                   `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
@@ -195,14 +203,14 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
                 />
               ) : (
                 <div className="flex size-full items-center justify-center">
-                  {tab === "film" ? (
+                  {(f as AnimeRow).kind === "film" ? (
                     <Clapperboard className="size-6 text-muted-foreground" />
                   ) : (
                     <Tv className="size-6 text-muted-foreground" />
                   )}
                 </div>
               )}
-              {tab === "film" ? (
+              {(f as AnimeRow).kind === "film" ? (
                 <Clapperboard className="absolute right-1.5 top-1.5 size-4 fill-gold text-gold drop-shadow" />
               ) : (
                 <Heart className="absolute right-1.5 top-1.5 size-4 fill-white/85 text-white/85 drop-shadow" />
@@ -226,25 +234,7 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
         <h1 className="text-left text-2xl font-black tracking-tight">Subscribe</h1>
         <div className="mt-2 h-px w-full bg-gradient-to-r from-gold/70 via-border to-transparent" />
 
-        {/* ---------------- TAB KATEGORI ---------------- */}
-        <div className="thin-scroll -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition",
-                tab === t.key
-                  ? "border-gold bg-gold/15 text-gold"
-                  : "border-border text-muted-foreground",
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ---------------- DAFTAR SUBSCRIBE ---------------- */}
+        {/* ---------------- DAFTAR SUBSCRIBE (semua tipe dicampur) ---------------- */}
         {items.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             {emptyText}
@@ -257,16 +247,39 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
           <div>
             {ongoingItems.length > 0 && (
               <>
+                {/* Judul ONGOING: putih, tanpa dot (permintaan user). */}
                 <div className="mt-4 flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_1px_rgba(52,211,153,.8)]" aria-hidden />
-                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">
+                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-white">
                     Ongoing
                   </h2>
                   <span className="text-[11px] font-semibold text-muted-foreground">
-                    {ongoingItems.length} masih jalan
+                    {ongoingShown.length} masih jalan
                   </span>
                 </div>
-                {renderGrid(ongoingItems)}
+                {/* Chip tipe anime/manga/manhwa/donghua khusus Ongoing. */}
+                <div className="thin-scroll -mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {ONGOING_CHIPS.map((c) => (
+                    <button
+                      key={c.key}
+                      onClick={() => setOngoingType(c.key)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold transition",
+                        ongoingType === c.key
+                          ? "border-white bg-white text-black"
+                          : "border-white/25 text-white/70",
+                      )}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+                {ongoingShown.length === 0 ? (
+                  <p className="mt-2 text-[12px] text-muted-foreground">
+                    Tidak ada ongoing tipe ini.
+                  </p>
+                ) : (
+                  renderGrid(ongoingShown)
+                )}
               </>
             )}
 
@@ -283,9 +296,9 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
 
             {doneItems.length > 0 && (
               <>
+                {/* Judul COMPLETED: putih, tanpa dot (permintaan user). */}
                 <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-zinc-400" aria-hidden />
-                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-zinc-300">
+                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-white">
                     Completed
                   </h2>
                   <span className="text-[11px] font-semibold text-muted-foreground">

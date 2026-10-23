@@ -516,7 +516,7 @@ function ClanScreen({ onBack }: { onBack: () => void }) {
             onClick={() => setTop(false)}
             className={cn(
               "border-b-2 pb-1.5 pt-1 text-[12px] font-black transition",
-              !top ? "border-gold text-gold" : "border-transparent text-zinc-400 hover:text-zinc-200",
+              !top ? "border-white text-white" : "border-transparent text-zinc-400 hover:text-zinc-200",
             )}
           >
             Semua
@@ -525,10 +525,10 @@ function ClanScreen({ onBack }: { onBack: () => void }) {
             onClick={() => setTop(true)}
             className={cn(
               "flex items-center justify-center gap-1 border-b-2 pb-1.5 pt-1 text-[12px] font-black transition",
-              top ? "border-gold text-gold" : "border-transparent text-zinc-400 hover:text-zinc-200",
+              top ? "border-white text-white" : "border-transparent text-zinc-400 hover:text-zinc-200",
             )}
           >
-            <Crown className="size-3.5" aria-hidden /> Top Clan 1-50
+            <Crown className="size-3.5" aria-hidden /> Top Clan
           </button>
         </div>
         <div className="mt-2 flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2">
@@ -548,26 +548,29 @@ function ClanScreen({ onBack }: { onBack: () => void }) {
             </p>
           )}
           {shown.map((c, i) => (
-            <div key={c._id} className="flex items-start gap-2">
+            <div key={c._id} className="relative">
+              {/* Nomor TOP: badge besar miring di pojok KANAN ATAS kartu
+                  (bukan chip kecil di kiri atas) — gradasi emas/perak/zinc
+                  mengikuti peringkat, #1 dapat mahkota (permintaan user). */}
               {top && (
                 <span
                   className={cn(
-                    "mt-3 flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg px-1.5 text-[11px] font-black",
+                    "absolute right-2.5 top-2 z-10 flex h-8 min-w-8 -rotate-6 items-center justify-center gap-0.5 rounded-xl px-2 text-[13px] font-black ring-1 ring-white/40 shadow-[0_6px_16px_-6px_rgba(0,0,0,.9)]",
                     rankChipCls(i),
                   )}
+                  aria-label={`Peringkat ${i + 1}`}
                 >
-                  #{i + 1}
+                  {i === 0 && <Crown className="size-3.5" aria-hidden />}
+                  {i + 1}
                 </span>
               )}
-              <div className="min-w-0 flex-1">
-                <ClanRow
-                  clan={c}
-                  onOpen={() => navigate(`/clan?clan=${c._id}`)}
-                  onJoin={() => void join(c._id)}
-                  busy={busyId === c._id}
-                  loggedIn={!!user}
-                />
-              </div>
+              <ClanRow
+                clan={c}
+                onOpen={() => navigate(`/clan?clan=${c._id}`)}
+                onJoin={() => void join(c._id)}
+                busy={busyId === c._id}
+                loggedIn={!!user}
+              />
             </div>
           ))}
         </div>

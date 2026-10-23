@@ -268,10 +268,10 @@ function AccountPanel({
         {/* Banner profil TIDAK tampil di panel akun (hanya di profil &
             komentar); latar panel memakai background 45% + blur. */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-transparent to-gold/[0.05]" aria-hidden />
-        {/* pb-9: ruang khusus tombol YoruVerse di kanan bawah — cukup rapat
-            supaya TIDAK menambah ruang ke bawah yang gede, tapi tombol tetap
-            tidak pernah menimpa bar level / baris Sacret. */}
-        <div className="relative p-3 pb-9">
+        {/* pb-2: panel tidak memanjang ke bawah (permintaan user) — baris
+            Sacret + tombol YoruVerse pindah ke footer terpisah di luar
+            tombol ini, jadi tidak perlu ruang kosong besar di bawah. */}
+        <div className="relative p-3 pb-2">
           <div className="flex items-center gap-3">
             {avatarBorder && avatarBorder !== "none" ? (
               /* Border shop terpasang → bingkai kreatif menggantikan ring
@@ -310,7 +310,7 @@ function AccountPanel({
                     icon={clanTagIcon ?? DEFAULT_CLAN_ICON}
                     tag={clanTag}
                     level={clanLevel}
-                    className="scale-90 px-1.5 py-0 text-[9px]"
+                    className="zoom-[0.9] px-1.5 py-0 text-[9px]"
                   />
                 )}
               </div>
@@ -318,7 +318,7 @@ function AccountPanel({
           </div>
 
           {/* Bar level: lebih kecil, tanpa garis pembatas */}
-          <div className="mt-2.5">
+          <div className="mt-2">
             <div className="mb-1 flex items-center justify-between text-[10px]">
               <span className="font-semibold text-white">Level {level}</span>
               <span className="text-zinc-400">
@@ -332,31 +332,32 @@ function AccountPanel({
               />
             </div>
           </div>
-
-          {/* Total Sacret + sisa hari premium — ikon & teks KECIL supaya
-              rapat (permintaan user). Vote sudah dihapus dari panel akun. */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11px]">
-            <span className="flex items-center gap-1 font-semibold text-sky-300">
-              <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
-            </span>
-            {premium && (
-              <span className="flex items-center gap-1 font-semibold text-gold">
-                <CrownIcon className="size-3.5" /> {premiumDays} hari
-              </span>
-            )}
-          </div>
         </div>
       </button>
-      {/* YORUVERSE — tombol kecil di pojok KANAN BAWAH panel akun.
-          Dibalut ringkas, memanjang secukupnya ke samping (dengan ikon gem),
-          tanpa menambah tinggi panel dan tanpa menghalangi baris lain. */}
-      <button
-        onClick={onOpenYoruVerse}
-        className="absolute bottom-2 right-2.5 z-10 flex items-center gap-1 rounded-full border border-amber-300/60 bg-yellow-900/35 px-3.5 py-1 text-[10px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition active:scale-95 hover:bg-yellow-800/50"
-      >
-        <GemIcon className="size-3" aria-hidden />
-        YoruVerse
-      </button>
+
+      {/* Footer panel: Sacret + premium di kiri, tombol YoruVerse di
+          kanan — SEBARIS sehingga panel tidak memanjang ke bawah dan
+          tombol YoruVerse dibatasi ruangnya sendiri tanpa menimpa baris
+          mana pun (permintaan user). */}
+      <div className="relative flex items-center justify-between gap-2 px-3 pb-2.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[11px]">
+          <span className="flex items-center gap-1 font-semibold text-sky-300">
+            <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
+          </span>
+          {premium && (
+            <span className="flex items-center gap-1 font-semibold text-gold">
+              <CrownIcon className="size-3.5" /> {premiumDays} hari
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onOpenYoruVerse}
+          className="flex shrink-0 items-center gap-1 rounded-full border border-amber-300/60 bg-yellow-900/35 px-3 py-1 text-[10px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition hover:bg-yellow-800/50 active:scale-95"
+        >
+          <GemIcon className="size-3" aria-hidden />
+          YoruVerse
+        </button>
+      </div>
     </div>
   );
 }

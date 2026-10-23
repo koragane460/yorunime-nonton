@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
@@ -10,16 +10,19 @@ import { CharacterCard, TitleRibbon, type CosmeticRank } from "@/components/Cosm
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Award,
+  Camera,
   ChevronLeft,
   MessageSquare,
   History as HistoryIcon,
   Heart,
   LogIn,
+  RefreshCw,
   Send,
   Sparkles,
   Tv,
   UserPlus,
 } from "lucide-react";
+import { shrinkAvatar } from "@/lib/image";
 import { cn } from "@/lib/utils";
 import { xpForLevel } from "@/lib/level";
 import { timeAgo, usernameColor } from "@/lib/lstream";
@@ -92,6 +95,50 @@ export function ProfileSheet({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const isMe = me?._id === userId;
 
+  // ---- PHOTO PROFILE (detail akun sendiri): tombol kamera bulat kecil di
+  // pojok kanan bawah foto → sheet berisi "Ganti photo profile" (atas) dan
+  // "Refresh Photo Profile" (bawah) — permintaan user. ----
+  const updateProfile = useMutation(api.account.updateProfile);
+  const refreshPhotoMut = useMutation(api.account.refreshPhoto);
+  const [photoSheet, setPhotoSheet] = useState(false);
+  const [busyPhoto, setBusyPhoto] = useState(false);
+  const [busyRefresh, setBusyRefresh] = useState(false);
+  const photoFileRef = useRef<HTMLInputElement | null>(null);
+
+  const onPickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusyPhoto(true);
+    void (async () => {
+      try {
+        // Foto HP bisa 2-8 MB — perkecil dulu supaya muat di dokumen (1 MiB).
+        const small = await shrinkAvatar(f);
+        await updateProfile({ image: small });
+        setPhotoSheet(false);
+        toast.success("Photo profile diganti ✨");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Gagal mengganti photo");
+      } finally {
+        setBusyPhoto(false);
+      }
+    })();
+  };
+
+  const doRefreshPhoto = async () => {
+    if (busyRefresh || busyPhoto) return;
+    setBusyRefresh(true);
+    try {
+      await refreshPhotoMut();
+      setPhotoSheet(false);
+      toast.success("Photo profile di-refresh — user lain akan melihat foto terbaru");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal refresh photo");
+    } finally {
+      setBusyRefresh(false);
+    }
+  };
+
   const requestFriend = async () => {
     if (sending) return;
     setSending(true);
@@ -132,18 +179,32 @@ export function ProfileSheet({
             </button>
             {/* Foto profile menutupi banner, tepat di tengah — dengan cincin glow */}
             <div className="relative -mt-16 flex justify-center">
-              <div className="yn-avatar-ring">
-                <StoryRing
-                  image={profile.image}
-                  seed={profile.username}
-                  size={96}
-                  hasStory={(theirStories?.length ?? 0) > 0}
-                  seen={false}
-                  onClick={() =>
-                    (theirStories?.length ?? 0) > 0 && setViewStory(true)
-                  }
-                  className="rounded-full bg-background p-[2px]"
-                />
+              <div className="relative">
+                <div className="yn-avatar-ring">
+                  <StoryRing
+                    image={profile.image}
+                    seed={profile.username}
+                    size={96}
+                    hasStory={(theirStories?.length ?? 0) > 0}
+                    seen={false}
+                    onClick={() =>
+                      (theirStories?.length ?? 0) > 0 && setViewStory(true)
+                    }
+                    className="rounded-full bg-background p-[2px]"
+                  />
+                </div>
+                {/* Tombol kamera bulat KECIL di pojok kanan bawah foto
+                    (hanya profil sendiri) → sheet Ganti / Refresh photo. */}
+                {isMe && (
+                  <button
+                    type="button"
+                    onClick={() => setPhotoSheet(true)}
+                    aria-label="Ganti photo profile"
+                    className="absolute -bottom-1 -right-1 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-gold to-amber-600 text-black shadow-[0_4px_12px_-2px_rgba(212,175,55,0.8)] transition active:scale-90"
+                  >
+                    <Camera className="size-3.5" aria-hidden />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -476,7 +537,11 @@ export function ProfileSheet({
               {/* Tidak ada kotak scroll sendiri: daftar komentar ikut
                   gulir dengan halaman, sama seperti tab History. Kalau
                   dibungkus max-h + overflow, komentarnya terkurung di
-                  kotak dan halaman tidak bisa lanjut ke bawah. */}
+                  kotak dan halaman tidak bisa lanjut ke bawah.
+                  BUNGKUS -mx-4: kolom komentar MELEBAR ke samping sampai
+                  mentok tepi layar (membatalkan px-4 kontainer) tapi TIDAK
+                  keluar jalur — permintaan user. */}
+              <div className="-mx-4">
               {tab === "komen" &&
                 (profile.myComments ?? []).map((c: any) => (
                     <button
@@ -561,6 +626,7 @@ export function ProfileSheet({
                       </p>
                     </button>
                   ))}
+              </div>
             </div>
 
             {profile.premium === false && (
@@ -568,6 +634,57 @@ export function ProfileSheet({
                 <LogIn className="size-3.5" /> Belum premium — centang biru eksklusif
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* SHEET PHOTO PROFILE — dibuka tombol kamera di bawah foto (profil
+          sendiri). Tombol PERTAMA di atas: "Ganti photo profile" (buka
+          galeri, tanpa tulisan "dari galeri"); tombol KEDUA di bawah:
+          "Refresh Photo Profile" supaya photo tampil ke user lain. */}
+      {isMe && photoSheet && (
+        <div
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => !busyPhoto && !busyRefresh && setPhotoSheet(false)}
+          role="dialog"
+          aria-modal
+        >
+          <div
+            className="pop-enter w-full max-w-sm overflow-hidden rounded-2xl border border-white/15 bg-card p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => photoFileRef.current?.click()}
+              disabled={busyPhoto || busyRefresh}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-3 text-left text-sm font-bold transition hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold/15">
+                <Camera className="size-4 text-gold" aria-hidden />
+              </span>
+              {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void doRefreshPhoto()}
+              disabled={busyPhoto || busyRefresh}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-3 text-left text-sm font-bold transition hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-500/15">
+                <RefreshCw
+                  className={cn("size-4 text-sky-300", busyRefresh && "animate-spin")}
+                  aria-hidden
+                />
+              </span>
+              {busyRefresh ? "Me-refresh…" : "Refresh Photo Profile"}
+            </button>
+            <input
+              ref={photoFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onPickPhoto}
+            />
           </div>
         </div>
       )}
