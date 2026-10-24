@@ -15,7 +15,7 @@ const DASHBOARD_REDIRECT = "/dashboard";
 type Mode = "main" | "password" | "otp";
 
 export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn, signUp } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -59,10 +59,12 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     try {
       if (isRegister) {
         // Akun baru hanya dibuat di sini — setelah semua kolom terisi.
-        await signUp({
+        // Convex Auth tidak punya signUp terpisah: daftar = signIn flow "signUp".
+        await signIn("password", {
           email: email.trim(),
           password,
           name: name.trim(),
+          flow: "signUp",
         });
       } else {
         await signIn("password", {
@@ -165,22 +167,14 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 onClick={() => setMode("password")}
                 disabled={isLoading}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-xl border py-3 text-sm font-bold transition",
-                  (mode === "password" || mode === "main") && "border-foreground/40 bg-primary/15 text-primary",
-                  mode === "otp" && "border-border/40 bg-white/5 text-zinc-500 hover:border-foreground/30 hover:text-foreground",
-                )}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 py-3 text-sm font-bold text-primary transition disabled:opacity-50"
               >
                 <Mail className="size-4" /> Email &amp; Password
               </button>
               <button
                 onClick={() => setMode("otp")}
                 disabled={isLoading}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-xl border py-3 text-sm font-bold transition",
-                  (mode === "otp" || mode === "main") && "border-foreground/40 bg-primary/15 text-primary",
-                  mode === "password" && "border-border/40 bg-white/5 text-zinc-500 hover:border-foreground/30 hover:text-foreground",
-                )}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 py-3 text-sm font-bold text-primary transition disabled:opacity-50"
               >
                 <Lock className="size-4" /> Kirim OTP
               </button>
