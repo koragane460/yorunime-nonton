@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.svg";
-import { ArrowRight, Eye, EyeOff, Loader2, Mail, Google } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Mail, Lock, UserPlus, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveRedirectAfterAuth } from "@/lib/authRedirect";
 
@@ -15,7 +15,7 @@ const DASHBOARD_REDIRECT = "/dashboard";
 type Mode = "main" | "password" | "otp";
 
 export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn, signUp, signInWith } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -23,25 +23,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     DASHBOARD_REDIRECT,
   );
 
-  // Hanya opsi login yang tersedia saat ini: Google (sign-in) dan tester.
-  const googleLogin = async () => {
-    setGoogleLoading(true);
-    setError(null);
-    try {
-      await signInWith("google");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal login dengan Google");
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    setError(null);
-    setIsLoading(false);
-  };
-
+  const [mode, setMode] = useState<Mode>("main");
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -50,7 +32,6 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
   const [showPass, setShowPass] = useState(false);
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -180,28 +161,28 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-sm">
           {mode === "main" && (
-            <div className="space-y-2.5">
+            <div className="flex gap-2">
               <button
-                onClick={() => void googleLogin()}
-                disabled={googleLoading || authLoading}
-                className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition hover:opacity-90 disabled:opacity-40"
-              >
-                <Google className="size-4" aria-hidden />
-                {googleLoading ? "Memuat..." : "Login dengan Google"}
-              </button>
-              <button
-                onClick={() => switchMode("password")}
-                disabled={isLoading || authLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/25"
+                onClick={() => setMode("password")}
+                disabled={isLoading}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-2 rounded-xl border py-3 text-sm font-bold transition",
+                  (mode === "password" || mode === "main") && "border-foreground/40 bg-primary/15 text-primary",
+                  mode === "otp" && "border-border/40 bg-white/5 text-zinc-500 hover:border-foreground/30 hover:text-foreground",
+                )}
               >
                 <Mail className="size-4" /> Email &amp; Password
               </button>
               <button
-                onClick={() => switchMode("otp")}
-                disabled={isLoading || authLoading}
-                className="w-full rounded-xl px-4 py-2 text-xs font-semibold text-zinc-500 transition hover:text-zinc-300"
+                onClick={() => setMode("otp")}
+                disabled={isLoading}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-2 rounded-xl border py-3 text-sm font-bold transition",
+                  (mode === "otp" || mode === "main") && "border-foreground/40 bg-primary/15 text-primary",
+                  mode === "password" && "border-border/40 bg-white/5 text-zinc-500 hover:border-foreground/30 hover:text-foreground",
+                )}
               >
-                Kirim kode ke email
+                <Lock className="size-4" /> Kirim OTP
               </button>
             </div>
           )}
@@ -298,7 +279,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="button"
                 onClick={sendOtp}
-                disabled={isLoading || authLoading}
+                disabled={isLoading}
                 className="w-full rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-bold text-zinc-200 transition hover:border-foreground/40 disabled:opacity-50"
               >
                 Kirim kode 6 digit
@@ -331,7 +312,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
 
           {mode !== "main" && (
             <button
-              onClick={() => switchMode("main")}
+              onClick={() => setMode("main")}
               className="mt-3 w-full rounded-xl py-2 text-xs font-semibold text-zinc-500 transition hover:text-zinc-300"
             >
               Ganti cara masuk

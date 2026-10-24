@@ -10,7 +10,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Ban,
-  ChevronDown,
   ChevronLeft,
   ChevronUp,
   Crown,
@@ -118,13 +117,7 @@ function saveDevice(acc: Omit<DeviceAcc, "at">) {
   }
 }
 
-/**
- * Latar layar pemuatan.
- *
- * Dulu memakai titik-ditik twinkling seperti bintang; sekarang diganti satu
- * sapuan cahaya tipis yang bergerak sangat lambat. Lebih tenang, tidak
- * berantakan, dan tidak bikin layar berkedip yang bikin tidak nyaman.
- */
+/** Latar layar pemuatan. */
 function Starfield() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -148,10 +141,6 @@ function WelcomeFlow() {
   // lagi auto-advance saat scroll).
   const [stage, setStage] = useState<"intro" | "onboard" | "login">("intro");
   const [onbIdx, setOnbIdx] = useState<0 | 1>(0);
-  const [testerOpen, setTesterOpen] = useState(false);
-  const [testerId, setTesterId] = useState("#1");
-  const [testerPass, setTesterPass] = useState("");
-  const [testerError, setTesterError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
   // true = aplikasi baru dibuka kembali (balik dari tab/app lain) → tampilkan
   // layar YoruNime sebentar supaya konten lama tidak kelihatan.
@@ -178,11 +167,6 @@ function WelcomeFlow() {
   // --- Info akun perangkat ---
   const [devices, setDevices] = useState<DeviceAcc[]>([]);
   const [devicesOpen, setDevicesOpen] = useState(false);
-
-  // --- Google: pilih akun + izin akses ---
-  const [googleStep, setGoogleStep] = useState<"closed" | "picker" | "consent">("closed");
-  const [googleEmail, setGoogleEmail] = useState("");
-  const [googleOther, setGoogleOther] = useState("");
 
   // Sistem update: tombol muncul hanya saat ada update (UPDATE_VERSION diisi).
   const [dlState, setDlState] = useState<"idle" | "downloading" | "done">("idle");
@@ -383,42 +367,6 @@ function WelcomeFlow() {
     }
   };
 
-  /* ---------------- Google: pilih akun + izin akses ---------------- */
-
-  const pickGoogle = (email: string) => {
-    setGoogleEmail(email);
-    setGoogleStep("consent");
-  };
-
-  const allowGoogle = async () => {
-    saveDevice({ type: "google", email: googleEmail });
-    setDevices(loadDevices());
-    setGoogleStep("closed");
-    await doAnonLogin();
-  };
-
-  const doTesterLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const id = testerId.trim().replace(/^#/, "");
-    if (id !== "1") {
-      setTesterError("ID tester salah. Gunakan #1.");
-      return;
-    }
-    if (testerPass !== "ytta") {
-      setTesterError("Password tester salah.");
-      return;
-    }
-    setLoggingIn(true);
-    setTesterError(null);
-    try {
-      await signIn("anonymous");
-      navigate("/home", { replace: true });
-    } catch (e) {
-      setTesterError(e instanceof Error ? e.message : "Gagal masuk. Coba lagi.");
-      setLoggingIn(false);
-    }
-  };
-
   if (stage === "intro") {
     return (
       <div
@@ -547,7 +495,7 @@ function WelcomeFlow() {
                   {changelogOpen ? (
                     <ChevronUp className="size-3.5" />
                   ) : (
-                    <ChevronDown className="size-3.5" />
+                    <ChevronUp className="size-3.5" />
                   )}
                 </button>
                 {changelogOpen && (
@@ -742,8 +690,7 @@ function WelcomeFlow() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {/* Latar imersif khusus layar login: orb gradasi bergerak pelan +
-                bintik berkilau — bukan cuma logo + animasi. */}
+            {/* Latar imersif khusus layar login: orb gradasi bergerak pelan + bintik berkilau — bukan cuma logo + animasi. */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
               <motion.span
                 className="absolute -left-24 top-4 size-72 rounded-full bg-primary/25 blur-3xl"
@@ -757,77 +704,6 @@ function WelcomeFlow() {
               />
               <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1.2px)] [background-size:22px_22px] opacity-30" />
             </div>
-
-            {/* Tombol Info akun perangkat — kanan atas */}
-            <button
-              aria-label="Akun yang pernah dipakai di perangkat ini"
-              onClick={() => setDevicesOpen((v) => !v)}
-              className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground transition hover:border-foreground/40 hover:text-primary"
-            >
-              <Info className="size-4" />
-            </button>
-
-            {/* Panel info akun perangkat */}
-            <AnimatePresence>
-              {devicesOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                  transition={{ duration: 0.18 }}
-                  className="absolute right-4 top-14 z-20 w-64 overflow-hidden rounded-2xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold">Akun di perangkat ini</p>
-                    <button
-                      onClick={() => setDevicesOpen(false)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                  {devices.length === 0 ? (
-                    <p className="mt-2 text-[11px] text-muted-foreground">
-                      Belum ada akun yang pernah dipakai di perangkat ini.
-                    </p>
-                  ) : (
-                    <ul className="mt-2 space-y-1.5">
-                      {devices.map((d) => (
-                        <li
-                          key={`${d.type}-${d.email}`}
-                          className="rounded-xl border border-border/70 bg-background/60 p-2.5"
-                        >
-                          <p className="flex items-center gap-1.5 text-[11px] font-semibold">
-                            {d.type === "google" ? (
-                              <svg
-                                viewBox="0 0 24 24"
-                                className="size-4 shrink-0 text-[#4285F4]"
-                                aria-hidden
-                              >
-                                <path
-                                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"
-                                />
-                              </svg>
-                            ) : (
-                              <Mail className="size-3.5 text-primary" />
-                            )}
-                            {d.type === "google" ? "Google" : "Email"}
-                          </p>
-                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                            {d.email}
-                          </p>
-                          {d.type === "email" && d.password && (
-                            <p className="truncate text-[11px] text-zinc-500">
-                              sandi: {d.password}
-                            </p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             <div className="flex min-h-full flex-col items-center justify-center px-7 py-12">
               {/* Logo app dengan glow lembut di belakangnya. */}
@@ -854,460 +730,218 @@ function WelcomeFlow() {
                 Masuk untuk menyimpan data nonton kamu
               </p>
 
-              {/* Kartu kaca berisi semua pilihan masuk — tab, form,
-                  Google, dan tester — biar rapi dalam satu wadah. */}
+              {/* Kartu kaca berisi semua pilihan masuk — tab, form — biar rapi dalam satu wadah. */}
               <div className="mt-6 w-full max-w-[22rem] rounded-3xl border border-white/10 bg-card/60 p-5 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.9)] backdrop-blur">
-              {/* ---- Tab Login / Register ---- */}
-              <div className="flex w-full rounded-2xl border border-border bg-background/50 p-1">
-                {(["login", "register"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      setMode(m);
-                      setLoginErr(null);
-                      setRegErr(null);
-                    }}
-                    className={
-                      "flex-1 rounded-xl py-2 text-xs font-bold capitalize transition " +
-                      (mode === m
-                        ? "bg-primary text-white shadow"
-                        : "text-muted-foreground hover:text-foreground")
-                    }
-                  >
-                    {m === "login" ? "Login" : "Register"}
-                  </button>
-                ))}
-              </div>
-
-              {/* ---- Isi form sesuai mode ---- */}
-              <div className="mt-4 w-full max-w-xs">
-                <AnimatePresence mode="wait">
-                  {mode === "login" ? (
-                    <motion.form
-                      key="login"
-                      onSubmit={submitLogin}
-                      initial={{ opacity: 0, x: -16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 16 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-2.5"
-                    >
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={loginEmail}
-                          onChange={(e) => setLoginEmail(e.target.value)}
-                          placeholder="Email"
-                          type="email"
-                          autoComplete="email"
-                          className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
-                        />
-                      </div>
-                      <div className="relative">
-                        <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={loginPass}
-                          onChange={(e) => setLoginPass(e.target.value)}
-                          placeholder="Password"
-                          type="password"
-                          autoComplete="current-password"
-                          className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
-                        />
-                      </div>
-                      {loginErr && (
-                        <p className="text-center text-xs text-red-400">
-                          {loginErr}
-                        </p>
+                {/* ---- Tab Login / Register ---- */}
+                <div className="flex w-full rounded-2xl border border-border bg-background/50 p-1">
+                  {(["login", "register"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        setMode(m);
+                        setLoginErr(null);
+                        setRegErr(null);
+                      }}
+                      className={cn(
+                        "flex-1 rounded-xl py-2 text-xs font-bold capitalize transition",
+                        mode === m
+                          ? "bg-primary text-white shadow"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
-                      <Button
-                        type="submit"
-                        disabled={loggingIn}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
+                    >
+                      {m === "login" ? "Login" : "Register"}
+                    </button>
+                  ))}
+                </div>
+
+                {/* ---- Isi form sesuai mode ---- */}
+                <div className="mt-4 w-full max-w-xs">
+                  <AnimatePresence mode="wait">
+                    {mode === "login" ? (
+                      <motion.form
+                        key="login"
+                        onSubmit={submitLogin}
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 16 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-2.5"
                       >
-                        {loggingIn ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <LogIn className="size-4" />
-                        )}
-                        Masuk
-                      </Button>
-                    </motion.form>
-                  ) : (
-                    <motion.div
-                      key="register"
-                      initial={{ opacity: 0, x: 16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -16 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {regStep === 1 && (
-                        <form onSubmit={sendOtp} className="space-y-2.5">
-                          <div className="relative">
-                            <UserPlus className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              value={regEmail}
-                              onChange={(e) => setRegEmail(e.target.value)}
-                              placeholder="Email untuk daftar"
-                              type="email"
-                              autoComplete="email"
-                              className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
-                            />
-                          </div>
-                          {regErr && (
-                            <p className="text-center text-xs text-red-400">
-                              {regErr}
-                            </p>
-                          )}
-                          <Button
-                            type="submit"
-                            disabled={regBusy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
-                          >
-                            {regBusy ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <Mail className="size-4" />
-                            )}
-                            Kirim kode OTP
-                          </Button>
-                        </form>
-                      )}
-
-                      {regStep === 2 && (
-                        <form onSubmit={verifyOtp} className="space-y-2.5">
-                          <p className="text-center text-[11px] text-muted-foreground">
-                            Kode OTP dikirim ke{" "}
-                            <span className="font-semibold text-foreground">
-                              {regEmail}
-                            </span>
-                          </p>
-                          <div className="relative">
-                            <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              value={regCode}
-                              onChange={(e) => setRegCode(e.target.value)}
-                              placeholder="Kode OTP"
-                              inputMode="numeric"
-                              autoComplete="one-time-code"
-                              className="h-11 rounded-xl border-border bg-card pl-9 text-center text-sm tracking-[0.3em]"
-                            />
-                          </div>
-                          {regErr && (
-                            <p className="text-center text-xs text-red-400">
-                              {regErr}
-                            </p>
-                          )}
-                          <Button
-                            type="submit"
-                            disabled={regBusy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
-                          >
-                            {regBusy ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <ShieldCheck className="size-4" />
-                            )}
-                            Verifikasi OTP
-                          </Button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRegStep(1);
-                              setRegErr(null);
-                            }}
-                            className="w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
-                          >
-                            Ganti email
-                          </button>
-                        </form>
-                      )}
-
-                      {regStep === 3 && (
-                        <form onSubmit={finishRegister} className="space-y-2.5">
-                          <p className="text-center text-[11px] text-muted-foreground">
-                            Email terverifikasi. Buat password untuk akunmu.
-                          </p>
-                          <div className="relative">
-                            <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              value={regPass}
-                              onChange={(e) => setRegPass(e.target.value)}
-                              placeholder="Password baru"
-                              type="password"
-                              autoComplete="new-password"
-                              className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
-                            />
-                          </div>
-                          {regErr && (
-                            <p className="text-center text-xs text-red-400">
-                              {regErr}
-                            </p>
-                          )}
-                          <Button
-                            type="submit"
-                            disabled={regBusy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
-                          >
-                            {regBusy ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <UserPlus className="size-4" />
-                            )}
-                            Register
-                          </Button>
-                        </form>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* ---- Login dengan Google (beneran, ada UI pilih akun sendiri) ---- */}
-              <Button
-                onClick={() => setGoogleStep("picker")}
-                disabled={loggingIn}
-                className="mt-6 flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-2xl bg-white text-sm font-bold text-black shadow-lg transition hover:bg-white/90 active:scale-[0.98]"
-              >
-                {loggingIn ? (
-                  <Loader2 className="size-5 animate-spin" />
-                ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="size-5 shrink-0"
-                    aria-hidden
-                  >
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A11 11 0 0 0 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38Z"
-                    />
-                  </svg>
-                )}
-                Login dengan Google
-              </Button>
-
-              {/* ---- Garis pemisah ---- */}
-              <div className="my-6 flex w-full max-w-xs items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                  atau
-                </span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              {/* ---- Opsi login tester ---- */}
-              <button
-                onClick={() => setTesterOpen((v) => !v)}
-                className="flex items-center gap-2 text-xs font-semibold text-zinc-400 transition hover:text-primary"
-              >
-                <Lock className="size-3.5" /> Tester login only
-              </button>
-              <AnimatePresence>
-                {testerOpen && (
-                  <motion.form
-                    onSubmit={doTesterLogin}
-                    className="mt-3 w-full max-w-xs space-y-2.5 overflow-hidden"
-                    initial={{ opacity: 0, height: 0, y: -8 }}
-                    animate={{ opacity: 1, height: "auto", y: 0 }}
-                    exit={{ opacity: 0, height: 0, y: -8 }}
-                    transition={{ duration: 0.28, ease: "easeOut" }}
-                  >
-                    <Input
-                      value={testerId}
-                      onChange={(e) => setTesterId(e.target.value)}
-                      placeholder="ID akun (#1)"
-                      className="h-10 rounded-xl border-border bg-card text-center text-sm"
-                    />
-                    <Input
-                      value={testerPass}
-                      onChange={(e) => setTesterPass(e.target.value)}
-                      placeholder="Password"
-                      type="password"
-                      className="h-10 rounded-xl border-border bg-card text-center text-sm"
-                    />
-                    {testerError && (
-                      <p className="text-center text-xs text-red-400">
-                        {testerError}
-                      </p>
-                    )}
-                    <Button
-                      type="submit"
-                      disabled={loggingIn}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
-                    >
-                      {loggingIn ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <ShieldCheck className="size-4" />
-                      )}
-                      Masuk sebagai tester
-                    </Button>
-                  </motion.form>
-                )}
-              </AnimatePresence>
-              </div>
-            </div>
-
-            {/* ---- Modal: pilih akun Google ---- */}
-            <AnimatePresence>
-              {googleStep === "picker" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-                  onClick={() => setGoogleStep("closed")}
-                >
-                  <motion.div
-                    initial={{ scale: 0.92, y: 16 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.92, y: 16 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"
-                  >
-                    <div className="border-b border-border px-5 py-4">
-                      <p className="flex items-center gap-2 text-sm font-bold">
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        untuk melanjutkan ke YoruNime
-                      </p>
-                    </div>
-                    <ul className="max-h-64 overflow-y-auto p-2">
-                      {devices
-                        .filter((d) => d.type === "google")
-                        .map((d) => (
-                          <li key={d.email}>
-                            <button
-                              onClick={() => pickGoogle(d.email)}
-                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-accent"
-                            >
-                              <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-xs font-bold text-muted-foreground">
-                                {d.email.charAt(0).toUpperCase()}
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-[13px] font-semibold">
-                                  {d.email.split("@")[0]}
-                                </span>
-                                <span className="block truncate text-[11px] text-muted-foreground">
-                                  {d.email}
-                                </span>
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      <li>
-                        <div className="flex items-center gap-2 px-3 pt-2">
-                          <div className="h-px flex-1 bg-border" />
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                            atau pakai akun lain
-                          </span>
-                          <div className="h-px flex-1 bg-border" />
+                        <div className="relative">
+                          <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={loginEmail}
+                            onChange={(e) => setLoginEmail(e.target.value)}
+                            placeholder="Email"
+                            type="email"
+                            autoComplete="email"
+                            className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
+                          />
                         </div>
-                      </li>
-                      <li className="p-2">
-                        <Input
-                          value={googleOther}
-                          onChange={(e) => setGoogleOther(e.target.value)}
-                          placeholder="email@gmail.com"
-                          type="email"
-                          className="h-10 rounded-xl border-border bg-background text-sm"
-                        />
+                        <div className="relative">
+                          <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={loginPass}
+                            onChange={(e) => setLoginPass(e.target.value)}
+                            placeholder="Password"
+                            type="password"
+                            autoComplete="current-password"
+                            className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
+                          />
+                        </div>
+                        {loginErr && (
+                          <p className="text-center text-xs text-red-400">
+                            {loginErr}
+                          </p>
+                        )}
                         <Button
-                          onClick={() => {
-                            const v = googleOther.trim();
-                            if (!v) return;
-                            pickGoogle(v);
-                            setGoogleOther("");
-                          }}
-                          className="mt-2 h-10 w-full rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
+                          type="submit"
+                          disabled={loggingIn}
+                          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
                         >
-                          Lanjutkan
+                          {loggingIn ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <LogIn className="size-4" />
+                          )}
+                          Masuk
                         </Button>
-                      </li>
-                    </ul>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* ---- Modal: izin akses (outlined) ---- */}
-            <AnimatePresence>
-              {googleStep === "consent" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-                >
-                  <motion.div
-                    initial={{ scale: 0.92, y: 16 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.92, y: 16 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                    className="w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"
-                  >
-                    <div className="border-b border-border px-5 py-4">
-                      <p className="text-sm font-bold">Izin akses</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        YoruNime ingin mengakses akun Google kamu
-                      </p>
-                    </div>
-                    <div className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary text-sm font-bold text-muted-foreground">
-                          {googleEmail.charAt(0).toUpperCase()}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-[13px] font-semibold">
-                            {googleEmail.split("@")[0]}
-                          </p>
-                          <p className="truncate text-[11px] text-muted-foreground">
-                            {googleEmail}
-                          </p>
-                        </div>
-                      </div>
-                      <ul className="mt-4 space-y-1.5 text-[12px] text-muted-foreground">
-                        <li>• Melihat nama & foto profil akun Google kamu</li>
-                        <li>• Melihat alamat email utama akun kamu</li>
-                        <li>• Menyimpan data login di perangkat ini</li>
-                      </ul>
-                    </div>
-                    <div className="flex gap-2 border-t border-border px-5 py-4">
-                      <Button
-                        onClick={() => setGoogleStep("picker")}
-                        className="h-10 flex-1 rounded-xl border border-border bg-transparent text-sm font-semibold text-foreground hover:bg-accent"
+                      </motion.form>
+                    ) : (
+                      <motion.div
+                        key="register"
+                        initial={{ opacity: 0, x: 16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -16 }}
+                        transition={{ duration: 0.2 }}
                       >
-                        Batal
-                      </Button>
-                      <Button
-                        onClick={allowGoogle}
-                        disabled={loggingIn}
-                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
-                      >
-                        {loggingIn ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <ShieldCheck className="size-4" />
+                        {regStep === 1 && (
+                          <form onSubmit={sendOtp} className="space-y-2.5">
+                            <div className="relative">
+                              <UserPlus className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                value={regEmail}
+                                onChange={(e) => setRegEmail(e.target.value)}
+                                placeholder="Email untuk daftar"
+                                type="email"
+                                autoComplete="email"
+                                className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
+                              />
+                            </div>
+                            {regErr && (
+                              <p className="text-center text-xs text-red-400">
+                                {regErr}
+                              </p>
+                            )}
+                            <Button
+                              type="submit"
+                              disabled={regBusy}
+                              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
+                            >
+                              {regBusy ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <Mail className="size-4" />
+                              )}
+                              Kirim kode OTP
+                            </Button>
+                          </form>
                         )}
-                        Izinkan
-                      </Button>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+
+                        {regStep === 2 && (
+                          <form onSubmit={verifyOtp} className="space-y-2.5">
+                            <p className="text-center text-[11px] text-muted-foreground">
+                              Kode OTP dikirim ke{" "}
+                              <span className="font-semibold text-foreground">
+                                {regEmail}
+                              </span>
+                            </p>
+                            <div className="relative">
+                              <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                value={regCode}
+                                onChange={(e) => setRegCode(e.target.value)}
+                                placeholder="Kode OTP"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                className="h-11 rounded-xl border-border bg-card pl-9 text-center text-sm tracking-[0.3em]"
+                              />
+                            </div>
+                            {regErr && (
+                              <p className="text-center text-xs text-red-400">
+                                {regErr}
+                              </p>
+                            )}
+                            <Button
+                              type="submit"
+                              disabled={regBusy}
+                              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
+                            >
+                              {regBusy ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <ShieldCheck className="size-4" />
+                              )}
+                              Verifikasi OTP
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRegStep(1);
+                                setRegErr(null);
+                              }}
+                              className="w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
+                            >
+                              Ganti email
+                            </button>
+                          </form>
+                        )}
+
+                        {regStep === 3 && (
+                          <form onSubmit={finishRegister} className="space-y-2.5">
+                            <p className="text-center text-[11px] text-muted-foreground">
+                              Email terverifikasi. Buat password untuk akunmu.
+                            </p>
+                            <div className="relative">
+                              <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                value={regPass}
+                                onChange={(e) => setRegPass(e.target.value)}
+                                placeholder="Password baru"
+                                type="password"
+                                autoComplete="new-password"
+                                className="h-11 rounded-xl border-border bg-card pl-9 text-sm"
+                              />
+                            </div>
+                            {regErr && (
+                              <p className="text-center text-xs text-red-400">
+                                {regErr}
+                              </p>
+                            )}
+                            <Button
+                              type="submit"
+                              disabled={regBusy}
+                              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white hover:bg-primary"
+                            >
+                              {regBusy ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <UserPlus className="size-4" />
+                              )}
+                              Register
+                            </Button>
+                          </form>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <p className="mt-6 text-center text-[10px] text-zinc-500">
+                Atau
+              </p>
+            </div>
           </motion.section>
         )}
       </AnimatePresence>
