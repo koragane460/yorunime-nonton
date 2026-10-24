@@ -1023,25 +1023,20 @@ function HomeContent() {
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   return (
     <div className="pb-8">
-      {/* 1) YORUNIME PREMIUM — card ke /premium */}
+      {/* 1) YORUNIME PREMIUM — kotak KECIL: ikon mahkota di kiri, tulisan
+          "Beli Premium Ada Di Sini" di kanan. Tema biru muda lembut (bukan
+          neon, bukan emas) — permintaan user. */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/20 via-secondary/45 to-secondary/45 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 backdrop-blur-md transition hover:border-gold/60"
+        className="fade-enter mt-4 flex w-full items-center gap-2.5 rounded-2xl border border-sky-400/25 bg-gradient-to-r from-sky-500/[0.14] via-sky-500/[0.06] to-transparent px-3 py-2.5 text-left transition hover:border-sky-400/50"
       >
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/15 shadow-[0_0_16px_-4px] shadow-gold/50">
-          <CrownIcon className="size-7 text-gold" />
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-sky-400/35 bg-sky-400/15">
+          <CrownIcon className="size-4.5 text-sky-300" />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-mono text-[11px] font-bold tracking-[0.2em] text-gold">
-            PREMIUM
-          </span>
-          <span className="mt-0.5 block text-xs leading-snug text-zinc-300">
-            Premium mulai dari 7.000 — baca manga dan manhwa sepuasnya
-          </span>
+        <span className="min-w-0 flex-1 text-[13px] font-bold text-sky-100">
+          Beli Premium Ada Di Sini
         </span>
-        <span className="flex shrink-0 items-center rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-black">
-          Buka Premium
-        </span>
+        <ChevronRight className="size-4 shrink-0 text-sky-300/70" aria-hidden />
       </button>
 
       {/* 2) HERO BANNER — SATU anime tampil (fade antar judul, selalu hanya
@@ -1214,6 +1209,7 @@ function HomeContent() {
                       title={a.title}
                       image={a.image}
                       imageOnly
+                      squareBottom
                       onClick={() =>
                         openAnime(a.id, a.title, a.isDonghua ? "sanka" : "anilist")
                       }
@@ -1235,7 +1231,9 @@ function HomeContent() {
                     )}
                   </div>
                   {/* Kotak judul MENYATU langsung dengan kartu — tanpa celah
-                      (mt dihapus) dan sudut bawahnya ikut rounded-xl kartu. */}
+                      dan TANPA sudut rounded di atas, karena poster di atasnya
+                      juga kotak di bawah (pinggiran kiri bawah & kanan bawah
+                      menyatu dengan background judul). */}
                   <div className="rounded-b-xl bg-black/60 px-1.5 pb-1 pt-1 backdrop-blur-sm">
                     <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
                       {a.title}

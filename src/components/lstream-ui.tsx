@@ -89,6 +89,7 @@ export function AnimeCard({
   onClick,
   isNew,
   imageOnly,
+  squareBottom,
   views,
   episodes,
 }: {
@@ -104,6 +105,9 @@ export function AnimeCard({
   isNew?: boolean;
   /** true = hanya poster, judul & skor ditampilkan oleh pemanggil. */
   imageOnly?: boolean;
+  /** true = sudut bawah poster SUDUT KOTAK (tidak rounded) supaya menyatu dengan
+      kotak judul di bawahnya (permintaan: Update News). */
+  squareBottom?: boolean;
   /** Jumlah views — ditampilkan di bawah judul saat tersedia. */
   views?: number;
   /** Jumlah episode — "N episode" di bawah judul (donghua memakai `episode`). */
@@ -112,7 +116,10 @@ export function AnimeCard({
   return (
     <button
       onClick={onClick}
-      className="group relative w-full overflow-hidden rounded-xl text-left transition hover:opacity-90"
+      className={cn(
+        "group relative w-full overflow-hidden text-left transition hover:opacity-90",
+        squareBottom ? "rounded-t-xl" : "rounded-xl",
+      )}
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
         {image ? (

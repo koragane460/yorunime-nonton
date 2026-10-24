@@ -602,10 +602,14 @@ export const detail = action({
 
     // Sumber pertama yang punya konten TAPI tanpa daftar episode disimpan
     // di sini. Loop tetap jalan ke sumber berikutnya yang mungkin punya
-    // daftar episode lengkap — dulu sumber pertama langsung menang sehingga
+    // daftar episode lengkap. Dulu sumber pertama langsung menang sehingga
     // ada judul yang metadatanya bilang episodenya banyak, tapi daftar
     // episodnya kosong saat dibuka.
-    let fallback: SankaDetail | null = null;
+    // SEMUA sumber dicoba lalu digabung di akhir handler. donghub hanya
+    // menyimpan jendela episode terbaru, sedangkan donghua (anichin)
+    // menyimpan daftar LENGKAP dari episode pertama, jadi sumber pertama
+    // tidak boleh langsung menang (bug "episode ga lengkap").
+    const candidates: SankaDetail[] = [];
 
     for (const src of order) {
       const raw = await sankaGet(
@@ -680,89 +684,51 @@ export const detail = action({
         related,
         source: src,
       };
-      // Punya daftar episode → langsung menang. Tidak punya → simpan
-      // sebagai cadangan dan coba sumber lain dulu.
-      if (eps.length > 0) return res;
-      fallback ??= res;
+      if (res.synopsis || eps.length > 0 || genres.length > 0) {
+        candidates.push(res);
+      }
     }
-    return fallback ?? { error: "Detail tidak ditemukan" };
+    if (candidates.length === 0) return { error: "Detail tidak ditemukan" };
+
+    // Metadata: kandidat pertama menang, field kosong diisi milik kandidat
+    // lain (satu sumber bisa punya sinopsis tapi tidak punya daftar episode).
+    const base = candidates[0];
+    const merged: SankaDetail = { ...base, title: base.title || s, episodes: [] };
+    const fill = (candidates.find((c) => c.synopsis)?.synopsis ?? "");
+    if (!merged.synopsis) merged.synopsis = fill;
+    merged.poster ??= candidates.find((c) => c.poster)?.poster;
+    merged.cover ??= candidates.find((c) => c.cover)?.cover;
+    merged.rating ??= candidates.find((c) => c.rating)?.rating;
+    merged.status ??= candidates.find((c) => c.status)?.status;
+    merged.type ??= candidates.find((c) => c.type)?.type;
+    merged.studio ??= candidates.find((c) => c.studio)?.studio;
+    merged.alterTitle ??= candidates.find((c) => c.alterTitle)?.alterTitle;
+    if (merged.genres.length === 0) {
+      merged.genres = candidates.find((c) => c.genres.length > 0)?.genres ?? [];
+    }
+    if (merged.related.length === 0) {
+      merged.related = candidates.find((c) => c.related.length > 0)?.related ?? [];
+    }
+
+    // Gabung daftar episode: union per nomor episode. Sumber dengan urutan
+    // preferensi pertama diprioritaskan; nomor yang sama dari sumber lain
+    // dibuang supaya tombol episode tidak dobel.
+    const seen = new Set<number>();
+    for (const c of candidates) {
+      for (const e of c.episodes) {
+        if (e.number > 0) {
+          if (seen.has(e.number)) continue;
+          seen.add(e.number);
+        }
+        merged.episodes.push(e);
+      }
+    }
+    merged.episodes.sort((a, b) => a.number - b.number);
+    return merged;
   },
 });
 
-/**
- * Cari satu episode di DailyMotion dan ambil URL HLS-nya.
- *
- * Dipakai lebih dulu untuk donghua: kalau ada, playback memakai file m3u8
- * (HLS) yang diputar player bawaan aplikasi sendiri, bukan iframe server
- * penuh iklan. Kalau DailyMotion tidak punya / tidak bisa dibaca, pemanggil
- * falls back ke server Sanka seperti biasa.
- */
-async function dailymotionHls(title: string): Promise<{
-  label: string;
-  url: string;
-  type: "hls";
-  baked: boolean;
-  ads: boolean;
-} | null> {
-  const q = String(title ?? "")
-    .replace(/episode\s*\d+/gi, "")
-    .replace(/subtitle\s*indonesia/gi, "")
-    .trim();
-  if (!q) return null;
-  try {
-    const u = `https://api.dailymotion.com/videos?search=${encodeURIComponent(
-      q,
-    )}&limit=5&fields=id,title`;
-    const res = await fetch(u, {
-      headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const list = (await res.json()) as { list?: { id: string; title?: string }[] };
-    const items = (list?.list ?? []).filter((v) => v?.id);
-    if (items.length === 0) return null;
 
-    for (const v of items) {
-      const meta = await fetch(
-        `https://www.dailymotion.com/player/metadata/video/${v.id}`,
-        {
-          headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
-          signal: AbortSignal.timeout(8000),
-        },
-      ).catch(() => null);
-      if (!meta || !meta.ok) continue;
-      const j: any = await meta.json().catch(() => null);
-      const qualities: any[] = Array.isArray(j?.qualities) ? j.qualities : [];
-      // Prioritas paling tinggi dulu: pilih sesuai urutan di bawah.
-      const wanted = [
-        "2160",
-        "1440",
-        "1080",
-        "720",
-        "480",
-        "380",
-        "240",
-        "auto",
-      ];
-      for (const w of wanted) {
-        const qy = qualities.find((x) => String(x?.quality) === w);
-        const m3u8 = qy?.type === "application/x-mpegURL" && qy?.url;
-        if (m3u8) {
-          return {
-            label: `DailyMotion ${w === "auto" ? "auto" : `${w}p`}`,
-            url: String(m3u8),
-            type: "hls" as const,
-            baked: false,
-            ads: false,
-          };
-        }
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Stream satu episode donghua.
@@ -869,6 +835,90 @@ async function dailymotionHlsForEpisode(
   return null;
 }
 
+/**
+ * URL embed yang layak ditawarkan sebagai cadangan pemutar.
+ *
+ * Embed DailyMotion dilewati: link lama mati (video dihapus, DM005) dan
+ * yang hidup sudah diambil sebagai HLS pada lapisan pertama.
+ */
+function isPlayableEmbed(url: string): boolean {
+  if (!/^https:\/\//i.test(url)) return false;
+  if (/dailymotion\.com/i.test(url)) return false;
+  return /ok\.ru|rumble\.com|\/e\/|\/embed|videoembed/i.test(url);
+}
+
+/**
+ * Pencarian DailyMotion yang dicek per episode.
+ *
+ * Video DailyMotion milik episode lama sering dihapus (DM005), dan pencarian
+ * berjudul seri saja berisiko memutar episode yang salah. Fungsi ini hanya
+ * menerima video yang judulnya menyebut nomor episode yang sama dengan slug
+ * ini, lalu memakai HLS-nya (plus subtitle Indonesia kalau ada).
+ */
+async function dailymotionEpisodeHls(
+  epSlug: string,
+): Promise<{ label: string; url: string; subtitle: string | null } | null> {
+  const number = parseEpisodeNumber(epSlug);
+  const series = epSlug
+    .replace(/-episode-.*$/i, "")
+    .replace(/-/g, " ")
+    .trim();
+  if (!series || number <= 0) return null;
+  try {
+    const u = `https://api.dailymotion.com/videos?search=${encodeURIComponent(
+      `${series} episode ${number}`,
+    )}&limit=10&fields=id,title`;
+    const res = await fetch(u, {
+      headers: { "User-Agent": UA },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const list = (await res.json()) as {
+      list?: { id: string; title?: string }[];
+    };
+    const mentionsEpisode = new RegExp(
+      `episode[\\s._-]*0*${number}(?!\\d)`,
+      "i",
+    );
+    for (const v of list?.list ?? []) {
+      const title = String(v?.title ?? "");
+      if (!v?.id || !mentionsEpisode.test(title)) continue;
+      if (titleSimilarity(series, title) < 60) continue;
+      const meta = await fetch(
+        `https://www.dailymotion.com/player/metadata/video/${v.id}`,
+        {
+          headers: { "User-Agent": UA, Referer: "https://www.dailymotion.com/" },
+          signal: AbortSignal.timeout(8000),
+        },
+      ).catch(() => null);
+      if (!meta || !meta.ok) continue;
+      const j: any = await meta.json().catch(() => null);
+      if (j?.error) continue;
+      const qualities: any = j?.qualities;
+      for (const w of ["2160", "1440", "1080", "720", "480", "380", "240", "auto"]) {
+        const q = Array.isArray(qualities?.[w])
+          ? String(qualities[w][0]?.url ?? "")
+          : "";
+        if (!q) continue;
+        const subs = await dailymotionSubtitles(v.id);
+        const indo = subs.find(
+          (s) =>
+            /^(id|ind|indonesia|indon)/i.test(s.key) ||
+            /indonesia/i.test(s.label),
+        );
+        return {
+          label: `DailyMotion ${w === "auto" ? "auto" : `${w}p`}`,
+          url: q,
+          subtitle: indo?.url ?? null,
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export const resolveEpisode = action({
   args: { slug: v.string(), source: v.optional(v.string()) },
   handler: async (_ctx, { slug, source }) => {
@@ -904,14 +954,62 @@ export const resolveEpisode = action({
       };
     }
 
-    // Cadangan: pencarian judul — masih DailyMotion (HLS), dipakai hanya
-    // kalau episode tidak punya server DailyMotion sama sekali.
-    const fromTitle = await dailymotionHls(
-      epSlug
-        .replace(/-episode-\d+.*$/i, "")
-        .replace(/-/g, " ")
-        .trim(),
-    );
+    // Server milik episode: Direct HLS/MP4 lebih dulu, lalu pencarian
+    // DailyMotion yang ketat, dan EMBED sebagai cadangan TERAKHIR. Semua
+    // sumber dicoba (bukan berhenti di sumber pertama) supaya episode lama
+    // yang hanya tersimpan di anichin tetap bisa diputar.
+    const order = source
+      ? [source, ...DONGHUA_SOURCES.filter((s) => s !== source)]
+      : DONGHUA_SOURCES;
+    const directs: { label: string; url: string; mp4: boolean }[] = [];
+    const embeds: { label: string; url: string; ads: boolean }[] = [];
+    const seenUrls = new Set<string>();
+    for (const src of order) {
+      const j = await sankaGet(
+        `/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
+        20_000,
+      );
+      const rawList: any[] = Array.isArray(j?.data?.streams)
+        ? j.data.streams
+        : Array.isArray(j?.streaming?.servers)
+          ? j.streaming.servers
+          : [];
+      for (const s of rawList) {
+        const label = String(s?.server ?? s?.name ?? src);
+        const url = String(s?.url ?? "");
+        if (!url || seenUrls.has(url)) continue;
+        if (/\.(m3u8|mp4)(\?|$)/i.test(url)) {
+          seenUrls.add(url);
+          directs.push({ label, url, mp4: /\.mp4(\?|$)/i.test(url) });
+        } else if (isPlayableEmbed(url)) {
+          seenUrls.add(url);
+          embeds.push({ label, url, ads: /\[ads?\]/i.test(label) });
+        }
+      }
+    }
+    if (directs.length > 0) {
+      return {
+        ok: true as const,
+        sources: directs.map((s) => ({
+          label: `Direct · ${s.label}`,
+          url: s.url,
+          type: s.mp4 ? ("mp4" as const) : ("hls" as const),
+          baked: true,
+        })),
+        subtitle: null,
+        subtitles: [] as { label: string; url: string }[],
+        subTracks: [] as unknown[],
+        hasIndonesian: true,
+        bakedSubs: true,
+        intro: null,
+        outro: null,
+      };
+    }
+
+    // Pencarian DailyMotion KETAT per episode (judul video harus benar-benar
+    // menyebut nomor episode ini) dipakai sebelum embed, karena hasilnya
+    // bersih dan bisa membawa subtitle Indonesia.
+    const fromTitle = await dailymotionEpisodeHls(epSlug);
     if (fromTitle) {
       return {
         ok: true as const,
@@ -923,6 +1021,30 @@ export const resolveEpisode = action({
             baked: false,
           },
         ],
+        subtitle: fromTitle.subtitle,
+        subtitles: [] as { label: string; url: string }[],
+        subTracks: [] as unknown[],
+        hasIndonesian: !!fromTitle.subtitle,
+        bakedSubs: false,
+        intro: null,
+        outro: null,
+      };
+    }
+
+    // Cadangan terakhir: server EMBED milik episode (ok.ru, Rumble, dst).
+    // Dulu semua embed dibuang sehingga episode yang DailyMotion-nya sudah
+    // dihapus jadi "Episode belum tersedia" padahal server lain ada.
+    if (embeds.length > 0) {
+      // Server berlabel [ADS] diletakkan paling belakang.
+      embeds.sort((a, b) => Number(a.ads) - Number(b.ads));
+      return {
+        ok: true as const,
+        sources: embeds.map((s) => ({
+          label: s.label,
+          url: s.url,
+          type: "embed" as const,
+          baked: false,
+        })),
         subtitle: null,
         subtitles: [] as { label: string; url: string }[],
         subTracks: [] as unknown[],
@@ -931,49 +1053,6 @@ export const resolveEpisode = action({
         intro: null,
         outro: null,
       };
-    }
-    // Server langsung milik episode (Direct HLS/MP4). Server EMBED dihapus
-    // sesuai permintaan: donghua hanya DailyMotion 4K + Direct HLS.
-    {
-      const order = source
-        ? [source, ...DONGHUA_SOURCES.filter((s) => s !== source)]
-        : DONGHUA_SOURCES;
-      for (const src of order) {
-        const j = await sankaGet(
-          `/anime/${src}/episode/${encodeURIComponent(epSlug)}`,
-          20_000,
-        );
-        const rawList: any[] = Array.isArray(j?.data?.streams)
-          ? j.data.streams
-          : Array.isArray(j?.streaming?.servers)
-            ? j.streaming.servers
-            : [];
-        const direct = rawList
-          .map((s: any) => ({
-            label: String(s?.server ?? s?.name ?? src),
-            url: String(s?.url ?? ""),
-          }))
-          .filter((s: { url: string }) =>
-            /\.(m3u8|mp4)(\?|$)/i.test(s.url),
-          );
-        if (direct.length === 0) continue;
-        return {
-          ok: true as const,
-          sources: direct.map((s: { label: string; url: string }) => ({
-            label: `Direct HLS · ${s.label}`,
-            url: s.url,
-            type: /\.mp4(\?|$)/i.test(s.url) ? ("mp4" as const) : ("hls" as const),
-            baked: true,
-          })),
-          subtitle: null,
-          subtitles: [] as { label: string; url: string }[],
-          subTracks: [] as unknown[],
-          hasIndonesian: true,
-          bakedSubs: true,
-          intro: null,
-          outro: null,
-        };
-      }
     }
     return { ok: false as const, reason: "Episode belum tersedia" };
   },

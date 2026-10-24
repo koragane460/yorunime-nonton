@@ -65,12 +65,14 @@ const GIVE_COST: Record<number, number> = {
 const GIVE_XP: Record<number, number> = {
   1: 250, 3: 550, 5: 700, 7: 1000, 15: 2100, 25: 5500, 30: 6900,
 };
+/**
+ * Tambahan biaya hari untuk jumlah penerima. Semakin banyak user yang bisa
+ * claim, semakin mahal — harus sinkan dengan RECEIVER_COST di convex/chat.ts.
+ */
 function receiverCost(r: number) {
-  if (r === 5) return 0;
-  if (r === 15) return 1;
-  if (r === 20) return 3;
-  if (r === 30) return 4;
-  return Math.max(0, Math.ceil((r - 5) / 7));
+  const table: Record<number, number> = { 5: 0, 15: 3, 20: 6, 30: 10 };
+  if (table[r] !== undefined) return table[r];
+  return Math.max(0, Math.ceil((r - 5) * 0.35));
 }
 
 function GivePremiumDialog({
@@ -120,25 +122,32 @@ function GivePremiumDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm border-foreground/40">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-400">
-            <Crown className="size-5" /> Give Premium
+      <DialogContent className="max-w-sm gap-0 overflow-hidden border border-amber-400/25 bg-card p-0">
+        {/* Header emas premium — crown di lingkaran lembut, tanpa neon. */}
+        <div className="relative border-b border-amber-400/20 bg-gradient-to-b from-amber-500/[0.14] to-transparent px-5 pb-4 pt-5 text-center">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15">
+            <Crown className="size-6 text-amber-300" />
+          </span>
+          <DialogTitle className="mt-2.5 text-lg font-bold text-amber-200">
+            Give Premium
           </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Bagikan hari premium ke member chat ini
+          </p>
+        </div>
+        <div className="thin-scroll max-h-[70vh] space-y-4 overflow-y-auto px-5 py-4">
           <div>
-            <p className="mb-2 text-xs text-muted-foreground">Berapa hari</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">Berapa hari</p>
+            <div className="flex flex-wrap gap-1.5">
               {GIVE_DAYS.map((d) => (
                 <button
                   key={d}
                   onClick={() => setDays(d)}
                   className={cn(
-                    "rounded-lg border px-3 py-1.5 text-sm transition",
+                    "flex-1 basis-[calc(25%-0.375rem)] rounded-xl border px-2 py-2 text-sm font-bold transition",
                     days === d
-                      ? "border-foreground/40 bg-primary/15 text-primary"
-                      : "border-border text-muted-foreground hover:border-foreground/40",
+                      ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
+                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-amber-400/40 hover:text-foreground",
                   )}
                 >
                   {d} hari
@@ -147,77 +156,103 @@ function GivePremiumDialog({
             </div>
           </div>
           <div>
-            <p className="mb-2 text-xs text-muted-foreground">Untuk berapa orang</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">
+              Untuk berapa orang
+              <span className="ml-1.5 font-normal text-[10px]">
+                (makin banyak, makin mahal)
+              </span>
+            </p>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2">
+              <button
+                aria-label="Kurangi penerima"
+                disabled={receivers <= 5}
+                onClick={() => setReceivers((r) => Math.max(5, r - 1))}
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lg font-bold text-muted-foreground transition hover:border-amber-400/50 hover:text-foreground disabled:opacity-35"
+              >
+                −
+              </button>
+              <div className="min-w-0 text-center">
+                <p className="text-lg font-black leading-none text-foreground">
+                  {receivers} org
+                </p>
+                <p className="mt-1 text-[10px] text-amber-300/90">
+                  +{receiverCost(receivers)} hari biaya penerima
+                </p>
+              </div>
+              <button
+                aria-label="Tambah penerima"
+                disabled={receivers >= 30}
+                onClick={() => setReceivers((r) => Math.min(30, r + 1))}
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lg font-bold text-muted-foreground transition hover:border-amber-400/50 hover:text-foreground disabled:opacity-35"
+              >
+                +
+              </button>
+            </div>
+            <div className="mt-2 flex gap-1.5">
               {[5, 15, 20, 30].map((r) => (
                 <button
                   key={r}
                   onClick={() => setReceivers(r)}
                   className={cn(
-                    "rounded-lg border px-3 py-1.5 text-sm transition",
+                    "flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition",
                     receivers === r
-                      ? "border-foreground/40 bg-primary/15 text-primary"
-                      : "border-border text-muted-foreground hover:border-foreground/40",
+                      ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
+                      : "border-white/10 text-muted-foreground hover:border-amber-400/40",
                   )}
                 >
-                  {r} orang
+                  {r} org
                 </button>
               ))}
             </div>
-            <div className="mt-3 flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={receivers <= 5}
-                onClick={() => setReceivers((r) => Math.max(5, r - 1))}
-              >
-                −
-              </Button>
-              <span className="min-w-16 text-center text-lg font-semibold">
-                {receivers} org
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={receivers >= 30}
-                onClick={() => setReceivers((r) => Math.min(30, r + 1))}
-              >
-                +
-              </Button>
+          </div>
+          <div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Pesan (opsional, minimal 50 karakter)"
+              rows={3}
+              className="w-full rounded-xl border border-white/12 bg-white/[0.03] p-3 text-sm outline-none focus:border-amber-400/50"
+            />
+            {msgLen > 0 && msgLen < 50 && (
+              <p className="mt-1 text-[11px] font-semibold text-amber-300">
+                Pesan masih {50 - msgLen} karakter kurang — atau kosongkan saja.
+              </p>
+            )}
+          </div>
+          {/* Ringkasan biaya — emas lembut, angka utama besar. */}
+          <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.08] p-3">
+            <div className="flex items-end justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300/80">
+                  Biaya
+                </p>
+                <p className="mt-0.5 text-2xl font-black leading-none text-amber-200">
+                  {cost} hari
+                </p>
+              </div>
+              <p className="pb-0.5 text-right text-[11px] leading-relaxed text-muted-foreground">
+                {GIVE_COST[days]} hari dasar
+                <br />+ {receiverCost(receivers)} hari × {receivers} penerima
+              </p>
             </div>
+            <p className="mt-2 border-t border-amber-400/15 pt-2 text-xs font-semibold text-amber-300/90">
+              +{xp} XP untuk kamu
+            </p>
           </div>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Pesan (opsional, minimal 50 karakter)"
-            rows={3}
-            className="w-full rounded-lg border border-input bg-background/60 p-3 text-sm"
-          />
-          {msgLen > 0 && msgLen < 50 && (
-            <p className="text-[11px] font-semibold text-amber-300">
-              Pesan masih {50 - msgLen} karakter kurang — atau kosongkan saja.
-            </p>
-          )}
-          <div className="rounded-lg bg-primary/10 p-3 text-sm">
-            <p>
-              Biaya: <b>{cost} hari</b> premium kamu
-            </p>
-            <p className="text-xs text-muted-foreground">
-              ({GIVE_COST[days]} hari + {receiverCost(receivers)} hari untuk {receivers}{" "}
-              penerima)
-            </p>
-            <p className="mt-1 text-xs text-primary">XP yang kamu dapat: +{xp} XP</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pb-1">
+            <Button
+              variant="outline"
+              className="flex-1 border-white/15"
+              onClick={() => onOpenChange(false)}
+            >
               Batal
             </Button>
             <Button
               disabled={!msgOk}
-              className="flex-1 bg-primary text-primary-foreground hover:brightness-110"
+              className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 font-bold text-black shadow-[0_2px_10px_-4px_rgba(251,191,36,.6)] hover:brightness-105"
               onClick={submit}
             >
-              Kirim
+              <Crown className="size-4" /> Kirim
             </Button>
           </div>
         </div>
@@ -662,7 +697,8 @@ export function ChatPanel({
                         {give.days} hari premium untuk {give.slots} orang
                       </p>
                       {give.message && (
-                        <p className="mt-2 rounded-lg bg-black/25 p-2 text-left text-xs">
+                        // Pesan give ditengahkan sesuai permintaan.
+                        <p className="mt-2 rounded-lg bg-black/25 p-2 text-center text-xs leading-relaxed">
                           {give.message}
                         </p>
                       )}

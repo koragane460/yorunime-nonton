@@ -18,8 +18,8 @@ import { ComicDetailScreen } from "@/components/ComicDetailScreen";
 import { cn } from "@/lib/utils";
 import { Clapperboard, Crown, Filter, Heart, List, Tv, Vote as VoteIcon } from "lucide-react";
 
-// Chip tipe di dalam kelompok Ongoing (mode filter saja).
-type OngoingFilter = "semua" | "anime" | "manga" | "manhwa" | "donghua";
+// Chip tipe anime/manga/manhwa/donghua DIHAPUS PERMANEN sesuai permintaan
+// user — kelompok Ongoing menampilkan SEMUA tipe tanpa penyaring.
 
 /**
  * Status tayang → kelompok Ongoing. Terima snapshot AniList (RELEASING),
@@ -33,21 +33,6 @@ function isOngoingStatus(s?: string): boolean {
     return false;
   }
   return /(releasing|ongoing|berjalan|airing|airing|belum tamat|publishing|jalan)/.test(v);
-}
-
-const ONGOING_CHIPS: { key: OngoingFilter; label: string }[] = [
-  { key: "semua", label: "Semua" },
-  { key: "anime", label: "Anime" },
-  { key: "manga", label: "Manga" },
-  { key: "manhwa", label: "Manhwa" },
-  { key: "donghua", label: "Donghua" },
-];
-
-/** Tipe baris favorite untuk chip Ongoing. */
-function rowType(f: SubRow): OngoingFilter {
-  if ("slug" in f) return f.kind === "manhwa" ? "manhwa" : "manga";
-  const k = f.kind ?? "anime";
-  return k === "donghua" ? "donghua" : k === "anime" ? "anime" : k as OngoingFilter;
 }
 
 /** Baris favorite anime/donghua/film (tabel animeFavorites). */
@@ -84,8 +69,6 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
   // Top 10 hasil voting karakter — hanya terisi setelah event (7 hari) selesai.
   const top = useQuery(api.votes.topCharacters, {});
 
-  // Chip tipe di dalam kelompok Ongoing (mode filter saja).
-  const [ongoingType, setOngoingType] = useState<OngoingFilter>("semua");
   // "filter" (DEFAULT) = daftar otomatis dikelompokkan Ongoing → garis
   // pembatas → Completed, tanpa satu pun tombol status.
   // "single" = SEMUA kategori dicampur, kartu berbaris polos urut favorite.
@@ -148,15 +131,6 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
     }
     return { ongoingItems: ongoing, doneItems: done };
   }, [items]);
-
-  // Chip tipe menyaring kelompok Ongoing saja (sesuai permintaan).
-  const ongoingShown =
-    ongoingType === "semua"
-      ? ongoingItems
-      : ongoingItems.filter((f) => {
-          const t = rowType(f);
-          return t === ongoingType;
-        });
 
   const emptyText =
     "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
@@ -231,8 +205,10 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
     <div className="fade-enter pb-24">
       <div className="px-1 pt-4">
         {/* ---------------- JUDUL + GARIS ---------------- */}
-        <h1 className="text-left text-2xl font-black tracking-tight">Subscribe</h1>
-        <div className="mt-2 h-px w-full bg-gradient-to-r from-gold/70 via-border to-transparent" />
+        {/* Judul ditengahkan dan garis pembatasi FULL WIDTH (tanpa fade
+            transparan di ujung) — permintaan user. */}
+        <h1 className="text-center text-2xl font-black tracking-tight">Subscribe</h1>
+        <div className="mt-2 h-px w-full bg-gold/60" />
 
         {/* ---------------- DAFTAR SUBSCRIBE (semua tipe dicampur) ---------------- */}
         {items.length === 0 ? (
@@ -247,39 +223,15 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
           <div>
             {ongoingItems.length > 0 && (
               <>
-                {/* Judul ONGOING: putih, tanpa dot (permintaan user). */}
+                {/* Judul ONGOING: putih, tanpa dot, tanpa angka "masih jalan"
+                    (permintaan user). */}
                 <div className="mt-4 flex items-center gap-2">
                   <h2 className="text-sm font-black uppercase tracking-[0.14em] text-white">
                     Ongoing
                   </h2>
-                  <span className="text-[11px] font-semibold text-muted-foreground">
-                    {ongoingShown.length} masih jalan
-                  </span>
                 </div>
-                {/* Chip tipe anime/manga/manhwa/donghua khusus Ongoing. */}
-                <div className="thin-scroll -mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
-                  {ONGOING_CHIPS.map((c) => (
-                    <button
-                      key={c.key}
-                      onClick={() => setOngoingType(c.key)}
-                      className={cn(
-                        "shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold transition",
-                        ongoingType === c.key
-                          ? "border-white bg-white text-black"
-                          : "border-white/25 text-white/70",
-                      )}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-                {ongoingShown.length === 0 ? (
-                  <p className="mt-2 text-[12px] text-muted-foreground">
-                    Tidak ada ongoing tipe ini.
-                  </p>
-                ) : (
-                  renderGrid(ongoingShown)
-                )}
+                {/* Chip tipe anime/manga/manhwa/donghua DIHAPUS PERMANEN. */}
+                {renderGrid(ongoingItems)}
               </>
             )}
 
@@ -296,14 +248,11 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
 
             {doneItems.length > 0 && (
               <>
-                {/* Judul COMPLETED: putih, tanpa dot (permintaan user). */}
+                {/* Judul COMPLETED: putih, tanpa dot, tanpa angka "tamat". */}
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-black uppercase tracking-[0.14em] text-white">
                     Completed
                   </h2>
-                  <span className="text-[11px] font-semibold text-muted-foreground">
-                    {doneItems.length} tamat
-                  </span>
                 </div>
                 {renderGrid(doneItems)}
               </>

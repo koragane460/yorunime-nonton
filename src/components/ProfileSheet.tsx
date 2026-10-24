@@ -29,6 +29,7 @@ import { timeAgo, usernameColor } from "@/lib/lstream";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { StoryRing, StoryViewer } from "@/components/StoriesUI";
+import { useHideNavOnMount } from "@/components/AppLayout";
 import type { Id } from "@/convex/_generated/dataModel";
 
 type Tab = "komen" | "history" | "favorite";
@@ -51,6 +52,9 @@ export function ProfileSheet({
 }) {
   const { user: me } = useAuth();
   const navigate = useNavigate();
+  // Detail akun harus benar-benar FULLSCREEN: bar navigasi bawah disembunyikan
+  // selama layar ini terbuka, bukan tampil menumpuk di bawahnya.
+  useHideNavOnMount();
   const profile = useQuery(api.account.getPublicProfile, { userId });
   const addFriend = useMutation(api.friends.sendFriendRequest);
   const friendStatus = useQuery(
@@ -193,14 +197,15 @@ export function ProfileSheet({
                     className="rounded-full bg-background p-[2px]"
                   />
                 </div>
-                {/* Tombol kamera bulat KECIL di pojok kanan bawah foto
-                    (hanya profil sendiri) → sheet Ganti / Refresh photo. */}
+                {/* Tombol kamera bulat KECIL di foto (hanya profil sendiri)
+                    → sheet Ganti / Refresh photo. Tema biru muda lembut
+                    (bukan neon) dan digeser sedikit ke atas + ke kiri. */}
                 {isMe && (
                   <button
                     type="button"
                     onClick={() => setPhotoSheet(true)}
                     aria-label="Ganti photo profile"
-                    className="absolute -bottom-1 -right-1 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-gold to-amber-600 text-black shadow-[0_4px_12px_-2px_rgba(212,175,55,0.8)] transition active:scale-90"
+                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-sky-300 to-sky-500 text-sky-950 shadow-[0_4px_12px_-4px_rgba(56,189,248,0.55)] transition active:scale-90"
                   >
                     <Camera className="size-3.5" aria-hidden />
                   </button>
@@ -644,40 +649,78 @@ export function ProfileSheet({
           "Refresh Photo Profile" supaya photo tampil ke user lain. */}
       {isMe && photoSheet && (
         <div
-          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm"
+          // Tanpa blur (permintaan: "gausah kasih blur segala") — cukup lapisan
+          // gelap tipis supaya sheet-nya terasa mengambang.
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/45 p-3 pb-5"
           onClick={() => !busyPhoto && !busyRefresh && setPhotoSheet(false)}
           role="dialog"
           aria-modal
         >
           <div
-            className="pop-enter w-full max-w-sm overflow-hidden rounded-2xl border border-white/15 bg-card p-2 shadow-2xl"
+            className="pop-enter w-full max-w-sm overflow-hidden rounded-3xl border border-white/12 bg-[#10131a] shadow-[0_-8px_40px_-12px_rgba(0,0,0,.8)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => photoFileRef.current?.click()}
-              disabled={busyPhoto || busyRefresh}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-3 text-left text-sm font-bold transition hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold/15">
-                <Camera className="size-4 text-gold" aria-hidden />
-              </span>
-              {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void doRefreshPhoto()}
-              disabled={busyPhoto || busyRefresh}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-3 text-left text-sm font-bold transition hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-500/15">
-                <RefreshCw
-                  className={cn("size-4 text-sky-300", busyRefresh && "animate-spin")}
-                  aria-hidden
-                />
-              </span>
-              {busyRefresh ? "Me-refresh…" : "Refresh Photo Profile"}
-            </button>
+            {/* Header sheet: pegangan + judul + penjelasan singkat. */}
+            <div className="px-4 pb-2 pt-2.5 text-center">
+              <span
+                aria-hidden
+                className="mx-auto mb-2.5 block h-1 w-10 rounded-full bg-white/20"
+              />
+              <p className="text-sm font-bold text-foreground">Photo profile</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                Pakai foto dari galeri, atau refresh supaya foto baru langsung
+                tampil ke user lain.
+              </p>
+            </div>
+            <div className="space-y-1 px-3 pb-3">
+              <button
+                type="button"
+                onClick={() => photoFileRef.current?.click()}
+                disabled={busyPhoto || busyRefresh}
+                className="flex w-full items-center gap-3 rounded-2xl border border-sky-400/25 bg-sky-400/[0.08] px-3.5 py-3 text-left transition hover:bg-sky-400/[0.14] active:scale-[0.99] disabled:opacity-50"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-400/20">
+                  <Camera className="size-4 text-sky-300" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-foreground">
+                    {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Pilih foto baru dari galeri
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void doRefreshPhoto()}
+                disabled={busyPhoto || busyRefresh}
+                className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3 text-left transition hover:bg-white/[0.06] active:scale-[0.99] disabled:opacity-50"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10">
+                  <RefreshCw
+                    className={cn("size-4 text-foreground/80", busyRefresh && "animate-spin")}
+                    aria-hidden
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-foreground">
+                    {busyRefresh ? "Me-refresh…" : "Refresh Photo Profile"}
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Sinkronkan foto ke tampilan user lain
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoSheet(false)}
+                disabled={busyPhoto || busyRefresh}
+                className="w-full rounded-2xl px-3.5 py-2.5 text-center text-sm font-semibold text-muted-foreground transition hover:text-foreground active:scale-[0.99] disabled:opacity-50"
+              >
+                Batal
+              </button>
+            </div>
             <input
               ref={photoFileRef}
               type="file"

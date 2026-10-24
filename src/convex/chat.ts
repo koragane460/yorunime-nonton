@@ -297,14 +297,18 @@ export const nsfwReport = mutation({
 const DAY_COST: Record<number, number> = {
   1: 2, 3: 4, 5: 6, 7: 9, 15: 17, 20: 23, 25: 30, 30: 32,
 };
-const RECEIVER_COST: Record<number, number> = { 5: 0, 15: 1, 20: 3, 30: 4 };
+// Semakin banyak penerima (slot claim), semakin mahal biaya harinya —
+// permintaan: "semakin banyak user claim semakin banyak hari yang dibutuhin
+// buat give premium".
+const RECEIVER_COST: Record<number, number> = { 5: 0, 15: 3, 20: 6, 30: 10 };
 const DAY_XP: Record<number, number> = {
   1: 250, 3: 550, 5: 700, 7: 1000, 15: 2100, 20: 4000, 25: 5500, 30: 6900,
 };
 
 export function giveCost(days: number, receivers: number) {
   const base = DAY_COST[days] ?? days + 1;
-  const sur = RECEIVER_COST[receivers] ?? Math.max(0, Math.ceil((receivers - 5) / 7));
+  const sur =
+    RECEIVER_COST[receivers] ?? Math.max(0, Math.ceil((receivers - 5) * 0.35));
   return base + sur;
 }
 

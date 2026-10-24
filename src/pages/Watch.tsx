@@ -1187,9 +1187,12 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         setDirectErr(null);
         setDirect(d);
         setSubTouched(false);
-        // Sumber Consumet (bila sudah ada) ikut digabungkan.
+        // Sumber server digabungkan, dan TIPE pemutar diambil dari server
+        // pertama (HLS/MP4 harus diputar <video>, bukan iframe — dulu semua
+        // donghua dipaksa "embed" sehingga stream langsung tidak pernah jalan).
         setSources(mergeCs(d.sources));
-        setSourceType("embed");
+        const dt0 = d.sources?.[0]?.type;
+        setSourceType(dt0 === "hls" ? "hls" : dt0 === "mp4" ? "mp4" : "embed");
         setSourceIdx(0);
         // Sama seperti anime: hitungan mundur dimulai setelah sumber siap.
         setNowTick(Date.now());
@@ -2639,7 +2642,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                   : "border-foreground/40 bg-primary/15 text-primary",
               )}
             >
-              MegaPlay
+              {isDonghua ? "Sanka" : "MegaPlay"}
               {!directErr && (
                 <span className="size-1.5 animate-pulse rounded-full bg-primary" />
               )}
