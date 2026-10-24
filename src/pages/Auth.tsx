@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.svg";
-import { ArrowRight, Eye, EyeOff, Loader2, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Mail, Google } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveRedirectAfterAuth } from "@/lib/authRedirect";
 
@@ -15,7 +15,7 @@ const DASHBOARD_REDIRECT = "/dashboard";
 type Mode = "main" | "password" | "otp";
 
 export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn, signUp } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, signIn, signUp, signInWith } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -23,7 +23,25 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     DASHBOARD_REDIRECT,
   );
 
-  const [mode, setMode] = useState<Mode>("main");
+  // Hanya opsi login yang tersedia saat ini: Google (sign-in) dan tester.
+  const googleLogin = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      await signInWith("google");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal login dengan Google");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setIsLoading(false);
+  };
+
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -32,19 +50,18 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
   const [showPass, setShowPass] = useState(false);
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) navigate(redirect, { replace: true });
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
-
-  
-  // ------------------------------------------------- Email + password ----
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim());
   const passOk = password.length >= 8;
   const confirmOk = !isRegister || confirm === password;
-  const canSubmitPassword = emailOk && passOk && confirmOk && (!isRegister || name.trim().length >= 2);
+  const canSubmitPassword =
+    emailOk && passOk && confirmOk && (!isRegister || name.trim().length >= 2);
 
   const submitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,12 +141,6 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    setError(null);
-    setIsLoading(false);
-  };
-
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#06060d] px-4 py-10">
       {/* Latar: satu cahaya ungu tipis di atas + garis film tipis. */}
@@ -163,39 +174,35 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
             YORUNIME
           </p>
           <p className="mt-1 text-[11px] text-zinc-500">
-            {mode === "main"
-              ? "Masuk untuk lanjut nonton"
-              : mode === "otp"
-                ? "Masukkan kode yang kami kirim"
-                : isRegister
-                  ? "Buat akun baru"
-                  : "Masuk dengan akunmu"}
+            Masuk untuk lanjut nonton
           </p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-sm">
           {mode === "main" && (
             <div className="space-y-2.5">
-
               <button
-                onClick={() => {
-                  switchMode("password");
-                  setIsRegister(false);
-                }}
-                disabled={isLoading}
+                onClick={() => void googleLogin()}
+                disabled={googleLoading || authLoading}
+                className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition hover:opacity-90 disabled:opacity-40"
+              >
+                <Google className="size-4" aria-hidden />
+                {googleLoading ? "Memuat..." : "Login dengan Google"}
+              </button>
+              <button
+                onClick={() => switchMode("password")}
+                disabled={isLoading || authLoading}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/25"
               >
                 <Mail className="size-4" /> Email &amp; Password
               </button>
-
               <button
                 onClick={() => switchMode("otp")}
-                disabled={isLoading}
+                disabled={isLoading || authLoading}
                 className="w-full rounded-xl px-4 py-2 text-xs font-semibold text-zinc-500 transition hover:text-zinc-300"
               >
                 Kirim kode ke email
               </button>
-
             </div>
           )}
 
@@ -258,11 +265,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 disabled={isLoading}
                 className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold disabled:opacity-50"
               >
-                {isLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="size-4" />
-                )}
+                {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                 {isRegister ? "Daftar" : "Masuk"}
               </button>
 
@@ -295,7 +298,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="button"
                 onClick={sendOtp}
-                disabled={isLoading}
+                disabled={isLoading || authLoading}
                 className="w-full rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-bold text-zinc-200 transition hover:border-foreground/40 disabled:opacity-50"
               >
                 Kirim kode 6 digit

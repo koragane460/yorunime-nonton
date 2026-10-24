@@ -6,7 +6,7 @@ import { useEffect } from "react";
 export function useAuth() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
   const user = useQuery(api.users.currentUser);
-  const { signIn, signOut } = useAuthActions();
+  const { signIn, signOut, signInWith } = useAuthActions();
   const ensureUid = useMutation(api.users.ensureUid);
 
   // Setiap akun punya UID 7 karakter (huruf + angka) untuk verifikasi pembelian.
@@ -33,5 +33,6 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
+    signInWith: (provider: string) => signInWith ? signInWith(provider) : Promise.reject(new Error("signInWith tidak tersedia di autentikasi ini")),
   };
 }
