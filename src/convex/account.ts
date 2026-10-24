@@ -21,7 +21,7 @@ export const ensureUser = mutation({
       if (row) {
         const next = row.value + 1;
         await ctx.db.patch(row._id, { value: next });
-        patch.seqId = next;
+        patch.seqId = Math.max(1, next);
       } else {
         await ctx.db.insert("counters", { key: "userSeq", value: 1 });
         patch.seqId = 1;

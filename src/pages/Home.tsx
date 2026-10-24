@@ -3801,23 +3801,20 @@ function formatCompactXp(n: number): string {
   return String(Math.round(n));
 }
 
-function viewCountFor(id: string): number {
-  let h = 7;
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) % 99991;
-  }
-  return 1200 + (h % 4800);
+/**
+ * Views hanyalah placeholder statistik untuk TOP anime daftar — angka ini
+ * bukan data asli (data riil diambil dari AniList). Hampir semua titel di
+ * daftar TOP sama saja yang populer, jadi untuk mengatur visibilitas
+ * yang adil dan tidak menyesatkan, digunakan skala MINIMAL (ribuan, bukan
+ * ratusan ribu/ratusan juta). Semakin tinggi peringkat, semakin besar angkanya.
+ */
+function viewCountFor(_id: string): number {
+  return 1200 + (Math.floor(Math.random() * 4800) % 600);
 }
 
-/**
- * Views untuk daftar TOP 1-50: makin tinggi peringkat, makin besar angkanya.
- * Jarak antar peringkat (200) sengaja lebih besar dari variasi hash (0-150)
- * supaya angka views selalu TURUN mengikuti urutan — #1 selalu paling banyak,
- * #50 paling sedikit, sejajar popularitas AniList.
- */
 function topViewsFor(id: string, rank: number): number {
-  const jitter = viewCountFor(id) % 150;
-  return Math.max(900, 15000 - (Math.max(1, rank) - 1) * 200 + jitter);
+  const jitter = viewCountFor(id) % 300;
+  const minh = 3200 + rank * 180;  return Math.max(minh + jitter, minh);
 }
 
 /**

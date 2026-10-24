@@ -52,8 +52,7 @@ export default function Film() {
   const [genreId, setGenreId] = useState<string | null>(null);
   const [kind, setKind] = useState<"movie" | "tv">(
     params.get("t") === "tv" ? "tv" : "movie",
-  );
-  const [openId, setOpenId] = useState<string | null>(params.get("film"));
+  );          const [openId, setOpenId] = useState<string | null>(params.get("film"));
 
   // Koleksi film yang di-subscribe (favorite kind="film").
   const myFavs = useQuery(
@@ -77,6 +76,7 @@ export default function Film() {
   const searchFilms = useAction(api.films.search);
   const getGenres = useAction(api.films.genres);
   const byGenre = useAction(api.films.byGenre);
+  const getDetail = useAction(api.films.detail);
 
   const [items, setItems] = useState<FilmCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
@@ -141,6 +141,21 @@ export default function Film() {
     setOpenId(id);
     navigate(`/film?film=${encodeURIComponent(id)}&t=${k}`, { replace: true });
   };
+
+  // Detail film datang dari aksi films.detail (genres + castFull sudah lengkap
+  // dari server: genre Wikidata + foto pemeran Wikipedia). Dibaca ulang
+  // sekali setelah load supaya data yang masih kosong sendiri terisi.
+  useEffect(() => {
+    let alive = true;
+    if (!openId) return;
+    getDetail({ id: openId, kind })
+      .then((r: any) => alive && setItems((pre) => (pre.find((x) => x.id === openId) ? pre : [r])))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, kind]);
 
   if (openId) {
     return (
@@ -661,31 +676,31 @@ function FilmDetail({
             {(d?.castFull ?? []).length > 0 ? (
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {d!.castFull.map((c, i) => (
-                  <div key={`${c.name}-${i}`} className="text-center">
-                    <div className="mx-auto size-16 overflow-hidden rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03]">
-                      {c.image ? (
-                        <img
-                          src={c.image}
-                          alt={c.name}
-                          loading="lazy"
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-full items-center justify-center text-xl font-black text-white/60">
-                          {c.name.slice(0, 1)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1.5 line-clamp-1 text-[11px] font-black text-white/90">
-                      {c.name}
-                    </p>
-                    {c.character && (
-                      <p className="line-clamp-1 text-[10px] text-muted-foreground">
-                        {c.character}
-                      </p>
-                    )}
-                  </div>
-                ))}
+            <div key={`${c.name}-${i}`} className="text-center">
+              <div className="mx-auto size-16 overflow-hidden rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03]">
+                {c.image ? (
+                  <img
+                    src={c.image}
+                    alt={c.name}
+                    loading="lazy"
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <span className="flex size-full items-center justify-center text-xl font-black text-white/60">
+                    {c.name.slice(0, 1)}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1.5 line-clamp-1 text-[11px] font-black text-white/90">
+                {c.name}
+              </p>
+              {c.character && (
+                <p className="line-clamp-1 text-[10px] text-muted-foreground">
+                  {c.character}
+                </p>
+              )}
+            </div>
+          ))}
               </div>
             ) : (
               <p className="py-6 text-center text-sm font-bold text-muted-foreground">
