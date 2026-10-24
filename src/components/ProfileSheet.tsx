@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { getAntiLag } from "@/lib/antilag";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
 import { BlurBanner } from "@/components/BlurBanner";
-import { CharacterCard, TitleRibbon, type CosmeticRank } from "@/components/Cosmetics";
+import { TitleRibbon } from "@/components/Cosmetics";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Award,
@@ -79,18 +79,11 @@ export function ProfileSheet({
   // menampilkan detail akun dengan banner foto yang bisa diatur di
   // Pengaturan (premium).
 
-  // Title + kartu GACHA yang sedang dipasang — tampil di bawah stat akun.
+  // Title yang sedang dipasang — tampil di bawah stat akun.
   const cosmetics = useQuery(api.titles.publicOf, { userId });
-  // Gambar kartu karakter dari AniList (cache server) — potret berfoto.
-  const rosterImages = useAction(api.gacha.rosterImages);
-  const [cardImages, setCardImages] = useState<Record<string, string>>({});
-  useEffect(() => {
-    if (!cosmetics?.card && !(cosmetics?.cards?.length)) return;
-    rosterImages()
-      .then((r) => setCardImages(r ?? {}))
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cosmetics?.card?.id]);
+  // GACHA KARTU ANIME DIHAPUS PERMANEN — profil tidak lagi menampilkan
+  // kartu karakter; hadiah gacha sekarang langsung masuk (XP/telur/Sacret/
+  // premium) lewat mesin vending di YoruVerse › Shop.
 
   // Animasi intro FULLSCREEN (awan/gagak) DIHAPUS permanen sesuai permintaan
   // — profil langsung tampil tanpa pembuka animasi.
@@ -325,46 +318,21 @@ export function ProfileSheet({
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
 
-            {/* KARTU (maks 4, kecil-kecil) di kiri — TITLE (maks 3) di
-                kanan kartu. Satu kotak rapi, tidak menambah tinggi gede. */}
+            {/* TITLE (maks 3) terpasang — satu kotak rapi di bawah stat. */}
             {(() => {
-              const cards =
-                cosmetics?.cards ?? (cosmetics?.card ? [cosmetics.card] : []);
               const titles =
                 cosmetics?.titles ??
                 (cosmetics?.title ? [cosmetics.title] : []);
-              if (cards.length === 0 && titles.length === 0) return null;
+              if (titles.length === 0) return null;
               return (
                 <div className="mx-auto mt-4 flex max-w-sm items-stretch gap-2.5 rounded-2xl border border-white/12 bg-white/[0.05] p-2.5">
-                  {/* Kiri: kartu karakter terpasang — kecil supaya 4 muat */}
-                  <div className="flex shrink-0 items-center gap-1">
-                    {cards.slice(0, 4).map((c) => (
-                      <CharacterCard
-                        key={c.id}
-                        name={c.name}
-                        anime={(c as { anime?: string }).anime}
-                        rank={c.rank as CosmeticRank}
-                        image={cardImages[c.id]}
-                        active
-                        className="w-14 shrink-0"
-                      />
-                    ))}
-                  </div>
-                  {/* Kanan: title yang terpasang — maksimal 3 */}
                   <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
                     {titles.slice(0, 3).map((t) => (
                       <TitleRibbon key={t.id} name={t.name} size="sm" />
                     ))}
-                    {cards[0] ? (
-                      <p className="line-clamp-2 text-[10px] leading-tight text-zinc-400">
-                        {`${cards[0].name}${(cards[0] as { anime?: string }).anime ? ` · ${(cards[0] as { anime?: string }).anime}` : ""}`}
-                        {cards.length > 1 ? ` +${cards.length - 1} kartu lagi` : ""}
-                      </p>
-                    ) : (
-                      <p className="line-clamp-2 text-[10px] leading-tight text-zinc-400">
-                        Pasang title &amp; kartu karakter di YoruVerse › Shop
-                      </p>
-                    )}
+                    <p className="line-clamp-2 text-[10px] leading-tight text-zinc-400">
+                      Pasang title di YoruVerse › Shop
+                    </p>
                   </div>
                 </div>
               );

@@ -313,6 +313,168 @@ async function wikiSummary(ctx: any, title: string): Promise<string> {
   return hit ?? "";
 }
 
+/**
+ * Cari QID entitas Wikidata dari judul film. Urutan hasil Wikidata sudah
+ * diurutkan relevansi; kandidat yang deskripsinya menyebut film/match tahun
+ * diprioritaskan.
+ */
+async function wbs(title: string, year?: string): Promise<string[]> {
+  const q = encodeURIComponent(title.trim());
+  const d = await jget(
+    `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${q}&language=en&uselang=id&type=item&limit=8&format=json&origin=*`,
+    8000,
+  );
+  const hits = (d?.search ?? []) as any[];
+  const ids = hits.map((h) => String(h?.id ?? "")).filter(Boolean);
+  if (!ids.length) return [];
+  const scored = hits.map((h, i) => {
+    const desc = String(h?.description ?? "").toLowerCase();
+    let score = hits.length - i;
+    if (year && desc.includes(year)) score += 100;
+    if (/\bfilm\b|\bmovie\b|\bfeature\b/.test(desc)) score += 20;
+    return { id: ids[i], score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.id);
+}
+
+/** Label genre Wikidata yang rapi — buang prefiks bahasa seperti "en:". */
+function cleanGenre(raw: string): string {
+  const s = String(raw ?? "").trim();
+  const m = s.match(/^[a-z]{2,3}:[^:]+:(.*)$/i);
+  return (m ? m[1] : s).replace(/\s+/g, " ").trim();
+}
+
+/** Pecah label genre gabungan ("Action & Adventure, Drama") jadi daftar. */
+function splitGenreLabel(s: string): string[] {
+  return String(s ?? "")
+    .split(/[,·]|\s+&\s+|\s+\/\s+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Genre film dari Wikidata (properti P136 "genre") — tanpa API key dan
+ * selalu benar karena diambil dari data film aslinya. Di-cache 30 hari.
+ */
+async function movieGenres(ctx: any, title: string, year?: string): Promise<string[]> {
+  const hit = (await cached(
+    ctx,
+    `films:genre:${normTitle(title).slice(0, 60)}:${year ?? ""}`,
+    30 * 86400_000,
+    async () => {
+      try {
+        const qids = await wbs(title, year);
+        if (!qids.length) return [] as string[];
+        const genresOfQid = async (qid: string): Promise<string[]> => {
+          const d = await jget(
+            `https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=${qid}&property=P136&format=json&origin=*`,
+            8000,
+          );
+          const claims = d?.claims?.P136 ?? [];
+          const nodeIds = claims
+            .map((c: any) => String(c?.mainsnak?.datavalue?.value?.id ?? ""))
+            .filter(Boolean)
+            .slice(0, 6);
+          if (!nodeIds.length) return [];
+          const labels = await jget(
+            `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${nodeIds.join("|")}&props=labels&languages=id&format=json&origin=*`,
+            8000,
+          );
+          const out: string[] = [];
+          for (const id of nodeIds) {
+            const name = cleanGenre(
+              labels?.entities?.[id]?.labels?.id?.value ?? labels?.entities?.[id]?.labels?.en?.value ?? "",
+            );
+            if (name && !out.some((g) => g.toLowerCase() === name.toLowerCase())) out.push(name);
+          }
+          return out;
+        };
+        // Coba kandidat QID sampai ketemu yang punya genre.
+        for (const qid of qids.slice(0, 3)) {
+          const names = await genresOfQid(qid);
+          if (names.length) return names;
+        }
+        return [] as string[];
+      } catch {
+        return [] as string[];
+      }
+    },
+  )) as string[];
+  return hit ?? [];
+}
+
+/**
+ * Foto profil pemeran — ambil thumbnail Wikipedia (public, tanpa API key).
+ * Per nama dan di-cache 30 hari supaya tidak memanggil ulang.
+ */
+async function castPhoto(ctx: any, name: string): Promise<string | null> {
+  const n = name.trim();
+  if (!n || n.length > 60) return null;
+  const hit = (await cached(
+    ctx,
+    `films:cast:${normTitle(n).slice(0, 50)}`,
+    30 * 86400_000,
+    async () => {
+      const q = encodeURIComponent(n.replace(/ /g, "_"));
+      for (const host of ["en.wikipedia.org", "id.wikipedia.org"]) {
+        try {
+          const d = await jget(
+            `https://${host}/w/api.php?action=query&titles=${q}&prop=pageimages&piprop=thumbnail&pithumbsize=200&format=json&origin=*`,
+            7000,
+          );
+          const pages = d?.query?.pages ?? {};
+          const first: any = Object.values(pages)[0];
+          const src = String(first?.thumbnail?.source ?? "").trim();
+          if (src) return src;
+        } catch {
+          /* coba host berikutnya */
+        }
+      }
+      return "";
+    },
+  )) as string;
+  return hit || null;
+}
+
+/**
+ * Lengkapi detail film: genre benar (Wikidata) + foto pemeran (Wikipedia).
+ * Dipakai oleh semua jalur film (Apple RSS, TMDB, IMDb, iTunes) supaya
+ * tampilan "Info · Pemeran" selalu konsisten.
+ */
+async function enrichMovie(
+  ctx: any,
+  title: string,
+  year: string | undefined,
+  cast: string[],
+  fallbackGenres: string[],
+): Promise<{ genres: { id: string; name: string }[]; castFull: { name: string; character?: string; image?: string }[] }> {
+  return (await cached(
+    ctx,
+    `films:meta:${normTitle(title).slice(0, 60)}`,
+    30 * 86400_000,
+    async () => {
+      let names = await movieGenres(ctx, title, year);
+      if (!names.length) {
+        names = fallbackGenres
+          .map((g) => g.trim())
+          .filter(Boolean)
+          .filter((g, i, a) => a.findIndex((x) => x.toLowerCase() === g.toLowerCase()) === i)
+          .slice(0, 8);
+      }
+      const castFull: { name: string; character?: string; image?: string }[] = [];
+      for (const n of cast.slice(0, 8)) {
+        const image = await castPhoto(ctx, n);
+        castFull.push({ name: n, ...(image ? { image } : {}) });
+      }
+      return {
+        genres: names.map((name, i) => ({ id: `g${i}`, name })),
+        castFull,
+      };
+    },
+  )) as { genres: { id: string; name: string }[]; castFull: { name: string; character?: string; image?: string }[] };
+}
+
 /** Predikat entry saran IMDb: benarkah film atau series? */
 function isMovieHit(d: any): boolean {
   return d?.qid === "movie" || d?.qid === "tvMovie" || d?.q === "feature";
@@ -507,6 +669,10 @@ export const detail = action({
           character: c.character as string | undefined,
           image: poster(c.profile_path),
         }));
+        // Foto pemeran yang tidak ada di TMDb → cari dari Wikipedia.
+        for (const c of castFull) {
+          if (!c.image) c.image = (await castPhoto(ctx, c.name)) ?? undefined;
+        }
         const videos = (d.videos?.results ?? []) as any[];
         const trailer = videos.find(
           (v: any) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser"),
@@ -596,6 +762,13 @@ export const detail = action({
           .map(rssCard)
           .filter((c) => c.id !== id && c.genre === card.genre)
           .slice(0, 6);
+        const meta = await enrichMovie(
+          ctx,
+          card.title,
+          card.year,
+          cast.slice(0, 8),
+          splitGenreLabel(card.genre ?? ""),
+        );
         return {
           id,
           title: card.title,
@@ -605,14 +778,12 @@ export const detail = action({
           rating: undefined,
           kind: "movie",
           synopsis: card.synopsis ?? "",
-          genres: card.genre
-            ? [{ id: "g", name: card.genre }]
-            : [],
+          genres: meta.genres,
           runtime: undefined,
           tagline: undefined,
           director: card.director,
-          cast,
-          castFull: cast.map((name) => ({ name })),
+          cast: meta.castFull.map((c) => c.name),
+          castFull: meta.castFull,
           trailer: undefined,
           similar: sameGenre.length ? sameGenre : FALLBACK.filter((f) => f.id !== id),
         } satisfies FilmDetail;
@@ -638,6 +809,13 @@ export const detail = action({
           .flat()
           .find((e) => normTitle(rssCard(e).title) === normTitle(title));
         const localCard = entry ? rssCard(entry) : null;
+        const meta = await enrichMovie(
+          ctx,
+          title,
+          hit.y ? String(hit.y) : undefined,
+          cast.slice(0, 8),
+          localCard?.genre ? splitGenreLabel(localCard.genre) : [],
+        );
         return {
           id,
           title,
@@ -647,12 +825,12 @@ export const detail = action({
           rating: undefined,
           kind: k,
           synopsis: localCard?.synopsis || synopsis,
-          genres: localCard?.genre ? [{ id: "g", name: localCard.genre }] : [],
+          genres: meta.genres,
           runtime: undefined,
           tagline: undefined,
           director: localCard?.director,
-          cast,
-          castFull: cast.map((name) => ({ name })),
+          cast: meta.castFull.map((c) => c.name),
+          castFull: meta.castFull,
           trailer: undefined,
           similar: [],
         } satisfies FilmDetail;
@@ -661,6 +839,13 @@ export const detail = action({
 
     const f = FALLBACK.find((x) => x.id === id) ?? FALLBACK[0];
     const extra = FALLBACK_DETAIL[f.id] ?? {};
+    const meta = await enrichMovie(
+      ctx,
+      f.title,
+      f.year,
+      (extra.cast ?? []).slice(0, 8),
+      ((extra.genres ?? []) as any[]).map((g) => String(g?.name ?? "")).filter(Boolean),
+    );
     return {
       id: f.id,
       title: f.title,
@@ -670,12 +855,12 @@ export const detail = action({
       rating: f.rating,
       kind: k,
       synopsis: extra.synopsis ?? "",
-      genres: extra.genres ?? [],
+      genres: meta.genres,
       runtime: extra.runtime,
       tagline: extra.tagline,
       director: extra.director,
-      cast: extra.cast ?? [],
-      castFull: (extra.cast ?? []).map((name: string) => ({ name })),
+      cast: meta.castFull.map((c) => c.name),
+      castFull: meta.castFull,
       trailer: undefined,
       similar: FALLBACK.filter((x) => x.id !== f.id),
     } satisfies FilmDetail;

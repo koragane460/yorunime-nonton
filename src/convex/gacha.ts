@@ -1,215 +1,23 @@
-// YoruNime — SISTEM GACHA karakter anime.
+// YoruNime — MESIN VENDING (pengganti gacha kartu anime yang DIHAPUS).
 //
-// Mata uang: Sacret (field `diamonds` di user). 1 pull = 160, 10 pull =
-// 1600. Rank SSS paling susah didapat; PITY 75 menjamin SSS. Kartu yang
-// didapat bisa dipasang di pengaturan (equip kartu anime) dan tampil di
-// detail akun. Semua efek/animasi kartu ada di frontend — di sini hanya
-// logika, angka, dan koleksi.
+// Mata uang: Sacret (field `diamonds` di user).
+//   - Pull 1×  GRATIS untuk yang belum pernah pull sama sekali,
+//     sesudahnya 169 Sacret.
+//   - Pull 10× 1600 Sacret.
+// Hadiah keluar dari mesin (bukan kartu karakter):
+//   XP 100–10.000 · Telur pet 1–10 · Sacret 500–3.000 · Premium 1–360 hari
+// Semua animasi (koin jatuh, produk jatuh, kotak buka, gosok kartu emas)
+// ada di frontend — di sini hanya logika, angka, dan koleksi.
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { action, mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { mutation, query } from "./_generated/server";
 import {
-  GACHA_ROSTER,
-  PITY_MAX,
-  PULL_COST_1,
-  PULL_COST_10,
-  charQueryName,
-  type GachaChar,
-  type GachaRank,
-} from "../lib/gachaRoster";
-
-const ANILIST_URL = "https://graphql.anilist.co";
-const JIKAN_URL = "https://api.jikan.moe/v4";
-const KITSU_URL = "https://kitsu.io/api/edge";
-
-/** Ambil JSON dengan timeout — dipakai fallback sumber gambar. */
-async function jget(url: string, ms = 9000): Promise<any | null> {
-  try {
-    const r = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "YoruNime/1.0",
-      },
-      signal: AbortSignal.timeout(ms),
-    });
-    if (!r.ok) return null;
-    return await r.json();
-  } catch {
-    return null;
-  }
-}
-
-async function aniGraphql(
-  query: string,
-  variables: Record<string, unknown> = {},
-): Promise<any> {
-  const res = await fetch(ANILIST_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "YoruNime/1.0",
-    },
-    body: JSON.stringify({ query, variables }),
-    signal: AbortSignal.timeout(12_000),
-  });
-  if (!res.ok) throw new Error(`AniList ${res.status}`);
-  const j = await res.json();
-  if (j?.errors?.length) throw new Error(`AniList: ${j.errors[0].message}`);
-  return j?.data;
-}
-
-/** Cache sederhana lewat tabel animeCache (dipinjam dari anime.ts). */
-async function cached(
-  runCtx: any,
-  endpoint: string,
-  ttlMs: number,
-  fetcher: () => Promise<unknown>,
-): Promise<unknown> {
-  const row = await runCtx.runQuery(internal.anime.cacheGet, { endpoint });
-  if (row && Date.now() - row.updatedAt < ttlMs) return row.payload;
-  const payload = await fetcher();
-  await runCtx.runMutation(internal.anime.cacheSet, { endpoint, payload });
-  return payload;
-}
-
-/** Cari gambar karakter di Jikan (MyAnimeList) — tanpa API key. */
-async function jikanImage(name: string): Promise<string> {
-  const d = await jget(
-    `${JIKAN_URL}/characters?q=${encodeURIComponent(name)}&limit=1&order_by=favorites&sort=desc`,
-  );
-  return String(d?.data?.[0]?.images?.jpg?.image_url ?? "");
-}
-
-/** Cari gambar karakter di Kitsu — tanpa API key. */
-async function kitsuImage(name: string): Promise<string> {
-  const d = await jget(
-    `${KITSU_URL}/characters?filter[name]=${encodeURIComponent(name)}&page[limit]=1`,
-  );
-  return String(d?.data?.[0]?.attributes?.image?.original ?? "");
-}
-
-/** Tarik semua gambar roster dari sumber berlapis. Hasil dibungkus
- *  timestamp + tanda "lengkap" supaya cache sebagian tidak dipakai lama. */
-type RosterPayload = { at: number; full: boolean; images: Record<string, string> };
-
-async function fetchRosterImages(): Promise<RosterPayload> {
-  const out: Record<string, string> = {};
-  // --- 1) AniList: satu query untuk semua karakter ---
-  try {
-    const parts = GACHA_ROSTER.map(
-      (c, i) =>
-        `c${i}: Character(search: ${JSON.stringify(charQueryName(c))}){ id name{full} image{large} }`,
-    );
-    const data = await aniGraphql(`query{ ${parts.join(" ")} }`);
-    GACHA_ROSTER.forEach((c, i) => {
-      out[c.id] = String(data?.[`c${i}`]?.image?.large ?? "");
-    });
-  } catch {
-    /* AniList gagal → lanjut ke fallback */
-  }
-
-  // --- 2) & 3) fallback per karakter yang masih kosong ---
-  const missing = GACHA_ROSTER.filter((c) => !out[c.id]);
-  for (const c of missing) {
-    let url = "";
-    try {
-      url = await jikanImage(c.name);
-    } catch {
-      url = "";
-    }
-    if (!url) {
-      try {
-        url = await kitsuImage(c.name);
-      } catch {
-        url = "";
-      }
-    }
-    out[c.id] = url;
-    // jeda kecil — Jikan membatasi ~3 request/detik.
-    await new Promise((r) => setTimeout(r, 350));
-  }
-
-  const full = GACHA_ROSTER.every((c) => !!out[c.id]);
-  return { at: Date.now(), full, images: out };
-}
-
-/**
- * Gambar semua karakter roster — SUMBER BERLAPIS supaya gambar tidak pernah
- * kosong dan TIDAK seragam:
- *   1. AniList (satu query alias per karakter) — paling lengkap.
- *   2. Jikan / MyAnimeList — untuk yang kosong di AniList.
- *   3. Kitsu — untuk yang masih kosong.
- * Cache 30 hari kalau LENGKAP; hasil sebagian cuma dipakai 1 hari lalu
- * ditarik ulang (kesalahan lama: hasil gagal di-cache 30 hari penuh,
- * makanya kartu cuma huruf doang).
- */
-export const rosterImages = action({
-  args: {},
-  handler: async (ctx) => {
-    // v3: buang cache lama yang bisa berisi URL kosong (hasil gagal dulu),
-    // biar semua kartu karakter langsung berfoto lagi.
-    const payload = (await cached(
-      ctx,
-      "gacha:roster:v3",
-      30 * 86400 * 1000,
-      fetchRosterImages,
-    )) as RosterPayload;
-    // Hasil kosong total → langsung tarik ulang. Hasil sebagian yang sudah
-    // tua (>1 hari) → tarik ulang sekali tanpa cache.
-    const cachedOk = Object.values(payload.images ?? {}).filter(Boolean).length;
-    if (cachedOk === 0 || (!payload.full && Date.now() - payload.at > 86400 * 1000)) {
-      const fresh = await fetchRosterImages();
-      const okCount = Object.values(fresh.images).filter(Boolean).length;
-      if (okCount > 0) return fresh.images;
-    }
-    return payload.images;
-  },
-});
-
-/** State gacha milik saya: Sacret, pity, koleksi, kartu terpasang. */
-export const myState = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return null;
-    const u = await ctx.db.get(userId);
-    const st = await ctx.db
-      .query("gachaState")
-      .withIndex("userId", (q) => q.eq("userId", userId))
-      .first();
-    return {
-      sacret: u?.diamonds ?? 0,
-      pity: st?.pity ?? 0,
-      totalPulls: st?.totalPulls ?? 0,
-      sssCount: st?.sssCount ?? 0,
-      ssCount: st?.ssCount ?? 0,
-      owned: (st?.owned ?? {}) as Record<string, number>,
-      equippedCard: u?.equippedCard ?? null,
-      // MULTI-EQUIP: maksimal 4 kartu terpasang (detail akun).
-      equippedCards: (Array.isArray(u?.equippedCards) && u.equippedCards.length
-        ? u.equippedCards
-        : u?.equippedCard
-          ? [u.equippedCard]
-          : []) as string[],
-      history: (st?.pullHistory ?? []) as {
-        id: string;
-        rank: string;
-        at: number;
-      }[],
-    };
-  },
-});
-
-function pickRank(pityAfter: number): GachaRank {
-  // Pity 75: pull ke-75 tanpa SSS dijamin SSS.
-  if (pityAfter >= PITY_MAX) return "SSS";
-  const r = Math.random();
-  if (r < 0.02) return "SSS"; // 2%
-  if (r < 0.15) return "SS"; // 13%
-  return "S"; // 85%
-}
+  VENDING_X1,
+  VENDING_X10,
+  rollReward,
+  type VendingReward,
+} from "../lib/vending";
+import { addXpInternal } from "./xp";
 
 /** Tambah title collection (idempoten — hanya insert kalau belum ada). */
 async function awardTitle(ctx: any, userId: any, titleId: string) {
@@ -227,7 +35,79 @@ async function awardTitle(ctx: any, userId: any, titleId: string) {
     });
 }
 
-/** PULL gacha — 1x (160 Sacret) atau 10x (1600 Sacret). */
+async function loadState(ctx: any, userId: any) {
+  let st = await ctx.db
+    .query("gachaState")
+    .withIndex("userId", (q: any) => q.eq("userId", userId))
+    .first();
+  if (!st) {
+    const id = await ctx.db.insert("gachaState", {
+      userId,
+      pity: 0,
+      totalPulls: 0,
+      sssCount: 0,
+      ssCount: 0,
+      streak: 0,
+      bestStreak: 0,
+      owned: {},
+    });
+    st = (await ctx.db.get(id))!;
+  }
+  return st;
+}
+
+async function loadPetState(ctx: any, userId: any) {
+  let s = await ctx.db
+    .query("petState")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .first();
+  if (!s) {
+    const id = await ctx.db.insert("petState", {
+      userId,
+      eggs: 0,
+      owned: [],
+      claimAt: 0,
+      crystals: 0,
+      scenes: [],
+      scene: "hutan",
+    });
+    s = (await ctx.db.get(id))!;
+  }
+  return s;
+}
+
+/** State vending milik saya: Sacret, total pull, apakah 1× masih gratis. */
+export const myState = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+    const u = await ctx.db.get(userId);
+    const st = await ctx.db
+      .query("gachaState")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .first();
+    const totalPulls = st?.totalPulls ?? 0;
+    return {
+      sacret: u?.diamonds ?? 0,
+      totalPulls,
+      /** Belum pernah pull sama sekali → 1× pertama gratis. */
+      freeAvailable: totalPulls === 0,
+      premiumUntil: u?.premiumUntil ?? 0,
+      unlimitedSacret: !!u?.unlimitedSacret,
+      history: ((st?.pullHistory ?? []) as {
+        id: string;
+        rank: string;
+        at: number;
+      }[]).slice(0, 30),
+    };
+  },
+});
+
+/**
+ * PULL mesin vending — 1× (gratis pertama lalu 169) atau 10× (1600).
+ * Tiap unit menghasilkan SATU hadiah: XP / telur pet / Sacret / premium.
+ */
 export const pull = mutation({
   args: { count: v.union(v.literal(1), v.literal(10)) },
   handler: async (ctx, { count }) => {
@@ -235,60 +115,47 @@ export const pull = mutation({
     if (userId === null) throw new Error("Masuk akun dulu");
     const u = await ctx.db.get(userId);
     if (!u) throw new Error("Akun tidak ditemukan");
-    const cost = count === 1 ? PULL_COST_1 : PULL_COST_10;
-    if ((u.diamonds ?? 0) < cost)
+
+    const st = await loadState(ctx, userId);
+    const free = count === 1 && st.totalPulls === 0;
+    const cost = count === 1 ? (free ? 0 : VENDING_X1) : VENDING_X10;
+    const paid = u.unlimitedSacret ? 0 : cost;
+    if ((u.diamonds ?? 0) < paid)
       throw new Error(`Sacret tidak cukup — butuh ${cost}`);
 
-    let st = await ctx.db
-      .query("gachaState")
-      .withIndex("userId", (q) => q.eq("userId", userId))
-      .first();
-    if (!st) {
-      const id = await ctx.db.insert("gachaState", {
-        userId,
-        pity: 0,
-        totalPulls: 0,
-        sssCount: 0,
-        ssCount: 0,
-        streak: 0,
-        bestStreak: 0,
-        owned: {},
-      });
-      st = (await ctx.db.get(id))!;
+    // ---- roll hadiah per unit ----
+    const rewards: VendingReward[] = [];
+    for (let i = 0; i < count; i++) rewards.push(rollReward());
+
+    let sacretGain = 0;
+    let eggGain = 0;
+    let premiumDays = 0;
+    let xpGain = 0;
+    for (const r of rewards) {
+      if (r.kind === "sacret") sacretGain += r.amount;
+      else if (r.kind === "egg") eggGain += r.amount;
+      else if (r.kind === "premium") premiumDays += r.amount;
+      else xpGain += r.amount;
     }
 
-    const byRank: Record<GachaRank, GachaChar[]> = {
-      SSS: GACHA_ROSTER.filter((c) => c.rank === "SSS"),
-      SS: GACHA_ROSTER.filter((c) => c.rank === "SS"),
-      S: GACHA_ROSTER.filter((c) => c.rank === "S"),
-    };
-
-    const owned: Record<string, number> = { ...(st.owned ?? {}) };
-    let pity = st.pity;
-    let sssInPull = 0;
-    let ssInPull = 0;
-    const results: GachaChar[] = [];
-    for (let i = 0; i < count; i++) {
-      const rank = pickRank(pity + 1);
-      pity = rank === "SSS" ? 0 : pity + 1;
-      const pool = byRank[rank];
-      const card = pool[Math.floor(Math.random() * pool.length)];
-      results.push(card);
-      owned[card.id] = (owned[card.id] ?? 0) + 1;
-      if (rank === "SSS") sssInPull++;
-      else if (rank === "SS") ssInPull++;
+    // ---- terapkan ----
+    if (xpGain > 0) await addXpInternal(ctx, userId, xpGain, "vending");
+    if (eggGain > 0) {
+      const ps = await loadPetState(ctx, userId);
+      await ctx.db.patch(ps._id, { eggs: (ps.eggs ?? 0) + eggGain });
     }
-
-    const gotSss = sssInPull > 0;
-    const streak = gotSss ? st.streak + 1 : 0;
-    const bestStreak = Math.max(st.bestStreak, streak);
-    const sssCount = st.sssCount + sssInPull;
-    const ssCount = st.ssCount + ssInPull;
-
-    // Riwayat pull terbaru disimpan (paling baru di depan, maksimal 100).
     const now = Date.now();
-    const historyEntries = results
-      .map((c) => ({ id: c.id, rank: c.rank as string, at: now }))
+    let premiumUntil = u.premiumUntil ?? 0;
+    if (premiumDays > 0) {
+      premiumUntil = Math.max(now, premiumUntil) + premiumDays * 86400000;
+      await ctx.db.patch(userId, { premiumUntil });
+    }
+    const newSacret = (u.diamonds ?? 0) - paid + sacretGain;
+    await ctx.db.patch(userId, { diamonds: newSacret });
+
+    // ---- riwayat (paling baru di depan, maks 100) ----
+    const historyEntries = rewards
+      .map((r) => ({ id: r.kind, rank: r.tier as string, at: now }))
       .reverse();
     const pullHistory = [
       ...historyEntries,
@@ -296,109 +163,27 @@ export const pull = mutation({
     ].slice(0, 100);
 
     await ctx.db.patch(st._id, {
-      pity,
       totalPulls: st.totalPulls + count,
-      sssCount,
-      ssCount,
-      streak,
-      bestStreak,
-      owned,
       pullHistory,
     });
-    await ctx.db.patch(userId, { diamonds: (u.diamonds ?? 0) - cost });
 
-    // ---- TITLE COLLECTION (dicek setiap pull) ----
-    if (sssCount >= 1) await awardTitle(ctx, userId, "lucky_trinity");
-    if (sssCount >= 2) await awardTitle(ctx, userId, "jackpot_hunter");
-    if (bestStreak >= 3) await awardTitle(ctx, userId, "unbreakable_streak");
-    if (sssInPull >= 3) await awardTitle(ctx, userId, "celestial_pull");
-    if (sssInPull >= 1 && ssInPull >= 1)
-      await awardTitle(ctx, userId, "ss_s_magnet");
-    if (sssInPull >= 4) await awardTitle(ctx, userId, "three_of_kind");
+    // ---- title collection ----
+    if (premiumDays > 0) await awardTitle(ctx, userId, "jackpot_hunter");
+    if (rewards.some((r) => r.kind === "premium" && r.amount >= 30))
+      await awardTitle(ctx, userId, "celestial_pull");
+    if (count === 10) await awardTitle(ctx, userId, "ss_s_magnet");
 
     return {
-      results: results.map((c) => ({
-        id: c.id,
-        name: c.name,
-        anime: c.anime,
-        rank: c.rank as string,
+      rewards: rewards.map((r) => ({
+        kind: r.kind,
+        amount: r.amount,
+        tier: r.tier as string,
       })),
-      pity,
-      sssInPull,
-      ssInPull,
-      sacret: (u.diamonds ?? 0) - cost,
+      freeUsed: free,
+      cost: paid,
+      totalPulls: st.totalPulls + count,
+      sacret: newSacret,
+      premiumUntil,
     };
-  },
-});
-
-/** Pasang kartu anime (harus dimiliki) — "none" untuk melepas. */
-export const equipCard = mutation({
-  args: { cardId: v.string() },
-  handler: async (ctx, { cardId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Masuk akun dulu");
-    if (cardId !== "none") {
-      const st = await ctx.db
-        .query("gachaState")
-        .withIndex("userId", (q) => q.eq("userId", userId))
-        .first();
-      if (!((st?.owned ?? {}) as Record<string, number>)[cardId])
-        throw new Error("Kartu belum dimiliki");
-    }
-    const u = (await ctx.db.get(userId)) as any;
-    const prevCards: string[] = Array.isArray(u?.equippedCards)
-      ? (u.equippedCards as string[])
-      : u?.equippedCard
-        ? [u.equippedCard as string]
-        : [];
-    const nextCards =
-      cardId === "none"
-        ? []
-        : [cardId, ...prevCards.filter((c) => c !== cardId)].slice(0, 4);
-    await ctx.db.patch(userId, {
-      equippedCard: cardId === "none" ? undefined : cardId,
-      // Sinkronkan daftar multi-equip: kartu baru jadi utama + ikut tampil
-      // di detail akun (maks 4).
-      equippedCards: nextCards,
-    });
-  },
-});
-
-/**
- * Toggle kartu untuk MULTI-EQUIP — maksimal 4 kartu terpasang di akun.
- * Menambah/mengeluarkan kartu dari daftar tampilan profil; kartu pertama
- * selalu jadi "kartu utama" (field lama equippedCard).
- */
-export const toggleCard = mutation({
-  args: { cardId: v.string() },
-  handler: async (ctx, { cardId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Masuk akun dulu");
-    const st = await ctx.db
-      .query("gachaState")
-      .withIndex("userId", (q) => q.eq("userId", userId))
-      .first();
-    if (!((st?.owned ?? {}) as Record<string, number>)[cardId])
-      throw new Error("Kartu belum dimiliki");
-    const u = (await ctx.db.get(userId)) as any;
-    const prev = ((Array.isArray(u?.equippedCards)
-      ? u.equippedCards
-      : u?.equippedCard
-        ? [u.equippedCard]
-        : []) as string[]).filter(Boolean);
-    const cur = [...new Set(prev)];
-    let next: string[];
-    if (cur.includes(cardId)) {
-      next = cur.filter((c) => c !== cardId);
-    } else {
-      if (cur.length >= 4)
-        throw new Error("Maksimal 4 kartu — lepas salah satu dulu");
-      next = [...cur, cardId];
-    }
-    await ctx.db.patch(userId, {
-      equippedCards: next,
-      // "Kartu utama" untuk tampilan lama = kartu pertama (atau kosong).
-      equippedCard: next[0] ?? undefined,
-    });
   },
 });

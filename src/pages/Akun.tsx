@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -12,11 +12,7 @@ import {
 import { StaffPanel } from "@/components/StaffPanel";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { BlurBanner } from "@/components/BlurBanner";
-import {
-  CharacterCard,
-  TitleRibbon,
-  type CosmeticRank,
-} from "@/components/Cosmetics";
+import { TitleRibbon } from "@/components/Cosmetics";
 import { DEFAULT_CLAN_ICON, resolveClanIcon } from "@/lib/clanIcons";
 import {
   Avatar,
@@ -85,10 +81,6 @@ import {
 } from "@/lib/antilag";
 import { toast } from "sonner";
 import { SacretIcon } from "@/components/lstream-ui";
-import {
-  GACHA_ROSTER,
-  type GachaRank,
-} from "@/lib/gachaRoster";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export default function Akun() {
@@ -553,20 +545,11 @@ function SettingsScreen({
   // TITLE & KARTU GACHA — pasang dari koleksi yang sudah dimiliki.
   const myCosmetics = useQuery(api.titles.myTitles, {});
   const equipTitle = useMutation(api.titles.equip);
-  const equipCard = useMutation(api.gacha.equipCard);
-  // MULTI-EQUIP — maksimal 4 kartu & 3 title tampil di detail akun.
+  // MULTI-EQUIP — maksimal 3 title tampil di detail akun.
   const toggleTitleM = useMutation(api.titles.toggleTitle);
-  const toggleCardM = useMutation(api.gacha.toggleCard);
   const [busyCosmetic, setBusyCosmetic] = useState<string | null>(null);
-  // Gambar kartu karakter dari AniList (cache server) — preview berfoto.
-  const rosterImages = useAction(api.gacha.rosterImages);
-  const [cardImages, setCardImages] = useState<Record<string, string>>({});
-  useEffect(() => {
-    rosterImages()
-      .then((r) => setCardImages(r ?? {}))
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // GACHA KARTU ANIME DIHAPUS PERMANEN — hadiah gacha sekarang keluar dari
+  // mesin vending (XP, telur pet, Sacret, premium), bukan kartu karakter.
   const [name, setName] = useState(user?.username ?? "");
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
@@ -638,34 +621,6 @@ function SettingsScreen({
         e2 instanceof Error
           ? e2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
           : "Gagal mengubah title",
-      );
-    } finally {
-      setBusyCosmetic(null);
-    }
-  };
-
-  /** Pasang / lepas KARTU GACHA dari Pengaturan.
-      - `"none"` = LEPAS SEMUA kartu.
-      - id kartu = toggle (maksimal 4 kartu terpasang). */
-  const pickCard = async (cardId: string) => {
-    if (busyCosmetic) return;
-    setBusyCosmetic(cardId);
-    try {
-      if (cardId === "none") {
-        await equipCard({ cardId: "none" });
-        toast.success("Kartu dilepas");
-      } else {
-        const eq =
-          myCosmetics?.equippedCards ??
-          (myCosmetics?.equippedCard ? [myCosmetics.equippedCard] : []);
-        await toggleCardM({ cardId });
-        toast.success(eq.includes(cardId) ? "Kartu dilepas" : "Kartu dipasang ✨");
-      }
-    } catch (e2) {
-      setErr(
-        e2 instanceof Error
-          ? e2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
-          : "Gagal mengubah kartu",
       );
     } finally {
       setBusyCosmetic(null);
@@ -824,50 +779,8 @@ function SettingsScreen({
           )}
         </div>
 
-        <p className="mt-4 text-[13px] font-medium">Kartu anime (Gacha) — maks 4</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Kartu hasil pull di Gacha — pasang sampai 4 kartu untuk dipamerkan
-          di profil.
-        </p>
-        {/* KARTU BERGAMBAR ASLI — grid 4 kolom supaya 4 kartu muat satu baris */}
-        <div className="mt-2.5 grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {(myCosmetics?.ownedCards ?? []).map((cardId) => {
-            const c = GACHA_ROSTER.find((r) => r.id === cardId);
-            if (!c) return null;
-            const eq =
-              myCosmetics?.equippedCards ??
-              (myCosmetics?.equippedCard ? [myCosmetics.equippedCard] : []);
-            const active = eq.includes(c.id);
-            return (
-              <CharacterCard
-                key={c.id}
-                name={c.name}
-                anime={c.anime}
-                rank={c.rank as CosmeticRank}
-                image={cardImages[c.id]}
-                active={active}
-                disabled={busyCosmetic !== null}
-                onClick={() => void pickCard(c.id)}
-              />
-            );
-          })}
-        </div>
-        {myCosmetics?.equippedCard && (
-          <button
-            type="button"
-            disabled={busyCosmetic !== null}
-            onClick={() => void pickCard("none")}
-            className="mt-2 rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
-          >
-            Lepas semua kartu
-          </button>
-        )}
-        {(myCosmetics?.ownedCards ?? []).length === 0 && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Belum punya kartu — buka tombol Gacha (tekan lama History) lalu
-            pull!
-          </p>
-        )}
+        {/* GACHA KARTU ANIME DIHAPUS PERMANEN — tidak ada lagi grid kartu
+            di pengaturan; hadiah vending machine langsung masuk akun. */}
       </div>
 
       <BlockTitle>Pengaturan</BlockTitle>
