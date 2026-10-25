@@ -145,21 +145,26 @@ export function AnimeCard({
           <Star className="size-5 opacity-40" />
           {title.split(" ").slice(0, 2).join(" ")}
         </div>
-        {rank !== undefined && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-primary">
-            #{rank}
-          </span>
-        )}
-        {isNew && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-            New
-          </span>
-        )}
-        {status && (
-          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px]">
-            {status}
-          </span>
-        )}
+        {/* Title ONGOING/TAMAT — melekat FLUSH di kiri ATAS kartu (rounded
+            hanya pojok kanan-bawah, jadi kelihatan nyambung ke sudut poster).
+            Badge rank/New ikut bergeser ke kanannya lewat satu flex. */}
+        <div className="absolute left-0 top-0 z-10 flex items-start">
+          {status && (
+            <span className="rounded-none rounded-br-lg bg-black/70 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide">
+              {status}
+            </span>
+          )}
+          {rank !== undefined && (
+            <span className="m-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-primary">
+              #{rank}
+            </span>
+          )}
+          {isNew && (
+            <span className="m-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+              New
+            </span>
+          )}
+        </div>
       </div>
       {!imageOnly && (
         <div className="rounded-b-xl bg-black/55 p-2 backdrop-blur-sm">

@@ -105,9 +105,43 @@ export const getPublicProfile = query({
     const tier = tierForLevel(u.level ?? 1);
     const cost = xpForLevel(u.level ?? 1);
     const xpIn = Math.max(0, Math.min(u.xp ?? 0, cost));
+    // ---- Chip di bawah username: jumlah teman + peringkat GIVER / TOP XP ----
+    const asA = await ctx.db
+      .query("friendships")
+      .withIndex("userA", (q) => q.eq("userA", userId))
+      .collect();
+    const asB = await ctx.db
+      .query("friendships")
+      .withIndex("userB", (q) => q.eq("userB", userId))
+      .collect();
+    const friendCount = new Set(
+      [...asA, ...asB].map((f) => String(f.userA === userId ? f.userB : f.userA)),
+    ).size;
+    // Peringkat GIVER: agregasi hari premium yang diberikan, urut desc.
+    const gives = await ctx.db.query("premiumGives").collect();
+    const giveByUser = new Map<string, number>();
+    for (const g of gives) {
+      const key = String(g.fromUserId);
+      giveByUser.set(key, (giveByUser.get(key) ?? 0) + g.days * g.slots);
+    }
+    const giverSorted = [...giveByUser.entries()].sort((a, b) => b[1] - a[1]);
+    const giverRank =
+      giverSorted.findIndex(([uid]) => uid === String(userId)) + 1 || undefined;
+    // Peringkat TOP XP total komunitas.
+    const allUsers = await ctx.db.query("users").collect();
+    const xpSorted = allUsers
+      .map((uu) => ({ id: uu._id, xp: uu.xp ?? 0 }))
+      .sort((a, b) => b.xp - a.xp);
+    const xpRank =
+      xpSorted.findIndex((r) => r.id === userId) + 1 || undefined;
     return {
       _id: u._id,
       seqId: u.seqId,
+      friendCount,
+      giverRank,
+      xpRank,
+      clanName: clan?.name,
+      clanVerified: !!clan?.verified,
       username: u.username,
       image: u.image,
       bannerUrl: u.bannerUrl,

@@ -1,8 +1,31 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { RefreshCw, Wifi, Gauge } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
+
+/**
+ * Error boundary khusus query versi — kalau useQuery(appVersion) melempar
+ * (server error / deploy belum sinkron), app TETAP jalan tanpa gerbang
+ * update, bukan blank ke layar "Preview runtime error".
+ */
+class VersionBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: Error) {
+    console.warn("[UpdateGate] Query versi gagal — lanjut tanpa gate:", err.message);
+  }
+  render() {
+    // Gagal → render app mentah tanpa gerbang update (jangan render ulang
+    // gate-nya, karena itu yang tadi melempar).
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
+}
 
 /** Bandingkan versi "1.2.3" dengan versi minimum dari server. */
 function isOlderThan(current: string, min: string) {
@@ -34,7 +57,7 @@ const APP_VERSION = "1.0.0";
  * aplikasi ditutupi layar "wajib update". Ini yang bikin user langsung
  * dapat versi baru begitu membuka app, tanpa harusupdate manual.
  */
-export function UpdateGate({ children }: { children: React.ReactNode }) {
+function VersionGate({ children }: { children: React.ReactNode }) {
   const version = useQuery(api.moderation.appVersion, {});
   const [dismissed, setDismissed] = useState<string | null>(null);
 
@@ -77,6 +100,15 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
         Lanjut saja dulu
       </button>
     </div>
+  );
+}
+
+/** Gerbang update yang dibungkus boundary — query gagal = tetap jalan. */
+export function UpdateGate({ children }: { children: React.ReactNode }) {
+  return (
+    <VersionBoundary fallback={children}>
+      <VersionGate>{children}</VersionGate>
+    </VersionBoundary>
   );
 }
 

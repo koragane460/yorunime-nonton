@@ -28,6 +28,7 @@ import {
   type PetRarity,
 } from "@/lib/pets";
 import { PetArt } from "@/components/PetArt";
+import type { Id } from "@/convex/_generated/dataModel";
 
 /** Isi sheet bawah — Telur / Pet / Index / Scene. */
 type SheetTab = "telur" | "pet" | "index" | "scene";
@@ -42,8 +43,29 @@ function fmtLeft(ms: number): string {
   return h > 0 ? `${h}j ${pad(m)}m ${pad(sec)}d` : `${pad(m)}m ${pad(sec)}d`;
 }
 
-export function YoruPetScreen({ onBack }: { onBack: () => void }) {
-  const state = useQuery(api.pets.state, {});
+export function YoruPetScreen({
+  onBack,
+  viewUserId,
+}: {
+  onBack: () => void;
+  /** Mode lihat: kebun binatang user LAIN (dari detail akun → YoruPet).
+      Data dari api.pets.view, semua tombol aksi disembunyikan. */
+  viewUserId?: Id<"users">;
+}) {
+  const isView = !!viewUserId;
+  const ownState = useQuery(api.pets.state, viewUserId ? "skip" : {});
+  const viewState = useQuery(api.pets.view, viewUserId ? { userId: viewUserId } : "skip");
+  // Samakan bentuk data mode view dengan state supaya seluruh render tetap
+  // berjalan — hanya tampilan, tanpa klaim/gacha/klaim Sacret.
+  const state = isView
+    ? viewState && {
+        ...viewState,
+        sacret: 0,
+        eggs: 0,
+        claimReady: false,
+        claimIn: 0,
+      }
+    : ownState;
   const pullM = useMutation(api.pets.pull);
   const hatchM = useMutation(api.pets.hatch);
   const hatchAllM = useMutation(api.pets.hatchAll);
@@ -206,13 +228,17 @@ export function YoruPetScreen({ onBack }: { onBack: () => void }) {
               <span className="font-black text-gold">{state.username}</span>
             </h1>
             <p className="text-[10px] text-zinc-300">
-              Telur ×{state.eggs} · Crystal {state.crystals.toLocaleString("id-ID")}
+              {isView
+                ? `🐾 ${state.owned.length} peliharaan`
+                : `Telur ×${state.eggs} · Crystal ${state.crystals.toLocaleString("id-ID")}`}
             </p>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 text-[12px] font-black text-gold backdrop-blur-sm">
-            <Coins className="size-3.5" aria-hidden />
-            {state.sacret.toLocaleString("id-ID")}
-          </span>
+          {!isView && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 text-[12px] font-black text-gold backdrop-blur-sm">
+              <Coins className="size-3.5" aria-hidden />
+              {state.sacret.toLocaleString("id-ID")}
+            </span>
+          )}
         </div>
 
         {/* ----------------- panggung: PAS DI TENGAH ------------------- */}
@@ -234,7 +260,10 @@ export function YoruPetScreen({ onBack }: { onBack: () => void }) {
                 transition={{ duration: 2.4, ease: "easeInOut" }}
               >
                 {/* bubble klaim: tipis, rounded penuh, hitung mundur 24 jam */}
-                <div className="absolute -top-10 left-1/2 w-max max-w-[160px] -translate-x-1/2">
+                <div className={cn(
+                  "absolute -top-10 left-1/2 w-max max-w-[160px] -translate-x-1/2",
+                  isView && "hidden",
+                )}>
                   {claimReady ? (
                     <button
                       onClick={doClaim}
@@ -281,6 +310,11 @@ export function YoruPetScreen({ onBack }: { onBack: () => void }) {
 
         {/* ------------- tombol di PALING BAWAH layar ------------------ */}
         <div className="mx-auto w-full max-w-2xl px-3 pb-6">
+          {isView ? (
+            <p className="mx-auto w-fit rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-center text-[11px] font-bold text-zinc-200 backdrop-blur-sm">
+              Melihat kebun milik {state.username} 🐾
+            </p>
+          ) : (
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => doGacha(1)}
@@ -313,6 +347,7 @@ export function YoruPetScreen({ onBack }: { onBack: () => void }) {
               <span className="block text-[9px] font-bold opacity-80">{PETS.length} pet</span>
             </button>
           </div>
+          )}
         </div>
       </div>
 

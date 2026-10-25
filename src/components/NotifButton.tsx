@@ -132,16 +132,27 @@ function NotifSheet({
             {list.map((n: any, i: number) => (
               <div
                 key={n._id}
+                onClick={() => {
+                  // Undangan/hasil Afinitas: buka profil pengirim — pop-up
+                  // Afinitas muncul otomatis dari sana.
+                  if (n.type?.startsWith("affinity") && n.refUserId) {
+                    onOpenChange(false);
+                    navigate(`/?user=${n.refUserId}`);
+                  }
+                }}
                 className={cn(
                   "flex gap-2.5 rounded-2xl border p-3",
                   n.type === "premiumClaim"
                     ? "border-amber-500/40 bg-amber-500/[0.07]"
-                    : i === 0
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-white/10 bg-white/[0.05]",
+                    : n.type?.startsWith("affinity")
+                      ? "border-pink-500/40 bg-pink-500/[0.07]"
+                      : i === 0
+                        ? "border-primary/50 bg-primary/10"
+                        : "border-white/10 bg-white/[0.05]",
+                  n.type?.startsWith("affinity") && "cursor-pointer",
                 )}
               >
-                {n.type === "premiumClaim" && n.refUserId ? (
+                {n.refUserId && (n.type === "premiumClaim" || n.type.startsWith("affinity")) ? (
                   <Avatar
                     src={n.refImage}
                     seed={n.refUsername ?? n.refUserId}

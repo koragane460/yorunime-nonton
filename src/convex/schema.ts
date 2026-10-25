@@ -175,6 +175,12 @@ const schema = defineSchema(
       level: v.number(),
       levelProgress: v.number(),
       createdAt: v.number(),
+      /** CENTANG BIRU clan (dibeli leader/officer di Shop clan detail). */
+      verified: v.optional(v.boolean()),
+      /** Kapasitas member (mulai 20, upgrade +2/200 Sacret, maks 100). */
+      memberCap: v.optional(v.number()),
+      /** Tier tag clan yang sudah DIBELI (1..6 — ikon tag per level). */
+      tagTier: v.optional(v.number()),
     })
       .index("leaderId", ["leaderId"])
       .index("diamonds", ["diamonds"])
@@ -309,6 +315,57 @@ const schema = defineSchema(
       read: v.optional(v.boolean()),
       createdAt: v.number(),
     }).index("userId_created", ["userId", "createdAt"]),
+
+    // ---- AFINITAS — relasi dekat antar user (ala Mobile Legends) ----
+    affinity: defineTable({
+      userA: v.id("users"),
+      userB: v.id("users"),
+      kind: v.union(
+        v.literal("pasangan"),
+        v.literal("saudara"),
+        v.literal("sahabat"),
+        v.literal("terpercaya"),
+      ),
+      bondXp: v.number(),
+      createdAt: v.number(),
+      // Misi harian chat (reset per hari) — 5 chat/hari ke partner.
+      chatDay: v.optional(v.string()),
+      chatCount: v.optional(v.number()),
+      chatDoneDay: v.optional(v.string()),
+      // Misi kumulatif give premium (2x tiap jenis).
+      give7: v.optional(v.number()),
+      give30: v.optional(v.number()),
+    })
+      .index("userA", ["userA"])
+      .index("userB", ["userB"])
+      .index("pair", ["userA", "userB"]),
+
+    affinityInvites: defineTable({
+      fromId: v.id("users"),
+      toId: v.id("users"),
+      kind: v.union(
+        v.literal("pasangan"),
+        v.literal("saudara"),
+        v.literal("sahabat"),
+        v.literal("terpercaya"),
+      ),
+      createdAt: v.number(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("accepted"),
+        v.literal("rejected"),
+      ),
+    })
+      .index("to_status", ["toId", "status"])
+      .index("from", ["fromId"]),
+
+    // Cooldown pasca-putus: userA tidak boleh mengajak userB lagi
+    // sebelum blockedUntil (7 hari).
+    affinityBreaks: defineTable({
+      userA: v.id("users"),
+      userB: v.id("users"),
+      blockedUntil: v.number(),
+    }).index("pair", ["userA", "userB"]),
 
     /**
      * Buku besar saldo developer. Satu baris per transaksi (masuk atau

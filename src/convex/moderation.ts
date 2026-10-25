@@ -621,14 +621,21 @@ export const createAnnouncement = mutation({
 export const appVersion = query({
   args: {},
   handler: async (ctx) => {
-    const row = await ctx.db
-      .query("appSettings")
-      .withIndex("key", (q: any) => q.eq("key", "minVersion"))
-      .first();
-    return {
-      // Versi minimum yang WAJIB dipakai. Kosong = belum ada paksaan update.
-      minVersion: String(row?.value ?? ""),
-    };
+    // Query ini dipakai di UpdateGate SEBELUM seluruh app render. Kalau dia
+    // throw (deploy sinkronisasi dsb.), seluruh preview jadi "runtime error"
+    // — jadi gagal apa pun harus tetap return versi kosong (tanpa paksaan).
+    try {
+      const row = await ctx.db
+        .query("appSettings")
+        .withIndex("key", (q: any) => q.eq("key", "minVersion"))
+        .first();
+      return {
+        // Versi minimum yang WAJIB dipakai. Kosong = belum ada paksaan update.
+        minVersion: String(row?.value ?? ""),
+      };
+    } catch {
+      return { minVersion: "" };
+    }
   },
 });
 

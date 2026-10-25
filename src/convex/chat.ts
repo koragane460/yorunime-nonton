@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { addXpInternal } from "./xp";
 import { requireActive } from "./moderation";
+import { noteChatFor, noteGivePremiumFor } from "./affinity";
 
 const TEXT_MAX = 2000;
 
@@ -249,6 +250,8 @@ export const sendMessage = mutation({
     await addXpInternal(ctx, userId, 5, "chat");
 
     if (kind === "dm" && peerId) {
+      // Misi bond Afinitas: 5 chat/hari ke partner → +20 XP bond.
+      await noteChatFor(ctx, userId, peerId);
       await ctx.db.insert("notifications", {
         userId: peerId,
         type: "friend_chat",
@@ -383,6 +386,9 @@ export const givePremium = mutation({
     await ctx.db.patch(giveId, { chatMessageId: messageId });
 
     await addXpInternal(ctx, userId, giveXp(days, receivers), "give_premium");
+    // Misi bond Afinitas: give premium 7/30 hari ke partner → progres misi.
+    if (kind === "dm" && peerId)
+      await noteGivePremiumFor(ctx, userId, peerId, days);
     void myClanTag;
     return { messageId, giveId };
   },

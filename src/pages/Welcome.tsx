@@ -252,12 +252,21 @@ function WelcomeFlow() {
   // Setelah onboard / splash, user langsung masuk pakai sesi anonim.
   // Kalau anonymous gagal (koneksi), baruluh jatuh ke layar login manual.
   const enterRanRef = useRef(false);
+  // True = status sesi tidak pernah selesai dalam 8 detik (socket macet).
+  const [authStalled, setAuthStalled] = useState(false);
   useEffect(() => {
     if (stage !== "entering") {
+      setAuthStalled(false);
       enterRanRef.current = false;
       return;
     }
-    if (authLoading || enterRanRef.current) return;
+    // Masih loading sesi → beri waktu 8 detik, jangan diam selamanya di
+    // layar "Masuk…" kalau socket tidak pernah selesai.
+    if (authLoading && !authStalled) {
+      const t = window.setTimeout(() => setAuthStalled(true), 8000);
+      return () => window.clearTimeout(t);
+    }
+    if (enterRanRef.current) return;
     if (isAuthenticated) {
       navigate("/home", { replace: true });
       return;
@@ -279,7 +288,8 @@ function WelcomeFlow() {
       setLoginErr("Koneksi bermasalah. Coba masuk manual dulu.");
       setStage("login");
     })();
-  }, [stage, authLoading, isAuthenticated, signIn, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, authLoading, isAuthenticated, authStalled, signIn, navigate]);
 
   /** Lanjut dari splash — dipanggil otomatis lewat timer ATAU saat user
    *  menekan layar ("Ketuk untuk lanjut"). Kunjungan berikutnya (onboard

@@ -13,6 +13,7 @@ import { ProfileSheet } from "@/components/ProfileSheet";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { StripBack } from "@/components/StripBack";
 import { VoteScreen } from "@/components/VoteScreen";
+import { CuplixOverlay } from "@/components/CuplixOverlay";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
@@ -130,7 +131,7 @@ export default function Home() {
 
 function HeroSkeleton() {
   return (
-    <div className="skeleton mt-3 h-[300px] w-full rounded-2xl border border-white/5" />
+    <div className="skeleton mt-3 h-[178px] w-full rounded-2xl border border-white/5" />
   );
 }
 
@@ -325,16 +326,9 @@ function ComicHomeRow({
   return (
     <div className="fade-enter mt-4">
       <div className="mb-2 flex items-center justify-between">
-        <h2
-          className={cn(
-            "bg-clip-text text-lg font-bold tracking-tight text-transparent",
-            variant === "manga"
-              ? "bg-gradient-to-r from-amber-200 via-orange-200 to-rose-300"
-              : "bg-gradient-to-r from-violet-300 via-fuchsia-200 to-pink-300",
-          )}
-        >
-          {title}
-        </h2>
+        {/* Judul baris TANPA warna gradasi (permintaan: tulisan
+            "…Terbaru & Populer" polos). */}
+        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
         <button
           onClick={onMore}
           className="shrink-0 text-xs font-semibold text-primary"
@@ -379,8 +373,10 @@ function ComicHomeRow({
                   </span>
                 )}
                 {/* Label "Berjalan" untuk manga yang masih tamat. */}
+                {/* Title ONGOING — flush ke sudut kiri-atas kartu (menyatu,
+                    rounded hanya pojok kanan-bawah). */}
                 {variant === "manga" && c.ongoing && (
-                  <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+                  <span className="absolute left-0 top-0 rounded-none rounded-br-lg bg-primary px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
                     Berjalan
                   </span>
                 )}
@@ -1253,10 +1249,7 @@ function HomeContent() {
                   setSearchOpenGenres(false);
                   setShowSearch(true);
                 }}
-                className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition active:scale-95",
-                  genreHue(gi),
-                )}
+                className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold text-zinc-200 backdrop-blur-md transition hover:border-white/35 active:scale-95"
               >
                 {g.name}
               </button>
@@ -2635,9 +2628,9 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
                   key={g.id}
                   onClick={() => toggleGenre(g.name)}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                    genreHue(gi),
-                    on && "font-black ring-1 ring-gold-strong",
+                    "rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-zinc-300 transition",
+                    on &&
+                      "border-white/45 bg-white/[0.16] font-black ring-1 ring-gold-strong",
                   )}
                 >
                   {g.name}
@@ -3182,6 +3175,8 @@ function AnimeDetailScreen({
   // Tab Info / Nonton / Character / Vote — tombol tanpa background rounded,
   // hanya garis bawah pada teks yang aktif.
   const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "vote">("info");
+  // Cuplix (pengganti Like): overlay FULLSCREEN klip TikTok judul ini.
+  const [cuplixFs, setCuplixFs] = useState(false);
   // Tab Cuplikan (dulu): karakter terpilih + daftar klip TikTok-nya — kini
   // digantikan tab Vote, tapi state ini masih dipakai panel lamanya.
   const [cuplikanChar, setCuplikanChar] = useState<{ id: string; name: string } | null>(null);
@@ -3440,11 +3435,19 @@ function AnimeDetailScreen({
               ["info", "Info"],
               ["nonton", "Nonton"],
               ["character", "Character"],
-              ["vote", "Like"],
+              ["vote", "Cuplix"],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
-                onClick={() => setDetailTab(id)}
+                onClick={() => {
+                  // Cuplix bukan tab biasa — langsung buka fullscreen
+                  // klip TikTok judul ini.
+                  if (id === "vote") {
+                    setCuplixFs(true);
+                    return;
+                  }
+                  setDetailTab(id);
+                }}
                 className={cn(
                   "relative flex-1 px-1 pb-2 pt-1 text-sm font-semibold transition",
                   detailTab === id
@@ -3521,7 +3524,16 @@ function AnimeDetailScreen({
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
           )}
 
-          {/* Vote karakter (pengganti Cuplikan) — tampil di tab Vote */}
+          {/* Cuplix — overlay FULLSCREEN klip TikTok judul ini (pengganti
+              Like). Dibuka lewat tombol tab, bukan panel inline. */}
+          {cuplixFs && (
+            <CuplixOverlay
+              title={detail.title ?? animeTitle ?? ""}
+              onClose={() => setCuplixFs(false)}
+            />
+          )}
+
+          {/* Vote karakter — tampil di tab Vote */}
           {detailTab === "vote" && (
             <VoteScreen
               animeId={String(animeId)}

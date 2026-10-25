@@ -91,6 +91,12 @@ class RootErrorBoundary extends React.Component<
                 {this.state.stack}
               </pre>
             )}
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground"
+            >
+              Muat ulang
+            </button>
           </div>
         </div>
       );

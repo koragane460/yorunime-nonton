@@ -527,6 +527,8 @@ export function ChatPanel({
   // Cegah tap dobel (Enter lalu ketuk, atau ketuk dua kali) mengirim isi yang
   // sama dua kali — tanpa kunci yang menelan pesan berikutnya diam-diam.
   const lastSent = useRef({ text: "", at: 0 });
+  // Chat teman (DM): cooldown10 detik antar pesan.
+  const lastDmAt = useRef(0);
   const nsfwReport = useMutation(api.chat.nsfwReport);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const { muted } = useModeration();
@@ -576,14 +578,21 @@ export function ChatPanel({
     }
     if (!text.trim()) return;
     const t = text;
+    const now = Date.now();
+    // Chat teman (DM): cooldown10 detik sebelum bisa kirim lagi.
+    if (peerId && lastDmAt.current && now - lastDmAt.current < 10000) {
+      const sisa = Math.ceil((10000 - (now - lastDmAt.current)) / 1000);
+      toast.info(`Cooldown chat ${sisa}s lagi`);
+      return;
+    }
     // Kirim dua kali dalam <800ms dengan teks identik hampir pasti ketukan
     // dobel, bukan pesan baru.
-    const now = Date.now();
     if (lastSent.current.text === t && now - lastSent.current.at < 800) return;
     lastSent.current = { text: t, at: now };
     setText("");
     try {
       await send({ text: t });
+      if (peerId) lastDmAt.current = Date.now();
     } catch (e) {
       // Kegagalan: kembalikan teks DAN buka lagi penjaga ketukan dobel,
       // supaya kirim ulang yang segera setelahnya tidak diblokir diam-diam.

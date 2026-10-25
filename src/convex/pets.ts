@@ -73,6 +73,47 @@ export const state = query({
   },
 });
 
+/**
+ * VIEW-ONLY kebun binatang user lain (dibuka dari detail akun → YoruPet).
+ * Balasannya sama dengan `state` tapi tanpa klaim/gacha — hanya tampilan.
+ */
+export const view = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const u = await ctx.db.get(userId);
+    if (!u) return null;
+    const s = await ctx.db
+      .query("petState")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    const owned = (s?.owned ?? []).map((o) => {
+      const def = petById(o.petId);
+      return {
+        uid: o.uid,
+        at: o.at,
+        petId: o.petId,
+        name: def?.name ?? o.petId,
+        emoji: def?.emoji ?? "❔",
+        rarity: def?.rarity ?? ("Common" as const),
+        crystal: def?.crystal ?? 0,
+        claim: def?.claim ?? 0,
+        rate: def?.rate ?? 0,
+      };
+    });
+    const equipped = owned.find((o) => o.uid === s?.equippedUid) ?? null;
+    return {
+      username: u.username ?? "Pet",
+      image: u.image,
+      owned,
+      equipped,
+      crystals: s?.crystals ?? 0,
+      scenes: s?.scenes ?? ["hutan"],
+      scene: s?.scene ?? "hutan",
+      viewing: true as const,
+    };
+  },
+});
+
 /** Gacha — membeli telur Misteri (1x 1.000 / 10x 10.000 Sacret). */
 export const pull = mutation({
   args: { count: v.union(v.literal(1), v.literal(10)) },

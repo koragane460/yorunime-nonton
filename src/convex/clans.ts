@@ -121,6 +121,9 @@ function clanPublic(clan: any, memberCount: number) {
     color,
     ageDays,
     memberCount,
+    verified: !!clan.verified,
+    memberCap: clan.memberCap ?? 20,
+    tagTier: clan.tagTier ?? 0,
   };
 }
 
@@ -734,6 +737,91 @@ export const setBackground = mutation({
     const res = await leaderGuard(ctx, userId, ["leader", "officer"]);
     await ctx.db.patch(res.clan._id, { backgroundUrl: url.trim() || undefined });
     return { ok: true };
+  },
+});
+
+// =================== SHOP CLAN (leader/officer) ===================
+
+/** Biaya centang biru clan — sekali beli, tampil di semua member. */
+export const BLUE_CHECK_COST = 5000;
+/** Harga upgrade slot member: 200 Sacret per +2 slot (maks 100). */
+export const SLOT_COST = 200;
+export const SLOT_STEP = 2;
+export const SLOT_MAX = 100;
+export const SLOT_START = 20;
+/** Harga beli tier tag clan (1..6) — tag makin tinggi makin bagus. */
+export const TAG_TIER_COST: Record<number, number> = {
+  1: 3000,
+  2: 6000,
+  3: 9000,
+  4: 12000,
+  5: 16000,
+  6: 19500,
+};
+
+/** Beli CENTANG BIRU clan (leader & officer) — tampil di profil member. */
+export const buyVerified = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const res = await leaderGuard(ctx, userId, ["leader", "officer"]);
+    const clan = res.clan;
+    if (clan.verified) return { ok: true, already: true };
+    const me = await ctx.db.get(userId);
+    const bal = me?.diamonds ?? 0;
+    if (bal < BLUE_CHECK_COST)
+      throw new Error(`Sacret tidak cukup (butuh ${BLUE_CHECK_COST})`);
+    await ctx.db.patch(userId, { diamonds: bal - BLUE_CHECK_COST });
+    await ctx.db.patch(clan._id, { verified: true });
+    return { ok: true };
+  },
+});
+
+/** Upgrade slot member +2 (200 Sacret), maksimal 100. */
+export const upgradeSlots = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const res = await leaderGuard(ctx, userId, ["leader"]);
+    const clan = res.clan;
+    const cap = clan.memberCap ?? SLOT_START;
+    if (cap >= SLOT_MAX) throw new Error("Slot member sudah maksimal (100)");
+    const me = await ctx.db.get(userId);
+    const bal = me?.diamonds ?? 0;
+    if (bal < SLOT_COST)
+      throw new Error(`Sacret tidak cukup (butuh ${SLOT_COST})`);
+    await ctx.db.patch(userId, { diamonds: bal - SLOT_COST });
+    await ctx.db.patch(clan._id, { memberCap: Math.min(SLOT_MAX, cap + SLOT_STEP) });
+    return { ok: true, memberCap: Math.min(SLOT_MAX, cap + SLOT_STEP) };
+  },
+});
+
+/**
+ * Beli TIER tag clan (1..6): tag lvl 50/100/150/200/250/300.
+ * Tier dibeli — bukan otomatis ikut level clan.
+ */
+export const buyTagTier = mutation({
+  args: { tier: v.number() },
+  handler: async (ctx, { tier }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    if (!(tier >= 1 && tier <= 6)) throw new Error("Tier tidak valid");
+    const res = await leaderGuard(ctx, userId, ["leader"]);
+    const clan = res.clan;
+    const owned = clan.tagTier ?? 0;
+    // Tier harus dibeli berurutan (wajib punya tier sebelumnya).
+    if (tier > owned + 1)
+      throw new Error(`Beli tag tier ${owned + 1} dulu sebelum tier ${tier}`);
+    if (tier <= owned) return { ok: true, already: true };
+    const cost = TAG_TIER_COST[tier];
+    const me = await ctx.db.get(userId);
+    const bal = me?.diamonds ?? 0;
+    if (bal < cost) throw new Error(`Sacret tidak cukup (butuh ${cost})`);
+    await ctx.db.patch(userId, { diamonds: bal - cost });
+    await ctx.db.patch(clan._id, { tagTier: tier });
+    return { ok: true, tagTier: tier };
   },
 });
 

@@ -84,7 +84,16 @@ export function ComicCard({
             {ranked}
           </span>
         )}
-        <StatusChip ongoing={item.ongoing} className="absolute right-1 top-1" />
+        {/* Title ONGOING/TAMAT — melekat di kiri ATAS kartu: flush ke
+            sudut (rounded hanya pojok kanan-bawah supaya "nyambung"),
+            digeser ke kanan kalau ada badge peringkat di depannya. */}
+        <StatusChip
+          ongoing={item.ongoing}
+          className={cn(
+            "absolute top-0 rounded-none rounded-br-lg",
+            ranked !== undefined ? "left-9" : "left-0",
+          )}
+        />
         {views && (
           <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">
             <Eye className="size-2.5" /> {views}
