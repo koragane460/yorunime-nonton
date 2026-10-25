@@ -150,7 +150,9 @@ function WelcomeFlow() {
   // HANYA untuk kunjungan pertama) → login. Setelah onboard selesai,
   // kunjungan berikutnya langsung ke login (ada tombol eksplisit, tidak
   // lagi auto-advance saat scroll).
-  const [stage, setStage] = useState<"intro" | "onboard" | "login">("intro");
+  const [stage, setStage] = useState<"intro" | "onboard" | "entering" | "login">(
+    "intro",
+  );
   const [onbIdx, setOnbIdx] = useState<0 | 1>(0);
   const [loggingIn, setLoggingIn] = useState(false);
   // true = aplikasi baru dibuka kembali (balik dari tab/app lain) → tampilkan
@@ -246,6 +248,39 @@ function WelcomeFlow() {
       navigate("/home", { replace: true });
   }, [authLoading, isAuthenticated, navigate, registering, reopened, stage]);
 
+  // --- Alur MASUK OTOMATIS (layar login disembunyikan untuk sekarang) ---
+  // Setelah onboard / splash, user langsung masuk pakai sesi anonim.
+  // Kalau anonymous gagal (koneksi), baruluh jatuh ke layar login manual.
+  const enterRanRef = useRef(false);
+  useEffect(() => {
+    if (stage !== "entering") {
+      enterRanRef.current = false;
+      return;
+    }
+    if (authLoading || enterRanRef.current) return;
+    if (isAuthenticated) {
+      navigate("/home", { replace: true });
+      return;
+    }
+    enterRanRef.current = true;
+    void (async () => {
+      // Retry singkat: "connection lost" biasanya terjadi saat websocket
+      // baru reconnect — coba lagi beberapa kali sebelum menyerah.
+      for (let i = 0; i < 3; i++) {
+        try {
+          await signIn("anonymous");
+          navigate("/home", { replace: true });
+          return;
+        } catch {
+          await new Promise((r) => setTimeout(r, 600));
+        }
+      }
+      enterRanRef.current = false;
+      setLoginErr("Koneksi bermasalah. Coba masuk manual dulu.");
+      setStage("login");
+    })();
+  }, [stage, authLoading, isAuthenticated, signIn, navigate]);
+
   /** Lanjut dari splash — dipanggil otomatis lewat timer ATAU saat user
    *  menekan layar ("Ketuk untuk lanjut"). Kunjungan berikutnya (onboard
    *  sudah pernah selesai) langsung menuju login. */
@@ -255,7 +290,7 @@ function WelcomeFlow() {
       navigate("/home", { replace: true });
       return;
     }
-    setStage(readOnboarded() ? "login" : "onboard");
+    setStage(readOnboarded() ? "entering" : "onboard");
   };
 
   useEffect(() => {
@@ -609,7 +644,7 @@ function WelcomeFlow() {
               <button
                 onClick={() => {
                   saveOnboarded();
-                  setStage("login");
+                  setStage("entering");
                 }}
                 className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
               >
@@ -731,7 +766,7 @@ function WelcomeFlow() {
                   if (onbIdx === 0) setOnbIdx(1);
                   else {
                     saveOnboarded();
-                    setStage("login");
+                    setStage("entering");
                   }
                 }}
                 className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition hover:bg-primary/90 active:scale-[0.98]"
@@ -740,6 +775,23 @@ function WelcomeFlow() {
                 <ArrowRight className="size-4" aria-hidden />
               </button>
             </div>
+          </motion.section>
+        )}
+
+        {stage === "entering" && (
+          <motion.section
+            key="entering"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <Loader2 className="size-7 animate-spin text-primary" aria-hidden />
+            <p className="text-sm font-semibold text-foreground">Masuk…</p>
+            <p className="max-w-[15rem] text-center text-[11px] leading-relaxed text-muted-foreground">
+              Menyiapkan akun kamu — bentar ya.
+            </p>
           </motion.section>
         )}
 
