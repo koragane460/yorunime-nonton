@@ -12,6 +12,7 @@ import {
   getFirebaseIdToken,
   signInWithGoogleFirebase,
 } from "@/lib/firebase";
+import Login from "@/pages/Login";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -44,6 +45,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Skip the redirect if the user already has a session (no ping-pong).
   useEffect(() => {
     if (!authLoading && isAuthenticated) navigate(redirect, { replace: true });
   }, [authLoading, isAuthenticated, navigate, redirect]);

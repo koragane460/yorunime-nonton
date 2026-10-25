@@ -12,6 +12,7 @@ import {
   Ban,
   ChevronLeft,
   ChevronUp,
+  Clock,
   Crown,
   Film,
   Flag,
@@ -20,7 +21,6 @@ import {
   Info,
   KeyRound,
   Loader2,
-  Lock,
   LogIn,
   Mail,
   Megaphone,
@@ -31,6 +31,7 @@ import {
   Users,
   UserX,
   X,
+  Lock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -60,8 +61,8 @@ const DEV_KEY = "yorunime_device_accounts";
 /**
  * Penanda onboard SELESAI — kunjungan berikutnya langsung loncat ke layar
  * login (tidak mengulang splash + 2 slide perhatian/peraturan). Ini bagian
- * dari redesign logika welcome: alur jadi intro → onboard (sekali saja) →
- * login, dengan tombol eksplisit (bukan auto-advance saat scroll).
+ * dari redesign logika welcome: alur jadi intro → onboard (sekali saja) → login,
+ * dengan tombol eksplisit (bukan auto-advance saat scroll).
  */
 const ONBOARD_KEY = "yorunime_onboarded_v1";
 
@@ -252,7 +253,7 @@ function WelcomeFlow() {
   // Setelah onboard / splash, user langsung masuk pakai sesi anonim.
   // Kalau anonymous gagal (koneksi), baruluh jatuh ke layar login manual.
   const enterRanRef = useRef(false);
-  // True = status sesi tidak pernah selesai dalam 8 detik (socket macet).
+  // True = status sesi tidak pernah selesai dalam 1,5 detik (socket macet).
   const [authStalled, setAuthStalled] = useState(false);
   useEffect(() => {
     if (stage !== "entering") {
@@ -260,10 +261,10 @@ function WelcomeFlow() {
       enterRanRef.current = false;
       return;
     }
-    // Masih loading sesi → beri waktu 8 detik, jangan diam selamanya di
+    // Masih loading sesi → beri waktu 1,5 detik, jangan diam selamanya di
     // layar "Masuk…" kalau socket tidak pernah selesai.
     if (authLoading && !authStalled) {
-      const t = window.setTimeout(() => setAuthStalled(true), 8000);
+      const t = window.setTimeout(() => setAuthStalled(true), 1500);
       return () => window.clearTimeout(t);
     }
     if (enterRanRef.current) return;
@@ -285,7 +286,7 @@ function WelcomeFlow() {
         }
       }
       enterRanRef.current = false;
-      setLoginErr("Koneksi bermasalah. Coba masuk manual dulu.");
+      setLoginErr("Koneksi bermasalah. Mencoba masuk manual.");
       setStage("login");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -515,7 +516,11 @@ function WelcomeFlow() {
           />
         </motion.div>
         <motion.h1
-          // Wordmark gradasi emas→putih: elemen dominan layar.
+          // Wordmark font display cyrptic: memakai font family theme yang
+          // sudah didefinisikan (--font-display). Karena template Vite
+          // belum mendaftarkan font family custom, pakai fallback yang
+          // halus dan monospace yang jelas: TTF Cryptic menghasilkan
+          // huruf yang lurus & kaku (serif + digit bergaris tebal).
           className="w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(2.25rem,10vw,4.5rem)] font-black leading-[0.9] tracking-[-0.03em] text-transparent"
           initial={{ opacity: 0, y: 10, filter: "blur(14px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
