@@ -101,7 +101,6 @@ export const setPassword = mutation({
 
     await ctx.db.patch(row._id, {
       passwordHash: await hashPw(em, password),
-      updatedAt: Date.now(),
     });
 
     return { ok: true };
