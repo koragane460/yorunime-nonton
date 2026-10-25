@@ -11,7 +11,8 @@ import {
   firebaseReady,
   getFirebaseIdToken,
 } from "@/lib/firebase";
-import { LogIn, Mail, User, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, LogIn, Mail, User, AlertCircle, Loader2 } from "lucide-react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,7 +31,8 @@ import { cn } from "@/lib/utils";
  */
 export default function Login() {
   const navigate = useNavigate();
-  const { isLoading: authLoading, isAuthenticated, signIn } = useConvexAuth();
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
+  const { signIn } = useAuthActions();
   const [loginState, setLoginState] = useState<"idle" | "loading">("idle");
   const [loginErr, setLoginErr] = useState<string | null>(null);
   const [showTesterLogin, setShowTesterLogin] = useState(false);
@@ -48,14 +50,10 @@ export default function Login() {
   const [testerUser, setTesterUser] = useState("");
   const [testerPass, setTesterPass] = useState("");
   const [testerErr, setTesterErr] = useState<string | null>(null);
-  const [accountStep, setAccountStep] = useState<"create" | "set-password" | "done">("create");
   const [accountErr, setAccountErr] = useState<string | null>(null);
   const [accountState, setAccountState] = useState<"idle" | "loading">("idle");
-  // Di-read-only setelah create: ditampilkan sebagai referensi saja.
-  const [accountEmailDone, setAccountEmailDone] = useState("");
-  const [accountNameDone, setAccountNameDone] = useState("");
-  const [accountUserDone, setAccountUserDone] = useState("");
-  const [accountPassDone, setAccountPassDone] = useState("");
+  // Username hasil create — tampil read-only di tahap set-password.
+  const [accountUser, setAccountUser] = useState("");
 
   // --- Login Google (firebase console) ---
   // Konfigurasi Firebase diambil dari env Keys/API keys UI:
@@ -127,12 +125,11 @@ export default function Login() {
       });
       setAccountEmailDone(email);
       setAccountNameDone(accountName.trim());
-      setAccountUserDone((res as any)?.name ?? accountName.trim());
-      setAccountPassDone(pass);
       setAccountEmailDone(email);
       setAccountNameDone(accountName.trim());
       setAccountUserDone((res as any)?.name ?? accountName.trim());
       setAccountPassDone(pass);
+      setAccountUser((res as any)?.name ?? accountName.trim());
       setAccountStep("done");
       setAccountState("idle");
       setAccountErr(null);
@@ -269,7 +266,7 @@ export default function Login() {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-foreground">Login sebagai tester</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Tester YoruNime &middot; Tester YoruNime / yttaajadeh
+                    Masuk memakai akun tester YoruNime
                   </p>
                 </div>
               </div>
@@ -319,7 +316,7 @@ export default function Login() {
                   <LogIn className="size-4" />
                 )}
                 Log in
-                Tester YoruNime / yttaajadeh              </Button>
+              </Button>
 
               <Button
                 variant="ghost"
@@ -339,7 +336,7 @@ export default function Login() {
           <SheetContent className="bg-[#07060c] border-white/10 shadow-2xl" side="bottom">
             <SheetHeader className="sr-only"></SheetHeader>
             <div className="flex flex-col gap-4 py-3">
-              {accountStep === "create" && (
+              {accountStep === "create" ? (
                 <form onSubmit={submitCreateAccount} className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">
@@ -482,12 +479,6 @@ export default function Login() {
           >
             Tutup
           </Button>
-          </SheetContent>
-        </Sheet>
-      )}
-    </div>
-  );
-}
           </SheetContent>
         </Sheet>
       )}

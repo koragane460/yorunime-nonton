@@ -382,7 +382,7 @@ function WatchContent() {
   const record = useMutation(api.activities.recordWatch);
   const saveProgress = useMutation(api.activities.saveProgress);
   const saveSettings = useMutation(api.account.updateSettings);
-  const { user: currentUser } = useConvexAuth();
+  const currentUser = useQuery(api.users.currentUser, {});
   // Settings extracted from current user profile (settings live on the user doc).
   // Fall back to defaults when no user is signed in so the player still works.
   const settings = currentUser

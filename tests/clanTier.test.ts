@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
-  CLAN_TIER_BLUE_MIN,
+  CLAN_TIER_BROWN_MIN,
   CLAN_TIER_GOLD_MIN,
-  CLAN_TIER_GREEN_MIN,
-  CLAN_TIER_PURPLE_MIN,
+  CLAN_TIER_RAINBOW_MIN,
+  CLAN_TIER_RED_MIN,
   clanTextClass,
   clanTierClass,
 } from "../src/components/lstream-ui";
@@ -11,20 +11,20 @@ import {
 /**
  * Ambang warna nama clan. Nilai ini ditetapkan pemilik aplikasi dan harus
  * SAMA di semua layar (detail akun, akun, chat clan, halaman Clan):
- *   1-49    biru muda
- *   50-99   hijau muda
- *   100-149 ungu
- *   150-200 emas
+ *   1-49    coklat
+ *   50-99   emas
+ *   100-149 merah
+ *   150-200 rainbow
  */
 const EXPECTED_TIERS = [
-  { level: 1, want: "clan-tier-blue" },
-  { level: 49, want: "clan-tier-blue" },
-  { level: 50, want: "clan-tier-green" },
-  { level: 99, want: "clan-tier-green" },
-  { level: 100, want: "clan-tier-purple" },
-  { level: 149, want: "clan-tier-purple" },
-  { level: 150, want: "clan-tier-gold" },
-  { level: 200, want: "clan-tier-gold" },
+  { level: 1, want: "clan-tier-brown" },
+  { level: 49, want: "clan-tier-brown" },
+  { level: 50, want: "clan-tier-gold" },
+  { level: 99, want: "clan-tier-gold" },
+  { level: 100, want: "clan-tier-red" },
+  { level: 149, want: "clan-tier-red" },
+  { level: 150, want: "clan-tier-rainbow" },
+  { level: 200, want: "clan-tier-rainbow" },
 ];
 
 describe("clan: warna nama per level", () => {
@@ -43,15 +43,15 @@ describe("clan: warna nama per level", () => {
   });
 
   test("level kosong/0 tidak meledak dan jatuh ke tier terendah", () => {
-    expect(clanTextClass(undefined)).toBe("clan-tier-blue");
-    expect(clanTextClass(0)).toBe("clan-tier-blue");
-    expect(clanTextClass(null as unknown as number)).toBe("clan-tier-blue");
+    expect(clanTextClass(undefined)).toBe("clan-tier-brown");
+    expect(clanTextClass(0)).toBe("clan-tier-brown");
+    expect(clanTextClass(null as unknown as number)).toBe("clan-tier-brown");
   });
 
   test("konstanta ambang tidak berubah diam-diam", () => {
-    expect(CLAN_TIER_BLUE_MIN).toBe(1);
-    expect(CLAN_TIER_GREEN_MIN).toBe(50);
-    expect(CLAN_TIER_PURPLE_MIN).toBe(100);
-    expect(CLAN_TIER_GOLD_MIN).toBe(150);
+    expect(CLAN_TIER_BROWN_MIN).toBe(1);
+    expect(CLAN_TIER_GOLD_MIN).toBe(50);
+    expect(CLAN_TIER_RED_MIN).toBe(100);
+    expect(CLAN_TIER_RAINBOW_MIN).toBe(150);
   });
 });

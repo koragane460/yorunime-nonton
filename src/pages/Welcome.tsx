@@ -1,3 +1,5 @@
+import { api } from "@/convex/_generated/api";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,7 +143,7 @@ function WelcomeFlow() {
   // Load gate hanya menunggu status sesi (websocket) — tidak perlu ikut
   // menunggu query currentUser, supaya layar tidak lama diam di splash.
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
-  const { signIn } = useConvexAuth();
+  const { signIn } = useAuthActions();
   const loginAccount = useMutation(api.authAccounts.loginAccount);
   const registerAccount = useMutation(api.authAccounts.registerAccount);
 

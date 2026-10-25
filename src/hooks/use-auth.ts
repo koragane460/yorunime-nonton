@@ -1,31 +1,24 @@
+import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 
+/**
+ * Status sesi + profil user.
+ *
+ * `user` berasal dari `users:currentUser` (null saat belum masuk, undefined
+ * selagi query masih jalan). `signIn`/`signOut` diambil dari
+ * `useAuthActions()` — `useConvexAuth()` sendiri hanya mengembalikan status
+ * loading/authenticated, bukan aksi.
+ */
 export function useAuth() {
-  const { isLoading: isAuthLoading, isAuthenticated, signIn, signOut } =
-    useConvexAuth();
-
-  // Login tanpa musti menunggu query users:currentUser —
-  // gabungkan isLoading auth + tunggu sedikit setelah isAuthenticated true
-  // baru anggap sudah siap (biar websocket/refresh token sempat settle).
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    if (!isAuthLoading && isAuthenticated) {
-      const t = setTimeout(() => setReady(true), 120);
-      return () => clearTimeout(t);
-    } else {
-      setReady(false);
-    }
-  }, [isAuthLoading, isAuthenticated]);
-
-  // Gabungkan keduanya jadi satu flag isLoading yang stabil.
-  const isLoading =
-    isAuthLoading || (!ready && isAuthenticated) || (isAuthLoading === false && !isAuthenticated);
+  const { signIn, signOut } = useAuthActions();
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  const user = useQuery(api.users.currentUser, {});
 
   return {
     isLoading,
     isAuthenticated,
-    user: undefined as never, // bukan useQuery — segera diganti per halaman
+    user,
     signIn,
     signOut,
   };

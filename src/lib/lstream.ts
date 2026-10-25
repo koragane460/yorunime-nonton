@@ -1,6 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import { useConvexAuth, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import {
   Crown,
