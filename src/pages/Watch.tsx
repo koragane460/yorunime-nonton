@@ -4,6 +4,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import Hls from "hls.js";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { useConvexAuth } from "convex/react";
 import { CommentsSection, type CommentT } from "@/components/Comments";
 import { SectionTitle } from "@/components/lstream-ui";
 import { setMiniPlayer } from "@/components/AppLayout";
@@ -381,9 +382,26 @@ function WatchContent() {
   const record = useMutation(api.activities.recordWatch);
   const saveProgress = useMutation(api.activities.saveProgress);
   const saveSettings = useMutation(api.account.updateSettings);
-  // Saat belum masuk, currentUser() mengembalikan null; guard query agar
-  // db.get(null) di account.ts tidak melempar dan menghancurkan app.
-  const settings = useQuery(api.users.currentUser, {} as any);
+  const { user: currentUser } = useConvexAuth();
+  // Settings extracted from current user profile (settings live on the user doc).
+  // Fall back to defaults when no user is signed in so the player still works.
+  const settings = currentUser
+    ? {
+        defaultSpeed: currentUser.defaultSpeed ?? 1,
+        defaultQuality: currentUser.defaultQuality ?? "720p",
+        hideOnline: currentUser.hideOnline ?? false,
+        autoRejectFriend: currentUser.autoRejectFriend ?? false,
+        theme: currentUser.theme ?? "dark",
+        customColor: currentUser.customColor ?? "",
+      }
+    : {
+        defaultSpeed: 1,
+        defaultQuality: "720p",
+        hideOnline: false,
+        autoRejectFriend: false,
+        theme: "dark",
+        customColor: "",
+      };
   const hlsRef = useRef<Hls | null>(null);
   // Cache hasil resolve per episode supaya ganti episode tidak nunggu
   // pencarian server lagi (langsung pakai URL yang sudah ada).
