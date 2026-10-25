@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { CommentsSection, type CommentT } from "@/components/Comments";
 import { SectionTitle } from "@/components/lstream-ui";
 import { setMiniPlayer } from "@/components/AppLayout";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
   ChevronDown,
@@ -1850,10 +1851,10 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       {!isFs && (
         <button
           onClick={() => goBackFromWatch()}
-          className="fixed left-3 top-3 z-40 rounded-full bg-black/55 p-2 backdrop-blur"
+          className="fixed left-3 top-3 z-40 flex items-center py-1 pr-1 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition active:opacity-60"
           aria-label="Kembali"
         >
-          <ChevronLeft className="size-5 text-white" />
+          <StripBackIcon />
         </button>
       )}
       {/* Player — di fullscreen video tidak di-stretch: area dipagrasio 16:9
@@ -2251,8 +2252,8 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
               isFs ? "px-2 py-1" : "p-3",
             )}
           >
-            <button onClick={goBackFromWatch} className="rounded-full bg-black/50 p-2">
-              <ChevronLeft className="size-4 text-white" />
+            <button onClick={goBackFromWatch} className="flex items-center py-1 pr-1 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition active:opacity-60">
+              <StripBackIcon />
             </button>
             <p className="line-clamp-1 text-sm text-white">
               {D.title} {currentEp ? `— Ep ${currentEp.number}` : ""}
@@ -2529,10 +2530,10 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-gradient-to-b from-black/75 to-transparent px-3 py-2">
               <button
                 onClick={() => navigate("/home")}
-                className="pointer-events-auto rounded-full bg-black/50 p-2"
+                className="pointer-events-auto flex items-center py-1 pr-1 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] transition active:opacity-60"
                 aria-label="Kembali"
               >
-                <ChevronLeft className="size-4 text-white" />
+                <StripBackIcon />
               </button>
               <p className="line-clamp-1 text-xs font-semibold text-white">
                 {D.title}

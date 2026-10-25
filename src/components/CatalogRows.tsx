@@ -3,6 +3,7 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, Loader2, Star, Tv } from "lucide-react";
+import { StripBackIcon } from "@/components/StripBack";
 
 /**
  * Asal data kartu. "sanka" berarti id-nya slug SankaVollereii (donghua),
@@ -265,9 +266,9 @@ export function CatalogScreen({
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+          className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-5" />
+          <StripBackIcon />
         </button>
         <h1 className="min-w-0 flex-1 truncate text-base font-bold tracking-tight">
           {title}

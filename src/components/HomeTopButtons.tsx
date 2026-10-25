@@ -35,6 +35,7 @@ import {
 } from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { StripBackIcon } from "@/components/StripBack";
 
 /* ====================================================================== *
  *  Tiga tombol atas Home: Download — Paling sering — Untuk kamu.
@@ -82,9 +83,9 @@ function PanelShell({
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex size-9 items-center justify-center rounded-full border border-border"
+          className="flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-5" />
+          <StripBackIcon />
         </button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-bold tracking-tight">{title}</h1>

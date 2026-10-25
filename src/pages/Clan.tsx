@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   Camera,
   ChevronLeft,
@@ -207,9 +208,9 @@ function JoinScreen() {
           <button
             onClick={() => navigate("/")}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-5" />
+            <StripBackIcon />
           </button>
           <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Clan</h1>
           <button
@@ -470,9 +471,9 @@ function ClanDetailScreen({
           <button
             onClick={onClose}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-5" />
+            <StripBackIcon />
           </button>
           <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Detail Clan</h1>
           {/* Tombol PENGATURAN CLAN — hanya untuk leader/officer: kelola
@@ -1141,9 +1142,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           <button
             onClick={onDone}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-5" />
+            <StripBackIcon />
           </button>
           <div>
             <h1 className="text-lg font-extrabold">Buat Clan</h1>

@@ -6,6 +6,7 @@ import { getAntiLag } from "@/lib/antilag";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
 import { BlurBanner } from "@/components/BlurBanner";
+import { StripBackIcon } from "@/components/StripBack";
 import { TitleRibbon } from "@/components/Cosmetics";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
@@ -169,10 +170,10 @@ export function ProfileSheet({
             </div>
             <button
               onClick={onClose}
-              className="absolute left-3 top-3 z-10 flex size-10 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm"
+              className="absolute left-3 top-3 z-10 flex items-center py-1 pr-1 text-white transition active:opacity-60"
               aria-label="Tutup"
             >
-              <ChevronLeft className="size-4" />
+              <StripBackIcon />
             </button>
             {/* Foto profile menutupi banner, tepat di tengah — dengan cincin glow */}
             <div className="relative -mt-16 flex justify-center">

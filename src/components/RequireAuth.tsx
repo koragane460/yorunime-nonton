@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useConvexAuth } from "convex/react";
 import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
@@ -26,7 +26,9 @@ export function RequireAuth({
   /** Langsung ke `/auth` tanpa menampilkan layar blokir. */
   redirectImmediately?: boolean;
 }) {
-  const { isLoading, isAuthenticated } = useAuth();
+  // Cukup status sesi dari websocket — tanpa menunggu query user, supaya
+  // halaman terbuka langsung tanpa lama di spinner.
+  const { isLoading, isAuthenticated } = useConvexAuth();
   const navigate = useNavigate();
   const location = useLocation();
 

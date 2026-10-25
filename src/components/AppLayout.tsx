@@ -9,6 +9,7 @@ import {
   ContinuePanel,
 } from "@/components/HomeTopButtons";
 import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge, SacretIcon } from "@/components/lstream-ui";
+import { StripBack } from "@/components/StripBack";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {

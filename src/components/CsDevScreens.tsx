@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar } from "@/components/lstream-ui";
 import { useHideNavOnMount } from "@/components/AppLayout";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   Check,
   ChevronLeft,
@@ -49,9 +50,9 @@ export function CsScreen({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           aria-label="Tutup"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+          className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-4" />
+          <StripBackIcon />
         </button>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
           <Headset className="size-4 text-primary" />
@@ -204,9 +205,9 @@ function CsChatDev({
         <button
           onClick={onBack}
           aria-label="Kembali"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+          className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-4" />
+          <StripBackIcon />
         </button>
         <Avatar src={info?.image} seed={info?.username} className="size-9" />
         <p className="min-w-0 flex-1 truncate text-sm font-bold">{info?.username ?? "user"}</p>

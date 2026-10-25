@@ -10,6 +10,7 @@ import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BookOpen, ChevronLeft, Eye, Heart, Lock } from "lucide-react";
+import { StripBackIcon } from "@/components/StripBack";
 
 type Chapter = {
   number: number;
@@ -137,9 +138,9 @@ export function ComicDetailScreen({
           <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-3">
             <button
               onClick={onClose}
-              className="rounded-full bg-black/55 p-2 backdrop-blur transition hover:border-sky-400"
+              className="flex items-center py-1 pr-1 text-white transition active:opacity-60"
             >
-              <ChevronLeft className="size-4 text-white" />
+              <StripBackIcon />
             </button>
             <button
               onClick={async () => {

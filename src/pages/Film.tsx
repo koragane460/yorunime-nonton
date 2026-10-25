@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
   Clapperboard,
@@ -179,9 +180,9 @@ export default function Film() {
           <button
             onClick={() => navigate("/")}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-5" />
+            <StripBackIcon />
           </button>
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-lg font-black tracking-tight">
             <Clapperboard className="size-5 text-gold" aria-hidden />
@@ -453,9 +454,9 @@ function FilmDetail({
             <button
               onClick={onClose}
               aria-label="Kembali"
-              className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur transition active:scale-90"
+              className="flex items-center py-1 pr-1 text-white transition active:opacity-60"
             >
-              <ChevronLeft className="size-5 text-white" />
+              <StripBackIcon />
             </button>
             <span className="rounded-full border border-gold/40 bg-black/40 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gold backdrop-blur">
               {kind === "tv" ? "Series" : "Film"}
@@ -819,9 +820,9 @@ function FilmWatch({
         <button
           onClick={onClose}
           aria-label="Kembali ke detail film"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border transition active:scale-90"
+          className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-5" />
+          <StripBackIcon />
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-black">{d?.title ?? "…"}</p>

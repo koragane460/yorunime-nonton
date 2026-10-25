@@ -14,6 +14,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Award, ChevronLeft, Crown, Lock, Sparkles } from "lucide-react";
+import { StripBackIcon } from "@/components/StripBack";
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
 import { TitleTag } from "@/components/Cosmetics";
@@ -256,9 +257,9 @@ export function TitleScreen({ onBack }: { onBack: () => void }) {
           <button
             onClick={onBack}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-5" />
+            <StripBackIcon />
           </button>
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-lg font-black tracking-tight">
             <Award className="size-5 text-gold" aria-hidden />

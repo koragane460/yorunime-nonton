@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useConvexAuth } from "convex/react";
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.svg";
-import { ArrowRight, Eye, EyeOff, Loader2, Mail, Lock, UserPlus, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Mail, Lock, UserPlus, ShieldCheck, FlaskConical } from "lucide-react";
+import { GoogleGIcon } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
 import { resolveRedirectAfterAuth } from "@/lib/authRedirect";
+import {
+  firebaseReady,
+  getFirebaseIdToken,
+  signInWithGoogleFirebase,
+} from "@/lib/firebase";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -15,7 +22,10 @@ const DASHBOARD_REDIRECT = "/dashboard";
 type Mode = "main" | "password" | "otp";
 
 export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  // Cukup status sesi dari websocket — tidak perlu ikut menunggu query
+  // user, supaya redirect setelah login terasa cepat.
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -81,6 +91,47 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
       else if (/invalid|password|credential/i.test(raw))
         setError("Email atau password salah.");
       else setError(raw || "Gagal menyimpan akun. Coba lagi.");
+      setIsLoading(false);
+    }
+  };
+
+  // ------------------------------------------------ Google & Tester ----
+  const doGoogleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const u = await signInWithGoogleFirebase();
+      if (!u) {
+        setError(
+          firebaseReady
+            ? "Popup diblokir browser. Izinkan popup lalu coba lagi."
+            : "Login Google belum dikonfigurasi.",
+        );
+        setIsLoading(false);
+        return;
+      }
+      const idToken = await getFirebaseIdToken(u);
+      if (!idToken) throw new Error("Gagal mengambil sesi Google.");
+      await signIn("firebase", { idToken });
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Gagal masuk dengan Google.",
+      );
+      setIsLoading(false);
+    }
+  };
+
+  const doTesterLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await signIn("anonymous");
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Gagal masuk sebagai tester.",
+      );
       setIsLoading(false);
     }
   };
@@ -163,21 +214,43 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-sm">
           {mode === "main" && (
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <button
-                onClick={() => setMode("password")}
+                onClick={doGoogleLogin}
                 disabled={isLoading}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 py-3 text-sm font-bold text-primary transition disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3 text-sm font-bold text-zinc-900 transition hover:bg-zinc-100 disabled:opacity-50"
               >
-                <Mail className="size-4" /> Email &amp; Password
+                <GoogleGIcon className="size-4" />
+                Masuk dengan Google
               </button>
               <button
-                onClick={() => setMode("otp")}
+                onClick={doTesterLogin}
                 disabled={isLoading}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 py-3 text-sm font-bold text-primary transition disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 py-3 text-sm font-bold text-primary transition disabled:opacity-50"
               >
-                <Lock className="size-4" /> Kirim OTP
+                {isLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FlaskConical className="size-4" />
+                )}
+                Login Tester
               </button>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setMode("password")}
+                  disabled={isLoading}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-semibold text-zinc-300 transition hover:border-foreground/40 disabled:opacity-50"
+                >
+                  <Mail className="size-3.5" /> Email
+                </button>
+                <button
+                  onClick={() => setMode("otp")}
+                  disabled={isLoading}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-semibold text-zinc-300 transition hover:border-foreground/40 disabled:opacity-50"
+                >
+                  <Lock className="size-3.5" /> OTP
+                </button>
+              </div>
             </div>
           )}
 

@@ -3,6 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
   Globe,
@@ -140,9 +141,9 @@ export function RoomSheet({
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex size-9 items-center justify-center rounded-full border border-border"
+          className="flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-5" />
+          <StripBackIcon />
         </button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-bold tracking-tight">

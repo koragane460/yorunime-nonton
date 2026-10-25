@@ -7,6 +7,7 @@ import {
   ChevronLeftIcon,
   SparklesIcon,
 } from "@/components/ios-icons";
+import { StripBackIcon } from "@/components/StripBack";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
@@ -113,9 +114,9 @@ function NotifSheet({
           <button
             onClick={() => onOpenChange(false)}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/20 text-white/80 transition hover:border-white/45 hover:text-white"
+            className="flex shrink-0 items-center py-1 pr-1 text-white/90 transition active:opacity-60"
           >
-            <ChevronLeftIcon className="size-5" />
+            <StripBackIcon />
           </button>
           <SheetTitle className="flex items-center gap-2 text-base">
             <BellIcon className="size-4 text-primary" /> Notifikasi

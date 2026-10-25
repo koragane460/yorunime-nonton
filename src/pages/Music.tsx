@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
   Disc3,
@@ -182,9 +183,9 @@ export default function MusicScreen({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           aria-label="Tutup musik"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+          className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-5" />
+          <StripBackIcon />
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">Musik</p>

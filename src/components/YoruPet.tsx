@@ -15,6 +15,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { ChevronLeft, Egg, BookOpen, Coins, Gift } from "lucide-react";
+import { StripBackIcon } from "@/components/StripBack";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import {
@@ -195,9 +196,9 @@ export function YoruPetScreen({ onBack }: { onBack: () => void }) {
           <button
             onClick={onBack}
             aria-label="Kembali ke YoruVerse"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-black/30 backdrop-blur-sm"
+            className="flex shrink-0 items-center py-1 pr-1 text-white/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-5" />
+            <StripBackIcon />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-[15px] leading-tight">

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   AppLayout,
   HOME_BG_EVENT,
@@ -1208,9 +1209,9 @@ function CsChatScreen({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+          className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
         >
-          <ChevronLeft className="size-4" />
+          <StripBackIcon />
         </button>
         <CsBotAvatar size={38} />
         <div className="min-w-0 flex-1">
@@ -1324,9 +1325,9 @@ function FullScreen({
           <button
             onClick={onClose}
             aria-label="Kembali"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           >
-            <ChevronLeft className="size-4" />
+            <StripBackIcon />
           </button>
         </div>
         {children}

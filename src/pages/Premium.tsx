@@ -3,6 +3,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
+import { StripBackIcon } from "@/components/StripBack";
 import {
   Check,
   ChevronLeft,
@@ -159,10 +160,10 @@ export default function Premium() {
             terlihat rapi. */}
         <button
           onClick={() => navigate("/home")}
-          className="mb-3 ml-1 flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur transition hover:border-white/30"
+          className="mb-3 ml-1 flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
           aria-label="Kembali"
         >
-          <ChevronLeft className="size-5" />
+          <StripBackIcon />
         </button>
         <Hero />
         <Plans />

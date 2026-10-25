@@ -1,10 +1,10 @@
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
-import { SacretIcon } from "@/components/lstream-ui";
+import { GoogleGIcon, SacretIcon } from "@/components/lstream-ui";
 import { APP_VERSION, UPDATE_BODY, UPDATE_VERSION } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
   Crown,
   Film,
   Flag,
+  FlaskConical,
   Heart,
   Info,
   KeyRound,
@@ -35,6 +36,13 @@ import type { LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { cn } from "@/lib/utils";
+import {
+  consumeFirebaseRedirect,
+  firebaseReady,
+  getActiveFirebaseIdToken,
+  getFirebaseIdToken,
+  signInWithGoogleFirebase,
+} from "@/lib/firebase";
 
 /* ------------------------------------------------------------------ *
  * Akun yang pernah dipakai di perangkat ini (disimpan di localStorage)  *
@@ -131,7 +139,10 @@ function Starfield() {
 
 function WelcomeFlow() {
   const navigate = useNavigate();
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  // Load gate hanya menunggu status sesi (websocket) — tidak perlu ikut
+  // menunggu query currentUser, supaya layar tidak lama diam di splash.
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
+  const { signIn } = useAuth();
   const loginAccount = useMutation(api.authAccounts.loginAccount);
   const registerAccount = useMutation(api.authAccounts.registerAccount);
 
@@ -251,8 +262,9 @@ function WelcomeFlow() {
     if (stage !== "intro") return;
     // Kalau ada update yang belum di-download, tahan di intro dulu.
     if (updatePending) return;
-    // Splash cukup 2,4 detik — user bisa mempercepat dengan menekan layar.
-    const t = setTimeout(() => advanceFromIntro(), 2400);
+    // Splash singkat: 1,5 detik saat buka pertama, 0,7 detik saat balik dari
+    // tab lain. User juga bisa mempercepat dengan menekan layar.
+    const t = setTimeout(() => advanceFromIntro(), reopened ? 700 : 1500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, updatePending, reopened, isAuthenticated]);
@@ -274,6 +286,55 @@ function WelcomeFlow() {
       setLoggingIn(false);
     }
   };
+
+  /** Masuk pakai akun Google (Firebase) → sesi dikirim ke Convex. */
+  const doGoogleLogin = async () => {
+    setLoggingIn(true);
+    setLoginErr(null);
+    try {
+      const u = await signInWithGoogleFirebase();
+      if (!u) {
+        setLoginErr(
+          firebaseReady
+            ? "Popup diblokir browser. Izinkan popup lalu coba lagi."
+            : "Login Google belum dikonfigurasi.",
+        );
+        setLoggingIn(false);
+        return;
+      }
+      const idToken = await getFirebaseIdToken(u);
+      if (!idToken) throw new Error("Gagal mengambil sesi Google.");
+      await signIn("firebase", { idToken });
+      navigate("/home", { replace: true });
+    } catch (e) {
+      setLoginErr(
+        e instanceof Error ? e.message : "Gagal masuk dengan Google.",
+      );
+      setLoggingIn(false);
+    }
+  };
+
+  // Balikan dari redirect Google (fallback saat popup diblokir): sesi
+  // Firebase sudah aktif — tinggal dicocokkan ke Convex, lalu masuk.
+  useEffect(() => {
+    let dead = false;
+    void (async () => {
+      try {
+        const hadRedirect = await consumeFirebaseRedirect();
+        if (!hadRedirect || dead) return;
+        const token = await getActiveFirebaseIdToken();
+        if (!token || dead) return;
+        await signIn("firebase", { idToken: token });
+        if (!dead) navigate("/home", { replace: true });
+      } catch {
+        /* biarkan — user bisa login manual */
+      }
+    })();
+    return () => {
+      dead = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ---------------- LOGIN: email + password ---------------- */
 
@@ -941,6 +1002,29 @@ function WelcomeFlow() {
               <p className="mt-6 text-center text-[10px] text-zinc-500">
                 Atau
               </p>
+
+              <div className="mt-3 w-full max-w-[22rem] space-y-2">
+                <button
+                  onClick={doGoogleLogin}
+                  disabled={loggingIn}
+                  className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-white text-sm font-bold text-zinc-900 transition hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
+                >
+                  <GoogleGIcon className="size-4" />
+                  Masuk dengan Google
+                </button>
+                <button
+                  onClick={doAnonLogin}
+                  disabled={loggingIn}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/50 bg-primary/15 text-sm font-bold text-primary transition hover:bg-primary/25 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {loggingIn ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FlaskConical className="size-4" />
+                  )}
+                  Login Tester
+                </button>
+              </div>
             </div>
           </motion.section>
         )}
