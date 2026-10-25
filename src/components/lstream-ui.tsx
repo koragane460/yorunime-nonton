@@ -221,12 +221,13 @@ export function AnimeGrid({
     /** Jumlah episode — tampil di bawah judul ("N episode"). */
     episodes?: number;
     // "sanka" = slug donghua. Wajib diteruskan supaya kartu itu membuka layar
-    // detail DONGHUA, bukan dicari sebagai MAL id anime.
-    source?: "anilist" | "sanka";
+    // detail DONGHUA, bukan dicari sebagai MAL id anime. "film" = hasil
+    // pencarian film (dibuka lewat rute /film).
+    source?: "anilist" | "sanka" | "film";
   }[];
   // Judul ikut diteruskan supaya halaman detail bisa mencari metadata anime
   // dari kartu penghasilnya, walau id-nya bukan MAL id.
-  onPick: (id: string, title?: string, source?: "anilist" | "sanka") => void;
+  onPick: (id: string, title?: string, source?: "anilist" | "sanka" | "film") => void;
   ranked?: boolean;
   newIds?: Set<string>;
   views?: number[];

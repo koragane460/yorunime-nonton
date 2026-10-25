@@ -75,6 +75,12 @@ const schema = defineSchema(
       voteSpent: v.optional(v.number()),
       theme: v.optional(v.string()),
       customColor: v.optional(v.string()),
+      /** BUBBLE CHAT (premium): warna latar bubble milik user. */
+      bubbleColor: v.optional(v.string()),
+      /** BUBBLE CHAT (premium): URL background PNG untuk bubble (bukan gif). */
+      bubbleBg: v.optional(v.string()),
+      /** BUBBLE CHAT (premium): jenis frame/border dekoratif bubble. */
+      bubbleBorder: v.optional(v.string()),
       createdAt: v.optional(v.number()),
       mutedUntil: v.optional(v.number()),
       mutedReason: v.optional(v.string()),
@@ -273,9 +279,12 @@ const schema = defineSchema(
       startedAt: v.number(),
       updatedAt: v.number(),
       endedAt: v.optional(v.number()),
+      /** Kode undangan room (mis. "AB12CD") — dipakai join lewat Catalog. */
+      inviteCode: v.optional(v.string()),
     })
       .index("hostId", ["hostId"])
-      .index("animeId", ["animeId"]),
+      .index("animeId", ["animeId"])
+      .index("inviteCode", ["inviteCode"]),
 
     watchRoomMembers: defineTable({
       roomId: v.id("watchRooms"),
@@ -756,6 +765,35 @@ const schema = defineSchema(
       .index("by_character", ["characterId"])
       .index("by_anime", ["animeId"])
       .index("by_user_character", ["userId", "characterId"]),
+
+    /**
+     * Vote Waifu / Vote Husbu (kotak di Catalog) — daftar karakter DIATUR
+     * DEV lewat Panel Developer (foto pakai link), terpisah per jenis.
+     * Satu baris vote per (user, karakter); bisa vote 1× per hari.
+     */
+    waifuVoteCandidates: defineTable({
+      /** "waifu" atau "husbu". */
+      kind: v.string(),
+      name: v.string(),
+      image: v.optional(v.string()),
+      votes: v.number(),
+      createdAt: v.number(),
+    })
+      .index("by_kind", ["kind"])
+      .index("by_kind_votes", ["kind", "votes"]),
+
+    waifuVotes: defineTable({
+      userId: v.id("users"),
+      candidateId: v.id("waifuVoteCandidates"),
+      /** "waifu" atau "husbu". */
+      kind: v.string(),
+      createdAt: v.number(),
+      /** Waktu vote terakhir (untuk jeda 1 hari per user per jenis). */
+      dayKey: v.string(),
+    })
+      .index("by_user_kind", ["userId", "kind"])
+      .index("by_candidate", ["candidateId"])
+      .index("by_user_day", ["userId", "dayKey"]),
 
     /** YORUPET — kebun binatang virtual di YoruVerse. */
     petState: defineTable({

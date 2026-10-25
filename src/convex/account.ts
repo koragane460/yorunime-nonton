@@ -254,6 +254,32 @@ export const updateSettings = mutation({
 });
 
 /**
+ * Simpan pengaturan BUBBLE CHAT — khusus user premium.
+ * Fields: bubbleColor (warna), bubbleBg (URL PNG), bubbleBorder (frame).
+ */
+export const saveBubble = mutation({
+  args: {
+    bubbleColor: v.optional(v.string()),
+    bubbleBg: v.optional(v.string()),
+    bubbleBorder: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
+    if ((me.premiumUntil ?? 0) <= Date.now())
+      throw new Error("Bubble chat hanya untuk premium user");
+    const patch: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(args)) {
+      if (val !== undefined) patch[k] = val;
+    }
+    await ctx.db.patch(userId, patch);
+    return await ctx.db.get(userId);
+  },
+});
+
+/**
  * Top giver premium komunitas: siapa yang paling banyak bagi hari premium
  * lewat chat. Digunakan di halaman Akun (perhitungan title) dan di panel
  * leaderboard Home. Ranking didasarkan pada hari premium yang dikirim

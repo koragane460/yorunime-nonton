@@ -9,7 +9,7 @@ import { ChevronLeft, Loader2, Star, Tv } from "lucide-react";
  * BUKAN id AniList — layar detail harus memakai sumber yang berbeda supaya
  * judul donghua tidak tertukar dengan judul anime.
  */
-export type PickSource = "anilist" | "sanka";
+export type PickSource = "anilist" | "sanka" | "film";
 
 export type CardT = {
   id: string;

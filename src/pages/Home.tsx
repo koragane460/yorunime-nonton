@@ -11,6 +11,7 @@ import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { FramedAvatar } from "@/components/FramedAvatar";
+import { StripBack } from "@/components/StripBack";
 import { VoteScreen } from "@/components/VoteScreen";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
@@ -745,6 +746,20 @@ function HomeContent() {
   // sini, lalu disimpan sebagai --yn-tint-end supaya warna berhenti tepat di
   // bawah tombol dan sisanya hitam penuh.
   const searchAnchor = useRef<HTMLDivElement | null>(null);
+  // Sticky search bar: muncul di paling atas saat user scroll LEWAT kotak
+  // search (permintaan) — kotak lurus samping hitam + kolom cari lebih besar.
+  const [showStickySearch, setShowStickySearch] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = searchAnchor.current;
+      if (!el) return;
+      const past = el.getBoundingClientRect().bottom < 8;
+      setShowStickySearch(past);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const hero = useAction(api.anime.animeOngoing);
   // Donghua ikut rotasi hero banner supaya bukan hanya anime yang tampil.
@@ -987,7 +1002,9 @@ function HomeContent() {
   const [pickTitle, setPickTitle] = useState<string | undefined>(undefined);
   // Kartu donghua (slug Sanka) dan kartu anime (id AniList) butuh layar
   // detail yang berbeda; kalau dicampur, judul donghua tertukar dengan anime.
-  const [pickSource, setPickSource] = useState<CatalogPickSource>("anilist");
+  const [pickSource, setPickSource] = useState<CatalogPickSource>(
+    (params.get("src") as CatalogPickSource) || "anilist",
+  );
   const openAnime = (
     id: string,
     title?: string,
@@ -1023,6 +1040,26 @@ function HomeContent() {
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   return (
     <div className="pb-8">
+      {/* Sticky search bar — muncul di paling atas saat user sudah scroll
+          lewat kotak search. Kotak lurus (samping hitam) + kolom cari lebih
+          besar untuk anime / donghua / film. */}
+      {showStickySearch && (
+        <div className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-black/92 px-3 py-2.5 backdrop-blur-xl">
+          <button
+            onClick={() => {
+              setSearchGenre(null);
+              setSearchOpenGenres(false);
+              setShowSearch(true);
+            }}
+            className="flex w-full items-center gap-2 rounded-xl border border-white/12 bg-white/[0.06] px-3.5 py-3 text-left"
+          >
+            <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="flex-1 text-[15px] text-muted-foreground">
+              Cari anime, donghua, film…
+            </span>
+          </button>
+        </div>
+      )}
       {/* 1) YORUNIME PREMIUM — kotak KECIL: ikon mahkota di kiri, tulisan
           "Beli Premium Ada Di Sini" di kanan. Tema biru muda lembut (bukan
           neon, bukan emas) — permintaan user. */}
@@ -1059,73 +1096,7 @@ function HomeContent() {
             onTop={() => setShowTopAnime(true)}
           />
 
-          {/* ---- LEADERBOARD DI KANAN banner — kolom vertikal Top 5,
-              DILEBARKAN & dirapatkan ke banner (celah diminimalkan,
-              permintaan user) — menekan kartu membuka layar Leaderboard
-              lengkap. ---- */}
-          <button
-            onClick={() => setShowLeaderboard(true)}
-            aria-label="Lihat leaderboard lengkap"
-            className="group flex w-[152px] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/50 text-left backdrop-blur-md transition hover:bg-black/60"
-          >
-            <span className="flex items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
-              <Trophy className="size-3 shrink-0 text-gold" aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-[10px] font-black tracking-wide text-white">
-                Leaderboard
-              </span>
-              <ChevronRight
-                className="size-3 shrink-0 text-white/50 transition group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </span>
-            <span className="flex min-h-0 flex-1 flex-col justify-evenly px-1 py-1">
-              {heroLb === undefined &&
-                Array.from({ length: 5 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="skeleton mx-1 h-4 rounded-md"
-                    aria-hidden
-                  />
-                ))}
-              {heroLb?.length === 0 && (
-                <span className="px-1.5 text-[9px] leading-tight text-muted-foreground">
-                  Belum ada data XP minggu ini
-                </span>
-              )}
-              {(heroLb ?? []).slice(0, 5).map((e) => (
-                <span
-                  key={`${e.rank}-${e.userId}`}
-                  className="flex items-center gap-1.5 rounded-md px-1 py-[3px]"
-                >
-                  <span
-                    className={cn(
-                      "w-5 shrink-0 text-center text-[10px] font-black",
-                      e.rank === 1
-                        ? "text-yellow-400"
-                        : e.rank === 2
-                          ? "text-zinc-300"
-                          : e.rank === 3
-                            ? "text-amber-500"
-                            : "text-white/60",
-                    )}
-                  >
-                    #{e.rank}
-                  </span>
-                  <Avatar
-                    src={e.image}
-                    seed={e.username}
-                    className="size-5 shrink-0"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-white/90">
-                    {e.username ?? "user"}
-                  </span>
-                  <span className="shrink-0 text-[9px] font-bold text-primary">
-                    {formatCompactXp(e.xp)}
-                  </span>
-                </span>
-              ))}
-            </span>
-          </button>
+          {/* ---- Leaderboard DIHAPUS dari hero (sudah pindah ke Catalog). */}
         </div>
         </>
       ) : null}
@@ -2295,6 +2266,18 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   onOpenMusic: () => void;
 }) {
   useHideNavOnMount();
+  const navigate = useNavigate();
+  // Klik hasil film → buka halaman film (/film?film=...&t=...), bukan detail
+  // anime. Hasil film memakai id ber-prefix "film:" dan kind lewat filmKind.
+  const pick = (a: AnimeCardT) => {
+    if (a.source === "film") {
+      const raw = String(a.id).replace(/^film:/, "");
+      const kind = (a as any).filmKind === "tv" ? "tv" : "movie";
+      navigate(`/film?film=${encodeURIComponent(raw)}&t=${kind}`);
+      return;
+    }
+    onPick(a.id, a.title, a.source);
+  };
   // Link pemutar musik rahasia disuntukkan supaya podum leaderboard bisa
   // membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {
@@ -2307,6 +2290,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   }, [onOpenMusic]);
   const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
+  const searchFilms = useAction(api.films.search);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadGenres = useAction(api.anime.animeByGenres);
   const loadAll = useAction(api.anime.animeTop);
@@ -2427,7 +2411,22 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       const donghuaP: Promise<AnimeCardT[]> = searchDonghua({ q: query })
         .then((r: unknown) => (r ?? []) as AnimeCardT[])
         .catch(() => [] as AnimeCardT[]);
-      const [animeRes, donghuaRes] = await Promise.all([animeP, donghuaP]);
+      // Film ikut dicari supaya pencarian di Home mencakup anime, donghua
+      // DAN film (permintaan). Film dipetak ke bentuk AnimeCardT dengan
+      // source "film" supaya bisa dirender SearchResultRow yang sama.
+      const filmP: Promise<AnimeCardT[]> = searchFilms({ q: query })
+        .then((r: any) =>
+          ((r ?? []) as any[]).map((f) => ({
+            id: String(f.id),
+            title: f.title,
+            image: f.image,
+            type: f.kind === "tv" ? "Series" : "Movie",
+            source: "film" as const,
+            filmKind: f.kind ?? "movie",
+          })) as unknown as AnimeCardT[],
+        )
+        .catch(() => [] as AnimeCardT[]);
+      const [animeRes, donghuaRes, filmRes] = await Promise.all([animeP, donghuaP, filmP]);
       const seen = new Set<string>();
       const merged: AnimeCardT[] = [];
       // Donghua selalu ditandai "sanka" supaya kliknya membuka detail donghua,
@@ -2440,6 +2439,14 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
         if (!c?.id || seen.has(c.id)) continue;
         seen.add(c.id);
         merged.push({ ...c, type: c.type, source: src });
+      }
+      // Film ditambahkan belakangan; id-nya diawali "film:" supaya tidak
+      // tabrakan dengan id AniList/donghua yang bisa sama persis.
+      for (const f of filmRes ?? []) {
+        const key = `film:${f.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ ...f, id: key, source: "film" } as unknown as AnimeCardT);
       }
       setResults(merged);
     } catch {
@@ -2697,7 +2704,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
                     <SearchResultRow
                       key={a.id}
                       item={a}
-                      onClick={() => onPick(a.id, a.title, a.source)}
+                      onClick={() => pick(a)}
                     />
                   ))}
                 </div>
@@ -2717,7 +2724,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
                   <SearchResultRow
                     key={a.id}
                     item={a}
-                    onClick={() => onPick(a.id, a.title, a.source)}
+                    onClick={() => pick(a)}
                   />
                 ))}
               </div>
@@ -4056,13 +4063,7 @@ function DetailHeader({
 }) {
   return (
     <div className="relative z-10 flex items-center gap-3 p-3">
-      <button
-        onClick={onClose}
-        aria-label="Kembali"
-        className="-ml-1 flex size-10 items-center justify-center rounded-full text-white transition hover:bg-white/10"
-      >
-        <ChevronLeft className="size-5" />
-      </button>
+      <StripBack onClick={onClose} />
       <h1 className="text-base font-semibold tracking-tight text-white">
         {title}
       </h1>

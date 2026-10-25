@@ -28,6 +28,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, SacretIcon } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
+import { StripBack } from "@/components/StripBack";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
 import { GachaScreen } from "@/pages/Gacha";
 import { TitleScreen } from "@/pages/Title";
@@ -710,13 +711,7 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
 function ScreenHead({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <div className="flex items-center gap-2">
-      <button
-        onClick={onBack}
-        aria-label="Kembali ke YoruVerse"
-        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/30"
-      >
-        <ChevronLeft className="size-5" />
-      </button>
+      <StripBack onClick={onBack} label="Kembali ke YoruVerse" />
       <h2 className="flex-1 text-lg font-black tracking-tight">{title}</h2>
     </div>
   );

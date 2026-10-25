@@ -10,6 +10,14 @@ import { requireActive } from "./moderation";
 
 const MAX_ROOM_NAME = 40;
 
+/** Kode undangan room 6 karakter (huruf + angka, tanpa huruf mirip). */
+function genCode(len = 6): string {
+  const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < len; i++) s += ABC[Math.floor(Math.random() * ABC.length)];
+  return s;
+}
+
 /**
  * Host yang menutup aplikasi atau koneksinya terputus tidak ada yang
  * menyentuh room lagi. Kalau tidak ada tanda kehidupan dari host selama
@@ -40,6 +48,7 @@ type Room = {
   startedAt: number;
   updatedAt: number;
   endedAt?: number;
+  inviteCode?: string;
 };
 
 async function loadRoom(ctx: any, roomId: any): Promise<Room | null> {
@@ -127,6 +136,7 @@ export const listRooms = query({
         isHost: isHost(room, userId),
         joined: iAmIn,
         updatedAt: room.updatedAt,
+        inviteCode: room.inviteCode,
       });
     }
     return out.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -213,6 +223,44 @@ export const searchUsers = query({
   },
 });
 
+/** Cari room lewat KODE UNDANGAN atau nama host — untuk tombol Join room. */
+export const findByCode = query({
+  args: { code: v.string() },
+  handler: async (ctx, { code }) => {
+    const needle = code.trim();
+    if (!needle) return null;
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
+    // Coba cocokkan sebagai kode undangan dulu (case-insensitive).
+    const rooms = (await ctx.db
+      .query("watchRooms")
+      .filter((q) => q.eq(q.field("endedAt"), undefined))
+      .collect()) as Room[];
+    const up = needle.toUpperCase();
+    let hit =
+      rooms.find((r) => (r.inviteCode ?? "").toUpperCase() === up) ?? null;
+    // Kalau bukan kode — cocokkan sebagai nama host (exact, lalu prefix).
+    if (!hit) {
+      const byName = rooms.filter((r) => {
+        if (!isAlive(r)) return false;
+        return r.name.toLowerCase() === needle.toLowerCase();
+      });
+      hit = byName[0] ?? null;
+    }
+    if (!hit || !isAlive(hit) || !canView(hit, userId)) return null;
+    const host = (await ctx.db.get(hit.hostId)) as any;
+    return {
+      _id: hit._id,
+      name: hit.name,
+      animeTitle: hit.animeTitle ?? "",
+      animeImage: hit.animeImage,
+      episode: hit.episode,
+      hostName: host?.username ?? "user",
+      inviteCode: hit.inviteCode,
+    };
+  },
+});
+
 // ------------------------------------------------------------- write ----
 
 export const createRoom = mutation({
@@ -255,6 +303,9 @@ export const createRoom = mutation({
         .withIndex("clanId", (q) => q.eq("clanId", clanId))
         .collect();      autoMembers = rows.map((r: any) => r.userId);
     }
+    // Kode undangan 6 karakter (huruf + angka) — unik, dipakai join room
+    // lewat layar Nobar di Catalog.
+    const inviteCode = genCode();
     const roomId = await ctx.db.insert("watchRooms", {
       name,
       hostId: userId,
@@ -270,6 +321,7 @@ export const createRoom = mutation({
       clanId,
       startedAt: now,
       updatedAt: now,
+      inviteCode,
     });
     const seen = new Set<string>([userId]);
     await ctx.db.insert("watchRoomMembers", {
@@ -286,7 +338,7 @@ export const createRoom = mutation({
         joinedAt: now,
       });
     }
-    return { roomId };
+    return { roomId, inviteCode };
   },
 });
 

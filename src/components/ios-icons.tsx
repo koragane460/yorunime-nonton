@@ -107,6 +107,29 @@ export function InfoIconFill(props: IconProps) {
   );
 }
 
+/** Ikon katalog: EMPAT kotak (grid 2×2). */
+export function CatalogIcon(props: IconProps) {
+  return (
+    <S {...props}>
+      <rect x="4" y="4" width="7" height="7" rx="1.8" />
+      <rect x="13" y="4" width="7" height="7" rx="1.8" />
+      <rect x="4" y="13" width="7" height="7" rx="1.8" />
+      <rect x="13" y="13" width="7" height="7" rx="1.8" />
+    </S>
+  );
+}
+
+export function CatalogIconFill(props: IconProps) {
+  return (
+    <S {...props}>
+      <rect fill="currentColor" stroke="none" x="4" y="4" width="7" height="7" rx="1.8" />
+      <rect fill="currentColor" stroke="none" x="13" y="4" width="7" height="7" rx="1.8" />
+      <rect fill="currentColor" stroke="none" x="4" y="13" width="7" height="7" rx="1.8" />
+      <rect fill="currentColor" stroke="none" x="13" y="13" width="7" height="7" rx="1.8" />
+    </S>
+  );
+}
+
 /** Penanda simpan: sudut membulat, lekuk bawah halus. */
 export function BookmarkIcon(props: IconProps) {
   return (

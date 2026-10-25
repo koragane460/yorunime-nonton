@@ -33,7 +33,7 @@ export default function Info() {
   );
 }
 
-function InfoContent() {
+export function InfoContent() {
   const [tab, setTab] = useState<Tab>("lanjut");
 
   return (

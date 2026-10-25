@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
-type Room = {
+export type Room = {
   _id: Id<"watchRooms">;
   name: string;
   animeId: string;
@@ -105,7 +105,7 @@ export function NobarBar({ onJoined }: { onJoined: (roomId: string) => void }) {
 
 // --------------------------------------------------------- daftar room ----
 
-function RoomSheet({
+export function RoomSheet({
   rooms,
   onClose,
   onJoined,
@@ -292,7 +292,7 @@ function fmtSec(s: number) {
 
 // ---------------------------------------------------------- buat room ----
 
-function CreateRoomSheet({
+export function CreateRoomSheet({
   onClose,
   onCreated,
 }: {

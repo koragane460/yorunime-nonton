@@ -22,6 +22,7 @@ const Clan = lazy(() => import("./pages/Clan.tsx"));
 const Jadwal = lazy(() => import("./pages/Jadwal.tsx"));
 const Akun = lazy(() => import("./pages/Akun.tsx"));
 const Info = lazy(() => import("./pages/Info.tsx"));
+const Catalog = lazy(() => import("./pages/Catalog.tsx"));
 const Premium = lazy(() => import("./pages/Premium.tsx"));
 const Manga = lazy(() => import("./pages/Manga.tsx"));
 const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
@@ -226,6 +227,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Info />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/catalog"
+                element={
+                  <RequireAuth>
+                    <Catalog />
                   </RequireAuth>
                 }
               />

@@ -33,6 +33,8 @@ import {
   PersonIconFill,
   InfoIcon,
   InfoIconFill,
+  CatalogIcon,
+  CatalogIconFill,
   BookmarkIcon,
   BookmarkIconFill,
   BookIcon,
@@ -743,13 +745,7 @@ function TopPanelChrome({
   return (
     <>
       <div className="flex items-center gap-2 border-b border-border px-3 py-3">
-        <button
-          onClick={onBack}
-          aria-label="Kembali"
-          className="flex size-9 items-center justify-center rounded-full border border-border"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
+        <StripBack onClick={onBack} />
         <h1 className="truncate text-base font-bold tracking-tight">{title}</h1>
         <div className="ml-auto flex size-9 items-center justify-end">
           <button
@@ -843,7 +839,7 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    { path: "/info", label: "History", icon: InfoIcon, iconFill: InfoIconFill },
+    { path: "/catalog", label: "Catalog", icon: CatalogIcon, iconFill: CatalogIconFill },
     // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
     // Home). Ikon buku, di kanan History.
     { path: "/baca", label: "Baca", icon: BookIcon },
