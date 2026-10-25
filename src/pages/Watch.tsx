@@ -381,9 +381,9 @@ function WatchContent() {
   const record = useMutation(api.activities.recordWatch);
   const saveProgress = useMutation(api.activities.saveProgress);
   const saveSettings = useMutation(api.account.updateSettings);
-  const settings = useQuery(api.users.currentUser, {});
-
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // Saat belum masuk, currentUser() mengembalikan null; guard query agar
+  // db.get(null) di account.ts tidak melempar dan menghancurkan app.
+  const settings = useQuery(api.users.currentUser, {} as any);
   const hlsRef = useRef<Hls | null>(null);
   // Cache hasil resolve per episode supaya ganti episode tidak nunggu
   // pencarian server lagi (langsung pakai URL yang sudah ada).
