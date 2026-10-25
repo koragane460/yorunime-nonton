@@ -1,9 +1,7 @@
 import { useConvexAuth, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/use-auth";
 import { GoogleGIcon, SacretIcon } from "@/components/lstream-ui";
 import { APP_VERSION, UPDATE_BODY, UPDATE_VERSION } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
@@ -143,7 +141,7 @@ function WelcomeFlow() {
   // Load gate hanya menunggu status sesi (websocket) — tidak perlu ikut
   // menunggu query currentUser, supaya layar tidak lama diam di splash.
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
-  const { signIn } = useAuth();
+  const { signIn } = useConvexAuth();
   const loginAccount = useMutation(api.authAccounts.loginAccount);
   const registerAccount = useMutation(api.authAccounts.registerAccount);
 
@@ -161,7 +159,7 @@ function WelcomeFlow() {
   const [reopened, setReopened] = useState(false);
   const wasHidden = useRef(false);
 
-  // --- Mode utama: Login / Register ---
+  // Mode form: login biasa / register email-otp.
   const [mode, setMode] = useState<"login" | "register">("login");
 
   // --- Form Login ---
@@ -178,7 +176,7 @@ function WelcomeFlow() {
   const [regBusy, setRegBusy] = useState(false);
   const [registering, setRegistering] = useState(false);
 
-  // --- Info akun perangkat ---
+  // Info akun perangkat (email/Google) yang pernah dipakai di perangkat ini.
   const [devices, setDevices] = useState<DeviceAcc[]>([]);
   const [devicesOpen, setDevicesOpen] = useState(false);
 
@@ -245,52 +243,61 @@ function WelcomeFlow() {
 
   // Auto-redirect kalau sudah punya sesi (kecuali saat splash atau register)
   useEffect(() => {
-    if (!authLoading && isAuthenticated && !registering && !(reopened && stage === "intro"))
+    if (authLoading || registering) return;
+    if (isAuthenticated) {
+      if (reopened && stage === "intro") {
+        setStage("entering");
+        return;
+      }
       navigate("/home", { replace: true });
+    }
   }, [authLoading, isAuthenticated, navigate, registering, reopened, stage]);
 
-  // --- Alur MASUK OTOMATIS (layar login disembunyikan untuk sekarang) ---
-  // Setelah onboard / splash, user langsung masuk pakai sesi anonim.
-  // Kalau anonymous gagal (koneksi), baruluh jatuh ke layar login manual.
-  const enterRanRef = useRef(false);
-  // True = status sesi tidak pernah selesai dalam 1,5 detik (socket macet).
-  const [authStalled, setAuthStalled] = useState(false);
+  // --- Masuk otomatis setelah onboard / splash selesai ---
+  // Langsung coba signIn("anonymous") begitu masuk tahap entering.
+  // Kalau websocket masih loading, beri waktu maksimal agak lama, lalu
+  // coba lagi; kalau gagal_total, turun ke layar login manual.
+  const enterAttemptRef = useRef(false);
+  const [anonErr, setAnonErr] = useState<string | null>(null);
   useEffect(() => {
     if (stage !== "entering") {
-      setAuthStalled(false);
-      enterRanRef.current = false;
+      enterAttemptRef.current = false;
+      setAnonErr(null);
       return;
     }
-    // Masih loading sesi → beri waktu 1,5 detik, jangan diam selamanya di
-    // layar "Masuk…" kalau socket tidak pernah selesai.
-    if (authLoading && !authStalled) {
-      const t = window.setTimeout(() => setAuthStalled(true), 1500);
-      return () => window.clearTimeout(t);
-    }
-    if (enterRanRef.current) return;
+
+    // Tunggu authLoading selesai dulu, tapi jangan diam selamanya.
+    if (authLoading) return;
+    if (enterAttemptRef.current) return;
+    enterAttemptRef.current = true;
+
     if (isAuthenticated) {
       navigate("/home", { replace: true });
       return;
     }
-    enterRanRef.current = true;
+
+    let attempts = 0;
     void (async () => {
-      // Retry singkat: "connection lost" biasanya terjadi saat websocket
-      // baru reconnect — coba lagi beberapa kali sebelum menyerah.
-      for (let i = 0; i < 3; i++) {
+      while (attempts < 5) {
+        attempts += 1;
         try {
           await signIn("anonymous");
           navigate("/home", { replace: true });
           return;
-        } catch {
-          await new Promise((r) => setTimeout(r, 600));
+        } catch (e) {
+          const msg =
+            e instanceof Error ? e.message : "Gagal masuk secara otomatis.";
+          if (attempts >= 5) {
+            setAnonErr(msg);
+            setStage("login");
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 700));
         }
       }
-      enterRanRef.current = false;
-      setLoginErr("Koneksi bermasalah. Mencoba masuk manual.");
-      setStage("login");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, authLoading, isAuthenticated, authStalled, signIn, navigate]);
+  }, [stage]);
 
   /** Lanjut dari splash — dipanggil otomatis lewat timer ATAU saat user
    *  menekan layar ("Ketuk untuk lanjut"). Kunjungan berikutnya (onboard
@@ -324,6 +331,7 @@ function WelcomeFlow() {
   /** Masuk sesi + ke beranda. */
   const doAnonLogin = async () => {
     setLoggingIn(true);
+    setLoginErr(null);
     try {
       await signIn("anonymous");
       navigate("/home", { replace: true });
@@ -1066,11 +1074,11 @@ function WelcomeFlow() {
                 </div>
               </div>
 
-              <p className="mt-6 text-center text-[10px] text-zinc-500">
+              <p className="mt-5 text-center text-[10px] text-zinc-500">
                 Atau
               </p>
 
-              <div className="mt-3 w-full max-w-[22rem] space-y-2">
+              <div className="mt-2 w-full max-w-[22rem] space-y-2">
                 <button
                   onClick={doGoogleLogin}
                   disabled={loggingIn}

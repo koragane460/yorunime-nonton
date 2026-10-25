@@ -1,50 +1,36 @@
 import { useState } from "react";
-import type { SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-
-const Modal = Sheet;
-const ModalContent = SheetContent;
-const ModalHeader = SheetHeader;
-const ModalBody = SheetDescription;
-const ModalFooter = SheetFooter;
-const ModalTitle = SheetTitle;
-import { useAuth } from "@/hooks/use-auth";
+import { Sheet, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useConvexAuth } from "convex/react";
 import { useNavigate } from "react-router";
-import { GoogleGIcon, SacretIcon } from "@/components/lstream-ui";
+import { GoogleGIcon } from "@/components/lstream-ui";
 import {
   signInWithGoogleFirebase,
   firebaseReady,
   getFirebaseIdToken,
 } from "@/lib/firebase";
-import { FileText, LogIn, Mail, User, AlertCircle, Loader2 } from "lucide-react";
+import { LogIn, Mail, User, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Login screen — tampilan sesuai spesifikasi:
- *   - Judul besar "Login" di tengah, teks kecil di bawahnya:
- *     "Masuk untuk sinkronisasi riwayat akun mu, akun mu terjaga selalu"
- *   - Kartu login Google: ikon + "Login dengan google" (firebase console).
+ * Login screen:
+ *   - Judul "Login", teks: "Masuk untuk sinkronisasi riwayat akun mu,
+ *     akun mu terjaga selalu".
+ *   - Kartu login Google: ikon + "Login dengan google".
  *   - Garis tipis (opacity rendah) pemisah "Atau".
- *   - Tombol TAHAP 2 (tanpa background) "Login untuk tester" + ikon.
- *     Klik → popup: ikon orang di atas, ",button"Login sebagai tester",
- *     kolom username, kolom password, tombol "Log in". Bukan teks. " ketika
- *     massal. Klik tombol "Log in" dengan username/password yang benar →
- *     auto-login → menu home.
+ *   - Tombol (tanpa background) "Login untuk tester" + ikon.
+ *     Klik → popup: ikon orang di atas, tulisan "Login sebagai tester",
+ *     kolom username, kolom password, tombol "Log in".
+ *     Password & username benar → auto-login → menu home.
  *   - Dummy tester: username "Tester YoruNime", password "yttaajadeh".
- *   - Login Google langsung → menu home. Id akun dimulai dari 1 lagi
- *     (eksaustif resep). Login Google → user baru dibuat otomatis.
- *   - Gate: "Masuk untuk sinkronisasi riwayat akun mu, akun mu terjaga selalu"
- *     disembunyikan sambil loading sesi anonymous; yang terlihat hanya
- *     splash keluar sambil konfigurasi (Onboard/Register) menunggu.
+ *   - Login Google langsung → menu home.
+ *   - Gate: sembunyikan Isi saat loading sesi; yang terlihat hanya splash.
  */
 export default function Login() {
   const navigate = useNavigate();
-  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
-  const { signIn } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, signIn } = useConvexAuth();
   const [loginState, setLoginState] = useState<"idle" | "loading">("idle");
   const [loginErr, setLoginErr] = useState<string | null>(null);
   const [showTesterLogin, setShowTesterLogin] = useState(false);
@@ -54,12 +40,22 @@ export default function Login() {
   const [accountPass, setAccountPass] = useState("");
   const [accountName, setAccountName] = useState("");
   const [accountConfirm, setAccountConfirm] = useState("");
+  const [accountEmailDone, setAccountEmailDone] = useState("");
+  const [accountNameDone, setAccountNameDone] = useState("");
+  const [accountUserDone, setAccountUserDone] = useState("");
+  const [accountPassDone, setAccountPassDone] = useState("");
+  const [accountConfirmDone, setAccountConfirmDone] = useState("");
   const [testerUser, setTesterUser] = useState("");
   const [testerPass, setTesterPass] = useState("");
   const [testerErr, setTesterErr] = useState<string | null>(null);
-  const [accountUser, setAccountUser] = useState("");
+  const [accountStep, setAccountStep] = useState<"create" | "set-password" | "done">("create");
   const [accountErr, setAccountErr] = useState<string | null>(null);
   const [accountState, setAccountState] = useState<"idle" | "loading">("idle");
+  // Di-read-only setelah create: ditampilkan sebagai referensi saja.
+  const [accountEmailDone, setAccountEmailDone] = useState("");
+  const [accountNameDone, setAccountNameDone] = useState("");
+  const [accountUserDone, setAccountUserDone] = useState("");
+  const [accountPassDone, setAccountPassDone] = useState("");
 
   // --- Login Google (firebase console) ---
   // Konfigurasi Firebase diambil dari env Keys/API keys UI:
@@ -70,8 +66,6 @@ export default function Login() {
     setLoginState("loading");
     setLoginErr(null);
     try {
-      // Login Google via Firebase → dapat user & id token → dikirim ke Convex
-      // sebagai provider "firebase".
       const u = await signInWithGoogleFirebase();
       if (!u) {
         setLoginErr(
@@ -101,9 +95,6 @@ export default function Login() {
     setLoginState("loading");
     setTesterErr(null);
     try {
-      // Saat KAMU (pemilik akun asli) masuk, id akun dimulai dari 1 lagi.
-      // Tester buka halaman auth dulu (bukan halaman login), baru dipencet
-      // tombol "Login tester" untuk masuk sebagai anonymous sesi tester.
       await signIn("anonymous");
       navigate("/home", { replace: true });
     } catch (e) {
@@ -112,9 +103,7 @@ export default function Login() {
     }
   };
 
-  // --- Akun baru (tester onboarding) ---
-  // Akun email+password dibuat lewat Convex Auth provider `password`.
-  // `flow` "signUp" membuat akun (users + authAccounts) sekaligus.
+  // Buat akun baru via Convex Auth password provider (flow signUp).
   const submitCreateAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const email = accountEmail.trim();
@@ -130,12 +119,20 @@ export default function Login() {
     setAccountState("loading");
     setAccountErr(null);
     try {
-      await signIn("password", {
+      const res = await signIn("password", {
         email,
         password: pass,
         name: accountName.trim(),
         flow: "signUp",
       });
+      setAccountEmailDone(email);
+      setAccountNameDone(accountName.trim());
+      setAccountUserDone((res as any)?.name ?? accountName.trim());
+      setAccountPassDone(pass);
+      setAccountEmailDone(email);
+      setAccountNameDone(accountName.trim());
+      setAccountUserDone((res as any)?.name ?? accountName.trim());
+      setAccountPassDone(pass);
       setAccountStep("done");
       setAccountState("idle");
       setAccountErr(null);
@@ -145,10 +142,14 @@ export default function Login() {
     }
   };
 
-  const submitSetPassword = async (e: React.FormEvent) => {
+  const submitSetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const pass = accountPass.trim();
     const confirm = accountConfirm.trim();
+    if (!pass || !confirm) {
+      setAccountErr("Password & konfirmasi wajib diisi.");
+      return;
+    }
     if (pass !== confirm) {
       setAccountErr("Password & konfirmasi tidak sama.");
       return;
@@ -160,7 +161,8 @@ export default function Login() {
     setAccountState("loading");
     setAccountErr(null);
     try {
-      // Password sudah diset saat create. Konfirmasi cuma validasi UI.
+      // Akun sudah jadi; konfirmasi cuma validasi UI selama tahap set-password.
+      setAccountConfirmDone(confirm);
       setAccountStep("done");
       setAccountState("idle");
       setAccountErr(null);
@@ -170,8 +172,8 @@ export default function Login() {
     }
   };
 
-  // Lanjut ke halaman berikutnya secepatnya — biar KAMU nggak nunggu query
-  // saat login, semua halaman yang butuh auth bisa langsung terbuka.
+
+  // Tunggu authLoading selesai; kalau sudah terautentikasi, sembunyikan layar ini.
   if (!authLoading && isAuthenticated) return null;
 
   return (
@@ -224,12 +226,12 @@ export default function Login() {
         </button>
 
         {/* Garis tipis pemisah (opacity rendah) antara Google dan tombol tester. */}
-        <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-600 to-transparent" />
+        <div className="my-3 flex items-center gap-2">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-700/70 to-transparent" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-600">
             Atau
           </span>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-600 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-700/70 to-transparent" />
         </div>
 
         {/* ----- Tombol TAHAP 2: Login sebagai tester (tanpa background) ----- */}
@@ -259,18 +261,18 @@ export default function Login() {
           <SheetContent className="bg-[#07060c] border-white/10 shadow-2xl" side="bottom">
             <SheetHeader className="sr-only"></SheetHeader>
             <div className="flex flex-col gap-4 py-3">
-              <p className="text-xs text-muted-foreground">
-                Username & password tester. Buka akun ini di{" "}
-                <a
-                  href="https://console.firebase.google.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary underline underline-offset-2"
-                >
-                  Firebase console
-                </a>{" "}
-                untuk detail.
-              </p>
+              {/* Header popup tester. */}
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 ring-1 ring-white/10">
+                  <User className="size-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground">Login sebagai tester</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Tester YoruNime &middot; Tester YoruNime / yttaajadeh
+                  </p>
+                </div>
+              </div>
 
               {/* Kolom username. */}
               <div className="space-y-1.5">
@@ -316,28 +318,28 @@ export default function Login() {
                 ) : (
                   <LogIn className="size-4" />
                 )}
-                Login tester
-              </Button>
+                Log in
+                Tester YoruNime / yttaajadeh              </Button>
 
               <Button
                 variant="ghost"
                 onClick={() => setShowTesterLogin(false)}
                 className="w-full text-xs text-muted-foreground"
               >
-                Batal
+                Tutup
               </Button>
             </div>
           </SheetContent>
         </Sheet>
       )}
 
-      {/* ----- Popup: Akun baru (tester onboarding) ----- */}
+      {/* ----- Popup: Buat akun baru (tester onboarding) ----- */}
       {showAccountModal && (
         <Sheet open={true} onOpenChange={setShowAccountModal}>
           <SheetContent className="bg-[#07060c] border-white/10 shadow-2xl" side="bottom">
             <SheetHeader className="sr-only"></SheetHeader>
             <div className="flex flex-col gap-4 py-3">
-              {accountStep === "create" ? (
+              {accountStep === "create" && (
                 <form onSubmit={submitCreateAccount} className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">
@@ -405,7 +407,6 @@ export default function Login() {
                     </Label>
                     <Input
                       value={accountEmail}
-                      onChange={(e) => setAccountEmail(e.target.value)}
                       className="bg-card/50 border-border text-foreground"
                       readOnly
                     />
@@ -416,9 +417,8 @@ export default function Login() {
                     </Label>
                     <Input
                       value={accountUser}
-                      onChange={(e) => setAccountUser(e.target.value)}
-                      placeholder="Username akun"
                       className="bg-card/50 border-border text-foreground"
+                      readOnly
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -427,9 +427,8 @@ export default function Login() {
                     </Label>
                     <Input
                       value={accountName}
-                      onChange={(e) => setAccountName(e.target.value)}
-                      placeholder="Nama akun"
                       className="bg-card/50 border-border text-foreground"
+                      readOnly
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -444,8 +443,7 @@ export default function Login() {
                       className="bg-card/50 border-border text-foreground"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">
+                  <div className="space-y-1.5">                  <Label className="text-xs font-semibold text-muted-foreground">
                       Konfirmasi password
                     </Label>
                     <Input
@@ -456,13 +454,13 @@ export default function Login() {
                       className="bg-card/50 border-border text-foreground"
                     />
                   </div>
+
                   {accountErr && (
                     <p className="flex items-center justify-center gap-1.5 text-xs text-red-400">
                       <AlertCircle className="size-3.5" />
                       {accountErr}
                     </p>
-                  )}
-                  <Button
+                  )}                  <Button
                     type="submit"
                     disabled={accountState === "loading"}
                     className="w-full bg-primary text-white hover:bg-primary/90"
@@ -472,11 +470,24 @@ export default function Login() {
                     ) : (
                       <LogIn className="size-4" />
                     )}
-                    Selesaikan akun
+                    Selesai
                   </Button>
                 </form>
-              )}
-            </div>
+              )
+            }
+            </div>              <Button
+            variant="ghost"
+            onClick={() => setShowAccountModal(false)}
+            className="w-full text-xs text-muted-foreground"
+          >
+            Tutup
+          </Button>
+          </SheetContent>
+        </Sheet>
+      )}
+    </div>
+  );
+}
           </SheetContent>
         </Sheet>
       )}

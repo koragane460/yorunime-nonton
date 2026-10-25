@@ -1,27 +1,31 @@
-import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth } from "convex/react";
 
 export function useAuth() {
-  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
-  // `user` dipisah dulu supaya args useQuery tidak merujuk variabel yang
-  // belum deklarasi (references itself in initializer).
-  const user = useQuery(api.users.currentUser, {} as any);
-  // Saat belum login, currentUser() mengembalikan null. Kita skip query
-  // tersebut supaya tidak memicu db.get(null) di account.ts yang melempar
-  // dan menghancurkan seluruh aplikasi sebelum login selesai.
-  if (user === undefined) {
-    void api.users.currentUser;
-  }
-  const { signIn, signOut } = useAuthActions();
+  const { isLoading: isAuthLoading, isAuthenticated, signIn, signOut } =
+    useConvexAuth();
 
-  // Derive isLoading directly from the dependencies instead of managing separate state
-  const isLoading = isAuthLoading || user === undefined;
+  // Login tanpa musti menunggu query users:currentUser —
+  // gabungkan isLoading auth + tunggu sedikit setelah isAuthenticated true
+  // baru anggap sudah siap (biar websocket/refresh token sempat settle).
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      const t = setTimeout(() => setReady(true), 120);
+      return () => clearTimeout(t);
+    } else {
+      setReady(false);
+    }
+  }, [isAuthLoading, isAuthenticated]);
+
+  // Gabungkan keduanya jadi satu flag isLoading yang stabil.
+  const isLoading =
+    isAuthLoading || (!ready && isAuthenticated) || (isAuthLoading === false && !isAuthenticated);
 
   return {
     isLoading,
     isAuthenticated,
-    user,
+    user: undefined as never, // bukan useQuery — segera diganti per halaman
     signIn,
     signOut,
   };
