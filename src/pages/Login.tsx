@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConvexAuth } from "convex/react";
 import { useNavigate } from "react-router";
 import { GoogleGIcon, SacretIcon } from "@/components/lstream-ui";
+import {
+  signInWithGoogleFirebase,
+  firebaseReady,
+  getFirebaseIdToken,
+} from "@/lib/firebase";
 import { FileText, LogIn, Mail, User, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +49,7 @@ export default function Login() {
   const [loginErr, setLoginErr] = useState<string | null>(null);
   const [showTesterLogin, setShowTesterLogin] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
-  const [accountStep, setAccountStep] = useState<"create" | "set-password">("create");
+  const [accountStep, setAccountStep] = useState<"create" | "set-password" | "done">("create");
   const [accountEmail, setAccountEmail] = useState("");
   const [accountPass, setAccountPass] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -56,21 +62,27 @@ export default function Login() {
   const [accountState, setAccountState] = useState<"idle" | "loading">("idle");
 
   // --- Login Google (firebase console) ---
+  // Konfigurasi Firebase diambil dari env Keys/API keys UI:
+  // VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN,
+  // VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_MESSAGING_SENDER_ID,
+  // VITE_FIREBASE_APP_ID. src/lib/firebase.ts mengembalikannya ke client.
   const doGoogleLogin = async () => {
     setLoginState("loading");
     setLoginErr(null);
     try {
-      const u = await (window as any).__googleSignIn();
+      // Login Google via Firebase → dapat user & id token → dikirim ke Convex
+      // sebagai provider "firebase".
+      const u = await signInWithGoogleFirebase();
       if (!u) {
         setLoginErr(
-          (window as any).__firebaseReady
+          firebaseReady
             ? "Popup diblokir browser. Izinkan popup lalu coba lagi."
             : "Login Google belum dikonfigurasi.",
         );
         setLoginState("idle");
         return;
       }
-      const idToken = await (window as any).__getFirebaseIdToken(u);
+      const idToken = await getFirebaseIdToken(u);
       if (!idToken) throw new Error("Gagal mengambil sesi Google.");
       await signIn("firebase", { idToken });
       navigate("/home", { replace: true });
@@ -89,15 +101,11 @@ export default function Login() {
     setLoginState("loading");
     setTesterErr(null);
     try {
-      // Dummy credentials. Login Google → user baru dibuat otomatis.
-      if (testerUser.trim() === "Tester YoruNime" && testerPass.trim() === "yttaajadeh") {
-        await signIn("anonymous");
-        // Dipimpin ke menu home. Id akun dimulai dari 1 lagi.
-        navigate("/home", { replace: true });
-        return;
-      }
-      setTesterErr("Username atau password salah.");
-      setLoginState("idle");
+      // Saat KAMU (pemilik akun asli) masuk, id akun dimulai dari 1 lagi.
+      // Tester buka halaman auth dulu (bukan halaman login), baru dipencet
+      // tombol "Login tester" untuk masuk sebagai anonymous sesi tester.
+      await signIn("anonymous");
+      navigate("/home", { replace: true });
     } catch (e) {
       setTesterErr(e instanceof Error ? e.message : "Gagal masuk. Coba lagi.");
       setLoginState("idle");
@@ -105,6 +113,8 @@ export default function Login() {
   };
 
   // --- Akun baru (tester onboarding) ---
+  // Akun email+password dibuat lewat Convex Auth provider `password`.
+  // `flow` "signUp" membuat akun (users + authAccounts) sekaligus.
   const submitCreateAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const email = accountEmail.trim();
@@ -120,14 +130,13 @@ export default function Login() {
     setAccountState("loading");
     setAccountErr(null);
     try {
-      // Dummy: user baru dibuat langsung (id dimulai dari 1). Login Google
-      // → user dibuat otomatis di backend.
-      await (window as any).__createAccount({
+      await signIn("password", {
         email,
         password: pass,
-        name,
+        name: accountName.trim(),
+        flow: "signUp",
       });
-      setAccountStep("set-password");
+      setAccountStep("done");
       setAccountState("idle");
       setAccountErr(null);
     } catch (err) {
@@ -136,7 +145,7 @@ export default function Login() {
     }
   };
 
-  const submitSetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+  const submitSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const pass = accountPass.trim();
     const confirm = accountConfirm.trim();
@@ -151,19 +160,18 @@ export default function Login() {
     setAccountState("loading");
     setAccountErr(null);
     try {
-      await (window as any).__setPassword({
-        email: accountEmail.trim(),
-        password: pass,
-      });
-      // Login langsung dengan akun baru
-      await signIn("firebase", { email: accountEmail.trim(), password: pass });
-      navigate("/home", { replace: true });
+      // Password sudah diset saat create. Konfirmasi cuma validasi UI.
+      setAccountStep("done");
+      setAccountState("idle");
+      setAccountErr(null);
     } catch (err) {
       setAccountErr(err instanceof Error ? err.message : "Gagal menyelesaikan akun.");
       setAccountState("idle");
     }
   };
 
+  // Lanjut ke halaman berikutnya secepatnya — biar KAMU nggak nunggu query
+  // saat login, semua halaman yang butuh auth bisa langsung terbuka.
   if (!authLoading && isAuthenticated) return null;
 
   return (
@@ -308,7 +316,7 @@ export default function Login() {
                 ) : (
                   <LogIn className="size-4" />
                 )}
-                Log in
+                Login tester
               </Button>
 
               <Button

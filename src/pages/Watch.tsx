@@ -496,6 +496,7 @@ function WatchContent() {
   const longPressTimer = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
 
+  const videoRef = useRef<HTMLVideoElement>(null);
   // ------------------------------------------------------- kualitas ----
   // Resolusi yang benar-benar ada di stream HLS yang sedang diputar, supaya
   // pilihan 144p/480p/1080p benar-benar menghasilkan gambar yang berbeda.
@@ -2013,7 +2014,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         ) : (
           <video
             key={epParam}
-            ref={videoRef}
+            
+
+  // Ref ke elemen <video> di player (digunakan untuk posisi playback, currentTime, dst.).ref={videoRef}
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
             className="h-full w-full object-contain"
