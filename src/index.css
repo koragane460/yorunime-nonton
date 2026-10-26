@@ -775,6 +775,37 @@
   0% { background-position: 120% 0; }
   100% { background-position: -120% 0; }
 }
+
+/* ------------------------------------------------------------------
+ * ANIMASI SILAU — kilau putih menyapu melintasi badge/tag level dan
+ * tag clan (permintaan user: "ada kayak animasi silau nya").
+ * Kelas `.badge-shine` dipakai LevelBadge, TitleBadge, dan ClanTag.
+ * ------------------------------------------------------------------ */
+@keyframes yn-shine-sweep {
+  0% { background-position: 200% 0; }
+  55%, 100% { background-position: -140% 0; }
+}
+.badge-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.badge-shine::after {
+  content: "";
+  position: absolute;
+  inset: -70% -45%;
+  background: linear-gradient(
+    112deg,
+    transparent 36%,
+    rgba(255, 255, 255, 0.7) 50%,
+    transparent 64%
+  );
+  background-size: 280% 100%;
+  background-position: 200% 0;
+  animation: yn-shine-sweep 2.9s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
 @keyframes yn-twinkle {
   0%, 100% { opacity: 0.35; transform: scale(0.8) rotate(0deg); }
   50% { opacity: 1; transform: scale(1.15) rotate(45deg); }

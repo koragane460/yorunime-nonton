@@ -351,12 +351,15 @@ export function LevelBadge({ level, className }: { level: number; className?: st
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white/95",
+        // badge-shine = animasi kilau menyapu (index.css) — tag level ikut
+        // berkilau mengikuti tag clan.
+        "badge-shine inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white/95",
         b.cls,
         className,
       )}
     >
-      <Icon className="size-3" aria-hidden /> Lv.{level}
+      <Icon className="size-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" aria-hidden />
+      Lv.{level}
     </span>
   );
 }
@@ -560,11 +563,11 @@ export function ClanTag({
   const inner = (
     <>
       <span
-        className="inline-flex size-3.5 shrink-0 items-center justify-center"
+        className="inline-flex size-3.5 shrink-0 items-center justify-center drop-shadow-[0_0_5px_currentColor]"
         style={{ color: tone }}
         aria-hidden
       >
-        <Icon strokeWidth={2} className="size-3.5" />
+        <Icon strokeWidth={2.4} className="size-3.5" />
       </span>
       {/* Tag clan (teks [TAG]) selalu PUTIH, huruf miring tebal. */}
       <span className="text-[11px] font-black italic tracking-wider text-white">
@@ -590,7 +593,7 @@ export function ClanTag({
           // Tag clan gaya RIBBON: kiri bergerigi masuk, kanan runcing keluar
           // (.clan-tag-ribbon di index.css), huruf miring tebal, dan garis
           // tipis putih di dalam tepinya biar kelihatan tajam & cool.
-          "clan-tag inline-flex select-none items-center whitespace-nowrap",
+          "clan-tag badge-shine inline-flex select-none items-center whitespace-nowrap",
           className,
         )}
       >
@@ -612,7 +615,7 @@ export function ClanTag({
   return (
     <span
       className={cn(
-        "clan-tag inline-flex select-none items-center whitespace-nowrap",
+        "clan-tag badge-shine inline-flex select-none items-center whitespace-nowrap",
         className,
       )}
     >

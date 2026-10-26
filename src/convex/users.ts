@@ -5,13 +5,16 @@ import { internalMutation, mutation, query } from "./_generated/server";
 // ---- Level & badge math (per spec) ----
 // 1-49: bronze(12k/lvl) 50-99: silver(27k) 100-499: diamond(45k)
 // 500-1000: emerald(70k) 1001-4999: master(120k) 5000-10000: grandmaster(165k)
+// 500-1000: emerald(70k) 1001-4999: master(120k) 5000-12999: grandmaster(165k)
+// 13000+: central(220k) — tier baru di atas Grandmaster.
 const TIERS = [
   { min: 1, max: 49, per: 12000, badge: "Bronze" },
   { min: 50, max: 99, per: 27000, badge: "Silver" },
   { min: 100, max: 499, per: 45000, badge: "Diamond" },
   { min: 500, max: 1000, per: 70000, badge: "Emerald" },
   { min: 1001, max: 4999, per: 120000, badge: "Master" },
-  { min: 5000, max: 10000, per: 165000, badge: "Grandmaster" },
+  { min: 5000, max: 12999, per: 165000, badge: "Grandmaster" },
+  { min: 13000, max: 999999999, per: 220000, badge: "Central" },
 ];
 
 export function tierForLevel(level: number) {

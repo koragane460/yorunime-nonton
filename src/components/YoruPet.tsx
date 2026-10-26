@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ChevronLeft, Egg, BookOpen, Coins, Gift } from "lucide-react";
+import { ChevronLeft, Egg, BookOpen, Coins, Gift, Settings2, Sparkles } from "lucide-react";
 import { StripBackIcon } from "@/components/StripBack";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -30,8 +30,17 @@ import {
 import { PetArt } from "@/components/PetArt";
 import type { Id } from "@/convex/_generated/dataModel";
 
-/** Isi sheet bawah — Telur / Pet / Index / Scene. */
-type SheetTab = "telur" | "pet" | "index" | "scene";
+/** Isi sheet bawah — Telur / Kelola / Pet / Index / Scene. */
+type SheetTab = "telur" | "kelola" | "pet" | "index" | "scene";
+
+/** Peringkat rarity — dipakai tombol "Auto equip best pet". */
+const RARITY_RANK: Record<string, number> = {
+  Common: 1,
+  Uncommon: 2,
+  Rare: 3,
+  Divine: 4,
+  Tetrix: 5,
+};
 
 /** Format hitungan mundur klaim 24 jam jadi "7j 12m 03d". */
 function fmtLeft(ms: number): string {
@@ -78,6 +87,8 @@ export function YoruPetScreen({
 
   /** Sheet bawah (overlay) — null = tertutup. */
   const [sheet, setSheet] = useState<SheetTab | null>(null);
+  /** POPUP GACHA — berisi telur + tombol Gacha 1× / 10×. */
+  const [gachaOpen, setGachaOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   /** Hasil tetasan terakhir — kartu perayaan di tengah layar. */
   const [hatched, setHatched] = useState<
@@ -110,9 +121,32 @@ export function YoruPetScreen({
   const doGacha = (count: 1 | 10) =>
     void run(async () => {
       await pullM({ count });
+      setGachaOpen(false);
       setSheet("telur");
       toast.success(count === 1 ? "Dapat 1 Telur Misteri!" : "Dapat 10 Telur Misteri!");
     });
+
+  /** Auto equip pet terbaik (rarity tertinggi, lalu klaim terbesar). */
+  const autoEquipBest = () => {
+    const owned = state?.owned ?? [];
+    if (owned.length === 0) {
+      toast.error("Belum punya pet — gacha dulu ya");
+      return;
+    }
+    const best = [...owned].sort(
+      (a, b) =>
+        (RARITY_RANK[b.rarity] ?? 0) - (RARITY_RANK[a.rarity] ?? 0) ||
+        (b.claim ?? 0) - (a.claim ?? 0),
+    )[0];
+    if (equipped?.uid === best.uid) {
+      toast.info(`${best.name} sudah jadi pet terbaik kamu`);
+      return;
+    }
+    void run(async () => {
+      await equipM({ uid: best.uid });
+      toast.success(`Auto equip: ${best.name} (${best.rarity})`);
+    });
+  };
 
   const doHatch = async () => {
     if (busy) return;
@@ -250,22 +284,12 @@ export function YoruPetScreen({
           )}
         </div>
 
-        {/* ----------------- panggung: PAS DI TENGAH ------------------- */}
+        {/* ----------------- panggung: TANPA KOTAK PEMBATAS ----------------
+            Gambar scene bebas memanjang (tidak dibungkus rounded/border),
+            berlaku untuk SEMUA tema scene. */}
         <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-4">
-          <div
-            className={cn(
-              "relative h-72 w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 shadow-[0_18px_40px_-18px_rgba(0,0,0,.9)]",
-            )}
-          >
-            <div className={cn("absolute inset-0 bg-gradient-to-b", scene.sky)} aria-hidden />
-            {scene.image && (
-              <img
-                src={scene.image}
-                alt=""
-                className="absolute inset-0 size-full object-cover"
-              />
-            )}
-            {/* lantai */}
+          <div className="relative h-72 w-full max-w-2xl">
+            {/* lantai — hanya gradasi, tanpa kotak */}
             <div className={cn("absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b opacity-80", scene.floor)} aria-hidden />
             {/* pet berjalan + bubble klaim di atasnya */}
             {equipped ? (
@@ -331,35 +355,33 @@ export function YoruPetScreen({
               Melihat kebun milik {state.username} 🐾
             </p>
           ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex items-stretch gap-2">
+            {/* GACHA — SATU tombol, buka POPUP (telur + 1× / 10×). */}
             <button
-              onClick={() => doGacha(1)}
+              onClick={() => setGachaOpen(true)}
               disabled={busy}
-              className="rounded-2xl bg-gradient-to-b from-amber-300 to-amber-600 py-2.5 text-black shadow-[0_10px_22px_-10px_rgba(245,158,11,.9)] transition active:scale-[0.97] disabled:opacity-60"
+              className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-amber-300 to-amber-600 py-3 text-black shadow-[0_10px_22px_-10px_rgba(245,158,11,.9)] transition active:scale-[0.97] disabled:opacity-60"
             >
-              <Egg className="mx-auto size-4" aria-hidden />
-              <span className="mt-0.5 block text-[11px] font-black leading-tight">Gacha 1×</span>
-              <span className="block text-[9px] font-bold opacity-80">
-                {GACHA_X1.toLocaleString("id-ID")} Sacret
-              </span>
+              <Egg className="size-5" aria-hidden />
+              <span className="mt-0.5 block text-[12px] font-black leading-tight">Gacha</span>
+              <span className="block text-[9px] font-bold opacity-80">1× / 10×</span>
             </button>
+            {/* KELOLA — sheet berisi telur, pet, pet terpakai, auto equip. */}
             <button
-              onClick={() => doGacha(10)}
-              disabled={busy}
-              className="rounded-2xl bg-gradient-to-b from-emerald-300 to-emerald-600 py-2.5 text-black shadow-[0_10px_22px_-10px_rgba(16,185,129,.9)] transition active:scale-[0.97] disabled:opacity-60"
+              onClick={() => setSheet("kelola")}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-violet-400 to-violet-700 py-3 text-white shadow-[0_10px_22px_-10px_rgba(139,92,246,.9)] transition active:scale-[0.97]"
             >
-              <Egg className="mx-auto size-4" aria-hidden />
-              <span className="mt-0.5 block text-[11px] font-black leading-tight">Gacha 10×</span>
-              <span className="block text-[9px] font-bold opacity-80">
-                {GACHA_X10.toLocaleString("id-ID")} Sacret
-              </span>
+              <Settings2 className="size-5" aria-hidden />
+              <span className="mt-0.5 block text-[12px] font-black leading-tight">Kelola</span>
+              <span className="block text-[9px] font-bold opacity-80">telur · pet</span>
             </button>
+            {/* INDEX — kotak MENDEKATI PERSEGI (tidak memanjang ke samping). */}
             <button
               onClick={() => setSheet("index")}
-              className="rounded-2xl bg-gradient-to-b from-zinc-500 to-zinc-700 py-2.5 text-white shadow-[0_10px_22px_-10px_rgba(0,0,0,.9)] transition active:scale-[0.97]"
+              className="flex w-[74px] shrink-0 flex-col items-center justify-center self-start rounded-2xl bg-gradient-to-b from-zinc-500 to-zinc-700 py-3 text-white shadow-[0_10px_22px_-10px_rgba(0,0,0,.9)] transition active:scale-[0.97]"
             >
-              <BookOpen className="mx-auto size-4" aria-hidden />
-              <span className="mt-0.5 block text-[11px] font-black leading-tight">Index</span>
+              <BookOpen className="size-5" aria-hidden />
+              <span className="mt-0.5 block text-[12px] font-black leading-tight">Index</span>
               <span className="block text-[9px] font-bold opacity-80">{PETS.length} pet</span>
             </button>
           </div>
@@ -389,10 +411,11 @@ export function YoruPetScreen({
               className="thin-scroll mx-auto max-h-[68%] w-full max-w-2xl overflow-y-auto rounded-t-3xl border-t border-white/20 bg-black/85 p-3 pb-5 backdrop-blur-xl"
             >
               <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/25" aria-hidden />
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-5 gap-1.5">
                 {(
                   [
                     ["telur", "🥚 Telur"],
+                    ["kelola", "🧰 Kelola"],
                     ["pet", "🐾 Pet"],
                     ["index", "📖 Index"],
                     ["scene", "🏞️ Scene"],
@@ -402,7 +425,7 @@ export function YoruPetScreen({
                     key={k}
                     onClick={() => setSheet(k)}
                     className={cn(
-                      "rounded-full px-2 py-1.5 text-[11px] font-black transition",
+                      "rounded-full px-1.5 py-1.5 text-[10px] font-black transition",
                       sheet === k
                         ? "bg-gold text-black"
                         : "bg-white/10 text-zinc-300 hover:bg-white/15",
@@ -452,8 +475,90 @@ export function YoruPetScreen({
                   </div>
                 )}
 
+                {/* ----------------- KELOLA (telur + pet terpakai + auto) --- */}
+                {sheet === "kelola" && (
+                  <div className="space-y-2.5">
+                    {/* Telur */}
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-black">
+                          🥚 Telur <span className="text-gold">×{state.eggs}</span>
+                        </p>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={doHatch}
+                            disabled={busy || state.eggs < 1}
+                            className="rounded-xl bg-gradient-to-b from-fuchsia-400 to-fuchsia-600 px-3 py-1.5 text-[11px] font-black text-white transition active:scale-95 disabled:opacity-50"
+                          >
+                            Tetas 1
+                          </button>
+                          <button
+                            onClick={() =>
+                              void run(async () => {
+                                const r = await hatchAllM({});
+                                setSheet("pet");
+                                toast.success(`Menetas ${r.count} telur!`);
+                              })
+                            }
+                            disabled={busy || state.eggs < 1}
+                            className="rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 px-3 py-1.5 text-[11px] font-black text-white transition active:scale-95 disabled:opacity-50"
+                          >
+                            Tetas Semua
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pet yang dipakai + Auto equip best */}
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                        Pet yang dipakai
+                      </p>
+                      <div className="mt-2 flex items-center gap-2.5">
+                        {equipped ? (
+                          <>
+                            <span
+                              className={cn(
+                                "flex size-11 shrink-0 items-center justify-center rounded-full bg-white/10 p-0.5",
+                                RARITY_STYLE[equipped.rarity as PetRarity]?.glow,
+                              )}
+                            >
+                              <PetArt petId={equipped.petId} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-black">
+                                {equipped.name}
+                              </span>
+                              <span
+                                className={cn(
+                                  "rounded-full px-1.5 py-0.5 text-[9px] font-black",
+                                  RARITY_STYLE[equipped.rarity as PetRarity]?.chip,
+                                )}
+                              >
+                                {equipped.rarity}
+                              </span>
+                            </span>
+                          </>
+                        ) : (
+                          <p className="flex-1 text-xs font-bold text-zinc-400">
+                            Belum ada pet yang dipasang
+                          </p>
+                        )}
+                        <button
+                          onClick={autoEquipBest}
+                          disabled={busy}
+                          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 px-3 py-2 text-[11px] font-black text-black transition active:scale-95 disabled:opacity-50"
+                        >
+                          <Sparkles className="size-3.5" aria-hidden />
+                          Auto equip best
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* -------------------------- PET --------------------- */}
-                {sheet === "pet" &&
+                {(sheet === "pet" || sheet === "kelola") &&
                   (state.owned.length === 0 ? (
                     <p className="py-8 text-center text-xs font-bold text-zinc-400">
                       Belum punya pet — gacha lalu tetas telurnya! 🥚
@@ -612,6 +717,70 @@ export function YoruPetScreen({
                   </div>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* -------------------- POPUP GACHA (telur + 1× / 10×) ---------- */}
+      <AnimatePresence>
+        {gachaOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setGachaOpen(false)}
+            className="fixed inset-0 z-[78] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 24 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 24 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-xs rounded-3xl border border-white/20 bg-background p-5 text-center"
+            >
+              <motion.div
+                animate={{ rotate: [-4, 4, -4] }}
+                transition={{ duration: 2.6, repeat: Infinity }}
+                className="mx-auto flex size-20 items-center justify-center rounded-full bg-white/10 text-5xl ring-1 ring-white/20"
+              >
+                🥚
+              </motion.div>
+              <p className="mt-2.5 text-sm font-black">
+                Telur Misteri <span className="text-gold">×{state?.eggs ?? 0}</span>
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => doGacha(1)}
+                  disabled={busy}
+                  className="rounded-2xl bg-gradient-to-b from-amber-300 to-amber-600 py-2.5 text-black transition active:scale-[0.97] disabled:opacity-60"
+                >
+                  <Egg className="mx-auto size-4" aria-hidden />
+                  <span className="mt-0.5 block text-[11px] font-black leading-tight">Gacha 1×</span>
+                  <span className="block text-[9px] font-bold opacity-80">
+                    {GACHA_X1.toLocaleString("id-ID")} Sacret
+                  </span>
+                </button>
+                <button
+                  onClick={() => doGacha(10)}
+                  disabled={busy}
+                  className="rounded-2xl bg-gradient-to-b from-emerald-300 to-emerald-600 py-2.5 text-black transition active:scale-[0.97] disabled:opacity-60"
+                >
+                  <Egg className="mx-auto size-4" aria-hidden />
+                  <span className="mt-0.5 block text-[11px] font-black leading-tight">Gacha 10×</span>
+                  <span className="block text-[9px] font-bold opacity-80">
+                    {GACHA_X10.toLocaleString("id-ID")} Sacret
+                  </span>
+                </button>
+              </div>
+              <button
+                onClick={() => setGachaOpen(false)}
+                className="mt-3 w-full rounded-xl border border-white/15 bg-white/[0.06] py-2 text-[11px] font-black text-zinc-300 transition active:scale-[0.98]"
+              >
+                Tutup
+              </button>
             </motion.div>
           </motion.div>
         )}

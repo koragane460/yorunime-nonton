@@ -166,6 +166,9 @@ export const state = query({
             inviteId: fromTarget._id,
             kind: fromTarget.kind as AffinityKind,
             createdAt: fromTarget.createdAt,
+            // Profil pengirim — supaya UI bisa menampilkan request dengan
+            // tampilan yang SAMA seperti pasangan yang sudah terhubung.
+            fromUser: await userBrief(ctx, fromTarget.fromId as Id<"users">),
           }
         : null,
       cooldownUntil,

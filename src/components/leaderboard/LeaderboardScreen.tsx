@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
-import { Crown, Users, Gift, MoreHorizontal, Sparkles } from "lucide-react";
+import { Crown, Users, Gift, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type View = "xp" | "give" | "clan";
@@ -32,54 +32,13 @@ function StripBack({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* Titik tiga → tiap tombol punya KOTAK SENDIRI-sendiri (tidak digabung jadi
-   satu list), muncul satu per satu (stagger). Titik tiganya sendiri juga
-   berada di dalam kotaknya sendiri. */
-function OverflowMenu({
-  onPick,
-}: {
-  onPick: (v: View) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Menu lainnya"
-        className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white/85 transition active:scale-90"
-      >
-        <MoreHorizontal className="size-5" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-11 z-30 flex w-48 flex-col gap-2">
-          <button
-            onClick={() => { onPick("give"); setOpen(false); }}
-            style={{ animationDelay: "0ms" }}
-            className="lb-menu-item flex w-full items-center gap-2.5 rounded-xl border border-white/12 bg-neutral-900/95 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
-          >
-            <Gift className="size-4 text-rose-300" /> Top Give Prem
-          </button>
-          <button
-            onClick={() => { onPick("clan"); setOpen(false); }}
-            style={{ animationDelay: "90ms" }}
-            className="lb-menu-item flex w-full items-center gap-2.5 rounded-xl border border-white/12 bg-neutral-900/95 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
-          >
-            <Users className="size-4 text-emerald-300" /> Leaderboard Clan
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+/* Menu PINDAH KE HALAMAN CATALOG (di luar layar, kayak Vote Waifu) —
+   komponen ini hanya menyediakan daftar pilihannya. */
+export const LB_MENU = [
+  { key: "give", label: "Top Give Prem", Icon: Gift, iconCls: "text-rose-300" },
+  { key: "clan", label: "Leaderboard Clan", Icon: Users, iconCls: "text-emerald-300" },
+] as const;
+export type LbMenuKey = (typeof LB_MENU)[number]["key"];
 
 /* Angka peringkat ber-OUTLINE GERAK putus-putus: 1 emas, 2 abu, 3 coklat,
    sisanya abu. */
@@ -94,7 +53,7 @@ function DashedNum({ rank }: { rank: number }) {
   return (
     <span
       className={cn(
-        "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ring-2",
+        "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ring-2",
         dashedCls(rank),
       )}
     >
@@ -119,12 +78,12 @@ function Podium({
       : rank === 2
         ? "from-zinc-200 via-zinc-300 to-zinc-500"
         : "from-amber-500 via-amber-600 to-amber-800";
-  const h = rank === 1 ? "h-24" : rank === 2 ? "h-20" : "h-16";
+  const h = rank === 1 ? "h-20" : rank === 2 ? "h-16" : "h-14";
   return (
     <div className="lb-rise flex min-w-0 flex-col items-center" style={{ animationDelay: `${rank * 70}ms` }}>
       <div className="relative">
         <span aria-hidden className={cn("absolute -inset-1 rounded-full opacity-70 blur-md bg-gradient-to-br", grad)} />
-        <Avatar src={image} seed={username} className="relative size-12 ring-2 ring-white/70" />
+        <Avatar src={image} seed={username} className="relative size-10 ring-2 ring-white/70" />
         <svg className="pointer-events-none absolute -inset-[4px] overflow-visible text-white/90" viewBox="0 0 100 100" aria-hidden>
           <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="6"
             strokeLinecap="round" pathLength={100} strokeDasharray="55 45" className="lb-dash-spin" />
@@ -133,9 +92,9 @@ function Podium({
           <Crown className="absolute -top-3.5 left-1/2 size-4 -translate-x-1/2 text-yellow-300 drop-shadow" aria-hidden />
         )}
       </div>
-      <p className="mt-1.5 w-full truncate text-center text-[11px] font-semibold leading-tight">{username ?? "user"}</p>
-      <p className="text-[10px] leading-tight text-white/70">{xp.toLocaleString("id-ID")} XP</p>
-      <div className={cn("mt-1.5 flex w-full items-start justify-center rounded-t-xl pt-1 text-lg font-black text-black bg-gradient-to-t", grad, h)}>
+      <p className="mt-1.5 w-full truncate text-center text-[10px] font-semibold leading-tight">{username ?? "user"}</p>
+      <p className="text-[9px] leading-tight text-white/70">{xp.toLocaleString("id-ID")} XP</p>
+      <div className={cn("mt-1.5 flex w-full items-start justify-center rounded-t-xl pt-1 text-base font-black text-black bg-gradient-to-t", grad, h)}>
         {rank}
       </div>
     </div>
@@ -146,21 +105,21 @@ function Row({
   rank, username, image, xp, suffix, staffRole, clanTag, clanTagIcon, clanNameColor, level, premium, seqId, givePremiumCount,
 }: any) {
   return (
-    <div className="lb-rise flex w-full items-center gap-3 rounded-xl px-2 py-1.5"
+    <div className="lb-rise flex w-full items-center gap-2 rounded-xl px-2 py-1"
       style={{ animationDelay: `${Math.min(rank, 16) * 40}ms` }}>
       <DashedNum rank={rank} />
-      <Avatar src={image} seed={username} className="size-9 shrink-0" />
+      <Avatar src={image} seed={username} className="size-8 shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-semibold">{username ?? "user"}</p>
+          <p className="truncate text-[13px] font-semibold">{username ?? "user"}</p>
           {premium && <BlueCheck className="size-3.5 shrink-0" />}
           <TitleBadge role={staffRole} compact />
           {clanTag && (
             <ClanTag icon={clanTagIcon ?? DEFAULT_CLAN_ICON} tag={clanTag} color={clanNameColor}
-              level={level} className="shrink-0 scale-[0.72] px-1 py-0 text-[9px]" />
+              level={level} className="shrink-0 scale-[0.65] px-1 py-0 text-[9px]" />
           )}
         </div>
-        <p className="text-xs text-white/60">
+        <p className="text-[11px] text-white/60">
           {suffix ? suffix : `${xp?.toLocaleString?.("id-ID") ?? xp} XP`}
           {level !== undefined && <span className="ml-1.5">Lv.{level}</span>}
           {seqId !== undefined && <span className="ml-1.5">#{seqId}</span>}
@@ -180,12 +139,12 @@ function XpView() {
   const [t1, t2, t3, ...rest] = data ?? [];
   return (
     <>
-      {/* Tab periode: kotak rounded hijau muda agak ketus. */}
-      <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-2xl bg-emerald-500/15 p-1.5 ring-1 ring-emerald-400/20">
+      {/* Tab periode: kotak rounded hijau muda agak ketus (LEBIH KECIL). */}
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl bg-emerald-500/15 p-1 ring-1 ring-emerald-400/20">
         {["harian", "mingguan", "bulanan"].map((p) => (
           <button key={p} onClick={() => setPeriod(p)}
             className={cn(
-              "rounded-xl py-2 text-xs font-black capitalize transition",
+              "rounded-xl py-1.5 text-[11px] font-black capitalize transition",
               period === p ? "bg-emerald-400 text-emerald-950 shadow" : "text-emerald-100/80 hover:text-emerald-50",
             )}>
             {p}
@@ -195,7 +154,7 @@ function XpView() {
       {!data && <p className="py-8 text-center text-sm text-white/50">Memuat…</p>}
       {data?.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada data XP periode ini</p>}
       {data && data.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-white/12 bg-white/[0.05] p-3">
+        <div className="mb-3 rounded-2xl border border-white/12 bg-white/[0.05] p-2">
           <div className="grid grid-cols-3 items-end gap-2">
             {t2 && <Podium {...t2} rank={2} />}
             {t1 && <Podium {...t1} rank={1} />}
@@ -271,9 +230,16 @@ function ClanView() {
   );
 }
 
-export function LeaderboardScreen({ onClose }: { onClose: () => void }) {
+export function LeaderboardScreen({
+  onClose,
+  initialView,
+}: {
+  onClose: () => void;
+  /** Tampilan awal — dipilih lewat titik tiga di halaman Catalog. */
+  initialView?: View;
+}) {
   useHideNavOnMount();
-  const [view, setView] = useState<View>("xp");
+  const [view, setView] = useState<View>(initialView ?? "xp");
   const title = view === "xp" ? "" : view === "give" ? "" : "";
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -281,7 +247,6 @@ export function LeaderboardScreen({ onClose }: { onClose: () => void }) {
         <div className="mb-3 mt-3 flex items-center gap-2">
           <StripBack onClose={onClose} />
           <div className="min-w-0 flex-1" />
-          <OverflowMenu onPick={setView} />
         </div>
         <div className="mb-3 flex items-center gap-2">
           {view !== "xp" && (

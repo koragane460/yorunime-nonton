@@ -16,7 +16,9 @@ import {
   Bone,
   ChevronLeft,
   Crown,
+  LogIn,
   Music,
+  Plus,
   Search,
   Shield,
   ShoppingBag,
@@ -480,6 +482,7 @@ function ClanScreen({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [top, setTop] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const clans = useQuery(api.clans.listClans, q.trim() ? { q: q.trim() } : {});
   const requestJoin = useMutation(api.clans.requestJoin);
@@ -510,69 +513,98 @@ function ClanScreen({ onBack }: { onBack: () => void }) {
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
       <div className="mx-auto w-full max-w-2xl px-4 pt-4">
         <ScreenHead title="Clan" onBack={onBack} />
-        <div className="mt-3 grid grid-cols-2 gap-2">
+
+        {/* TIGA TOMBOL — lurus ke samping, persis gaya "Buat clan / Join
+            clan" di daftar gabung clan pada Chat Bareng. */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
           <button
-            onClick={() => setTop(false)}
-            className={cn(
-              "border-b-2 pb-1.5 pt-1 text-[12px] font-black transition",
-              !top ? "border-white text-white" : "border-transparent text-zinc-400 hover:text-zinc-200",
-            )}
+            onClick={() => navigate("/clan?create=1")}
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-white/12 bg-white/[0.06] py-3 text-[13px] font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
           >
-            Semua
+            <Plus className="size-4 text-emerald-300" aria-hidden />
+            Buat clan
           </button>
           <button
-            onClick={() => setTop(true)}
+            onClick={() => setSearchOpen((v) => !v)}
             className={cn(
-              "flex items-center justify-center gap-1 border-b-2 pb-1.5 pt-1 text-[12px] font-black transition",
-              top ? "border-white text-white" : "border-transparent text-zinc-400 hover:text-zinc-200",
+              "flex items-center justify-center gap-1.5 rounded-2xl border py-3 text-[13px] font-extrabold transition active:scale-[0.98]",
+              searchOpen
+                ? "border-sky-400/50 bg-sky-500/15 text-sky-200"
+                : "border-white/12 bg-white/[0.06] text-white hover:bg-white/10",
             )}
           >
-            <Crown className="size-3.5" aria-hidden /> Top Clan
+            <LogIn className="size-4 text-sky-300" aria-hidden />
+            Join clan
           </button>
-        </div>
-        <div className="mt-2 flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2">
-          <Search className="size-4 shrink-0 text-zinc-500" aria-hidden />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Cari nama clan…"
-            className="w-full bg-transparent text-xs font-bold outline-none placeholder:text-zinc-600"
-          />
+          <button
+            onClick={() => setTop((v) => !v)}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-2xl border py-3 text-[13px] font-extrabold transition active:scale-[0.98]",
+              top
+                ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                : "border-white/12 bg-white/[0.06] text-white hover:bg-white/10",
+            )}
+          >
+            <Crown className="size-3.5 text-amber-300" aria-hidden />
+            Top Clan
+          </button>
         </div>
 
-        <div className="mt-3 space-y-2">
-          {shown.length === 0 && (
-            <p className="py-10 text-center text-xs font-bold text-zinc-500">
-              Tidak ada clan{q ? ` untuk "${q}"` : " — jadilah yang pertama!"}
-            </p>
-          )}
-          {shown.map((c, i) => (
-            <div key={c._id} className="relative">
-              {/* Nomor TOP: badge besar miring di pojok KANAN ATAS kartu
-                  (bukan chip kecil di kiri atas) — gradasi emas/perak/zinc
-                  mengikuti peringkat, #1 dapat mahkota (permintaan user). */}
-              {top && (
-                <span
-                  className={cn(
-                    "absolute right-2.5 top-2 z-10 flex h-8 min-w-8 -rotate-6 items-center justify-center gap-0.5 rounded-xl px-2 text-[13px] font-black ring-1 ring-white/40 shadow-[0_6px_16px_-6px_rgba(0,0,0,.9)]",
-                    rankChipCls(i),
-                  )}
-                  aria-label={`Peringkat ${i + 1}`}
-                >
-                  {i === 0 && <Crown className="size-3.5" aria-hidden />}
-                  {i + 1}
-                </span>
-              )}
-              <ClanRow
-                clan={c}
-                onOpen={() => navigate(`/clan?clan=${c._id}`)}
-                onJoin={() => void join(c._id)}
-                busy={busyId === c._id}
-                loggedIn={!!user}
-              />
-            </div>
-          ))}
-        </div>
+        {/* Kolom cari — MUNCUL setelah tombol Join clan dipencet
+            (sama persis dengan daftar gabung clan di Chat Bareng). */}
+        {searchOpen && !top && (
+          <div className="mt-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2">
+            <Search className="size-4 shrink-0 text-zinc-500" aria-hidden />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              autoFocus
+              placeholder="Cari clan dengan nama atau tag clan…"
+              className="w-full bg-transparent text-xs font-bold outline-none placeholder:text-zinc-600"
+            />
+          </div>
+        )}
+
+        {/* Daftar clan — SAMA seperti daftar Join clan di Chat Bareng. */}
+        {clans === undefined ? (
+          <div className="mt-4 space-y-2.5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton h-24 w-full rounded-2xl" />
+            ))}
+          </div>
+        ) : shown.length === 0 ? (
+          <p className="py-10 text-center text-xs font-bold text-zinc-500">
+            Tidak ada clan{q ? ` untuk "${q}"` : " — jadilah yang pertama!"}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2.5">
+            {shown.map((c, i) => (
+              <div key={c._id} className="relative">
+                {/* Nomor TOP: badge kecil miring di pojok kanan atas —
+                    hanya saat tab Top Clan aktif. */}
+                {top && (
+                  <span
+                    className={cn(
+                      "absolute right-2.5 top-2 z-10 flex h-7 min-w-7 -rotate-6 items-center justify-center gap-0.5 rounded-lg px-1.5 text-[12px] font-black ring-1 ring-white/40 shadow-[0_6px_16px_-6px_rgba(0,0,0,.9)]",
+                      rankChipCls(i),
+                    )}
+                    aria-label={`Peringkat ${i + 1}`}
+                  >
+                    {i === 0 && <Crown className="size-3.5" aria-hidden />}
+                    {i + 1}
+                  </span>
+                )}
+                <ClanRow
+                  clan={c}
+                  onOpen={() => navigate(`/clan?clan=${c._id}`)}
+                  onJoin={() => void join(c._id)}
+                  busy={busyId === c._id}
+                  loggedIn={!!user}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

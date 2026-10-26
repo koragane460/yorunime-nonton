@@ -45,14 +45,15 @@ export function shrinkImageFile(
   });
 }
 
-/** Avatar akun: 256px sudah lebih dari cukup untuk tampil di daftar. */
+/** Avatar akun — HD (512px) supaya foto tidak pecah saat diperbesar di
+ *  profil / story / layar penuh, tetap jauh di bawah batas 1 MiB Convex. */
 export function shrinkAvatar(file: File): Promise<string> {
-  return shrinkImageFile(file, 256, 0.82);
+  return shrinkImageFile(file, 512, 0.86);
 }
 
-/** Banner akun: 1200px, tetap ringan tapi tidak pecah di layar lebar. */
+/** Banner akun: 1600px, tetap ringan tapi tidak pecah di layar lebar. */
 export function shrinkBanner(file: File): Promise<string> {
-  return shrinkImageFile(file, 1200, 0.78);
+  return shrinkImageFile(file, 1600, 0.82);
 }
 
 /**

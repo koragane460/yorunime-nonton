@@ -13,7 +13,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LeaderboardScreen } from "@/components/leaderboard/LeaderboardScreen";
+import {
+  LeaderboardScreen,
+  LB_MENU,
+  type LbMenuKey,
+} from "@/components/leaderboard/LeaderboardScreen";
 import { InfoContent } from "@/pages/Info";
 import { VoteCatalogScreen } from "@/components/VoteCatalogScreen";
 import { FriendsCatalogScreen } from "@/components/FriendsCatalogScreen";
@@ -61,6 +65,10 @@ const BOXES: Box[] = [
   { key: "adofima", label: "Adofima-nga", Icon: LayoutGrid, from: "from-lime-300", to: "to-green-400", ring: "ring-lime-400/30", icon: "text-lime-400" },
 ];
 
+/** Latar kotak: dasar gelap + WASH gradasi warna (dari/to di tiap kotak)
+ *  supaya tiap kotak terlihat berwarna & cool, bukan abu-abu polos. */
+const BOX_BG = "bg-gradient-to-b from-zinc-900 via-zinc-950 to-black";
+
 export default function Catalog() {
   return (
     <AppLayout>
@@ -75,6 +83,11 @@ function CatalogContent() {
   const [voteKind, setVoteKind] = useState<"waifu" | "husbu">("waifu");
   const [voteMenu, setVoteMenu] = useState(false);
   const voteRef = useRef<HTMLDivElement>(null);
+  // Titik tiga LEADERBOARD — berada DI LUAR layar (di kotaknya, sama
+  // persis seperti kotak Vote Waifu), bukan di dalam layar leaderboard.
+  const [lbMenu, setLbMenu] = useState(false);
+  const [lbView, setLbView] = useState<LbMenuKey | null>(null);
+  const lbRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!voteMenu) return;
@@ -84,6 +97,15 @@ function CatalogContent() {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [voteMenu]);
+
+  useEffect(() => {
+    if (!lbMenu) return;
+    const onDoc = (e: MouseEvent) => {
+      if (lbRef.current && !lbRef.current.contains(e.target as Node)) setLbMenu(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [lbMenu]);
 
   return (
     <div className="pb-6 pt-2">
@@ -97,15 +119,20 @@ function CatalogContent() {
               <button
                 onClick={() => setScreen("voteWaifu")}
                 className={cn(
-                  "group relative flex h-44 w-full flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border bg-gradient-to-b from-zinc-800 to-zinc-950 shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
+                  "group relative flex h-56 w-full flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
+                  BOX_BG,
                   voteKind === "husbu" ? "border-rose-400/40" : b.ring,
                 )}
               >
+                <span
+                  aria-hidden
+                  className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-30", b.from, b.to)}
+                />
                 <b.Icon
-                  className={cn("size-9 drop-shadow", voteKind === "husbu" ? "text-rose-400" : b.icon)}
+                  className={cn("relative size-9 drop-shadow", voteKind === "husbu" ? "text-rose-400" : b.icon)}
                   strokeWidth={2}
                 />
-                <span className="text-sm font-extrabold text-white">
+                <span className="relative text-sm font-extrabold text-white">
                   {voteKind === "husbu" ? "Vote Husbu" : "Vote Waifu"}
                 </span>
               </button>
@@ -134,6 +161,55 @@ function CatalogContent() {
                 </div>
               )}
             </div>
+          ) : b.key === "leaderboard" ? (
+            /* Kotak Leaderboard punya TITIK TIGA di LUAR kotaknya — sama
+               seperti Vote Waifu — buat pilih Top Give Prem / Clan. */
+            <div key={b.key} ref={lbRef} className="relative">
+              <button
+                onClick={() => setScreen("leaderboard")}
+                className={cn(
+                  "group relative flex h-56 w-full flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
+                  BOX_BG,
+                  b.ring,
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-30", b.from, b.to)}
+                />
+                <b.Icon className={cn("relative size-9 drop-shadow", b.icon)} strokeWidth={2} />
+                <span className="relative text-sm font-extrabold text-white">{b.label}</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLbMenu((v) => !v);
+                }}
+                aria-label="Menu leaderboard"
+                className="absolute right-2 top-2 z-20 flex size-8 items-center justify-center rounded-lg border border-white/15 bg-black/60 text-white/85 transition active:scale-90"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+              {lbMenu && (
+                <div className="absolute right-2 top-11 z-30 flex w-40 flex-col gap-2">
+                  {LB_MENU.map((m, mi) => (
+                    <button
+                      key={m.key}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLbView(m.key);
+                        setScreen("leaderboard");
+                        setLbMenu(false);
+                      }}
+                      style={{ animationDelay: `${mi * 90}ms` }}
+                      className="lb-menu-item flex w-full items-center gap-2 rounded-xl border border-white/12 bg-neutral-900/95 px-3 py-2.5 text-left text-xs font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
+                    >
+                      <m.Icon className={cn("size-3.5", m.iconCls)} /> {m.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <button
               key={b.key}
@@ -141,19 +217,29 @@ function CatalogContent() {
                 setScreen(b.key);
               }}
               className={cn(
-                "group relative flex h-44 flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-zinc-800 to-zinc-950 text-white shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
+                "group relative flex h-56 flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
+                BOX_BG,
                 b.ring,
               )}
             >
-              <b.Icon className={cn("size-9 drop-shadow", b.icon)} strokeWidth={2} />
-              <span className="text-sm font-extrabold text-white">{b.label}</span>
+              <span
+                aria-hidden
+                className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-30", b.from, b.to)}
+              />
+              <b.Icon className={cn("relative size-9 drop-shadow", b.icon)} strokeWidth={2} />
+              <span className="relative text-sm font-extrabold text-white">{b.label}</span>
             </button>
           ),
         )}
       </div>
       )}
 
-      {screen === "leaderboard" && <LeaderboardScreen onClose={() => setScreen(null)} />}
+      {screen === "leaderboard" && (
+        <LeaderboardScreen
+          onClose={() => setScreen(null)}
+          initialView={lbView ?? undefined}
+        />
+      )}
       {screen === "history" && (
         <FullScreen title="History" onClose={() => setScreen(null)}>
           <InfoContent />

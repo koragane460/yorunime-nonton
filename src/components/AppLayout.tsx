@@ -194,9 +194,13 @@ export function AppLayout({
           )}
         </div>
       </div>
-      <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
+      {/* CATALOG = layar fullscreen: navbar bawah & footer TIDAK tampil
+          sama sekali selama di halaman ini (permintaan user). */}
+      {!overlayOpen && location.pathname !== "/catalog" && (
+        <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
+      )}
       <TopPanelHost topPanel={topPanel} onClose={closeTopPanel} onOpen={openTopPanel} />
-      <AppFooter />
+      {!overlayOpen && location.pathname !== "/catalog" && <AppFooter />}
       <MusicMiniBar />
       <MiniPlayerHost />
 
@@ -256,13 +260,13 @@ function AccountPanel({
     <div className="pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-3xl border border-white/15 bg-background/45 shadow-[0_0_28px_-6px] shadow-primary/25 backdrop-blur-xl">
       {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
           Keduanya di luar area teks supaya tidak saling nimpa. */}
-      <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1.5">
+      <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-2">
         <button
           aria-label="Pengaturan"
           onClick={() => goto("/akun?tab=settings")}
-          className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
+          className="flex size-11 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
         >
-          <Settings className="size-4" strokeWidth={1.7} />
+          <Settings className="size-5" strokeWidth={1.7} />
         </button>
         <NotifButton />
       </div>
@@ -343,21 +347,21 @@ function AccountPanel({
           tombol YoruVerse dibatasi ruangnya sendiri tanpa menimpa baris
           mana pun (permintaan user). */}
       <div className="relative flex items-center justify-between gap-2 px-3 pb-3.5 pt-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[11px]">
-          <span className="flex items-center gap-1 font-semibold text-sky-300">
-            <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 text-sm">
+          <span className="flex items-center gap-1.5 font-bold text-sky-300">
+            <GemIcon className="size-5" /> {diamonds.toLocaleString("id-ID")} Sacret
           </span>
           {premium && (
-            <span className="flex items-center gap-1 font-semibold text-gold">
-              <CrownIcon className="size-3.5" /> {premiumDays} hari
+            <span className="flex items-center gap-1.5 font-bold text-gold">
+              <CrownIcon className="size-5" /> {premiumDays} hari
             </span>
           )}
         </div>
         <button
           onClick={onOpenYoruVerse}
-          className="flex shrink-0 items-center gap-1 rounded-full border border-amber-300/60 bg-yellow-900/35 px-3 py-1 text-[10px] font-black tracking-wide text-amber-300 backdrop-blur-sm transition hover:bg-yellow-800/50 active:scale-95"
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-yellow-900/60 px-4 py-1.5 text-xs font-black tracking-wide text-amber-300 backdrop-blur-sm transition hover:bg-yellow-800/70 active:scale-95"
         >
-          <GemIcon className="size-3" aria-hidden />
+          <GemIcon className="size-4" aria-hidden />
           YoruVerse
         </button>
       </div>

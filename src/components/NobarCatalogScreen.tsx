@@ -39,8 +39,10 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
     try {
       await join({ roomId: found._id });
       toast.success(`Masuk room "${found.name}"`);
+      // WAJIB bawa ?room=<id> — tanpa ini halaman nonton tidak pernah
+      // tahu sedang masuk room dan macet di layar "Memuat…".
       onClose();
-      navigate("/nonton");
+      navigate(`/nonton?room=${found._id}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal join");
     } finally {
@@ -48,46 +50,50 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const onJoined = () => {
+  /** Semua jalur masuk room berakhir di sini — selalu membawa ?room=<id>. */
+  const onJoined = (roomId?: string) => {
     setListOpen(false);
     setCreating(false);
     onClose();
-    navigate("/nonton");
+    navigate(roomId ? `/nonton?room=${roomId}` : "/nonton");
   };
 
   return (
     <div className="space-y-4">
-      {/* ---------------- HERO ---------------- */}
-      <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-gradient-to-b from-zinc-900 to-black px-4 py-8 text-center shadow-lg shadow-black/40">
-        <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.07]">
-          <Users className="size-8 text-rose-300" aria-hidden />
-        </span>
-        <p className="mt-3 text-3xl font-black leading-none text-white">Nobar</p>
-        <p className="mt-2 text-xs text-zinc-400">
-          nonton bareng temenmu agar makin asik
-        </p>
-      </div>
+      {/* ------- SATU KOTAK: judul Nobar + Buat/Join digabung ---------- */}
+      <div className="overflow-hidden rounded-3xl border border-indigo-400/25 bg-gradient-to-b from-indigo-950/90 via-slate-900 to-zinc-950 shadow-[0_16px_40px_-18px_rgba(99,102,241,0.75)]">
+        {/* Hero — ikon teman + judul, MENYATU dengan kotak aksi di bawah. */}
+        <div className="flex flex-col items-center border-b border-white/10 bg-gradient-to-b from-indigo-500/15 to-transparent px-4 py-6 text-center">
+          <span className="flex size-14 items-center justify-center rounded-2xl border border-indigo-300/30 bg-indigo-500/20 shadow-[0_0_22px_-6px_rgba(129,140,248,0.8)]">
+            <Users className="size-7 text-indigo-200" aria-hidden />
+          </span>
+          <p className="mt-2.5 text-2xl font-black leading-none text-white">Nobar</p>
+          <p className="mt-1.5 text-xs text-indigo-200/70">
+            nonton bareng temenmu agar makin asik
+          </p>
+        </div>
 
-      {/* ------- DUA KOTAK BERDAMPINGAN (dipotong di tengah) ------- */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05]">
-        <button
-          onClick={() => setCreating(true)}
-          className="flex flex-col items-center gap-2 border-r border-white/10 py-6 transition hover:bg-white/10 active:scale-[0.98]"
-        >
-          <span className="flex size-11 items-center justify-center rounded-xl border border-white/15 bg-black/40">
-            <Video className="size-5 text-sky-300" aria-hidden />
-          </span>
-          <span className="text-sm font-extrabold text-white">Buat Room</span>
-        </button>
-        <button
-          onClick={() => setJoinOpen((v) => !v)}
-          className="flex flex-col items-center gap-2 py-6 transition hover:bg-white/10 active:scale-[0.98]"
-        >
-          <span className="flex size-11 items-center justify-center rounded-xl border border-white/15 bg-black/40">
-            <LogIn className="size-5 text-emerald-300" aria-hidden />
-          </span>
-          <span className="text-sm font-extrabold text-white">Join Room</span>
-        </button>
+        {/* Dua tombol aksi — SEBARIS di kotak yang sama (tidak dipisah). */}
+        <div className="grid grid-cols-2">
+          <button
+            onClick={() => setCreating(true)}
+            className="flex flex-col items-center gap-2 border-r border-white/10 py-5 transition hover:bg-white/10 active:scale-[0.98]"
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl border border-sky-300/25 bg-sky-500/15">
+              <Video className="size-5 text-sky-300" aria-hidden />
+            </span>
+            <span className="text-sm font-extrabold text-white">Buat Room</span>
+          </button>
+          <button
+            onClick={() => setJoinOpen((v) => !v)}
+            className="flex flex-col items-center gap-2 py-5 transition hover:bg-white/10 active:scale-[0.98]"
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-500/15">
+              <LogIn className="size-5 text-emerald-300" aria-hidden />
+            </span>
+            <span className="text-sm font-extrabold text-white">Join Room</span>
+          </button>
+        </div>
       </div>
 
       {/* ------- PANEL JOIN — muncul DI BAWAH kotak ------- */}
@@ -181,7 +187,7 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
     try {
       await join({ roomId });
       toast.success("Masuk room");
-      onJoined();
+      onJoined(roomId);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal join");
     } finally {

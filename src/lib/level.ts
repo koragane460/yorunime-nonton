@@ -5,7 +5,8 @@ const TIERS = [
   { min: 100, max: 499, per: 45000, badge: "Diamond" },
   { min: 500, max: 1000, per: 70000, badge: "Emerald" },
   { min: 1001, max: 4999, per: 120000, badge: "Master" },
-  { min: 5000, max: 10000, per: 165000, badge: "Grandmaster" },
+  { min: 5000, max: 12999, per: 165000, badge: "Grandmaster" },
+  { min: 13000, max: 999999999, per: 220000, badge: "Central" },
 ];
 
 export function tierForLevel(level: number) {

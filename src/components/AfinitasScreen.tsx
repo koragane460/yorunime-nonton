@@ -21,10 +21,10 @@ import {
   Handshake,
   Heart,
   HeartHandshake,
-  Plus,
   Search,
   Send,
   Trophy,
+  X,
 } from "lucide-react";
 
 type Kind = "pasangan" | "saudara" | "sahabat" | "terpercaya";
@@ -167,6 +167,9 @@ export function AfinitasScreen({
   } | null>(null);
   /** Undangan masuk dari target — pop-up Terima/Tolak. */
   const [invHandled, setInvHandled] = useState(false);
+  /** Pop-up request bisa dibuka lagi lewat buletan slot (mis. setelah
+      ditutup) — jadi buletan pasangan = pintu ke daftar request. */
+  const [invOpen, setInvOpen] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const circles = (st?.circles ?? {
@@ -356,7 +359,9 @@ export function AfinitasScreen({
 
           {/* --------------------- PANGGUNG ----------------------------- */}
           <div className="relative mx-auto mt-1 h-[470px] w-full max-w-md px-2">
-            {/* Garis penghubung tengah → tiap slot */}
+            {/* Garis penghubung ICON jenis → tiap slot (SOLID, bukan
+                putus-putus — permintaan user). Titik awalnya emblem ikon,
+                bukan foto profile. */}
             <svg
               className="absolute inset-0 h-full w-full"
               viewBox="0 0 100 100"
@@ -366,16 +371,16 @@ export function AfinitasScreen({
               {ALL_KINDS.flatMap((kind) =>
                 SLOT_POS[kind].map((p, i) => {
                   const filled = i < (circles[kind]?.length ?? 0);
+                  const from = EMBLEM_POS[kind];
                   return (
                     <line
                       key={`${kind}-${i}`}
-                      x1={CENTER.x}
-                      y1={CENTER.y}
+                      x1={from.x}
+                      y1={from.y}
                       x2={p.x}
                       y2={p.y}
                       stroke="#ffffff"
                       strokeWidth={filled ? 1.6 : 1.2}
-                      strokeDasharray={filled ? undefined : "4 5"}
                       vectorEffect="non-scaling-stroke"
                       opacity={filled ? 0.9 : 0.45}
                     />
@@ -403,22 +408,13 @@ export function AfinitasScreen({
               );
             })}
 
-            {/* Foto target + tombol "+" di atasnya */}
+            {/* Foto target + nama (TANPA bulatan "+" — dihapus sesuai
+                permintaan user; ajakan lewat slot kosong di sekitarnya). */}
             <div
               className="absolute -translate-x-1/2 -translate-y-1/2"
               style={{ left: `${CENTER.x}%`, top: `${CENTER.y}%` }}
             >
               <div className="flex flex-col items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setPickKind("pasangan");
-                    setKindSheet(true);
-                  }}
-                  aria-label="Ajak relasi"
-                  className="flex size-8 items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur-sm transition active:scale-90"
-                >
-                  <Plus className="size-4" />
-                </button>
                 <div className="relative">
                   <span className="absolute -inset-1 rounded-full bg-gradient-to-br from-pink-400/40 to-blue-400/40 blur-md" />
                   <Avatar
@@ -433,22 +429,36 @@ export function AfinitasScreen({
               </div>
             </div>
 
-            {/* Slot lingkaran */}
+            {/* Slot lingkaran — slot yang punya REQUEST dari target
+                (mis. diajak jadi pasangan) tampil PERSIS seperti pasangan
+                yang sudah terhubung: avatar + ring berwarna + nama. */}
             {ALL_KINDS.flatMap((kind) => {
               const meta = KIND_META[kind];
               return SLOT_POS[kind].map((p, i) => {
                 const member = circles[kind]?.[i];
+                // Request masuk dari target untuk jenis ini (slot masih kosong).
+                const pending =
+                  !member && inv && !invHandled && inv.kind === kind
+                    ? ((inv as unknown as {
+                        fromUser?: { username: string; image?: string };
+                      }).fromUser ?? null)
+                    : null;
                 return (
                   <button
                     key={`${kind}-${i}`}
                     aria-label={
                       member
                         ? `Bond ${member.username}`
-                        : `Slot kosong — ajak ${meta.label}`
+                        : pending
+                          ? `Request ${meta.label} dari ${pending.username}`
+                          : `Slot kosong — ajak ${meta.label}`
                     }
                     onClick={() => {
                       if (member) setBondRow({ kind, member });
-                      else {
+                      else if (pending) {
+                        // Buka pop-up request (Terima / Tolak).
+                        setInvOpen(true);
+                      } else {
                         setPickKind(kind);
                         setKindSheet(true);
                       }
@@ -460,29 +470,48 @@ export function AfinitasScreen({
                       <span
                         className="rounded-full p-[2px]"
                         style={{
-                          boxShadow: `0 0 12px -3px ${meta.ring}`,
-                          border: `2px solid ${meta.ring}`,
+                          boxShadow: `0 0 14px -3px ${meta.ring}`,
+                          border: `2.5px solid ${meta.ring}`,
                         }}
                       >
                         <Avatar
                           src={member.image}
                           seed={member.username}
-                          className="size-10 rounded-full"
+                          className="size-14 rounded-full"
+                        />
+                      </span>
+                    ) : pending ? (
+                      /* Request — tampilan SAMA dengan pasangan aktif. */
+                      <span
+                        className="rounded-full p-[2px]"
+                        style={{
+                          boxShadow: `0 0 14px -3px ${meta.ring}`,
+                          border: `2.5px solid ${meta.ring}`,
+                        }}
+                      >
+                        <Avatar
+                          src={pending.image}
+                          seed={pending.username}
+                          className="size-14 rounded-full"
                         />
                       </span>
                     ) : (
                       <span
                         className={cn(
-                          "flex size-10 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.04]",
+                          "flex size-14 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.04]",
                           meta.cls,
                           "opacity-70",
                         )}
                       >
-                        <meta.Icon className="size-4" />
+                        <meta.Icon className="size-5" />
                       </span>
                     )}
-                    <span className="max-w-[64px] truncate text-[8.5px] font-bold text-zinc-300">
-                      {member ? member.username : meta.label}
+                    <span className="max-w-[76px] truncate text-[9px] font-bold text-zinc-300">
+                      {member
+                        ? member.username
+                        : pending
+                          ? pending.username
+                          : meta.label}
                     </span>
                   </button>
                 );
@@ -552,15 +581,23 @@ export function AfinitasScreen({
         </div>
       )}
 
-      {/* =============== POP-UP UNDANGAN MASUK (dari target) ============== */}
-      {inv && !invHandled && (
+      {/* =============== POP-UP REQUEST / UNDANGAN MASUK (dari target) === */}
+      {inv && !invHandled && invOpen && (
         <div className="fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-5">
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="w-full max-w-xs rounded-3xl border border-white/15 bg-[#10131a] p-4 text-center"
+            className="relative w-full max-w-xs rounded-3xl border border-white/15 bg-[#10131a] p-4 text-center"
           >
+            {/* Tutup — pop-up bisa dibuka lagi lewat buletan slot. */}
+            <button
+              onClick={() => setInvOpen(false)}
+              aria-label="Tutup"
+              className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-zinc-300 transition active:scale-90"
+            >
+              <X className="size-4" />
+            </button>
             <Avatar
               src={target?.image}
               seed={targetName}

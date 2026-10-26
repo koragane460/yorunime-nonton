@@ -36,6 +36,7 @@ import {
 import { xpForLevel } from "@/lib/level";
 import { shrinkAvatar, shrinkBanner, shrinkHomeBg } from "@/lib/image";
 import { FramedAvatar } from "@/components/FramedAvatar";
+import { AfinitasScreen } from "@/components/AfinitasScreen";
 import { BORDERS } from "@/lib/borders";
 import {
   StoryAddButton,
@@ -94,6 +95,7 @@ export default function Akun() {
 
 function AkunContent() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   // Layar Akun kini HANYA tombol Pengaturan. Banner, profil, title, story,
   // statistik, dan tab history/komen/favorite dihapus permanen.
@@ -103,6 +105,18 @@ function AkunContent() {
   const [csOpen, setCsOpen] = useState(false);
   // Detail akun (layar penuh) — dibuka dengan menekan header profil di atas.
   const [detailOpen, setDetailOpen] = useState(false);
+  // ?user=<id> — buka profil orang lain dari luar (mis. notifikasi).
+  // ?afinitas=1 — langsung buka layar AFINITAS orang itu (notifikasi
+  // undangan/hasil afinitas harus mengarah ke sini, bukan cuma ke profil).
+  const viewUserId = params.get("user") as Id<"users"> | null;
+  const openAffinity = params.get("afinitas") === "1" && !!viewUserId;
+  const clearDeepLink = () => {
+    const next = new URLSearchParams(params);
+    next.delete("user");
+    next.delete("afinitas");
+    const qs = next.toString();
+    navigate(`/akun${qs ? `?${qs}` : ""}`, { replace: true });
+  };
 
   if (!user) return null;
   return (
@@ -143,11 +157,21 @@ function AkunContent() {
       )}
       {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
       {/* DETAIL AKUN — dibuka dari header profil di atas. */}
-      {detailOpen && (
+      {detailOpen && !viewUserId && (
         <ProfileSheet
           userId={user._id}
           onClose={() => setDetailOpen(false)}
         />
+      )}
+
+      {/* Deep link: profil orang lain (dipakai notifikasi & daftar teman). */}
+      {viewUserId && !openAffinity && (
+        <ProfileSheet userId={viewUserId} onClose={clearDeepLink} />
+      )}
+
+      {/* Deep link: LANGSUNG ke layar Afinitas orang itu. */}
+      {viewUserId && openAffinity && (
+        <AfinitasScreen targetUserId={viewUserId} onClose={clearDeepLink} />
       )}
     </div>
   );

@@ -13,13 +13,35 @@ const COLORS = [
 
 const BORDERS = [
   { key: "none", label: "Tanpa" },
-  { key: "gold", label: "Gold", ring: "ring-2 ring-amber-400" },
-  { key: "neon", label: "Neon", ring: "ring-2 ring-cyan-400" },
-  { key: "rose", label: "Rose", ring: "ring-2 ring-rose-400" },
-  { key: "galaxy", label: "Galaxy", ring: "ring-2 ring-violet-500" },
+  { key: "gold", label: "Gold" },
+  { key: "neon", label: "Neon" },
+  { key: "rose", label: "Rose" },
+  { key: "galaxy", label: "Galaxy" },
 ];
 
-/** Preview bubble — berubah mengikuti warna / background / frame yang dipilih. */
+/**
+ * FRAME bubble — BUKAN sekadar outline tipis. Tiap frame punya:
+ * border luar tebal + GLOW + border DALAM (rangkap dua), jadi kelihatan
+ * seperti bingkai sungguhan, bukan garis pinggir doang.
+ */
+const FRAME_CLS: Record<string, string> = {
+  none: "border border-black/10",
+  gold:
+    "border-2 border-amber-300 shadow-[0_0_0_2px_rgba(252,211,77,0.32),0_0_18px_-2px_rgba(251,191,36,0.85)] before:border before:border-amber-100/50",
+  neon:
+    "border-2 border-cyan-300 shadow-[0_0_0_2px_rgba(34,211,238,0.30),0_0_20px_-2px_rgba(34,211,238,0.85)] before:border before:border-cyan-100/50",
+  rose:
+    "border-2 border-rose-400 shadow-[0_0_0_2px_rgba(251,113,133,0.30),0_0_20px_-2px_rgba(244,63,94,0.8)] before:border before:border-rose-100/45",
+  galaxy:
+    "border-2 border-violet-400 shadow-[0_0_0_2px_rgba(167,139,250,0.32),0_0_22px_-2px_rgba(139,92,246,0.9)] before:border before:border-fuchsia-100/45",
+};
+
+/** Lapisan dalam rangkap-dua (dipasang lewat pseudo-element). */
+const FRAME_INNER =
+  "before:pointer-events-none before:absolute before:inset-[3px] before:rounded-[0.85rem]";
+
+/** Preview bubble — ukurannya PERSIS seperti pesan di Chat Bareng:
+ *  kolom w-3/4, bubble `rounded-md px-3 py-2`, header username + isi + jam. */
 function BubblePreview({
   color,
   bg,
@@ -29,18 +51,20 @@ function BubblePreview({
   bg?: string;
   border: string;
 }) {
-  const borderCls = BORDERS.find((b) => b.key === border)?.ring ?? "";
+  const frame = FRAME_CLS[border] ?? FRAME_CLS.none;
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
       <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">
         Preview
       </p>
+      {/* Pesan SENDIRI — sama seperti bubble di Chat Bareng. */}
       <div className="flex items-end gap-2">
-        <div className="max-w-[75%]">
+        <div className="w-3/4">
           <div
             className={cn(
-              "relative overflow-hidden rounded-2xl px-3.5 py-2.5 text-sm font-medium text-white shadow-lg",
-              borderCls,
+              "relative flex w-full flex-col overflow-hidden rounded-md px-3 py-2 text-sm text-white shadow-lg",
+              frame,
+              border !== "none" && FRAME_INNER,
             )}
             style={{
               backgroundColor: bg ? undefined : color,
@@ -49,15 +73,23 @@ function BubblePreview({
               backgroundPosition: "center",
             }}
           >
-            <span className="relative z-10">Hai! Pesan bubble kamu ✨</span>
+            <span className="flex w-fit items-center gap-1.5 text-xs font-semibold text-emerald-300">
+              kamu
+            </span>
+            <span className="mt-0.5 break-words">Hai! Pesan bubble kamu ✨</span>
+            <span className="mt-1.5 self-end text-[10px] text-white/45">
+              12:34
+            </span>
           </div>
-          <p className="mt-1 text-[10px] text-white/40">kamu</p>
         </div>
       </div>
+      {/* Pesan balasan teman — ukuran kotak sama. */}
       <div className="mt-3 flex justify-end">
-        <div className="max-w-[75%]">
-          <div className="rounded-2xl bg-white/10 px-3.5 py-2.5 text-sm text-white/80">
-            Balasan teman
+        <div className="w-3/4">
+          <div className="flex w-full flex-col rounded-md bg-white/10 px-3 py-2 text-sm text-white/80">
+            <span className="text-xs font-semibold text-sky-300">teman</span>
+            <span className="mt-0.5">Balasan teman</span>
+            <span className="mt-1.5 self-end text-[10px] text-white/40">12:35</span>
           </div>
         </div>
       </div>
@@ -71,7 +103,7 @@ export function BubbleChatScreen() {
   const isPremium = (user?.premiumUntil ?? 0) > Date.now();
 
   const [color, setColor] = useState<string>(user?.bubbleColor ?? "#3b82f6");
-  const [bg, setBg] = useState<string | undefined>(user?.bubbleBg);
+  const [bg, setBg] = useState<string | undefined>(user?.bubbleBg || undefined);
   const [border, setBorder] = useState<string>(user?.bubbleBorder ?? "none");
   const [busy, setBusy] = useState(false);
 
@@ -108,7 +140,10 @@ export function BubbleChatScreen() {
     try {
       await saveBubble({
         bubbleColor: color,
-        bubbleBg: bg,
+        // Background DIKIRIM '' saat kosong supaya benar-benar terhapus dari
+        // server (kalau dikirim undefined, mutation melewatkannya dan background
+        // lama tetap tersimpan — inilah yang bikin "Simpan" terasa tidak jalan).
+        bubbleBg: bg ?? "",
         bubbleBorder: border,
       });
       toast.success("Bubble chat tersimpan ✓");
@@ -182,7 +217,20 @@ export function BubbleChatScreen() {
               )}
             >
               {b.key !== "none" && (
-                <span className={cn("mr-1.5 inline-block size-2.5 rounded-full", b.ring)} />
+                <span
+                  className="mr-1.5 inline-block size-2.5 rounded-full ring-2"
+                  style={{
+                    boxShadow: `0 0 8px currentColor`,
+                    backgroundImage:
+                      b.key === "gold"
+                        ? "linear-gradient(135deg,#fde68a,#f59e0b)"
+                        : b.key === "neon"
+                          ? "linear-gradient(135deg,#a5f3fc,#06b6d4)"
+                          : b.key === "rose"
+                            ? "linear-gradient(135deg,#fda4af,#f43f5e)"
+                            : "linear-gradient(135deg,#c4b5fd,#7c3aed)",
+                  }}
+                />
               )}
               {b.label}
               {border === b.key && <Check className="ml-1.5 inline size-3" />}

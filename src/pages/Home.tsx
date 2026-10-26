@@ -211,25 +211,25 @@ function HeroSlides({
               aria-label={`Detail ${a.title}`}
               className="absolute inset-0"
             />
-            {/* Angka peringkat di KIRI ATAS (angka saja, putih) dan jumlah
-                views di KANAN ATAS — keduanya lebih besar. */}
+            {/* Angka peringkat di KIRI ATAS — TANPA background, font tebel
+                (permintaan user); jumlah views di KANAN ATAS. */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onTop();
               }}
-              className="absolute left-2 top-2 z-10 inline-flex shrink-0 items-center rounded-lg bg-black/70 px-2.5 py-1 text-base font-black leading-none text-white backdrop-blur-sm transition active:scale-95"
+              className="absolute left-2 top-2 z-10 inline-flex shrink-0 items-center text-xl font-black leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,.85)] transition active:scale-95"
             >
               {i + 1}
             </button>
-            <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
+            <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
               <Eye className="size-4 text-white/90" aria-hidden />
               {formatViews(viewCountFor(String(a.id)))}
             </span>
-            {/* Kotak hitam MENYATU ke banner: lebih tinggi, judul di tengah,
-                sudut bawah ikut terpotong rounded-nya banner (gak keliatan). */}
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 rounded-t-2xl bg-black/80 px-3 py-3.5 backdrop-blur-[2px]">
-              <p className="min-w-0 flex-1 truncate text-center text-base font-bold text-white">
+            {/* Kotak hitam MENYATU ke banner: TANPA rounded, background 40%,
+                judul di tengah dengan font tebal. */}
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/40 px-3 py-3.5 backdrop-blur-[2px]">
+              <p className="min-w-0 flex-1 truncate text-center text-base font-black text-white">
                 {a.title}
               </p>
             </div>
@@ -380,11 +380,17 @@ function ComicHomeRow({
                     {c.latestChapter}
                   </span>
                 )}
-                {/* Title ONGOING — flush ke sudut kiri-atas kartu (menyatu,
-                    rounded hanya pojok kanan-bawah), biru muda. */}
-                {variant === "manga" && c.ongoing && (
-                  <span className="absolute left-0 top-0 rounded-none rounded-br-lg bg-sky-300 px-1.5 py-0.5 text-[9px] font-black uppercase text-black">
-                    Ongoing
+                {/* Title ONGOING/TAMAT — flush ke sudut kiri-atas kartu
+                    (menyatu, rounded hanya pojok kanan-bawah), background
+                    biru SAMPAI dengan chip StatusChip di manhwa/manhwa. */}
+                {variant === "manga" && (
+                  <span
+                    className={cn(
+                      "absolute left-0 top-0 rounded-none rounded-br-lg px-1.5 py-0.5 text-[9px] font-black uppercase text-black",
+                      c.ongoing ? "bg-sky-300" : "bg-sky-400",
+                    )}
+                  >
+                    {c.ongoing ? "Ongoing" : "Tamat"}
                   </span>
                 )}
               </div>
@@ -421,7 +427,8 @@ function FilmPosterRow({
   title: string;
   items: FilmCardT[];
   loading: boolean;
-  onMore: () => void;
+  /** Opsional — "Lihat selengkap" (menu film) sudah dihapus dari Home. */
+  onMore?: () => void;
   onPick: (id: string, kind: "movie" | "tv") => void;
   /** true = tanpa judul baris (baris dikumpulkan jadi SATU kategori Film). */
   hideHeader?: boolean;
@@ -447,12 +454,14 @@ function FilmPosterRow({
             <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
             {title}
           </h2>
-          <button
-            onClick={onMore}
-            className="shrink-0 text-xs font-semibold text-primary"
-          >
-            Lihat selengkap ›
-          </button>
+          {onMore && (
+            <button
+              onClick={onMore}
+              className="shrink-0 text-xs font-semibold text-primary"
+            >
+              Lihat selengkap ›
+            </button>
+          )}
         </div>
       )}
       <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
@@ -595,7 +604,6 @@ function FilmHomeSection() {
 
   const openFilm = (id: string, kind: "movie" | "tv") =>
     navigate(`/film?film=${encodeURIComponent(id)}&t=${kind}`);
-  const more = () => navigate("/film");
 
   if (!loading && movies.length === 0 && series.length === 0 && genreItems.length === 0) {
     return null;
@@ -608,15 +616,13 @@ function FilmHomeSection() {
           <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
           Film &amp; Series
         </h2>
-        <button onClick={more} className="text-xs font-semibold text-primary">
-          Lihat selengkap ›
-        </button>
+        {/* Tombol "Lihat selengkap" (menu film) DIHAPUS — film kini cukup
+            dijangkau lewat Pencarian di Home (permintaan user). */}
       </div>
       <FilmPosterRow
         title="Film Populer"
         items={movies}
         loading={loading}
-        onMore={more}
         onPick={openFilm}
         hideHeader
       />
@@ -624,7 +630,6 @@ function FilmHomeSection() {
         title="Series Populer"
         items={series}
         loading={loading}
-        onMore={more}
         onPick={openFilm}
         hideHeader
       />
@@ -632,7 +637,6 @@ function FilmHomeSection() {
         title={genreName ? `Film ${genreName}` : "Film Pilihan"}
         items={genreItems}
         loading={loading}
-        onMore={more}
         onPick={openFilm}
         hideHeader
       />
@@ -1064,23 +1068,18 @@ function HomeContent() {
         </div>
       )}
       {/* 1) YORUNIME PREMIUM — kotak ABU-ABU: ikon mahkota (kuning lembut)
-          dalam kotak rounded, tulisan "Beli Premium Ada Di Sini" dalam kotak
-          rounded berlatar biru, dan baris bawah "Mulai dari Rp7.000". */}
+          dalam kotak rounded + tulisan "Beli Premium Ada Di Sini" dalam
+          kotak biru agak rounded. Tanpa ikon panah & tanpa "Mulai dari
+          Rp7.000" (permintaan user). */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full flex-col gap-2.5 rounded-2xl border border-white/10 bg-zinc-500/25 px-3.5 py-4 text-left transition hover:bg-zinc-500/35"
+        className="fade-enter mt-4 flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-zinc-500/25 px-3.5 py-4 text-left transition hover:bg-zinc-500/35"
       >
-        <span className="flex w-full items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
-            <CrownIcon className="size-5 text-amber-300" />
-          </span>
-          <span className="min-w-0 flex-1 rounded-xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
-            Beli Premium Ada Di Sini
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-white/60" aria-hidden />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
+          <CrownIcon className="size-5 text-amber-300" />
         </span>
-        <span className="pl-0.5 text-[11px] font-semibold text-white/65">
-          Mulai dari Rp7.000
+        <span className="min-w-0 flex-1 rounded-2xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
+          Beli Premium Ada Di Sini
         </span>
       </button>
 
@@ -1261,7 +1260,7 @@ function HomeContent() {
                   setSearchOpenGenres(false);
                   setShowSearch(true);
                 }}
-                className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold text-zinc-200 backdrop-blur-md transition hover:border-white/35 active:scale-95"
+                className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition hover:border-white/35 active:scale-95"
               >
                 {g.name}
               </button>
@@ -2064,9 +2063,10 @@ function LeaderboardRow({ e, dense }: { e: LbEntry; dense?: boolean }) {
  */
 /**
  * Layar Top anime (dibuka dari badge TOP di hero banner).
- * Tanpa judul di kiri atas — cukup tombol kembali. Top 1 di kiri dengan
- * gambar besar, top 2 & 3 di kanannya dengan ukuran lebih kecil (tidak
- * melebihi top 1), lalu top 4-50 dalam grid dua kolom ke bawah.
+ * Tanpa judul di kiri atas — cukup tombol kembali. SELURUH daftar kini
+ * SATU KOLOM memanjang ke bawah (tidak ada lagi susunan ke samping);
+ * top 1-3 memakai kotak lebih besar, top 4-50 kotak standar.
+ * Gaya angka top / views / kotak hitam disamakan dengan hero banner Home.
  */
 function TopAnimeScreen({
   items,
@@ -2097,25 +2097,15 @@ function TopAnimeScreen({
             Data Top anime belum siap — coba lagi sebentar.
           </p>
         ) : (
-          <>
-            {/* Panggung 3 besar: top 1 besar di kiri, top 2 & 3 kecil di kanan. */}
-            <div className="mt-3 grid grid-cols-2 items-stretch gap-2.5">
-              {t1 && <TopAnimeCard item={t1} rank={1} big onPick={onPick} />}
-              <div className="grid grid-rows-2 gap-2.5">
-                {t2 && <TopAnimeCard item={t2} rank={2} onPick={onPick} />}
-                {t3 && <TopAnimeCard item={t3} rank={3} onPick={onPick} />}
-              </div>
-            </div>
-
-            {/* Top 4-50: dua kolom, urutan kiri-lalu-kanan seperti daftar. */}
-            {fifty.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
-                {fifty.map((a, i) => (
-                  <TopAnimeCard key={a.id} item={a} rank={i + 4} onPick={onPick} />
-                ))}
-              </div>
-            )}
-          </>
+          /* Satu kolom lurus memanjang — top 1-3 besar, sisanya standar. */
+          <div className="mt-3 flex flex-col gap-2.5">
+            {t1 && <TopAnimeCard item={t1} rank={1} big onPick={onPick} />}
+            {t2 && <TopAnimeCard item={t2} rank={2} big onPick={onPick} />}
+            {t3 && <TopAnimeCard item={t3} rank={3} big onPick={onPick} />}
+            {fifty.map((a, i) => (
+              <TopAnimeCard key={a.id} item={a} rank={i + 4} onPick={onPick} />
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -2142,7 +2132,8 @@ function TopAnimeCard({
       <div
         className={cn(
           "relative w-full overflow-hidden bg-black",
-          big ? "flex-1 min-h-0" : "aspect-[3/2]",
+          // Top 1-3: kotak lebih gede (lebih tinggi) dari top 4-50.
+          big ? "aspect-[16/11]" : "aspect-[16/9]",
         )}
       >
         {item.image ? (
@@ -2153,21 +2144,30 @@ function TopAnimeCard({
             className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : null}
-        {/* Badge #N — kiri atas, kotak hitam 45% + ANGKA emas gradasi
-            (sama seperti badge TOP #1 di hero banner). */}
-        <span className="absolute left-2 top-2 z-10 rounded-lg bg-black/45 px-2 py-1 text-[11px] font-black backdrop-blur-sm">
-          <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-            #{rank}
-          </span>
+        {/* Angka top — TANPA background, font tebel (sama dgn hero banner). */}
+        <span
+          className={cn(
+            "absolute left-2 top-2 z-10 font-black leading-none text-white [text-shadow:0_2px_6px_rgba(0,0,0,.85)]",
+            big ? "text-2xl" : "text-xl",
+          )}
+        >
+          #{rank}
         </span>
-        {/* Jumlah views — benar-benar di KANAN ATAS, kotak rounded + ikon mata. */}
-        <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
-          <Eye className="size-3.5 text-white/80" aria-hidden />
+        {/* Jumlah views — background 40% + ikon mata, sama dgn hero banner. */}
+        <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
+          <Eye className="size-4 text-white/90" aria-hidden />
           {views}
         </span>
-        {/* Kotak hitam opacity 70% di bawah — isinya hanya judul. */}
-        <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1.5 text-center backdrop-blur-[2px]">
-          <p className="truncate text-[11px] font-semibold text-white">{item.title}</p>
+        {/* Kotak hitam background 40% tanpa rounded — hanya judul, font tebel. */}
+        <div className="absolute inset-x-0 bottom-0 bg-black/40 px-3 py-2 backdrop-blur-[2px]">
+          <p
+            className={cn(
+              "truncate font-black text-white",
+              big ? "text-base" : "text-sm",
+            )}
+          >
+            {item.title}
+          </p>
         </div>
       </div>
     </button>
@@ -2217,6 +2217,12 @@ function SearchResultRow({
         {isDonghua && (
           <span className="absolute left-0.5 top-0.5 rounded border border-black/40 bg-zinc-800/80 px-1 py-0.5 text-[9px] font-semibold text-zinc-200">
             DH
+          </span>
+        )}
+        {/* Film — bedain dari hasil anime/donghua: chip FILM ungu. */}
+        {source === "film" && (
+          <span className="absolute left-0.5 top-0.5 rounded border border-violet-400/40 bg-violet-700/85 px-1 py-0.5 text-[9px] font-black uppercase tracking-wide text-violet-100">
+            Film
           </span>
         )}
       </div>
@@ -3313,11 +3319,13 @@ function AnimeDetailScreen({
               <span
                 className={cn(
                   "inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
+                  // Background biru SAMPAI dengan chip Ongoing/Tamat di
+                  // manhwa & manga (sky-300 / sky-400 + teks hitam).
                   detail.status === "Completed"
-                    ? "bg-emerald-500/80 text-white"
+                    ? "bg-sky-400 text-black"
                     : detail.status === "OVA" || detail.status === "Movie"
                       ? "bg-sky-700/90 text-white"
-                      : "bg-primary text-white",
+                      : "bg-sky-300 text-black",
                 )}
               >
                 {detail.status ?? "Ongoing"}
@@ -4315,7 +4323,7 @@ function DonghuaDetailScreen({
                 ukuran & posisi sejajar dengan tag status di detail anime. */}
             {detail.status === "Ongoing" && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="inline-block rounded-full bg-sky-300 px-2.5 py-0.5 text-[10px] font-bold text-black">
                   Ongoing
                 </span>
                 {updateDay && (

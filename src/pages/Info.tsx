@@ -48,7 +48,7 @@ export function InfoContent() {
               key={k}
               onClick={() => setTab(k)}
               className={cn(
-                "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-3 text-sm font-semibold transition",
+                "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-1.5 text-sm font-semibold transition",
                 tab === k ? "text-foreground" : "text-muted-foreground",
               )}
             >
@@ -343,7 +343,7 @@ function LanjutTab() {
   }
 
   return (
-    <div className="pt-3">
+    <div className="pt-1">
       {groups.map((g) => (
         <div key={g.label} className="mb-4">
           {/* Judul tanggal: kotak rounded biru, teks putih supaya kontras. */}

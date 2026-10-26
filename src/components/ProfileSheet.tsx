@@ -283,68 +283,66 @@ export function ProfileSheet({
                 ID (kotak rounded abu-abu, awalan #) · tag level (TRANSAPAN +
                 outline, ikon material, tap = daftar tier) · jumlah teman
                 (kotak abu-abu + ikon orang). Tag clan pindah ke banner. */}
-            <div className="mt-2 flex items-center justify-center gap-2 text-[13px]">
-              <span className="inline-flex items-center rounded-lg bg-zinc-500/25 px-3 py-1 font-mono font-bold text-white/95">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[13px]">
+              <span className="inline-flex items-center rounded-full bg-zinc-500/25 px-3 py-1 font-mono font-bold text-white/95">
                 {displayId(profile.seqId)}
               </span>
               <button
                 type="button"
                 onClick={() => setTierPopup(true)}
                 aria-label="Daftar tag level"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/45 bg-white/5 px-3 py-1 font-bold text-white/95 transition active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/45 bg-white/5 px-3 py-1 font-bold text-white/95 transition active:scale-95"
               >
                 <TierIcon tier={badgeForLevel(profile.level).name} className="size-4" />
                 Lv.{profile.level}
               </button>
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-500/25 px-3 py-1 font-bold text-white/95">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/25 px-3 py-1 font-bold text-white/95">
                 <Users className="size-3.5" aria-hidden />
                 {profile.friendCount ?? 0}
               </span>
             </div>
 
-            {/* YoruPet & Afinitas SELALU tampil (profil sendiri maupun orang
-                lain); Add Friend hanya untuk profil ORANG LAIN. Ketiganya
-                kini lebih besar. */}
-            <div className="mx-auto mt-4 flex max-w-sm flex-col items-center gap-2.5">
-              <div className="flex justify-center gap-2.5">
-                {!isMe && (
-                  <button
-                    type="button"
-                    onClick={requestFriend}
-                    disabled={sending || friendStatus === "friend" || friendStatus === "pending"}
-                    className={cn(
-                      "inline-flex w-fit items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.09] px-5 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]",
-                      (friendStatus === "friend" || friendStatus === "pending") &&
-                        "opacity-50",
-                    )}
-                  >
-                    {sending ? (
-                      <Send className="size-4 shrink-0" />
-                    ) : (
-                      <UserPlus className="size-4 shrink-0" />
-                    )}
-                    {friendStatus === "friend"
-                      ? "Teman"
-                      : friendStatus === "pending"
-                        ? "Terkirim"
-                        : "Add Friend"}
-                  </button>
-                )}
-                {/* YoruPet: lihat kebun binatang milik user ini */}
+            {/* Add Friend · YoruPet · Afinitas — SATU baris membentang ke
+                samping (flex-1) supaya rapi. Di profil SENDIRI tidak ada
+                Add Friend, jadi urutannya YoruPet lalu Afinitas di kanannya. */}
+            <div className="mx-auto mt-4 flex w-full max-w-sm items-stretch gap-2.5">
+              {!isMe && (
                 <button
                   type="button"
-                  onClick={() => setViewPet(true)}
-                  className="inline-flex w-fit items-center justify-center gap-2 rounded-full border border-amber-500/50 bg-amber-600/90 px-5 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]"
+                  onClick={requestFriend}
+                  disabled={sending || friendStatus === "friend" || friendStatus === "pending"}
+                  className={cn(
+                    "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.09] px-3 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]",
+                    (friendStatus === "friend" || friendStatus === "pending") &&
+                      "opacity-50",
+                  )}
                 >
-                  <PawPrint className="size-4 shrink-0" />
-                  YoruPet
+                  {sending ? (
+                    <Send className="size-4 shrink-0" />
+                  ) : (
+                    <UserPlus className="size-4 shrink-0" />
+                  )}
+                  {friendStatus === "friend"
+                    ? "Teman"
+                    : friendStatus === "pending"
+                      ? "Terkirim"
+                      : "Add Friend"}
                 </button>
-              </div>
+              )}
+              {/* YoruPet: lihat kebun binatang milik user ini */}
+              <button
+                type="button"
+                onClick={() => setViewPet(true)}
+                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-amber-500/50 bg-amber-600/90 px-3 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]"
+              >
+                <PawPrint className="size-4 shrink-0" />
+                YoruPet
+              </button>
               {/* Afinitas — relasi dekat, layar penuh */}
               <button
                 type="button"
                 onClick={() => setAffinity(true)}
-                className="inline-flex w-fit items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-5 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
+                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-3 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
               >
                 <HeartHandshake className="size-4 shrink-0" />
                 Afinitas
@@ -861,6 +859,7 @@ const TIER_DESC: Record<string, string> = {
   Emerald: "Langka, konsisten, dan bergengsi.",
   Master: "Legenda komunitas YoruNime.",
   Grandmaster: "Puncak tertinggi — hanya segelintir yang sampai.",
+  Central: "Tier rahasia di atas Grandmaster — level 13.000 ke atas.",
 };
 
 /** Ikon material per tier level — ingot (Bronze/Silver/Grandmaster) dan
@@ -912,6 +911,16 @@ function TierIcon({ tier, className }: { tier: string; className?: string }) {
       <>
         <path d="M8 1.6 L9.95 5.85 L14.6 6.4 L11.15 9.5 L12.1 14.1 L8 11.75 L3.9 14.1 L4.85 9.5 L1.4 6.4 L6.05 5.85 Z" fill="#f5c542" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
         <path d="M8 4.6 L8.85 6.7 L11.15 7 L9.4 8.6 L9.85 10.85 L8 9.75 L6.15 10.85 L6.6 8.6 L4.85 7 L7.15 6.7 Z" fill="rgba(255,255,255,.5)" />
+      </>
+    ),
+    /* CENTRAL — mahkota emas berkilau dengan permata di puncak,
+       tier rahasia di atas Grandmaster (level 13.000+). */
+    Central: (
+      <>
+        <path d="M2 6.2 L4.6 8.4 L8 3.4 L11.4 8.4 L14 6.2 L12.9 12.4 H3.1 Z" fill="#ffd76a" stroke="rgba(0,0,0,.55)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M3.1 13.4 H12.9" stroke="rgba(0,0,0,.55)" strokeWidth="1.2" strokeLinecap="round" />
+        <circle cx="8" cy="9.9" r="1.5" fill="#ff8f3f" stroke="rgba(0,0,0,.45)" strokeWidth="0.7" />
+        <path d="M4.6 8.4 L5.4 11.6 M11.4 8.4 L10.6 11.6" stroke="rgba(255,255,255,.6)" strokeWidth="0.7" />
       </>
     ),
   };

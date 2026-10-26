@@ -49,11 +49,11 @@ export function NotifButton({
         }
         onClick={() => setOpen(true)}
         className={cn(
-          "relative flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground",
+          "relative flex size-11 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground",
           className,
         )}
       >
-        <BellIcon className="size-4" />
+        <BellIcon className="size-5" />
         {unread ? <UnreadBadge count={unread} /> : null}
       </button>
 
@@ -133,11 +133,11 @@ function NotifSheet({
               <div
                 key={n._id}
                 onClick={() => {
-                  // Undangan/hasil Afinitas: buka profil pengirim — pop-up
-                  // Afinitas muncul otomatis dari sana.
+                  // Undangan/hasil Afinitas: arahkan LANGSUNG ke layar
+                  // Afinitas milik pengirim (bukan cuma membuka profil).
                   if (n.type?.startsWith("affinity") && n.refUserId) {
                     onOpenChange(false);
-                    navigate(`/?user=${n.refUserId}`);
+                    navigate(`/akun?user=${n.refUserId}&afinitas=1`);
                   }
                 }}
                 className={cn(
