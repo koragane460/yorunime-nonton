@@ -189,14 +189,14 @@ function SearchResultCard({ h }: { h: Hit }) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
-            <div className="flex justify-center py-2.5">
+            <div className="flex justify-center pb-1 pt-2">
               <span className="h-1 w-10 rounded-full bg-white/25" />
             </div>
             <button
               onClick={() => { setOpen(false); navigate(`/akun?user=${h._id}`); }}
-              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-white/5"
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/5"
             >
-              <span className="flex size-9 items-center justify-center rounded-xl bg-white/10">
+              <span className="flex size-8 items-center justify-center">
                 <UserRound className="size-5 text-white/85" />
               </span>
               <span className="text-sm font-bold">Lihat Profile</span>
@@ -205,11 +205,11 @@ function SearchResultCard({ h }: { h: Hit }) {
               onClick={() => void add()}
               disabled={status === "friend"}
               className={cn(
-                "flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-white/5 disabled:opacity-60",
+                "flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/5 disabled:opacity-60",
                 "border-t border-white/10",
               )}
             >
-              <span className="flex size-9 items-center justify-center rounded-xl bg-white/10">
+              <span className="flex size-8 items-center justify-center">
                 {requestLabel === "Terkirim" ? (
                   <Check className="size-5 text-emerald-300" />
                 ) : requestLabel === "Teman" ? (
@@ -220,7 +220,7 @@ function SearchResultCard({ h }: { h: Hit }) {
               </span>
               <span className="text-sm font-bold">{requestLabel}</span>
             </button>
-            <div className="h-3" />
+            <div className="h-1" />
           </div>
         </div>
       )}
@@ -261,17 +261,16 @@ function FriendSheet({ username, onClose }: { username: string; onClose: () => v
         className="relative w-full border-t border-white/15 bg-neutral-900 pb-[env(safe-area-inset-bottom)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-center py-2.5">
+        <div className="flex justify-center pb-1 pt-2">
           <span className="h-1 w-10 rounded-full bg-white/25" />
         </div>
-        <p className="px-4 pb-2 text-center text-xs font-bold text-white/50">{username}</p>
-        <button className="flex w-full items-center gap-3 border-t border-white/10 px-4 py-3.5 text-left hover:bg-white/5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-amber-500/20">
+        <p className="px-4 pb-1.5 text-center text-xs font-bold text-white/50">{username}</p>
+        <button className="flex w-full items-center gap-3 border-t border-white/10 px-4 py-2.5 text-left hover:bg-white/5">
+          <span className="flex size-8 items-center justify-center">
             <Heart className="size-5 text-amber-300" />
           </span>
           <span className="text-sm font-bold">Give Premium</span>
         </button>
-        <div className="h-3" />
       </div>
     </div>
   );

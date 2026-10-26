@@ -87,21 +87,40 @@ const HLS_LABEL = "MegaPlay · SUB";
 const resultCache = new Map<string, { value: any; at: number }>();
 const RESULT_TTL = 30 * 60_000;
 
-/** Bentuk hasil yang sama dengan resolveEpisode, dirakit dari sumber Indo saja. */  // Anime tanpa MAL id (mis. Otakudesu) tidak punya MAL id sama sekali, jadi
-  // HLS MegaPlay tidak bisa dibangun untuk episode itu. Karena semua server
-  // lain sudah dihapus, episode seperti ini dilaporkan belum tersedia — bukan
-  // diam-diam dijatuhkan ke server lain yang sudah tidak ada.
+/** Bentuk hasil yang sama dengan resolveEpisode, dirakit dari sumber Indo saja.
+ *  Dipakai untuk judul tanpa MAL id — MegaPlay tidak bisa dipakai, jadi
+ *  sumber Indonesia langsung yang jadi andalan supaya episodenya tetap ada. */
   async function resolveByTitle(
     ep: number,
     title: string | undefined,
     fast: boolean,
   ): Promise<Record<string, any> | { ok: false; reason: string }> {
-    void ep;
-    void title;
-    void fast;
+    if (!title) {
+      return { ok: false as const, reason: "Episode ini belum tersedia di server MegaPlay" };
+    }
+    const indo = await resolveIndo(title, ep, { max: fast ? 2 : 5 }).catch(() => []);
+    const direct = indo.filter((s) => s.type === "hls" || s.type === "mp4");
+    if (direct.length === 0) {
+      return { ok: false as const, reason: "Episode ini belum tersedia di server MegaPlay" };
+    }
     return {
-      ok: false as const,
-      reason: "Episode ini belum tersedia di server MegaPlay",
+      ok: true as const,
+      sources: direct.slice(0, 3).map((s) => ({
+        label: s.label || "SUB Indonesia",
+        url: s.url,
+        type: s.type === "mp4" ? ("mp4" as const) : ("hls" as const),
+        baked: true,
+      })),
+      subtitle: null,
+      subtitles: [],
+      subTracks: [],
+      hasIndonesian: true,
+      // Subtitle Indonesia menempel langsung di video sumber Indo.
+      bakedSubs: true,
+      intro: null,
+      outro: null,
+      megaM3u8: null,
+      megaRef: REF,
     };
   }
 
@@ -160,6 +179,20 @@ export const resolveEpisode = action({
       }[] = [];
       if (sub) {
         sources.push({ label: HLS_LABEL, url: sub.m3u8, type: "hls", baked: false });
+      }
+
+      // Cadangan: MegaPlay tidak selalu punya semua judul/season (episode
+      // bisa terdaftar tapi tidak punya video di sana). Kalau sumbernya
+      // kosong, pakai sumber Indonesia langsung supaya video tetap ada.
+      if (sources.length === 0) {
+        for (const s of indoDirect.slice(0, 3)) {
+          sources.push({
+            label: s.label || "SUB Indonesia",
+            url: s.url,
+            type: s.type === "mp4" ? "mp4" : "hls",
+            baked: true,
+          });
+        }
       }
 
       if (sources.length === 0) {

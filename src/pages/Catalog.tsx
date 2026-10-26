@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { useHideNavOnMount } from "@/components/AppLayout";
 import {
   Trophy,
   Users,
@@ -10,6 +9,7 @@ import {
   MessageCircle,
   LayoutGrid,
   MoreHorizontal,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ import { FriendsCatalogScreen } from "@/components/FriendsCatalogScreen";
 import { AdofimaScreen } from "@/components/AdofimaScreen";
 import { NobarCatalogScreen } from "@/components/NobarCatalogScreen";
 import { BubbleChatScreen } from "@/components/BubbleChatScreen";
+import { DownloadsPanel } from "@/components/HomeTopButtons";
 
 /** Shell isi Catalog — TIDAK fullscreen: panel ini menempel di dalam halaman
     catalog (scroll mengikuti halaman), strip-back di kiri atas tanpa judul. */
@@ -42,7 +43,7 @@ function FullScreen({ onClose, children }: { title: string; onClose: () => void;
   );
 }
 
-type Screen = null | "leaderboard" | "friends" | "nobar" | "history" | "voteWaifu" | "voteHusbu" | "bubble" | "adofima";
+type Screen = null | "leaderboard" | "friends" | "nobar" | "history" | "voteWaifu" | "voteHusbu" | "bubble" | "adofima" | "download";
 
 interface Box {
   key: Exclude<Screen, null>;
@@ -63,6 +64,7 @@ const BOXES: Box[] = [
   { key: "voteWaifu", label: "Vote Waifu", Icon: Heart, from: "from-fuchsia-300", to: "to-purple-400", ring: "ring-fuchsia-400/30", icon: "text-fuchsia-400" },
   { key: "bubble", label: "Bubble Chat", Icon: MessageCircle, from: "from-cyan-300", to: "to-sky-400", ring: "ring-cyan-400/30", icon: "text-cyan-400" },
   { key: "adofima", label: "Adofima-nga", Icon: LayoutGrid, from: "from-lime-300", to: "to-green-400", ring: "ring-lime-400/30", icon: "text-lime-400" },
+  { key: "download", label: "Download", Icon: Download, from: "from-teal-300", to: "to-emerald-400", ring: "ring-teal-400/30", icon: "text-teal-400" },
 ];
 
 /** Latar kotak: dasar gelap + WASH gradasi warna (dari/to di tiap kotak)
@@ -78,7 +80,6 @@ export default function Catalog() {
 }
 
 function CatalogContent() {
-  useHideNavOnMount();
   const [screen, setScreen] = useState<Screen>(null);
   const [voteKind, setVoteKind] = useState<"waifu" | "husbu">("waifu");
   const [voteMenu, setVoteMenu] = useState(false);
@@ -153,7 +154,8 @@ function CatalogContent() {
                       setVoteKind((k) => (k === "waifu" ? "husbu" : "waifu"));
                       setVoteMenu(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-xl border border-white/12 bg-neutral-900/95 px-3 py-2.5 text-left text-xs font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
+                    style={{ animationDelay: "0ms" }}
+                    className="lb-menu-item flex w-full items-center gap-2 rounded-xl border border-white/12 bg-neutral-900/95 px-3 py-2.5 text-left text-xs font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
                   >
                     <Heart className="size-4 text-rose-300" />
                     {voteKind === "waifu" ? "Vote Husbu" : "Vote Waifu"}
@@ -239,6 +241,11 @@ function CatalogContent() {
           onClose={() => setScreen(null)}
           initialView={lbView ?? undefined}
         />
+      )}
+      {screen === "download" && (
+        <FullScreen title="Download" onClose={() => setScreen(null)}>
+          <DownloadsPanel inline onClose={() => setScreen(null)} minimalEmpty />
+        </FullScreen>
       )}
       {screen === "history" && (
         <FullScreen title="History" onClose={() => setScreen(null)}>

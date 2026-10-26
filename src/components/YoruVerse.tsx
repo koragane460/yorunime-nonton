@@ -676,18 +676,20 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
 
       {tab === "profile" ? (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
-          <div className="mx-auto w-full max-w-2xl px-4 pt-3">
+          <div className="mx-auto w-full max-w-2xl px-4 pt-8">
             {/* Semua kotak border dibungkus SATU kotak lagi, dan di paling
                 atas ada KOTAK LURUS KE SAMPING (header bar) yang tidak
                 memanjang ke bawah. Tanpa paragraf penjelas lagi. */}
-            <div className="overflow-hidden rounded-3xl border border-white/12 bg-white/[0.03]">
-              <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.06] px-3 py-2">
-                <p className="text-[12px] font-black tracking-wide">Border Profile</p>
+            <div className="overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-b from-gold/[0.07] via-white/[0.03] to-transparent">
+              <div className="flex items-center justify-between border-b border-gold/20 bg-gradient-to-r from-gold/15 via-transparent to-gold/10 px-3.5 py-2.5">
+                <p className="text-[12px] font-black tracking-wide text-gold">
+                  ✨ Border Profile
+                </p>
                 <span className="text-[10px] font-bold text-zinc-400">
                   Tekan lagi untuk melepas
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2 p-3">
+              <div className="grid grid-cols-3 gap-2.5 p-3">
                 {BORDERS.map((b) => {
                   const owned = b.id === "none" || ownedBorders.includes(b.id);
                   const active = equippedBorder === b.id;
@@ -699,10 +701,10 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
                       disabled={busyBorder !== null}
                       title={b.blurb}
                       className={cn(
-                        "flex flex-col items-center gap-1 rounded-xl border p-2 transition active:scale-[0.97] disabled:opacity-60",
+                        "flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 transition active:scale-[0.97] disabled:opacity-60",
                         active
-                          ? "border-gold/70 bg-gold/10 shadow-[0_0_14px_-6px_rgba(212,175,55,0.7)]"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30",
+                          ? "border-gold/80 bg-gradient-to-b from-gold/20 to-gold/5 shadow-[0_0_18px_-4px_rgba(212,175,55,0.85)]"
+                          : "border-white/10 bg-white/[0.03] hover:border-white/35 hover:bg-white/[0.07]",
                       )}
                     >
                       <FramedAvatar
@@ -712,11 +714,23 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
                         className="size-12"
                       />
                       <span className="text-[10px] font-black">{b.name}</span>
-                      <span className="text-[9px] font-bold text-gold">
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[9px] font-black",
+                          b.price === 0
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : "bg-gold/15 text-gold",
+                        )}
+                      >
                         {b.price === 0 ? "Gratis" : `${b.price.toLocaleString("id-ID")} 💰`}
                       </span>
                       {owned && !active && (
                         <span className="text-[8px] font-bold text-zinc-500">dimiliki</span>
+                      )}
+                      {active && (
+                        <span className="text-[8px] font-black uppercase tracking-wide text-gold">
+                          terpasang
+                        </span>
                       )}
                     </button>
                   );

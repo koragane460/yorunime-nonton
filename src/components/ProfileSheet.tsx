@@ -199,7 +199,7 @@ export function ProfileSheet({
             {((profile.clanTag && profile.clanName) ||
               profile.giverRank ||
               profile.xpRank) && (
-              <div className="absolute left-3 top-11 z-[5] max-w-[70%] space-y-2 rounded-2xl bg-black/75 p-2.5 ring-1 ring-white/25 backdrop-blur-sm">
+              <div className="absolute left-3 top-11 z-[5] max-w-[70%] space-y-2 rounded-3xl bg-black/40 p-2.5 ring-1 ring-white/15 backdrop-blur-md">
                 {profile.clanTag && profile.clanName && (
                   <div className="flex items-center gap-1.5">
                     <ClanTag
@@ -333,7 +333,7 @@ export function ProfileSheet({
               <button
                 type="button"
                 onClick={() => setViewPet(true)}
-                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-amber-500/50 bg-amber-600/90 px-3 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]"
+                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-amber-400/55 bg-transparent px-3 py-2.5 text-[13px] font-bold text-amber-200 transition active:scale-[0.98]"
               >
                 <PawPrint className="size-4 shrink-0" />
                 YoruPet

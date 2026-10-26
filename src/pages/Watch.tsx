@@ -1936,7 +1936,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         {/* KOTAK "MEMUAT" di TENGAH ATAS player — muncul selama episode
             masih dimuat (1-15 detik) dan HILANG begitu video siap. */}
         {(!streamUrl || videoHolding) && !directErr && (
-          <div className="absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-xl border border-white/20 bg-black/70 px-3 py-1.5 text-center shadow-lg backdrop-blur-sm">
+          <div className="absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-2xl border border-white/15 bg-black/85 px-3 py-1.5 text-center shadow-lg">
             <p className="text-[11px] font-bold leading-tight text-white">
               Memuat membutuhkan 1-15 detik
             </p>

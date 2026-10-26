@@ -95,8 +95,18 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-3">
+      {/* Kepala: judul + jumlah judul yang tersedia. */}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="bg-gradient-to-r from-lime-300 via-emerald-300 to-teal-300 bg-clip-text text-lg font-black text-transparent">
+          Adofima-nga
+        </h2>
+        <span className="rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/70">
+          {items.length} judul
+        </span>
+      </div>
+
       {/* Kolom pencarian. */}
-      <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2.5">
+      <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2.5 transition focus-within:border-lime-400/50">
         <Search className="size-4 shrink-0 text-zinc-500" aria-hidden />
         <input
           value={q}
@@ -114,7 +124,9 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
             onClick={() => setLetter(l)}
             className={cn(
               "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-black transition",
-              letter === l ? "bg-sky-400 text-black" : "bg-white/8 text-white/60 hover:bg-white/15",
+              letter === l
+                ? "bg-gradient-to-b from-sky-300 to-sky-500 text-black shadow-md shadow-sky-500/25"
+                : "bg-white/10 text-white/60 hover:bg-white/20 hover:text-white",
             )}
           >
             {l}
@@ -122,7 +134,16 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
         ))}
       </div>
 
-      {loading && <p className="py-10 text-center text-sm text-white/50">Memuat judul…</p>}
+      {loading && (
+        <div className="grid grid-cols-3 gap-2.5">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i}>
+              <div className="skeleton aspect-[2/3] w-full rounded-xl" />
+              <div className="skeleton mt-1.5 h-3 w-full rounded" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Grid kartu. */}
       <div className="grid grid-cols-3 gap-2.5">
@@ -130,9 +151,9 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
           <button
             key={it.key}
             onClick={it.go}
-            className="group overflow-hidden rounded-xl text-left"
+            className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] text-left transition hover:border-white/30 hover:bg-white/[0.08] active:scale-[0.98]"
           >
-            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-white/5">
+            <div className="relative aspect-[2/3] w-full overflow-hidden bg-white/5">
               {it.image ? (
                 <img
                   src={it.image}
@@ -145,16 +166,19 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
                   <Star className="size-5 text-white/25" />
                 </div>
               )}
+              <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent" />
               <span className={cn(
-                "absolute left-1 top-1 rounded px-1 py-0.5 text-[8px] font-black uppercase",
-                it.cat === "film" ? "bg-sky-500/80 text-black"
-                  : it.cat === "manga" || it.cat === "manhwa" ? "bg-emerald-500/80 text-black"
-                    : "bg-fuchsia-500/80 text-black",
+                "absolute left-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ring-1 ring-black/30 backdrop-blur-sm",
+                it.cat === "film" ? "bg-sky-400/90 text-black"
+                  : it.cat === "manga" || it.cat === "manhwa" ? "bg-emerald-400/90 text-black"
+                    : "bg-fuchsia-400/90 text-black",
               )}>
                 {it.cat}
               </span>
             </div>
-            <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-tight">{it.title}</p>
+            <p className="line-clamp-2 px-1.5 py-1.5 text-[11px] font-semibold leading-tight transition group-hover:text-white">
+              {it.title}
+            </p>
           </button>
         ))}
       </div>

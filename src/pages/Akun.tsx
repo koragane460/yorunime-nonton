@@ -566,6 +566,8 @@ function SettingsScreen({
 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  // Pintasan layar Notifikasi dari Pengaturan (fitur baru).
+  const [showNotif, setShowNotif] = useState(false);
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
   // Shop border: beli pakai Sacret + pasang/lepas bingkai foto profile.
@@ -686,7 +688,7 @@ function SettingsScreen({
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
       <BlockTitle>Akun</BlockTitle>
-      <div className="rounded-xl border border-border bg-card p-3">
+      <div className="rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/10 via-card to-card p-3.5">
         <div className="flex items-center gap-2.5">
           <FramedAvatar
             border={user.avatarBorder}
@@ -702,8 +704,19 @@ function SettingsScreen({
             <p className="text-[11px] text-muted-foreground">
               ID: {displayId(user.seqId, user._id)} · Level {user.level}
             </p>
-            <div className="mt-1">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <LevelBadge level={user.level ?? 1} />
+              <button
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(String(displayId(user.seqId, user._id)))
+                    .then(() => toast.success("ID akun disalin"))
+                    .catch(() => toast.error("Gagal menyalin ID"));
+                }}
+                className="rounded-full border border-white/15 px-2.5 py-0.5 text-[10px] font-bold text-white/70 transition hover:border-white/40 hover:text-white active:scale-95"
+              >
+                Salin ID
+              </button>
             </div>
           </div>
         </div>
@@ -984,7 +997,22 @@ function SettingsScreen({
           </span>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </button>
-        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-[13px]">
+        <button
+          onClick={() => setShowNotif(true)}
+          className="flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-primary/50"
+        >
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15">
+            <Bell className="size-[18px] text-primary" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-semibold">Notifikasi</span>
+            <span className="block text-[11px] text-muted-foreground">
+              Update, reply, request teman & clan
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+        <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-card p-3 text-[13px]">
           <Mail className="size-4 shrink-0 text-primary" /> Lstreamsupport@gmail.com
         </div>
         <button
@@ -992,19 +1020,23 @@ function SettingsScreen({
             await onSignOut();
             navigate("/home");
           }}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-destructive/40 bg-card p-3 text-[13px] text-destructive"
+          className="flex w-full items-center gap-2.5 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[13px] font-semibold text-red-300 transition hover:border-red-400 hover:bg-red-500/20 active:scale-[0.99]"
         >
           <LogOut className="size-4 shrink-0" /> Log out dari akun
         </button>
       </div>
+
+      {/* Pintasan layar Notifikasi (overlay dari Pengaturan). */}
+      {showNotif && <NotifScreen onClose={() => setShowNotif(false)} />}
     </FullScreen>
   );
 }
 
-/** Judul bagian di pengaturan: kecil, bukan seperti judul halaman. */
+/** Judul bagian di pengaturan: kapital kecil + garis emas pendek. */
 function BlockTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-1.5 mt-4 text-[13px] font-bold text-muted-foreground">
+    <h2 className="mb-2 mt-5 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-gold/90">
+      <span aria-hidden className="h-px w-5 bg-gold/60" />
       {children}
     </h2>
   );

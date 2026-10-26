@@ -5,7 +5,8 @@
 // Mode SINGLE = semua favorite tampil polos; mode FILTER = otomatis
 // dikelompokkan Ongoing (dengan chip tipe anime/manga/manhwa/donghua)
 // → garis pembatas → Completed, dua-duanya berjudul putih tanpa dot.
-// Di bawahnya tetap ada blok Download dan TOP VOTE CHARACTER.
+// Di bawahnya ada TOP VOTE CHARACTER (blok Download dipindah ke Catalog
+// sesuai permintaan user).
 
 import { useEffect, useMemo, useState } from "react";
 import { useAction, useQuery } from "convex/react";
@@ -13,7 +14,6 @@ import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
-import { DownloadsPanel } from "@/components/HomeTopButtons";
 import { ComicDetailScreen } from "@/components/ComicDetailScreen";
 import { cn } from "@/lib/utils";
 import { Clapperboard, Crown, Filter, Heart, List, Tv, Vote as VoteIcon } from "lucide-react";
@@ -61,7 +61,7 @@ type ComicRow = {
 
 type SubRow = AnimeRow | ComicRow;
 
-export function FavoritesScreen({ onClose }: { onClose: () => void }) {
+export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
@@ -259,14 +259,6 @@ export function FavoritesScreen({ onClose }: { onClose: () => void }) {
             )}
           </div>
         )}
-
-        {/* ---------------- 2) DOWNLOAD ---------------- */}
-        <div className="mt-6">
-          <h2 className="text-left text-lg font-bold tracking-tight">Download</h2>
-          <div className="mt-2">
-            <DownloadsPanel inline onClose={onClose} minimalEmpty />
-          </div>
-        </div>
 
         {/* -------- 3) TOP VOTE CHARACTER ANIME — setelah voting 7 hari -------- */}
         {top?.ready && top.items.length > 0 && (

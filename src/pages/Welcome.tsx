@@ -152,7 +152,7 @@ function ScrollCue({ onClick, label }: { onClick: () => void; label: string }) {
     <button
       type="button"
       onClick={onClick}
-      className="mx-auto mt-8 flex w-40 flex-col items-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 transition hover:bg-white/10 active:scale-95"
+      className="mx-auto mt-8 flex w-40 flex-col items-center gap-1.5 px-2 py-1 transition active:scale-95"
     >
       <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-zinc-400">
         {label}
@@ -186,7 +186,7 @@ function WelcomeFlow() {
   const [stage, setStage] = useState<"intro" | "onboard" | "entering" | "login">(
     "intro",
   );
-  const [onbIdx, setOnbIdx] = useState<0 | 1>(0);
+  const discRef = useRef<HTMLDivElement | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
   // true = aplikasi baru dibuka kembali (balik dari tab/app lain) → tampilkan
   // layar YoruNime sebentar supaya konten lama tidak kelihatan.
@@ -689,19 +689,8 @@ function WelcomeFlow() {
             exit={{ opacity: 0, y: -32 }}
             transition={{ duration: 0.28 }}
           >
-            {/* Header: indikator slide + tombol Lewati */}
-            <div className="flex items-center gap-3 px-5 pb-1 pt-6">
-              <div className="flex flex-1 items-center gap-1.5" aria-hidden>
-                {[0, 1].map((i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "h-1.5 rounded-full transition-all duration-300",
-                      onbIdx === i ? "w-7 bg-primary" : "w-3 bg-white/15",
-                    )}
-                  />
-                ))}
-              </div>
+            {/* Header: hanya tombol Lewati — navigasi utama lewat scroll */}
+            <div className="flex items-center justify-end px-5 pb-1 pt-6">
               <button
                 onClick={() => {
                   saveOnboarded();
@@ -713,17 +702,14 @@ function WelcomeFlow() {
               </button>
             </div>
 
-            {/* Isi slide — bisa di-scroll, tapi navigasi memakai tombol */}
+            {/* Isi: satu halaman panjang — scroll VERTIKAL ke bawah
+                (Welcome → Disclaimer), bukan geser ke samping. */}
             <div className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
-              <AnimatePresence mode="wait">
-                {onbIdx === 0 ? (
-                  <motion.div
-                    key="onb-perhatian"
-                    initial={{ opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -24 }}
-                    transition={{ duration: 0.22 }}
-                  >
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
                     <div className="flex min-h-[64vh] flex-col items-center justify-center text-center">
                       <h1
                         className="text-6xl font-black leading-none tracking-tight"
@@ -746,18 +732,17 @@ function WelcomeFlow() {
                         baca manga &amp; manhwa
                       </p>
                     </div>
-                    {/* Animasi scroll-down — ANIMASI, bukan scroll beneran */}
-                    <ScrollCue onClick={() => setOnbIdx(1)} label="Scroll" />
-                    <div className="h-4 shrink-0" aria-hidden />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="onb-peraturan"
-                    initial={{ opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -24 }}
-                    transition={{ duration: 0.22 }}
-                  >
+                    {/* Petunjuk scroll ke bawah — murni animasi */}
+                    <ScrollCue
+                      label="Scroll"
+                      onClick={() =>
+                        discRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      }
+                    />
+                    <div ref={discRef} className="h-4 shrink-0" aria-hidden />
+
+                    {/* -------- Disclaimer — bagian kedua, di-scroll vertikal -------- */}
+                    <div className="pt-10">
                     <h2 className="text-4xl font-black leading-none tracking-tight">
                       Disclaimer
                     </h2>
@@ -786,7 +771,7 @@ function WelcomeFlow() {
                         </div>
                       ))}
                     </div>
-                    {/* Animasi scroll-down → ke layar Login */}
+                    {/* Animasi scroll-down → ke layar Login (tanpa background) */}
                     <ScrollCue
                       label="Scroll"
                       onClick={() => {
@@ -795,36 +780,12 @@ function WelcomeFlow() {
                       }}
                     />
                     <div className="h-4 shrink-0" aria-hidden />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </div>
+              </motion.div>
             </div>
 
-            {/* Tombol bawah: Kembali (slide 2) + Lanjut / Mulai & Masuk */}
-            <div className="flex items-center gap-2 border-t border-white/10 bg-background/85 px-5 py-3 backdrop-blur">
-              {onbIdx === 1 && (
-                <button
-                  onClick={() => setOnbIdx(0)}
-                  aria-label="Kembali ke slide sebelumnya"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:text-foreground"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  if (onbIdx === 0) setOnbIdx(1);
-                  else {
-                    saveOnboarded();
-                    navigate("/login", { replace: true });
-                  }
-                }}
-                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition hover:bg-primary/90 active:scale-[0.98]"
-              >
-                {onbIdx === 0 ? "Lanjut" : "Masuk"}
-                <ArrowRight className="size-4" aria-hidden />
-              </button>
-            </div>
+            {/* Tombol Lanjut DIHAPUS — navigasi lewat scroll vertikal +
+                animasi scroll di paling bawah (permintaan user). */}
           </motion.section>
         )}
 

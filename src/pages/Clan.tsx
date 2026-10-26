@@ -117,7 +117,6 @@ function ShortDivider() {
  *  belum → daftar clan (join). */
 export default function Clan() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   useHideNavOnMount();
 
@@ -138,16 +137,17 @@ export default function Clan() {
   }
   if (wantClan)
     return <ClanDetailScreen clanId={wantClan} onClose={() => setSearchParams({})} />;
-  if (membership?.clanId)
-    return <ClanDetailScreen clanId={membership.clanId} onClose={() => navigate("/")} />;
-  return <JoinScreen />;
+  // Punya clan TETAP lewat daftar clan dulu — di tengah atas ada kotak
+  // "clan kamu sendiri" (foto, tag, nama, stats, level) yang bisa dipencet
+  // untuk membuka detail clan.
+  return <JoinScreen ownClanId={membership?.clanId ?? undefined} />;
 }
 
 /* ====================================================================== */
 /*  LAYAR DAFTAR CLAN (JOIN)                                               */
 /* ====================================================================== */
 
-function JoinScreen() {
+function JoinScreen({ ownClanId }: { ownClanId?: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
@@ -169,6 +169,15 @@ function JoinScreen() {
         c.name?.toLowerCase().includes(term) || c.tag?.toLowerCase().includes(term),
     );
   }, [all, q]);
+
+  /** Clan SENDIRI — ditampilkan sebagai kotak khusus di tengah ATAS. */
+  const ownClan = useMemo(
+    () =>
+      all?.find((c: any) => c._id === ownClanId) ??
+      all?.find((c: any) => c.isMine) ??
+      null,
+    [all, ownClanId],
+  );
 
   const join = async (clanId: string) => {
     if (!user) {
@@ -219,7 +228,75 @@ function JoinScreen() {
           <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Cari clan</h1>
         </div>
 
-        {/* KOTAK HERO — ikon clan di tengah + tulisan di bawahnya. */}
+        {/* KOTAK CLAN KAMU SENDIRI — di TENGAH ATAS, hanya muncul kalau
+            punya clan. Isi: foto profile, tag clan, nama clan, stats clan,
+            dan level — dipencet → langsung ke detail clan. */}
+        {ownClan && (
+          <button
+            onClick={() => setPick({ id: ownClan._id, tab: "member" })}
+            className="mx-auto flex w-full flex-col items-center gap-2 rounded-3xl border border-gold/35 bg-gradient-to-b from-gold/[0.14] via-white/[0.05] to-transparent px-4 py-5 text-center transition hover:border-gold/60 active:scale-[0.99]"
+          >
+            {ownClan.avatarUrl ? (
+              <img
+                src={ownClan.avatarUrl}
+                alt=""
+                className="size-16 shrink-0 rounded-2xl object-cover ring-2 ring-gold/60"
+              />
+            ) : (
+              <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
+                <Shield className="size-8 text-violet-300" aria-hidden />
+              </span>
+            )}
+            <ClanTag
+              icon={ownClan.tagIcon ?? DEFAULT_CLAN_ICON}
+              tag={ownClan.tag}
+              color={ownClan.color}
+              level={ownClan.level}
+              className="px-2 py-0.5 text-[10px]"
+            />
+            <p className={cn("text-lg font-black", clanNameClass(ownClan.level))}>
+              {ownClan.name}
+            </p>
+            {/* Stats clan: member · Sacret · umur */}
+            <div className="flex items-center justify-center gap-3 text-[11px] font-bold text-white/75">
+              <span className="inline-flex items-center gap-1">
+                <Users className="size-3.5" /> {ownClan.memberCount ?? 0}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <SacretIcon className="size-3.5 text-sky-300" />{" "}
+                {Number(ownClan.diamonds ?? 0).toLocaleString("id-ID")}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Timer className="size-3.5" /> {ownClan.ageDays ?? 0} hari
+              </span>
+            </div>
+            {/* Bar level clan */}
+            <div className="flex w-full max-w-xs items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5">
+              <span className="shrink-0 text-[11px] font-black text-gold">
+                Lv.{ownClan.level}
+              </span>
+              <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-gold/70 to-gold"
+                  style={{
+                    width: `${Math.min(100, ((ownClan.levelProgress ?? 0) / (ownClan.levelCost ?? 100000)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <span className="shrink-0 text-[9px] text-white/55">
+                {(ownClan.levelProgress ?? 0).toLocaleString("id-ID")}/
+                {(ownClan.levelCost ?? 100000).toLocaleString("id-ID")}
+              </span>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-gold/70">
+              Ketuk untuk buka clan ▾
+            </span>
+          </button>
+        )}
+
+        {/* KOTAK HERO — ikon clan di tengah + tulisan di bawahnya.
+            Hanya untuk yang BELUM punya clan. */}
+        {!ownClan && (
         <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-gradient-to-b from-violet-500/20 via-white/[0.04] to-transparent px-4 py-7 text-center">
           <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
             <Shield className="size-8 text-violet-300" aria-hidden />
@@ -229,6 +306,7 @@ function JoinScreen() {
             gabung, donasi, dan bawa clan mu ke puncak Top Clan
           </p>
         </div>
+        )}
 
         {/* DUA TOMBOL — lurus ke samping, tidak tinggi. */}
         <div className="mt-3 grid grid-cols-2 gap-2.5">

@@ -89,10 +89,7 @@ export function ComicCard({
             digeser ke kanan kalau ada badge peringkat di depannya. */}
         <StatusChip
           ongoing={item.ongoing}
-          className={cn(
-            "absolute top-0 rounded-none rounded-br-lg",
-            ranked !== undefined ? "left-9" : "left-0",
-          )}
+          className="absolute right-0 top-0 rounded-none rounded-bl-lg"
         />
         {views && (
           <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">

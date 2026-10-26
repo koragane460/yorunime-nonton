@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useHideNavOnMount } from "@/components/AppLayout";
 import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { Crown, Users, Gift, Sparkles } from "lucide-react";
@@ -105,7 +104,7 @@ function Row({
   rank, username, image, xp, suffix, staffRole, clanTag, clanTagIcon, clanNameColor, level, premium, seqId, givePremiumCount,
 }: any) {
   return (
-    <div className="lb-rise flex w-full items-center gap-2 rounded-xl px-2 py-1"
+    <div className="lb-rise flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2 transition hover:border-white/25 hover:bg-white/[0.08]"
       style={{ animationDelay: `${Math.min(rank, 16) * 40}ms` }}>
       <DashedNum rank={rank} />
       <Avatar src={image} seed={username} className="size-8 shrink-0" />
@@ -140,12 +139,14 @@ function XpView() {
   return (
     <>
       {/* Tab periode: kotak rounded hijau muda agak ketus (LEBIH KECIL). */}
-      <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl bg-emerald-500/15 p-1 ring-1 ring-emerald-400/20">
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
         {["harian", "mingguan", "bulanan"].map((p) => (
           <button key={p} onClick={() => setPeriod(p)}
             className={cn(
-              "rounded-xl py-1.5 text-[11px] font-black capitalize transition",
-              period === p ? "bg-emerald-400 text-emerald-950 shadow" : "text-emerald-100/80 hover:text-emerald-50",
+              "rounded-xl py-2 text-[11px] font-black capitalize transition",
+              period === p
+                ? "bg-gradient-to-b from-yellow-300 to-amber-500 text-black shadow-md shadow-amber-500/25"
+                : "text-white/55 hover:bg-white/10 hover:text-white",
             )}>
             {p}
           </button>
@@ -181,6 +182,9 @@ function GiveView() {
     return <p className="py-8 text-center text-sm text-white/50">Belum ada yang bagi premium — jadilah yang pertama!</p>;
   return (
     <div className="space-y-1.5">
+      <p className="flex items-center gap-1.5 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[11px] font-black text-rose-200">
+        <Gift className="size-3.5" aria-hidden /> Paling royal bagi-bagi premium 🎁
+      </p>
       {data.map((g: any, i) => (
         <Row key={`${i + 1}-${g.userId}`} rank={i + 1} username={g.username} image={g.image} xp={g.days}
           suffix={`${g.days} hari · ${g.slots} orang · ${g.sends}x kirim`} givePremiumCount={g.days} />
@@ -203,6 +207,9 @@ function ClanView() {
   if (!clans) return <p className="py-8 text-center text-sm text-white/50">Memuat…</p>;
   return (
     <div className="space-y-2">
+      <p className="flex items-center gap-1.5 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] font-black text-amber-200">
+        <Crown className="size-3.5" aria-hidden /> Clan paling kuat — urut dari level & Sacret
+      </p>
       {shown.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada clan</p>}
       {shown.map((c: any, i) => (
         <button key={c._id} onClick={() => navigate(`/clan?clan=${c._id}`)}
@@ -238,24 +245,41 @@ export function LeaderboardScreen({
   /** Tampilan awal — dipilih lewat titik tiga di halaman Catalog. */
   initialView?: View;
 }) {
-  useHideNavOnMount();
   const [view, setView] = useState<View>(initialView ?? "xp");
-  const title = view === "xp" ? "" : view === "give" ? "" : "";
+  const TABS = [
+    { key: "xp" as const, label: "Top XP", Icon: Sparkles },
+    { key: "give" as const, label: "Give Prem", Icon: Gift },
+    { key: "clan" as const, label: "Clan", Icon: Users },
+  ];
   return (
-    <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
+    <div className="screen-enter w-full pb-10 pt-2">
       <div className="w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-2">
           <StripBack onClose={onClose} />
-          <div className="min-w-0 flex-1" />
+          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">
+            Leaderboard
+          </h1>
+          <Crown className="size-5 shrink-0 text-yellow-300" aria-hidden />
         </div>
-        <div className="mb-3 flex items-center gap-2">
-          {view !== "xp" && (
-            <button onClick={() => setView("xp")}
-              className="rounded-full border border-white/15 px-3 py-1 text-xs font-bold text-white/70 transition hover:bg-white/10">
-              ← XP
+
+        {/* Tab tampilan: Top XP · Give Prem · Clan — ganti view langsung,
+            tanpa harus balik ke halaman Catalog. */}
+        <div className="mb-4 grid grid-cols-3 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setView(t.key)}
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-black transition",
+                view === t.key
+                  ? "bg-gradient-to-b from-white/95 to-white/80 text-black shadow-lg shadow-black/30"
+                  : "text-white/55 hover:bg-white/10 hover:text-white/90",
+              )}
+            >
+              <t.Icon className="size-3.5" aria-hidden />
+              {t.label}
             </button>
-          )}
-          {title && <h1 className="text-base font-extrabold">{title}</h1>}
+          ))}
         </div>
 
         {view === "xp" && <XpView />}

@@ -60,17 +60,37 @@ export function VoteCatalogScreen({
           konten) buat ganti jenis vote (Waifu ⇄ Husbu). Tiap pilihan juga
           kotaknya masing-masing — tidak digabung jadi satu list. */}
       <div className="relative flex items-center gap-2 pr-1">
-        <h2 className="flex-1 text-lg font-extrabold capitalize">Vote {kind}</h2>
+        <h2
+          className={cn(
+            "flex-1 bg-gradient-to-r bg-clip-text text-lg font-black text-transparent",
+            kind === "waifu"
+              ? "from-pink-300 via-fuchsia-300 to-purple-300"
+              : "from-sky-300 via-blue-300 to-indigo-300",
+          )}
+        >
+          Vote {kind}
+        </h2>
+        {/* Tombol ganti jenis vote — menunya muncul dari KANAN + animasi. */}
         <div className="relative">
           <button
             onClick={() => setMenu((v) => !v)}
             aria-label="Ganti jenis vote"
-            className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white/85 transition active:scale-90"
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black transition active:scale-95",
+              kind === "waifu"
+                ? "border-pink-400/45 bg-pink-500/15 text-pink-200"
+                : "border-sky-400/45 bg-sky-500/15 text-sky-200",
+            )}
           >
-            <MoreHorizontal className="size-5" />
+            <Heart className="size-3.5" />
+            Ganti
+            <MoreHorizontal className="size-3.5" />
           </button>
           {menu && (
-            <div className="absolute right-0 top-11 z-30 flex w-44 flex-col gap-2">
+            <div
+              style={{ animationDelay: "0ms" }}
+              className="lb-menu-item absolute right-0 top-11 z-30 flex w-44 flex-col gap-2"
+            >
               <button
                 onClick={() => { onKindChange(kind === "waifu" ? "husbu" : "waifu"); setMenu(false); }}
                 className="flex w-full items-center gap-2.5 rounded-xl border border-white/12 bg-neutral-900/95 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
@@ -102,7 +122,9 @@ export function VoteCatalogScreen({
             onClick={() => setLetter(l)}
             className={cn(
               "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-black transition",
-              letter === l ? "bg-white text-black" : "bg-white/10 text-white/70 hover:bg-white/20",
+              letter === l
+                ? "bg-gradient-to-b from-white to-zinc-200 text-black shadow-md shadow-white/20"
+                : "bg-white/10 text-white/70 hover:bg-white/20",
             )}
           >
             {l}
@@ -124,8 +146,10 @@ export function VoteCatalogScreen({
             <div
               key={c.id}
               className={cn(
-                "overflow-hidden rounded-3xl border bg-gradient-to-b from-zinc-900 to-black shadow-lg shadow-black/40 transition",
-                votedThis ? "border-pink-400/60" : "border-white/10",
+                "overflow-hidden rounded-3xl border bg-gradient-to-b from-zinc-900 to-black shadow-xl shadow-black/50 transition",
+                votedThis
+                  ? "border-pink-400/60 shadow-[0_0_24px_-6px_rgba(236,72,153,0.65)]"
+                  : "border-white/10 hover:border-white/25",
               )}
             >
               <div className="relative aspect-[3/4] w-full bg-black">
@@ -147,8 +171,10 @@ export function VoteCatalogScreen({
                   onClick={() => void vote(c.id)}
                   disabled={busy === c.id || board?.votedToday}
                   className={cn(
-                    "flex w-full items-center justify-center gap-1.5 rounded-2xl py-2.5 text-xs font-black transition disabled:opacity-50",
-                    votedThis ? "bg-pink-500 text-white" : "bg-white/12 text-white hover:bg-white/20",
+                    "flex w-full items-center justify-center gap-1.5 rounded-2xl py-2.5 text-xs font-black transition active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100",
+                    votedThis
+                      ? "bg-gradient-to-r from-pink-500 to-fuchsia-500 text-white shadow-lg shadow-pink-500/30"
+                      : "border border-white/15 bg-white/[0.06] text-white hover:border-white/40 hover:bg-white/15",
                   )}
                 >
                   <Heart className={cn("size-3.5", votedThis && "fill-current")} />
