@@ -1849,8 +1849,15 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
   if (!detailData)
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Memuat…
+      <div className="flex min-h-screen flex-col items-center justify-center gap-1.5 text-center text-sm text-muted-foreground">
+        <span>Memuat…</span>
+        {/* Room nobar: nunggu detail anime dari server, makanya butuh
+            waktu — kasih tahu biar tidak dianggap macet. */}
+        {roomId && (
+          <span className="text-xs text-muted-foreground/70">
+            Memuat kotak nobar memerlukan 1-10 detik, sabar ya…
+          </span>
+        )}
       </div>
     );
 

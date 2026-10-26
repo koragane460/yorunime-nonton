@@ -1,0 +1,23 @@
+{
+  "name": "YoruNime",
+  "short_name": "YoruNime",
+  "description": "Streaming anime subtitle Indonesia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1a33",
+  "theme_color": "#0f1a33",
+  "icons": [
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-source.jpg",
+      "sizes": "640x640",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

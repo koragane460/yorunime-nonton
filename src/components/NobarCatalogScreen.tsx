@@ -147,7 +147,14 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {code.trim().length >= 2 && !found && (
+          {/* Masih mencari (query belum balik) → jangan bilang "tidak
+              ditemukan" dulu; kasih tahu bahwa carinya butuh waktu. */}
+          {code.trim().length >= 2 && found === undefined && (
+            <p className="mt-2 text-center text-[11px] text-white/40">
+              Mencari room… memerlukan 1-10 detik, sabar ya…
+            </p>
+          )}
+          {code.trim().length >= 2 && found === null && (
             <p className="mt-2 text-center text-[11px] text-white/40">
               Room tidak ditemukan atau sudah bubar.
             </p>
@@ -157,7 +164,18 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
 
       {/* ------- DAFTAR ROOM — grid ke bawah ------- */}
       <div className="grid gap-2.5">
-        {(rooms ?? []).length === 0 && (
+        {/* Query belum balik → tampilin kotak loading, bukan "belum ada
+            room" (dulu kebaca sebagai room kosong padahal masih memuat). */}
+        {rooms === undefined && (
+          <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-indigo-400/25 bg-white/[0.04] px-4 py-7 text-center">
+            <Loader2 className="size-5 animate-spin text-indigo-300" aria-hidden />
+            <p className="text-xs font-bold text-white/80">Memuat kotak nobar…</p>
+            <p className="text-[11px] text-white/50">
+              Memerlukan 1-10 detik, sabar ya…
+            </p>
+          </div>
+        )}
+        {rooms !== undefined && rooms.length === 0 && (
           <p className="py-8 text-center text-xs font-bold text-zinc-500">
             Belum ada room aktif — jadilah host pertama.
           </p>
