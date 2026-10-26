@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
@@ -199,7 +199,7 @@ export function ProfileSheet({
             {((profile.clanTag && profile.clanName) ||
               profile.giverRank ||
               profile.xpRank) && (
-              <div className="absolute left-3 top-11 z-[5] max-w-[64%] space-y-1.5 rounded-2xl bg-black/35 p-2 backdrop-blur-[2px]">
+              <div className="absolute left-3 top-11 z-[5] max-w-[70%] space-y-2 rounded-2xl bg-black/75 p-2.5 ring-1 ring-white/25 backdrop-blur-sm">
                 {profile.clanTag && profile.clanName && (
                   <div className="flex items-center gap-1.5">
                     <ClanTag
@@ -218,14 +218,14 @@ export function ProfileSheet({
                   </div>
                 )}
                 {profile.giverRank ? (
-                  <span className="flex w-fit items-center gap-1.5 rounded-md bg-gradient-to-r from-red-950/90 to-black/90 px-2 py-1 text-[10px] font-black text-red-200 ring-1 ring-red-500/35">
-                    <Gift className="size-3 text-red-500" aria-hidden />
+                  <span className="flex w-fit items-center gap-1.5 rounded-lg bg-red-900/85 px-2.5 py-1.5 text-[11px] font-black text-red-100 ring-1 ring-red-400/60">
+                    <Gift className="size-3.5 text-red-300" aria-hidden />
                     GIVER {profile.giverRank}
                   </span>
                 ) : null}
                 {profile.xpRank ? (
-                  <span className="flex w-fit items-center gap-1.5 rounded-md bg-gradient-to-r from-yellow-950/90 to-black/90 px-2 py-1 text-[10px] font-black text-yellow-200 ring-1 ring-yellow-500/35">
-                    <Zap className="size-3 text-yellow-400" aria-hidden />
+                  <span className="flex w-fit items-center gap-1.5 rounded-lg bg-yellow-900/85 px-2.5 py-1.5 text-[11px] font-black text-yellow-100 ring-1 ring-yellow-400/60">
+                    <Zap className="size-3.5 text-yellow-300" aria-hidden />
                     TOP XP {profile.xpRank}
                   </span>
                 ) : null}
@@ -283,39 +283,37 @@ export function ProfileSheet({
                 ID (kotak rounded abu-abu, awalan #) · tag level (TRANSAPAN +
                 outline, ikon material, tap = daftar tier) · jumlah teman
                 (kotak abu-abu + ikon orang). Tag clan pindah ke banner. */}
-            <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px]">
-              <span className="inline-flex items-center rounded-md bg-zinc-500/45 px-2 py-0.5 font-mono font-bold text-white/95">
+            <div className="mt-2 flex items-center justify-center gap-2 text-[13px]">
+              <span className="inline-flex items-center rounded-lg bg-zinc-500/25 px-3 py-1 font-mono font-bold text-white/95">
                 {displayId(profile.seqId)}
               </span>
               <button
                 type="button"
                 onClick={() => setTierPopup(true)}
                 aria-label="Daftar tag level"
-                className="inline-flex items-center gap-1 rounded-md border border-white/45 px-2 py-0.5 font-bold text-white/95 transition active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/45 bg-white/5 px-3 py-1 font-bold text-white/95 transition active:scale-95"
               >
-                <TierIcon tier={badgeForLevel(profile.level).name} className="size-3.5" />
+                <TierIcon tier={badgeForLevel(profile.level).name} className="size-4" />
                 Lv.{profile.level}
               </button>
-              <span className="inline-flex items-center gap-1 rounded-md bg-zinc-500/45 px-2 py-0.5 font-bold text-white/95">
-                <Users className="size-3" aria-hidden />
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-500/25 px-3 py-1 font-bold text-white/95">
+                <Users className="size-3.5" aria-hidden />
                 {profile.friendCount ?? 0}
               </span>
             </div>
 
-            {/* Dua tombol membulat (pill), tidak lagi kotak panjang yang memenuhi
-                lebar layar: lebar keduanya ikut isi teks + justify-self, jadi
-                rapih berdampingan dan tidak melar ke pinggir. Add Friend
-                memakai warna kotak pesan chat (abu-abu gelap); Chat kuning
-                tua dan baru bisa ditekan kalau sudah berteman. */}
-            {!isMe && (
-              <div className="mx-auto mt-3 flex max-w-sm flex-col items-center gap-2">
-                <div className="flex justify-center gap-2">
+            {/* YoruPet & Afinitas SELALU tampil (profil sendiri maupun orang
+                lain); Add Friend hanya untuk profil ORANG LAIN. Ketiganya
+                kini lebih besar. */}
+            <div className="mx-auto mt-4 flex max-w-sm flex-col items-center gap-2.5">
+              <div className="flex justify-center gap-2.5">
+                {!isMe && (
                   <button
                     type="button"
                     onClick={requestFriend}
                     disabled={sending || friendStatus === "friend" || friendStatus === "pending"}
                     className={cn(
-                      "inline-flex w-fit items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-4 py-2 text-[12px] font-bold text-white transition active:scale-[0.98]",
+                      "inline-flex w-fit items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.09] px-5 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]",
                       (friendStatus === "friend" || friendStatus === "pending") &&
                         "opacity-50",
                     )}
@@ -331,27 +329,27 @@ export function ProfileSheet({
                         ? "Terkirim"
                         : "Add Friend"}
                   </button>
-                  {/* Chat → YoruPet: lihat kebun binatang milik user ini */}
-                  <button
-                    type="button"
-                    onClick={() => setViewPet(true)}
-                    className="inline-flex w-fit items-center justify-center gap-2 rounded-full border border-amber-500/50 bg-amber-600/90 px-4 py-2 text-[12px] font-bold text-white transition active:scale-[0.98]"
-                  >
-                    <PawPrint className="size-4 shrink-0" />
-                    YoruPet
-                  </button>
-                </div>
-                {/* Afinitas — relasi dekat, layar penuh */}
+                )}
+                {/* YoruPet: lihat kebun binatang milik user ini */}
                 <button
                   type="button"
-                  onClick={() => setAffinity(true)}
-                  className="inline-flex w-fit items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-4 py-2 text-[12px] font-bold text-pink-100 transition active:scale-[0.98]"
+                  onClick={() => setViewPet(true)}
+                  className="inline-flex w-fit items-center justify-center gap-2 rounded-full border border-amber-500/50 bg-amber-600/90 px-5 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]"
                 >
-                  <HeartHandshake className="size-4 shrink-0" />
-                  Afinitas
+                  <PawPrint className="size-4 shrink-0" />
+                  YoruPet
                 </button>
               </div>
-            )}
+              {/* Afinitas — relasi dekat, layar penuh */}
+              <button
+                type="button"
+                onClick={() => setAffinity(true)}
+                className="inline-flex w-fit items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-5 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
+              >
+                <HeartHandshake className="size-4 shrink-0" />
+                Afinitas
+              </button>
+            </div>
 
             {/* Bar level: kiri Level n, kanan 1/12.000 */}
             <div className="mx-auto mt-3 max-w-sm">
@@ -868,6 +866,61 @@ const TIER_DESC: Record<string, string> = {
 /** Ikon material per tier level — ingot (Bronze/Silver/Grandmaster) dan
  *  permata (Diamond/Emerald/Master). SVG kecil tanpa latar (clean). */
 function TierIcon({ tier, className }: { tier: string; className?: string }) {
+  /** Enam material BERBEDA — ingot, ore, intan, zamrud, kristal, medali. */
+  const art: Record<string, ReactNode> = {
+    /* INGOT — batangan logam bertingkat. */
+    Bronze: (
+      <>
+        <path d="M4.6 6.4 H11.4 L13.4 10.4 H2.6 Z" fill="#c87a4a" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M2.6 10.4 H13.4 V12.4 H2.6 Z" fill="#a35f38" opacity="0.9" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M5.4 7.5 H10.6" stroke="rgba(255,255,255,.5)" strokeWidth="0.8" />
+      </>
+    ),
+    /* ORE — bongkahan bijih bersegmen. */
+    Silver: (
+      <>
+        <path d="M3.4 8.6 L5.4 4.6 L9.6 3.6 L12.8 6.4 L11.8 11.4 L6.4 12.6 Z" fill="#b9c0ca" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M5.4 4.6 L7.6 8.2 L12.8 6.4 M7.6 8.2 L6.4 12.6 M7.6 8.2 L11.8 11.4" stroke="rgba(255,255,255,.55)" strokeWidth="0.7" fill="none" />
+      </>
+    ),
+    /* INTAN — potongan brilian. */
+    Diamond: (
+      <>
+        <path d="M8 13.6 L2.6 6.4 H13.4 Z" fill="#7ddffb" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M2.6 6.4 L4.7 3 H11.3 L13.4 6.4 Z" fill="#a9edff" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M4.7 3 L6.5 6.4 L8 13.6 M11.3 3 L9.5 6.4" stroke="rgba(255,255,255,.6)" strokeWidth="0.7" fill="none" />
+      </>
+    ),
+    /* ZAMRUD — potongan octagon bertingkat. */
+    Emerald: (
+      <>
+        <path d="M5.4 2.6 H10.6 L13.4 5.4 V10.6 L10.6 13.4 H5.4 L2.6 10.6 V5.4 Z" fill="#3fd07f" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M6.4 5.4 H9.6 V10.6 H6.4 Z" fill="rgba(255,255,255,.4)" stroke="rgba(0,0,0,.35)" strokeWidth="0.7" />
+      </>
+    ),
+    /* KRISTAL — rumpun tiga bilah. */
+    Master: (
+      <>
+        <path d="M4.4 13.4 L3.2 9 L5.4 4.2 L8 7.8 Z" fill="#e0455c" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M7 13.6 L6.4 8.6 L9.4 3.6 L12.6 9.4 L11.4 13.6 Z" fill="#ff7183" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M9.4 3.6 L9.6 13.6" stroke="rgba(255,255,255,.55)" strokeWidth="0.7" />
+        <path d="M2.4 13.6 H13.6" stroke="rgba(0,0,0,.45)" strokeWidth="0.9" strokeLinecap="round" />
+      </>
+    ),
+    /* MEDALI BINTANG — puncak tertinggi. */
+    Grandmaster: (
+      <>
+        <path d="M8 1.6 L9.95 5.85 L14.6 6.4 L11.15 9.5 L12.1 14.1 L8 11.75 L3.9 14.1 L4.85 9.5 L1.4 6.4 L6.05 5.85 Z" fill="#f5c542" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M8 4.6 L8.85 6.7 L11.15 7 L9.4 8.6 L9.85 10.85 L8 9.75 L6.15 10.85 L6.6 8.6 L4.85 7 L7.15 6.7 Z" fill="rgba(255,255,255,.5)" />
+      </>
+    ),
+  };
+  if (art[tier])
+    return (
+      <svg viewBox="0 0 16 16" className={className} aria-hidden>
+        {art[tier]}
+      </svg>
+    );
   const gem: Record<string, string> = {
     Diamond: "#7ddffb",
     Emerald: "#3fd07f",

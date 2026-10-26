@@ -27,10 +27,21 @@ export function xpForLevel(level: number) {
 export const currentUser = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    // Token basi / header auth rusak bikin getAuthUserId melempar error dan
+    // seluruh app error ("Server Error"). Anggap saja belum login.
+    let userId;
+    try {
+      userId = await getAuthUserId(ctx);
+    } catch {
+      return null;
+    }
     if (userId === null) return null;
-    const user = await ctx.db.get(userId);
-    return user;
+    try {
+      return await ctx.db.get(userId);
+    } catch {
+      // Dokumen user tidak ada / tidak valid terhadap schema.
+      return null;
+    }
   },
 });
 

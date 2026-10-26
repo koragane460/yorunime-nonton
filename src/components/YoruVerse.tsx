@@ -39,12 +39,11 @@ import { BORDERS } from "@/lib/borders";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 
-type HubView = null | "teman" | "clan" | "shop" | "title" | "pet" | "music";
+type HubView = null | "clan" | "shop" | "title" | "pet" | "music";
 
 /** Kotak ketupat + gradien lembut per kotak (gaya sama kayak judul baris
  *  "Manga / Manhwa Terbaru & Populer" di Home — bukan neon). */
 const BOXES = [
-  { key: "teman", label: "Teman", Icon: Users, grad: "from-amber-300/70 via-orange-200/45 to-rose-300/60" },
   { key: "clan", label: "Clan", Icon: Shield, grad: "from-violet-400/70 via-fuchsia-300/45 to-pink-400/60" },
   { key: "shop", label: "Shop", Icon: ShoppingBag, grad: "from-sky-400/70 via-cyan-300/45 to-teal-400/60" },
   { key: "title", label: "Title", Icon: Award, grad: "from-emerald-400/70 via-lime-300/45 to-yellow-300/60" },
@@ -62,7 +61,6 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<HubView>(null);
 
   const sub =
-    view === "teman" ? <TemanScreen onBack={() => setView(null)} /> :
     view === "clan" ? <ClanScreen onBack={() => setView(null)} /> :
     view === "shop" ? <ShopScreen onBack={() => setView(null)} /> :
     view === "title" ? <TitleScreen onBack={() => setView(null)} /> :

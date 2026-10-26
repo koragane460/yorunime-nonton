@@ -101,6 +101,8 @@ export type SceneDef = {
   cost: number;
   /** Kelas gradien latar langit. */
   sky: string;
+  /** GAMBAR latar asli (raster) — dipakai kalau ada, menggantikan gradien. */
+  image?: string;
   /** Kelas gradien lantai tanah. */
   floor: string;
   /** Partikel melayang khas scene ini. */
@@ -115,6 +117,7 @@ export const SCENES: SceneDef[] = [
     emoji: "🌲",
     cost: 0,
     sky: "from-emerald-950 via-emerald-800/50 to-lime-950",
+    image: "/scenes/hutan.jpg",
     floor: "from-emerald-900 to-green-950",
     particle: "🍃",
   },

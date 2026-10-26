@@ -17,7 +17,6 @@ import { CuplixOverlay } from "@/components/CuplixOverlay";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
-import { NobarBar } from "@/components/NobarBar";
 import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { formatViews, type ComicItem } from "@/components/ComicCard";
 import type { FilmCard as FilmCardT } from "@/convex/films";
@@ -44,6 +43,7 @@ import {
   LayoutGrid,
   List,
   Eye,
+  CalendarDays,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -129,9 +129,18 @@ export default function Home() {
 
 // ------------------------------------------------------------- skeletons ----
 
+/** Nama hari Indonesia dari tanggal ("YYYY-MM-DD" / ms / Date). */
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+function hariDariTanggal(v?: string | number): string | undefined {
+  if (!v) return undefined;
+  const t = typeof v === "number" ? v : Date.parse(String(v));
+  if (!Number.isFinite(t)) return undefined;
+  return HARI[new Date(t).getDay()];
+}
+
 function HeroSkeleton() {
   return (
-    <div className="skeleton mt-3 h-[178px] w-full rounded-2xl border border-white/5" />
+    <div className="skeleton mt-3 h-[150px] w-full rounded-2xl border border-white/5" />
   );
 }
 
@@ -171,7 +180,7 @@ function HeroSlides({
   }, [total]);
 
   return (
-    <div className="relative h-[178px] min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10">
+    <div className="relative h-[150px] min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10">
       {items.map((a, i) => (
         <div
           key={a.id}
@@ -202,27 +211,25 @@ function HeroSlides({
               aria-label={`Detail ${a.title}`}
               className="absolute inset-0"
             />
-            {/* Badge TOP di KIRI ATAS dan jumlah views di KANAN ATAS. */}
+            {/* Angka peringkat di KIRI ATAS (angka saja, putih) dan jumlah
+                views di KANAN ATAS — keduanya lebih besar. */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onTop();
               }}
-              className="absolute left-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm transition active:scale-95"
+              className="absolute left-2 top-2 z-10 inline-flex shrink-0 items-center rounded-lg bg-black/70 px-2.5 py-1 text-base font-black leading-none text-white backdrop-blur-sm transition active:scale-95"
             >
-              <Trophy className="size-3 text-gold" aria-hidden /> TOP{" "}
-              <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-                #{i + 1}
-              </span>
+              {i + 1}
             </button>
-            <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/70 px-1.5 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
-              <Eye className="size-3 text-white/80" aria-hidden />
+            <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
+              <Eye className="size-4 text-white/90" aria-hidden />
               {formatViews(viewCountFor(String(a.id)))}
             </span>
-            {/* Kotak hitam lurus full lebar di bawah banner (opacity 70%):
-                judul di tengah — TOP & views sudah pindah ke pojok atas. */}
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/70 px-3 py-2 backdrop-blur-[2px]">
-              <p className="min-w-0 flex-1 truncate text-center text-sm font-bold text-white">
+            {/* Kotak hitam MENYATU ke banner: lebih tinggi, judul di tengah,
+                sudut bawah ikut terpotong rounded-nya banner (gak keliatan). */}
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 rounded-t-2xl bg-black/80 px-3 py-3.5 backdrop-blur-[2px]">
+              <p className="min-w-0 flex-1 truncate text-center text-base font-bold text-white">
                 {a.title}
               </p>
             </div>
@@ -366,18 +373,18 @@ function ComicHomeRow({
                     )}
                   />
                 )}
-                {/* Label chapter terbaru — khas kartu webtoon/manhwa. */}
+                {/* Label chapter terbaru — MENYATU dengan kartu (flush ke
+                    sudut, tanpa rounded yang terlihat), biru muda. */}
                 {variant === "manhwa" && c.latestChapter && (
-                  <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
+                  <span className="absolute left-0 top-0 rounded-none rounded-br-lg bg-sky-300 px-1.5 py-0.5 font-mono text-[9px] font-bold text-black">
                     {c.latestChapter}
                   </span>
                 )}
-                {/* Label "Berjalan" untuk manga yang masih tamat. */}
                 {/* Title ONGOING — flush ke sudut kiri-atas kartu (menyatu,
-                    rounded hanya pojok kanan-bawah). */}
+                    rounded hanya pojok kanan-bawah), biru muda. */}
                 {variant === "manga" && c.ongoing && (
-                  <span className="absolute left-0 top-0 rounded-none rounded-br-lg bg-primary px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
-                    Berjalan
+                  <span className="absolute left-0 top-0 rounded-none rounded-br-lg bg-sky-300 px-1.5 py-0.5 text-[9px] font-black uppercase text-black">
+                    Ongoing
                   </span>
                 )}
               </div>
@@ -1047,7 +1054,7 @@ function HomeContent() {
               setSearchOpenGenres(false);
               setShowSearch(true);
             }}
-            className="flex w-full items-center gap-2 rounded-xl border border-white/12 bg-white/[0.06] px-3.5 py-3 text-left"
+            className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-3 text-left"
           >
             <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
             <span className="flex-1 text-[15px] text-muted-foreground">
@@ -1056,20 +1063,25 @@ function HomeContent() {
           </button>
         </div>
       )}
-      {/* 1) YORUNIME PREMIUM — kotak KECIL: ikon mahkota di kiri, tulisan
-          "Beli Premium Ada Di Sini" di kanan. Tema biru muda lembut (bukan
-          neon, bukan emas) — permintaan user. */}
+      {/* 1) YORUNIME PREMIUM — kotak ABU-ABU: ikon mahkota (kuning lembut)
+          dalam kotak rounded, tulisan "Beli Premium Ada Di Sini" dalam kotak
+          rounded berlatar biru, dan baris bawah "Mulai dari Rp7.000". */}
       <button
         onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-2.5 rounded-2xl border border-sky-400/25 bg-gradient-to-r from-sky-500/[0.14] via-sky-500/[0.06] to-transparent px-3 py-2.5 text-left transition hover:border-sky-400/50"
+        className="fade-enter mt-4 flex w-full flex-col gap-2.5 rounded-2xl border border-white/10 bg-zinc-500/25 px-3.5 py-4 text-left transition hover:bg-zinc-500/35"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-sky-400/35 bg-sky-400/15">
-          <CrownIcon className="size-4.5 text-sky-300" />
+        <span className="flex w-full items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
+            <CrownIcon className="size-5 text-amber-300" />
+          </span>
+          <span className="min-w-0 flex-1 rounded-xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
+            Beli Premium Ada Di Sini
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-white/60" aria-hidden />
         </span>
-        <span className="min-w-0 flex-1 text-[13px] font-bold text-sky-100">
-          Beli Premium Ada Di Sini
+        <span className="pl-0.5 text-[11px] font-semibold text-white/65">
+          Mulai dari Rp7.000
         </span>
-        <ChevronRight className="size-4 shrink-0 text-sky-300/70" aria-hidden />
       </button>
 
       {/* 2) HERO BANNER — SATU anime tampil (fade antar judul, selalu hanya
@@ -1124,11 +1136,11 @@ function HomeContent() {
             setSearchOpenGenres(false);
             setShowSearch(true);
           }}
-          className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-border bg-black/55 px-4 py-3 text-left backdrop-blur-md"
+          className="mt-3 flex w-full items-center gap-2 rounded-full border border-border bg-black/55 px-4 py-3.5 text-left backdrop-blur-md"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-sm text-muted-foreground">
-            contoh: ayanokoji adalah aku / battle through
+            Cari disini
           </span>
           <span className="px-3 py-1 text-xs font-bold text-white">
             Cari
@@ -2483,14 +2495,14 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
         </div>
 
         {/* Input + tombol Cari */}
-        <div className="flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+        <div className="flex w-full items-center gap-2 rounded-full border border-border bg-card px-4 py-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder="contoh: ayanokoji adalah aku / battle through"
+            placeholder="Cari disini"
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {query && (
@@ -2811,13 +2823,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           {tab === "chat" && (
             /* Latar layar chat abu-abu — bubble pesan tetap warnanya sendiri. */
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/50 bg-black/35">
-              {/* Nobar: daftar room nonton bareng */}
-              <NobarBar
-                onJoined={(roomId) => {
-                  onClose();
-                  navigate(`/nonton?room=${roomId}`);
-                }}
-              />
+              {/* Bar NOBAR DIHAPUS dari sini — sudah ada di Catalog › Nobar. */}
               {/* Chat global dirender LANGSUNG begitu layar dibuka, tanpa menunggu
                   riwayat dari server. Duluymenunggu query selesai dulu baru
                   menampilkan panel — jadi kalau server lambat, user cuma bisa
@@ -3225,6 +3231,15 @@ function AnimeDetailScreen({
     );
 
   const eps: any[] = [...(detail.episodeList ?? [])];
+  // Hari update mingguan — tanggal tayang episode pertama (serial mingguan
+  // selalu tayang di hari yang sama). Hanya judul ONGOING yang menampilkan
+  // tag "Update setiap …".
+  const updateDay =
+    detail.status === "Ongoing"
+      ? hariDariTanggal(
+          (detail.episodeList ?? []).find((e: any) => e.aired)?.aired,
+        )
+      : undefined;
   if (episodeOrder === "last") eps.reverse();
   // Filter pencarian episode (nomor atau judul) — lokal, tanpa fetch.
   const qEp = episodeQuery.trim().toLowerCase();
@@ -3294,28 +3309,38 @@ function AnimeDetailScreen({
                 {detail.titleEnglish}
               </p>
             )}
-            <span
-              className={cn(
-                "mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
-                detail.status === "Completed"
-                  ? "bg-emerald-500/80 text-white"
-                  : detail.status === "OVA" || detail.status === "Movie"
-                    ? "bg-sky-700/90 text-white"
-                    : "bg-primary text-white",
-              )}
-            >
-              {detail.status ?? "Ongoing"}
-            </span>
-            {/* Tombol info khusus developer: MAL id + URL poster + id sumber,
-                dipakai saat mengisi tools konten. */}
-            {devAccess?.level === "dev" && (
-              <button
-                onClick={() => setDevInfoOpen(true)}
-                className="ml-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white/90"
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span
+                className={cn(
+                  "inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
+                  detail.status === "Completed"
+                    ? "bg-emerald-500/80 text-white"
+                    : detail.status === "OVA" || detail.status === "Movie"
+                      ? "bg-sky-700/90 text-white"
+                      : "bg-primary text-white",
+                )}
               >
-                <Info className="size-3" /> Info developer
-              </button>
-            )}
+                {detail.status ?? "Ongoing"}
+              </span>
+              {/* Jadwal update — hanya judul ONGOING. Sejajar + ukuran sama
+                  dengan tag status; ikon kalender + teks kuning lembut. */}
+              {detail.status === "Ongoing" && updateDay && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 ring-1 ring-amber-300/35">
+                  <CalendarDays className="size-3" aria-hidden />
+                  Update setiap {updateDay}
+                </span>
+              )}
+              {/* Tombol info khusus developer: MAL id + URL poster + id sumber,
+                  dipakai saat mengisi tools konten. */}
+              {devAccess?.level === "dev" && (
+                <button
+                  onClick={() => setDevInfoOpen(true)}
+                  className="inline-flex w-fit items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white/90"
+                >
+                  <Info className="size-3" /> Info developer
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -3355,7 +3380,7 @@ function AnimeDetailScreen({
               {(detail.genres ?? []).map((g: string) => (
                 <span
                   key={g}
-                  className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-semibold text-primary"
+                  className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-white"
                 >
                   {g}
                 </span>
@@ -4190,6 +4215,33 @@ function DonghuaDetailScreen({
     api.content.overrideFor,
     slug ? { key: slug, kind: "donghua" } : "skip",
   );
+  // Jadwal donghua resmi (per hari) — dipakai untuk tag "Update setiap …".
+  const weeklySchedule = useAction(api.sanka.donghuaWeeklySchedule);
+  const [updateDay, setUpdateDay] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    setUpdateDay(undefined);
+    weeklySchedule({})
+      .then((r: any) => {
+        if (!alive || !r?.byDay) return;
+        for (const [day, list] of Object.entries(
+          r.byDay as Record<string, { id?: string; title?: string }[]>,
+        )) {
+          const hit = (list ?? []).some(
+            (c) => c?.id === slug || c?.title === detail?.title,
+          );
+          if (hit) {
+            setUpdateDay(day);
+            return;
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, detail?.title]);
   const synopsisLines = useMemo(
     () =>
       (customDonghuaSynopsis?.synopsis ?? detail?.synopsis ?? "")
@@ -4259,6 +4311,21 @@ function DonghuaDetailScreen({
               {detail.rating ? `★ ${detail.rating}` : "Rating belum ada"}
               {detail.status ? ` • ${detail.status}` : ""}
             </p>
+            {/* Tag status + jadwal update (khusus yang masih ONGOING) —
+                ukuran & posisi sejajar dengan tag status di detail anime. */}
+            {detail.status === "Ongoing" && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-white">
+                  Ongoing
+                </span>
+                {updateDay && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 ring-1 ring-amber-300/35">
+                    <CalendarDays className="size-3" aria-hidden />
+                    Update setiap {updateDay}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -4269,7 +4336,7 @@ function DonghuaDetailScreen({
               {detail.genres.map((g) => (
                 <span
                   key={g}
-                  className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-semibold text-primary"
+                  className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-white"
                 >
                   {g}
                 </span>

@@ -274,7 +274,7 @@ function AccountPanel({
         {/* pb-2: panel tidak memanjang ke bawah (permintaan user) — baris
             Sacret + tombol YoruVerse pindah ke footer terpisah di luar
             tombol ini, jadi tidak perlu ruang kosong besar di bawah. */}
-        <div className="relative p-3 pb-2">
+        <div className="relative p-4 pb-4">
           <div className="flex items-center gap-3">
             {avatarBorder && avatarBorder !== "none" ? (
               /* Border shop terpasang → bingkai kreatif menggantikan ring
@@ -283,12 +283,12 @@ function AccountPanel({
                 border={avatarBorder}
                 src={image}
                 seed={name}
-                className="size-14 shrink-0"
+                className="size-16 shrink-0"
               />
             ) : (
               <div className="yn-avatar-ring shrink-0">
                 <div className="rounded-full bg-background p-[2px]">
-                  <Avatar src={image} seed={name} className="size-14" />
+                  <Avatar src={image} seed={name} className="size-16" />
                 </div>
               </div>
             )}
@@ -320,15 +320,15 @@ function AccountPanel({
             </div>
           </div>
 
-          {/* Bar level: lebih kecil, tanpa garis pembatas */}
-          <div className="mt-2">
-            <div className="mb-1 flex items-center justify-between text-[10px]">
+          {/* Bar level: lebih besar & jarak longgar */}
+          <div className="mt-4">
+            <div className="mb-1.5 flex items-center justify-between text-[11px]">
               <span className="font-semibold text-white">Level {level}</span>
               <span className="text-zinc-400">
                 {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
               </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-black/60">
+            <div className="h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/20">
               <div
                 className="h-full rounded-full bg-primary"
                 style={{ width: `${pct}%` }}
@@ -342,7 +342,7 @@ function AccountPanel({
           kanan — SEBARIS sehingga panel tidak memanjang ke bawah dan
           tombol YoruVerse dibatasi ruangnya sendiri tanpa menimpa baris
           mana pun (permintaan user). */}
-      <div className="relative flex items-center justify-between gap-2 px-3 pb-2.5">
+      <div className="relative flex items-center justify-between gap-2 px-3 pb-3.5 pt-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[11px]">
           <span className="flex items-center gap-1 font-semibold text-sky-300">
             <GemIcon className="size-3.5" /> {diamonds.toLocaleString("id-ID")} Sacret

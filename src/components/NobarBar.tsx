@@ -38,6 +38,8 @@ export type Room = {
   isHost: boolean;
   joined: boolean;
   updatedAt: number;
+  /** Kode undangan room (ditampilkan di kartu room). */
+  inviteCode?: string;
 };
 
 /**

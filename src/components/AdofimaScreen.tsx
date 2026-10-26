@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { Search, Star, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Cat = "semua" | "anime" | "manga" | "manhwa" | "film";
+type Cat = "anime" | "manga" | "manhwa" | "film";
 
 type Item = {
   key: string;
@@ -17,13 +17,6 @@ type Item = {
 };
 
 const AZ = ["Semua", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")];
-const CATS: { k: Cat; label: string }[] = [
-  { k: "semua", label: "Semua" },
-  { k: "anime", label: "Anime" },
-  { k: "manga", label: "Manga" },
-  { k: "manhwa", label: "Manhwa" },
-  { k: "film", label: "Film" },
-];
 
 export function AdofimaScreen({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
@@ -33,7 +26,6 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cat, setCat] = useState<Cat>("semua");
   const [letter, setLetter] = useState("Semua");
   const [q, setQ] = useState("");
 
@@ -92,7 +84,6 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
 
   const shown = useMemo(() => {
     let list = items;
-    if (cat !== "semua") list = list.filter((i) => i.cat === cat);
     if (q.trim()) {
       const t = q.trim().toLowerCase();
       list = list.filter((i) => i.title.toLowerCase().includes(t));
@@ -100,7 +91,7 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
     if (letter !== "Semua")
       list = list.filter((i) => i.title.toUpperCase().startsWith(letter));
     return list;
-  }, [items, cat, q, letter]);
+  }, [items, q, letter]);
 
   return (
     <div className="space-y-3">
@@ -115,23 +106,7 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
         />
       </div>
 
-      {/* Filter kategori. */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {CATS.map((c) => (
-          <button
-            key={c.k}
-            onClick={() => setCat(c.k)}
-            className={cn(
-              "shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-black transition",
-              cat === c.k ? "bg-white text-black" : "bg-white/10 text-white/70 hover:bg-white/20",
-            )}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Filter A-Z. */}
+      {/* Filter A-Z + Semua. */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {AZ.map((l) => (
           <button
@@ -139,7 +114,7 @@ export function AdofimaScreen({ onClose }: { onClose: () => void }) {
             onClick={() => setLetter(l)}
             className={cn(
               "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-black transition",
-              letter === l ? "bg-emerald-400 text-emerald-950" : "bg-white/8 text-white/60 hover:bg-white/15",
+              letter === l ? "bg-sky-400 text-black" : "bg-white/8 text-white/60 hover:bg-white/15",
             )}
           >
             {l}

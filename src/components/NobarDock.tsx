@@ -189,8 +189,8 @@ export function NobarDock({
       <div className="flex border-b border-border bg-white/[0.03]">
         {(
           [
-            ["chat", "Chat Nobar", MessageSquare],
-            ["orang", ` Orang (${members.length})`, Users],
+            ["chat", "Chat", MessageSquare],
+            ["orang", `Member (${members.length})`, Users],
           ] as const
         ).map(([k, label, Icon]) => (
           <button

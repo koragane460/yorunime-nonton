@@ -30,7 +30,7 @@ export function formatViews(n?: number) {
   return `${v}`;
 }
 
-/** Chip status: hijau = tamat, amber = masih jalan. */
+/** Chip status: biru muda lembut (tanpa neon) — Ongoing / Tamat. */
 export function StatusChip({
   ongoing,
   className,
@@ -42,7 +42,7 @@ export function StatusChip({
     <span
       className={cn(
         "rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide",
-        ongoing ? "bg-amber-500 text-black" : "bg-emerald-600 text-white",
+        ongoing ? "bg-sky-300 text-black" : "bg-sky-400 text-black",
         className,
       )}
     >

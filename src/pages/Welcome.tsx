@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Ban,
   ChevronLeft,
+  ChevronDown,
   ChevronUp,
   Clock,
   Crown,
@@ -135,6 +136,37 @@ function Starfield() {
       {/* Vignette halus supaya tepi tidak mencolok. */}
       <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_0%,transparent_55%,rgb(0_0_0/0.45))]" />
     </div>
+  );
+}
+
+/** Tiga teks peraturan di layar Disclaimer (kotak judul + teks di bawah). */
+const RULE_CARDS = [
+  "Dilarang untuk menyebutkan nama merek lain agar tidak terjadi kegaduhan & perselisihan",
+  "Aplikasi ini tidak mengunggah, menyimpan, dan menyalahgunakan konten media. Semua tautan berasal dari sumber publik di media.",
+  "Jika merasa konten yang ada di YoruNime mempunyai hak cipta, jangan membuat issue untuk hal yang tidak pasti. Dan jika merasa konten yang diberikan memiliki Hak Cipta silahkan hubungi yorunimesupport@gmail.com",
+];
+
+/** Petunjuk scroll-down beranimasi (animasi saja, bukan scroll sungguhan). */
+function ScrollCue({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mx-auto mt-8 flex w-40 flex-col items-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 transition hover:bg-white/10 active:scale-95"
+    >
+      <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-zinc-400">
+        {label}
+      </span>
+      <motion.span
+        className="flex flex-col items-center"
+        animate={{ y: [0, 7, 0] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+        aria-hidden
+      >
+        <ChevronDown className="size-5 text-white/85" />
+        <ChevronDown className="-mt-2.5 size-5 text-white/35" />
+      </motion.span>
+    </button>
   );
 }
 
@@ -310,9 +342,13 @@ function WelcomeFlow() {
       navigate("/home", { replace: true });
       return;
     }
-    setStage(readOnboarded() ? "entering" : "onboard");
+    // Sudah pernah onboard → langsung ke layar LOGIN (Google / tester).
+    if (readOnboarded()) {
+      navigate("/login", { replace: true });
+      return;
+    }
+    setStage("onboard");
   };
-
   useEffect(() => {
     if (stage !== "intro") return;
     // Kalau ada update yang belum di-download, tahan di intro dulu.
@@ -669,7 +705,7 @@ function WelcomeFlow() {
               <button
                 onClick={() => {
                   saveOnboarded();
-                  setStage("entering");
+                  navigate("/login", { replace: true });
                 }}
                 className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
               >
@@ -688,40 +724,30 @@ function WelcomeFlow() {
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.22 }}
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
-                      YoruNime
-                    </p>
-                    <h2 className="mt-2 text-2xl font-extrabold leading-tight">
-                      Mohon perhatiannya
-                    </h2>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Hal penting sebelum kamu mulai:
-                    </p>
-                    {/* Teks panjang kreatif — TANPA kotak background: tiap poin
-                        mengalir dengan nomor besar + garis aksen tipis di kiri. */}
-                    <ol className="mt-5 space-y-4">
-                      {NOTICE_ITEMS.map((t, i) => (
-                        <motion.li
-                          key={i}
-                          className="relative flex items-start gap-3 pl-4"
-                          initial={{ opacity: 0, x: -14 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: i * 0.05 }}
-                        >
-                          <span
-                            className="absolute left-0 top-1 h-[calc(100%-8px)] w-[2px] rounded-full bg-gradient-to-b from-primary via-primary/40 to-transparent"
-                            aria-hidden
-                          />
-                          <span className="mt-0.5 w-5 shrink-0 text-right font-mono text-[11px] font-black text-primary/70">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <span className="min-w-0 flex-1 text-[13px] leading-relaxed text-foreground/85">
-                            {t.text}
-                          </span>
-                        </motion.li>
-                      ))}
-                    </ol>
+                    <div className="flex min-h-[64vh] flex-col items-center justify-center text-center">
+                      <h1
+                        className="text-6xl font-black leading-none tracking-tight"
+                        style={{
+                          // Huruf "putus-putus": gradasi garis horizontal
+                          // yang memotong teks (background-clip: text).
+                          backgroundImage:
+                            "repeating-linear-gradient(180deg, rgba(255,255,255,0.98) 0 11px, rgba(255,255,255,0) 11px 17px)",
+                          WebkitBackgroundClip: "text",
+                          backgroundClip: "text",
+                          color: "transparent",
+                        }}
+                      >
+                        Welcome
+                      </h1>
+                      <p className="mt-7 text-lg font-bold leading-snug text-white/90">
+                        Aplikasi nonton anime, donghua &amp; film
+                      </p>
+                      <p className="mt-1 text-lg font-bold leading-snug text-white/70">
+                        baca manga &amp; manhwa
+                      </p>
+                    </div>
+                    {/* Animasi scroll-down — ANIMASI, bukan scroll beneran */}
+                    <ScrollCue onClick={() => setOnbIdx(1)} label="Scroll" />
                     <div className="h-4 shrink-0" aria-hidden />
                   </motion.div>
                 ) : (
@@ -732,43 +758,42 @@ function WelcomeFlow() {
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.22 }}
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
-                      Wajib dibaca
-                    </p>
-                    <h2 className="mt-2 text-2xl font-extrabold leading-tight">
-                      Peraturan YoruNime
+                    <h2 className="text-4xl font-black leading-none tracking-tight">
+                      Disclaimer
                     </h2>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Patuhi aturan ini supaya komunitas tetap nyaman:
+                    <p className="mt-3 max-w-md text-[12px] leading-relaxed text-muted-foreground">
+                      YoruNime adalah aplikasi tidak resmi atau aplikasi pihak
+                      ketiga. diharap untuk mengikuti peraturan yang ada
                     </p>
-                    {/* Peraturan sebagai teks panjang kreatif — judul + deskripsi
-                        mengalir, TANPA kotak background, dengan nomor besar. */}
-                    <div className="mt-5 space-y-4">
-                      {RULE_ITEMS.map((r, i) => (
-                        <motion.div
-                          key={i}
-                          className="relative pl-9"
-                          initial={{ opacity: 0, x: -14 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: i * 0.05 }}
-                        >
-                          <span
-                            className="absolute left-0 top-0 flex size-6 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-[11px] font-black text-primary"
-                            aria-hidden
+                    {/* Peraturan: kotak rounded + teks di bawahnya. Kotak #3
+                        berlatar kuning tipis (tidak terlalu mencolok). */}
+                    <div className="mt-6 space-y-4">
+                      {RULE_CARDS.map((text, i) => (
+                        <div key={i}>
+                          <div
+                            className={cn(
+                              "rounded-2xl border px-4 py-2.5 text-center text-sm font-black",
+                              i === 2
+                                ? "border-amber-300/35 bg-amber-300/15 text-amber-100"
+                                : "border-white/12 bg-white/[0.07] text-white",
+                            )}
                           >
-                            {i + 1}
-                          </span>
-                          <p className="flex items-center gap-2 text-[14px] font-bold">
-                            <r.icon className="size-3.5 shrink-0 text-primary" aria-hidden />
-                            {r.title}
+                            Peraturan #{i + 1}
+                          </div>
+                          <p className="mt-2 text-[13px] leading-relaxed text-white/80">
+                            {text}
                           </p>
-                          <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-                            {r.desc}
-                          </p>
-                        </motion.div>
+                        </div>
                       ))}
                     </div>
+                    {/* Animasi scroll-down → ke layar Login */}
+                    <ScrollCue
+                      label="Scroll"
+                      onClick={() => {
+                        saveOnboarded();
+                        navigate("/login", { replace: true });
+                      }}
+                    />
                     <div className="h-4 shrink-0" aria-hidden />
                   </motion.div>
                 )}
@@ -791,12 +816,12 @@ function WelcomeFlow() {
                   if (onbIdx === 0) setOnbIdx(1);
                   else {
                     saveOnboarded();
-                    setStage("entering");
+                    navigate("/login", { replace: true });
                   }
                 }}
                 className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition hover:bg-primary/90 active:scale-[0.98]"
               >
-                {onbIdx === 0 ? "Lanjut" : "Mulai & Masuk"}
+                {onbIdx === 0 ? "Lanjut" : "Masuk"}
                 <ArrowRight className="size-4" aria-hidden />
               </button>
             </div>

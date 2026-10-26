@@ -29,6 +29,10 @@ import { cn } from "@/lib/utils";
  *   - Login Google langsung → menu home.
  *   - Gate: sembunyikan Isi saat loading sesi; yang terlihat hanya splash.
  */
+/** Kredensial akun tester. */
+const TESTER_USER = "Tester YoruNime";
+const TESTER_PASS = "yttaajadeh";
+
 export default function Login() {
   const navigate = useNavigate();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
@@ -85,9 +89,17 @@ export default function Login() {
   };
 
   // --- Tester login (username + password) ---
+  // Kredensial tester: username "Tester YoruNime", password "yttaajadeh".
+  // Keduanya harus cocok supaya bisa masuk.
   const doTesterLogin = async () => {
-    if (!testerUser.trim() || !testerPass.trim()) {
+    const u = testerUser.trim();
+    const p = testerPass.trim();
+    if (!u || !p) {
       setTesterErr("Username & password wajib diisi.");
+      return;
+    }
+    if (u !== TESTER_USER || p !== TESTER_PASS) {
+      setTesterErr("Username atau password tester salah.");
       return;
     }
     setLoginState("loading");
@@ -204,8 +216,10 @@ export default function Login() {
 
       {/* Kartu login utama. */}
       <div className="relative z-10 mt-10 w-full max-w-[26rem] rounded-3xl border border-white/10 bg-background/70 p-6 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl">
-        <h2 className="text-2xl font-black text-foreground">Login</h2>
-        <p className="mt-1 text-center text-xs text-muted-foreground">
+        <h2 className="text-center text-4xl font-black leading-none tracking-tight text-foreground">
+          Login
+        </h2>
+        <p className="mt-2 text-center text-xs leading-relaxed text-muted-foreground">
           Masuk untuk sinkronisasi riwayat akun mu, akun mu terjaga selalu
         </p>
 

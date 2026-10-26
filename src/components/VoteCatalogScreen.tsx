@@ -56,22 +56,24 @@ export function VoteCatalogScreen({
 
   return (
     <div className="space-y-3">
-      {/* Kepala: judul + titik tiga ganti jenis vote (Waifu ⇄ Husbu). */}
-      <div className="flex items-center gap-2">
+      {/* Kepala: judul + titik tiga (di dalam KOTAK SENDIRI, di luar kotak
+          konten) buat ganti jenis vote (Waifu ⇄ Husbu). Tiap pilihan juga
+          kotaknya masing-masing — tidak digabung jadi satu list. */}
+      <div className="relative flex items-center gap-2 pr-1">
         <h2 className="flex-1 text-lg font-extrabold capitalize">Vote {kind}</h2>
         <div className="relative">
           <button
             onClick={() => setMenu((v) => !v)}
             aria-label="Ganti jenis vote"
-            className="flex size-9 items-center justify-center rounded-xl text-white/80 transition active:scale-90"
+            className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white/85 transition active:scale-90"
           >
             <MoreHorizontal className="size-5" />
           </button>
           {menu && (
-            <div className="absolute right-0 top-11 z-30 w-40 overflow-hidden rounded-2xl border border-white/12 bg-neutral-900/95 shadow-2xl">
+            <div className="absolute right-0 top-11 z-30 flex w-44 flex-col gap-2">
               <button
                 onClick={() => { onKindChange(kind === "waifu" ? "husbu" : "waifu"); setMenu(false); }}
-                className="lb-menu-item flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 hover:bg-white/10"
+                className="flex w-full items-center gap-2.5 rounded-xl border border-white/12 bg-neutral-900/95 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
               >
                 <Heart className="size-4 text-pink-300" />
                 {kind === "waifu" ? "Vote Husbu" : "Vote Waifu"}
@@ -115,28 +117,37 @@ export function VoteCatalogScreen({
       )}
 
       {/* Grid kartu character: gambar + nama + tombol Vote. */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-3">
         {items.map((c) => {
           const votedThis = board?.votedCandidateId === c.id;
           return (
-            <div key={c.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05]">
+            <div
+              key={c.id}
+              className={cn(
+                "overflow-hidden rounded-3xl border bg-gradient-to-b from-zinc-900 to-black shadow-lg shadow-black/40 transition",
+                votedThis ? "border-pink-400/60" : "border-white/10",
+              )}
+            >
               <div className="relative aspect-[3/4] w-full bg-black">
                 {c.image ? (
                   <img src={c.image} alt={c.name} loading="lazy" className="absolute inset-0 size-full object-cover" />
                 ) : (
                   <Avatar seed={c.name} className="absolute inset-0 size-full" />
                 )}
-                <span className="absolute left-2 top-2 rounded-lg bg-black/60 px-2 py-0.5 text-[11px] font-black text-white">
+                <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-black text-white ring-1 ring-white/15 backdrop-blur-sm">
                   {c.votes.toLocaleString("id-ID")} vote
                 </span>
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/85 to-transparent" />
+                <p className="absolute inset-x-0 bottom-1.5 truncate px-2 text-center text-xs font-extrabold text-white drop-shadow">
+                  {c.name}
+                </p>
               </div>
-              <div className="p-2">
-                <p className="truncate text-center text-xs font-bold">{c.name}</p>
+              <div className="p-2.5">
                 <button
                   onClick={() => void vote(c.id)}
                   disabled={busy === c.id || board?.votedToday}
                   className={cn(
-                    "mt-1.5 flex w-full items-center justify-center gap-1 rounded-xl py-2 text-xs font-black transition disabled:opacity-50",
+                    "flex w-full items-center justify-center gap-1.5 rounded-2xl py-2.5 text-xs font-black transition disabled:opacity-50",
                     votedThis ? "bg-pink-500 text-white" : "bg-white/12 text-white hover:bg-white/20",
                   )}
                 >

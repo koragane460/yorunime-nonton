@@ -195,7 +195,16 @@ export function YoruPetScreen({
           transition={{ duration: 0.7 }}
           className={cn("pointer-events-none absolute inset-0 bg-gradient-to-b", scene.sky)}
           aria-hidden
-        />
+        >
+          {/* Scene dgn foto asli → gambar beneran, bukan gradien HTML. */}
+          {scene.image && (
+            <img
+              src={scene.image}
+              alt=""
+              className="absolute inset-0 size-full object-cover"
+            />
+          )}
+        </motion.div>
       </AnimatePresence>
       {/* partikel melayang khas scene */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
@@ -249,6 +258,13 @@ export function YoruPetScreen({
             )}
           >
             <div className={cn("absolute inset-0 bg-gradient-to-b", scene.sky)} aria-hidden />
+            {scene.image && (
+              <img
+                src={scene.image}
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+              />
+            )}
             {/* lantai */}
             <div className={cn("absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b opacity-80", scene.floor)} aria-hidden />
             {/* pet berjalan + bubble klaim di atasnya */}

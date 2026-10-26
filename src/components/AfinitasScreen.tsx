@@ -76,37 +76,34 @@ const SHEET_ORDER: Kind[] = ["pasangan", "saudara", "terpercaya", "sahabat"];
 const LB_ORDER: Kind[] = ["pasangan", "saudara", "sahabat", "terpercaya"];
 const ALL_KINDS: Kind[] = ["pasangan", "saudara", "sahabat", "terpercaya"];
 
-/** Posisi slot per jenis (% dalam panggung) — sengaja melengkung. */
+/** Posisi slot per jenis (% dalam panggung) — simetris & rapi. */
 const SLOT_POS: Record<Kind, { x: number; y: number }[]> = {
-  pasangan: [
-    { x: 27, y: 9 },
-    { x: 50, y: 5 },
-    { x: 73, y: 9 },
-  ],
+  // Pasangan cuma SATU slot, tepat di atas foto.
+  pasangan: [{ x: 50, y: 10 }],
   sahabat: [
-    { x: 22, y: 26 },
-    { x: 15, y: 45 },
-    { x: 9, y: 63 },
+    { x: 20, y: 32 },
+    { x: 13, y: 52 },
+    { x: 20, y: 72 },
   ],
   saudara: [
-    { x: 78, y: 26 },
-    { x: 85, y: 45 },
-    { x: 91, y: 63 },
+    { x: 80, y: 32 },
+    { x: 87, y: 52 },
+    { x: 80, y: 72 },
   ],
   terpercaya: [
-    { x: 50, y: 83 },
-    { x: 33, y: 92 },
-    { x: 67, y: 92 },
+    { x: 26, y: 88 },
+    { x: 50, y: 88 },
+    { x: 74, y: 88 },
   ],
 };
 /** Titik tengah foto target dalam panggung (%). */
-const CENTER = { x: 50, y: 47 };
+const CENTER = { x: 50, y: 52 };
 /** Posisi emblem ikon jenis di sekitar foto tengah (%). */
 const EMBLEM_POS: Record<Kind, { x: number; y: number }> = {
-  pasangan: { x: 50, y: 27 },
-  sahabat: { x: 30, y: 47 },
-  saudara: { x: 70, y: 47 },
-  terpercaya: { x: 50, y: 67 },
+  pasangan: { x: 50, y: 34 },
+  sahabat: { x: 30, y: 52 },
+  saudara: { x: 70, y: 52 },
+  terpercaya: { x: 50, y: 74 },
 };
 
 type CircleMember = {
@@ -376,11 +373,11 @@ export function AfinitasScreen({
                       y1={CENTER.y}
                       x2={p.x}
                       y2={p.y}
-                      stroke={filled ? KIND_META[kind].hex : "rgba(255,255,255,.16)"}
-                      strokeWidth={filled ? 1.8 : 1}
-                      strokeDasharray={filled ? undefined : "3 4"}
+                      stroke="#ffffff"
+                      strokeWidth={filled ? 1.6 : 1.2}
+                      strokeDasharray={filled ? undefined : "4 5"}
                       vectorEffect="non-scaling-stroke"
-                      opacity={filled ? 0.75 : 0.55}
+                      opacity={filled ? 0.9 : 0.45}
                     />
                   );
                 }),

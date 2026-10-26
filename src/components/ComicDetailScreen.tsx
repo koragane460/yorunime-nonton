@@ -9,8 +9,17 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BookOpen, ChevronLeft, Eye, Heart, Lock } from "lucide-react";
+import { BookOpen, CalendarDays, ChevronLeft, Eye, Heart, Lock } from "lucide-react";
 import { StripBackIcon } from "@/components/StripBack";
+
+/** Nama hari Indonesia — dipakai tag "Update setiap …" (komik ongoing). */
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+function hariDariTanggal(v?: string | number): string | undefined {
+  if (!v) return undefined;
+  const t = typeof v === "number" ? v : Date.parse(String(v));
+  if (!Number.isFinite(t)) return undefined;
+  return HARI[new Date(t).getDay()];
+}
 
 type Chapter = {
   number: number;
@@ -100,6 +109,11 @@ export function ComicDetailScreen({
   const accentBorder = isManga ? "border-sky-500/60" : "border-rose-500/60";
 
   const chapters = d ? (asc ? [...d.chapters].reverse() : d.chapters) : [];
+  // Hari update — diambil dari tanggal chapter terbaru (komik yang masih
+  // ongoing). Tidak ada tanggal = tag tidak ditampilkan (tidak dikarang).
+  const updateDay = d?.ongoing
+    ? hariDariTanggal(d?.latest?.dateMs ?? d?.latest?.date)
+    : undefined;
   const shown = showAll ? chapters : chapters.slice(0, 30);
   const views = formatViews(d?.views);
 
@@ -188,6 +202,12 @@ export function ComicDetailScreen({
                     {isManga ? "Manga" : "Manhwa"}
                   </span>
                   <StatusChip ongoing={d.ongoing} />
+                  {updateDay && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-amber-300 ring-1 ring-amber-300/35">
+                      <CalendarDays className="size-3" aria-hidden />
+                      Update setiap {updateDay}
+                    </span>
+                  )}
                 </div>
                 <h1 className="mt-1 line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
                   {d.title}
@@ -240,7 +260,7 @@ export function ComicDetailScreen({
                   {d.genres.map((g) => (
                     <span
                       key={g}
-                      className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-200"
+                      className="rounded-full border border-white/25 px-2.5 py-1 text-[11px] font-semibold text-white"
                     >
                       {g}
                     </span>

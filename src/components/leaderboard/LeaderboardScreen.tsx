@@ -32,7 +32,9 @@ function StripBack({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* Titik tiga → kotak menu 2 item yang muncul SATU PER SATU (stagger). */
+/* Titik tiga → tiap tombol punya KOTAK SENDIRI-sendiri (tidak digabung jadi
+   satu list), muncul satu per satu (stagger). Titik tiganya sendiri juga
+   berada di dalam kotaknya sendiri. */
 function OverflowMenu({
   onPick,
 }: {
@@ -53,23 +55,23 @@ function OverflowMenu({
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Menu lainnya"
-        className="flex size-9 items-center justify-center rounded-xl text-white/80 transition active:scale-90"
+        className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.07] text-white/85 transition active:scale-90"
       >
         <MoreHorizontal className="size-5" />
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-30 w-44 overflow-hidden rounded-2xl border border-white/12 bg-neutral-900/95 shadow-2xl backdrop-blur-xl">
+        <div className="absolute right-0 top-11 z-30 flex w-48 flex-col gap-2">
           <button
             onClick={() => { onPick("give"); setOpen(false); }}
             style={{ animationDelay: "0ms" }}
-            className="lb-menu-item flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 transition hover:bg-white/10"
+            className="lb-menu-item flex w-full items-center gap-2.5 rounded-xl border border-white/12 bg-neutral-900/95 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
           >
             <Gift className="size-4 text-rose-300" /> Top Give Prem
           </button>
           <button
             onClick={() => { onPick("clan"); setOpen(false); }}
             style={{ animationDelay: "90ms" }}
-            className="lb-menu-item flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 transition hover:bg-white/10"
+            className="lb-menu-item flex w-full items-center gap-2.5 rounded-xl border border-white/12 bg-neutral-900/95 px-3.5 py-3 text-left text-[13px] font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
           >
             <Users className="size-4 text-emerald-300" /> Leaderboard Clan
           </button>

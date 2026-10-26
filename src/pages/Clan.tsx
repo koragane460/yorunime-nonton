@@ -6,7 +6,10 @@ import {
   Camera,
   ChevronLeft,
   Crown,
+  LogIn,
+  Plus,
   Search,
+  Shield,
   Tag as TagIcon,
   Timer,
   Type,
@@ -148,6 +151,7 @@ function JoinScreen() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [pick, setPick] = useState<{
     id: string;
     tab: "member" | "donate";
@@ -212,32 +216,58 @@ function JoinScreen() {
           >
             <StripBackIcon />
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Clan</h1>
+          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Cari clan</h1>
+        </div>
+
+        {/* KOTAK HERO — ikon clan di tengah + tulisan di bawahnya. */}
+        <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-gradient-to-b from-violet-500/20 via-white/[0.04] to-transparent px-4 py-7 text-center">
+          <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
+            <Shield className="size-8 text-violet-300" aria-hidden />
+          </span>
+          <p className="mt-3 text-xl font-black text-white">Clan kamu nanti di sini</p>
+          <p className="mt-1 text-xs text-zinc-400">
+            gabung, donasi, dan bawa clan mu ke puncak Top Clan
+          </p>
+        </div>
+
+        {/* DUA TOMBOL — lurus ke samping, tidak tinggi. */}
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
           <button
             onClick={() =>
               user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1")
             }
-            className="yn-btn-warm shrink-0 rounded-full px-4 py-2 text-xs font-bold"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
           >
-            + Buat
+            <Plus className="size-4 text-emerald-300" aria-hidden />
+            Buat clan
+          </button>
+          <button
+            onClick={() => setSearchOpen((v) => !v)}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
+          >
+            <LogIn className="size-4 text-sky-300" aria-hidden />
+            Join clan
           </button>
         </div>
 
-        {/* Kolom pencarian */}
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Cari nama atau tag clan…"
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-          {q && (
-            <button onClick={() => setQ("")} aria-label="Bersihkan">
-              <X className="size-4 text-muted-foreground" />
-            </button>
-          )}
-        </div>
+        {/* Kolom cari — MUNCUL setelah tombol Join clan dipencet. */}
+        {searchOpen && (
+          <div className="mt-3 flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2.5">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              autoFocus
+              placeholder="Cari clan dengan nama atau tag clan…"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {q && (
+              <button onClick={() => setQ("")} aria-label="Bersihkan">
+                <X className="size-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Daftar clan */}
         {all === undefined ? (
@@ -409,6 +439,26 @@ function ClanDetailScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"request" | "role">("request");
   const [descDraft, setDescDraft] = useState<string | null>(null);
+  // Tombol REQUEST JOIN di bawah kotak clan — jalan walau layar dibuka
+  // langsung lewat ?clan=<id> (tanpa onJoin dari daftar).
+  const requestJoinMut = useMutation(api.clans.requestJoin);
+  const [joinBusy, setJoinBusy] = useState(false);
+  const doRequestJoin = async () => {
+    if (joinBusy) return;
+    setJoinBusy(true);
+    try {
+      const r: any = await requestJoinMut({ clanId: clanId as never });
+      toast.success(
+        r?.requested
+          ? "Permintaan gabung dikirim — tunggu dibuka leader"
+          : "Permintaan dibatalkan",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal gabung");
+    } finally {
+      setJoinBusy(false);
+    }
+  };
 
   if (!detail) {
     return (
@@ -492,10 +542,10 @@ function ClanDetailScreen({
           )}
         </div>
 
-        {/* Kotak header clan — DESAIN SESUAI REFERENSI: foto + nama + tag di
-            kiri, STATS (member/donasi/hari) dibungkus BACKGROUND KOTAK di
-            KANAN ATAS, lalu deskripsi clan, baru bar level di bawahnya. */}
-        <div className="rounded-2xl border border-white/10 bg-card p-3">
+        {/* Kotak header clan — TANPA bungkus kotak (TRANSAPAN): foto +
+            nama + tag di kiri, STATS di kanan atas, deskripsi, lalu bar
+            level. (permintaan user) */}
+        <div className="p-1">
           <div className="flex items-start gap-3">
             {c.avatarUrl ? (
               <img src={c.avatarUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
@@ -550,21 +600,20 @@ function ClanDetailScreen({
           </div>
         </div>
 
-        {/* Bukan member: tombol Join / Batalkan Request (hijau) — ikon
-            status request ikut diambil dari server, jadi tombol di detail
-            sama persis dengan yang di daftar dan tetap bisa dipencet. */}
-        {!isMember && onJoin && (
+        {/* Bukan member: tombol REQUEST JOIN / Batalkan Request (hijau) —
+            selalu tampil di bawah kotak clan, walau dibuka tanpa onJoin. */}
+        {!isMember && (
           <button
-            onClick={onJoin}
-            disabled={busy}
+            onClick={() => (onJoin ? onJoin() : void doRequestJoin())}
+            disabled={busy || joinBusy}
             className={cn(
-              "mt-3 w-full rounded-xl py-2.5 text-sm font-bold active:scale-[0.98] disabled:opacity-50",
+              "mt-3 w-full rounded-xl py-3 text-sm font-bold active:scale-[0.98] disabled:opacity-50",
               isRequested
                 ? "border border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_-6px_rgba(52,211,153,0.9)]"
                 : "yn-btn-warm",
             )}
           >
-            {busy ? "…" : isRequested ? "Batalkan Request" : "Join Clan"}
+            {busy || joinBusy ? "…" : isRequested ? "Batalkan Request" : "Request Join"}
           </button>
         )}
 
