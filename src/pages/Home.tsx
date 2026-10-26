@@ -1078,7 +1078,7 @@ function HomeContent() {
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
           <CrownIcon className="size-5 text-amber-300" />
         </span>
-        <span className="min-w-0 flex-1 rounded-2xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
+        <span className="w-fit max-w-full rounded-2xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
           Beli Premium Ada Di Sini
         </span>
       </button>

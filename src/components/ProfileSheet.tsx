@@ -302,9 +302,9 @@ export function ProfileSheet({
               </span>
             </div>
 
-            {/* Add Friend · YoruPet · Afinitas — SATU baris membentang ke
-                samping (flex-1) supaya rapi. Di profil SENDIRI tidak ada
-                Add Friend, jadi urutannya YoruPet lalu Afinitas di kanannya. */}
+            {/* Add Friend · YoruPet — SATU baris; Afinitas turun ke baris
+                kedua di profil ORANG supaya ukurannya pas (di profil sendiri
+                Afinitas tetap sebaris dengan YoruPet, dua-duanya flex-1). */}
             <div className="mx-auto mt-4 flex w-full max-w-sm items-stretch gap-2.5">
               {!isMe && (
                 <button
@@ -338,16 +338,33 @@ export function ProfileSheet({
                 <PawPrint className="size-4 shrink-0" />
                 YoruPet
               </button>
-              {/* Afinitas — relasi dekat, layar penuh */}
-              <button
-                type="button"
-                onClick={() => setAffinity(true)}
-                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-3 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
-              >
-                <HeartHandshake className="size-4 shrink-0" />
-                Afinitas
-              </button>
+              {/* Afinitas di profil SENDIRI — sejajar dengan YoruPet. */}
+              {isMe && (
+                <button
+                  type="button"
+                  onClick={() => setAffinity(true)}
+                  className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-3 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
+                >
+                  <HeartHandshake className="size-4 shrink-0" />
+                  Afinitas
+                </button>
+              )}
             </div>
+
+            {/* Afinitas di profil ORANG — baris sendiri di bawah Add Friend
+                supaya tinggi & lebarnya sama persis dengan tombol di atas. */}
+            {!isMe && (
+              <div className="mx-auto mt-2.5 flex w-full max-w-sm items-stretch gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setAffinity(true)}
+                  className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-3 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
+                >
+                  <HeartHandshake className="size-4 shrink-0" />
+                  Afinitas
+                </button>
+              </div>
+            )}
 
             {/* Bar level: kiri Level n, kanan 1/12.000 */}
             <div className="mx-auto mt-3 max-w-sm">
@@ -860,6 +877,8 @@ const TIER_DESC: Record<string, string> = {
   Master: "Legenda komunitas YoruNime.",
   Grandmaster: "Puncak tertinggi — hanya segelintir yang sampai.",
   Central: "Tier rahasia di atas Grandmaster — level 13.000 ke atas.",
+  Ruby: "Permata merah paling langka — level 20.000 ke atas.",
+  Ascendant: "Puncak tertinggi YoruNime, di atas Central — level 28.000 ke atas.",
 };
 
 /** Ikon material per tier level — ingot (Bronze/Silver/Grandmaster) dan
@@ -921,6 +940,28 @@ function TierIcon({ tier, className }: { tier: string; className?: string }) {
         <path d="M3.1 13.4 H12.9" stroke="rgba(0,0,0,.55)" strokeWidth="1.2" strokeLinecap="round" />
         <circle cx="8" cy="9.9" r="1.5" fill="#ff8f3f" stroke="rgba(0,0,0,.45)" strokeWidth="0.7" />
         <path d="M4.6 8.4 L5.4 11.6 M11.4 8.4 L10.6 11.6" stroke="rgba(255,255,255,.6)" strokeWidth="0.7" />
+      </>
+    ),
+    /* RUBY — batu permata merah menyala dengan potongan faset.
+       Tier di atas Central (level 20.000+). */
+    Ruby: (
+      <>
+        <path d="M5.6 2.6 H10.4 L13.6 6 L8 13.8 L2.4 6 Z" fill="#e11d48" stroke="rgba(0,0,0,.55)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M2.4 6 H13.6" stroke="rgba(0,0,0,.45)" strokeWidth="0.8" />
+        <path d="M5.6 2.6 L4.6 6 L8 13.8 M10.4 2.6 L11.4 6 L8 13.8 M4.6 6 L11.4 6" stroke="rgba(255,255,255,.55)" strokeWidth="0.7" fill="none" />
+        <path d="M6.2 3.4 L5.4 5.6" stroke="rgba(255,255,255,.85)" strokeWidth="0.9" strokeLinecap="round" />
+        <circle cx="13.4" cy="2.9" r="0.7" fill="#ffd0dc" />
+      </>
+    ),
+    /* ASCENDANT — bintang bersayap yang menanjak: simbol puncak baru
+       di atas Central (level 28.000+). */
+    Ascendant: (
+      <>
+        <path d="M8 1.8 L9.85 6.05 L14.4 6.65 L11.05 9.75 L12 14.2 L8 11.9 L4 14.2 L4.95 9.75 L1.6 6.65 L6.15 6.05 Z" fill="#e8fbff" stroke="rgba(0,0,0,.5)" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d="M8 4.6 L8.8 6.85 L11.05 7.2 L9.35 8.85 L9.75 11.05 L8 9.85 L6.25 11.05 L6.65 8.85 L4.95 7.2 L7.2 6.85 Z" fill="#67e8f9" opacity="0.85" />
+        <path d="M1.4 3.2 L3.4 4.4 M12.6 3.2 L14.6 4.4 M8 0.9 V0.1" stroke="#f0abfc" strokeWidth="0.9" strokeLinecap="round" />
+        <circle cx="2.2" cy="12.4" r="0.6" fill="#f0abfc" />
+        <circle cx="13.8" cy="12.4" r="0.6" fill="#67e8f9" />
       </>
     ),
   };

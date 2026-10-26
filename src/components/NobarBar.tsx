@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -138,32 +139,36 @@ export function RoomSheet({
   return (
     // Layar penuh, bukan panel dari bawah: daftar room memenuhi layar dan
     // punya tombol "Buat" sendiri di pojok kanan.
-    <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-background">
-      <header className="flex items-center gap-3 border-b border-border px-3 py-3">
-        <button
-          onClick={onClose}
-          aria-label="Kembali"
-          className="flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
-        >
-          <StripBackIcon />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-bold tracking-tight">
-            Nonton Bareng
-          </h1>
-          <p className="text-[11px] text-muted-foreground">
-            {rooms.length > 0
-              ? `${rooms.length} room lagi jalan`
-              : "Belum ada room aktif"}
-          </p>
-        </div>
-        <button
-          onClick={onCreate}
-          className="shrink-0 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white"
-        >
-          Buat
-        </button>
-      </header>
+    // PORTAL ke <body>: wrapper layar Nobar punya animasi `transform`, yang
+    // bikin `fixed` menempel di kotak konten (kotak hitam + tombol balik
+    // dobel). Lewat portal, panel menutupi SELURUH layar.
+    createPortal(
+      <div className="screen-enter fixed inset-0 z-[95] flex flex-col bg-background">
+        <header className="flex items-center gap-3 border-b border-border px-3 py-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
+          >
+            <StripBackIcon />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-bold tracking-tight">
+              Nonton Bareng
+            </h1>
+            <p className="text-[11px] text-muted-foreground">
+              {rooms.length > 0
+                ? `${rooms.length} room lagi jalan`
+                : "Belum ada room aktif"}
+            </p>
+          </div>
+          <button
+            onClick={onCreate}
+            className="shrink-0 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white"
+          >
+            Buat
+          </button>
+        </header>
 
       <div className="thin-scroll min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
         {rooms.length === 0 && (
@@ -253,9 +258,11 @@ export function RoomSheet({
               )}
             </div>
           </div>
-        ))}
+        )        )}
       </div>
-    </div>
+      </div>,
+      document.body,
+    )
   );
 }
 
@@ -269,21 +276,27 @@ function Sheet({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col justify-end bg-black/80 backdrop-blur-sm">
-      <div className="fade-enter max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-border bg-background p-4">
-        <div className="mb-3 flex items-center gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-full border border-border p-2"
-            aria-label="Tutup"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          <h2 className="flex-1 text-lg font-bold">{title}</h2>
+    // PORTAL + DITENGAHKAN: overlay tidak lagi terkurung di dalam layar
+    // Nobar yang ber-animasi (dulu jadi kotak hitam yang cuma setengah
+    // layar), dan tombol baliknya tidak lagi dobel.
+    createPortal(
+      <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="fade-enter max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-border bg-background p-4 shadow-2xl shadow-black/60">
+          <div className="mb-3 flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-full border border-border p-2"
+              aria-label="Tutup"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <h2 className="flex-1 text-lg font-bold">{title}</h2>
+          </div>
+          {children}
         </div>
-        {children}
-      </div>
-    </div>
+      </div>,
+      document.body,
+    )
   );
 }
 

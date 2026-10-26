@@ -150,7 +150,16 @@ export function AnimeCard({
             Badge rank/New ikut bergeser ke kanannya lewat satu flex. */}
         <div className="absolute left-0 top-0 z-10 flex items-start">
           {status && (
-            <span className="rounded-none rounded-br-lg bg-black/70 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide">
+            <span
+              className={cn(
+                "rounded-none rounded-br-lg px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-black",
+                // Biru SAMPAI dengan chip Ongoing/Tamat di kartu manga
+                // (sky-300 berjalan / sky-400 tamat) — bukan hitam lagi.
+                /tamat|completed|ended|selesai|finish/i.test(status)
+                  ? "bg-sky-400"
+                  : "bg-sky-300",
+              )}
+            >
               {status}
             </span>
           )}

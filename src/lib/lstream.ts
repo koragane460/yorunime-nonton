@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import {
   Crown,
   Diamond,
+  Feather,
   Flame,
   Gem,
   Logs,
@@ -43,8 +44,12 @@ export const DAYS_EN = [
   "sunday",
 ];
 
-/** Badge level user (Bronze..Central) — nama tier + ikon lucide-nya. */
+/** Badge level user (Bronze..Ascendant) — nama tier + ikon lucide-nya. */
 export function badgeForLevel(level: number) {
+  if (level >= 28000)
+    return { name: "Ascendant", icon: Feather, cls: "bg-gradient-to-r from-cyan-200 via-white to-fuchsia-300" };
+  if (level >= 20000)
+    return { name: "Ruby", icon: Gem, cls: "bg-gradient-to-r from-rose-300 via-rose-400 to-red-500" };
   if (level >= 13000)
     return { name: "Central", icon: Crown, cls: "bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400" };
   if (level >= 5000)
@@ -75,6 +80,8 @@ export const LEVEL_BADGE_TIERS: {
   { name: "Master", icon: Sparkles, minLevel: 1001, cls: "from-red-700 to-red-400", fx: "badge-shine shadow-[0_0_18px_4px] shadow-red-500/50" },
   { name: "Grandmaster", icon: Crown, minLevel: 5000, cls: "from-red-600 via-fuchsia-600 to-slate-200", fx: "badge-shine animate-pulse shadow-[0_0_22px_5px] shadow-fuchsia-500/60" },
   { name: "Central", icon: Crown, minLevel: 13000, cls: "from-yellow-200 via-amber-300 to-orange-400", fx: "badge-shine animate-pulse shadow-[0_0_26px_6px] shadow-amber-300/70" },
+  { name: "Ruby", icon: Gem, minLevel: 20000, cls: "from-rose-300 via-rose-400 to-red-500", fx: "badge-shine animate-pulse shadow-[0_0_26px_6px] shadow-rose-400/70" },
+  { name: "Ascendant", icon: Feather, minLevel: 28000, cls: "from-cyan-200 via-white to-fuchsia-300", fx: "badge-shine animate-pulse shadow-[0_0_28px_7px] shadow-cyan-200/70" },
 ];
 
 /** Warna username random yang stabil per username (palet vivid, tetap kebaca di dark). */

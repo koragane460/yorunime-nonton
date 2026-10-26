@@ -106,10 +106,11 @@ function AkunContent() {
   // Detail akun (layar penuh) — dibuka dengan menekan header profil di atas.
   const [detailOpen, setDetailOpen] = useState(false);
   // ?user=<id> — buka profil orang lain dari luar (mis. notifikasi).
-  // ?afinitas=1 — langsung buka layar AFINITAS orang itu (notifikasi
-  // undangan/hasil afinitas harus mengarah ke sini, bukan cuma ke profil).
+  // ?afinitas=1 — langsung buka layar AFINITAS; tanpa ?user = Afinitas
+  // MILIK KAMU (notifikasi ajakan Afinitas mengarah ke sini, bukan ke
+  // profil pengirim, supaya relasi & Bond sendiri langsung kelihatan).
   const viewUserId = params.get("user") as Id<"users"> | null;
-  const openAffinity = params.get("afinitas") === "1" && !!viewUserId;
+  const openAffinity = params.get("afinitas") === "1";
   const clearDeepLink = () => {
     const next = new URLSearchParams(params);
     next.delete("user");
@@ -169,9 +170,13 @@ function AkunContent() {
         <ProfileSheet userId={viewUserId} onClose={clearDeepLink} />
       )}
 
-      {/* Deep link: LANGSUNG ke layar Afinitas orang itu. */}
-      {viewUserId && openAffinity && (
-        <AfinitasScreen targetUserId={viewUserId} onClose={clearDeepLink} />
+      {/* Deep link: LANGSUNG ke layar Afinitas — targetnya user ?user= kalau
+          ada, kalau tidak Afinitas milik kamu sendiri. */}
+      {openAffinity && (
+        <AfinitasScreen
+          targetUserId={viewUserId ?? user._id}
+          onClose={clearDeepLink}
+        />
       )}
     </div>
   );

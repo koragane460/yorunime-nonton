@@ -30,8 +30,9 @@ import {
 import { PetArt } from "@/components/PetArt";
 import type { Id } from "@/convex/_generated/dataModel";
 
-/** Isi sheet bawah — Telur / Kelola / Pet / Index / Scene. */
-type SheetTab = "telur" | "kelola" | "pet" | "index" | "scene";
+/** Isi sheet bawah — Kelola (telur + pet) / Index / Scene. Tiap tombol di
+    bawah punya isi sendiri, TANPA baris tab di atas (permintaan pemilik). */
+type SheetTab = "kelola" | "index" | "scene";
 
 /** Peringkat rarity — dipakai tombol "Auto equip best pet". */
 const RARITY_RANK: Record<string, number> = {
@@ -122,7 +123,7 @@ export function YoruPetScreen({
     void run(async () => {
       await pullM({ count });
       setGachaOpen(false);
-      setSheet("telur");
+      setSheet("kelola");
       toast.success(count === 1 ? "Dapat 1 Telur Misteri!" : "Dapat 10 Telur Misteri!");
     });
 
@@ -285,10 +286,11 @@ export function YoruPetScreen({
         </div>
 
         {/* ----------------- panggung: TANPA KOTAK PEMBATAS ----------------
-            Gambar scene bebas memanjang (tidak dibungkus rounded/border),
-            berlaku untuk SEMUA tema scene. */}
+            Panggung punya LATAR SENDIRI (panel gelap) supaya TIDAK
+            menyatu/bergantung ke background hutan di belakangnya —
+            background hutan dan background tampilan dibuat BEDA. */}
         <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-4">
-          <div className="relative h-72 w-full max-w-2xl">
+          <div className="relative h-72 w-full max-w-2xl overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-b from-[#0b1220]/95 via-[#111827]/92 to-black/95 shadow-[0_24px_60px_-28px_rgba(0,0,0,.95)] backdrop-blur-md">
             {/* lantai — hanya gradasi, tanpa kotak */}
             <div className={cn("absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b opacity-80", scene.floor)} aria-hidden />
             {/* pet berjalan + bubble klaim di atasnya */}
@@ -378,11 +380,20 @@ export function YoruPetScreen({
             {/* INDEX — kotak MENDEKATI PERSEGI (tidak memanjang ke samping). */}
             <button
               onClick={() => setSheet("index")}
-              className="flex w-[74px] shrink-0 flex-col items-center justify-center self-start rounded-2xl bg-gradient-to-b from-zinc-500 to-zinc-700 py-3 text-white shadow-[0_10px_22px_-10px_rgba(0,0,0,.9)] transition active:scale-[0.97]"
+              className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-zinc-500 to-zinc-700 py-3 text-white shadow-[0_10px_22px_-10px_rgba(0,0,0,.9)] transition active:scale-[0.97]"
             >
               <BookOpen className="size-5" aria-hidden />
               <span className="mt-0.5 block text-[12px] font-black leading-tight">Index</span>
               <span className="block text-[9px] font-bold opacity-80">{PETS.length} pet</span>
+            </button>
+            {/* SCENE — ganti tampilan background kebun. */}
+            <button
+              onClick={() => setSheet("scene")}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-teal-400 to-emerald-700 py-3 text-black shadow-[0_10px_22px_-10px_rgba(16,185,129,.85)] transition active:scale-[0.97]"
+            >
+              <span className="text-lg leading-none" aria-hidden>🏞️</span>
+              <span className="mt-0.5 block text-[12px] font-black leading-tight">Scene</span>
+              <span className="block text-[9px] font-bold opacity-80">ganti latar</span>
             </button>
           </div>
           )}
@@ -411,70 +422,8 @@ export function YoruPetScreen({
               className="thin-scroll mx-auto max-h-[68%] w-full max-w-2xl overflow-y-auto rounded-t-3xl border-t border-white/20 bg-black/85 p-3 pb-5 backdrop-blur-xl"
             >
               <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/25" aria-hidden />
-              <div className="grid grid-cols-5 gap-1.5">
-                {(
-                  [
-                    ["telur", "🥚 Telur"],
-                    ["kelola", "🧰 Kelola"],
-                    ["pet", "🐾 Pet"],
-                    ["index", "📖 Index"],
-                    ["scene", "🏞️ Scene"],
-                  ] as const
-                ).map(([k, label]) => (
-                  <button
-                    key={k}
-                    onClick={() => setSheet(k)}
-                    className={cn(
-                      "rounded-full px-1.5 py-1.5 text-[10px] font-black transition",
-                      sheet === k
-                        ? "bg-gold text-black"
-                        : "bg-white/10 text-zinc-300 hover:bg-white/15",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
 
               <div className="mt-3">
-                {/* ------------------------- TELUR -------------------- */}
-                {sheet === "telur" && (
-                  <div className="flex flex-col items-center gap-2 py-2">
-                    <motion.div
-                      animate={{ rotate: [-4, 4, -4] }}
-                      transition={{ duration: 2.6, repeat: Infinity }}
-                      className="flex size-20 items-center justify-center rounded-full bg-white/10 text-5xl ring-1 ring-white/20"
-                    >
-                      🥚
-                    </motion.div>
-                    <p className="text-sm font-black">
-                      Telur Misteri <span className="text-gold">×{state.eggs}</span>
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={doHatch}
-                        disabled={busy || state.eggs < 1}
-                        className="rounded-xl bg-gradient-to-b from-fuchsia-400 to-fuchsia-600 px-4 py-2 text-[12px] font-black text-white transition active:scale-95 disabled:opacity-50"
-                      >
-                        Tetas 1
-                      </button>
-                      <button
-                        onClick={() =>
-                          void run(async () => {
-                            const r = await hatchAllM({});
-                            setSheet("pet");
-                            toast.success(`Menetas ${r.count} telur!`);
-                          })
-                        }
-                        disabled={busy || state.eggs < 1}
-                        className="rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 px-4 py-2 text-[12px] font-black text-white transition active:scale-95 disabled:opacity-50"
-                      >
-                        Tetas Semua
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* ----------------- KELOLA (telur + pet terpakai + auto) --- */}
                 {sheet === "kelola" && (
                   <div className="space-y-2.5">
@@ -495,8 +444,8 @@ export function YoruPetScreen({
                           <button
                             onClick={() =>
                               void run(async () => {
-                                const r = await hatchAllM({});
-                                setSheet("pet");
+                            const r = await hatchAllM({});
+                            setSheet("kelola");
                                 toast.success(`Menetas ${r.count} telur!`);
                               })
                             }
@@ -557,8 +506,8 @@ export function YoruPetScreen({
                   </div>
                 )}
 
-                {/* -------------------------- PET --------------------- */}
-                {(sheet === "pet" || sheet === "kelola") &&
+                {/* -------------------------- PET (list + jual) ---------- */}
+                {sheet === "kelola" &&
                   (state.owned.length === 0 ? (
                     <p className="py-8 text-center text-xs font-bold text-zinc-400">
                       Belum punya pet — gacha lalu tetas telurnya! 🥚

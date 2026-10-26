@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router";
-import { CheckCheck, Megaphone, MessageSquare } from "lucide-react";
+import { CheckCheck, Megaphone, MessageSquare, ArrowRight } from "lucide-react";
 import {
   BellIcon,
   ChevronLeftIcon,
@@ -124,74 +124,106 @@ function NotifSheet({
         </SheetHeader>
 
         {empty ? (
-          <p className="py-12 text-center text-xs text-muted-foreground">
-            Belum ada notifikasi
-          </p>
+          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <span className="flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+              <BellIcon className="size-6 text-muted-foreground" />
+            </span>
+            <p className="text-sm font-bold">Belum ada notifikasi</p>
+            <p className="max-w-[16rem] text-xs leading-relaxed text-muted-foreground">
+              Broadcast developer, ajakan Afinitas, dan komentar teman akan
+              muncul di sini.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2 px-4 pt-3">
-            {list.map((n: any, i: number) => (
-              <div
-                key={n._id}
-                onClick={() => {
-                  // Undangan/hasil Afinitas: arahkan LANGSUNG ke layar
-                  // Afinitas milik pengirim (bukan cuma membuka profil).
-                  if (n.type?.startsWith("affinity") && n.refUserId) {
-                    onOpenChange(false);
-                    navigate(`/akun?user=${n.refUserId}&afinitas=1`);
-                  }
-                }}
-                className={cn(
-                  "flex gap-2.5 rounded-2xl border p-3",
-                  n.type === "premiumClaim"
-                    ? "border-amber-500/40 bg-amber-500/[0.07]"
-                    : n.type?.startsWith("affinity")
-                      ? "border-pink-500/40 bg-pink-500/[0.07]"
-                      : i === 0
-                        ? "border-primary/50 bg-primary/10"
-                        : "border-white/10 bg-white/[0.05]",
-                  n.type?.startsWith("affinity") && "cursor-pointer",
-                )}
-              >
-                {n.refUserId && (n.type === "premiumClaim" || n.type.startsWith("affinity")) ? (
-                  <Avatar
-                    src={n.refImage}
-                    seed={n.refUsername ?? n.refUserId}
-                    className="mt-0.5 size-8 shrink-0"
-                  />
-                ) : (
-                <span
+          <div className="space-y-2.5 px-4 pt-3">
+            {list.map((n: any, i: number) => {
+              // Ajakan/hasil Afinitas → langsung ke layar Afinitas KAMU.
+              const isAffinity = !!n.type?.startsWith("affinity");
+              const handleOpen = () => {
+                if (!isAffinity) return;
+                onOpenChange(false);
+                navigate("/akun?afinitas=1");
+              };
+              return (
+                <button
+                  key={n._id}
+                  type="button"
+                  onClick={handleOpen}
                   className={cn(
-                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl",
-                    i === 0 ? "bg-primary/20" : "bg-white/[0.06]",
+                    "block w-full overflow-hidden rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+                    n.type === "premiumClaim"
+                      ? "border-amber-500/40 bg-gradient-to-r from-amber-500/[0.12] to-transparent"
+                      : isAffinity
+                        ? "border-pink-400/45 bg-gradient-to-r from-pink-500/[0.16] to-transparent shadow-[0_0_18px_-10px_rgba(236,72,153,.8)]"
+                        : i === 0
+                          ? "border-primary/50 bg-primary/10"
+                          : "border-white/10 bg-white/[0.05]",
+                    isAffinity && "cursor-pointer",
                   )}
                 >
-                  {n.type === "update" ? (
-                    <SparklesIcon className="size-4 text-primary" />
-                  ) : (
-                    <Megaphone className="size-4 text-muted-foreground" />
-                  )}
-                </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-xs font-bold">{n.title}</p>
-                    {i === 0 && (
-                      <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-primary-foreground">
-                        Terbaru
+                  <div className="flex gap-3">
+                    {n.refUserId &&
+                    (n.type === "premiumClaim" || isAffinity) ? (
+                      <span className="relative mt-0.5 shrink-0">
+                        <Avatar
+                          src={n.refImage}
+                          seed={n.refUsername ?? n.refUserId}
+                          className="size-9 rounded-full ring-2 ring-white/25"
+                        />
+                        {isAffinity && (
+                          <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-pink-500 text-[9px] text-white ring-2 ring-black/60">
+                            ♥
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
+                          n.type === "update"
+                            ? "bg-primary/20 text-primary"
+                            : "bg-white/[0.06] text-muted-foreground",
+                          i === 0 && n.type !== "update" && "bg-primary/15",
+                        )}
+                      >
+                        {n.type === "update" ? (
+                          <SparklesIcon className="size-4" />
+                        ) : (
+                          <Megaphone className="size-4" />
+                        )}
                       </span>
                     )}
-                    <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
-                      {timeAgo(n.createdAt)}
-                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="min-w-0 flex-1 truncate text-[13px] font-bold">
+                          {n.title}
+                        </p>
+                        {i === 0 && (
+                          <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-primary-foreground">
+                            Terbaru
+                          </span>
+                        )}
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                          {timeAgo(n.createdAt)}
+                        </span>
+                      </div>
+                      {n.body && (
+                        <p className="mt-1 text-[12.5px] leading-snug text-zinc-300">
+                          {n.body}
+                        </p>
+                      )}
+                      {isAffinity && (
+                        <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-pink-400/40 bg-pink-500/25 px-2.5 py-1 text-[10px] font-black text-pink-100">
+                          Buka Afinitas kamu
+                          <ArrowRight className="size-3" aria-hidden />
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {n.body && (
-                    <p className="mt-0.5 text-[13px] leading-snug text-zinc-300">
-                      {n.body}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+                </button>
+              );
+            })}
 
             {comments.length > 0 && (
               <>

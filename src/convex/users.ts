@@ -6,7 +6,8 @@ import { internalMutation, mutation, query } from "./_generated/server";
 // 1-49: bronze(12k/lvl) 50-99: silver(27k) 100-499: diamond(45k)
 // 500-1000: emerald(70k) 1001-4999: master(120k) 5000-10000: grandmaster(165k)
 // 500-1000: emerald(70k) 1001-4999: master(120k) 5000-12999: grandmaster(165k)
-// 13000+: central(220k) — tier baru di atas Grandmaster.
+// 13000-19999: central(220k) — tier baru di atas Grandmaster.
+// 20000-27999: ruby(260k) 28000+: ascendant(300k) — dua tier teratas.
 const TIERS = [
   { min: 1, max: 49, per: 12000, badge: "Bronze" },
   { min: 50, max: 99, per: 27000, badge: "Silver" },
@@ -14,7 +15,9 @@ const TIERS = [
   { min: 500, max: 1000, per: 70000, badge: "Emerald" },
   { min: 1001, max: 4999, per: 120000, badge: "Master" },
   { min: 5000, max: 12999, per: 165000, badge: "Grandmaster" },
-  { min: 13000, max: 999999999, per: 220000, badge: "Central" },
+  { min: 13000, max: 19999, per: 220000, badge: "Central" },
+  { min: 20000, max: 27999, per: 260000, badge: "Ruby" },
+  { min: 28000, max: 999999999, per: 300000, badge: "Ascendant" },
 ];
 
 export function tierForLevel(level: number) {

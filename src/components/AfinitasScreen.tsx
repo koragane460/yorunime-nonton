@@ -7,7 +7,7 @@
 // Saudara, Orang Terpercaya, Sahabat) → layar Ajak (cari teman). Ketuk
 // baris relasi → sheet Bond (bar level + misi). Trophy kanan atas →
 // leaderboard per jenis relasi. Ikon jenis BERSIH tanpa latar.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
@@ -98,6 +98,10 @@ const SLOT_POS: Record<Kind, { x: number; y: number }[]> = {
 };
 /** Titik tengah foto target dalam panggung (%). */
 const CENTER = { x: 50, y: 52 };
+/** Jari-jari bulatan avatar (px) — dipakai supaya garis BERHENTI di tepi
+    bulatan, bukan menembus ke tengah foto. */
+const R_FILLED = 33; // avatar size-14 + padding 2px + border 2.5px
+const R_EMPTY = 29; // bulatan putus-putus size-14 + border
 /** Posisi emblem ikon jenis di sekitar foto tengah (%). */
 const EMBLEM_POS: Record<Kind, { x: number; y: number }> = {
   pasangan: { x: 50, y: 34 },
@@ -171,6 +175,38 @@ export function AfinitasScreen({
       ditutup) — jadi buletan pasangan = pintu ke daftar request. */
   const [invOpen, setInvOpen] = useState(true);
   const [busy, setBusy] = useState(false);
+
+  /** Ukuran panggung (px) — agar garis bisa dipotong tepat di tepi bulatan. */
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const update = () =>
+      setStageSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  /** Potong ujung garis (% panggung) supaya berhenti di tepi bulatan. */
+  const trimToEdge = (
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    radius: number,
+  ) => {
+    const { w, h } = stageSize;
+    if (!w || !h) return to;
+    const dx = ((to.x - from.x) / 100) * w;
+    const dy = ((to.y - from.y) / 100) * h;
+    const len = Math.hypot(dx, dy);
+    if (len <= radius) return to;
+    return {
+      x: to.x - ((dx / len) * radius * 100) / w,
+      y: to.y - ((dy / len) * radius * 100) / h,
+    };
+  };
 
   const circles = (st?.circles ?? {
     pasangan: [],
@@ -358,10 +394,15 @@ export function AfinitasScreen({
           </div>
 
           {/* --------------------- PANGGUNG ----------------------------- */}
-          <div className="relative mx-auto mt-1 h-[470px] w-full max-w-md px-2">
+          {/* Geser ke bawah (mt-6) + tinggi ditambah, supaya seluruh isi
+              lingkaran tidak menempel di kepala layar. */}
+          <div
+            ref={stageRef}
+            className="relative mx-auto mt-6 h-[505px] w-full max-w-md px-2"
+          >
             {/* Garis penghubung ICON jenis → tiap slot (SOLID, bukan
                 putus-putus — permintaan user). Titik awalnya emblem ikon,
-                bukan foto profile. */}
+                bukan foto profile, dan ujungnya DIPOTONG di tepi bulatan. */}
             <svg
               className="absolute inset-0 h-full w-full"
               viewBox="0 0 100 100"
@@ -372,13 +413,18 @@ export function AfinitasScreen({
                 SLOT_POS[kind].map((p, i) => {
                   const filled = i < (circles[kind]?.length ?? 0);
                   const from = EMBLEM_POS[kind];
+                  const end = trimToEdge(
+                    from,
+                    p,
+                    filled ? R_FILLED : R_EMPTY,
+                  );
                   return (
                     <line
                       key={`${kind}-${i}`}
                       x1={from.x}
                       y1={from.y}
-                      x2={p.x}
-                      y2={p.y}
+                      x2={end.x}
+                      y2={end.y}
                       stroke="#ffffff"
                       strokeWidth={filled ? 1.6 : 1.2}
                       vectorEffect="non-scaling-stroke"
@@ -398,7 +444,7 @@ export function AfinitasScreen({
                   key={kind}
                   aria-hidden
                   className={cn(
-                    "absolute -translate-x-1/2 -translate-y-1/2",
+                    "absolute z-10 -translate-x-1/2 -translate-y-1/2",
                     KIND_META[kind].cls,
                   )}
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
@@ -411,7 +457,7 @@ export function AfinitasScreen({
             {/* Foto target + nama (TANPA bulatan "+" — dihapus sesuai
                 permintaan user; ajakan lewat slot kosong di sekitarnya). */}
             <div
-              className="absolute -translate-x-1/2 -translate-y-1/2"
+              className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
               style={{ left: `${CENTER.x}%`, top: `${CENTER.y}%` }}
             >
               <div className="flex flex-col items-center gap-1.5">
@@ -463,7 +509,7 @@ export function AfinitasScreen({
                         setKindSheet(true);
                       }
                     }}
-                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 transition active:scale-95"
+                    className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 transition active:scale-95"
                     style={{ left: `${p.x}%`, top: `${p.y}%` }}
                   >
                     {member ? (
