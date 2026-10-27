@@ -44,6 +44,8 @@ import {
   List,
   Eye,
   CalendarDays,
+  Clock,
+  Hash,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -62,7 +64,43 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
+import {
+  AfinitasPromo,
+  ChatVoiceRow,
+  ContinueWatchingRow,
+  DailyQuestRow,
+  GreetingBar,
+  LeaderPodium,
+  PillButton,
+  ProfileBar,
+  StatBoxes,
+  TopAiringRow,
+  bumpQuestLocal,
+  pushRecentSearch,
+  readRecentSearch,
+} from "@/components/HomeHead";
+import {
+  LeaderboardScreen as CatalogLeaderboard,
+} from "@/components/leaderboard/LeaderboardScreen";
+import { VoiceCallScreen } from "@/components/VoiceCall";
+import { AfinitasScreen } from "@/components/AfinitasScreen";
 import type { Id } from "@/convex/_generated/dataModel";
+
+/** Genre yang paling sering dicari — dipakai "Trending tag" di layar cari. */
+const POPULAR_TAGS = [
+  "Action",
+  "Comedy",
+  "Romance",
+  "Fantasy",
+  "Shounen",
+  "Slice of Life",
+  "Sci-Fi",
+  "Adventure",
+  "Drama",
+  "Horror",
+  "Mystery",
+  "Isekai",
+];
 
 
 /**
@@ -159,13 +197,17 @@ function HeroSlides({
   items,
   onPick,
   onTop,
+  promo,
 }: {
   items: AnimeCardT[];
   onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
   onTop: () => void;
+  /** Slide pertama (index 0): promosi Afinitas. */
+  promo: ReactNode;
 }) {
   const [idx, setIdx] = useState(0);
-  const total = items.length;
+  // Slide 0 = promo Afinitas, sisanya anime/donghua yang berganti-ganti.
+  const total = items.length + 1;
 
   // Jaga indeks tetap valid saat daftar item berubah (mis. load ulang).
   useEffect(() => {
@@ -180,13 +222,23 @@ function HeroSlides({
   }, [total]);
 
   return (
-    <div className="relative h-[150px] min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10">
+    <div className="min-w-0 flex-1">
+    <div className="relative h-[150px] w-full overflow-hidden rounded-2xl border border-white/10">
+      {/* Slide 0 — promosi Afinitas (selalu tampil pertama). */}
+      <div
+        className={cn(
+          "absolute inset-0 transition-opacity duration-700",
+          idx === 0 ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      >
+        {promo}
+      </div>
       {items.map((a, i) => (
         <div
           key={a.id}
           className={cn(
             "absolute inset-0 transition-opacity duration-700",
-            i === idx ? "opacity-100" : "pointer-events-none opacity-0",
+            i + 1 === idx ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
           <div
@@ -236,6 +288,21 @@ function HeroSlides({
           </div>
         </div>
       ))}
+    </div>
+      {/* TITIK SLIDE — tepat di tengah, di bawah banner. */}
+      <div className="mt-2 flex items-center justify-center gap-1.5">
+        {Array.from({ length: total }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIdx(i)}
+            aria-label={`Slide ${i + 1}`}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              i === idx ? "w-5 bg-white" : "w-1.5 bg-white/30",
+            )}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -726,6 +793,10 @@ function HomeContent() {
   const [showChat, setShowChat] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
+  // Layar VOICE CALL (daftar room → buat room → panggilan). + popup Afinitas
+  // yang dibuka dari slide promosi di hero banner.
+  const [showVoice, setShowVoice] = useState(false);
+  const [afinitas, setAfinitas] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
@@ -1017,6 +1088,8 @@ function HomeContent() {
     title?: string,
     source: CatalogPickSource = "anilist",
   ) => {
+    // Hitung ke Daily Quest "buka detail 5 judul" (reset tiap 00.00).
+    bumpQuestLocal("detail");
     setPickId(id);
     setPickTitle(title);
     setPickSource(source);
@@ -1067,21 +1140,11 @@ function HomeContent() {
           </button>
         </div>
       )}
-      {/* 1) YORUNIME PREMIUM — kotak ABU-ABU: ikon mahkota (kuning lembut)
-          dalam kotak rounded + tulisan "Beli Premium Ada Di Sini" dalam
-          kotak biru agak rounded. Tanpa ikon panah & tanpa "Mulai dari
-          Rp7.000" (permintaan user). */}
-      <button
-        onClick={() => navigate("/premium")}
-        className="fade-enter mt-4 flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-zinc-500/25 px-3.5 py-4 text-left transition hover:bg-zinc-500/35"
-      >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
-          <CrownIcon className="size-5 text-amber-300" />
-        </span>
-        <span className="w-fit max-w-full rounded-2xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
-          Beli Premium Ada Di Sini
-        </span>
-      </button>
+      {/* 1) SAPAAN WAKTU + KOTAK PROFIL & LEVEL + 3 KOTAK
+          (Sacret · Premium · YoruVerse) — bagian paling atas Home. */}
+      <GreetingBar />
+      <ProfileBar />
+      <StatBoxes />
 
       {/* 2) HERO BANNER — SATU anime tampil (fade antar judul, selalu hanya
           1 slide terlihat) + Leaderboard sebagai kolom DI KANAN banner. */}
@@ -1101,6 +1164,13 @@ function HomeContent() {
             items={heroItems}
             onPick={openAnime}
             onTop={() => setShowTopAnime(true)}
+            promo={
+              <AfinitasPromo
+                onOpen={() =>
+                  user ? setAfinitas(true) : toast.info("Login dulu ya")
+                }
+              />
+            }
           />
 
           {/* ---- Leaderboard DIHAPUS dari hero (sudah pindah ke Catalog). */}
@@ -1108,19 +1178,42 @@ function HomeContent() {
         </>
       ) : null}
 
-      {/* 4) CHAT BARENG — satu baris kecil, benar-benar rounded:
-          ikon chat → "Chat:" → satu pesan orang (berputar tiap 3 menit). */}
+      {/* 6a) TOP AIRING — anime populer & trending saat ini, geser ke kanan. */}
+      <TopAiringRow
+        items={(todayList.length ? todayList : topList).slice(0, 12)}
+        viewsOf={viewCountFor}
+        onPick={(id, title) => openAnime(id, title, "anilist")}
+      />
+
+      {/* 6b) DAILY QUEST — 3 misi ringan per hari, reset jam 00.00. */}
+      <DailyQuestRow />
+
+      {/* 6c) LEADERBOARD — podium top 1-3 (ganti Top XP ⇄ Top Give tiap
+          6 detik) + daftar lengkap gaya Catalog saat "Lihat selengkapnya". */}
+      <LeaderPodium onSeeAll={() => setShowLeaderboard(true)} />
+      {showLeaderboard && (
+        <div className="mt-3">
+          <CatalogLeaderboard onClose={() => setShowLeaderboard(false)} />
+        </div>
+      )}
+
+      {/* 6d) CHAT GLOBAL + VOICE CALL (kotak tegak sejajar). */}
+      <ChatVoiceRow
+        onOpenChat={() => setShowChat(true)}
+        onOpenVoice={() => setShowVoice(true)}
+      />
+
+      {/* 6e) YORUNIME PREMIUM — tampilan tetap sama seperti sebelumnya. */}
       <button
-        onClick={() => setShowChat(true)}
-        className="fade-enter mt-3 flex w-full items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3 py-2 text-left backdrop-blur-md transition hover:border-foreground/40"
+        onClick={() => navigate("/premium")}
+        className="fade-enter mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-zinc-500/25 px-3.5 py-4 text-left transition hover:bg-zinc-500/35"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center bg-primary/15">
-          <MessageSquare className="size-4 text-primary" aria-hidden />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
+          <CrownIcon className="size-5 text-amber-300" />
         </span>
-        <span className="shrink-0 text-sm font-bold">Chat:</span>
-        <QueryBoundary label="Gagal memuat chat">
-          <GlobalChatPreview />
-        </QueryBoundary>
+        <span className="w-fit max-w-full rounded-2xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
+          Beli Premium Ada Di Sini
+        </span>
       </button>
 
       {/* 5) CARI ANIME — hanya tombol pemicu; pencarian tampil di layar
@@ -1155,78 +1248,9 @@ function HomeContent() {
 
 
 
-      {/* 6a) ANIME UPDATE NEWS — di bawah tombol search */}
-        {updateFirst && (
-          <>
-            <div className="mt-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold tracking-tight">Update News</h2>
-              <span className="text-[11px] text-muted-foreground">rilis hari ini</span>
-            </div>
-            {newsLoading ? (
-              <div className="mt-2 flex gap-2.5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="skeleton h-44 w-28 shrink-0 rounded-xl" />
-                ))}
-              </div>
-            ) : updateNews.length === 0 ? (
-              <p className="py-6 text-center text-xs text-muted-foreground">
-                Tidak ada episode baru hari ini.
-              </p>
-            ) : (
-              <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
-              {updateNews.map((a) => (
-                <button
-                  key={`${a.isDonghua ? "dh" : "an"}-${a.id}-${a.episode}`}
-                  onClick={() =>
-                    openAnime(a.id, a.title, a.isDonghua ? "sanka" : "anilist")
-                  }
-                  className="w-28 shrink-0 text-left"
-                >
-                  <div className="relative">
-                    <AnimeCard
-                      title={a.title}
-                      image={a.image}
-                      imageOnly
-                      squareBottom
-                      onClick={() =>
-                        openAnime(a.id, a.title, a.isDonghua ? "sanka" : "anilist")
-                      }
-                    />
-                    <span
-                      className={cn(
-                        "absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold",
-                        a.isDonghua
-                          ? "bg-sky-700 text-white"
-                          : "bg-primary text-primary-foreground",
-                      )}
-                    >
-                      Ep {a.episode}
-                    </span>
-                    {a.isDonghua && (
-                      <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
-                        Donghua
-                      </span>
-                    )}
-                  </div>
-                  {/* Kotak judul MENYATU langsung dengan kartu — tanpa celah
-                      dan TANPA sudut rounded di atas, karena poster di atasnya
-                      juga kotak di bawah (pinggiran kiri bawah & kanan bawah
-                      menyatu dengan background judul). */}
-                  <div className="rounded-b-xl bg-black/60 px-1.5 pb-1 pt-1 backdrop-blur-sm">
-                    <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
-                      {a.title}
-                    </p>
-                    {/* Jam rilis di bawah judul, mengikuti zona waktu device. */}
-                    <p className="font-mono text-[10px] text-white/60">
-                      {a.timeLabel}
-                    </p>
-                  </div>
-                </button>
-              )              )}
-            </div>
-          )}
-        </>
-      )}
+      {/* 6a-2) LANJUTKAN NONTON — banner anime + bar progres + posisi
+          menit (mis. 16.45/24.00), geser ke kanan. */}
+      <ContinueWatchingRow />
 
       {/* 6b) SEASON INI — lalu GENRE di bawahnya: chip-pill geser ke
           kanan. Menekan chip membuka layar SearchScreen dengan genre itu
@@ -1417,7 +1441,8 @@ function HomeContent() {
       )}
 
       {/* Screens */}
-      {showLeaderboard && <LeaderboardScreen onClose={() => setShowLeaderboard(false)} />}
+      {/* Leaderboard penuh tampil INLINE di bawah podium (bukan layar
+          terpisah), sama seperti halaman Catalog. */}
       {showTopAnime && (
         <TopAnimeScreen
           items={topList}
@@ -1452,6 +1477,13 @@ function HomeContent() {
         </Suspense>
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
+      {showVoice && <VoiceCallScreen onClose={() => setShowVoice(false)} />}
+      {afinitas && user && (
+        <AfinitasScreen
+          targetUserId={user._id}
+          onClose={() => setAfinitas(false)}
+        />
+      )}
       {pickId && pickSource === "sanka" && (
         <DonghuaDetailScreen
           slug={pickId}
@@ -2319,6 +2351,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   const [activeGenres, setActiveGenres] = useState<string[]>([]);
   const [adult, setAdult] = useState(false);
   const [adultUnlocked, setAdultUnlocked] = useState(false);
+  // Pencarian terakhir ("Baru Saja") — disimpan lokal per device.
+  const [recent, setRecent] = useState<string[]>(() => readRecentSearch());
   // Toggle 18+ hanya muncul untuk user yang punya akses (staff).
   const { user } = useAuth();
   const panelAccess = useQuery(
@@ -2327,6 +2361,15 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   );
   const canAdult = !!panelAccess?.adult;
   const genres = useAction(api.anime.animeGenres);
+
+  // Trending tag: genre populer, disusun ulang supaya yang paling sering
+  // dicari berada di depan. Dipencet → kolom pencarian ikut terisi.
+  const trendingTags = useMemo(() => {
+    const byName = new Map(genreList.map((g) => [g.name, g]));
+    const ordered = POPULAR_TAGS.map((n) => byName.get(n)).filter(Boolean);
+    const rest = genreList.filter((g) => !POPULAR_TAGS.includes(g.name));
+    return [...(ordered as typeof genreList), ...rest].slice(0, 14);
+  }, [genreList]);
 
   useEffect(() => {
     genres({})
@@ -2412,6 +2455,10 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       return;
     }
     setSearching(true);
+    // Kegiatan cari → Daily Quest "cari 3 judul" + daftar Baru Saja.
+    bumpQuestLocal("search");
+    pushRecentSearch(query);
+    setRecent(readRecentSearch());
     try {
       // Pencarian mencakup anime DAN donghua: dua katalog AniList diambil
       // bersamaan lalu digabung, donghua tidak diprioritaskan tapi tetap
@@ -2528,6 +2575,51 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             Cari
           </button>
         </div>
+
+        {/* BARU SAJA — pencarian terakhir, geser ke kanan. */}
+        {results === null && recent.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-bold tracking-tight">Baru Saja</p>
+            <div className="thin-scroll flex gap-2 overflow-x-auto pb-1">
+              {recent.map((r) => (
+                <PillButton
+                  key={r}
+                  icon={<Clock className="size-3.5 text-white/50" aria-hidden />}
+                  onClick={() => {
+                    setQuery(r);
+                    void doSearch();
+                  }}
+                >
+                  {r}
+                </PillButton>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TRENDING TAG — genre populer (geser ke kanan), dipencet langsung
+            jadi kata kunci pencarian. */}
+        {results === null && trendingTags.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-bold tracking-tight">Trending tag</p>
+            <div className="thin-scroll flex gap-2 overflow-x-auto pb-1">
+              {trendingTags.map((t) => (
+                <PillButton
+                  key={t.id}
+                  icon={<Hash className="size-3.5 text-sky-300" aria-hidden />}
+                  onClick={() => {
+                    setQuery(t.name);
+                    pushRecentSearch(t.name);
+                    setRecent(readRecentSearch());
+                    void doSearch();
+                  }}
+                >
+                  #{t.name.toLowerCase().replace(/\s+/g, "-")}
+                </PillButton>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filter 18+ — hanya untuk user yang punya akses */}
         {canAdult && (
@@ -2707,8 +2799,10 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             ) : (
               <>
                 <div className="mb-2 flex items-baseline justify-between">
-                  <p className="text-base font-bold tracking-tight">
-                    Hasil Pencarian ({results.length})                  </p>
+                  <p className="text-base font-bold tracking-tight">Hasil</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {results.length} judul
+                  </p>
                 </div>
                 <div className="space-y-2">
                   {results.map((a) => (

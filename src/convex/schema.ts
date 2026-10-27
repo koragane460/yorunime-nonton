@@ -872,6 +872,51 @@ const schema = defineSchema(
       /** Scene aktif (mengubah panggung DAN latar layar). */
       scene: v.string(),
     }).index("by_user", ["userId"]),
+
+    /**
+     * VOICE CALL ROOM — daftar room + siapa yang sedang berada di dalamnya.
+     * Audio sendiri lewat WebRTC (peer-to-peer), tabel ini hanya untuk daftar
+     * room, keanggotaan, dan kode undangan (GP-xxxxxxx / OP-xxxxxxx).
+     */
+    voiceRooms: defineTable({
+      name: v.string(),
+      /** casual | gaming | study | music */
+      type: v.string(),
+      ownerId: v.id("users"),
+      maxUsers: v.number(),
+      privacy: v.union(v.literal("public"), v.literal("private")),
+      /** Kode link grup (Reusable). */
+      linkCode: v.string(),
+      /** Kode link personal (ONE TIME — hilang begitu dipakai). */
+      oneTimeCode: v.optional(v.string()),
+      members: v.optional(
+        v.array(
+          v.object({
+            userId: v.id("users"),
+            username: v.string(),
+            image: v.optional(v.string()),
+            joinedAt: v.number(),
+          }),
+        ),
+      ),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("linkCode", ["linkCode"])
+      .index("oneTimeCode", ["oneTimeCode"])
+      .index("updatedAt", ["updatedAt"]),
+
+    /** Sinyal WebRTC (offer/answer/ice) + status mikrofon antar member. */
+    voiceSignals: defineTable({
+      roomId: v.id("voiceRooms"),
+      from: v.id("users"),
+      /** offer | answer | ice | speaking | mic */
+      kind: v.string(),
+      payload: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("roomId", ["roomId"])
+      .index("roomId_created", ["roomId", "createdAt"]),
   },
   {
     schemaValidation: false,

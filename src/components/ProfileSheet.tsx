@@ -179,9 +179,11 @@ export function ProfileSheet({
             <div className="relative">
               {/* Banner FULLSCREEN besar & tajam: foto dari Pengaturan
                   (premium) atau foto profile sebagai fallback. HD (1200px). */}
-              <BlurBanner
-                src={profile.bannerUrl ?? profile.image}
-                className="h-64 w-full"
+              {/* Banner NORMAL (tanpa blur) — foto tampil tajam apa adanya. */}
+              <img
+                src={profile.bannerUrl ?? profile.image ?? ""}
+                alt=""
+                className="h-64 w-full object-cover"
               />
               {/* Bilah sambung warna tipis di bawah banner */}
               <div aria-hidden className="yn-banner-fade" />
@@ -231,14 +233,20 @@ export function ProfileSheet({
                 ) : null}
               </div>
             )}
-            {/* Foto profile menutupi banner, tepat di tengah — dengan cincin glow */}
-            <div className="relative -mt-16 flex justify-center">
-              <div className="relative">
+          </div>
+
+          {/* KOTAK ISI di bawah banner — pinggiran ROUND. */}
+          <div className="relative -mt-12 px-3">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4 text-center backdrop-blur-md">
+            {/* Baris atas: foto profile BESAR di kiri, username + chips di
+                kanan (rata kiri, bukan tengah lagi). */}
+            <div className="flex items-start gap-3.5 text-left">
+              <div className="relative shrink-0 self-center">
                 <div className="yn-avatar-ring">
                   <StoryRing
                     image={profile.image}
                     seed={profile.username}
-                    size={96}
+                    size={92}
                     hasStory={(theirStories?.length ?? 0) > 0}
                     seen={false}
                     onClick={() =>
@@ -248,8 +256,7 @@ export function ProfileSheet({
                   />
                 </div>
                 {/* Tombol kamera bulat KECIL di foto (hanya profil sendiri)
-                    → sheet Ganti / Refresh photo. Tema biru muda lembut
-                    (bukan neon) dan digeser sedikit ke atas + ke kiri. */}
+                    → sheet Ganti / Refresh photo. */}
                 {isMe && (
                   <button
                     type="button"
@@ -261,129 +268,90 @@ export function ProfileSheet({
                   </button>
                 )}
               </div>
-            </div>
-          </div>
-
-          <div className="-mt-1 px-4 text-center">
-            {/* Urutan: username -> ID -> level badge + tag clan */}
-            <div className="flex items-center justify-center gap-1.5"><p
-              key={profile.username}
-              className={cn(
-                "text-xl font-black tracking-wide drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]",
-                usernameColor(profile.username),
-              )}
-            >
-              {profile.username ?? "user"}
-            </p>
-            {profile.premium && <BlueCheck className="size-4" />}
-            {profile.devTagged && <RedMark className="size-4" />}
-            <TitleBadge role={profile.staffRole} seqId={profile.seqId} compact />
-            </div>
-            {/* Chips di bawah username — ketiganya UKURAN SAMA:
-                ID (kotak rounded abu-abu, awalan #) · tag level (TRANSAPAN +
-                outline, ikon material, tap = daftar tier) · jumlah teman
-                (kotak abu-abu + ikon orang). Tag clan pindah ke banner. */}
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[13px]">
-              <span className="inline-flex items-center rounded-full bg-zinc-500/25 px-3 py-1 font-mono font-bold text-white/95">
-                {displayId(profile.seqId)}
-              </span>
-              <button
-                type="button"
-                onClick={() => setTierPopup(true)}
-                aria-label="Daftar tag level"
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/45 bg-white/5 px-3 py-1 font-bold text-white/95 transition active:scale-95"
-              >
-                <TierIcon tier={badgeForLevel(profile.level).name} className="size-4" />
-                Lv.{profile.level}
-              </button>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/25 px-3 py-1 font-bold text-white/95">
-                <Users className="size-3.5" aria-hidden />
-                {profile.friendCount ?? 0}
-              </span>
-            </div>
-
-            {/* Add Friend · YoruPet — SATU baris; Afinitas turun ke baris
-                kedua di profil ORANG supaya ukurannya pas (di profil sendiri
-                Afinitas tetap sebaris dengan YoruPet, dua-duanya flex-1). */}
-            <div className="mx-auto mt-4 flex w-full max-w-sm items-stretch gap-2.5">
-              {!isMe && (
-                <button
-                  type="button"
-                  onClick={requestFriend}
-                  disabled={sending || friendStatus === "friend" || friendStatus === "pending"}
-                  className={cn(
-                    "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.09] px-3 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.98]",
-                    (friendStatus === "friend" || friendStatus === "pending") &&
-                      "opacity-50",
-                  )}
-                >
-                  {sending ? (
-                    <Send className="size-4 shrink-0" />
-                  ) : (
-                    <UserPlus className="size-4 shrink-0" />
-                  )}
-                  {friendStatus === "friend"
-                    ? "Teman"
-                    : friendStatus === "pending"
-                      ? "Terkirim"
-                      : "Add Friend"}
-                </button>
-              )}
-              {/* YoruPet: lihat kebun binatang milik user ini */}
-              <button
-                type="button"
-                onClick={() => setViewPet(true)}
-                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-amber-400/55 bg-transparent px-3 py-2.5 text-[13px] font-bold text-amber-200 transition active:scale-[0.98]"
-              >
-                <PawPrint className="size-4 shrink-0" />
-                YoruPet
-              </button>
-              {/* Afinitas di profil SENDIRI — sejajar dengan YoruPet. */}
-              {isMe && (
-                <button
-                  type="button"
-                  onClick={() => setAffinity(true)}
-                  className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-3 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
-                >
-                  <HeartHandshake className="size-4 shrink-0" />
-                  Afinitas
-                </button>
-              )}
-            </div>
-
-            {/* Afinitas di profil ORANG — baris sendiri di bawah Add Friend
-                supaya tinggi & lebarnya sama persis dengan tombol di atas. */}
-            {!isMe && (
-              <div className="mx-auto mt-2.5 flex w-full max-w-sm items-stretch gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setAffinity(true)}
-                  className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-pink-400/45 bg-pink-500/25 px-3 py-2.5 text-[13px] font-bold text-pink-100 transition active:scale-[0.98]"
-                >
-                  <HeartHandshake className="size-4 shrink-0" />
-                  Afinitas
-                </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p
+                    key={profile.username}
+                    className={cn(
+                      "truncate text-xl font-black tracking-wide",
+                      usernameColor(profile.username),
+                    )}
+                  >
+                    {profile.username ?? "user"}
+                  </p>
+                  {profile.premium && <BlueCheck className="size-4" />}
+                  {profile.devTagged && <RedMark className="size-4" />}
+                  <TitleBadge
+                    role={profile.staffRole}
+                    seqId={profile.seqId}
+                    compact
+                  />
+                </div>
+                {/* Chips: ID · tag level · jumlah teman */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
+                  <span className="inline-flex items-center rounded-full bg-zinc-500/25 px-2.5 py-1 font-mono font-bold text-white/95">
+                    {displayId(profile.seqId)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setTierPopup(true)}
+                    aria-label="Daftar tag level"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/45 bg-white/5 px-2.5 py-1 font-bold text-white/95 transition active:scale-95"
+                  >
+                    <TierIcon
+                      tier={badgeForLevel(profile.level).name}
+                      className="size-4"
+                    />
+                    Lv.{profile.level}
+                  </button>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/25 px-2.5 py-1 font-bold text-white/95">
+                    <Users className="size-3.5" aria-hidden />
+                    {profile.friendCount ?? 0}
+                  </span>
+                </div>
               </div>
-            )}
+            </div>
 
-            {/* Bar level: kiri Level n, kanan 1/12.000 */}
-            <div className="mx-auto mt-3 max-w-sm">
-              <div className="mb-1 flex items-center justify-between text-[11px]">
-                <span className="font-semibold text-white">Level {profile.level}</span>
-                <span className="text-zinc-300">
-                  {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
+            {/* KOTAK RINGKAS tanpa background: TOP XP · TOP GIVE PREMIUM ·
+                TAG CLAN + nama + centang biru. */}
+            <div className="mt-3 flex flex-wrap items-center justify-start gap-2 text-left">
+              {profile.xpRank ? (
+                <span className="inline-flex items-center gap-1 rounded-lg border border-yellow-400/45 bg-yellow-400/10 px-2 py-1 text-[11px] font-black text-yellow-200">
+                  <Zap className="size-3" aria-hidden /> Top XP {profile.xpRank}
                 </span>
-              </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/25">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
+              ) : null}
+              {profile.giverRank ? (
+                <span className="inline-flex items-center gap-1 rounded-lg border border-rose-400/45 bg-rose-400/10 px-2 py-1 text-[11px] font-black text-rose-200">
+                  <Gift className="size-3" aria-hidden /> Top Give{" "}
+                  {profile.giverRank}
+                </span>
+              ) : null}
+              {profile.clanTag && profile.clanName ? (
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-white/20 bg-white/[0.06] px-2 py-1">
+                  <ClanTag
+                    icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                    tag={profile.clanTag}
+                    color={profile.clanNameColor}
+                    level={profile.clanLevel}
+                    className="shrink-0 scale-90 px-1 py-0 text-[9px]"
+                  />
+                  <span className="truncate text-[11px] font-bold text-white/95">
+                    {profile.clanName}
+                  </span>
+                  {profile.clanVerified && <BlueCheck className="size-3.5 shrink-0" />}
+                </span>
+              ) : null}
             </div>
 
-            {/* Stats horizontal tanpa background */}
-            <div className="mt-4 grid grid-cols-4 divide-x divide-white/15 text-center">
+            {/* Urutan lama (username di tengah + chips) sudah pindah ke
+                baris atas kotak ini. */}
+
+            {/* Tombol pindah ke kotak 3-tombol (di bawah title). */}
+
+
+            {/* STATS dulu (History · Komen · Bergabung · Menit), baru bar
+                level besar — sesuai urutan yang diminta. */}
+            <div className="mt-3 grid grid-cols-4 divide-x divide-white/15 text-center">
               <StatCell label="History" value={profile.watchCount} />
               <StatCell label="Komen" value={profile.commentCount} />
               <StatCell
@@ -393,25 +361,91 @@ export function ProfileSheet({
               <StatCell label="Menit" value={profile.minutesWatched} />
             </div>
 
-            {/* TITLE (maks 3) terpasang — satu kotak rapi di bawah stat. */}
+            {/* BAR LEVEL BESAR — tulisan kiri (Level n) & kanan (x/y) di
+                atasnya, seukuran judul besar di bawahnya. */}
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-[12px]">
+                <span className="font-black text-white">Level {profile.level}</span>
+                <span className="text-zinc-300">
+                  {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
+                </span>
+              </div>
+              <div className="h-3.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/25">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-700"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* TITLE terpasang — sebesar bar level, geser ke kanan. */}
             {(() => {
               const titles =
                 cosmetics?.titles ??
                 (cosmetics?.title ? [cosmetics.title] : []);
               if (titles.length === 0) return null;
               return (
-                <div className="mx-auto mt-4 flex max-w-sm items-stretch gap-2.5 rounded-2xl border border-white/12 bg-white/[0.05] p-2.5">
-                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                    {titles.slice(0, 3).map((t) => (
-                      <TitleRibbon key={t.id} name={t.name} size="sm" />
-                    ))}
-                    <p className="line-clamp-2 text-[10px] leading-tight text-zinc-400">
-                      Pasang title di YoruVerse › Shop
-                    </p>
-                  </div>
+                <div className="thin-scroll mt-3 flex items-stretch gap-2 overflow-x-auto pb-1">
+                  {titles.slice(0, 3).map((t) => (
+                    <div key={t.id} className="min-w-[42%] shrink-0">
+                      <TitleRibbon name={t.name} size="sm" />
+                    </div>
+                  ))}
                 </div>
               );
             })()}
+
+            {/* KOTAK ROUNDED — 3 tombol DIGABUNG (Add Friend · YoruPet ·
+                Afinitas) dengan garis pembatas di antaranya. */}
+            <div
+              className={cn(
+                "mt-4 grid divide-x divide-white/15 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]",
+                isMe ? "grid-cols-2" : "grid-cols-3",
+              )}
+            >
+              {!isMe && (
+                <button
+                  type="button"
+                  onClick={requestFriend}
+                  disabled={
+                    sending || friendStatus === "friend" || friendStatus === "pending"
+                  }
+                  className={cn(
+                    "flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[12px] font-bold transition active:scale-[0.98]",
+                    friendStatus === "friend" || friendStatus === "pending"
+                      ? "text-white/45"
+                      : "text-white",
+                  )}
+                >
+                  {sending ? (
+                    <Send className="size-4" />
+                  ) : (
+                    <UserPlus className="size-4" />
+                  )}
+                  {friendStatus === "friend"
+                    ? "Teman"
+                    : friendStatus === "pending"
+                      ? "Terkirim"
+                      : "Add Friend"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setViewPet(true)}
+                className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[12px] font-bold text-amber-200 transition active:scale-[0.98]"
+              >
+                <PawPrint className="size-4" />
+                YoruPet
+              </button>
+              <button
+                type="button"
+                onClick={() => setAffinity(true)}
+                className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[12px] font-bold text-pink-100 transition active:scale-[0.98]"
+              >
+                <HeartHandshake className="size-4" />
+                Afinitas
+              </button>
+            </div>
 
             {/* Tab tanpa background: garis bawah, bisa pindah */}
             <div className="mt-5 flex border-b border-white/15">
@@ -682,6 +716,7 @@ export function ProfileSheet({
                 <LogIn className="size-3.5" /> Belum premium — centang biru eksklusif
               </p>
             )}
+            </div>
           </div>
         </div>
       )}
