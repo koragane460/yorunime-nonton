@@ -855,7 +855,7 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    { path: "/catalog", label: "Catalog", icon: CatalogIcon, iconFill: CatalogIconFill },
+    { path: "/catalog", label: "History", icon: CatalogIcon, iconFill: CatalogIconFill },
     // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
     // Home). Ikon buku, di kanan History.
     { path: "/baca", label: "Baca", icon: BookIcon },

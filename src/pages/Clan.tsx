@@ -28,7 +28,11 @@ import {
   TitleBadge,
   clanNameClass,
 } from "@/components/lstream-ui";
-import { DEFAULT_CLAN_ICON, PICKABLE_CLAN_ICONS } from "@/lib/clanIcons";
+import {
+  DEFAULT_CLAN_ICON,
+  PICKABLE_CLAN_ICONS,
+  resolveClanIcon,
+} from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +111,80 @@ function ClanRoleTitle({ role, className }: { role?: string; className?: string 
 /** Garis pembatas pendek di tengah (kayak ngelewatin sedikit tulisan). */
 function ShortDivider() {
   return <div className="mx-auto my-1.5 h-px w-24 bg-white/15" />;
+}
+
+/**
+ * AKSEN SUDUT EMAS — garis L kecil miring di pojok kiri-atas & kanan-bawah
+ * kartu ungu (gaya referensi). Sengaja KECIL dan hanya di dua sudut supaya
+ * dekoratif, bukan membungkus seluruh kartu.
+ */
+function GoldCorners({ size = 14 }: { size?: number }) {
+  const s = { width: size, height: size } as const;
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0">
+      <span
+        className="absolute left-0 top-0 border-l-2 border-t-2 border-gold/75"
+        style={s}
+      />
+      <span
+        className="absolute bottom-0 right-0 border-b-2 border-r-2 border-gold/75"
+        style={s}
+      />
+    </span>
+  );
+}
+
+/** Ranting sakura emas — dekorasi kiri & kanan atas layar Buat Clan. */
+function BlossomBranch({
+  className,
+  id = "ycl",
+  flip = false,
+}: {
+  className?: string;
+  id?: string;
+  flip?: boolean;
+}) {
+  return (
+    <svg
+      viewBox="0 0 160 96"
+      className={className}
+      style={flip ? { transform: "scaleX(-1)" } : undefined}
+      fill="none"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={`${id}-g`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fde68a" />
+          <stop offset="1" stopColor="#b45309" />
+        </linearGradient>
+        <g id={`${id}-bl`}>
+          <circle cx="0" cy="-4" r="2.7" />
+          <circle cx="3.8" cy="-1.2" r="2.7" />
+          <circle cx="2.4" cy="3.4" r="2.7" />
+          <circle cx="-2.4" cy="3.4" r="2.7" />
+          <circle cx="-3.8" cy="-1.2" r="2.7" />
+        </g>
+      </defs>
+      <g stroke={`url(#${id}-g)`} strokeWidth="1.4" strokeLinecap="round">
+        <path d="M0 6 C 34 10, 66 22, 96 52" />
+        <path d="M34 13 C 46 26, 52 42, 54 60" />
+        <path d="M66 25 C 84 30, 104 34, 128 34" />
+        <path d="M14 8 C 20 22, 22 36, 20 52" />
+      </g>
+      <g fill={`url(#${id}-g)`}>
+        <use href={`#${id}-bl`} transform="translate(96 52)" />
+        <use href={`#${id}-bl`} transform="translate(54 62) scale(0.85)" />
+        <use href={`#${id}-bl`} transform="translate(130 34) scale(0.9)" />
+        <use href={`#${id}-bl`} transform="translate(20 54) scale(0.75)" />
+        <use href={`#${id}-bl`} transform="translate(70 27) scale(0.7)" />
+      </g>
+      <g fill="#fff7d6">
+        <circle cx="96" cy="52" r="1.8" />
+        <circle cx="54" cy="62" r="1.5" />
+        <circle cx="130" cy="34" r="1.6" />
+      </g>
+    </svg>
+  );
 }
 
 /* ====================================================================== */
@@ -1229,6 +1307,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
     if (avatarPubUrl) setAvatarUrl(avatarPubUrl);
   }, [avatarPubUrl]);
   const [busy, setBusy] = useState(false);
+  // Ikon tag dipakai di PREVIEW — warnanya mengikuti warna tag yang dipilih
+  // (fallback ke warna bawaan ikonnya).
+  const { Icon: TagIc, tone: tagTone } = resolveClanIcon(tagIcon);
 
   const submit = async () => {
     if (!name.trim() || tag.trim().length < 2) {
@@ -1255,14 +1336,16 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
-      {/* Latar kosmik khas referensi: bintik berkelip + orb gradasi ungu-biru
-          yang bergerak pelan di belakang formulir. */}
+    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-[#0a0714]">
+      {/* Latar ungu-emas: bintik berkelip, orb gradasi, dan ranting sakura
+          emas di kiri & kanan atas (gaya referensi). */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1.3px)] [background-size:26px_26px] opacity-40" />
-        <span className="absolute -left-24 top-10 size-72 rounded-full bg-violet-600/20 blur-3xl" />
-        <span className="absolute -right-24 bottom-16 size-72 rounded-full bg-sky-500/15 blur-3xl" />
-        <span className="absolute left-1/2 top-1/3 size-56 -translate-x-1/2 rounded-full bg-gold/10 blur-3xl" />
+        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1.3px)] [background-size:26px_26px] opacity-40" />
+        <span className="absolute -left-24 top-8 size-72 rounded-full bg-fuchsia-600/25 blur-3xl" />
+        <span className="absolute -right-24 bottom-20 size-72 rounded-full bg-violet-600/25 blur-3xl" />
+        <span className="absolute left-1/3 top-1/4 size-52 -translate-x-1/2 rounded-full bg-gold/10 blur-3xl" />
+        <BlossomBranch id="ycl-l" className="absolute left-0 top-0 h-24 w-40" />
+        <BlossomBranch id="ycl-r" className="absolute right-0 top-0 h-24 w-40" flip />
       </div>
       <div className="relative w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
@@ -1275,73 +1358,76 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           </button>
           <div>
             <h1 className="text-lg font-extrabold">Buat Clan</h1>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[11px] text-violet-300/85">
               Bikin tim bareng teman — biaya 1.000 Sacret
             </p>
           </div>
         </div>
 
         <div className="space-y-4">
-          {/* ===== KOTAK PREVIEW — bingkai gradasi HOLOGRAFIK bercahaya ===== */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-gold/50 via-fuchsia-400/40 to-sky-400/50 p-px shadow-[0_0_28px_-10px_rgba(212,175,55,0.7)]">
-            {/* Kilau holografik berjalan di atas bingkai */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 animate-[yn-holo_4.5s_ease_infinite] bg-[linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.35)_50%,transparent_65%)] bg-[length:300%_300%]"
-            />
-            <div className="relative rounded-[15px] bg-card/95 px-3 pb-3 pt-3 backdrop-blur">
-              <p className="text-center text-[11px] font-bold tracking-[0.2em] text-muted-foreground">
-                PREVIEW
-              </p>
-              <ShortDivider />
-              {/* Isi preview: foto di kiri pas tengah, garis lurus full di
-                  kanannya, lalu nama clan + pill "Tag clan" + kotak tag */}
-              <div className="flex items-stretch gap-3">
-                {avatarUrl.trim() ? (
-                  <img
-                    src={avatarUrl.trim()}
-                    alt=""
-                    className="my-auto size-16 shrink-0 rounded-2xl object-cover ring-2 ring-gold/40"
-                  />
-                ) : (
-                  <span className="my-auto flex size-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-secondary to-secondary/40 text-muted-foreground">
-                    <Users className="size-7" />
-                  </span>
-                )}
-                <div className="w-px shrink-0 bg-white/12" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-muted-foreground">Nama Clan</p>
-                  <p className={cn("truncate font-bold", clanNameClass(1))}>
-                    {name.trim() || "Nama clan"}
-                  </p>
-                  <span className="mt-1.5 inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-2 py-0.5 text-[9px] font-semibold text-zinc-300">
-                    Tag clan
-                  </span>
-                  <div className="mt-1.5">
-                    <ClanTag
-                      icon={tagIcon}
-                      tag={tag.toUpperCase() || "TAG"}
-                      level={1}
-                      bg={tagBg || undefined}
-                      className="px-1.5 py-0 text-[10px]"
+          {/* ===== KOTAK PREVIEW — kartu ungu + aksen sudut emas ===== */}
+          <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3 shadow-[0_18px_40px_-24px_rgba(168,85,247,0.6)]">
+            <GoldCorners />
+            <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
+              — PREVIEW —
+            </p>
+            {/* Isi preview: foto kotak di kiri, nama + pill tag + kotak tag
+                berbingkai emas di kanannya. */}
+            <div className="mt-3 flex items-stretch gap-3">
+              {avatarUrl.trim() ? (
+                <img
+                  src={avatarUrl.trim()}
+                  alt=""
+                  className="my-auto size-16 shrink-0 rounded-xl border border-gold/50 object-cover"
+                />
+              ) : (
+                <span className="my-auto flex size-16 shrink-0 items-center justify-center rounded-xl border border-gold/50 bg-[#241640] text-white/75">
+                  <Users className="size-7" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold text-violet-300/75">Nama Clan</p>
+                <p className="truncate text-sm font-black text-gold">
+                  {name.trim() || "Nama clan"}
+                </p>
+                <span className="mt-1.5 inline-flex items-center rounded-full border border-gold/45 bg-white/[0.06] px-2 py-0.5 text-[9px] font-bold text-gold/90">
+                  Tag clan
+                </span>
+                <div className="mt-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-gold/60 bg-black/45 px-2 py-1">
+                    <TagIc
+                      className="size-3.5"
+                      style={{ color: tagBg ?? tagTone }}
+                      fill="currentColor"
+                      strokeWidth={1.4}
                     />
-                  </div>
+                    <span className="text-[11px] font-black italic tracking-wider text-white">
+                      [{tag.toUpperCase() || "TAG"}]
+                    </span>
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ===== 3 KOTAK INPUT — tiap kotak punya ikon warna sendiri ===== */}
-          <div className="space-y-2.5">
-            {/* Ganti photo profile clan dari GALERI (bukan link PNG): foto
-                langsung di-upload ke penyimpanan dan tampil di preview. */}
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
-              <span className="relative block size-16 shrink-0">
+          {/* ===== DUA KOTAK FORM BERDAMPINGAN — kartu ungu + aksen sudut
+              emas, persis gaya referensi. ===== */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* KIRI — photo profile + nama clan */}
+            <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
+              <GoldCorners />
+              <p className="text-center text-[11px] font-black text-white/85">
+                Ganti photo profile
+              </p>
+              <label
+                htmlFor="clan-avatar-file"
+                className="group relative mx-auto mt-3 block size-16 cursor-pointer"
+              >
                 <span
                   aria-hidden
                   className="yn-ring-spin absolute inset-0 rounded-2xl bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
                 />
-                <span className="absolute inset-[3px] overflow-hidden rounded-[13px] bg-background">
+                <span className="absolute inset-[3px] overflow-hidden rounded-[13px] bg-[#241640]">
                   {avatarUrl.trim() ? (
                     <img
                       src={avatarUrl.trim()}
@@ -1349,101 +1435,134 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                       className="size-full object-cover"
                     />
                   ) : (
-                    <span className="flex size-full items-center justify-center text-muted-foreground">
+                    <span className="flex size-full items-center justify-center text-white/55">
                       <Users className="size-6" />
                     </span>
                   )}
                 </span>
-                <span className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-[3px] border-card bg-gradient-to-br from-gold to-amber-600 text-black">
+                <span className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-[3px] border-[#1b1133] bg-gradient-to-br from-gold to-amber-600 text-black">
                   <Camera className="size-3.5" aria-hidden />
                 </span>
-              </span>
-              <label className="group min-w-0 flex-1 cursor-pointer">
-                <span className="block text-xs">Ganti photo profile</span>
-                <span className="mt-1.5 inline-flex rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-[11px] font-bold text-gold transition group-hover:bg-gold/20">
-                  {busyAvatar ? "Mengunggah…" : "Pilih dari galeri"}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={busyAvatar}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!f) return;
-                    setBusyAvatar(true);
-                    void (async () => {
-                      try {
-                        const blob = await shrinkClanAvatar(f);
-                        const uploadUrl = await getUploadUrl();
-                        const res = await fetch(uploadUrl, {
-                          method: "POST",
-                          headers: { "Content-Type": blob.type || "image/jpeg" },
-                          body: blob,
-                        });
-                        if (!res.ok) throw new Error("Upload gagal");
-                        const { storageId } = (await res.json()) as {
-                          storageId: string;
-                        };
-                        setAvatarSid(storageId);
-                        toast.success("Foto clan terunggah ✨");
-                      } catch (err) {
-                        toast.error(
-                          err instanceof Error ? err.message : "Gagal unggah foto",
-                        );
-                      } finally {
-                        setBusyAvatar(false);
-                      }
-                    })();
-                  }}
-                />
               </label>
+              <p className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-violet-200/85">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
+                  <Type className="size-3" />
+                </span>
+                Isi nama clan
+              </p>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="mis. YoruNime"
+                maxLength={28}
+                aria-label="Isi nama clan"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 text-xs font-bold text-white outline-none placeholder:text-white/35 focus:border-gold/50"
+              />
+              <label
+                htmlFor="clan-avatar-file"
+                className="mt-2.5 block cursor-pointer rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 py-2 text-center text-[11px] font-black text-black shadow-[0_8px_20px_-14px_rgba(251,191,36,0.9)] transition hover:brightness-110"
+              >
+                {busyAvatar ? "Mengunggah…" : "Pilih dari galeri"}
+              </label>
+              {/* Foto clan dari GALERI: di-upload ke penyimpanan Convex,
+                  URL publiknya langsung tampil di preview. */}
+              <input
+                id="clan-avatar-file"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={busyAvatar}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  setBusyAvatar(true);
+                  void (async () => {
+                    try {
+                      const blob = await shrinkClanAvatar(f);
+                      const uploadUrl = await getUploadUrl();
+                      const res = await fetch(uploadUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": blob.type || "image/jpeg" },
+                        body: blob,
+                      });
+                      if (!res.ok) throw new Error("Upload gagal");
+                      const { storageId } = (await res.json()) as {
+                        storageId: string;
+                      };
+                      setAvatarSid(storageId);
+                      toast.success("Foto clan terunggah ✨");
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error ? err.message : "Gagal unggah foto",
+                      );
+                    } finally {
+                      setBusyAvatar(false);
+                    }
+                  })();
+                }}
+              />
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-                <Type className="size-[18px] text-primary" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <Label htmlFor="clan-name" className="mb-1.5 block text-xs">
-                  Isi nama clan
-                </Label>
-                <Input
-                  id="clan-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="mis. YoruNime"
-                  maxLength={28}
-                />
+
+            {/* KANAN — tag clan + pilihan warna background tag */}
+            <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
+              <GoldCorners />
+              <p className="text-center text-[11px] font-black text-white/85">
+                Isi tag clan
+              </p>
+              <p className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-violet-200/85">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
+                  <TagIcon className="size-3" />
+                </span>
+                Isi tag clan (nama)
+              </p>
+              <input
+                value={tag}
+                onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
+                placeholder="mis. YRNM"
+                maxLength={5}
+                aria-label="Isi tag clan"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 font-mono text-xs font-bold uppercase text-white outline-none placeholder:text-white/35 focus:border-gold/50"
+              />
+              <p className="mt-3 text-center text-[10px] font-black tracking-[0.2em] text-gold/85">
+                BACKGROUND TAG
+              </p>
+              <div className="mt-1.5 grid grid-cols-5 gap-1.5">
+                {TAG_BG_COLORS.map((col) => (
+                  <button
+                    key={col}
+                    type="button"
+                    onClick={() => setTagBg(col)}
+                    aria-label={`Background ${col}`}
+                    style={{ backgroundColor: col }}
+                    className={cn(
+                      "aspect-square rounded-md border transition hover:scale-110",
+                      tagBg === col
+                        ? "scale-110 border-white ring-2 ring-gold/70"
+                        : "border-white/15",
+                    )}
+                  />
+                ))}
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-card p-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
-                <TagIcon className="size-[18px] text-emerald-300" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <Label htmlFor="clan-tag" className="mb-1.5 block text-xs">
-                  Isi tag clan (nama)
-                </Label>
-                <Input
-                  id="clan-tag"
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
-                  placeholder="mis. YRNM"
-                  maxLength={5}
-                  className="font-mono"
-                />
-              </div>
+              {tagBg && (
+                <button
+                  type="button"
+                  onClick={() => setTagBg(null)}
+                  className="mt-2 w-full rounded-md border border-white/12 py-1 text-[9px] font-bold text-white/55 transition hover:border-white/25"
+                >
+                  Pakai warna bawaan
+                </button>
+              )}
             </div>
           </div>
 
           {/* ===== KOTAK ICON TAG CLAN ===== */}
-          <div className="rounded-2xl border border-white/10 bg-card px-3 pb-3 pt-3">
-            <p className="text-center text-[11px] font-bold text-muted-foreground">
-              Icon Tag Clan
+          <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] px-3 pb-3 pt-3">
+            <GoldCorners />
+            <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
+              — ICON TAG CLAN —
             </p>
-            <ShortDivider />
-            <div className="grid grid-cols-6 gap-2">
+            <div className="mt-3 grid grid-cols-4 gap-2.5">
               {PICKABLE_CLAN_ICONS.map((ic) => (
                 <button
                   key={ic.key}
@@ -1453,8 +1572,8 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                   className={cn(
                     "flex aspect-square items-center justify-center rounded-full border transition hover:scale-110",
                     tagIcon === ic.key
-                      ? "scale-110 border-primary ring-2 ring-primary/60 shadow-[0_0_12px_-2px_var(--tw-shadow-color,rgba(244,63,94,0.6))]"
-                      : "border-white/10",
+                      ? "scale-110 border-gold ring-2 ring-gold/60 shadow-[0_0_14px_-3px_rgba(251,191,36,0.9)]"
+                      : "border-white/12 hover:border-gold/40",
                   )}
                   style={{
                     backgroundColor: `${ic.tone}26`,
@@ -1472,44 +1591,22 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </div>
           </div>
 
-          {/* ===== KOTAK BACKGROUND TAG — 10 kotak gradasi antar warna,
-              5 cerah di baris atas + 5 agak gelap di baris bawah ===== */}
-          <div className="rounded-2xl border border-white/10 bg-card px-3 pb-3 pt-3">
-            <p className="text-center text-[11px] font-bold text-muted-foreground">
-              Background Tag
-            </p>
-            <ShortDivider />
-            <div className="grid grid-cols-5 gap-2">
-              {TAG_BG_COLORS.map((col) => (
-                <button
-                  key={col}
-                  type="button"
-                  onClick={() => setTagBg(col)}
-                  aria-label={`Background ${col}`}
-                  style={{ backgroundColor: col }}
-                  className={cn(
-                    "aspect-square rounded-lg border transition hover:scale-110",
-                    tagBg === col
-                      ? "scale-110 border-foreground/80 ring-2 ring-primary/60"
-                      : "border-white/10",
-                  )}
-                />
-              ))}
-            </div>
-          </div>
+          {/* Background Tag sudah pindah ke dalam kotak kanan (berdampingan
+              dengan input tag) supaya tata letaknya persis seperti referensi. */}
+
 
           {/* ===== TOMBOL BUAT & BATAL ===== */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             <button
               onClick={() => void submit()}
               disabled={busy}
-              className="yn-btn-warm rounded-xl py-3 text-sm font-bold active:scale-[0.98] disabled:opacity-50"
+              className="rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 py-3 text-sm font-black text-black shadow-[0_12px_28px_-16px_rgba(251,191,36,0.95)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
             >
               {busy ? "Menyimpan…" : "Buat Clan"}
             </button>
             <button
               onClick={onDone}
-              className="rounded-xl border border-white/15 py-3 text-sm font-bold text-muted-foreground"
+              className="rounded-xl border border-violet-300/30 bg-white/[0.05] py-3 text-sm font-black text-violet-100/85 transition hover:bg-white/10 active:scale-[0.98]"
             >
               Batal
             </button>

@@ -677,7 +677,7 @@ export function ChatPanel({
                     blinkId === m._id && "reply-blink",
                   )}
                 >
-                  {/* Header bubble: username + centang + title, clan tag di kanan */}
+                  {/* Header bubble: username + centang + title + tag level */}
                   <div className="flex w-fit min-w-0 max-w-full items-center gap-1.5">
                     <span className={cn("truncate text-xs font-semibold", usernameColor(m.username))}>
                       {m.username}
@@ -695,17 +695,20 @@ export function ChatPanel({
                         Lv.{m.level}
                       </span>
                     )}
-                    {/* Tag CLAN — gaya sama persis dengan detail clan,
-                        hitbox DIKECILKAN (cuma seukuran tagnya), dan bisa
-                        dipencet → buka detail clan FULLSCREEN. */}
-                    {m.clanTag && (
+                  </div>
+                  {/* Tag CLAN — BARIS TERPISAH DI BAWAH username supaya
+                      username tidak tertutup. Gaya sama persis dengan detail
+                      clan, hitbox seukuran tag, dipencet → detail clan
+                      FULLSCREEN. */}
+                  {m.clanTag && (
+                    <div className="mt-1 flex w-fit max-w-full">
                       <button
                         type="button"
                         aria-label={`Detail clan ${m.clanTag}`}
                         onClick={() =>
                           m.clanId && navigate(`/clan?clan=${m.clanId}`)
                         }
-                        className="-my-1 inline-flex shrink-0 items-center leading-none transition active:scale-95"
+                        className="inline-flex shrink-0 items-center leading-none transition active:scale-95"
                       >
                         <ClanTag
                           icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
@@ -715,8 +718,8 @@ export function ChatPanel({
                           className="pointer-events-none scale-90 px-1.5 py-0 text-[9px]"
                         />
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {m.replyTo && (
                     // Kutipan balas: kotak tipis yang tetap lapang, teks
                     // sumber ditampilkan sampai 3 baris supaya jelas.

@@ -59,6 +59,7 @@ type LinkLine = { x1: number; y1: number; x2: number; y2: number };
 /** Layar penuh YoruVerse — dirender AppLayout di atas segalanya. */
 export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const petState = useQuery(api.pets.state, {});
   const [view, setView] = useState<HubView>(null);
 
@@ -266,7 +267,11 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                           ref={(el) => {
                             boxRefs.current[i] = el;
                           }}
-                          onClick={() => setView(b.key)}
+                          onClick={() =>
+                            // Clan di YoruVerse membuka LAYAR CLAN yang sama
+                            // dengan /clan (foto referensi: "Cari clan").
+                            b.key === "clan" ? navigate("/clan") : setView(b.key)
+                          }
                           className={cn(
                             "flex h-16 w-24 flex-col items-center justify-center gap-0.5 bg-gradient-to-br",
                             b.grad,

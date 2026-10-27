@@ -370,7 +370,7 @@ function SectionRow({
   return (
     <>
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        <h2 className="yn-sec text-lg font-bold tracking-tight">{title}</h2>
         {count > shown && (
           <button
             onClick={onMore}
@@ -430,7 +430,7 @@ function ComicHomeRow({
       <div className="mb-2 flex items-center justify-between">
         {/* Judul baris TANPA warna gradasi (permintaan: tulisan
             "…Terbaru & Populer" polos). */}
-        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        <h2 className="yn-sec text-lg font-bold tracking-tight">{title}</h2>
         <button
           onClick={onMore}
           className="shrink-0 text-xs font-semibold text-primary"
@@ -545,7 +545,7 @@ function FilmPosterRow({
     <div className={cn("fade-enter", hideHeader ? "mt-3" : "mt-4")}>
       {!hideHeader && (
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+          <h2 className="yn-sec flex items-center gap-1.5 text-lg font-bold tracking-tight">
             <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
             {title}
           </h2>

@@ -29,6 +29,18 @@ import {
 
 type Kind = "pasangan" | "saudara" | "sahabat" | "terpercaya";
 
+/** Label waktu relatif ("baru saja", "3 jam lalu", "2 hari lalu"). */
+function agoLabel(ts: number) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return "baru saja";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
+}
+
 /** Meta jenis: label, warna Ikon (bersih, tanpa latar), ring lingkaran. */
 const KIND_META: Record<
   Kind,
@@ -146,6 +158,8 @@ export function AfinitasScreen({
   const inviteM = useMutation(api.affinity.invite);
   const respondM = useMutation(api.affinity.respond);
   const breakM = useMutation(api.affinity.breakLink);
+  /** SEMUA request masuk (dari siapa pun) — kotak "Permintaan Masuk". */
+  const incoming = useQuery(api.affinity.incomingInvites, {});
 
   const [view, setView] = useState<"circle" | "lb">("circle");
   const [lbKind, setLbKind] = useState<Kind>("pasangan");
@@ -260,6 +274,18 @@ export function AfinitasScreen({
       },
       `Undangan ${KIND_META[pickKind].label} terkirim`,
     );
+
+  /** Terima / tolak request dari kotak Permintaan Masuk. */
+  const respondTo = (inviteId: Id<"affinityInvites">, accept: boolean) =>
+    void run(async () => {
+      await respondM({ inviteId, accept });
+      if (accept) {
+        setInvHandled(true);
+        toast.success("Permintaan diterima — bond kalian dimulai! 💞");
+      } else {
+        toast.success("Permintaan ditolak");
+      }
+    });
 
   if (st == null || target === undefined) {
     return (
@@ -392,6 +418,89 @@ export function AfinitasScreen({
               <Trophy className="size-4" />
             </button>
           </div>
+
+          {/* ============ KOTAK PERMINTAAN MASUK (nerima request) ========= */}
+          {st.isMe && (incoming?.length ?? 0) > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="mx-3 mt-3 overflow-hidden rounded-3xl border border-pink-400/35 bg-[linear-gradient(160deg,#2b1033_0%,#170d23_55%,#0c0a14_100%)] shadow-[0_22px_48px_-28px_rgba(236,72,153,0.8)]"
+            >
+              <div className="flex items-center gap-2 border-b border-white/10 bg-white/[0.05] px-3.5 py-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-pink-500/25 text-pink-200 ring-1 ring-pink-400/55 shadow-[0_0_16px_-6px_rgba(236,72,153,0.9)]">
+                  <HeartHandshake className="size-4" aria-hidden />
+                </span>
+                <p className="min-w-0 flex-1 text-[12px] font-black text-white">
+                  Permintaan Masuk
+                </p>
+                <span className="rounded-full bg-pink-500/25 px-2 py-0.5 text-[10px] font-black text-pink-100 ring-1 ring-pink-400/55">
+                  {incoming?.length ?? 0}
+                </span>
+              </div>
+
+              <div className="divide-y divide-white/[0.07]">
+                {(incoming ?? []).map((iv: any) => {
+                  const meta =
+                    KIND_META[iv.kind as Kind] ?? KIND_META.sahabat;
+                  return (
+                  <div
+                    key={iv.inviteId}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5"
+                  >
+                    {/* Foto + emblem jenis */}
+                    <div className="relative shrink-0">
+                      <Avatar
+                        src={iv.fromUser?.image}
+                        seed={iv.fromUser?.username ?? "?"}
+                        className="size-10"
+                      />
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-[#120d1c] ring-1 ring-white/25"
+                        aria-hidden
+                      >
+                        <meta.Icon
+                          className={cn("size-2.5", meta.cls)}
+                        />
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-black text-white">
+                        {iv.fromUser?.username ?? "user"}
+                      </p>
+                      <p className="truncate text-[10px] text-white/55">
+                        Mengajak jadi{" "}
+                        <span
+                          className={cn("font-bold", meta.cls)}
+                        >
+                          {meta.label}
+                        </span>{" "}
+                        · {agoLabel(iv.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => respondTo(iv.inviteId, false)}
+                        aria-label="Tolak permintaan"
+                        className="flex size-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white/60 transition hover:border-white/40 hover:text-white active:scale-95"
+                      >
+                        <X className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => respondTo(iv.inviteId, true)}
+                        className="rounded-full bg-gradient-to-r from-pink-400 to-fuchsia-600 px-3.5 py-1.5 text-[11px] font-black text-white shadow-[0_10px_24px_-12px_rgba(236,72,153,0.95)] transition hover:brightness-110 active:scale-95"
+                      >
+                        Terima
+                      </button>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
 
           {/* --------------------- PANGGUNG ----------------------------- */}
           {/* Geser ke bawah (mt-6) + tinggi ditambah, supaya seluruh isi

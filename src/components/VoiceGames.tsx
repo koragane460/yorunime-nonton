@@ -6,7 +6,7 @@
 //  4. Catur      — papan 8x8 validasi server (kastel/en passant/skak)
 //
 // Semua overlay full-screen (fixed inset-0 z-[80]) di atas voice room.
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   ChevronLeft,
+  ChevronRight,
   Crown,
   Gamepad2,
   Lightbulb,
@@ -111,212 +112,409 @@ function GameMenu({
   };
 
   return (
-    <div className="screen-enter fixed inset-0 z-[80] overflow-y-auto bg-[#07060c]">
-      <div className="mx-auto w-full max-w-md px-4 pb-16 pt-3">
-        <button
-          onClick={onClose}
-          aria-label="Kembali ke voice room"
-          className="flex size-10 items-center justify-center text-white/85 transition active:scale-95"
-        >
-          <ChevronLeft className="size-6" />
-        </button>
+    <div className="screen-enter fixed inset-0 z-[80] overflow-y-auto bg-[#060509]">
+      {/* Latar premium: grid halus + tiga orb warna + sinar emas atas. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.2px)] [background-size:24px_24px]" />
+        <span className="absolute -left-20 -top-10 size-64 rounded-full bg-fuchsia-600/20 blur-3xl" />
+        <span className="absolute -right-24 top-40 size-64 rounded-full bg-sky-600/15 blur-3xl" />
+        <span className="absolute -bottom-24 left-1/4 size-72 rounded-full bg-amber-600/15 blur-3xl" />
+        <span className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.16),transparent_70%)]" />
+      </div>
 
-        <div className="mt-2">
-          <h1 className="text-2xl font-black tracking-tight">Game Room</h1>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-white/55">
-            <Sparkles className="size-3.5 text-amber-300" />
-            Ajak teman se-room, kumpulin pemain, mulai main
-          </p>
+      <div className="relative mx-auto w-full max-w-md px-4 pb-20 pt-3">
+        {/* ---- Kepala layar ---- */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali ke voice room"
+            className="flex size-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white/85 transition hover:border-white/40 active:scale-95"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gold/80">
+              YoruNime Party
+            </p>
+            <h1 className="bg-gradient-to-r from-white via-white to-white/55 bg-clip-text text-2xl font-black tracking-tight text-transparent">
+              Game Room
+            </h1>
+          </div>
+          <span className="flex size-10 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold shadow-[0_0_18px_-8px_rgba(251,191,36,0.9)]">
+            <Gamepad2 className="size-5" />
+          </span>
+        </div>
+        {/* Ornamen pembatas emas. */}
+        <div className="mt-2.5 flex items-center gap-2" aria-hidden>
+          <span className="h-px flex-1 bg-gradient-to-r from-transparent to-gold/55" />
+          <span className="size-1.5 rotate-45 bg-gold/80" />
+          <span className="size-1 rotate-45 bg-gold/45" />
+          <span className="size-1.5 rotate-45 bg-gold/80" />
+          <span className="h-px flex-1 bg-gradient-to-l from-transparent to-gold/55" />
+        </div>
+        <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-white/55">
+          <Sparkles className="size-3.5 text-amber-300" />
+          Ajak teman se-room, kumpulin pemain, mulai main
+        </p>
+
+        {/* ---- Strip statistik ---- */}
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {[
+            { k: "3", l: "Pilihan game", c: "text-amber-300" },
+            { k: "100%", l: "Validasi server", c: "text-emerald-300" },
+            { k: "Gratis", l: "Buat room", c: "text-sky-300" },
+          ].map((s) => (
+            <div
+              key={s.l}
+              className="rounded-2xl border border-white/10 bg-white/[0.05] px-2 py-2 text-center"
+            >
+              <p className={cn("text-sm font-black", s.c)}>{s.k}</p>
+              <p className="mt-0.5 text-[9px] font-bold leading-tight text-white/50">
+                {s.l}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Kartu berselang-seling: 1 kiri, 2 kanan, 3 kiri — gaya neon
-            ala promo Afinitas (glow tipis + judul bercahaya + chips detail). */}
-        <div className="mt-6 flex flex-col gap-4">
+        {/* ---- Kartu game berselang-seling (kiri-kanan-kiri) ---- */}
+        <div className="mt-5 flex flex-col gap-4">
           {/* ---- UNO ---- */}
-          <motion.button
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            onClick={() => void start("uno")}
+          <GameCard
+            idx={1}
+            title="UNO"
+            badge="Paling ramai"
+            delay={0.05}
             disabled={busy !== null}
-            className="group relative w-[92%] self-start overflow-hidden rounded-3xl border border-red-400/35 bg-[linear-gradient(140deg,#2a0f14_0%,#12060a_60%,#0a0508_100%)] p-4 text-left shadow-[0_20px_46px_-26px_rgba(244,63,94,0.65)] transition active:scale-[0.98] disabled:opacity-60"
-          >
-            <span aria-hidden className="absolute -right-10 -top-12 size-40 rounded-full bg-red-500/25 blur-3xl" />
-            <span aria-hidden className="absolute -bottom-14 left-6 size-32 rounded-full bg-amber-500/15 blur-3xl" />
-            <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-red-300/70 to-transparent" />
-
-            {/* Tiga kartu UNO menumpuk miring. */}
-            <div className="relative h-32 w-44">
-              <span className="absolute left-4 top-3 h-[112px] w-16 rotate-[-16deg] rounded-xl bg-gradient-to-b from-red-500 to-red-800 ring-2 ring-white/85 shadow-xl" />
-              <span className="absolute left-20 top-2 h-[112px] w-16 rotate-[10deg] rounded-xl bg-gradient-to-b from-amber-400 to-amber-700 ring-2 ring-white/85 shadow-xl" />
-              <span className="absolute left-11 top-6 flex h-[112px] w-16 rotate-[-4deg] items-center justify-center rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-700 ring-2 ring-white/85 shadow-2xl">
-                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-black italic text-red-600 shadow">
-                  UNO
-                </span>
+            onClick={() => void start("uno")}
+            tone={{
+              shell:
+                "border-red-400/35 bg-[linear-gradient(140deg,#2a0f14_0%,#12060a_60%,#0a0508_100%)]",
+              orb: "bg-red-500/30",
+              shadow: "0 24px 54px -30px rgba(244,63,94,0.85)",
+              titleGlow: "[text-shadow:0_0_14px_rgba(244,63,94,.55)]",
+              badgeCls: "bg-red-500/25 text-red-100 ring-1 ring-red-400/55",
+            }}
+            desc="Buang kartu serasi warna/angka, kartu liar ganti warna, jangan lupa teriak UNO sebelum keburu kehabisan!"
+            chips={["4 pemain", "108 kartu", "+2 · +4 · liar", "Validasi server"]}
+            cta={
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-3.5" />
+                {busy === "uno" ? "Membuat…" : "Mulai — 4 kursi"}
               </span>
-            </div>
-
-            <div className="relative mt-3">
-              <p className="text-xl font-black tracking-tight text-white [text-shadow:0_0_14px_rgba(244,63,94,.55)]">
-                UNO
-              </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-white/65">
-                Buang kartu serasi warna/angka, kartu liar ganti warna,
-                jangan lupa teriak UNO sebelum keburu kehabisan!
-              </p>
-            </div>
-            {/* Chips detail — biar kartu informatif, bukan cuma judul. */}
-            <div className="relative mt-2.5 flex flex-wrap gap-1.5">
-              {["4 pemain", "108 kartu", "+2 · +4 · liar", "Validasi server"].map((f) => (
-                <span key={f} className="rounded-full border border-white/15 bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/70">
-                  {f}
-                </span>
-              ))}
-            </div>
-            <span className="mt-3 flex w-fit items-center gap-1.5 rounded-full border border-red-400/45 bg-red-500/15 px-3 py-1.5 text-[11px] font-black text-red-100 shadow-[0_0_16px_-6px_rgba(244,63,94,.9)] transition group-hover:bg-red-500/25">
-              <Users className="size-3.5" /> {busy === "uno" ? "Membuat…" : "Mulai — 4 kursi"}
-            </span>
-          </motion.button>
+            }
+            art={
+              <>
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(244,63,94,0.4),transparent_62%)]"
+                />
+                <span
+                  aria-hidden
+                  className="absolute -left-8 -top-10 size-32 rounded-full bg-red-500/35 blur-2xl"
+                />
+                {/* Tiga kartu UNO menumpuk miring. */}
+                <div className="relative mx-auto h-32 w-44">
+                  <span className="absolute left-4 top-3 h-[112px] w-16 rotate-[-16deg] rounded-xl bg-gradient-to-b from-red-500 to-red-800 ring-2 ring-white/85 shadow-xl" />
+                  <span className="absolute left-20 top-2 h-[112px] w-16 rotate-[10deg] rounded-xl bg-gradient-to-b from-amber-400 to-amber-700 ring-2 ring-white/85 shadow-xl" />
+                  <span className="absolute left-11 top-6 flex h-[112px] w-16 rotate-[-4deg] items-center justify-center rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-700 ring-2 ring-white/85 shadow-2xl">
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-black italic text-red-600 shadow">
+                      UNO
+                    </span>
+                  </span>
+                </div>
+              </>
+            }
+          />
 
           {/* ---- CATUR ---- */}
-          <motion.button
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
-            onClick={() => void start("chess")}
+          <GameCard
+            idx={2}
+            title="Catur"
+            badge="Duel 1v1"
+            delay={0.12}
             disabled={busy !== null}
-            className="group relative w-[92%] self-end overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(220deg,#0f1a2a_0%,#070d16_60%,#05070c_100%)] p-4 text-left shadow-[0_20px_46px_-26px_rgba(56,189,248,0.6)] transition active:scale-[0.98] disabled:opacity-60"
-          >
-            <span aria-hidden className="absolute -left-10 -top-12 size-40 rounded-full bg-sky-500/20 blur-3xl" />
-            <span aria-hidden className="absolute -bottom-14 right-6 size-32 rounded-full bg-indigo-500/15 blur-3xl" />
-            <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent" />
-
-            {/* Papan catur mini + figur kuda. */}
-            <div className="relative ml-auto h-32 w-44 overflow-hidden rounded-xl border border-white/25 shadow-xl"
-              style={{
-                backgroundImage:
-                  "conic-gradient(#3d4256 90deg, #171a24 0 180deg, #3d4256 0 270deg, #171a24 0)",
-                backgroundSize: "25% 25%",
-              }}
-            >
-              <span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-              <span className="absolute inset-0 flex items-center justify-center text-6xl text-white drop-shadow-[0_6px_10px_rgba(0,0,0,0.9)]">
-                ♞
+            onClick={() => void start("chess")}
+            tone={{
+              shell:
+                "border-sky-400/35 bg-[linear-gradient(220deg,#0f1a2a_0%,#070d16_60%,#05070c_100%)]",
+              orb: "bg-sky-500/30",
+              shadow: "0 24px 54px -30px rgba(56,189,248,0.8)",
+              titleGlow: "[text-shadow:0_0_14px_rgba(56,189,248,.5)]",
+              badgeCls: "bg-sky-500/25 text-sky-100 ring-1 ring-sky-400/55",
+            }}
+            desc="Duel klasik 8×8 — kastel, en passant, skak & skakmat, semua langkah divalidasi server."
+            chips={["2 pemain", "Papan 8×8", "Skak & skakmat", "Validasi server"]}
+            cta={
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-3.5" />
+                {busy === "chess" ? "Membuat…" : "Mulai — 2 kursi"}
               </span>
-              <span className="absolute bottom-2 right-2 text-3xl text-zinc-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.35)]">
-                ♚
-              </span>
-            </div>
-
-            <div className="relative mt-3">
-              <p className="text-xl font-black tracking-tight text-white [text-shadow:0_0_14px_rgba(56,189,248,.5)]">
-                Catur
-              </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-white/65">
-                Duel klasik 8×8 — kastel, en passant, skak & skakmat,
-                semua langkah divalidasi server.
-              </p>
-            </div>
-            <div className="relative mt-2.5 flex flex-wrap gap-1.5">
-              {["2 pemain", "Papan 8×8", "Skak & skakmat", "Validasi server"].map((f) => (
-                <span key={f} className="rounded-full border border-white/15 bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/70">
-                  {f}
+            }
+            art={
+              <>
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "conic-gradient(#3d4256 90deg, #171a24 0 180deg, #3d4256 0 270deg, #171a24 0)",
+                    backgroundSize: "25% 25%",
+                  }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/35"
+                />
+                <span
+                  aria-hidden
+                  className="absolute -left-8 -top-10 size-32 rounded-full bg-sky-500/30 blur-2xl"
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-6xl text-white drop-shadow-[0_6px_10px_rgba(0,0,0,0.9)]">
+                  ♞
                 </span>
-              ))}
-            </div>
-            <span className="mt-3 flex w-fit items-center gap-1.5 rounded-full border border-sky-400/45 bg-sky-500/15 px-3 py-1.5 text-[11px] font-black text-sky-100 shadow-[0_0_16px_-6px_rgba(56,189,248,.9)] transition group-hover:bg-sky-500/25">
-              <Users className="size-3.5" /> {busy === "chess" ? "Membuat…" : "Mulai — 2 kursi"}
-            </span>
-          </motion.button>
+                <span className="absolute bottom-2 right-3 text-3xl text-zinc-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.35)]">
+                  ♚
+                </span>
+              </>
+            }
+          />
 
           {/* ---- ULAR TANGGA — dadu, maju, naik tangga & hindari ular ---- */}
-          <motion.button
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.16, ease: "easeOut" }}
-            onClick={() => void start("snakes")}
+          <GameCard
+            idx={3}
+            title="Ular Tangga"
+            badge="Baru"
+            delay={0.19}
             disabled={busy !== null}
-            className="group relative w-[92%] self-start overflow-hidden rounded-3xl border border-violet-400/40 bg-[linear-gradient(150deg,#241033_0%,#14101f_55%,#0a0a11_100%)] p-4 text-left shadow-[0_20px_46px_-26px_rgba(167,139,250,0.6)] transition active:scale-[0.98] disabled:opacity-60"
-          >
-            <span aria-hidden className="absolute -right-10 -top-12 size-40 rounded-full bg-pink-500/25 blur-3xl" />
-            <span aria-hidden className="absolute -bottom-14 left-6 size-32 rounded-full bg-indigo-500/20 blur-3xl" />
-            <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-pink-300/70 to-transparent" />
-
-            {/* Preview papan mini: checker + garis tangga + ular melengkung. */}
-            <div className="relative ml-auto h-32 w-44 overflow-hidden rounded-xl border border-white/25 shadow-xl"
-              style={{
-                backgroundImage:
-                  "conic-gradient(#1d2a22 90deg, #0f1712 0 180deg, #1d2a22 0 270deg, #0f1712 0)",
-                backgroundSize: "25% 25%",
-              }}
-            >
-              {/* Tangga emas mini. */}
-              <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden>
-                <g stroke="#f5c542" strokeWidth="1.6" strokeLinecap="round">
-                  <line x1="24" y1="82" x2="64" y2="26" />
-                  <line x1="30" y1="85" x2="70" y2="29" />
-                  {[0.2, 0.4, 0.6, 0.8].map((t) => (
-                    <line
-                      key={t}
-                      x1={24 + 40 * t}
-                      y1={82 - 56 * t}
-                      x2={30 + 40 * t}
-                      y2={85 - 56 * t}
-                      strokeWidth="1.2"
-                    />
-                  ))}
-                </g>
-                {/* Ular pink-ungu melengkung. */}
-                <path
-                  d="M 78 18 Q 55 45 82 62 Q 98 74 74 92"
-                  fill="none"
-                  stroke="url(#miniSnake)"
-                  strokeWidth="5.5"
-                  strokeLinecap="round"
-                />
-                <defs>
-                  <linearGradient id="miniSnake" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#f43f5e" />
-                    <stop offset="1" stopColor="#a78bfa" />
-                  </linearGradient>
-                </defs>
-                <circle cx="78" cy="18" r="4.5" fill="#f43f5e" />
-              </svg>
-              {/* Dadu mini miring. */}
-              <span className="absolute bottom-2 left-2 flex h-9 w-9 rotate-[-12deg] items-center justify-center rounded-lg bg-gradient-to-b from-white to-zinc-300 shadow-lg" aria-hidden>
-                <span className="grid grid-cols-2 gap-0.5">
-                  {[0, 1, 2, 3].map((k) => (
-                    <span key={k} className="size-1.5 rounded-full bg-zinc-800" />
-                  ))}
-                </span>
+            onClick={() => void start("snakes")}
+            tone={{
+              shell:
+                "border-violet-400/40 bg-[linear-gradient(150deg,#241033_0%,#14101f_55%,#0a0a11_100%)]",
+              orb: "bg-violet-500/35",
+              shadow: "0 24px 54px -30px rgba(167,139,250,0.85)",
+              titleGlow: "[text-shadow:0_0_14px_rgba(167,139,250,.55)]",
+              badgeCls: "bg-violet-500/30 text-violet-100 ring-1 ring-violet-400/60",
+            }}
+            desc="Lempar dadu 1–6, maju di papan 100 petak — naik tangga kalau kena, hati-hati ular! Harus PAS sampai di petak 100."
+            chips={["4 pemain", "Dadu 1–6", "9 tangga · 10 ular", "PAS di 100"]}
+            cta={
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-3.5" />
+                {busy === "snakes" ? "Membuat…" : "Mulai — 4 kursi"}
               </span>
-              <span className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-
-            <div className="relative mt-3">
-              <p className="text-xl font-black tracking-tight text-white [text-shadow:0_0_14px_rgba(167,139,250,.55)]">
-                Ular Tangga
-              </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-white/65">
-                Lempar dadu 1–6, maju di papan 100 petak — naik tangga kalau
-                kena, hati-hati ular! Harus PAS sampai di petak 100.
-              </p>
-            </div>
-            <div className="relative mt-2.5 flex flex-wrap gap-1.5">
-              {["4 pemain", "Dadu 1–6", "9 tangga · 10 ular", "PAS di 100"].map((f) => (
-                <span key={f} className="rounded-full border border-white/15 bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/70">
-                  {f}
+            }
+            art={
+              <>
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "conic-gradient(#1d2a22 90deg, #0f1712 0 180deg, #1d2a22 0 270deg, #0f1712 0)",
+                    backgroundSize: "25% 25%",
+                  }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-gradient-to-t from-black/55 to-black/10"
+                />
+                <span
+                  aria-hidden
+                  className="absolute -right-8 -top-10 size-32 rounded-full bg-pink-500/30 blur-2xl"
+                />
+                {/* Tangga emas mini + ular melengkung. */}
+                <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden>
+                  <g stroke="#f5c542" strokeWidth="1.6" strokeLinecap="round">
+                    <line x1="24" y1="82" x2="64" y2="26" />
+                    <line x1="30" y1="85" x2="70" y2="29" />
+                    {[0.2, 0.4, 0.6, 0.8].map((t) => (
+                      <line
+                        key={t}
+                        x1={24 + 40 * t}
+                        y1={82 - 56 * t}
+                        x2={30 + 40 * t}
+                        y2={85 - 56 * t}
+                        strokeWidth="1.2"
+                      />
+                    ))}
+                  </g>
+                  <path
+                    d="M 78 18 Q 55 45 82 62 Q 98 74 74 92"
+                    fill="none"
+                    stroke="url(#miniSnake)"
+                    strokeWidth="5.5"
+                    strokeLinecap="round"
+                  />
+                  <defs>
+                    <linearGradient id="miniSnake" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stopColor="#f43f5e" />
+                      <stop offset="1" stopColor="#a78bfa" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="78" cy="18" r="4.5" fill="#f43f5e" />
+                </svg>
+                {/* Dadu mini miring. */}
+                <span
+                  className="absolute bottom-2 left-3 flex h-10 w-10 rotate-[-12deg] items-center justify-center rounded-lg bg-gradient-to-b from-white to-zinc-300 shadow-lg"
+                  aria-hidden
+                >
+                  <span className="grid grid-cols-2 gap-0.5">
+                    {[0, 1, 2, 3].map((k) => (
+                      <span key={k} className="size-1.5 rounded-full bg-zinc-800" />
+                    ))}
+                  </span>
                 </span>
-              ))}
-            </div>
-            <span className="mt-3 flex w-fit items-center gap-1.5 rounded-full border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-[11px] font-black text-violet-100 shadow-[0_0_16px_-6px_rgba(167,139,250,.9)] transition group-hover:bg-violet-500/25">
-              <Users className="size-3.5" /> {busy === "snakes" ? "Membuat…" : "Mulai — 4 kursi"}
-            </span>
-          </motion.button>
+              </>
+            }
+          />
         </div>
+
+        <p className="mt-6 text-center text-[10px] leading-relaxed text-white/40">
+          Undangan otomatis terkirim ke semua member voice room — tunggu sampai
+          kursi penuh, baru permainan dimulai.
+        </p>
       </div>
     </div>
   );
+}
+
+/**
+ * KARTU GAME di menu — artwork besar penuh warna, angka urut besar,
+ * ringkasan + chips fitur, dan tombol CTA gradient selebar kartu.
+ * Berselang-seling kiri/kanan supaya tata letaknya hidup.
+ */
+function GameCard({
+  idx,
+  title,
+  badge,
+  desc,
+  chips,
+  cta,
+  tone,
+  art,
+  delay,
+  disabled,
+  onClick,
+}: {
+  idx: number;
+  title: string;
+  badge?: string;
+  desc: string;
+  chips: string[];
+  cta: ReactNode;
+  tone: {
+    shell: string;
+    orb: string;
+    shadow: string;
+    titleGlow: string;
+    badgeCls: string;
+  };
+  art: ReactNode;
+  delay: number;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.42, delay, ease: "easeOut" }}
+      onClick={onClick}
+      disabled={disabled}
+      style={{ boxShadow: tone.shadow }}
+      className={cn(
+        "group relative w-[94%] overflow-hidden rounded-[26px] border p-4 text-left transition active:scale-[0.98] disabled:opacity-60",
+        idx % 2 === 0 ? "self-end" : "self-start",
+        tone.shell,
+      )}
+    >
+      {/* Nomor urut besar transparan di pojok kanan atas. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-1 -top-4 select-none text-[92px] font-black leading-none text-white/[0.05]"
+      >
+        {idx < 10 ? `0${idx}` : idx}
+      </span>
+      {/* Garis rambut terang di tepi atas + dua orb warna. */}
+      <span
+        aria-hidden
+        className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent"
+      />
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute -left-12 -top-14 size-44 rounded-full blur-3xl",
+          tone.orb,
+        )}
+      />
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute -bottom-16 right-6 size-36 rounded-full blur-3xl",
+          tone.orb,
+        )}
+      />
+
+      {/* ARTWORK game — pelengkap visual, bukan cuma teks. */}
+      <div className="relative h-32 w-full overflow-hidden rounded-2xl border border-white/20 shadow-[0_16px_36px_-22px_rgba(0,0,0,0.95)]">
+        {art}
+      </div>
+
+      {/* Judul + badge status. */}
+      <div className="relative mt-3 flex items-center gap-2">
+        <p
+          className={cn(
+            "text-xl font-black tracking-tight text-white",
+            tone.titleGlow,
+          )}
+        >
+          {title}
+        </p>
+        {badge && (
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider",
+              tone.badgeCls,
+            )}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className="relative mt-1 text-[11px] leading-snug text-white/65">
+        {desc}
+      </p>
+
+      {/* Chips fitur. */}
+      <div className="relative mt-2.5 flex flex-wrap gap-1.5">
+        {chips.map((f) => (
+          <span
+            key={f}
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/70"
+          >
+            <span className="size-1 rounded-full bg-current opacity-70" />
+            {f}
+          </span>
+        ))}
+      </div>
+
+      {/* CTA selebar kartu + panah. */}
+      <span
+        className={cn(
+          "relative mt-3.5 flex w-full items-center justify-between rounded-2xl px-4 py-2.5 text-[12px] font-black shadow-[0_14px_28px_-16px_rgba(0,0,0,0.95)] transition group-hover:brightness-110",
+          ctaClsOf(idx),
+        )}
+      >
+        {cta}
+        <ChevronRight className="size-4" aria-hidden />
+      </span>
+    </motion.button>
+  );
+}
+
+/** Warna tombol CTA mengikuti game (1 UNO, 2 Catur, 3 Ular Tangga). */
+function ctaClsOf(idx: number) {
+  if (idx === 1) return "bg-gradient-to-r from-red-500 to-rose-700 text-white";
+  if (idx === 2) return "bg-gradient-to-r from-sky-400 to-blue-700 text-white";
+  return "bg-gradient-to-r from-violet-400 to-fuchsia-600 text-white";
 }
 
 /* ====================================================================== *

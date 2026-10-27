@@ -290,9 +290,78 @@ export function YoruPetScreen({
             menyatu/bergantung ke background hutan di belakangnya —
             background hutan dan background tampilan dibuat BEDA. */}
         <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-4">
-          <div className="relative h-72 w-full max-w-2xl overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-b from-[#0b1220]/95 via-[#111827]/92 to-black/95 shadow-[0_24px_60px_-28px_rgba(0,0,0,.95)] backdrop-blur-md">
-            {/* lantai — hanya gradasi, tanpa kotak */}
-            <div className={cn("absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b opacity-80", scene.floor)} aria-hidden />
+          <div className="relative h-72 w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 shadow-[0_28px_64px_-30px_rgba(0,0,0,.98)]">
+            {/* ---- LAPISAN LANGIT (scene) ---- */}
+            <div
+              className={cn("absolute inset-0 bg-gradient-to-b", scene.sky)}
+              aria-hidden
+            />
+            {scene.image && (
+              <img
+                src={scene.image}
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+              />
+            )}
+            {/* Sinar matahari/bulan + glow emas lembut. */}
+            <span
+              aria-hidden
+              className="absolute -right-12 -top-14 size-44 rounded-full bg-white/30 blur-3xl"
+            />
+            <span
+              aria-hidden
+              className="absolute left-1/2 top-4 size-44 -translate-x-1/2 rounded-full bg-gold/20 blur-3xl"
+            />
+
+            {/* ---- DUA LAPIS BUKIT JAUH (siluet) ---- */}
+            <svg
+              viewBox="0 0 400 120"
+              preserveAspectRatio="none"
+              className="absolute inset-x-0 bottom-[26%] h-24 w-full"
+              aria-hidden
+            >
+              <path
+                d="M0 88 Q 60 36 120 74 T 260 66 T 400 84 L400 120 L0 120 Z"
+                fill="rgba(0,0,0,0.42)"
+              />
+              <path
+                d="M0 104 Q 90 62 180 94 T 400 98 L400 120 L0 120 Z"
+                fill="rgba(0,0,0,0.62)"
+              />
+            </svg>
+
+            {/* ---- LAPISAN LANTAI ---- */}
+            <div
+              className={cn(
+                "absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b opacity-85",
+                scene.floor,
+              )}
+              aria-hidden
+            />
+            {/* Kilau rumput / pantulan cahaya di lantai. */}
+            <span
+              aria-hidden
+              className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent"
+            />
+            {/* Partikel melayang DI DALAM panggung (lebih dekat ke pet). */}
+            {particles.map((p, i) => (
+              <motion.span
+                key={`in-${i}`}
+                className="absolute text-base opacity-60"
+                style={{ left: `${(p.left + 11) % 92}%`, top: `${16 + (i % 3) * 24}%` }}
+                animate={{ y: [0, -14, 0], rotate: [0, -14, 0] }}
+                transition={{ duration: p.dur, repeat: Infinity, delay: p.delay }}
+                aria-hidden
+              >
+                {scene.particle}
+              </motion.span>
+            ))}
+            {/* Vignette biar fokus ke tengah. */}
+            <span
+              aria-hidden
+              className="absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.7)]"
+            />
+
             {/* pet berjalan + bubble klaim di atasnya */}
             {equipped ? (
               <motion.div
@@ -322,23 +391,65 @@ export function YoruPetScreen({
                     </div>
                   )}
                 </div>
-                {/* GAMBAR HEWAN BERBADAN (bukan emoji) */}
-                <motion.div
-                  animate={{ scaleX: flip }}
-                  transition={{ duration: 0.35 }}
-                  className={cn(
-                    "relative size-20 rounded-full bg-white/5 ring-1 backdrop-blur-sm",
-                    equippedDef?.ring,
-                    equippedDef?.glow,
-                  )}
-                >
-                  <PetArt petId={equipped.petId} />
-                  {/* bayangan tanah */}
+                {/* ---- GAMBAR HEWAN BERBADAN (bukan emoji) — membesar,
+                    melayang, dengan aura & panggung cahaya ---- */}
+                <div className="relative flex flex-col items-center">
+                  <motion.div
+                    animate={{ scaleX: flip, y: [0, -7, 0] }}
+                    transition={{
+                      scaleX: { duration: 0.35 },
+                      y: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
+                    }}
+                    className={cn(
+                      "relative size-24 rounded-full bg-white/10 ring-2 backdrop-blur-sm",
+                      equippedDef?.ring,
+                      equippedDef?.glow,
+                    )}
+                  >
+                    {/* Aura berdenyut di belakang pet. */}
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute -inset-2 rounded-full blur-xl",
+                        equippedDef?.glow,
+                      )}
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.28),transparent_65%)]"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <PetArt petId={equipped.petId} />
+                    </div>
+                    {/* Kilau bintang kecil di sekitar pet. */}
+                    <motion.span
+                      aria-hidden
+                      className="absolute -right-1 top-1 text-xs text-white"
+                      animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.15, 0.8] }}
+                      transition={{ duration: 1.9, repeat: Infinity }}
+                    >
+                      ✦
+                    </motion.span>
+                    <motion.span
+                      aria-hidden
+                      className="absolute -left-2 bottom-3 text-[10px] text-gold"
+                      animate={{ opacity: [0.9, 0.15, 0.9], scale: [1, 0.7, 1] }}
+                      transition={{ duration: 2.4, repeat: Infinity, delay: 0.6 }}
+                    >
+                      ✦
+                    </motion.span>
+                  </motion.div>
+
+                  {/* Panggung cahaya + bayangan tanah. */}
                   <span
                     aria-hidden
-                    className="absolute -bottom-1.5 left-1/2 h-2.5 w-14 -translate-x-1/2 rounded-[50%] bg-black/40 blur-[2px]"
+                    className="-mt-1 h-3 w-16 rounded-[50%] bg-black/55 blur-[3px]"
                   />
-                </motion.div>
+                  <span
+                    aria-hidden
+                    className="-mt-1.5 h-5 w-24 rounded-[50%] bg-gold/25 blur-md"
+                  />
+                </div>
               </motion.div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">

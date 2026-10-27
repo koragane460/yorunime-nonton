@@ -227,6 +227,39 @@ export const inviteableFriends = query({
   },
 });
 
+/**
+ * SEMUA undangan Afinitas MASUK (pending) — isi kotak "Permintaan Masuk"
+ * di layar Afinitas. Sudah difilter yang kedaluwarsa (> 7 hari).
+ */
+export const incomingInvites = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthUserId(ctx);
+    if (me === null) return [];
+    const rows = await ctx.db
+      .query("affinityInvites")
+      .withIndex("to_status", (q: any) =>
+        q.eq("toId", me).eq("status", "pending"),
+      )
+      .collect();
+    const now = Date.now();
+    const out: any[] = [];
+    for (const iv of rows) {
+      if (now - iv.createdAt > 7 * DAY_MS) continue;
+      const brief = await userBrief(ctx, iv.fromId as Id<"users">);
+      if (!brief) continue;
+      out.push({
+        inviteId: iv._id,
+        kind: iv.kind as AffinityKind,
+        createdAt: iv.createdAt,
+        fromUser: brief,
+      });
+    }
+    out.sort((a, b) => b.createdAt - a.createdAt);
+    return out;
+  },
+});
+
 /** Kirim undangan Afinitas (dari sheet pilihan jenis / layar Ajak). */
 export const invite = mutation({
   args: { toUserId: v.id("users"), kind: v.string() },

@@ -285,7 +285,7 @@ export function TopAiringRow({
             onClick={() => onPick(a.id, a.title)}
             className="w-52 shrink-0 text-left"
           >
-            <div className="relative h-32 overflow-hidden rounded-2xl border border-white/10 bg-black yn-cut-sm">
+            <div className="relative h-32 overflow-hidden rounded-2xl border border-white/10 bg-black">
               <img
                 src={a.image}
                 alt=""
@@ -816,7 +816,7 @@ export function ContinueWatchingRow() {
                     )}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
                   )
                 }
-                className="relative block h-24 w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left yn-cut-sm"
+                className="relative block h-24 w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
               >
                 {c.animeImage && (
                   <img

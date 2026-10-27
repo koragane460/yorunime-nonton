@@ -506,6 +506,9 @@
   /* Outline ringan bertema — periwinkle lembut, BUKAN abu-abu. */
   border-color: rgb(167 139 250 / 0.34);
 }
+/* Catatan: lekukan sengaja KECIL dan hanya dipasang di kotak terpilih
+   (hero, profil, kotak premium) supaya jadi aksen, bukan seragam di
+   semua kotak. */
 .yn-cut:hover,
 .yn-cut-alt:hover,
 .yn-cut-sm:hover {
@@ -514,10 +517,10 @@
 /* Radius default lewat :where() (specificity 0) supaya utility
    rounded-* di elemen tetap menang kalau mau ukuran berbeda. */
 :where(.yn-cut, .yn-cut-alt) {
-  border-radius: 18px;
+  border-radius: 11px;
 }
 :where(.yn-cut-sm) {
-  border-radius: 12px;
+  border-radius: 8px;
 }
 /* Glow tipis opsional untuk kotak yang mau terlihat premium. */
 .yn-glow {
@@ -1021,7 +1024,126 @@ h3,
 h4 {
   font-weight: 800;
 }
-/* Angkat satu tingkat: light→medium, normal→semibold, medium→bold, dst. */
+/* ================================================================ PREMIUM PASS
+   Rombak tampilan GLOBAL seluruh YoruNime (permintaan pemilik: semua layar
+   terasa premium). Ringan — hanya latar berlapis, kartu berkilau halus,
+   skeleton yang benar, fokus emas, dan micro-interaction konsisten. */
+
+/* 1) LATAR AURORA — navy pekat + tiga kabut (violet atas, emas kanan-atas,
+      burgundy kiri-bawah). Tetap gelap supaya teks terbaca. */
+body {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(130% 55% at 50% -8%, oklch(0.3 0.075 300 / 0.45), transparent 62%),
+    radial-gradient(85% 45% at 100% 0%, oklch(0.5 0.12 88 / 0.14), transparent 58%),
+    radial-gradient(95% 55% at 0% 100%, oklch(0.45 0.14 14 / 0.14), transparent 60%);
+  background-repeat: no-repeat;
+}
+
+/* 2) KARTU — kilau gradasi halus + hairline atas. Hanya kartu TANPA gradasi
+      milik sendiri (utility bg-gradient tetap menang). */
+:where(.bg-card):not([class*="gradient"]) {
+  background-image:
+    linear-gradient(155deg, oklch(1 0 0 / 0.055), oklch(1 0 0 / 0.012) 42%, transparent 72%),
+    linear-gradient(180deg, oklch(1 0 0 / 0.03), transparent 30%);
+}
+
+/* 3) SKELETON — kotak memuat berwarna abu-abu + shimmer (sebelumnya kelas
+      `.skeleton` dipakai banyak layar tapi tidak pernah didefinisikan). */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: oklch(1 0 0 / 0.07);
+  border: 1px solid oklch(1 0 0 / 0.06);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.1),
+    transparent
+  );
+  animation: yn-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes yn-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 4) FOKUS EMAS + seleksi emas + hilangkan tap-highlight biru bawaan. */
+:focus-visible {
+  outline: 2px solid oklch(0.86 0.16 92 / 0.85);
+  outline-offset: 2px;
+}
+::selection {
+  background: oklch(0.86 0.18 88 / 0.38);
+  color: #fff;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 5) Tombol aksi utama: hairline emas + kilau dalam biar terlihat "mahal". */
+.yn-btn-warm {
+  border-color: oklch(1 0 0 / 0.3);
+  box-shadow:
+    0 0 16px -6px oklch(0.62 0.19 18 / 0.8),
+    inset 0 1px 0 oklch(1 0 0 / 0.32),
+    0 10px 26px -18px oklch(0.62 0.19 18 / 0.95);
+}
+
+/* 6) JUDUL SEKSI — bar emas vertikal + glow di kiri judul (Home & turunan)
+      supaya setiap bagian punya aksen yang sama dan mahal. */
+.yn-sec {
+  position: relative;
+  padding-left: 0.8rem;
+}
+.yn-sec::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.16em;
+  bottom: 0.16em;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    oklch(0.86 0.16 92),
+    oklch(0.62 0.19 18)
+  );
+  box-shadow: 0 0 10px -2px oklch(0.86 0.16 92 / 0.85);
+}
+
+/* 7) Garis rambut emas opsional untuk panel premium (dipakai layar pilihan). */
+.yn-hairline-gold {
+  position: relative;
+}
+.yn-hairline-gold::before {
+  content: "";
+  position: absolute;
+  inset-inline: 12px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.86 0.16 92 / 0.75),
+    transparent
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
 .font-light {
   font-weight: 500;
 }
