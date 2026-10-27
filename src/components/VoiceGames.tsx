@@ -95,12 +95,18 @@ function GameMenu({
   const createMut = useMutation(api.games.createSession);
   const inviteMut = useMutation(api.games.inviteAll);
   const [busy, setBusy] = useState<Game | null>(null);
+  /** Jumlah pemain yang dipilih host — maksimal mengikuti game-nya. */
+  const [seatSel, setSeatSel] = useState<Record<string, number>>({
+    uno: 4,
+    chess: 2,
+    snakes: 4,
+  });
 
   const start = async (game: Game) => {
     if (busy) return;
     setBusy(game);
     try {
-      const id = await createMut({ roomId, game });
+      const id = await createMut({ roomId, game, seats: seatSel[game] });
       // Undang otomatis supaya member lain langsung lihat ajakan di room.
       await inviteMut({ sessionId: id }).catch(() => 0);
       onCreated(id);
@@ -182,18 +188,13 @@ function GameMenu({
           <GameCard
             idx={1}
             title="UNO"
-            badge="Paling ramai"
             delay={0.05}
             disabled={busy !== null}
             onClick={() => void start("uno")}
-            tone={{
-              shell:
-                "border-red-400/35 bg-[linear-gradient(140deg,#2a0f14_0%,#12060a_60%,#0a0508_100%)]",
-              orb: "bg-red-500/30",
-              shadow: "0 24px 54px -30px rgba(244,63,94,0.85)",
-              titleGlow: "[text-shadow:0_0_14px_rgba(244,63,94,.55)]",
-              badgeCls: "bg-red-500/25 text-red-100 ring-1 ring-red-400/55",
-            }}
+            shell="border-red-400/25"
+            seats={seatSel.uno}
+            seatOpts={[2, 3, 4]}
+            onSeats={(n) => setSeatSel((s) => ({ ...s, uno: n }))}
             desc="Buang kartu serasi warna/angka, kartu liar ganti warna, jangan lupa teriak UNO sebelum keburu kehabisan!"
             chips={["4 pemain", "108 kartu", "+2 · +4 · liar", "Validasi server"]}
             cta={
@@ -204,14 +205,6 @@ function GameMenu({
             }
             art={
               <>
-                <span
-                  aria-hidden
-                  className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(244,63,94,0.4),transparent_62%)]"
-                />
-                <span
-                  aria-hidden
-                  className="absolute -left-8 -top-10 size-32 rounded-full bg-red-500/35 blur-2xl"
-                />
                 {/* Tiga kartu UNO menumpuk miring. */}
                 <div className="relative mx-auto h-32 w-44">
                   <span className="absolute left-4 top-3 h-[112px] w-16 rotate-[-16deg] rounded-xl bg-gradient-to-b from-red-500 to-red-800 ring-2 ring-white/85 shadow-xl" />
@@ -230,18 +223,13 @@ function GameMenu({
           <GameCard
             idx={2}
             title="Catur"
-            badge="Duel 1v1"
             delay={0.12}
             disabled={busy !== null}
             onClick={() => void start("chess")}
-            tone={{
-              shell:
-                "border-sky-400/35 bg-[linear-gradient(220deg,#0f1a2a_0%,#070d16_60%,#05070c_100%)]",
-              orb: "bg-sky-500/30",
-              shadow: "0 24px 54px -30px rgba(56,189,248,0.8)",
-              titleGlow: "[text-shadow:0_0_14px_rgba(56,189,248,.5)]",
-              badgeCls: "bg-sky-500/25 text-sky-100 ring-1 ring-sky-400/55",
-            }}
+            shell="border-sky-400/25"
+            seats={seatSel.chess}
+            seatOpts={[2]}
+            onSeats={(n) => setSeatSel((s) => ({ ...s, chess: n }))}
             desc="Duel klasik 8×8 — kastel, en passant, skak & skakmat, semua langkah divalidasi server."
             chips={["2 pemain", "Papan 8×8", "Skak & skakmat", "Validasi server"]}
             cta={
@@ -262,11 +250,7 @@ function GameMenu({
                 />
                 <span
                   aria-hidden
-                  className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/35"
-                />
-                <span
-                  aria-hidden
-                  className="absolute -left-8 -top-10 size-32 rounded-full bg-sky-500/30 blur-2xl"
+                  className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/10"
                 />
                 <span className="absolute inset-0 flex items-center justify-center text-6xl text-white drop-shadow-[0_6px_10px_rgba(0,0,0,0.9)]">
                   ♞
@@ -282,18 +266,13 @@ function GameMenu({
           <GameCard
             idx={3}
             title="Ular Tangga"
-            badge="Baru"
             delay={0.19}
             disabled={busy !== null}
             onClick={() => void start("snakes")}
-            tone={{
-              shell:
-                "border-violet-400/40 bg-[linear-gradient(150deg,#241033_0%,#14101f_55%,#0a0a11_100%)]",
-              orb: "bg-violet-500/35",
-              shadow: "0 24px 54px -30px rgba(167,139,250,0.85)",
-              titleGlow: "[text-shadow:0_0_14px_rgba(167,139,250,.55)]",
-              badgeCls: "bg-violet-500/30 text-violet-100 ring-1 ring-violet-400/60",
-            }}
+            shell="border-violet-400/25"
+            seats={seatSel.snakes}
+            seatOpts={[2, 3, 4]}
+            onSeats={(n) => setSeatSel((s) => ({ ...s, snakes: n }))}
             desc="Lempar dadu 1–6, maju di papan 100 petak — naik tangga kalau kena, hati-hati ular! Harus PAS sampai di petak 100."
             chips={["4 pemain", "Dadu 1–6", "9 tangga · 10 ular", "PAS di 100"]}
             cta={
@@ -315,10 +294,6 @@ function GameMenu({
                 <span
                   aria-hidden
                   className="absolute inset-0 bg-gradient-to-t from-black/55 to-black/10"
-                />
-                <span
-                  aria-hidden
-                  className="absolute -right-8 -top-10 size-32 rounded-full bg-pink-500/30 blur-2xl"
                 />
                 {/* Tangga emas mini + ular melengkung. */}
                 <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden>
@@ -384,129 +359,104 @@ function GameMenu({
 function GameCard({
   idx,
   title,
-  badge,
   desc,
   chips,
   cta,
-  tone,
+  shell,
   art,
   delay,
   disabled,
   onClick,
+  seats,
+  seatOpts,
+  onSeats,
 }: {
   idx: number;
   title: string;
-  badge?: string;
   desc: string;
   chips: string[];
   cta: ReactNode;
-  tone: {
-    shell: string;
-    orb: string;
-    shadow: string;
-    titleGlow: string;
-    badgeCls: string;
-  };
+  shell: string;
   art: ReactNode;
   delay: number;
   disabled?: boolean;
   onClick: () => void;
+  /** Jumlah pemain terpilih + pilihan (maksimal mengikuti game). */
+  seats: number;
+  seatOpts: number[];
+  onSeats: (n: number) => void;
 }) {
   return (
-    <motion.button
-      initial={{ opacity: 0, y: 28 }}
+    <motion.div
+      role="button"
+      tabIndex={0}
+      aria-disabled={disabled}
+      onClick={() => {
+        if (!disabled) onClick();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !disabled) onClick();
+      }}
+      initial={{ opacity: 0, y: 22 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.42, delay, ease: "easeOut" }}
-      onClick={onClick}
-      disabled={disabled}
-      style={{ boxShadow: tone.shadow }}
+      transition={{ duration: 0.4, delay, ease: "easeOut" }}
       className={cn(
-        "group relative w-[94%] overflow-hidden rounded-[26px] border p-4 text-left transition active:scale-[0.98] disabled:opacity-60",
+        "group relative w-[94%] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#11131a] p-3.5 transition hover:border-white/25 active:scale-[0.99]",
+        disabled && "pointer-events-none opacity-60",
         idx % 2 === 0 ? "self-end" : "self-start",
-        tone.shell,
+        shell,
       )}
     >
-      {/* Nomor urut besar transparan di pojok kanan atas. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-1 -top-4 select-none text-[92px] font-black leading-none text-white/[0.05]"
-      >
-        {idx < 10 ? `0${idx}` : idx}
-      </span>
-      {/* Garis rambut terang di tepi atas + dua orb warna. */}
-      <span
-        aria-hidden
-        className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent"
-      />
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute -left-12 -top-14 size-44 rounded-full blur-3xl",
-          tone.orb,
-        )}
-      />
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute -bottom-16 right-6 size-36 rounded-full blur-3xl",
-          tone.orb,
-        )}
-      />
-
       {/* ARTWORK game — pelengkap visual, bukan cuma teks. */}
-      <div className="relative h-32 w-full overflow-hidden rounded-2xl border border-white/20 shadow-[0_16px_36px_-22px_rgba(0,0,0,0.95)]">
+      <div className="relative h-28 w-full overflow-hidden rounded-xl border border-white/10 bg-black/55">
         {art}
       </div>
 
-      {/* Judul + badge status. */}
-      <div className="relative mt-3 flex items-center gap-2">
-        <p
-          className={cn(
-            "text-xl font-black tracking-tight text-white",
-            tone.titleGlow,
-          )}
-        >
-          {title}
-        </p>
-        {badge && (
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider",
-              tone.badgeCls,
-            )}
-          >
-            {badge}
-          </span>
-        )}
+      {/* Judul + jumlah pemain terpilih. */}
+      <div className="relative mt-2.5 flex items-baseline justify-between gap-2">
+        <p className="text-lg font-black tracking-tight text-white">{title}</p>
+        <span className="shrink-0 text-[10px] font-bold text-white/40">
+          {seats} pemain
+        </span>
       </div>
-      <p className="relative mt-1 text-[11px] leading-snug text-white/65">
+      <p className="relative mt-0.5 text-[11px] leading-snug text-white/55">
         {desc}
       </p>
 
-      {/* Chips fitur. */}
-      <div className="relative mt-2.5 flex flex-wrap gap-1.5">
-        {chips.map((f) => (
-          <span
-            key={f}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/70"
+      {/* Rincian — satu baris teks biasa, tanpa chip berhiasan. */}
+      <p className="relative mt-1.5 text-[10px] font-bold text-white/40">
+        {chips.join(" · ")}
+      </p>
+
+      {/* Pilih jumlah pemain (maksimal mengikuti game-nya). */}
+      <div
+        className="relative mt-2.5 flex items-center gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="text-[10px] font-bold text-white/45">Pemain</span>
+        {seatOpts.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onSeats(n)}
+            className={cn(
+              "h-7 min-w-7 rounded-lg border px-2 text-[11px] font-black transition",
+              seats === n
+                ? "border-white/80 bg-white text-black"
+                : "border-white/15 text-white/60 hover:border-white/35",
+            )}
           >
-            <span className="size-1 rounded-full bg-current opacity-70" />
-            {f}
-          </span>
+            {n}
+          </button>
         ))}
       </div>
 
-      {/* CTA selebar kartu + panah. */}
-      <span
-        className={cn(
-          "relative mt-3.5 flex w-full items-center justify-between rounded-2xl px-4 py-2.5 text-[12px] font-black shadow-[0_14px_28px_-16px_rgba(0,0,0,0.95)] transition group-hover:brightness-110",
-          ctaClsOf(idx),
-        )}
-      >
+      {/* CTA selebar kartu — permukaan solid, tanpa gradasi mencolok. */}
+      <span className="relative mt-3 flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/[0.07] px-4 py-2.5 text-[12px] font-black text-white transition group-hover:bg-white/12">
         {cta}
-        <ChevronRight className="size-4" aria-hidden />
+        <ChevronRight className="size-4 text-white/50" aria-hidden />
       </span>
-    </motion.button>
+    </motion.div>
   );
 }
 

@@ -5,6 +5,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar } from "@/components/lstream-ui";
 import { VoiceGamesOverlay } from "@/components/VoiceGames";
+import { VoiceChatSheet } from "@/components/VoiceChatSheet";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ import {
   Link2,
   Lock,
   LogOut,
+  MessageCircle,
   Mic,
   MicOff,
   Minus,
@@ -592,6 +594,43 @@ function RoomScreen({
   // Ajakan game yang masuk ke room INI (banner + tombol Gabung).
   const myInvite = invites?.find((i) => i.roomId === roomId);
 
+  // ---- CHAT ROOM — panel setengah layar (bukan fullscreen). ----
+  const [chatOpen, setChatOpen] = useState(false);
+
+  // ---- TOAST JOIN / KELUAR di bawah — muncul dari bawah, hilang sendiri. ----
+  const memberKey = room?.members?.map((m) => m.userId).join("|") ?? "";
+  const namesRef = useRef<Record<string, string>>({});
+  const prevIdsRef = useRef<string[] | null>(null);
+  const [pops, setPops] = useState<
+    { key: string; name: string; kind: "join" | "leave" }[]
+  >([]);
+  useEffect(() => {
+    if (room) {
+      for (const m of room.members ?? [])
+        namesRef.current[String(m.userId)] = m.username;
+    }
+    const ids = memberKey ? memberKey.split("|") : [];
+    const prev = prevIdsRef.current;
+    prevIdsRef.current = ids;
+    if (!prev) return;
+    const nowSet = new Set(ids);
+    const prevSet = new Set(prev);
+    const events = [
+      ...ids.filter((id) => !prevSet.has(id)).map((id) => ({ id, kind: "join" as const })),
+      ...prev.filter((id) => !nowSet.has(id)).map((id) => ({ id, kind: "leave" as const })),
+    ];
+    if (events.length === 0) return;
+    const batch = events.map((e, i) => ({
+      key: `${e.kind}-${e.id}-${Date.now()}-${i}`,
+      name: namesRef.current[e.id] ?? "Seseorang",
+      kind: e.kind,
+    }));
+    setPops((p) => [...p, ...batch]);
+    setTimeout(() => {
+      setPops((p) => p.filter((x) => !batch.some((b) => b.key === x.key)));
+    }, 2800);
+  }, [memberKey, room]);
+
   const leave = useCallback(async () => {
     try {
       await leaveMut({ roomId });
@@ -663,6 +702,14 @@ function RoomScreen({
           <p className="truncate text-[11px] text-white/50">{m.label}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {/* Tombol CHAT ROOM — panel setengah layar (bukan fullscreen). */}
+          <button
+            onClick={() => setChatOpen((v) => !v)}
+            aria-label="Chat room"
+            className="flex size-10 items-center justify-center text-white/85 transition hover:text-white active:scale-95"
+          >
+            <MessageCircle className="size-5" />
+          </button>
           {/* Tombol GAME — semua member, tanpa background. Untuk non-host
               ini menggantikan posisi tombol invite; host punya invite
               di sebelah KANANNYA. */}
@@ -706,11 +753,34 @@ function RoomScreen({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-bold">
               <span className="text-fuchsia-200">{myInvite.fromUsername}</span>{" "}
-              mengajak main {myInvite.game === "uno" ? "UNO" : myInvite.game === "snakes" ? "Ular Tangga" : "Catur"}
+              Mengajak bermain{" "}
+              {myInvite.game === "uno"
+                ? "UNO"
+                : myInvite.game === "snakes"
+                  ? "Ular Tangga"
+                  : "Catur"}
             </p>
             <p className="text-[10px] text-white/55">
               {myInvite.roomName} · {myInvite.players}/{myInvite.seats} pemain
             </p>
+            {/* Daftar pemain yang sudah bergabung ke sesi. */}
+            {myInvite.playerList && myInvite.playerList.length > 0 && (
+              <div className="mt-1 flex items-center gap-1">
+                {myInvite.playerList.slice(0, 6).map((p, i) => (
+                  <span
+                    key={`${p.username}-${i}`}
+                    className="flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.07] py-0.5 pl-0.5 pr-1.5 text-[9px] font-bold text-white/75"
+                  >
+                    <Avatar
+                      src={p.image}
+                      seed={p.username}
+                      className="size-4"
+                    />
+                    {p.username}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={async () => {
@@ -848,6 +918,36 @@ function RoomScreen({
       )}
 
       {/* Overlay GAME (menu · lobby · UNO · Catur) di atas panggung. */}
+      {/* CHAT ROOM — panel setengah layar dari bawah. */}
+      {chatOpen && (
+        <VoiceChatSheet roomId={roomId} onClose={() => setChatOpen(false)} />
+      )}
+
+      {/* Toast JOIN / KELUAR — kotak kecil rounded, muncul dari bawah. */}
+      {pops.length > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[95] flex flex-col items-center gap-1.5">
+          <AnimatePresence>
+            {pops.map((p) => (
+              <motion.div
+                key={p.key}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 14 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-[11px] font-black shadow-[0_12px_26px_-14px_rgba(0,0,0,0.95)] backdrop-blur-md",
+                  p.kind === "join"
+                    ? "border-emerald-400/45 bg-emerald-500/25 text-emerald-100"
+                    : "border-rose-400/40 bg-rose-500/20 text-rose-100",
+                )}
+              >
+                {p.name} {p.kind === "join" ? "Join" : "Keluar"}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
       {(gameOpen || gameSession) && (
         <VoiceGamesOverlay
           roomId={roomId}
@@ -1343,20 +1443,30 @@ function InviteScreen({
   return (
     <div className="screen-enter fixed inset-0 z-[75] overflow-y-auto bg-background">
       <div className="w-full p-3 pb-16">
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2.5">
           <button
             onClick={onBack}
             aria-label="Kembali"
-            className="flex size-9 items-center justify-center rounded-xl border border-white/12 bg-white/5"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] transition hover:border-white/40 active:scale-95"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="text-base font-black">Invite Private Room</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-black tracking-tight">
+              Invite Private Room
+            </h1>
+            <p className="truncate text-[10px] font-bold text-gold/75">
+              Undang member · atur kuota · bagikan link
+            </p>
+          </div>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold shadow-[0_0_18px_-8px_rgba(251,191,36,0.9)]">
+            <UserPlus className="size-4" />
+          </span>
         </div>
 
         <div className="space-y-3">
           {/* Kotak 1 — INVITE USER + MAX USER */}
-          <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-3">
+          <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[linear-gradient(160deg,#151b26_0%,#0f131b_60%,#0b0e14_100%)] p-3.5 shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
             <div className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-lg border border-sky-400/40 bg-sky-400/10 text-sky-300">
                 <Users className="size-4" />
@@ -1403,7 +1513,7 @@ function InviteScreen({
           </div>
 
           {/* Kotak 2 — PERSONAL INVITE (one time) */}
-          <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-3">
+          <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[linear-gradient(160deg,#151b26_0%,#0f131b_60%,#0b0e14_100%)] p-3.5 shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
             <div className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-lg border border-rose-400/40 bg-rose-400/10 text-rose-300">
                 <UserPlus className="size-4" />
@@ -1423,7 +1533,7 @@ function InviteScreen({
           </div>
 
           {/* Kotak 3 — TIP */}
-          <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-3">
+          <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[linear-gradient(160deg,#151b26_0%,#0f131b_60%,#0b0e14_100%)] p-3.5 shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
             <div className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-300">
                 <Sparkles className="size-4" />
@@ -1447,7 +1557,7 @@ function InviteScreen({
           {/* INVITE LINK */}
           <div>
             <p className="text-xs font-bold text-white/70">Invite Link</p>
-            <div className="mt-1.5 rounded-2xl border border-white/12 bg-white/[0.04] p-3">
+            <div className="relative mt-1.5 overflow-hidden rounded-2xl border border-white/12 bg-[linear-gradient(160deg,#151b26_0%,#0f131b_60%,#0b0e14_100%)] p-3.5 shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
               <p className="text-sm font-black">Invite Link Mu!</p>
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-white/15 bg-black/40 px-3 py-2.5">

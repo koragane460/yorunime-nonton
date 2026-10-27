@@ -484,6 +484,19 @@ function myColor(
 
 /** Bentuk session untuk semua klien — hand UNO disensor jadi jumlah. */
 function view(s: Doc<"gameSessions">) {
+  // LOBBY: state belum dibuat — dulu `st.pos` / `st.hands` / `st.board`
+  // diakses saat state masih null sehingga query MELEMPAR error dan klien
+  // crash (terpental ke menu home, game tidak bisa dimulai). Bangun preview
+  // state dulu supaya kartu lobby tampil normal.
+  if (!s.state) {
+    const preview =
+      s.game === "uno"
+        ? startUno(s)
+        : s.game === "snakes"
+          ? startSnakes(orderOf(s.players))
+          : startChess();
+    if (preview) return view({ ...s, state: preview });
+  }
   const base = {
     _id: s._id,
     roomId: s.roomId,
@@ -616,6 +629,12 @@ export const myInvites = query({
         roomName: room?.name ?? "Room",
         players: s.players.length,
         seats: s.seats,
+        // Daftar pemain yang sudah bergabung — ditampilkan di banner
+        // "Mengajak bermain" di voice room.
+        playerList: s.players.map((p) => ({
+          username: p.username,
+          image: p.image,
+        })),
       });
     }
     return out;
@@ -634,8 +653,10 @@ export const createSession = mutation({
       v.literal("chess"),
       v.literal("snakes"),
     ),
+    /** Jumlah kursi yang dipilih host (2..max game). Catur selalu 2. */
+    seats: v.optional(v.number()),
   },
-  handler: async (ctx, { roomId, game }) => {
+  handler: async (ctx, { roomId, game, seats: wanted }) => {
     const userId = await me(ctx);
     if (!userId) throw new Error("Login dulu ya");
     const room = await ctx.db.get(roomId);
@@ -654,8 +675,13 @@ export const createSession = mutation({
     if (existing && existing.status !== "done") return existing._id;
 
     const user = await ctx.db.get(userId);
-    // UNO & Ular Tangga sama-sama 4 kursi, Catur 2.
-    const seats = game === "chess" ? 2 : 4;
+    // UNO / Ular Tangga / Ludo maksimal 4 kursi, Catur 2 — host boleh
+    // memilih lebih sedikit (mis. 2) supaya permainan cepat mulai.
+    const maxSeats = game === "chess" ? 2 : 4;
+    const seats =
+      game === "chess"
+        ? 2
+        : Math.min(maxSeats, Math.max(2, Math.round(wanted ?? maxSeats)));
     const now = Date.now();
     const sessionId = await ctx.db.insert("gameSessions", {
       roomId,
@@ -675,6 +701,19 @@ export const createSession = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    // Siapkan state LOBBY segera — `view()` membaca state untuk kartu lobby,
+    // dan state null membuat query melempar error (klien crash / terpental
+    // ke home). State asli disiapkan ulang oleh `startGame` saat kursi penuh.
+    const doc = await ctx.db.get(sessionId);
+    if (doc) {
+      const preview =
+        game === "uno"
+          ? startUno(doc)
+          : game === "snakes"
+            ? startSnakes(orderOf(doc.players))
+            : startChess();
+      await ctx.db.patch(sessionId, { state: preview, updatedAt: Date.now() });
+    }
     return sessionId;
   },
 });

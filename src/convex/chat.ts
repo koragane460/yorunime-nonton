@@ -33,13 +33,15 @@ function dmKey(a: string, b: string) {
 
 export const listMessages = query({
   args: {
-    kind: v.string(), // global | dm | clan | room
+    kind: v.string(), // global | dm | clan | room | voice
     clanId: v.optional(v.id("clans")),
     roomId: v.optional(v.id("watchRooms")),
     peerId: v.optional(v.id("users")),
+    /** Kunci channel untuk chat voice ("voice:<voiceRoomId>"). */
+    channel: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { kind, clanId, roomId, peerId, limit = 80 }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, channel, limit = 80 }) => {
     const block = await blocked(ctx);
     if (block) return [];
     let index: string | undefined = undefined;
@@ -62,6 +64,12 @@ export const listMessages = query({
       rows = await ctx.db
         .query("chatMessages")
         .withIndex("roomId_created", (q) => q.eq("roomId", roomId))
+        .order("desc")
+        .take(limit);
+    } else if (kind === "voice" && channel) {
+      rows = await ctx.db
+        .query("chatMessages")
+        .withIndex("dmKey_created", (q) => q.eq("dmKey", channel))
         .order("desc")
         .take(limit);
     } else if (kind === "dm" && index) {
@@ -168,6 +176,7 @@ export const listMessages = query({
         clanLevel: u?.clanLevel,
         clanId: clanByUser.get(String(r.userId))?.clanId as string | undefined,
         staffRole: u?.staffRole,
+        seqId: u?.seqId,
         text: r.text,
         imageUrl: r.imageStorageId
           ? (photoByUrl.get(r._id) ?? r.imageUrl)
@@ -197,12 +206,14 @@ export const sendMessage = mutation({
     clanId: v.optional(v.id("clans")),
     roomId: v.optional(v.id("watchRooms")),
     peerId: v.optional(v.id("users")),
+    /** Kunci channel untuk chat voice ("voice:<voiceRoomId>"). */
+    channel: v.optional(v.string()),
     text: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     imageStorageId: v.optional(v.string()),
     replyToId: v.optional(v.id("chatMessages")),
   },
-  handler: async (ctx, { kind, clanId, roomId, peerId, text, imageUrl, imageStorageId, replyToId }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, channel, text, imageUrl, imageStorageId, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
@@ -225,6 +236,19 @@ export const sendMessage = mutation({
     if (kind === "dm") {
       if (!peerId) throw new Error("Penerima tidak ada");
       index = dmKey(userId, peerId);
+    }
+    if (kind === "voice") {
+      // channel = "voice:<voiceRoomId>" — hanya member room yang boleh chat.
+      const voiceRoomId = channel?.startsWith("voice:")
+        ? channel.slice(6)
+        : "";
+      const vr: any = voiceRoomId
+        ? await ctx.db.get(voiceRoomId as never)
+        : null;
+      if (!vr) throw new Error("Voice room tidak ada");
+      if (!(vr.members ?? []).some((m: any) => m.userId === userId))
+        throw new Error("Kamu bukan member voice room ini");
+      index = channel;
     }
     if (kind === "clan") {
       if (!clanId) throw new Error("Clan tidak ada");
