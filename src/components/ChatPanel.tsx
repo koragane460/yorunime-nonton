@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { avatarFallback, usernameColor } from "@/lib/lstream";
 import { ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { TierIcon } from "@/components/ProfileSheet";
+import { badgeForLevel } from "@/lib/lstream";
+import { useNavigate } from "react-router";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { useAuth } from "@/hooks/use-auth";
 import { FramedAvatar } from "@/components/FramedAvatar";
@@ -34,6 +37,8 @@ export type ChatMsg = {
   staffRole?: string;
   clanTag?: string;
   clanTagIcon?: string;
+  /** ID clan pembawa pesan — tag clan di bubble bisa dipencet → detail clan. */
+  clanId?: string;
   /** Level clan — menentukan warna nama clan di tag. */
   clanLevel?: number;
   clanNameColor?: string;
@@ -514,6 +519,7 @@ export function ChatPanel({
   onDeleteLocal?: (id: string) => Promise<void> | void;
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<ChatMsg | null>(null);
   const [blinkId, setBlinkId] = useState<string | null>(null);
@@ -678,14 +684,37 @@ export function ChatPanel({
                     </span>
                     {m.premium && <BlueCheck className="size-3.5 shrink-0" />}
                     <TitleBadge role={m.staffRole} compact />
+                    {/* Tag LEVEL user — ikon tier material + Lv.x,
+                        gaya sama seperti di detail akun. */}
+                    {typeof m.level === "number" && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/45 bg-white/5 px-1.5 py-0 text-[9px] font-bold leading-none text-white/95">
+                        <TierIcon
+                          tier={badgeForLevel(m.level).name}
+                          className="size-3"
+                        />
+                        Lv.{m.level}
+                      </span>
+                    )}
+                    {/* Tag CLAN — gaya sama persis dengan detail clan,
+                        hitbox DIKECILKAN (cuma seukuran tagnya), dan bisa
+                        dipencet → buka detail clan FULLSCREEN. */}
                     {m.clanTag && (
-                      <ClanTag
-                        icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                        tag={m.clanTag}
-                        color={m.clanNameColor}
-                        level={m.clanLevel}
-                        className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
-                      />
+                      <button
+                        type="button"
+                        aria-label={`Detail clan ${m.clanTag}`}
+                        onClick={() =>
+                          m.clanId && navigate(`/clan?clan=${m.clanId}`)
+                        }
+                        className="-my-1 inline-flex shrink-0 items-center leading-none transition active:scale-95"
+                      >
+                        <ClanTag
+                          icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                          tag={m.clanTag}
+                          color={m.clanNameColor}
+                          level={m.clanLevel}
+                          className="pointer-events-none scale-90 px-1.5 py-0 text-[9px]"
+                        />
+                      </button>
                     )}
                   </div>
                   {m.replyTo && (

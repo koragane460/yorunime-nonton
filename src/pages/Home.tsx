@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -46,6 +46,7 @@ import {
   CalendarDays,
   Clock,
   Hash,
+  BookOpen,
 } from "lucide-react";
 // Ikon chrome Home memakai gaya SF Symbols (alias nama lama → JSX tetap utuh).
 import {
@@ -204,8 +205,10 @@ function HeroSlides({
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [idx, setIdx] = useState(0);
-  // Slide 0 = promo Afinitas, sisanya anime/donghua yang berganti-ganti.
-  const total = items.length + 1;
+  // Halaman anime/donghua cuma 1 — isinya ditumpuk & saling FADE.
+  const [ai, setAi] = useState(0);
+  // Slide 0 = promo Afinitas, slide 1 = grup anime/donghua (FADE).
+  const total = 2;
 
   const scrollToIdx = (i: number) => {
     const el = trackRef.current;
@@ -216,19 +219,21 @@ function HeroSlides({
   // Jaga indeks tetap valid saat daftar item berubah (mis. load ulang).
   useEffect(() => {
     if (idx >= total) setIdx(0);
-  }, [total, idx]);
+    if (ai >= items.length) setAi(0);
+  }, [total, idx, ai, items.length]);
 
-  // Auto-rotate tiap 6 detik — hanya menggeser track komponen ini.
+  // Auto-rotate tiap 6 detik: promo ↔ grup anime, dan di dalam grup
+  // anime/donghua saling MENGGANTI dengan FADE (opacity), bukan geser.
   useEffect(() => {
-    if (total < 2) return;
     const t = setInterval(() => {
       const next = (idx + 1) % total;
       setIdx(next);
       scrollToIdx(next);
+      if (items.length > 0) setAi((v) => (v + 1) % items.length);
     }, 6000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, total]);
+  }, [idx, total, items.length]);
 
   return (
     <div className="min-w-0 flex-1">
@@ -245,10 +250,16 @@ function HeroSlides({
       >
       {/* Slide 0 — promosi Afinitas (selalu tampil pertama). */}
       <div className="h-full w-full shrink-0 snap-start">{promo}</div>
+      {/* Slide 1 — grup anime & donghua di SATU tempat: saling FADE
+          (transisi opacity halus), tidak digeser ke kanan. */}
+      <div className="relative h-full w-full shrink-0 snap-start overflow-hidden">
       {items.map((a, i) => (
         <div
           key={a.id}
-          className="h-full w-full shrink-0 snap-start"
+          className={cn(
+            "absolute inset-0 transition-opacity duration-700 ease-in-out",
+            i === ai ? "opacity-100" : "pointer-events-none opacity-0",
+          )}
         >
           <div
             className="relative h-full overflow-hidden bg-cover bg-center"
@@ -297,6 +308,7 @@ function HeroSlides({
           </div>
         </div>
       ))}
+      </div>
     </div>
       {/* TITIK SLIDE — cuma 2: promo (kiri) & grup anime/donghua (kanan). */}
       <div className="mt-2 flex items-center justify-center gap-1.5">
@@ -2681,25 +2693,10 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
         </div>
         )}
 
-      {/* Baris filter: tombol genre + chip aktif + urutan */}
+      {/* Baris filter: chip genre AKTIF saja — tombol "Genre" DIHAPUS
+          dari layar pencarian (permintaan user; Genre tetap ada di Home). */}
+      {activeGenres.length > 0 && (
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setGenresOpen((v) => !v)}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-            genresOpen
-              ? "border-gold-strong bg-gold-soft text-gold-strong"
-              : "border-border bg-card text-muted-foreground hover:border-foreground/40",
-          )}
-        >
-          <SlidersHorizontal className="size-3.5" aria-hidden />
-          Genre
-          {activeGenres.length > 0 && (
-            <span className="ml-0.5 rounded-full bg-gold-strong px-1.5 text-[10px] font-bold text-background">
-              {activeGenres.length}
-            </span>
-          )}
-        </button>
         <div className="flex flex-1 flex-wrap gap-1">
           {activeGenres.map((g) => (
             <button
@@ -2721,6 +2718,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           </button>
         )}
       </div>
+      )}
 
       {/* Panel pilihan genre — TANPA kotak latar, hanya chip-pill yang
           langsung menempel di background halaman. */}
@@ -2862,6 +2860,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
   const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
+  const [clanTutorial, setClanTutorial] = useState(false);
   const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
     { kind: "global", limit: 60 },
     { kind: "global" },
@@ -3018,6 +3017,16 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
               )}
+
+              {/* KOTAK TOMBOL TUTORIAL CLAN — tepat DI BAWAH kotak chat
+                  clan: buka panduan singkat soal clan (buat/join/donasi). */}
+              <button
+                onClick={() => setClanTutorial(true)}
+                className="mt-2 flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-violet-400/35 bg-violet-500/12 py-2.5 text-xs font-black tracking-wide text-violet-100 shadow-[0_0_18px_-8px_rgba(167,139,250,.8)] transition hover:bg-violet-500/20 active:scale-[0.98]"
+              >
+                <BookOpen className="size-4 text-violet-300" aria-hidden />
+                Tutorial Clan
+              </button>
             </div>
           )}
 
@@ -3141,6 +3150,83 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           }}
         />
       )}
+
+      {/* TUTORIAL CLAN — panduan singkat bergaya neon ungu, dibuka dari
+          kotak "Tutorial Clan" di bawah chat clan. */}
+      {clanTutorial && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 pb-6 backdrop-blur-sm"
+          onClick={() => setClanTutorial(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="screen-enter w-full max-w-md overflow-hidden rounded-3xl border border-violet-400/35 bg-[linear-gradient(160deg,#170f26_0%,#101018_60%,#0a0a10_100%)] p-5 shadow-[0_24px_60px_-24px_rgba(167,139,250,.65)]"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-10 items-center justify-center rounded-2xl border border-violet-300/45 bg-violet-500/20 shadow-[0_0_18px_-5px_rgba(167,139,250,.8)]">
+                <BookOpen className="size-5 text-violet-200" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-black text-white [text-shadow:0_0_14px_rgba(167,139,250,.5)]">
+                  Tutorial Clan
+                </p>
+                <p className="text-[11px] text-violet-200/70">
+                  Panduan singkat biar cepat paham
+                </p>
+              </div>
+              <button
+                onClick={() => setClanTutorial(false)}
+                aria-label="Tutup tutorial"
+                className="shrink-0 rounded-full p-1.5 text-white/60 transition hover:text-white"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            </div>
+
+            <ol className="mt-4 space-y-2.5">
+              {[
+                {
+                  t: "Buat atau join clan",
+                  d: "Tekan \"Buat clan\" kalau mau bikin sendiri (butuh Sacret), atau \"Lihat clan\" buat pilih clan yang mau di-join.",
+                }, {
+                  t: "Ngobrol di chat clan",
+                  d: "Tab Clan di atas ini khusus buat member clan — pesan, foto, dan reply sama seperti chat global.",
+                }, {
+                  t: "Donasi & klaim hadiah",
+                  d: "Buka detail clan buat donasi harian, klaim reward, dan naikkan diamond clan.",
+                }, {
+                  t: "Naikkan level clan",
+                  d: "Makin aktif member, makin tinggi level clan — tag [CLAN] kamu ikut naik tier, warna, dan ikonnya.",
+                }, {
+                  t: "Shop clan & centang biru",
+                  d: "Leader/officer bisa beli tag khusus dan centang biru clan di halaman detail clan.",
+                },
+              ].map((s, i) => (
+                <li key={s.t} className="flex gap-3">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-violet-300/50 bg-violet-500/20 text-[11px] font-black text-violet-100">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold text-white">{s.t}</p>
+                    <p className="text-[11px] leading-snug text-white/60">{s.d}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <button
+              onClick={() => {
+                setClanTutorial(false);
+                onClose();
+                navigate("/clan");
+              }}
+              className="mt-4 w-full rounded-2xl border border-violet-300/45 bg-[linear-gradient(to_bottom,rgba(167,139,250,.30),rgba(167,139,250,.12))] py-3 text-sm font-black text-violet-50 shadow-[0_0_20px_-6px_rgba(167,139,250,.9)] transition active:scale-[0.98]"
+            >
+              Buka halaman Clan
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -3247,6 +3333,48 @@ function synopsisPreview(text: string, open: boolean) {
   return `${(sp > 120 ? text.slice(0, sp) : text.slice(0, cut)).trimEnd()}…`;
 }
 
+/** Kotak metadata kecil layar detail — ikon di tengah atas, nilai, label.
+ *  Dipakai di GRID metadata biar semuanya rapi & rata, bukan menumpuk
+ *  ke kiri satu per satu. */
+function MetaTile({
+  icon: Icon,
+  value,
+  label,
+  accent,
+  onClick,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  value: ReactNode;
+  label: string;
+  accent?: string;
+  onClick?: () => void;
+}) {
+  const inner = (
+    <>
+      <Icon className={cn("size-4", accent ?? "text-white/80")} aria-hidden />
+      <p className="mt-1 line-clamp-1 text-[12px] font-black text-white">
+        {value}
+      </p>
+      <p className="text-[9px] font-bold uppercase tracking-wider text-white/45">
+        {label}
+      </p>
+    </>
+  );
+  const cls =
+    "flex min-w-0 flex-col items-center justify-center rounded-2xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-center";
+  return onClick ? (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(cls, "transition hover:border-white/30 active:scale-[0.97]")}
+    >
+      {inner}
+    </button>
+  ) : (
+    <div className={cls}>{inner}</div>
+  );
+}
+
 function AnimeDetailScreen({
   animeId,
   animeTitle,
@@ -3303,6 +3431,19 @@ function AnimeDetailScreen({
   // untuk developer — user biasa tidak melihat tombolnya sama sekali.
   const devAccess = useQuery(api.moderation.myPanelAccess, {});
   const [devInfoOpen, setDevInfoOpen] = useState(false);
+  // Rating USER untuk judul ini (1–5 bintang) — disimpan lokal per device,
+  // dibuka lewat tombol "Beri Rating" di grid metadata.
+  const [myRating, setMyRating] = useState(0);
+  const [rateOpen, setRateOpen] = useState(false);
+  useEffect(() => {
+    try {
+      setMyRating(
+        Number(localStorage.getItem(`yn:rating:${animeId}`) ?? 0) || 0,
+      );
+    } catch {
+      setMyRating(0);
+    }
+  }, [animeId]);
 
   useEffect(() => {
     getDetail({ id: animeId, title: animeTitle })
@@ -3458,33 +3599,62 @@ function AnimeDetailScreen({
         </div>
 
         <div className="px-3">
-          {/* Chip metadata — gaya pil seperti referensi: rating ★, studio,
-              tahun, tipe tayangan, dan durasi per episode. */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white">
-              <Star className="size-3 fill-current text-yellow-400" aria-hidden />
-              {detail.score ? Number(detail.score).toFixed(2) : (detail.rating ?? "Rating 13+")}
-            </span>
+          {/* GRID metadata — tersusun rapi 2 kolom (rata TENGAH, bukan
+              menumpuk di kiri): Rating · Studio · Tahun · Tipe · Durasi ·
+              Favorite · tombol BERI RATING. */}
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <MetaTile
+              icon={Star}
+              value={
+                detail.score
+                  ? Number(detail.score).toFixed(2)
+                  : (detail.rating ?? "Rating 13+")
+              }
+              label="Rating"
+              accent="text-yellow-300"
+            />
             {detail.studio && (
-              <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
-                {detail.studio}
-              </span>
+              <MetaTile icon={Tv} value={detail.studio} label="Studio" />
             )}
             {detail.year && (
-              <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
-                {detail.year}
-              </span>
+              <MetaTile icon={CalendarDays} value={String(detail.year)} label="Tahun" />
             )}
             {detail.type && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
-                <Tv className="size-3" aria-hidden /> {typeLabel(detail.type)}
-              </span>
+              <MetaTile icon={Play} value={typeLabel(detail.type)} label="Tipe" />
             )}
             {eps.length > 0 && (
-              <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-white/90">
-                {eps[0]?.duration ?? "24 menit"} / ep
-              </span>
+              <MetaTile
+                icon={Clock}
+                value={`${eps[0]?.duration ?? "24 menit"} / ep`}
+                label="Durasi"
+              />
             )}
+            <MetaTile
+              icon={Heart}
+              value={`${fmtFavoritCount(favCount ?? 0)} favorite`}
+              label="Favorite"
+              accent="text-rose-300"
+            />
+            {/* TOMBOL RATING — kasih bintang 1–5 untuk judul ini. */}
+            <button
+              type="button"
+              onClick={() => setRateOpen(true)}
+              className="flex min-w-0 flex-col items-center justify-center rounded-2xl border border-yellow-400/40 bg-yellow-500/10 px-2 py-2.5 text-center transition hover:border-yellow-300/60 active:scale-[0.97]"
+            >
+              <Star
+                className={cn(
+                  "size-4",
+                  myRating > 0 ? "fill-yellow-300 text-yellow-300" : "text-yellow-300",
+                )}
+                aria-hidden
+              />
+              <p className="mt-1 text-[12px] font-black text-white">
+                {myRating > 0 ? `${myRating}.0` : "Beri Rating"}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-yellow-100/60">
+                {myRating > 0 ? "Rating kamu" : "Ketuk untuk nilai"}
+              </p>
+            </button>
           </div>
 
           {/* Genre — semua genre tampil sebagai chip pil (bukan cuma 3). */}
@@ -3501,14 +3671,8 @@ function AnimeDetailScreen({
             </div>
           )}
 
-          {/* Jumlah favorite — kotak di BAWAH chip genre dengan gradasi
-              ROSE (sesuai warna text genre) — bukan kuning mencolok. */}
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-3 py-1 text-[11px] font-semibold text-rose-200">
-              <Heart className="size-3 fill-current" aria-hidden />
-              {fmtFavoritCount(favCount ?? 0)} favorite
-            </span>
-          </div>
+          {/* Jumlah favorite — pindah jadi KOTAK di grid metadata (atas). */}
+
 
           {/* Baris aksi: "Lanjut episode" + "Favorite" — kotak ROUNDED
               lurus (tanpa kemiringan skew), tinggi sama. */}
@@ -3660,6 +3824,59 @@ function AnimeDetailScreen({
           {/* Kolom karakter paling ikonik — tampil di tab Character */}
           {detailTab === "character" && (
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
+          )}
+
+          {/* POPUP BERI RATING — 5 bintang neon emas, tersimpan lokal. */}
+          {rateOpen && (
+            <div
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+              onClick={() => setRateOpen(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="screen-enter w-full max-w-xs rounded-3xl border border-yellow-400/35 bg-[linear-gradient(160deg,#1d1608_0%,#12100c_60%,#0a0a10_100%)] p-5 text-center shadow-[0_24px_60px_-24px_rgba(251,191,36,.6)]"
+              >
+                <Star className="mx-auto size-8 fill-yellow-300 text-yellow-300 drop-shadow-[0_0_14px_rgba(251,191,36,.8)]" />
+                <p className="mt-2 text-base font-black text-white">Beri Rating</p>
+                <p className="line-clamp-1 text-[11px] text-yellow-100/60">
+                  {detail.title}
+                </p>
+                <div className="mt-4 flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      aria-label={`Beri ${s} bintang`}
+                      onClick={() => {
+                        setMyRating(s);
+                        try {
+                          localStorage.setItem(`yn:rating:${animeId}`, String(s));
+                        } catch {
+                          /* abaikan */
+                        }
+                        setRateOpen(false);
+                        toast.success(`Rating ${s} bintang tersimpan`);
+                      }}
+                      className="transition active:scale-90"
+                    >
+                      <Star
+                        className={cn(
+                          "size-8",
+                          s <= myRating
+                            ? "fill-yellow-300 text-yellow-300 drop-shadow-[0_0_10px_rgba(251,191,36,.7)]"
+                            : "text-white/30",
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setRateOpen(false)}
+                  className="mt-4 w-full rounded-2xl border border-white/15 py-2 text-xs font-bold text-white/60 transition hover:text-white"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Cuplix — overlay FULLSCREEN klip TikTok judul ini (pengganti

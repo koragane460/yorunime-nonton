@@ -107,6 +107,20 @@ export const listMessages = query({
     const users = new Map<string, any>(userIds.map((id, i) => [id, userDocs[i]]));
     const gives = new Map<string, any>(giveIds.map((id, i) => [id, giveDocs[i]]));
 
+    // Clan tiap pembawa pesan — tag clan di bubble chat bisa dipencet
+    // untuk membuka detail clan (fullscreen).
+    const memberDocs = await Promise.all(
+      userIds.map((id) =>
+        ctx.db
+          .query("clanMembers")
+          .withIndex("userId", (q) => q.eq("userId", id as never))
+          .first(),
+      ),
+    );
+    const clanByUser = new Map<string, { clanId?: unknown } | null>(
+      userIds.map((id, i) => [String(id), memberDocs[i]]),
+    );
+
     // Balasan butuh data user si pembalas — sekali lagi, batch per id unik.
     const replyRows = replyDocs.filter((m: any) => m && !m.deleted) as any[];
     const replyUserIds = uniq(replyRows.map((m) => m.userId));
@@ -152,6 +166,7 @@ export const listMessages = query({
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,
         clanLevel: u?.clanLevel,
+        clanId: clanByUser.get(String(r.userId))?.clanId as string | undefined,
         staffRole: u?.staffRole,
         text: r.text,
         imageUrl: r.imageStorageId

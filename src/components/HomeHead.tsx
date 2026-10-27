@@ -4,10 +4,11 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck, ClanTag, SacretIcon } from "@/components/lstream-ui";
-import { displayId } from "@/lib/lstream";
+import { badgeForLevel, displayId } from "@/lib/lstream";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { CrownIcon } from "@/components/ios-icons";
 import { YoruVerseScreen } from "@/components/YoruVerse";
+import { TierIcon } from "@/components/ProfileSheet";
 import { xpForLevel } from "@/lib/level";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -62,8 +63,15 @@ export function greetingOf(d = new Date()): string {
 export function GreetingBar() {
   const { user } = useAuth();
   const [, tick] = useState(0);
-  // Nama yang disapa harus NAMA USER beneran (bukan "YoruNime").
-  const name = user?.username || user?.name || "YoruNime";
+  // Nama yang disapa harus USERNAME akun user beneran
+  // (fallback terakhir baru "YoruNime").
+  const name =
+    user?.username ||
+    user?.name ||
+    (typeof (user as any)?.email === "string"
+      ? String((user as any).email).split("@")[0]
+      : "") ||
+    "YoruNime";
   // Ganti otomatis saat jam berpindah (mis. 10.59 → 11.00 jadi "Siang").
   useEffect(() => {
     const t = setInterval(() => tick((v) => v + 1), 60_000);
@@ -107,7 +115,13 @@ export function ProfileBar() {
           <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white/70">
             {displayId((user as any)?.seqId)}
           </span>
-          <span className="rounded-md border border-white/25 px-1.5 py-0.5 text-[9px] font-black text-white/80">
+          {/* Tag level — gaya sama persis dengan di detail akun:
+              bulat, outline putih, ikon material tier di kirinya. */}
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/5 px-2 py-0.5 text-[10px] font-bold text-white/95">
+            <TierIcon
+              tier={badgeForLevel(level).name}
+              className="size-3.5"
+            />
             Lv.{level}
           </span>
           {user?.clanTag && (
@@ -618,8 +632,13 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
         </button>
       </div>
 
-      <div className="mt-2 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] p-2 yn-cut-alt">
-        <div className="grid grid-cols-3 items-end">
+      {/* Kotak podium PREMIUM — latar gradasi gelap keemasan + glow,
+          border neon tipis, bukan abu-abu polos. */}
+      <div className="relative mt-2 overflow-hidden rounded-2xl border border-amber-400/30 bg-[linear-gradient(160deg,#1f1608_0%,#14100b_55%,#0a0a10_100%)] p-2.5 shadow-[0_20px_44px_-26px_rgba(251,191,36,0.5)] yn-cut-alt">
+        <span aria-hidden className="absolute -left-10 -top-12 size-36 rounded-full bg-amber-400/20 blur-3xl" />
+        <span aria-hidden className="absolute -bottom-14 -right-8 size-36 rounded-full bg-orange-500/15 blur-3xl" />
+        <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+        <div className="relative grid grid-cols-3 items-end">
           {byRank.map((e, i) => {
             const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
             return (
@@ -637,10 +656,10 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.45 }}
                     className={cn(
-                      "flex w-full min-w-0 flex-col items-center justify-center gap-0.5 border border-white/15 px-1 py-2",
+                      "flex w-full min-w-0 flex-col items-center justify-center gap-0.5 border px-1 py-2 backdrop-blur-[2px]",
                       rank === 1
-                        ? "h-20 bg-gradient-to-t from-amber-500/35 to-amber-300/15"
-                        : "h-14 bg-white/[0.06]",
+                        ? "h-20 border-amber-300/55 bg-[linear-gradient(to_top,rgba(251,191,36,.32),rgba(251,191,36,.10))] shadow-[0_0_22px_-8px_rgba(251,191,36,.75)]"
+                        : "h-14 border-white/20 bg-white/[0.07]",
                       rank === 2 && "rounded-l-2xl",
                       rank === 3 && "rounded-r-2xl",
                     )}
@@ -658,7 +677,7 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
           })}
         </div>
         {/* Label mode kecil di bawah podium — biar jelas sedang lihat apa. */}
-        <p className="mt-2 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-white/45">
+        <p className="relative mt-2 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-amber-100/70">
           {mode === "xp" ? (
             <>
               <Sparkles className="size-3 text-amber-300" /> Top XP minggu ini
@@ -690,43 +709,56 @@ export function ChatVoiceRow({
 
   return (
     <div className="mt-5 grid grid-cols-2 gap-3">
-      {/* CHAT GLOBAL — konten di TENGAH kotak, angka online pil rounded di
-          kanan bawah. Kotaknya membentang 2 baris di sisi kiri. */}
+      {/* CHAT GLOBAL — latar gradasi gelap biru langit + glow neon,
+          konten di TENGAH kotak, angka online pil rounded di kanan bawah. */}
       <button
         onClick={onOpenChat}
-        className="yn-cut relative row-span-2 flex min-h-[228px] flex-col items-center justify-center gap-3 rounded-3xl border border-white/12 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut relative row-span-2 flex min-h-[228px] flex-col items-center justify-center gap-3 overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(160deg,#0a1725_0%,#0b1220_55%,#07090f_100%)] shadow-[0_20px_46px_-26px_rgba(56,189,248,0.55)] transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span className="flex size-12 items-center justify-center rounded-2xl border border-sky-400/30 bg-sky-400/10">
-          <MessageSquare className="size-6 text-sky-300" />
+        <span aria-hidden className="absolute -left-10 -top-12 size-36 rounded-full bg-sky-400/20 blur-3xl" />
+        <span aria-hidden className="absolute -bottom-14 -right-8 size-36 rounded-full bg-cyan-500/15 blur-3xl" />
+        <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent" />
+        <span className="relative flex size-12 items-center justify-center rounded-2xl border border-sky-300/45 bg-[linear-gradient(to_bottom,rgba(56,189,248,.28),rgba(56,189,248,.10))] shadow-[0_0_20px_-4px_rgba(56,189,248,.7)]">
+          <MessageSquare className="size-6 text-sky-200" />
         </span>
-        <span className="text-sm font-extrabold text-white">Chat Global</span>
-        <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-emerald-400/35 bg-emerald-400/12 px-2.5 py-1 text-[10px] font-black text-emerald-200">
+        <span className="relative text-sm font-extrabold text-sky-50 [text-shadow:0_0_14px_rgba(56,189,248,.55)]">
+          Chat Global
+        </span>
+        <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-emerald-400/45 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black text-emerald-200 shadow-[0_0_14px_-6px_rgba(52,211,153,.9)]">
           <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
           {online ?? 0} online
         </span>
       </button>
 
-      {/* VOICE CALL — kotak tegak di kanan atas. */}
+      {/* VOICE CALL — kotak tegak di kanan atas, glow hijau. */}
       <button
         onClick={onOpenVoice}
-        className="yn-cut-alt flex h-28 flex-col items-center justify-center gap-2 rounded-3xl border border-white/12 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut-alt relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(160deg,#08180f_0%,#0a1310_55%,#07090c_100%)] shadow-[0_20px_44px_-26px_rgba(52,211,153,0.5)] transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span className="flex size-11 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-400/10">
-          <Mic className="size-5 text-emerald-300" />
+        <span aria-hidden className="absolute -left-8 -top-10 size-28 rounded-full bg-emerald-400/20 blur-3xl" />
+        <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
+        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-emerald-300/45 bg-[linear-gradient(to_bottom,rgba(52,211,153,.26),rgba(52,211,153,.08))] shadow-[0_0_18px_-4px_rgba(52,211,153,.7)]">
+          <Mic className="size-5 text-emerald-200" />
         </span>
-        <span className="text-sm font-extrabold text-white">Voice Call</span>
+        <span className="relative text-sm font-extrabold text-emerald-50 [text-shadow:0_0_14px_rgba(52,211,153,.5)]">
+          Voice Call
+        </span>
       </button>
 
-      {/* PREMIUM — kotak tegak, tepat DI BAWAH Voice Call. */}
+      {/* PREMIUM — kotak tegak, tepat DI BAWAH Voice Call, glow emas. */}
       <button
         onClick={onOpenPremium}
-        className="yn-cut flex h-28 flex-col items-center justify-center gap-2 rounded-3xl border border-amber-400/25 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-amber-400/40 bg-[linear-gradient(160deg,#1d1408_0%,#14100b_55%,#0a0a10_100%)] shadow-[0_20px_44px_-26px_rgba(251,191,36,0.5)] transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span className="flex size-11 items-center justify-center rounded-2xl border border-amber-300/35 bg-amber-300/12">
-          <CrownIcon className="size-5 text-amber-300" />
+        <span aria-hidden className="absolute -left-8 -top-10 size-28 rounded-full bg-amber-400/20 blur-3xl" />
+        <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-amber-300/50 bg-[linear-gradient(to_bottom,rgba(251,191,36,.28),rgba(251,191,36,.10))] shadow-[0_0_18px_-4px_rgba(251,191,36,.75)]">
+          <CrownIcon className="size-5 text-amber-200" />
         </span>
-        <span className="text-sm font-extrabold text-white">Premium</span>
-        <span className="text-[10px] font-bold text-white/50">
+        <span className="relative text-sm font-extrabold text-amber-50 [text-shadow:0_0_14px_rgba(251,191,36,.5)]">
+          Premium
+        </span>
+        <span className="relative text-[10px] font-bold text-amber-100/55">
           Beli Premium Ada Di Sini
         </span>
       </button>

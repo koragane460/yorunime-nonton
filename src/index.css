@@ -492,39 +492,43 @@
 }
 
 /* ------------------------------------------------------------------
- * SUDUT BENGKOK / CHAMFER — variasi selain rounded & lancip.
- * Garis miring di dua sudut berlawanan lalu lurus lagi ke bawah,
- * jadi tiap kotak tidak seragam rounded semua.
+ * INVERTED ROUNDED / CONCAVE NOTCH — KEBALIKAN rounded.
+ * `corner-shape: scoop` membuat SEMUA sudut melengkung ke dalam
+ * (kotong separuh lingkaran), dan border/outline ikut mengikuti lekuk
+ * itu — jadi garis pinggirnya juga ikut melengkung di tiap sudut,
+ * bukan putus seperti clip-path chamfer yang lama.
+ * Browser tanpa dukungan corner-shape: jatuh kembali ke rounded biasa.
  * ------------------------------------------------------------------ */
-.yn-cut {
-  clip-path: polygon(
-    16px 0,
-    100% 0,
-    100% calc(100% - 16px),
-    calc(100% - 16px) 100%,
-    0 100%,
-    0 16px
-  );
-}
-.yn-cut-alt {
-  clip-path: polygon(
-    0 0,
-    calc(100% - 16px) 0,
-    100% 16px,
-    100% 100%,
-    16px 100%,
-    0 calc(100% - 16px)
-  );
-}
+.yn-cut,
+.yn-cut-alt,
 .yn-cut-sm {
-  clip-path: polygon(
-    10px 0,
-    100% 0,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    0 100%,
-    0 10px
-  );
+  corner-shape: scoop;
+  /* Outline ringan bertema — periwinkle lembut, BUKAN abu-abu. */
+  border-color: rgb(167 139 250 / 0.34);
+}
+.yn-cut:hover,
+.yn-cut-alt:hover,
+.yn-cut-sm:hover {
+  border-color: rgb(196 165 255 / 0.6);
+}
+/* Radius default lewat :where() (specificity 0) supaya utility
+   rounded-* di elemen tetap menang kalau mau ukuran berbeda. */
+:where(.yn-cut, .yn-cut-alt) {
+  border-radius: 18px;
+}
+:where(.yn-cut-sm) {
+  border-radius: 12px;
+}
+/* Glow tipis opsional untuk kotak yang mau terlihat premium. */
+.yn-glow {
+  box-shadow:
+    0 0 26px -14px rgb(167 139 250 / 0.95),
+    0 14px 34px -22px rgb(0 0 0 / 0.9);
+}
+.yn-glow-pink {
+  box-shadow:
+    0 0 26px -14px rgb(244 114 182 / 0.95),
+    0 14px 34px -22px rgb(0 0 0 / 0.9);
 }
 
 /* Scroll horizontal tanpa scrollbar terlihat (hero, chip, dll). */

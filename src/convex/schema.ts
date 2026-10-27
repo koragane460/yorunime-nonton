@@ -937,7 +937,11 @@ const schema = defineSchema(
     gameSessions: defineTable({
       roomId: v.id("voiceRooms"),
       hostId: v.id("users"),
-      game: v.union(v.literal("uno"), v.literal("chess")),
+      game: v.union(
+        v.literal("uno"),
+        v.literal("chess"),
+        v.literal("snakes"),
+      ),
       seats: v.number(),
       players: v.array(
         v.object({
@@ -964,7 +968,11 @@ const schema = defineSchema(
     gameInvites: defineTable({
       sessionId: v.id("gameSessions"),
       roomId: v.id("voiceRooms"),
-      game: v.union(v.literal("uno"), v.literal("chess")),
+      game: v.union(
+        v.literal("uno"),
+        v.literal("chess"),
+        v.literal("snakes"),
+      ),
       fromUserId: v.id("users"),
       toUserId: v.id("users"),
       status: v.union(

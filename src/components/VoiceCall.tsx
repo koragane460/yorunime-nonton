@@ -706,7 +706,7 @@ function RoomScreen({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-bold">
               <span className="text-fuchsia-200">{myInvite.fromUsername}</span>{" "}
-              mengajak main {myInvite.game === "uno" ? "UNO" : "Catur"}
+              mengajak main {myInvite.game === "uno" ? "UNO" : myInvite.game === "snakes" ? "Ular Tangga" : "Catur"}
             </p>
             <p className="text-[10px] text-white/55">
               {myInvite.roomName} · {myInvite.players}/{myInvite.seats} pemain

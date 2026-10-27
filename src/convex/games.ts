@@ -17,7 +17,7 @@ async function me(ctx: QueryCtx | MutationCtx): Promise<Id<"users"> | null> {
   }
 }
 
-type Game = "uno" | "chess";
+type Game = "uno" | "chess" | "snakes";
 
 /* ====================================================================== *
  *  UNO — 108 kartu standar (encode: r/g/b/y + value, w/w4 = liar)
@@ -124,6 +124,55 @@ function startUno(s: Doc<"gameSessions">): UnoState {
     turn: order[0],
     dir: 1,
     unoCalled: Object.fromEntries(order.map((u) => [u, true])),
+  };
+}
+
+/* ====================================================================== *
+ *  ULAR TANGGA — dadu 1–6, maju, naik tangga & turun ular, harus PAS di 100
+ * ====================================================================== */
+
+type SnakesState = {
+  /** Posisi tiap pemain (0 = base, 1..100 = petak). */
+  pos: Record<string, number>;
+  turn: string;
+  /** Hasil dadu terakhir + siapa yang melempar (buat animasi UI). */
+  lastRoll: number | null;
+  lastBy: string | null;
+};
+
+/** Tangga: petak awal → petak akhir. */
+const LADDERS: Record<number, number> = {
+  1: 38,
+  4: 14,
+  9: 31,
+  21: 42,
+  28: 84,
+  36: 44,
+  51: 67,
+  71: 91,
+  80: 100,
+};
+
+/** Ular: kepala → ekor. */
+const SNAKES: Record<number, number> = {
+  16: 6,
+  47: 26,
+  49: 11,
+  56: 53,
+  62: 19,
+  64: 60,
+  87: 24,
+  93: 73,
+  95: 75,
+  98: 78,
+};
+
+function startSnakes(order: string[]): SnakesState {
+  return {
+    pos: Object.fromEntries(order.map((u) => [u, 0])),
+    turn: order[0] ?? "",
+    lastRoll: null,
+    lastBy: null,
   };
 }
 
@@ -446,6 +495,21 @@ function view(s: Doc<"gameSessions">) {
     players: s.players,
     updatedAt: s.updatedAt,
   };
+  if (s.game === "snakes") {
+    const st = s.state as SnakesState;
+    return {
+      ...base,
+      game: "snakes" as const,
+      snakes: {
+        pos: st.pos,
+        turn: st.turn,
+        lastRoll: st.lastRoll,
+        lastBy: st.lastBy,
+        ladders: LADDERS,
+        snakeMap: SNAKES,
+      },
+    };
+  }
   if (s.game === "uno") {
     const st = s.state as UnoState;
     const counts: Record<string, number> = {};
@@ -565,7 +629,11 @@ export const myInvites = query({
 export const createSession = mutation({
   args: {
     roomId: v.id("voiceRooms"),
-    game: v.union(v.literal("uno"), v.literal("chess")),
+    game: v.union(
+      v.literal("uno"),
+      v.literal("chess"),
+      v.literal("snakes"),
+    ),
   },
   handler: async (ctx, { roomId, game }) => {
     const userId = await me(ctx);
@@ -586,7 +654,8 @@ export const createSession = mutation({
     if (existing && existing.status !== "done") return existing._id;
 
     const user = await ctx.db.get(userId);
-    const seats = game === "uno" ? 4 : 2;
+    // UNO & Ular Tangga sama-sama 4 kursi, Catur 2.
+    const seats = game === "chess" ? 2 : 4;
     const now = Date.now();
     const sessionId = await ctx.db.insert("gameSessions", {
       roomId,
@@ -703,7 +772,12 @@ async function startGame(
 ): Promise<void> {
   const s = await ctx.db.get(sessionId);
   if (!s || s.status !== "lobby") return;
-  const state = s.game === "uno" ? startUno(s) : startChess();
+  const state =
+    s.game === "uno"
+      ? startUno(s)
+      : s.game === "snakes"
+        ? startSnakes(orderOf(s.players))
+        : startChess();
   await ctx.db.patch(sessionId, {
     status: "playing",
     state,
@@ -744,6 +818,13 @@ export const leave = mutation({
       }
       // Lanjut tanpa yang keluar (giliran dilewati lewat orderOf).
       await ctx.db.patch(sessionId, { players, updatedAt: Date.now() });
+      if (s.game === "snakes") {
+        const st = s.state as SnakesState;
+        const order = orderOf(players);
+        if (st.turn === userId && order.length) st.turn = order[0];
+        await ctx.db.patch(sessionId, { state: st, updatedAt: Date.now() });
+        return;
+      }
       if (s.game === "uno") {
         const st = s.state as UnoState;
         if (st.turn === userId) nextTurn(st, orderOf(players));
@@ -899,6 +980,45 @@ export const chessMove = mutation({
       return;
     }
     await ctx.db.patch(sessionId, { state: nxt, updatedAt: Date.now() });
+  },
+});
+
+/** Lempar dadu — Ular Tangga. */
+export const snakesRoll = mutation({
+  args: { sessionId: v.id("gameSessions") },
+  handler: async (ctx, { sessionId }) => {
+    const { s, userId } = await requirePlayer(ctx, sessionId);
+    if (s.game !== "snakes") throw new Error("Bukan Ular Tangga");
+    if (s.status !== "playing") throw new Error("Game belum mulai");
+    const st = s.state as SnakesState;
+    if (st.turn !== userId) throw new Error("Bukan giliranmu");
+
+    const roll = 1 + Math.floor(Math.random() * 6);
+    const cur = st.pos[userId] ?? 0;
+    let next = cur + roll;
+    // Harus PAS di 100 — kalau lebih, tetap di tempat.
+    if (next > 100) next = cur;
+    // Naik tangga / turun ular.
+    if (LADDERS[next]) next = LADDERS[next];
+    else if (SNAKES[next]) next = SNAKES[next];
+
+    st.pos[userId] = next;
+    st.lastRoll = roll;
+    st.lastBy = userId;
+
+    if (next === 100) {
+      await ctx.db.patch(sessionId, {
+        state: st,
+        status: "done",
+        winnerId: userId,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
+    const order = orderOf(s.players);
+    const i = order.indexOf(userId);
+    if (i >= 0 && order.length) st.turn = order[(i + 1) % order.length];
+    await ctx.db.patch(sessionId, { state: st, updatedAt: Date.now() });
   },
 });
 

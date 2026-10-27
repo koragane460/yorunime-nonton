@@ -173,7 +173,7 @@ export function ProfileSheet({
       {!profile ? (
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (
-        <div className="w-full pb-24">
+        <div className="w-full pb-10">
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div className="relative">
@@ -200,10 +200,11 @@ export function ProfileSheet({
                 kotak ID/level/teman. */}
           </div>
 
-          {/* KOTAK ISI di bawah banner — LEBIH GEDE, tanpa celah, naik
-              ke atas, sudut atas ROUND (pojok kanan & kiri). */}
-          <div className="relative -mt-20 px-2">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4 text-center backdrop-blur-md">
+          {/* KOTAK ISI di bawah banner — FULL lebar tanpa celah,
+              warna SOLID (tanpa transparan/blur), naik ke atas,
+              sudut atas ROUND (pojok kanan & kiri). */}
+          <div className="relative -mt-20">
+            <div className="rounded-3xl border border-white/10 bg-[#0c111b] p-4 text-center">
             {/* Baris atas: foto profile BESAR di kiri, username + chips di
                 kanan (rata kiri, bukan tengah lagi). */}
             <div className="flex items-start gap-3.5 text-left">
@@ -418,6 +419,11 @@ export function ProfileSheet({
                 Afinitas
               </button>
             </div>
+            </div>
+
+            {/* BAGIAN BAWAH TANPA BUNGKUS — tab & daftar menempel
+                langsung di latar sheet, bukan di dalam kotak kartu. */}
+            <div className="px-4 pb-2">
 
             {/* Tab tanpa background: garis bawah, bisa pindah */}
             <div className="mt-5 flex border-b border-white/15">
@@ -890,7 +896,7 @@ const TIER_DESC: Record<string, string> = {
 
 /** Ikon material per tier level — ingot (Bronze/Silver/Grandmaster) dan
  *  permata (Diamond/Emerald/Master). SVG kecil tanpa latar (clean). */
-function TierIcon({ tier, className }: { tier: string; className?: string }) {
+export function TierIcon({ tier, className }: { tier: string; className?: string }) {
   /** Enam material BERBEDA — ingot, ore, intan, zamrud, kristal, medali. */
   const art: Record<string, ReactNode> = {
     /* INGOT — batangan logam bertingkat. */
