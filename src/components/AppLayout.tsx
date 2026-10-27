@@ -112,6 +112,17 @@ export function AppLayout({
     if (user) void ensure();
   }, [user, ensure]);
 
+  // PRESENCE — penanda "online" tiap 30 detik selama aplikasi terbuka.
+  // Dipakai angka N online di kotak Chat Global Home (hitungan beneran).
+  const heartbeat = useMutation(api.presence.heartbeat);
+  useEffect(() => {
+    if (!user) return;
+    void heartbeat({}).catch(() => {});
+    const t = setInterval(() => void heartbeat({}).catch(() => {}), 30_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id]);
+
   // Mode Anti lag dari Pengaturan: berlaku di seluruh halaman.
   useEffect(() => {
     applyAntiLag(getAntiLag());

@@ -3,7 +3,9 @@ import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, SacretIcon } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, SacretIcon } from "@/components/lstream-ui";
+import { displayId } from "@/lib/lstream";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { CrownIcon } from "@/components/ios-icons";
 import { YoruVerseScreen } from "@/components/YoruVerse";
 import { xpForLevel } from "@/lib/level";
@@ -13,6 +15,7 @@ import {
   Check,
   ChevronRight,
   Crown,
+  Heart,
   MessageSquare,
   Mic,
   Play,
@@ -59,17 +62,19 @@ export function greetingOf(d = new Date()): string {
 export function GreetingBar() {
   const { user } = useAuth();
   const [, tick] = useState(0);
+  // Nama yang disapa harus NAMA USER beneran (bukan "YoruNime").
+  const name = user?.username || user?.name || "YoruNime";
   // Ganti otomatis saat jam berpindah (mis. 10.59 → 11.00 jadi "Siang").
   useEffect(() => {
     const t = setInterval(() => tick((v) => v + 1), 60_000);
     return () => clearInterval(t);
   }, []);
   return (
-    <div className="fade-enter flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 backdrop-blur-md">
+    <div className="fade-enter yn-cut flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 backdrop-blur-md">
       <p className="text-center text-base font-black tracking-tight">
         {greetingOf()},{" "}
         <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
-          {user?.username ?? "YoruNime"}
+          {name}
         </span>
       </p>
     </div>
@@ -85,7 +90,7 @@ export function ProfileBar() {
   const have = Math.max(0, Math.min(user?.xp ?? 0, need));
   const pct = Math.min(100, Math.round((have / Math.max(1, need)) * 100));
   return (
-    <div className="fade-enter mt-3 flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-md">
+    <div className="fade-enter yn-cut-alt mt-3 flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-md">
       {/* Foto profile besar, tepat di tengah vertikal sisi kiri. */}
       <Avatar
         src={user?.image}
@@ -93,26 +98,46 @@ export function ProfileBar() {
         className="size-16 shrink-0 self-center"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-right text-sm font-black">
-          {user?.username ?? "user"}
-        </p>
-        <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
-          Level progress
-        </p>
-        <div className="relative mt-2">
-          {/* Status level di ujung KANAN ATAS bar. */}
-          <span className="absolute -top-3 right-0 z-10 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-amber-300 ring-1 ring-amber-400/40">
+        {/* Username + centang biru + ID + tag level + tag clan. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="truncate text-sm font-black">{user?.username ?? "user"}</p>
+          {((user as any)?.premiumUntil ?? 0) > Date.now() && (
+            <BlueCheck className="size-3.5 shrink-0" />
+          )}
+          <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white/70">
+            {displayId((user as any)?.seqId)}
+          </span>
+          <span className="rounded-md border border-white/25 px-1.5 py-0.5 text-[9px] font-black text-white/80">
+            Lv.{level}
+          </span>
+          {user?.clanTag && (
+            <ClanTag
+              icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+              tag={user.clanTag}
+              color={(user as any).clanNameColor}
+              level={(user as any).clanLevel}
+              className="shrink-0 scale-90 px-1 py-0 text-[9px]"
+            />
+          )}
+        </div>
+        {/* Label kecil + status level (TANPA background & outline) di baris
+            yang sama, tepat di atas ujung kanan bar — jadi tidak menimpa. */}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
+            Level progress
+          </span>
+          <span className="text-[10px] font-black text-white/75">
             LV {fmtShort(level)}
           </span>
-          <div className="h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/20">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-700"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+        </div>
+        <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/20">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-700"
+            style={{ width: `${pct}%` }}
+          />
         </div>
         {/* "7.000/12.000 - 89%" di kiri bawah bar. */}
-        <p className="mt-1.5 text-[10px] font-semibold text-white/60">
+        <p className="mt-1 text-[10px] font-semibold text-white/60">
           {have.toLocaleString("id-ID")}/{need.toLocaleString("id-ID")} - {pct}%
         </p>
       </div>
@@ -150,15 +175,22 @@ function TileBox({
   label,
   value,
   onClick,
+  cut = "",
+  pushDown = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value?: React.ReactNode;
   onClick?: () => void;
+  /** Variasi sudut (chamfer) supaya kotak tidak seragam rounded. */
+  cut?: string;
+  /** Dorong isi ke bawah (kotak YoruVerse tanpa baris angka). */
+  pushDown?: boolean;
 }) {
   const inner = (
     <>
-      <span className="flex size-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06]">
+      {/* Ikon TANPA kotak background (permintaan). */}
+      <span className={cn("flex items-center justify-center", pushDown && "mt-4")}>
         {icon}
       </span>
       <span className="mt-1.5 text-[11px] font-black text-white">{label}</span>
@@ -167,8 +199,10 @@ function TileBox({
       )}
     </>
   );
-  const cls =
-    "flex min-w-0 flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-1.5 py-3 transition hover:border-white/25";
+  const cls = cn(
+    "flex min-w-0 flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-1.5 py-3 transition hover:border-white/25",
+    cut,
+  );
   return onClick ? (
     <button onClick={onClick} className={cls}>
       {inner}
@@ -190,17 +224,21 @@ export function StatBoxes() {
     <>
       <div className="fade-enter mt-3 grid grid-cols-3 gap-2.5">
         <TileBox
+          cut="yn-cut"
           icon={<SacretIcon className="size-5 text-sky-300" />}
           label="Sacret"
           value={fmtShort(user?.diamonds ?? 0)}
         />
         <TileBox
+          cut="yn-cut-alt"
           icon={<CrownIcon className="size-5 text-amber-300" />}
           label="Premium"
           value={`${premiumDays} hari`}
           onClick={() => navigate("/premium")}
         />
         <TileBox
+          cut="yn-cut"
+          pushDown
           icon={<SaturnIcon className="size-5 text-violet-300" />}
           label="YoruVerse"
           onClick={() => setYv(true)}
@@ -233,7 +271,7 @@ export function TopAiringRow({
             onClick={() => onPick(a.id, a.title)}
             className="w-52 shrink-0 text-left"
           >
-            <div className="relative h-32 overflow-hidden rounded-2xl border border-white/10 bg-black">
+            <div className="relative h-32 overflow-hidden rounded-2xl border border-white/10 bg-black yn-cut-sm">
               <img
                 src={a.image}
                 alt=""
@@ -410,7 +448,7 @@ export function DailyQuestRow() {
         <h2 className="text-lg font-bold tracking-tight">Daily Quest</h2>
         <span className="text-[11px] text-muted-foreground">reset 00.00</span>
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      <div className="thin-scroll -mx-1 mt-2 flex gap-2.5 overflow-x-auto px-1 pb-1">
         {quests.map((q) => {
           const val = Math.min(q.target, q.get(p, store.local));
           const done = q.get(p, store.local) >= q.target;
@@ -418,7 +456,10 @@ export function DailyQuestRow() {
           return (
             <div
               key={q.id}
-              className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.05] p-2"
+              className={cn(
+                "flex w-52 shrink-0 flex-col rounded-2xl border border-white/10 bg-white/[0.05] p-2.5",
+                q.xp % 2 === 0 ? "yn-cut" : "yn-cut-alt",
+              )}
             >
               <div className="flex items-start gap-1.5">
                 <span
@@ -577,7 +618,7 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
         </button>
       </div>
 
-      <div className="mt-2 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] p-2">
+      <div className="mt-2 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] p-2 yn-cut-alt">
         <div className="grid grid-cols-3 items-end">
           {byRank.map((e, i) => {
             const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
@@ -638,44 +679,56 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
 export function ChatVoiceRow({
   onOpenChat,
   onOpenVoice,
+  onOpenPremium,
 }: {
   onOpenChat: () => void;
   onOpenVoice: () => void;
+  onOpenPremium: () => void;
 }) {
-  const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 50 });
-  // "Online" = pengirim pesan global 10 menit terakhir (tanpa presence baru).
-  const online = useMemo(() => {
-    const now = Date.now();
-    const set = new Set<string>();
-    for (const m of (msgs ?? []) as { userId?: string; createdAt?: number }[]) {
-      if (m.userId && (m.createdAt ?? 0) > now - 600_000) set.add(String(m.userId));
-    }
-    return set.size;
-  }, [msgs]);
+  // Angka ONLINE beneran (presence tiap 30 detik), bukan tebakan dari chat.
+  const online = useQuery(api.presence.onlineCount, {});
 
   return (
     <div className="mt-5 grid grid-cols-2 gap-3">
+      {/* CHAT GLOBAL — konten di TENGAH kotak, angka online pil rounded di
+          kanan bawah. Kotaknya membentang 2 baris di sisi kiri. */}
       <button
         onClick={onOpenChat}
-        className="flex h-56 flex-col items-center justify-center gap-2.5 rounded-3xl border border-white/12 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut relative row-span-2 flex min-h-[228px] flex-col items-center justify-center gap-3 rounded-3xl border border-white/12 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span className="flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.06]">
-          <MessageSquare className="size-5 text-sky-300" />
+        <span className="flex size-12 items-center justify-center rounded-2xl border border-sky-400/30 bg-sky-400/10">
+          <MessageSquare className="size-6 text-sky-300" />
         </span>
         <span className="text-sm font-extrabold text-white">Chat Global</span>
-        <span className="mt-auto flex items-center gap-1.5 self-end pr-3.5 text-[10px] font-bold text-white/60">
-          <Users className="size-3.5 text-emerald-300" />
-          {fmtShort(online)} online
+        <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-emerald-400/35 bg-emerald-400/12 px-2.5 py-1 text-[10px] font-black text-emerald-200">
+          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+          {online ?? 0} online
         </span>
       </button>
+
+      {/* VOICE CALL — kotak tegak di kanan atas. */}
       <button
         onClick={onOpenVoice}
-        className="flex h-56 flex-col items-center justify-center gap-2.5 rounded-3xl border border-white/12 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut-alt flex h-28 flex-col items-center justify-center gap-2 rounded-3xl border border-white/12 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
       >
         <span className="flex size-11 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-400/10">
           <Mic className="size-5 text-emerald-300" />
         </span>
         <span className="text-sm font-extrabold text-white">Voice Call</span>
+      </button>
+
+      {/* PREMIUM — kotak tegak, tepat DI BAWAH Voice Call. */}
+      <button
+        onClick={onOpenPremium}
+        className="yn-cut flex h-28 flex-col items-center justify-center gap-2 rounded-3xl border border-amber-400/25 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]"
+      >
+        <span className="flex size-11 items-center justify-center rounded-2xl border border-amber-300/35 bg-amber-300/12">
+          <CrownIcon className="size-5 text-amber-300" />
+        </span>
+        <span className="text-sm font-extrabold text-white">Premium</span>
+        <span className="text-[10px] font-bold text-white/50">
+          Beli Premium Ada Di Sini
+        </span>
       </button>
     </div>
   );
@@ -722,7 +775,7 @@ export function ContinueWatchingRow() {
           const pct =
             total > 0 ? Math.min(100, Math.round(((c.progressSec ?? 0) / total) * 100)) : 0;
           return (
-            <div key={c._id} className="w-56 shrink-0">
+            <div key={c._id} className="w-44 shrink-0">
               <button
                 onClick={() =>
                   navigate(
@@ -731,7 +784,7 @@ export function ContinueWatchingRow() {
                     )}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
                   )
                 }
-                className="relative block h-28 w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
+                className="relative block h-24 w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left yn-cut-sm"
               >
                 {c.animeImage && (
                   <img
@@ -741,9 +794,9 @@ export function ContinueWatchingRow() {
                     className="h-full w-full object-cover"
                   />
                 )}
-                <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/35" />
-                {/* Posisi tonton di KIRI ATAS bar. */}
-                <span className="absolute left-2 top-2 rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white">
+                <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/35" />
+                {/* Posisi tonton — PAS di kiri atas bar (tanpa background). */}
+                <span className="absolute bottom-4 left-2 font-mono text-[10px] font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
                   {clockOf(c.progressSec)}/{clockOf(total)}
                 </span>
                 <span className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-white/25">
@@ -774,7 +827,15 @@ export function ContinueWatchingRow() {
  * Slide pertama HERO BANNER: promosi AFINITAS. Dibuat seperti kartu promo
  * sungguhan (gradasi gelap + glow pink/indigo + tombol CTA).
  */
-export function AfinitasPromo({ onOpen }: { onOpen: () => void }) {
+export function AfinitasPromo({
+  onOpen,
+  images,
+}: {
+  onOpen: () => void;
+  /** Foto karakter (anime/donghua) untuk kartu pasangan di sisi kanan. */
+  images?: string[];
+}) {
+  const [a, b] = images ?? [];
   return (
     <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(150deg,#241033_0%,#14101f_55%,#0a0a11_100%)]">
       <span
@@ -785,7 +846,27 @@ export function AfinitasPromo({ onOpen }: { onOpen: () => void }) {
         aria-hidden
         className="absolute -bottom-14 -right-8 size-44 rounded-full bg-indigo-500/30 blur-3xl"
       />
-      <div className="relative flex h-full flex-col justify-center gap-1 px-4">
+      {/* Dua kartu KARAKTER miring + hati di tengahnya (sisi kanan). */}
+      {(a || b) && (
+        <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
+          {a && (
+            <div className="relative h-[102px] w-[70px] -rotate-[9deg] overflow-hidden rounded-xl border-2 border-pink-400/60 shadow-[0_10px_24px_-8px_rgba(236,72,153,0.7)]">
+              <img src={a} alt="" className="size-full object-cover" />
+              <span className="absolute inset-0 bg-gradient-to-t from-pink-950/60 to-transparent" />
+            </div>
+          )}
+          {b && (
+            <div className="relative -ml-6 h-[102px] w-[70px] rotate-[9deg] overflow-hidden rounded-xl border-2 border-indigo-400/60 shadow-[0_10px_24px_-8px_rgba(99,102,241,0.7)]">
+              <img src={b} alt="" className="size-full object-cover" />
+              <span className="absolute inset-0 bg-gradient-to-t from-indigo-950/60 to-transparent" />
+            </div>
+          )}
+          <span className="absolute left-1/2 top-1/2 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-rose-600/50">
+            <Heart className="size-3.5 fill-white text-white" />
+          </span>
+        </div>
+      )}
+      <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-1 px-4">
         <span className="w-fit rounded-full border border-pink-400/40 bg-pink-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-pink-200">
           Afinitas
         </span>

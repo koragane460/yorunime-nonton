@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar } from "@/components/lstream-ui";
+import { VoiceGamesOverlay } from "@/components/VoiceGames";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -181,31 +182,34 @@ function VoiceHomeScreen({
           </button>
         </div>
 
-        {/* Judul + status room online */}
-        <h1 className="text-lg font-black tracking-tight">
-          YoruNime Voice Call Room
-        </h1>
-        <div className="mt-1 flex items-center gap-2 text-xs">
-          <span className="text-muted-foreground">pilih room untuk join</span>
-          <span className="text-white/30">•</span>
-          <span className="font-bold text-emerald-300">
-            {list.length} room online
-          </span>
-        </div>
+        {/* SATU KOTAK: judul + status room online + tombol create, semua
+            rata TENGAH. */}
+        <div className="yn-cut mt-2 rounded-3xl border border-white/12 bg-white/[0.04] p-4 text-center">
+          <h1 className="text-lg font-black tracking-tight">
+            YoruNime Voice Call Room
+          </h1>
+          <div className="mt-1 flex items-center justify-center gap-2 text-xs">
+            <span className="text-muted-foreground">pilih room untuk join</span>
+            <span className="text-white/30">•</span>
+            <span className="font-bold text-emerald-300">
+              {list.length} room online
+            </span>
+          </div>
 
-        {/* Tombol buat room */}
-        <button
-          onClick={() => {
-            if (!user) {
-              toast.info("Login dulu ya");
-              return;
-            }
-            onCreate();
-          }}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-400/12 py-3.5 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20 active:scale-[0.98]"
-        >
-          <Plus className="size-4" /> Create Voice Room
-        </button>
+          {/* Tombol buat room */}
+          <button
+            onClick={() => {
+              if (!user) {
+                toast.info("Login dulu ya");
+                return;
+              }
+              onCreate();
+            }}
+            className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-400/12 py-3.5 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20 active:scale-[0.98]"
+          >
+            <Plus className="size-4" /> Create Voice Room
+          </button>
+        </div>
 
         {/* Kepala daftar room */}
         <div className="mt-6 flex items-baseline justify-between">
@@ -234,28 +238,26 @@ function VoiceHomeScreen({
               return (
                 <div
                   key={r._id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"
+                  className="yn-cut-alt rounded-2xl border border-white/10 bg-white/[0.04] p-3.5"
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <span
                       className={cn(
-                        "flex size-10 shrink-0 items-center justify-center rounded-xl border",
+                        "flex size-12 shrink-0 items-center justify-center rounded-xl border",
                         m.cls,
                       )}
                     >
-                      <m.Icon className="size-5" />
+                      <m.Icon className="size-6" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold">{r.name}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {m.label}
-                      </p>
+                      <p className="truncate text-base font-black">{r.name}</p>
+                      <p className="text-xs text-muted-foreground">{m.label}</p>
                     </div>
                     <button
                       onClick={() => void join(r)}
                       disabled={locked || full}
                       className={cn(
-                        "shrink-0 rounded-xl px-3.5 py-2 text-xs font-black transition active:scale-95",
+                        "shrink-0 rounded-xl px-4 py-2.5 text-xs font-black transition active:scale-95",
                         locked || full
                           ? "cursor-not-allowed bg-white/10 text-white/35"
                           : "bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/50 hover:bg-emerald-500/30",
@@ -268,23 +270,25 @@ function VoiceHomeScreen({
                   {/* Garis pembatas agak pudar */}
                   <div className="my-2.5 h-px w-full bg-gradient-to-r from-white/18 via-white/8 to-transparent" />
 
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
+                  {/* Foto member di KIRI, jumlah user di kanan foto (bukan
+                      mentok kanan), tombol Join tetap paling kanan. */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex -space-x-2.5">
                       {(r.previews ?? []).map((p, i) => (
                         <Avatar
                           key={`${p.userId}-${i}`}
                           src={p.image}
                           seed={p.username}
-                          className="size-7 ring-2 ring-black"
+                          className="size-8 ring-2 ring-black"
                         />
                       ))}
                       {(r.previews ?? []).length === 0 && (
-                        <span className="flex size-7 items-center justify-center rounded-full bg-white/10 ring-2 ring-black">
-                          <Users className="size-3.5 text-white/50" />
+                        <span className="flex size-8 items-center justify-center rounded-full bg-white/10 ring-2 ring-black">
+                          <Users className="size-4 text-white/50" />
                         </span>
                       )}
                     </div>
-                    <span className="ml-auto text-[11px] font-bold text-white/70">
+                    <span className="text-xs font-bold text-white/70">
                       {r.count}/{r.maxUsers} User
                     </span>
                   </div>
@@ -342,7 +346,9 @@ function CreateRoomScreen({
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
-      <div className="mx-auto w-full max-w-md p-3 pb-16">
+      {/* Form dibuat lebih ke TENGAH (turun dari atas, tetap rata tengah
+          horizontal lewat max-w-md). */}
+      <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-3 pb-16 pt-10">
         <button
           onClick={onCancel}
           aria-label="Kembali"
@@ -575,6 +581,16 @@ function RoomScreen({
   const leaveMut = useMutation(api.voice.leaveRoom);
   const [showInvite, setShowInvite] = useState(false);
   const call = useVoiceCall(roomId, myId);
+  // --- GAME (UNO / Catur) ---
+  const [gameOpen, setGameOpen] = useState(false);
+  const [gameSession, setGameSession] = useState<Id<"gameSessions"> | null>(
+    null,
+  );
+  const activeGame = useQuery(api.games.activeInRoom, { roomId });
+  const invites = useQuery(api.games.myInvites, myId ? {} : "skip");
+  const respondMut = useMutation(api.games.respond);
+  // Ajakan game yang masuk ke room INI (banner + tombol Gabung).
+  const myInvite = invites?.find((i) => i.roomId === roomId);
 
   const leave = useCallback(async () => {
     try {
@@ -636,9 +652,9 @@ function RoomScreen({
         <button
           onClick={() => void leave()}
           aria-label="Keluar room"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-white/80 transition active:scale-95"
+          className="flex size-10 shrink-0 items-center justify-center text-white/85 transition active:scale-95"
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-5" />
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-black">
@@ -646,19 +662,71 @@ function RoomScreen({
           </p>
           <p className="truncate text-[11px] text-white/50">{m.label}</p>
         </div>
-        {host && (
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Tombol GAME — semua member, tanpa background. Untuk non-host
+              ini menggantikan posisi tombol invite; host punya invite
+              di sebelah KANANNYA. */}
           <button
-            onClick={() => setShowInvite(true)}
-            aria-label="Invite user"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 transition hover:bg-white/15 active:scale-95"
+            onClick={() => {
+              if (activeGame) setGameSession(activeGame.sessionId);
+              setGameOpen(true);
+            }}
+            aria-label="Game"
+            className="flex size-10 items-center justify-center text-white/85 transition hover:text-white active:scale-95"
           >
-            <span className="relative">
-              <Users className="size-4" />
-              <Plus className="absolute -right-1.5 -top-1.5 size-3" />
-            </span>
+            <Gamepad2 className="size-5" />
           </button>
-        )}
+          {host && (
+            <button
+              onClick={() => setShowInvite(true)}
+              aria-label="Invite user"
+              className="flex size-10 shrink-0 items-center justify-center text-white/85 transition hover:text-white active:scale-95"
+            >
+              <span className="relative">
+                <Users className="size-5" />
+                <Plus className="absolute -right-1.5 -top-1.5 size-3.5" />
+              </span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Undangan GAME dari host — foto profile, nama, jenis game, Gabung. */}
+      {myInvite && !gameSession && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-3 mt-2 flex items-center gap-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/12 p-2.5"
+        >
+          <Avatar
+            src={myInvite.fromImage}
+            seed={myInvite.fromUsername}
+            className="size-10"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold">
+              <span className="text-fuchsia-200">{myInvite.fromUsername}</span>{" "}
+              mengajak main {myInvite.game === "uno" ? "UNO" : "Catur"}
+            </p>
+            <p className="text-[10px] text-white/55">
+              {myInvite.roomName} · {myInvite.players}/{myInvite.seats} pemain
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await respondMut({ inviteId: myInvite.inviteId, accept: true });
+                setGameSession(myInvite.sessionId);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Gagal join game");
+              }
+            }}
+            className="shrink-0 rounded-xl bg-gradient-to-b from-fuchsia-300 to-fuchsia-500 px-4 py-2.5 text-xs font-black text-black shadow-lg shadow-fuchsia-600/25 transition active:scale-95"
+          >
+            Gabung
+          </button>
+        </motion.div>
+      )}
 
       {/* Peserta */}
       <div className="flex flex-1 items-center justify-center overflow-y-auto px-4 py-4">
@@ -679,11 +747,13 @@ function RoomScreen({
                 className="flex min-w-0 flex-col items-center"
               >
                 <div className="relative">
-                  {/* Gelombang saat sedang bicara. */}
+                  {/* Cincin bicara STEADY — tanpa animasi ping yang bikin
+                      avatar kecil-besar. Kolom VU tetap deteksi bicara,
+                      visualnya cuma nyala & diam. */}
                   {talking && (
                     <span
                       aria-hidden
-                      className="absolute -inset-2 animate-ping rounded-full bg-emerald-400/25"
+                      className="absolute -inset-1.5 rounded-full ring-2 ring-emerald-400/80 shadow-[0_0_18px_-2px_rgba(52,211,153,0.75)]"
                     />
                   )}
                   <Avatar
@@ -776,6 +846,19 @@ function RoomScreen({
           {call.error}
         </p>
       )}
+
+      {/* Overlay GAME (menu · lobby · UNO · Catur) di atas panggung. */}
+      {(gameOpen || gameSession) && (
+        <VoiceGamesOverlay
+          roomId={roomId}
+          sessionId={gameSession}
+          onSession={(id) => setGameSession(id)}
+          onClose={() => {
+            setGameSession(null);
+            setGameOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -796,20 +879,20 @@ function ControlButton({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 py-1 transition active:scale-95"
+      className="flex flex-col items-center gap-1.5 py-1 transition active:scale-95"
     >
       <span
         className={cn(
           "transition",
-          danger ? "text-rose-500" : active === false ? "text-white/40" : "text-white/90",
+          danger ? "text-rose-400" : active === false ? "text-white/55" : "text-white",
         )}
       >
         {icon}
       </span>
       <span
         className={cn(
-          "text-[10px] font-bold",
-          danger ? "text-rose-500" : active === false ? "text-white/40" : "text-white/70",
+          "text-[11px] font-extrabold leading-none",
+          danger ? "text-rose-400" : active === false ? "text-white/55" : "text-white",
         )}
       >
         {label}
@@ -838,6 +921,7 @@ function useVoiceCall(roomId: Id<"voiceRooms">, myId: Id<"users"> | null) {
   const streamRef = useRef<MediaStream | null>(null);
   const pcRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const audioRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const gainRef = useRef<Map<string, GainNode>>(new Map());
   const seenRef = useRef<Set<string>>(new Set());
   const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -859,6 +943,7 @@ function useVoiceCall(roomId: Id<"voiceRooms">, myId: Id<"users"> | null) {
   const applySpeakers = useCallback(() => {
     const muted = !speakerRef.current || deafenRef.current;
     audioRef.current.forEach((el) => (el.muted = muted));
+    gainRef.current.forEach((g) => (g.gain.value = muted ? 0 : 1));
   }, []);
 
   const attach = useCallback((peerId: string, stream: MediaStream) => {
@@ -871,10 +956,40 @@ function useVoiceCall(roomId: Id<"voiceRooms">, myId: Id<"users"> | null) {
       audioRef.current.set(peerId, el);
     }
     el.srcObject = stream;
-    el.muted = !speakerRef.current || deafenRef.current;
+    const muted = !speakerRef.current || deafenRef.current;
+    el.muted = muted;
     void el.play().catch(() => {
       /* autoplay diblokir sampai user interaksi */
     });
+
+    // Routing lewat Web Audio: kompresor + gain stabil biar suara jernih
+    // dan tidak "bergenging"/pecah saat lawan bicara bicara keras.
+    try {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      const ctx = ctxRef.current ?? new Ctx();
+      ctxRef.current = ctx;
+      void ctx.resume().catch(() => {});
+      if (!gainRef.current.has(peerId)) {
+        const mediaSrc = ctx.createMediaElementSource(el);
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -20;
+        comp.knee.value = 24;
+        comp.ratio.value = 6;
+        comp.attack.value = 0.003;
+        comp.release.value = 0.25;
+        const gain = ctx.createGain();
+        gain.gain.value = muted ? 0 : 1;
+        mediaSrc.connect(comp);
+        comp.connect(gain);
+        gain.connect(ctx.destination);
+        gainRef.current.set(peerId, gain);
+      }
+    } catch {
+      /* MediaElementSource tidak tersedia — <audio> biasa tetap jalan */
+    }
   }, []);
 
   const makePeer = useCallback(
@@ -932,7 +1047,16 @@ function useVoiceCall(roomId: Id<"voiceRooms">, myId: Id<"users"> | null) {
       setError("Browser ini tidak mendukung mikrofon");
       return;
     }
-    md.getUserMedia({ audio: true })
+    md.getUserMedia({
+      // Noise suppression + echo cancellation bawaan browser → suara
+      // jernih, minim gema/berdengung lawan bicara.
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+      },
+    })
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());

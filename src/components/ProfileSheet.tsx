@@ -195,48 +195,14 @@ export function ProfileSheet({
             >
               <StripBackIcon />
             </button>
-            {/* Kotak info kiri-atas banner (latar hitam ~35%): tag + nama
-                clan (centang biru = dibeli di Shop clan), title GIVER, dan
-                title TOP XP — sesuai peringkat di leaderboard masing-masing. */}
-            {((profile.clanTag && profile.clanName) ||
-              profile.giverRank ||
-              profile.xpRank) && (
-              <div className="absolute left-3 top-11 z-[5] max-w-[70%] space-y-2 rounded-3xl bg-black/40 p-2.5 ring-1 ring-white/15 backdrop-blur-md">
-                {profile.clanTag && profile.clanName && (
-                  <div className="flex items-center gap-1.5">
-                    <ClanTag
-                      icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                      tag={profile.clanTag}
-                      color={profile.clanNameColor}
-                      level={profile.clanLevel}
-                      className="shrink-0 px-1.5 py-0 text-[9px]"
-                    />
-                    <span className="truncate text-[11px] font-bold text-white/95">
-                      {profile.clanName}
-                    </span>
-                    {profile.clanVerified && (
-                      <BlueCheck className="size-3.5 shrink-0" />
-                    )}
-                  </div>
-                )}
-                {profile.giverRank ? (
-                  <span className="flex w-fit items-center gap-1.5 rounded-lg bg-red-900/85 px-2.5 py-1.5 text-[11px] font-black text-red-100 ring-1 ring-red-400/60">
-                    <Gift className="size-3.5 text-red-300" aria-hidden />
-                    GIVER {profile.giverRank}
-                  </span>
-                ) : null}
-                {profile.xpRank ? (
-                  <span className="flex w-fit items-center gap-1.5 rounded-lg bg-yellow-900/85 px-2.5 py-1.5 text-[11px] font-black text-yellow-100 ring-1 ring-yellow-400/60">
-                    <Zap className="size-3.5 text-yellow-300" aria-hidden />
-                    TOP XP {profile.xpRank}
-                  </span>
-                ) : null}
-              </div>
-            )}
+            {/* Kotak info di banner DIHAPUS permanen — isinya sudah pindah
+                ke kotak ringkas (Top XP / Top Give / tag clan) di bawah
+                kotak ID/level/teman. */}
           </div>
 
-          {/* KOTAK ISI di bawah banner — pinggiran ROUND. */}
-          <div className="relative -mt-12 px-3">
+          {/* KOTAK ISI di bawah banner — LEBIH GEDE, tanpa celah, naik
+              ke atas, sudut atas ROUND (pojok kanan & kiri). */}
+          <div className="relative -mt-20 px-2">
             <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4 text-center backdrop-blur-md">
             {/* Baris atas: foto profile BESAR di kiri, username + chips di
                 kanan (rata kiri, bukan tengah lagi). */}
@@ -313,8 +279,9 @@ export function ProfileSheet({
             </div>
 
             {/* KOTAK RINGKAS tanpa background: TOP XP · TOP GIVE PREMIUM ·
-                TAG CLAN + nama + centang biru. */}
-            <div className="mt-3 flex flex-wrap items-center justify-start gap-2 text-left">
+                TAG CLAN + nama + centang biru — MENDEKAT persis di bawah
+                kotak ID/tag level/teman. */}
+            <div className="mt-2 flex flex-wrap items-center justify-start gap-2 text-left">
               {profile.xpRank ? (
                 <span className="inline-flex items-center gap-1 rounded-lg border border-yellow-400/45 bg-yellow-400/10 px-2 py-1 text-[11px] font-black text-yellow-200">
                   <Zap className="size-3" aria-hidden /> Top XP {profile.xpRank}
@@ -387,8 +354,13 @@ export function ProfileSheet({
               return (
                 <div className="thin-scroll mt-3 flex items-stretch gap-2 overflow-x-auto pb-1">
                   {titles.slice(0, 3).map((t) => (
-                    <div key={t.id} className="min-w-[42%] shrink-0">
-                      <TitleRibbon name={t.name} size="sm" />
+                    <div key={t.id} className="min-w-[85%] shrink-0">
+                      {/* Gede banget (permintaan) — size lg + text override. */}
+                      <TitleRibbon
+                        name={t.name}
+                        size="lg"
+                        className="w-full justify-center text-base"
+                      />
                     </div>
                   ))}
                 </div>

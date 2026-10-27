@@ -159,7 +159,7 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
   return (
-    <AppLayout>
+    <AppLayout hideAccountPanel>
       <HomeContent />
     </AppLayout>
   );
@@ -183,15 +183,12 @@ function HeroSkeleton() {
 }
 
 /**
- * BANNER HERO YANG DIPEISOLASI (performa).
+ * BANNER HERO — KARUSEL SWIPE (bisa digeser ke kanan/kiri pakai jari).
  *
- * State rotasi (`idx`) + interval 6 detik dimiliki komponen KECIL ini, jadi
- * tiap pergantian slide hanya banner ini yang re-render — bukan seluruh Home
- * (4.000+ baris, belasan useQuery). Sebelumnya seluruh halaman render ulang
- * tiap 6 detik, cukup berat untuk HP kelas menengah.
- *
- * Slide ditumpuk absolute + opacity supaya pergantian benar-benar FADE.
- * Judul di tengah; badge TOP #n + jumlah views di KANAN (bukan di kiri).
+ * Slide 0 = promosi Afinitas, slide 1..n = anime/donghua yang berganti-ganti,
+ * semuanya di SATU tempat (track scroll-snap). Titik di bawah cuma 2:
+ * kiri = promo, kanan = grup anime/donghua. Rotasi otomatis tiap 6 detik,
+ * state + interval tetap dipeisolasi di komponen kecil ini (performa).
  */
 function HeroSlides({
   items,
@@ -205,41 +202,53 @@ function HeroSlides({
   /** Slide pertama (index 0): promosi Afinitas. */
   promo: ReactNode;
 }) {
+  const trackRef = useRef<HTMLDivElement | null>(null);
   const [idx, setIdx] = useState(0);
   // Slide 0 = promo Afinitas, sisanya anime/donghua yang berganti-ganti.
   const total = items.length + 1;
+
+  const scrollToIdx = (i: number) => {
+    const el = trackRef.current;
+    if (!el || el.clientWidth === 0) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
 
   // Jaga indeks tetap valid saat daftar item berubah (mis. load ulang).
   useEffect(() => {
     if (idx >= total) setIdx(0);
   }, [total, idx]);
 
-  // Auto-rotate tiap 6 detik — hanya menggerakkan state komponen ini.
+  // Auto-rotate tiap 6 detik — hanya menggeser track komponen ini.
   useEffect(() => {
     if (total < 2) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % total), 6000);
+    const t = setInterval(() => {
+      const next = (idx + 1) % total;
+      setIdx(next);
+      scrollToIdx(next);
+    }, 6000);
     return () => clearInterval(t);
-  }, [total]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, total]);
 
   return (
     <div className="min-w-0 flex-1">
-    <div className="relative h-[150px] w-full overflow-hidden rounded-2xl border border-white/10">
-      {/* Slide 0 — promosi Afinitas (selalu tampil pertama). */}
+      {/* Track SNAP — boleh di-swipe ke kanan/kiri; tiap slide selebar kotak. */}
       <div
-        className={cn(
-          "absolute inset-0 transition-opacity duration-700",
-          idx === 0 ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
+        ref={trackRef}
+        onScroll={() => {
+          const el = trackRef.current;
+          if (!el || el.clientWidth === 0) return;
+          const i = Math.round(el.scrollLeft / el.clientWidth);
+          if (i !== idx && i >= 0 && i < total) setIdx(i);
+        }}
+        className="no-bar flex h-[150px] w-full snap-x snap-mandatory overflow-x-auto rounded-2xl border border-white/10"
       >
-        {promo}
-      </div>
+      {/* Slide 0 — promosi Afinitas (selalu tampil pertama). */}
+      <div className="h-full w-full shrink-0 snap-start">{promo}</div>
       {items.map((a, i) => (
         <div
           key={a.id}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-700",
-            i + 1 === idx ? "opacity-100" : "pointer-events-none opacity-0",
-          )}
+          className="h-full w-full shrink-0 snap-start"
         >
           <div
             className="relative h-full overflow-hidden bg-cover bg-center"
@@ -289,19 +298,26 @@ function HeroSlides({
         </div>
       ))}
     </div>
-      {/* TITIK SLIDE — tepat di tengah, di bawah banner. */}
+      {/* TITIK SLIDE — cuma 2: promo (kiri) & grup anime/donghua (kanan). */}
       <div className="mt-2 flex items-center justify-center gap-1.5">
-        {Array.from({ length: total }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setIdx(i)}
-            aria-label={`Slide ${i + 1}`}
-            className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
-              i === idx ? "w-5 bg-white" : "w-1.5 bg-white/30",
-            )}
-          />
-        ))}
+        {[0, 1].map((d) => {
+          const active = d === 0 ? idx === 0 : idx > 0;
+          return (
+            <button
+              key={d}
+              onClick={() => {
+                const target = d === 0 ? 0 : idx === 0 ? 1 : idx;
+                setIdx(target);
+                scrollToIdx(target);
+              }}
+              aria-label={d === 0 ? "Slide promosi" : "Slide anime"}
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-300",
+                active ? "w-5 bg-white" : "w-1.5 bg-white/30",
+              )}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -453,8 +469,8 @@ function ComicHomeRow({
                 {variant === "manga" && (
                   <span
                     className={cn(
-                      "absolute left-0 top-0 rounded-none rounded-br-lg px-1.5 py-0.5 text-[9px] font-black uppercase text-black",
-                      c.ongoing ? "bg-sky-300" : "bg-sky-400",
+                      "absolute left-0 top-0 rounded-none rounded-br-lg px-1.5 py-0.5 text-[9px] font-black uppercase",
+                      c.ongoing ? "bg-sky-600 text-white" : "bg-sky-800 text-white",
                     )}
                   >
                     {c.ongoing ? "Ongoing" : "Tamat"}
@@ -1169,6 +1185,10 @@ function HomeContent() {
                 onOpen={() =>
                   user ? setAfinitas(true) : toast.info("Login dulu ya")
                 }
+                images={heroItems
+                  .slice(0, 2)
+                  .map((h) => h.image)
+                  .filter(Boolean)}
               />
             }
           />
@@ -1192,29 +1212,20 @@ function HomeContent() {
           6 detik) + daftar lengkap gaya Catalog saat "Lihat selengkapnya". */}
       <LeaderPodium onSeeAll={() => setShowLeaderboard(true)} />
       {showLeaderboard && (
-        <div className="mt-3">
+        <div className="screen-enter fixed inset-0 z-[75] overflow-y-auto bg-background">
           <CatalogLeaderboard onClose={() => setShowLeaderboard(false)} />
         </div>
       )}
 
-      {/* 6d) CHAT GLOBAL + VOICE CALL (kotak tegak sejajar). */}
+      {/* 6d) CHAT GLOBAL + VOICE CALL + PREMIUM (kotak tegak sejajar). */}
       <ChatVoiceRow
         onOpenChat={() => setShowChat(true)}
         onOpenVoice={() => setShowVoice(true)}
+        onOpenPremium={() => navigate("/premium")}
       />
 
-      {/* 6e) YORUNIME PREMIUM — tampilan tetap sama seperti sebelumnya. */}
-      <button
-        onClick={() => navigate("/premium")}
-        className="fade-enter mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-zinc-500/25 px-3.5 py-4 text-left transition hover:bg-zinc-500/35"
-      >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-300/15">
-          <CrownIcon className="size-5 text-amber-300" />
-        </span>
-        <span className="w-fit max-w-full rounded-2xl bg-sky-500 px-3 py-2 text-[13px] font-bold text-white">
-          Beli Premium Ada Di Sini
-        </span>
-      </button>
+      {/* 6e) LAMA "Beli Premium Ada Di Sini" — pindah jadi kotak tegak di
+          bawah Voice Call (lihat ChatVoiceRow). */}
 
       {/* 5) CARI ANIME — hanya tombol pemicu; pencarian tampil di layar
           FULL SCREEN (SearchScreen), bukan nempel di Home.
@@ -2251,9 +2262,9 @@ function SearchResultRow({
             DH
           </span>
         )}
-        {/* Film — bedain dari hasil anime/donghua: chip FILM ungu. */}
+        {/* Film — menempel FLUSH ke pojok kanan-atas (menyatu, tanpa celah). */}
         {source === "film" && (
-          <span className="absolute left-0.5 top-0.5 rounded border border-violet-400/40 bg-violet-700/85 px-1 py-0.5 text-[9px] font-black uppercase tracking-wide text-violet-100">
+          <span className="absolute right-0 top-0 rounded-none rounded-bl-lg bg-violet-700 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
             Film
           </span>
         )}
@@ -3413,13 +3424,13 @@ function AnimeDetailScreen({
               <span
                 className={cn(
                   "inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
-                  // Background biru SAMPAI dengan chip Ongoing/Tamat di
-                  // manhwa & manga (sky-300 / sky-400 + teks hitam).
+                  // Teks PUTIH (permintaan) — bg biru dinaikkan tingkat
+                  // gelapnya supaya kontras tetap aman.
                   detail.status === "Completed"
-                    ? "bg-sky-400 text-black"
+                    ? "bg-sky-700 text-white"
                     : detail.status === "OVA" || detail.status === "Movie"
                       ? "bg-sky-700/90 text-white"
-                      : "bg-sky-300 text-black",
+                      : "bg-sky-600 text-white",
                 )}
               >
                 {detail.status ?? "Ongoing"}
@@ -4417,7 +4428,7 @@ function DonghuaDetailScreen({
                 ukuran & posisi sejajar dengan tag status di detail anime. */}
             {detail.status === "Ongoing" && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="inline-block rounded-full bg-sky-300 px-2.5 py-0.5 text-[10px] font-bold text-black">
+                <span className="inline-block rounded-full bg-sky-600 px-2.5 py-0.5 text-[10px] font-bold text-white">
                   Ongoing
                 </span>
                 {updateDay && (

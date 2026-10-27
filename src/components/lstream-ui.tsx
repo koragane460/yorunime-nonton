@@ -152,12 +152,11 @@ export function AnimeCard({
           {status && (
             <span
               className={cn(
-                "rounded-none rounded-br-lg px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-black",
-                // Biru SAMPAI dengan chip Ongoing/Tamat di kartu manga
-                // (sky-300 berjalan / sky-400 tamat) — bukan hitam lagi.
+                "rounded-none rounded-br-lg px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide",
+                // Teks PUTIH (permintaan) — biru tua supaya kontras.
                 /tamat|completed|ended|selesai|finish/i.test(status)
-                  ? "bg-sky-400"
-                  : "bg-sky-300",
+                  ? "bg-sky-800 text-white"
+                  : "bg-sky-600 text-white",
               )}
             >
               {status}

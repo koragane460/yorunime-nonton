@@ -478,13 +478,62 @@
   }
 }
 .screen-enter {
-  animation: yn-screen-in 0.28s ease-out both;
+  /* `backwards` (bukan `both`): setelah animasi selesai TIDAK menyisakan
+     transform permanen, jadi elemen `fixed` di dalam layar (YoruPet,
+     Afinitas, popup) tetap menempel penuh ke viewport — dulu ada celah di
+     bawah karena transform menjadikan layar sebagai containing block. */
+  animation: yn-screen-in 0.28s ease-out backwards;
 }
 .fade-enter {
-  animation: yn-fade-in 0.35s ease-out both;
+  animation: yn-fade-in 0.35s ease-out backwards;
 }
 .pop-enter {
-  animation: yn-pop-in 0.18s ease-out both;
+  animation: yn-pop-in 0.18s ease-out backwards;
+}
+
+/* ------------------------------------------------------------------
+ * SUDUT BENGKOK / CHAMFER — variasi selain rounded & lancip.
+ * Garis miring di dua sudut berlawanan lalu lurus lagi ke bawah,
+ * jadi tiap kotak tidak seragam rounded semua.
+ * ------------------------------------------------------------------ */
+.yn-cut {
+  clip-path: polygon(
+    16px 0,
+    100% 0,
+    100% calc(100% - 16px),
+    calc(100% - 16px) 100%,
+    0 100%,
+    0 16px
+  );
+}
+.yn-cut-alt {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% 100%,
+    16px 100%,
+    0 calc(100% - 16px)
+  );
+}
+.yn-cut-sm {
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+}
+
+/* Scroll horizontal tanpa scrollbar terlihat (hero, chip, dll). */
+.no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-bar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Anti lag: matikan animasi & transisi berat (dipakai AppLayout). */

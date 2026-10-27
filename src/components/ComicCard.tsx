@@ -42,7 +42,8 @@ export function StatusChip({
     <span
       className={cn(
         "rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide",
-        ongoing ? "bg-sky-300 text-black" : "bg-sky-400 text-black",
+        // Teks PUTIH (permintaan) — bg dinaikkan biru tua supaya tetap terbaca.
+        ongoing ? "bg-sky-600 text-white" : "bg-sky-800 text-white",
         className,
       )}
     >

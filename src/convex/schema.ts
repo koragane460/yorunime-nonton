@@ -906,6 +906,16 @@ const schema = defineSchema(
       .index("oneTimeCode", ["oneTimeCode"])
       .index("updatedAt", ["updatedAt"]),
 
+    /**
+     * PRESENCE ringan — ditandai tiap 30 detik selama aplikasi terbuka.
+     * Dipakai penghitung "N online" di kotak Chat Global (angka beneran,
+     * bukan tebakan dari chat).
+     */
+    presences: defineTable({
+      userId: v.id("users"),
+      at: v.number(),
+    }).index("at", ["at"]),
+
     /** Sinyal WebRTC (offer/answer/ice) + status mikrofon antar member. */
     voiceSignals: defineTable({
       roomId: v.id("voiceRooms"),
@@ -917,6 +927,55 @@ const schema = defineSchema(
     })
       .index("roomId", ["roomId"])
       .index("roomId_created", ["roomId", "createdAt"]),
+
+    /**
+     * GAME ROOM di dalam Voice Call — UNO (4 kursi) & Catur (2 kursi).
+     * `state` berisi papan/permainan (UNO: deck+hand per user; Catur: papan
+     * 64 petak). Hand UNO TIDAK pernah dikirim utuh lewat query session
+     * (disensor jadi jumlah kartu saja) — hand asli lewat `myHand`.
+     */
+    gameSessions: defineTable({
+      roomId: v.id("voiceRooms"),
+      hostId: v.id("users"),
+      game: v.union(v.literal("uno"), v.literal("chess")),
+      seats: v.number(),
+      players: v.array(
+        v.object({
+          userId: v.id("users"),
+          username: v.string(),
+          image: v.optional(v.string()),
+          seat: v.number(),
+        }),
+      ),
+      status: v.union(
+        v.literal("lobby"),
+        v.literal("playing"),
+        v.literal("done"),
+      ),
+      state: v.any(),
+      winnerId: v.optional(v.id("users")),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_room", ["roomId"])
+      .index("by_status", ["status"]),
+
+    /** Undangan game dari host voice room ke member lain. */
+    gameInvites: defineTable({
+      sessionId: v.id("gameSessions"),
+      roomId: v.id("voiceRooms"),
+      game: v.union(v.literal("uno"), v.literal("chess")),
+      fromUserId: v.id("users"),
+      toUserId: v.id("users"),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("joined"),
+        v.literal("declined"),
+      ),
+      updatedAt: v.number(),
+    })
+      .index("by_to_status", ["toUserId", "status"])
+      .index("by_session", ["sessionId"]),
   },
   {
     schemaValidation: false,
