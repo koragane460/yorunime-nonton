@@ -1342,10 +1342,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
       {/* Latar ungu-emas: bintik berkelip, orb gradasi, dan ranting sakura
           emas di kiri & kanan atas (gaya referensi). */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1.3px)] [background-size:26px_26px] opacity-40" />
+        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1.3px)] [background-size:26px_26px] opacity-20" />
         <span className="absolute -left-24 top-8 size-72 rounded-full bg-fuchsia-600/25 blur-3xl" />
         <span className="absolute -right-24 bottom-20 size-72 rounded-full bg-violet-600/25 blur-3xl" />
-        <span className="absolute left-1/3 top-1/4 size-52 -translate-x-1/2 rounded-full bg-gold/10 blur-3xl" />
         <BlossomBranch id="ycl-l" className="absolute left-0 top-0 h-24 w-40" />
         <BlossomBranch id="ycl-r" className="absolute right-0 top-0 h-24 w-40" flip />
       </div>
@@ -1368,7 +1367,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
         <div className="space-y-4">
           {/* ===== KOTAK PREVIEW — kartu ungu + aksen sudut emas ===== */}
-          <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3 shadow-[0_18px_40px_-24px_rgba(168,85,247,0.6)]">
+          <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3 shadow-[0_18px_40px_-24px_rgba(168,85,247,0.6)]">
             <GoldCorners />
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
               — PREVIEW —
@@ -1416,7 +1415,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               emas, persis gaya referensi. ===== */}
           <div className="grid grid-cols-2 gap-2.5">
             {/* KIRI — photo profile + nama clan */}
-            <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
+            <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
               <GoldCorners />
               <p className="text-center text-[11px] font-black text-white/85">
                 Ganti photo profile
@@ -1427,7 +1426,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               >
                 <span
                   aria-hidden
-                  className="yn-ring-spin absolute inset-0 rounded-2xl bg-[conic-gradient(from_0deg,#fbbf24,#f472b6,#818cf8,#34d399,#fbbf24)]"
+                  className="absolute inset-0 rounded-2xl bg-[linear-gradient(160deg,#fbbf24,#f472b6_50%,#818cf8)]"
                 />
                 <span className="absolute inset-[3px] overflow-hidden rounded-[13px] bg-[#241640]">
                   {avatarUrl.trim() ? (
@@ -1507,7 +1506,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </div>
 
             {/* KANAN — tag clan + pilihan warna background tag */}
-            <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
+            <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
               <GoldCorners />
               <p className="text-center text-[11px] font-black text-white/85">
                 Isi tag clan
@@ -1559,7 +1558,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           </div>
 
           {/* ===== KOTAK ICON TAG CLAN ===== */}
-          <div className="relative overflow-hidden rounded-2xl border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] px-3 pb-3 pt-3">
+          <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] px-3 pb-3 pt-3">
             <GoldCorners />
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
               — ICON TAG CLAN —

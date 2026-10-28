@@ -82,7 +82,7 @@ export function GreetingBar() {
       <p className="text-center text-base font-black tracking-tight">
         {greetingOf()},{" "}
         <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
-          {name}
+          {name} Disini!
         </span>
       </p>
     </div>
@@ -277,35 +277,44 @@ export function TopAiringRow({
   if (items.length === 0) return null;
   return (
     <section className="fade-enter mt-5">
-      <h2 className="text-lg font-bold tracking-tight">Top Airing</h2>
-      <div className="thin-scroll -mx-1 mt-2 flex gap-2.5 overflow-x-auto px-1 pb-1">
+      <div className="flex items-center gap-2">
+        <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-amber-300 to-orange-500 shadow-[0_6px_16px_-8px_rgba(251,146,60,.9)]">
+          <Play className="size-3.5 text-black" />
+        </span>
+        <h2 className="text-lg font-bold tracking-tight">Top Airing</h2>
+        <span className="ml-auto flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-200">
+          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" /> On air
+        </span>
+      </div>
+      <div className="thin-scroll -mx-1 mt-2.5 flex gap-3 overflow-x-auto px-1 pb-1">
         {items.map((a) => (
           <button
             key={a.id}
             onClick={() => onPick(a.id, a.title)}
-            className="w-52 shrink-0 text-left"
+            className="w-44 shrink-0 text-left"
           >
-            <div className="relative h-32 overflow-hidden rounded-2xl border border-white/10 bg-black">
-              <img
-                src={a.image}
-                alt=""
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-              {/* Kotak bawah: transparan tapi masih kelihatan jelas. */}
-              <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2.5 pb-2 pt-2 backdrop-blur-[3px]">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1220] shadow-[0_16px_30px_-24px_rgba(0,0,0,.9)] transition hover:border-white/30">
+              {/* Banner + badge rating di pojok kanan atas */}
+              <div className="relative h-24 bg-black">
+                <img
+                  src={a.image}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-black text-amber-300 backdrop-blur">
+                  <Star className="size-3 fill-amber-300" />
+                  {(a.score ?? 0).toFixed(1)}
+                </span>
+              </div>
+              {/* Panel bawah TERPISAH: judul + jumlah nonton rapi */}
+              <div className="px-2.5 pb-2.5 pt-2">
                 <p className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
                   {a.title}
                 </p>
-                <p className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-white/75">
-                  <span className="flex items-center gap-1">
-                    <Star className="size-3 text-amber-300" />
-                    {(a.score ?? 0).toFixed(1)}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Play className="size-3 text-sky-300" />
-                    {fmtShort(viewsOf(a.id))}
-                  </span>
+                <p className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-white/55">
+                  <Play className="size-3 shrink-0 text-sky-300" />
+                  {fmtShort(viewsOf(a.id))} nonton
                 </p>
               </div>
             </div>
@@ -471,8 +480,7 @@ export function DailyQuestRow() {
             <div
               key={q.id}
               className={cn(
-                "flex w-52 shrink-0 flex-col rounded-2xl border border-white/10 bg-white/[0.05] p-2.5",
-                q.xp % 2 === 0 ? "yn-cut" : "yn-cut-alt",
+                "flex w-56 shrink-0 flex-col rounded-xl border border-dashed border-amber-300/35 bg-[linear-gradient(165deg,rgba(251,191,36,.10),rgba(17,12,26,.65))] p-2.5 shadow-[0_14px_30px_-24px_rgba(251,191,36,.7)]",
               )}
             >
               <div className="flex items-start gap-1.5">

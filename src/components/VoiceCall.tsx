@@ -22,7 +22,6 @@ import {
   Info,
   Link2,
   Lock,
-  LogOut,
   MessageCircle,
   Mic,
   MicOff,
@@ -184,16 +183,35 @@ function VoiceHomeScreen({
           </button>
         </div>
 
-        {/* SATU KOTAK: judul + status room online + tombol create, semua
-            rata TENGAH. */}
-        <div className="yn-cut mt-2 rounded-3xl border border-white/12 bg-white/[0.04] p-4 text-center">
-          <h1 className="text-lg font-black tracking-tight">
+        {/* SATU KOTAK PREMIUM: judul + status + tombol create, rata tengah. */}
+        <div className="relative mt-2 overflow-hidden rounded-3xl border border-emerald-400/30 bg-[linear-gradient(165deg,#0b1f1a_0%,#0d1420_55%,#0a0c12_100%)] p-5 text-center shadow-[0_26px_54px_-30px_rgba(16,185,129,.8)] yn-cut">
+          <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
+          <span aria-hidden className="absolute -left-12 -top-12 size-36 rounded-full bg-emerald-500/18 blur-3xl" />
+          <span aria-hidden className="absolute -bottom-16 -right-10 size-40 rounded-full bg-violet-500/15 blur-3xl" />
+          <span
+            aria-hidden
+            className="relative mx-auto flex h-12 items-center gap-1.5 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 shadow-[0_0_26px_-10px_rgba(16,185,129,.95)]"
+          >
+            {/* Equalizer hidup — pengganti medallion bulat yang itu-itu aja. */}
+            {[10, 22, 16, 28, 14, 24, 12].map((h, i) => (
+              <span
+                key={i}
+                className="w-1.5 rounded-full bg-gradient-to-t from-emerald-400 to-teal-200"
+                style={{
+                  height: h,
+                  animation: `eq-bar 1s ${i * 0.12}s ease-in-out infinite alternate`,
+                }}
+              />
+            ))}
+          </span>
+          <h1 className="relative mt-3 bg-gradient-to-r from-emerald-200 via-white to-teal-200 bg-clip-text text-xl font-black tracking-tight text-transparent">
             YoruNime Voice Call Room
           </h1>
-          <div className="mt-1 flex items-center justify-center gap-2 text-xs">
-            <span className="text-muted-foreground">pilih room untuk join</span>
-            <span className="text-white/30">•</span>
-            <span className="font-bold text-emerald-300">
+          <div className="relative mt-1.5 flex items-center justify-center gap-2 text-[11px]">
+            <span className="text-white/50">pilih room untuk join</span>
+            <span className="text-white/25">•</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/12 px-2 py-0.5 font-black text-emerald-200">
+              <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
               {list.length} room online
             </span>
           </div>
@@ -207,16 +225,25 @@ function VoiceHomeScreen({
               }
               onCreate();
             }}
-            className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-400/12 py-3.5 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20 active:scale-[0.98]"
+            className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-emerald-300 to-emerald-500 py-3.5 text-sm font-black text-black shadow-[0_16px_34px_-16px_rgba(16,185,129,.95)] transition hover:brightness-110 active:scale-[0.98]"
           >
-            <Plus className="size-4" /> Create Voice Room
+            <span className="flex size-6 items-center justify-center rounded-full bg-black/20">
+              <Plus className="size-4" />
+            </span>
+            Create Voice Room
+            <span className="rounded-full bg-black/15 px-2 py-0.5 text-[10px] font-black tracking-wider">
+              GRATIS
+            </span>
           </button>
         </div>
 
         {/* Kepala daftar room */}
-        <div className="mt-6 flex items-baseline justify-between">
-          <h2 className="text-base font-bold tracking-tight">Voice Room</h2>
-          <span className="text-[11px] text-muted-foreground">
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+            <h2 className="text-base font-black tracking-tight">Voice Room</h2>
+          </div>
+          <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-black text-emerald-200">
             {list.length} Room
           </span>
         </div>
@@ -240,29 +267,30 @@ function VoiceHomeScreen({
               return (
                 <div
                   key={r._id}
-                  className="yn-cut-alt rounded-2xl border border-white/10 bg-white/[0.04] p-3.5"
+                  className="relative overflow-hidden rounded-3xl border border-emerald-400/25 bg-[linear-gradient(160deg,#0b1a16_0%,#0d1220_58%,#0a0c12_100%)] p-4 shadow-[0_22px_46px_-30px_rgba(16,185,129,.75)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:shadow-[0_28px_56px_-30px_rgba(16,185,129,.9)] yn-cut-alt"
                 >
-                  <div className="flex items-center gap-3">
+                  <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
+                  <div className="relative flex items-center gap-3">
                     <span
                       className={cn(
-                        "flex size-12 shrink-0 items-center justify-center rounded-xl border",
+                        "flex size-14 shrink-0 items-center justify-center rounded-2xl border",
                         m.cls,
                       )}
                     >
-                      <m.Icon className="size-6" />
+                      <m.Icon className="size-7" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-black">{r.name}</p>
-                      <p className="text-xs text-muted-foreground">{m.label}</p>
+                      <p className="truncate text-lg font-black tracking-tight">{r.name}</p>
+                      <p className="truncate text-[11px] font-bold text-white/55">{m.label}</p>
                     </div>
                     <button
                       onClick={() => void join(r)}
                       disabled={locked || full}
                       className={cn(
-                        "shrink-0 rounded-xl px-4 py-2.5 text-xs font-black transition active:scale-95",
+                        "shrink-0 rounded-full px-5 py-2.5 text-xs font-black transition active:scale-95",
                         locked || full
                           ? "cursor-not-allowed bg-white/10 text-white/35"
-                          : "bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/50 hover:bg-emerald-500/30",
+                          : "bg-gradient-to-b from-emerald-300 to-emerald-500 text-black shadow-[0_10px_22px_-12px_rgba(16,185,129,.95)] hover:brightness-110",
                       )}
                     >
                       {full ? "Penuh" : locked ? "Private" : "Join"}
@@ -270,27 +298,26 @@ function VoiceHomeScreen({
                   </div>
 
                   {/* Garis pembatas agak pudar */}
-                  <div className="my-2.5 h-px w-full bg-gradient-to-r from-white/18 via-white/8 to-transparent" />
+                  <div className="relative my-3 h-px w-full bg-gradient-to-r from-white/20 via-white/8 to-transparent" />
 
-                  {/* Foto member di KIRI, jumlah user di kanan foto (bukan
-                      mentok kanan), tombol Join tetap paling kanan. */}
-                  <div className="flex items-center gap-2.5">
+                  {/* Foto member di KIRI, jumlah user menyusul (pill). */}
+                  <div className="relative flex items-center gap-2.5">
                     <div className="flex -space-x-2.5">
                       {(r.previews ?? []).map((p, i) => (
                         <Avatar
                           key={`${p.userId}-${i}`}
                           src={p.image}
                           seed={p.username}
-                          className="size-8 ring-2 ring-black"
+                          className="size-9 ring-2 ring-[#0b1018]"
                         />
                       ))}
                       {(r.previews ?? []).length === 0 && (
-                        <span className="flex size-8 items-center justify-center rounded-full bg-white/10 ring-2 ring-black">
+                        <span className="flex size-9 items-center justify-center rounded-full bg-white/10 ring-2 ring-[#0b1018]">
                           <Users className="size-4 text-white/50" />
                         </span>
                       )}
                     </div>
-                    <span className="text-xs font-bold text-white/70">
+                    <span className="rounded-full border border-emerald-400/30 bg-emerald-500/12 px-2.5 py-1 text-[11px] font-black text-emerald-100">
                       {r.count}/{r.maxUsers} User
                     </span>
                   </div>
@@ -374,25 +401,35 @@ function CreateRoomScreen({
           </svg>
         </button>
 
-        {/* Kepala layar */}
-        <div className="mt-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.34em] text-emerald-300/85">
-            YoruNime Voice
-          </p>
-          <h1 className="mt-1 bg-gradient-to-r from-emerald-200 via-white to-emerald-200 bg-clip-text text-2xl font-black tracking-tight text-transparent">
-            Buat Voice Room
+        {/* Kepala layar — medallion mic, TANPA ornamen garis berlian. */}
+        <div className="mt-4 flex flex-col items-center text-center">
+          <span className="relative flex size-16 items-center justify-center rounded-full border border-emerald-300/45 bg-[linear-gradient(to_bottom,rgba(52,211,153,.3),rgba(16,185,129,.08))] shadow-[0_0_30px_-8px_rgba(16,185,129,.9)]">
+            <Mic className="size-7 text-emerald-100" />
+            <span
+              aria-hidden
+              className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-[#0a0d12] bg-emerald-400"
+            />
+          </span>
+          <h1 className="mt-3 text-2xl font-black tracking-tight text-white">
+            Buat{" "}
+            <span className="text-emerald-300 drop-shadow-[0_0_14px_rgba(52,211,153,.6)]">
+              Voice Room
+            </span>
           </h1>
-          <div className="mt-2 flex items-center gap-2" aria-hidden>
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-emerald-400/55" />
-            <span className="size-1.5 rotate-45 bg-emerald-300/80" />
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-emerald-400/55" />
-          </div>
+          <p className="mt-1 text-[11px] font-semibold text-white/50">
+            Atur nama, jenis, kuota & privasi room kamu
+          </p>
         </div>
 
         <div className="relative mt-4 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(165deg,rgba(20,32,28,.92)_0%,rgba(13,15,22,.94)_60%,rgba(9,10,15,.96)_100%)] p-4 shadow-[0_28px_60px_-34px_rgba(16,185,129,.7)] backdrop-blur-xl">
           <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
           {/* Nama room */}
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300/80">Nama room</p>
+          <p className="flex items-center gap-2 text-[13px] font-black text-white/85">
+            <span className="flex size-5 items-center justify-center rounded-md bg-emerald-400/15 text-[10px] font-black text-emerald-300 ring-1 ring-emerald-400/40">
+              01
+            </span>
+            Nama room
+          </p>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -402,7 +439,12 @@ function CreateRoomScreen({
           />
 
           {/* Room type */}
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300/80">Room Type</p>
+          <p className="mt-4 flex items-center gap-2 text-[13px] font-black text-white/85">
+            <span className="flex size-5 items-center justify-center rounded-md bg-emerald-400/15 text-[10px] font-black text-emerald-300 ring-1 ring-emerald-400/40">
+              02
+            </span>
+            Room Type
+          </p>
           <button
             onClick={() => setTypeOpen((v) => !v)}
             className="mt-1.5 flex w-full items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-3 py-2.5 text-left"
@@ -462,7 +504,12 @@ function CreateRoomScreen({
           </AnimatePresence>
 
           {/* Max user */}
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300/80">Max user</p>
+          <p className="mt-4 flex items-center gap-2 text-[13px] font-black text-white/85">
+            <span className="flex size-5 items-center justify-center rounded-md bg-emerald-400/15 text-[10px] font-black text-emerald-300 ring-1 ring-emerald-400/40">
+              03
+            </span>
+            Max user
+          </p>
           <div className="mt-1.5 flex items-center justify-between rounded-xl border border-white/15 bg-black/40 px-2.5 py-2">
             <button
               onClick={() => setMax((v) => Math.max(1, v - 1))}
@@ -487,7 +534,12 @@ function CreateRoomScreen({
           </p>
 
           {/* Privasi room */}
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300/80">Privasi Room</p>
+          <p className="mt-4 flex items-center gap-2 text-[13px] font-black text-white/85">
+            <span className="flex size-5 items-center justify-center rounded-md bg-emerald-400/15 text-[10px] font-black text-emerald-300 ring-1 ring-emerald-400/40">
+              04
+            </span>
+            Privasi Room
+          </p>
           <div className="mt-1.5 space-y-2">
             <PrivacyBox
               active={privacy === "public"}
@@ -605,6 +657,8 @@ function RoomScreen({
   const room = useQuery(api.voice.roomDetail, { roomId });
   const leaveMut = useMutation(api.voice.leaveRoom);
   const [showInvite, setShowInvite] = useState(false);
+  // Minimize: perkecil room jadi pil kecil (mic & music tetap jalan).
+  const [minimized, setMinimized] = useState(false);
   const call = useVoiceCall(roomId, myId);
   // --- GAME (UNO / Catur) ---
   const [gameOpen, setGameOpen] = useState(false);
@@ -694,6 +748,21 @@ function RoomScreen({
   const alone = ordered.length <= 1;
   const m = metaOf(room.type);
 
+  // Room di-minimize — panggilan tetap hidup, tinggal ketuk pil untuk balik.
+  if (minimized) {
+    return (
+      <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[70] flex justify-center px-4">
+        <button
+          onClick={() => setMinimized(false)}
+          className="pointer-events-auto flex items-center gap-2 rounded-full border border-emerald-400/45 bg-[#0b1a14]/95 px-4 py-2.5 text-xs font-black text-emerald-100 shadow-[0_16px_36px_-18px_rgba(16,185,129,.9)] backdrop-blur-md transition active:scale-95"
+        >
+          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+          Voice Room — ketuk untuk kembali
+        </button>
+      </div>
+    );
+  }
+
   if (showInvite) {
     return (
       <InviteScreen
@@ -712,11 +781,11 @@ function RoomScreen({
       {/* Kepala room */}
       <div className="flex items-start gap-3 px-3 pt-3">
         <button
-          onClick={() => void leave()}
-          aria-label="Keluar room"
+          onClick={() => setMinimized(true)}
+          aria-label="Perkecil room"
           className="flex size-10 shrink-0 items-center justify-center text-white/85 transition active:scale-95"
         >
-          <LogOut className="size-5" />
+          <ChevronDown className="size-5" />
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-black">
@@ -1473,36 +1542,62 @@ function InviteScreen({
         <span className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.16),transparent_70%)]" />
       </div>
       <div className="relative w-full p-3 pb-16">
-        <div className="mb-4 flex items-center gap-2.5">
+        {/* KEPALA PREMIUM — medallion emas + judul di tengah. */}
+        <div className="mb-4 flex flex-col items-center text-center">
           <button
             onClick={onBack}
             aria-label="Kembali"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] transition hover:border-white/40 active:scale-95"
+            className="mb-1 self-start flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] transition hover:border-white/40 active:scale-95"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-base font-black tracking-tight">
-              Invite Private Room
-            </h1>
-            <p className="truncate text-[10px] font-bold text-gold/75">
-              Undang member · atur kuota · bagikan link
-            </p>
-          </div>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold shadow-[0_0_18px_-8px_rgba(251,191,36,0.9)]">
-            <UserPlus className="size-4" />
+          <span className="relative flex size-14 items-center justify-center rounded-full border border-gold/50 bg-[linear-gradient(to_bottom,rgba(251,191,36,.3),rgba(251,191,36,.08))] shadow-[0_0_30px_-8px_rgba(251,191,36,.95)]">
+            <UserPlus className="size-6 text-gold" />
           </span>
-        </div>
-        {/* Ornamen pembatas emas. */}
-        <div className="mb-4 flex items-center gap-2" aria-hidden>
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent to-gold/55" />
-          <span className="size-1.5 rotate-45 bg-gold/80" />
-          <span className="size-1 rotate-45 bg-gold/45" />
-          <span className="size-1.5 rotate-45 bg-gold/80" />
-          <span className="h-px flex-1 bg-gradient-to-l from-transparent to-gold/55" />
+          <h1 className="mt-2.5 text-lg font-black tracking-tight">
+            Invite Private Room
+          </h1>
+          <p className="mt-0.5 text-[11px] font-bold text-gold/75">
+            Undang member · atur kuota · bagikan link
+          </p>
+          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/12 px-3 py-1 text-[10px] font-black text-emerald-200">
+            <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+            {count} member di room
+          </span>
         </div>
 
         <div className="space-y-3">
+          {/* INVITE LINK — aksi utama, di paling atas. */}
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-400/30 bg-[linear-gradient(160deg,#0f241d_0%,#0f131b_60%,#0b0e14_100%)] p-4 shadow-[0_22px_48px_-30px_rgba(16,185,129,0.7)]">
+            <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
+            <p className="text-center text-sm font-black">Invite Link Mu!</p>
+            <div className="mt-2.5 flex items-center gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-black/45 px-3 py-3">
+                <Link2 className="size-3.5 shrink-0 text-emerald-300" />
+                <span className="truncate font-mono text-xs text-white/85">
+                  {link}
+                </span>
+              </div>
+              <button
+                onClick={() => void copy()}
+                aria-label="Salin link"
+                className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-400/12 transition hover:bg-emerald-400/20 active:scale-95"
+              >
+                {copied ? (
+                  <span className="text-emerald-300 text-xs font-black">OK</span>
+                ) : (
+                  <Copy className="size-4 text-emerald-200" />
+                )}
+              </button>
+            </div>
+            <button
+              onClick={() => void regenerate()}
+              disabled={busy}
+              className="mt-3 w-full rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 py-3 text-sm font-black text-black shadow-[0_18px_36px_-18px_rgba(251,191,36,.95)] transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+            >
+              {busy ? "Membuat…" : "Generate Link Baru"}
+            </button>
+          </div>
           {/* Kotak 1 — INVITE USER + MAX USER */}
           <div className="relative overflow-hidden rounded-3xl border border-sky-400/25 bg-[linear-gradient(160deg,#101d2e_0%,#0f131b_60%,#0b0e14_100%)] p-4 shadow-[0_22px_48px_-30px_rgba(56,189,248,0.8)] backdrop-blur-xl">
             <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent" />
@@ -1552,86 +1647,45 @@ function InviteScreen({
             </p>
           </div>
 
-          {/* Kotak 2 — PERSONAL INVITE (one time) */}
-          <div className="relative overflow-hidden rounded-3xl border border-rose-400/25 bg-[linear-gradient(160deg,#2a1220_0%,#151019_60%,#0b0e14_100%)] p-4 shadow-[0_22px_48px_-30px_rgba(244,63,94,0.7)] backdrop-blur-xl">
-            <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-rose-300/70 to-transparent" />
-            <div className="flex items-center gap-2">
-              <span className="flex size-9 items-center justify-center rounded-xl border border-rose-400/45 bg-rose-400/12 text-rose-300 shadow-[0_0_18px_-8px_rgba(244,63,94,.9)]">
-                <UserPlus className="size-4" />
-              </span>
-              <p className="flex-1 text-sm font-black">Personal Invite</p>
-              <span className="rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-[10px] font-black text-white/85">
-                One time
-              </span>
-            </div>
-            <p className="mt-2 text-[10px] leading-snug text-white/55">
-              Valid untuk digunakan sekali. link expired ketika sudah digunakan
-              dan join.
-            </p>
-            <p className="mt-1.5 text-[10px] font-bold text-amber-300">
-              {hasOneTime ? "Link personal aktif" : "Belum dibuat"}
-            </p>
-          </div>
-
-          {/* Kotak 3 — TIP */}
-          <div className="relative overflow-hidden rounded-3xl border border-amber-400/25 bg-[linear-gradient(160deg,#241a08_0%,#14101f_60%,#0b0e14_100%)] p-4 shadow-[0_22px_48px_-30px_rgba(251,191,36,0.6)] backdrop-blur-xl">
-            <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
-            <div className="flex items-center gap-2">
-              <span className="flex size-9 items-center justify-center rounded-xl border border-amber-400/45 bg-amber-400/12 text-amber-300 shadow-[0_0_18px_-8px_rgba(251,191,36,.9)]">
-                <Sparkles className="size-4" />
-              </span>
-              <p className="text-sm font-black">Tip: Grup vs Personal</p>
-            </div>
-            <p className="mt-2.5 text-xs font-black text-amber-200">Grup Invite</p>
-            <p className="text-[10px] leading-snug text-white/55">
-              Bagus untuk komunikasi, reusable sampai jumlah max user. Semua
-              yang join lewat link ini akan ditambahkan ke room.
-            </p>
-            <p className="mt-2.5 text-xs font-black text-amber-200">
-              Personal Invite
-            </p>
-            <p className="text-[10px] leading-snug text-white/55">
-              Bagus untuk invite 1 orang, link akan expired ketika sudah
-              digunakan.
-            </p>
-          </div>
-
-          {/* INVITE LINK */}
-          <div>
-            <p className="text-xs font-bold text-white/70">Invite Link</p>
-            <div className="relative mt-1.5 overflow-hidden rounded-3xl border border-emerald-400/25 bg-[linear-gradient(160deg,#0f241d_0%,#0f131b_60%,#0b0e14_100%)] p-4 shadow-[0_22px_48px_-30px_rgba(16,185,129,0.7)] backdrop-blur-xl">
-              <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
-              <p className="text-sm font-black">Invite Link Mu!</p>
-              <div className="mt-2 flex items-center gap-2">
-                <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-black/45 px-3 py-3">
-                  <Link2 className="size-3.5 shrink-0 text-emerald-300" />
-                  <span className="truncate font-mono text-xs text-white/85">
-                    {link}
-                  </span>
-                </div>
-                <button
-                  onClick={() => void copy()}
-                  aria-label="Salin link"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-400/12 transition hover:bg-emerald-400/20 active:scale-95"
-                >
-                  {copied ? (
-                    <span className="text-emerald-300 text-xs font-black">OK</span>
-                  ) : (
-                    <Copy className="size-4 text-emerald-200" />
-                  )}
-                </button>
+          {/* PERSONAL + TIP — dua kotak ringkas, berdampingan di layar lebar. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-rose-400/25 bg-[#190e15] p-3.5">
+              <div className="flex items-center gap-2">
+                <span className="flex size-9 items-center justify-center rounded-xl border border-rose-400/45 bg-rose-400/12 text-rose-300">
+                  <UserPlus className="size-4" />
+                </span>
+                <p className="flex-1 text-sm font-black">Personal Invite</p>
+                <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[9px] font-black text-white/85">
+                  One time
+                </span>
               </div>
+              <p className="mt-2 text-[10px] leading-snug text-white/55">
+                Valid untuk digunakan sekali. Link expired ketika sudah
+                digunakan dan join.
+              </p>
+              <p className="mt-1.5 text-[10px] font-bold text-amber-300">
+                {hasOneTime ? "Link personal aktif" : "Belum dibuat"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5">
+              <div className="flex items-center gap-2">
+                <span className="flex size-9 items-center justify-center rounded-xl border border-amber-400/45 bg-amber-400/12 text-amber-300">
+                  <Sparkles className="size-4" />
+                </span>
+                <p className="text-sm font-black">Tip: Grup vs Personal</p>
+              </div>
+              <p className="mt-2 text-[11px] font-black text-amber-200">Grup Invite</p>
+              <p className="text-[10px] leading-snug text-white/55">
+                Reusable sampai max user — semua yang join ditambahkan ke room.
+              </p>
+              <p className="mt-1.5 text-[11px] font-black text-amber-200">Personal Invite</p>
+              <p className="text-[10px] leading-snug text-white/55">
+                Untuk 1 orang, link expired setelah dipakai.
+              </p>
             </div>
           </div>
 
-          {/* GENERATE LINK BARU — CTA emas */}
-          <button
-            onClick={() => void regenerate()}
-            disabled={busy}
-            className="w-full rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 py-3.5 text-sm font-black text-black shadow-[0_18px_36px_-18px_rgba(251,191,36,.95)] transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
-          >
-            {busy ? "Membuat…" : "Generate Link Baru"}
-          </button>
+
         </div>
       </div>
     </div>

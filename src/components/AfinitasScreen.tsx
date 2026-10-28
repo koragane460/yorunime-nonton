@@ -278,6 +278,30 @@ export function AfinitasScreen({
       }
     });
 
+  /** Garis EKG (garis rumah sakit) + titik kecil melintas — aksen kotak top. */
+  const ecg = (mirror = false) => {
+    const d = "M0 8 H10 L13 3 L16 13 L19 8 H26 L29 4 L32 12 L35 8 H46";
+    return (
+      <svg
+        viewBox="0 0 46 16"
+        className={cn("h-4 w-10 text-rose-400", mirror && "-scale-x-100")}
+        fill="none"
+        aria-hidden
+      >
+        <path
+          d={d}
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          opacity="0.75"
+        />
+        <circle r="1.7" fill="currentColor">
+          <animateMotion dur="2.2s" repeatCount="indefinite" path={d} />
+        </circle>
+      </svg>
+    );
+  };
+
   if (st == null || target === undefined) {
     return (
       <div className="fixed inset-0 z-[85] flex items-center justify-center bg-background text-sm font-bold text-muted-foreground">
@@ -301,8 +325,8 @@ export function AfinitasScreen({
             </button>
             <p className="text-sm font-black">Leaderboard Bond</p>
           </div>
-          {/* Tab jenis relasi */}
-          <div className="flex gap-1.5 overflow-x-auto px-3 py-2.5">
+          {/* Tab jenis relasi — SEMUA kelihatan dalam satu pandangan */}
+          <div className="grid grid-cols-4 gap-1.5 px-3 py-2.5">
             {LB_ORDER.map((k) => {
               const m = KIND_META[k];
               return (
@@ -310,20 +334,85 @@ export function AfinitasScreen({
                   key={k}
                   onClick={() => setLbKind(k)}
                   className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black transition",
+                    "flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1.5 text-[9px] font-black leading-tight transition",
                     lbKind === k
                       ? cn("border-current bg-white/10", m.cls)
-                      : "border-white/15 text-zinc-400",
+                      : "border-white/12 text-zinc-400",
                   )}
                 >
                   <m.Icon className="size-3.5" />
-                  {m.label}
+                  <span className="text-center">{m.label}</span>
                 </button>
               );
             })}
           </div>
 
-          <div className="space-y-2 px-3">
+          {/* KOTAK TOP 1-3 — angka rank mewah, hati dikelilingi garis EKG
+              kiri & kanan dengan titik yang melintas, jarak lebih lega. */}
+          {(lb?.length ?? 0) > 0 && (
+            <div className="space-y-3.5 px-3 pt-1">
+              {lb!.slice(0, 3).map((r: any, i: number) => (
+                <motion.div
+                  key={`top-${r.linkId}`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06, duration: 0.3 }}
+                  className={cn(
+                    "relative flex items-center gap-2.5 overflow-hidden rounded-2xl border p-3",
+                    i === 0
+                      ? "border-amber-300/55 bg-[linear-gradient(150deg,rgba(251,191,36,.16),rgba(16,19,26,.92))] shadow-[0_18px_36px_-26px_rgba(251,191,36,.8)]"
+                      : "border-white/12 bg-white/[0.05]",
+                    r.isMine && KIND_META[lbKind].cls,
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "w-8 shrink-0 text-center text-xl font-black tabular-nums",
+                      i === 0
+                        ? "bg-gradient-to-b from-amber-200 to-amber-500 bg-clip-text text-transparent"
+                        : i === 1
+                          ? "text-zinc-300"
+                          : "text-orange-400/85",
+                    )}
+                  >
+                    #{i + 1}
+                  </span>
+                  <Avatar
+                    src={r.owner.image}
+                    seed={r.owner.username}
+                    className="size-10 shrink-0 ring-2 ring-white/30"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-black text-white">
+                      {r.owner.username}
+                    </p>
+                    <p className="truncate text-[10px] font-bold text-zinc-400">
+                      {r.partner.username}
+                    </p>
+                  </div>
+                  {/* Hati di tengah + garis EKG bergerak di kedua sisi */}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {ecg()}
+                    <KindIcon
+                      kind={lbKind}
+                      className={cn("size-4", KIND_META[lbKind].cls)}
+                    />
+                    <span className="text-[10px] font-black text-white/85">
+                      {r.xp.toLocaleString("id-ID")}
+                    </span>
+                    {ecg(true)}
+                  </div>
+                  <Avatar
+                    src={r.partner.image}
+                    seed={r.partner.username}
+                    className="size-10 shrink-0 ring-2 ring-white/20"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-2 px-3 pt-3">
             {lb === undefined && (
               <p className="py-10 text-center text-xs text-zinc-500">Memuat…</p>
             )}
@@ -333,7 +422,7 @@ export function AfinitasScreen({
                 leaderboard.
               </p>
             )}
-            {lb?.map((r: any, i: number) => (
+            {lb?.slice(3).map((r: any, i: number) => (
               <div
                 key={r.linkId}
                 className={cn(
@@ -347,7 +436,7 @@ export function AfinitasScreen({
                 {/* Kiri: foto + username pemilik */}
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="w-5 shrink-0 text-center text-[12px] font-black text-zinc-500">
-                    {i + 1}
+                    {i + 4}
                   </span>
                   <Avatar
                     src={r.owner.image}
@@ -757,9 +846,9 @@ export function AfinitasScreen({
               <p className="text-center text-sm font-black text-white">
                 Afinitas Bond
               </p>
-              {/* 4 jenis — Lover di kiri atas */}
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {SHEET_ORDER.map((k) => {
+              {/* HANYA jenis sesuai bulatan yang dipencet — tanpa pemilih 4 buletan */}
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                {SHEET_ORDER.filter((k) => k === pickKind).map((k) => {
                   const meta = KIND_META[k];
                   return (
                     <button

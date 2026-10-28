@@ -517,10 +517,11 @@
 /* Radius default lewat :where() (specificity 0) supaya utility
    rounded-* di elemen tetap menang kalau mau ukuran berbeda. */
 :where(.yn-cut, .yn-cut-alt) {
-  border-radius: 11px;
+  /* Notch KECIL — aksen halus, bukan lekukan besar. */
+  border-radius: 6px;
 }
 :where(.yn-cut-sm) {
-  border-radius: 8px;
+  border-radius: 5px;
 }
 /* Glow tipis opsional untuk kotak yang mau terlihat premium. */
 .yn-glow {
@@ -532,6 +533,59 @@
   box-shadow:
     0 0 26px -14px rgb(244 114 182 / 0.95),
     0 14px 34px -22px rgb(0 0 0 / 0.9);
+}
+/* --- Ekor pesan ala WhatsApp: sisi bawah miring ke arah pengirim --- */
+.bubble-mine,
+.bubble-mine-alt,
+.bubble-mine-am {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0 100%
+  );
+}
+.bubble-other,
+.bubble-other-alt,
+.bubble-other-am {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    9px 100%,
+    0 calc(100% - 9px)
+  );
+}
+/* Fade in per baris (lirik, notifikasi join/keluar) */
+@keyframes yn-fade-line {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.yn-fade-line {
+  animation: yn-fade-line 0.5s ease both;
+}
+/* EKG di kotak podium: garis bergerak + titik ikut lintasan */
+@keyframes yn-ecg-run {
+  to {
+    stroke-dashoffset: -160;
+  }
+}
+.yn-ecg-line {
+  stroke-dasharray: 8 4;
+  animation: yn-ecg-run 2.8s linear infinite;
+}
+/* Equalizer equalizer lobi Voice Room */
+@keyframes eq-bar {
+  to {
+    transform: scaleY(0.35);
+  }
 }
 
 /* Scroll horizontal tanpa scrollbar terlihat (hero, chip, dll). */

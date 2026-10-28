@@ -577,6 +577,14 @@ export function ChatPanel({
     [onSend, replyTo],
   );
 
+  // Cooldown DM: hitung mundur tampil di kiri atas kolom input.
+  const [cdLeft, setCdLeft] = useState(0);
+  useEffect(() => {
+    if (cdLeft <= 0) return;
+    const t = setTimeout(() => setCdLeft((v) => Math.max(0, v - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [cdLeft]);
+
   const submit = async () => {
     if (muted) {
       toast.error("Kamu sedang dimute, tidak bisa mengirim pesan");
@@ -588,6 +596,7 @@ export function ChatPanel({
     // Chat teman (DM): cooldown10 detik sebelum bisa kirim lagi.
     if (peerId && lastDmAt.current && now - lastDmAt.current < 10000) {
       const sisa = Math.ceil((10000 - (now - lastDmAt.current)) / 1000);
+      setCdLeft(sisa);
       toast.info(`Cooldown chat ${sisa}s lagi`);
       return;
     }
@@ -598,7 +607,10 @@ export function ChatPanel({
     setText("");
     try {
       await send({ text: t });
-      if (peerId) lastDmAt.current = Date.now();
+      if (peerId) {
+        lastDmAt.current = Date.now();
+        setCdLeft(10);
+      }
     } catch (e) {
       // Kegagalan: kembalikan teks DAN buka lagi penjaga ketukan dobel,
       // supaya kirim ulang yang segera setelahnya tidak diblokir diam-diam.
@@ -826,6 +838,13 @@ export function ChatPanel({
             >
               <X className="size-4" />
             </button>
+          </div>
+        )}
+        {/* Countdown cooldown DM — kiri atas kolom kirim pesan */}
+        {peerId && cdLeft > 0 && (
+          <div className="mb-1.5 flex w-fit items-center gap-1.5 rounded-full border border-amber-300/35 bg-amber-400/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-200">
+            <span className="size-1.5 animate-pulse rounded-full bg-amber-300" />
+            Cooldown chat · {cdLeft}
           </div>
         )}
         <div className="flex items-center gap-2">

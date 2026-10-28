@@ -15,6 +15,14 @@ import { Avatar, BlueCheck, ClanTag, PurpleCheck } from "@/components/lstream-ui
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { useAuth } from "@/hooks/use-auth";
 import { Music, Send, X } from "lucide-react";
+import {
+  lunaPause,
+  lunaPlay,
+  lunaResume,
+  lunaSeen,
+  lunaSetVolume,
+  lunaStop,
+} from "@/lib/lunaAudio";
 
 /** Avatar Luna Bot — bulan sabit gradasi violet + bintang, tanpa foto external. */
 function LunaAvatar({ className = "size-8" }: { className?: string }) {
@@ -45,17 +53,62 @@ function LunaAvatar({ className = "size-8" }: { className?: string }) {
   );
 }
 
-/** Kartu kaset now-playing: poster berputar + judul + pembuat + bar jalan. */
+/** Kartu kaset now-playing — KOTAK VERTIKAL: kaset+poster di tengah atas,
+ *  judul & pembuat, lirik fade per baris, lalu bar + menit di bawah. */
 function NowPlayingCard({ d }: { d: any }) {
   const t = d.track ?? {};
   const preview = !!t.preview;
-  const effMs = preview ? 30000 : Number(t.durationMs || 30000);
+  const totalSec = Math.max(
+    1,
+    preview ? 30 : Math.round(Number(t.durationMs || 30000) / 1000),
+  );
   const art = t.art || "";
+  const getLyrics = useAction(api.music.lyrics);
+  // Jam berjalan (tick 500ms) — sumber waktu untuk bar, menit & lirik.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick((v) => v + 1), 500);
+    return () => clearInterval(iv);
+  }, []);
+  const elapsed = Math.min(totalSec, Math.floor(tick / 2));
+  // Lirik diambil sekali; baris aktif diganti bertahap dengan fade in.
+  const [lines, setLines] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!t.title) return;
+    let alive = true;
+    void getLyrics({
+      artist: t.artist ?? "",
+      track: t.title,
+      durationSec: totalSec,
+    })
+      .then((r: any) => {
+        if (!alive) return;
+        const l: string[] | null =
+          r?.synced?.map((x: any) => x.text) ?? r?.plain ?? null;
+        if (l && l.length) setLines(l);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const idx =
+    lines && lines.length
+      ? Math.min(
+          lines.length - 1,
+          Math.floor((elapsed / totalSec) * lines.length),
+        )
+      : -1;
+  const lyric = idx >= 0 ? lines![idx] : null;
+  const fmt = (s: number) =>
+    `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const pct = Math.min(100, (elapsed / totalSec) * 100);
   return (
-    <div className="mb-1.5 w-fit max-w-[260px] overflow-hidden rounded-2xl border border-violet-400/25 bg-[linear-gradient(150deg,#241a3d_0%,#141126_60%,#0d0b16_100%)] shadow-[0_14px_34px_-20px_rgba(139,92,246,0.9)]">
-      <div className="flex items-center gap-2.5 p-2.5">
+    <div className="mb-1.5 flex w-[244px] flex-col items-center rounded-2xl border border-violet-400/25 bg-[linear-gradient(150deg,#241a3d_0%,#141126_60%,#0d0b16_100%)] px-4 pb-3 pt-4 shadow-[0_14px_34px_-20px_rgba(139,92,246,0.9)]">
+      <div className="flex flex-col items-center">
         {/* Kaset puter: poster di tengah piringan berputar */}
-        <span className="relative size-12 shrink-0">
+        <span className="relative size-24 shrink-0">
           <span
             className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#1b1b22,#3f3f4d,#131318,#4b4b5c,#1b1b22)] animate-[spin_4s_linear_infinite]"
             aria-hidden
@@ -72,25 +125,35 @@ function NowPlayingCard({ d }: { d: any }) {
           )}
           <span className="absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" aria-hidden />
         </span>
-        <div className="min-w-0">
-          <p className="truncate text-[11px] font-black text-white">
+        <div className="mt-2.5 min-w-0 max-w-full text-center">
+          <p className="truncate text-[13px] font-black text-white">
             {t.title ?? "—"}
           </p>
-          <p className="truncate text-[10px] font-semibold text-violet-200/80">
+          <p className="truncate text-[11px] font-semibold text-violet-200/80">
             {t.artist ?? ""}
           </p>
         </div>
       </div>
-      {/* Bar lagu berjalan */}
-      <div className="px-2.5 pb-2.5">
-        <div className="h-1 overflow-hidden rounded-full bg-white/15">
+      {/* Lirik — SATU baris per giliran, fade in */}
+      <div className="mt-2.5 flex h-7 w-full items-center justify-center px-1">
+        <p
+          key={`${idx}-${lyric ?? ""}`}
+          className="yn-fade-line line-clamp-1 text-center text-[11px] font-semibold italic text-violet-100/85"
+        >
+          {lyric ?? "♪ …"}
+        </p>
+      </div>
+      {/* Bar lagu + menit (sekarang / total) */}
+      <div className="mt-1 w-full">
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-300"
-            style={{
-              animation: `luna-np ${effMs}ms linear forwards`,
-              width: "0%",
-            }}
+            className="h-full rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-300 transition-[width] duration-500 ease-linear"
+            style={{ width: `${pct}%` }}
           />
+        </div>
+        <div className="mt-1 flex items-center justify-between text-[9px] font-black text-white/55">
+          <span>{fmt(elapsed)}</span>
+          <span>{fmt(totalSec)}</span>
         </div>
       </div>
     </div>
@@ -125,54 +188,37 @@ export function VoiceChatSheet({
   const endRef = useRef<HTMLDivElement | null>(null);
   const count = msgs?.length ?? 0;
 
-  // Pemutar audio Luna Bot (pratinjau lagu benar-benar bunyi di room ini).
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const seenRef = useRef<Set<string>>(new Set());
+  // Audio dipegang modul lunaAudio — musik tetap bunyi walau panel ditutup.
 
   // Selalu pipih ke bawah — pesan baru langsung terlihat.
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [count]);
 
-  // Reaksi terhadap pesan bot: putar lagu, pause/resume/stop/skip.
+  // Reaksi terhadap pesan bot: putar lagu, pause/resume/stop/skip/volume.
+  // Pesan LAMA tidak diproses ulang walau panel dibuka lagi (lunaSeen).
   useEffect(() => {
     if (!msgs) return;
     for (const m of msgs) {
       const d: any = m.botData;
       if (!m.bot || !d) continue;
-      if (seenRef.current.has(String(m._id))) continue;
-      seenRef.current.add(String(m._id));
-      const a = audioRef.current;
+      if (lunaSeen(String(m._id))) continue;
+      const vol = Math.max(0, Math.min(1, (d.volume ?? 80) / 100));
       if (d.kind === "np" && d.track?.preview) {
-        a?.pause();
-        const na = new Audio(d.track.preview);
-        na.volume = Math.max(0, Math.min(1, (d.volume ?? 80) / 100));
-        audioRef.current = na;
-        void na.play().catch(() => {});
+        lunaPlay(d.track.preview, vol);
       } else if (d.kind === "control") {
-        if (d.action === "pause") a?.pause();
-        else if (d.action === "resume") void a?.play().catch(() => {});
-        else if (d.action === "stop") {
-          a?.pause();
-          audioRef.current = null;
-        } else if (d.action === "skip" && d.track?.preview) {
-          a?.pause();
-          const na = new Audio(d.track.preview);
-          na.volume = Math.max(0, Math.min(1, 80 / 100));
-          audioRef.current = na;
-          void na.play().catch(() => {});
+        if (d.action === "pause") lunaPause();
+        else if (d.action === "resume") lunaResume();
+        else if (d.action === "stop") lunaStop();
+        else if (d.action === "volume") lunaSetVolume(vol);
+        else if (d.action === "skip" && d.track?.preview) {
+          lunaPlay(d.track.preview, vol);
         }
       }
     }
   }, [msgs]);
-
-  // Berhentikan audio saat panel ditutup.
-  useEffect(() => {
-    return () => {
-      audioRef.current?.pause();
-      audioRef.current = null;
-    };
-  }, []);
+  // TIDAK ada cleanup yang mematikan audio: musik tetap terdengar di room
+  // walau chat room ditutup / dibuka lagi.
 
   const submit = async () => {
     const t = text.trim();
@@ -277,7 +323,7 @@ export function VoiceChatSheet({
                         className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
                       />
                     )}
-                    {!mine && typeof m.seqId === "number" && (
+                    {!mine && !m.bot && typeof m.seqId === "number" && (
                       <span className="text-[9px] font-bold text-white/35">
                         #{m.seqId}
                       </span>
@@ -289,8 +335,8 @@ export function VoiceChatSheet({
                   <div
                     className={`mt-1 w-fit max-w-full rounded-2xl px-3 py-2 text-[12px] leading-snug text-white/90 ${
                       mine
-                        ? "rounded-tr-md bg-gradient-to-b from-indigo-500/70 to-indigo-700/70 text-white"
-                        : "rounded-tl-md bg-white/12"
+                        ? "bubble-mine rounded-tr-md bg-gradient-to-b from-indigo-500/70 to-indigo-700/70 text-white"
+                        : "bubble-other rounded-tl-md bg-white/12"
                     }`}
                   >
                     <span className="whitespace-pre-wrap break-words">{m.text}</span>

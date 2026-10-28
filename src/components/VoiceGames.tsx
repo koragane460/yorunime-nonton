@@ -634,7 +634,12 @@ function LobbyView({
       </div>
 
       {/* Kursi pemain */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div
+        className={cn(
+          "mt-4 grid gap-3",
+          seats.length <= 4 ? "grid-cols-2" : "grid-cols-3",
+        )}
+      >
         {seats.map((_, i) => {
           const p = s.players[i];
           return (
@@ -868,8 +873,8 @@ function UnoTable({
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">{/* Lawan */}
-      <div className="thin-scroll flex gap-2 overflow-x-auto px-3 py-2">
+    <div className="relative flex min-h-0 flex-1 flex-col">{/* Lawan — rata tengah, wrap untuk 3-5 pemain */}
+      <div className="flex flex-wrap justify-center gap-2 px-3 py-2">
         {opponents.map((p) => {
           const count = uno.counts[p.userId] ?? 0;
           const active = uno.turn === p.userId;
@@ -1032,8 +1037,8 @@ function UnoTable({
         </div>
       </div>
 
-      {/* Tangan saya — kartu menyebar MIRING dari kiri, ketuk judulnya
-          untuk membuka jadi barisan lurus. */}
+      {/* Tangan saya — menyebar MIRING dari kiri; ketuk judul untuk
+          keluar SEMUA kartu berjejer barisan (wrap, muat berbagai baris). */}
       <div className="border-t border-white/10 px-3 pb-6 pt-3">
         <button
           type="button"
@@ -1042,32 +1047,43 @@ function UnoTable({
         >
           Kartu kamu · {myHand.length} {fan ? "· ketuk untuk barisan" : "· ketuk untuk menyebar"}
         </button>
-        <div className="thin-scroll flex items-end gap-0.5 overflow-x-auto pb-1 pt-4">
+        <div
+          className={cn(
+            "thin-scroll flex items-end pb-1 pt-4",
+            fan ? "gap-0.5 overflow-x-auto" : "flex-wrap justify-center gap-2",
+          )}
+        >
           {myHand.map((c, i) => {
             const mid = (myHand.length - 1) / 2;
             const rot = fan ? (i - mid) * 3.6 : 0;
             const lift = fan ? Math.abs(i - mid) * 3 : 0;
             return (
-              <span
+              <motion.span
+                layout
                 key={`${c}-${i}`}
-                className="shrink-0 transition-transform duration-300"
+                transition={{ type: "spring", stiffness: 300, damping: 26 }}
+                className="shrink-0"
                 style={{
-                  transform: `translateY(${lift}px) rotate(${rot}deg)`,
-                  marginLeft: i === 0 ? 0 : fan ? -14 : 8,
+                  marginLeft: i === 0 ? 0 : fan ? -14 : 0,
                   zIndex: i,
                 }}
               >
-                <UnoCard
-                  c={c}
-                  onClick={() => void play(i)}
-                  disabled={!myTurn || !canPlayClient(c, uno.top, uno.color)}
-                  className={cn(
-                    !myTurn || !canPlayClient(c, uno.top, uno.color)
-                      ? "opacity-45 grayscale-[0.35]"
-                      : "ring-2 ring-amber-300/80",
-                  )}
-                />
-              </span>
+                <span
+                  className="block transition-transform duration-300"
+                  style={{ transform: `translateY(${lift}px) rotate(${rot}deg)` }}
+                >
+                  <UnoCard
+                    c={c}
+                    onClick={() => void play(i)}
+                    disabled={!myTurn || !canPlayClient(c, uno.top, uno.color)}
+                    className={cn(
+                      !myTurn || !canPlayClient(c, uno.top, uno.color)
+                        ? "opacity-45 grayscale-[0.35]"
+                        : "ring-2 ring-amber-300/80",
+                    )}
+                  />
+                </span>
+              </motion.span>
             );
           })}
           {myHand.length === 0 && (
@@ -1479,6 +1495,70 @@ function SnakesTable({
   const nameOf = (id: string) =>
     s.players.find((p) => p.userId === id)?.username ?? "…";
 
+  // Posisi TAMPIL per pemain — dijalankan LANGKAH DEMI LANGKAH mengikuti
+  // jalur petak (boustrophedon: kanan → atas → kiri → atas → kanan …),
+  // jadi token berjalan, bukan teleport.
+  const [anim, setAnim] = useState<Record<string, number>>({});
+  const prevPos = useRef<Record<string, number> | null>(null);
+  useEffect(() => {
+    const cur = st.pos;
+    const prev = prevPos.current;
+    prevPos.current = cur;
+    if (!prev) return;
+    const touched = new Set<string>();
+    const timers: number[] = [];
+    for (const p of s.players) {
+      const from = prev[p.userId] ?? 0;
+      const to = cur[p.userId] ?? 0;
+      if (from < 1 || from === to) continue;
+      touched.add(p.userId);
+      const up = to > from;
+      // Naik (dadu) jalan pelan-pelan; kena ular meluncur cepat turun.
+      const stepMs = up ? 210 : 80;
+      const path: number[] = [];
+      if (up) for (let n = from + 1; n <= to; n++) path.push(n);
+      else for (let n = from - 1; n >= to; n--) path.push(n);
+      if (path.length > 0) {
+        // Langkah pertama langsung diset supaya token nggak nongol di
+        // petak tujuan akhir dulu sebelum mulai berjalan.
+        const first = path[0];
+        setAnim((a) => ({ ...a, [p.userId]: first }));
+      }
+      path.forEach((n, i) => {
+        timers.push(
+          window.setTimeout(
+            () => setAnim((a) => ({ ...a, [p.userId]: n })),
+            stepMs * i,
+          ),
+        );
+      });
+      timers.push(
+        window.setTimeout(
+          () =>
+            setAnim((a) => {
+              const c = { ...a };
+              delete c[p.userId];
+              return c;
+            }),
+          stepMs * path.length + 260,
+        ),
+      );
+    }
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      // Roll berikutnya menggantikan animasi lama — buang sisanya supaya
+      // token tidak tertinggal di posisi basi.
+      if (touched.size > 0) {
+        setAnim((a) => {
+          const c = { ...a };
+          for (const k of touched) delete c[k];
+          return c;
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [st.pos]);
+
   const roll = async () => {
     if (!myTurn || rolling) return;
     setRolling(true);
@@ -1645,13 +1725,13 @@ function SnakesTable({
           })}
         </svg>
 
-        {/* Token pemain di petak mereka */}
+        {/* Token pemain di petak mereka (animasi langkah demi langkah) */}
         {s.players.map((p, idx) => {
-          const n = st.pos[p.userId] ?? 0;
+          const n = anim[p.userId] ?? st.pos[p.userId] ?? 0;
           if (n < 1) return null;
           const c = cellPct(n);
           const same = s.players.filter(
-            (q) => (st.pos[q.userId] ?? 0) === n,
+            (q) => (anim[q.userId] ?? st.pos[q.userId] ?? 0) === n,
           );
           const k = same.findIndex((q) => q.userId === p.userId);
           const ox = same.length > 1 ? ((k % 2) * 2 - 1) * 2.2 : 0;
@@ -1660,7 +1740,7 @@ function SnakesTable({
           return (
             <span
               key={p.userId}
-              className="absolute z-[2] -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-700 ease-in-out"
+              className="absolute z-[2] -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-[200ms] ease-in-out"
               style={{ left: `${c.x + ox}%`, top: `${c.y + oy}%` }}
             >
               <Avatar

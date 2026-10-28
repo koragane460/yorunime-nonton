@@ -581,7 +581,11 @@ export const luna = action({
           return;
         }
         await save({ volume: n });
-        await post(`🔊 Volume: ${n}%`);
+        await post(`🔊 Volume: ${n}%`, {
+          kind: "control",
+          action: "volume",
+          volume: n,
+        });
         return;
       }
       case "bassboost":
