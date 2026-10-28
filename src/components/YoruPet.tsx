@@ -290,7 +290,9 @@ export function YoruPetScreen({
             menyatu/bergantung ke background hutan di belakangnya —
             background hutan dan background tampilan dibuat BEDA. */}
         <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-4">
-          <div className="relative h-72 w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 shadow-[0_28px_64px_-30px_rgba(0,0,0,.98)]">
+          {/* Panggung TANPA kotak pembatas — hanya background, pet
+              berdiri langsung di atasnya (permintaan user). */}
+          <div className="relative h-72 w-full max-w-2xl overflow-hidden">
             {/* ---- LAPISAN LANGIT (scene) ---- */}
             <div
               className={cn("absolute inset-0 bg-gradient-to-b", scene.sky)}
@@ -303,15 +305,17 @@ export function YoruPetScreen({
                 className="absolute inset-0 size-full object-cover"
               />
             )}
-            {/* Sinar matahari/bulan + glow emas lembut. */}
+            {/* Sinar matahari/bulan — halus, tanpa glow menyilaukan. */}
             <span
               aria-hidden
-              className="absolute -right-12 -top-14 size-44 rounded-full bg-white/30 blur-3xl"
+              className="absolute -right-10 -top-12 size-32 rounded-full bg-white/15 blur-2xl"
             />
             <span
               aria-hidden
-              className="absolute left-1/2 top-4 size-44 -translate-x-1/2 rounded-full bg-gold/20 blur-3xl"
+              className="absolute left-1/2 top-4 size-36 -translate-x-1/2 rounded-full bg-gold/10 blur-2xl"
             />
+            {/* Hiasan khas scene — dahan melengkung + detail beranimasi. */}
+            <SceneDecor key={scene.id} id={scene.id} />
 
             {/* ---- DUA LAPIS BUKIT JAUH (siluet) ---- */}
             <svg
@@ -739,8 +743,9 @@ export function YoruPetScreen({
                             active ? "ring-2 ring-gold" : "ring-1 ring-white/15",
                           )}
                         >
-                          <div className={cn("flex h-14 items-center justify-center bg-gradient-to-b text-2xl", sc.sky)}>
-                            {sc.emoji}
+                          <div className={cn("relative flex h-16 items-center justify-center overflow-hidden bg-gradient-to-b text-2xl", sc.sky)}>
+                            <SceneDecor id={sc.id} />
+                            <span className="relative">{sc.emoji}</span>
                           </div>
                           <div className="p-2">
                             <p className="text-[11px] font-black">{sc.name}</p>
@@ -820,7 +825,9 @@ export function YoruPetScreen({
                   <Egg className="mx-auto size-4" aria-hidden />
                   <span className="mt-0.5 block text-[11px] font-black leading-tight">Gacha 1×</span>
                   <span className="block text-[9px] font-bold opacity-80">
-                    {GACHA_X1.toLocaleString("id-ID")} Sacret
+                    {state && !(state as any).freeEggUsed
+                      ? "GRATIS · pertama kali"
+                      : `${GACHA_X1.toLocaleString("id-ID")} Sacret`}
                   </span>
                 </button>
                 <button
@@ -888,6 +895,212 @@ export function YoruPetScreen({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * HIASAN KHAS SCENE — dahan & detail MELENGKUNG (bukan kotak lurus),
+ * muncul dengan animasi path-draw / mekar. Tanpa glow berlebih.
+ */
+function SceneDecor({ id }: { id: string }) {
+  const wrap = "pointer-events-none absolute inset-0 h-full w-full";
+  const fade = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    transition: { duration: 0.8 },
+  } as const;
+
+  if (id === "sakura") {
+    const blossoms: [number, number][] = [
+      [96, 54],
+      [146, 44],
+      [176, 86],
+      [210, 122],
+      [232, 152],
+      [278, 64],
+      [322, 48],
+      [178, 28],
+      [302, 86],
+      [42, 46],
+    ];
+    return (
+      <motion.svg
+        {...fade}
+        className={cn(wrap, "overflow-hidden")}
+        viewBox="0 0 400 260"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden
+      >
+        {/* Dahan melengkung — digambar bertahap (path draw), bukan garis lurus */}
+        <motion.path d="M-8 34 C 64 50, 116 40, 172 84" stroke="#5d4347" strokeWidth="5" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, ease: "easeInOut" }} />
+        <motion.path d="M172 84 C 202 106, 214 132, 228 154" stroke="#5d4347" strokeWidth="3" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, delay: 0.5 }} />
+        <motion.path d="M114 48 C 132 26, 158 22, 184 28" stroke="#6b4a4f" strokeWidth="3" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 0.35 }} />
+        <motion.path d="M408 26 C 330 40, 282 56, 252 92" stroke="#5d4347" strokeWidth="4" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, delay: 0.25 }} />
+        <motion.path d="M322 44 C 300 66, 300 78, 306 94" stroke="#6b4a4f" strokeWidth="2.5" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 0.7 }} />
+        {/* Bunga mekar berjenjang — pop kecil satu per satu */}
+        {blossoms.map(([x, y], i) => (
+          <motion.circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={5}
+            fill={i % 2 ? "#ffd7e4" : "#ffb7cf"}
+            style={{ transformOrigin: `${x}px ${y}px` }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.6 + i * 0.08, type: "spring", bounce: 0.55 }}
+          />
+        ))}
+        {/* Kelopak jatuh pelan */}
+        {[130, 210, 300].map((x, i) => (
+          <motion.g
+            key={`f${i}`}
+            initial={{ y: 70, opacity: 0.85 }}
+            animate={{ y: 230, opacity: 0.1 }}
+            transition={{ duration: 4.5 + i, repeat: Infinity, delay: i * 1.3, ease: "easeIn" }}
+          >
+            <circle cx={x} cy={0} r={3} fill="#ffd7e4" />
+          </motion.g>
+        ))}
+      </motion.svg>
+    );
+  }
+
+  if (id === "galaxy") {
+    const stars: [number, number][] = [
+      [40, 40], [110, 80], [190, 30], [260, 70], [330, 45], [370, 110],
+      [70, 140], [220, 130], [300, 170], [140, 190], [250, 210], [60, 220],
+    ];
+    return (
+      <motion.svg {...fade} className={wrap} viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden>
+        {stars.map(([x, y], i) => (
+          <motion.circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={i % 3 ? 1.6 : 2.4}
+            fill="#e9d5ff"
+            animate={{ opacity: [0.2, 1, 0.2] }}
+            transition={{ duration: 1.6 + (i % 4) * 0.3, repeat: Infinity, delay: i * 0.22 }}
+          />
+        ))}
+        {/* Jejak meteor melengkung */}
+        <motion.path
+          d="M340 20 C 300 50, 250 70, 200 78"
+          stroke="#f5d0fe"
+          strokeWidth="1.6"
+          fill="none"
+          strokeLinecap="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: [0, 0.9, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 3.5, delay: 1.2 }}
+        />
+      </motion.svg>
+    );
+  }
+
+  if (id === "laut") {
+    return (
+      <motion.svg {...fade} className={wrap} viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden>
+        {/* Rumput laut melengkung tumbuh dari dasar */}
+        <g stroke="#34d399" fill="none" strokeLinecap="round" opacity="0.55">
+          <motion.path d="M24 260 C 6 220, 44 190, 20 150" strokeWidth="4" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1 }} />
+          <motion.path d="M56 260 C 74 226, 40 198, 62 164" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1, delay: 0.2 }} />
+          <motion.path d="M374 260 C 392 224, 356 196, 380 158" strokeWidth="4" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1, delay: 0.35 }} />
+        </g>
+        {/* Gelembung naik */}
+        {[0, 1, 2].map((i) => (
+          <motion.g
+            key={i}
+            initial={{ y: 0, opacity: 0.7 }}
+            animate={{ y: -150, opacity: 0 }}
+            transition={{ duration: 5 + i * 1.4, repeat: Infinity, delay: i * 1.6, ease: "linear" }}
+          >
+            <circle cx={300 + i * 24} cy={240} r={3 + i} fill="none" stroke="#bae6fd" strokeWidth="1.5" />
+          </motion.g>
+        ))}
+      </motion.svg>
+    );
+  }
+
+  if (id === "senja") {
+    return (
+      <motion.svg {...fade} className={wrap} viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden>
+        {/* Siluet burung terbang melengkung melintas */}
+        <motion.g
+          stroke="#312e81"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+          opacity="0.75"
+          initial={{ x: -60, opacity: 0 }}
+          animate={{ x: 220, opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
+        >
+          <path d="M40 60 q 8 -8 16 0 q 8 -8 16 0" />
+        </motion.g>
+        <motion.g
+          stroke="#312e81"
+          strokeWidth="1.7"
+          fill="none"
+          strokeLinecap="round"
+          opacity="0.7"
+          initial={{ x: -40, opacity: 0 }}
+          animate={{ x: 200, opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 20, repeat: Infinity, delay: 4, ease: "linear" }}
+        >
+          <path d="M70 96 q 6 -6 12 0 q 6 -6 12 0" />
+        </motion.g>
+      </motion.svg>
+    );
+  }
+
+  if (id === "abyss") {
+    const arcs = [
+      { d: "M80 170 C 110 120, 290 120, 320 170", w: 2, delay: 0 },
+      { d: "M120 190 C 150 156, 250 156, 280 190", w: 1.6, delay: 0.3 },
+      { d: "M158 208 C 178 190, 222 190, 242 208", w: 1.3, delay: 0.6 },
+    ];
+    return (
+      <motion.svg {...fade} className={wrap} viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden>
+        {arcs.map((a, i) => (
+          <motion.path
+            key={i}
+            d={a.d}
+            stroke="#a78bfa"
+            strokeWidth={a.w}
+            fill="none"
+            strokeLinecap="round"
+            opacity="0.5"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, delay: a.delay, ease: "easeInOut" }}
+          />
+        ))}
+      </motion.svg>
+    );
+  }
+
+  // hutan (default) — ranting melengkung + daun di dua sudut.
+  return (
+    <motion.svg {...fade} className={wrap} viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      <motion.path d="M-6 22 C 60 40, 96 66, 120 110" stroke="#14532d" strokeWidth="5" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2 }} />
+      <motion.path d="M406 26 C 344 44, 316 74, 300 116" stroke="#14532d" strokeWidth="4" fill="none" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, delay: 0.2 }} />
+      {([[70, 52], [104, 76], [118, 104], [340, 54], [316, 84], [304, 112]] as [number, number][]).map(([x, y], i) => (
+        <motion.ellipse
+          key={i}
+          cx={x}
+          cy={y}
+          rx={7}
+          ry={4}
+          fill={i % 2 ? "#4ade80" : "#22c55e"}
+          style={{ transformOrigin: `${x}px ${y}px` }}
+          initial={{ scale: 0, opacity: 0, rotate: i * 27 }}
+          animate={{ scale: 1, opacity: 0.85, rotate: i * 27 }}
+          transition={{ delay: 0.7 + i * 0.1, type: "spring", bounce: 0.5 }}
+        />
+      ))}
+    </motion.svg>
   );
 }
 

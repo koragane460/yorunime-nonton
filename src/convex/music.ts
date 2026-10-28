@@ -18,6 +18,8 @@ type Track = {
   art: string;
   preview: string;
   durationMs: number;
+  /** Video YouTube untuk lagu PENUH (bukan preview 30 detik). */
+  videoId?: string;
 };
 
 /**
@@ -200,23 +202,28 @@ export const lyrics = action({
  * Tanpa API key: ambil halaman hasil pencarian YouTube dari server lalu
  * ambil videoId pertama dari JSON yang disisipkan YouTube.
  */
+/** Cari videoId YouTube (dipakai action publik & alur !play Luna Bot). */
+async function findYouTubeId(q: string, remix = false): Promise<string | null> {
+  try {
+    const term = remix ? `${q} remix` : q;
+    const res = await fetch(
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}`,
+      { headers: { "Accept-Language": "en-US,en;q=0.9" } },
+    );
+    if (!res.ok) return null;
+    const html = await res.text();
+    const m = /"videoId":"([A-Za-z0-9_-]{11})"/.exec(html);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export const youtubeFind = action({
   args: { q: v.string(), remix: v.optional(v.boolean()) },
-  handler: async (_ctx, { q, remix }): Promise<{ videoId: string | null }> => {
-    try {
-      const term = remix ? `${q} remix` : q;
-      const res = await fetch(
-        `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}`,
-        { headers: { "Accept-Language": "en-US,en;q=0.9" } },
-      );
-      if (!res.ok) return { videoId: null };
-      const html = await res.text();
-      const m = /"videoId":"([A-Za-z0-9_-]{11})"/.exec(html);
-      return { videoId: m ? m[1] : null };
-    } catch {
-      return { videoId: null };
-    }
-  },
+  handler: async (_ctx, { q, remix }): Promise<{ videoId: string | null }> => ({
+    videoId: await findYouTubeId(q, !!remix),
+  }),
 });
 
 type MusicState = {
@@ -356,6 +363,47 @@ export const botJoin = internalMutation({
 
 // ------------------------------------------------------------ action ----
 
+/** Lagu selesai diputar di klien → lanjut antrian, atau Luna bilang habis. */
+export const lunaEnded = action({
+  args: { roomId: v.id("voiceRooms"), userId: v.id("users") },
+  handler: async (ctx, { roomId, userId }) => {
+    const st = (await ctx.runQuery(internal.music.getStateQ, {
+      roomId,
+    })) as MusicState | null;
+    const save = (patch: Record<string, unknown>) =>
+      ctx.runMutation(internal.music.saveState, { roomId, patch });
+    const post = (t: string, botData?: unknown) =>
+      ctx.runMutation(internal.music.postBot, {
+        roomId,
+        userId,
+        text: t,
+        botData,
+      });
+    const queue = st?.queue ?? [];
+    if (queue.length > 0) {
+      const [next, ...rest] = queue;
+      const started = {
+        ...next.track,
+        by: next.by,
+        startedAt: Date.now(),
+        posMs: 0,
+      };
+      await save({ current: started, queue: rest, paused: false });
+      await post(
+        `▶️ Lanjut antrian\n🎶 Judul: ${next.track.title}\n⏱️ Durasi: ${fmt(next.track.durationMs)}\n👤 Request by: @${next.by}\n\n| Sisa antrean: ${rest.length} • Volume: ${st?.volume ?? 80}% |`,
+        { kind: "np", track: next.track, volume: st?.volume ?? 80, by: next.by },
+      );
+      return;
+    }
+    if (st?.current) {
+      await save({ current: null, last: st.current, paused: false });
+    }
+    await post(
+      "🎵 Lagu selesai — tidak ada lagi di antrean.\n• Ketik !play <judul>! untuk tambah lagu lagi.",
+    );
+  },
+});
+
 export const luna = action({
   args: {
     roomId: v.id("voiceRooms"),
@@ -432,6 +480,13 @@ export const luna = action({
           await post(`🔎 Tidak menemukan "${args || "lagu"}" — coba judul lain.`);
           return;
         }
+        // Lagu PENUH via YouTube (bukan preview 30 detik) — kalau ketemu.
+        try {
+          const yt = await findYouTubeId(`${track.artist} ${track.title}`);
+          if (yt) track = { ...track, videoId: yt };
+        } catch {
+          /* tetap pakai preview Apple Music */
+        }
         // Bot otomatis masuk room saat dipanggil play.
         if (!st?.botInRoom) await ctx.runMutation(internal.music.botJoin, { roomId });
 
@@ -474,7 +529,7 @@ export const luna = action({
           return;
         }
         if (queue.length === 0) {
-          await save({ current: undefined, queue: [], last: cur, paused: false });
+          await save({ current: null, queue: [], last: cur, paused: false });
           await post(
             "⏭️ Skipped  - Antrian kosong\n• Gunakan !play! untuk tambah lagu lagi.",
             { kind: "control", action: "stop" },
@@ -499,7 +554,7 @@ export const luna = action({
       case "stop": {
         const n = (st?.queue?.length ?? 0) + (cur ? 1 : 0);
         await save({
-          current: undefined,
+          current: null,
           queue: [],
           paused: false,
           botInRoom: false,

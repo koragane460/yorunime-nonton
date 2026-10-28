@@ -334,13 +334,13 @@ export function AfinitasScreen({
                   key={k}
                   onClick={() => setLbKind(k)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1.5 text-[9px] font-black leading-tight transition",
+                    "flex flex-col items-center gap-0.5 rounded-lg border px-0.5 py-1 text-[8.5px] font-black leading-[1.15] transition",
                     lbKind === k
                       ? cn("border-current bg-white/10", m.cls)
                       : "border-white/12 text-zinc-400",
                   )}
                 >
-                  <m.Icon className="size-3.5" />
+                  <m.Icon className="size-3" />
                   <span className="text-center">{m.label}</span>
                 </button>
               );
@@ -358,24 +358,26 @@ export function AfinitasScreen({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06, duration: 0.3 }}
                   className={cn(
-                    "relative flex items-center gap-2.5 overflow-hidden rounded-2xl border p-3",
+                    "relative flex items-center gap-2.5 rounded-2xl border py-2.5 pl-7 pr-2.5",
                     i === 0
                       ? "border-amber-300/55 bg-[linear-gradient(150deg,rgba(251,191,36,.16),rgba(16,19,26,.92))] shadow-[0_18px_36px_-26px_rgba(251,191,36,.8)]"
                       : "border-white/12 bg-white/[0.05]",
                     r.isMine && KIND_META[lbKind].cls,
                   )}
                 >
+                  {/* Medali peringkat — DI LUAR kotak, menempel di tepi
+                      kiri supaya isi kotak lega tapi angka tetap jelas. */}
                   <span
                     className={cn(
-                      "w-8 shrink-0 text-center text-xl font-black tabular-nums",
+                      "absolute -left-2 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-[13px] font-black tabular-nums ring-2 ring-[#0b0f19]",
                       i === 0
-                        ? "bg-gradient-to-b from-amber-200 to-amber-500 bg-clip-text text-transparent"
+                        ? "bg-gradient-to-b from-amber-200 to-amber-500 text-black shadow-[0_6px_14px_-6px_rgba(251,191,36,.9)]"
                         : i === 1
-                          ? "text-zinc-300"
-                          : "text-orange-400/85",
+                          ? "bg-gradient-to-b from-zinc-200 to-zinc-400 text-black"
+                          : "bg-gradient-to-b from-orange-400 to-amber-700 text-black",
                     )}
                   >
-                    #{i + 1}
+                    {i + 1}
                   </span>
                   <Avatar
                     src={r.owner.image}

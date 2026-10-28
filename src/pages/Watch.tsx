@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConvexAuth } from "convex/react";
 import { CommentsSection, type CommentT } from "@/components/Comments";
 import { SectionTitle } from "@/components/lstream-ui";
-import { setMiniPlayer } from "@/components/AppLayout";
+import { setMiniCue, setMiniPlayer } from "@/components/AppLayout";
 import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
@@ -414,7 +414,14 @@ function WatchContent() {
   const resumeAtRef = useRef(0);
   const [playing, setPlaying] = useState(false);
   // Auto next: kalau aktif, episode berikutnya langsung diputar sehabis ini.
-  const [autoNext, setAutoNext] = useState(false);
+  // Defaultnya mengikuti Pengaturan (kunci yn:auto-next).
+  const [autoNext, setAutoNext] = useState(() => {
+    try {
+      return window.localStorage.getItem("yn:auto-next") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
   // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
   // datanya arrive (dan sebaliknya saat user ganti di player).
@@ -910,6 +917,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
   useEffect(() => {
     if (cues.length === 0) {
       setActiveCue("");
+      setMiniCue("");
       return;
     }
     const t = currentTime;
@@ -918,7 +926,10 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
       if (c.s <= t) hit = c;
       else break;
     }
-    setActiveCue(hit && t <= hit.e ? hit.t : "");
+    const text = hit && t <= hit.e ? hit.t : "";
+    setActiveCue(text);
+    // CC diteruskan ke mini player supaya teks subtitle ikut kelihatan.
+    setMiniCue(text);
   }, [currentTime, cues]);
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
@@ -2325,8 +2336,14 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             >
               <SkipBack className="size-4 text-white" />
             </button>
-            <button onClick={() => skip(-10)} className="rounded-full bg-black/50 p-1.5">
+            <button
+              onClick={() => skip(-10)}
+              className="flex flex-col items-center gap-0.5 rounded-full bg-black/50 px-2 py-1.5"
+            >
               <RotateCcw className="size-5 text-white" />
+              <span className="text-[9px] font-black leading-none text-white/85">
+                -10
+              </span>
             </button>
             {/* Play/pause diperkecil supaya tombol Auto next di bawahnya
                 tidak ketutup dan tetap bisa dipencet. */}
@@ -2337,8 +2354,14 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 <Play className="size-6 text-primary-foreground" />
               )}
             </button>
-            <button onClick={() => skip(10)} className="rounded-full bg-black/50 p-1.5">
+            <button
+              onClick={() => skip(10)}
+              className="flex flex-col items-center gap-0.5 rounded-full bg-black/50 px-2 py-1.5"
+            >
               <RotateCw className="size-5 text-white" />
+              <span className="text-[9px] font-black leading-none text-white/85">
+                +10
+              </span>
             </button>
             <button
               disabled={room ? (currentEp?.number ?? 1) >= epList.length : epIndex >= epList.length - 1}
@@ -2433,12 +2456,38 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 <button
                   onClick={() => {
                     setQualityDraft(quality);
-                    setQualityOpen(true);
+                    setQualityOpen((v) => !v);
                   }}
-                  className="rounded bg-white/15 px-2 py-1 text-[11px] font-bold"
+                  className={cn(
+                    "rounded px-2 py-1 text-[11px] font-bold",
+                    qualityOpen ? "bg-primary text-white" : "bg-white/15",
+                  )}
                   aria-label="Kualitas"
                 >
                   HD
+                </button>
+                {/* Auto next — DIGABUNG ke baris kontrol, TANPA outline. */}
+                <button
+                  onClick={() => {
+                    const nv = !autoNext;
+                    setAutoNext(nv);
+                    try {
+                      window.localStorage.setItem(
+                        "yn:auto-next",
+                        nv ? "1" : "0",
+                      );
+                    } catch {
+                      /* mode privat */
+                    }
+                  }}
+                  className={cn(
+                    "rounded px-2 py-1 text-[10px] font-bold",
+                    autoNext
+                      ? "bg-emerald-500/85 text-black"
+                      : "bg-white/15 text-white/85",
+                  )}
+                >
+                  Auto next {autoNext ? "ON" : "OFF"}
                 </button>
                 <button
                   onClick={() => setSpeedOpen((v) => !v)}
@@ -2493,6 +2542,52 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
                 </button>
               </div>
             </div>
+            {/* Pemilih kualitas INLINE — video tetap terlihat & semua tombol
+                tetap bisa dipencet (bukan modal yang menutupi). */}
+            {qualityOpen && (
+              <div className="thin-scroll flex max-h-40 flex-wrap gap-1.5 overflow-y-auto rounded-lg bg-black/85 p-2">
+                {QUALITIES.map((q) => {
+                  const locked = q === PREMIUM_QUALITY && !isPremium;
+                  const active = (qualityDraft ?? quality) === q;
+                  return (
+                    <button
+                      key={q}
+                      onClick={() => {
+                        if (locked) {
+                          setPremiumTapHint(true);
+                          window.setTimeout(
+                            () => setPremiumTapHint(false),
+                            1800,
+                          );
+                          return;
+                        }
+                        setQualityDraft(q);
+                        setQuality(q);
+                        setQualityTouched(true);
+                        applyQuality(q);
+                        setQualityOpen(false);
+                      }}
+                      className={cn(
+                        "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition",
+                        locked
+                          ? "cursor-not-allowed border-amber-500/40 bg-amber-500/5 text-amber-300"
+                          : active
+                            ? "border-foreground/40 bg-primary/15 text-primary"
+                            : "border-border text-white hover:border-foreground/40",
+                      )}
+                    >
+                      {q}
+                      {q === PREMIUM_QUALITY && !isPremium && " ★"}
+                    </button>
+                  );
+                })}
+                {premiumTapHint && (
+                  <p className="w-full text-[10px] text-amber-200">
+                    1080p khusus akun Premium.
+                  </p>
+                )}
+              </div>
+            )}
             {speedOpen && (
               <div className="flex flex-wrap gap-1.5 rounded-lg bg-black/80 p-2">
                 {SPEEDS.map((s) => (
@@ -3086,8 +3181,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
         )}
       </div>
 
-      {/* Popups diperbagus */}
-      {qualityOpen && (
+      {/* Popup kualitas LAMA dimatikan — pilihan kualitas sekarang tampil
+          INLINE di baris kontrol: video tidak ketutup, tombol tidak ketimpa. */}
+      {false && (
         <Popup onClose={cancelQuality} title="Kualitas">
           <div className="space-y-1.5">
             {/* Opsi "HD" DIHAPUS permanen. Yang tersisa hanya daftar resolusi:
@@ -3209,7 +3305,7 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
           </div>
         </Popup>
       )}
-      {speedOpen && (
+      {false && (
         <Popup onClose={() => setSpeedOpen(false)} title="Kecepatan">
           <div className="flex flex-wrap gap-2">
             {SPEEDS.map((s) => (

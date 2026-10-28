@@ -600,6 +600,15 @@ function SettingsScreen({
   // "Animasi profil" DIHAPUS permanen — state-nya ikut dihapus.
   // Anti lag: status lokal (tidak perlu server), langsung diterapkan ke <html>.
   const [antiLag, setAntiLagState] = useState(() => getAntiLag());
+  // AUTO NEXT default — disimpan di perangkat; layar Nonton ikut membaca
+  // kunci yang sama (fitur baru di Pengaturan).
+  const [autoNext, setAutoNext] = useState(() => {
+    try {
+      return window.localStorage.getItem("yn:auto-next") === "1";
+    } catch {
+      return false;
+    }
+  });
   // Toast bawah sudah dihapus permanen, jadi galat pengaturan tampil inline.
   const [err, setErr] = useState("");
   // Panel hanya untuk developer (#1 / title dev) & moderator.
@@ -688,8 +697,12 @@ function SettingsScreen({
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
       <BlockTitle>Akun</BlockTitle>
-      <div className="rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/10 via-card to-card p-3.5">
-        <div className="flex items-center gap-2.5">
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-3.5">
+        {/* Hiasan: titik halus + orb warna tema — tanpa blur menyilaukan. */}
+        <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.3px)] [background-size:20px_20px] opacity-60" />
+        <span aria-hidden className="absolute -right-8 -top-10 size-24 rounded-full bg-primary/15 blur-2xl" />
+        <span aria-hidden className="absolute left-2.5 top-2.5 size-3 border-l-2 border-t-2 border-primary/50 rounded-tl-md" />
+        <div className="relative flex items-center gap-2.5">
           <FramedAvatar
             border={user.avatarBorder}
             src={user.image}
@@ -723,7 +736,7 @@ function SettingsScreen({
         {/* Tombol "Ganti photo profile" di Pengaturan DIHAPUS (permintaan
             user) — ganti photo & refresh photo sekarang lewat tombol kamera
             di pojok kanan bawah foto profil (layar Akun). */}
-        <div className="mt-2 flex min-w-0 gap-2">
+        <div className="relative mt-2 flex min-w-0 gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -766,65 +779,8 @@ function SettingsScreen({
           "sleix shop nya hapus — yang dipengaturan, bukan YoruVerse").
           Border foto profile tetap ada di YoruVerse › Shop. ===== */}
 
-      {/* -------- TITLE & KARTU GACHA — equip dari koleksi -------- */}
-      <BlockTitle>Title & Kartu</BlockTitle>
-      <div className="rounded-xl border border-border bg-card p-3">
-        <p className="text-[13px] font-medium">Title aktif (maks 3)</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Muncul di bawah nama kamu di layar detail akun. Kelola semua di
-          tombol Title (tekan lama tombol Subscribe).
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {(myCosmetics?.defs ?? [])
-            .filter((d) => !!myCosmetics?.earnedAt[d.id])
-            .map((d) => {
-              const eq =
-                myCosmetics?.equippedTitles ??
-                (myCosmetics?.equippedTitle
-                  ? [myCosmetics.equippedTitle]
-                  : []);
-              const active = eq.includes(d.id);
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  disabled={busyCosmetic !== null}
-                  onClick={() => void pickTitle(d.id)}
-                  title={d.desc}
-                  className="transition active:scale-95 disabled:opacity-60"
-                >
-                  {/* Preview pita title — bentuk medali, bukan teks polos */}
-                  <TitleRibbon
-                    name={d.name}
-                    size="sm"
-                    dim={!active}
-                    className={active ? "ring-1 ring-gold/70" : ""}
-                  />
-                </button>
-              );
-            })}
-          {myCosmetics?.equippedTitle && (
-            <button
-              type="button"
-              disabled={busyCosmetic !== null}
-              onClick={() => void pickTitle(null)}
-              className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
-            >
-              Lepas semua title
-            </button>
-          )}
-          {(myCosmetics?.defs ?? []).every(
-            (d) => !myCosmetics?.earnedAt[d.id],
-          ) && (
-            <p className="text-[11px] text-muted-foreground">
-              Belum ada title — tonton anime atau menangkan gacha!
-            </p>
-          )}
-        </div>
-
-        {/* GACHA KARTU ANIME DIHAPUS PERMANEN — tidak ada lagi grid kartu
-            di pengaturan; hadiah vending machine langsung masuk akun. */}
-      </div>
+      {/* (Judul "Title & Kartu" dipindah ke BAWAH bagian Pengaturan —
+          penempatan baru.) */}
 
       <BlockTitle>Pengaturan</BlockTitle>
       <div className="space-y-2">
@@ -839,9 +795,24 @@ function SettingsScreen({
           }}
         />
         {/* "Animasi profil" DIHAPUS permanen sesuai permintaan. */}
+        {/* AUTO NEXT — fitur baru: disimpan di perangkat, dipakai layar Nonton. */}
+        <ToggleRow
+          label="Auto next"
+          desc="Langsung putar episode berikutnya sehabis episode selesai"
+          value={autoNext}
+          onToggle={(v) => {
+            setAutoNext(v);
+            try {
+              window.localStorage.setItem("yn:auto-next", v ? "1" : "0");
+            } catch {
+              /* mode privat */
+            }
+            toast.success(v ? "Auto next aktif" : "Auto next dimatikan");
+          }}
+        />
         <div className="rounded-xl border border-border bg-card p-3">
-          <p className="text-[13px] font-medium">Tema</p>
-          <div className="mt-2 flex min-w-0 gap-2">
+          <p className="text-[13px] font-medium">Tema tampilan</p>
+          <div className="mt-2 flex min-w-0 gap-1 rounded-xl border border-white/10 bg-black/25 p-1">
             {["dark", "light", "custom"].map((t) => (
               <button
                 key={t}
@@ -851,8 +822,10 @@ function SettingsScreen({
                   quickSave({ theme: t });
                 }}
                 className={cn(
-                  "min-w-0 flex-1 truncate rounded-lg border py-2 text-xs capitalize",
-                  theme === t ? "border-foreground/40 text-primary" : "border-border",
+                  "min-w-0 flex-1 truncate rounded-lg py-1.5 text-xs capitalize transition",
+                  theme === t
+                    ? "bg-gradient-to-b from-white/95 to-white/80 font-black text-black shadow-md shadow-black/30"
+                    : "text-white/55 hover:bg-white/10 hover:text-white",
                 )}
               >
                 {t === "dark" ? "Gelap" : t === "light" ? "Terang" : "Custom"}
@@ -898,11 +871,38 @@ function SettingsScreen({
           }}
         />
 
+        {/* BERSIHKAN RIWAYAT CARI — fitur baru: hapus daftar "Baru Saja". */}
+        <button
+          onClick={() => {
+            try {
+              window.localStorage.removeItem("yn:recent-search");
+            } catch {
+              /* mode privat */
+            }
+            toast.success("Riwayat pencarian dibersihkan");
+          }}
+          className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/40"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+            <HistoryIcon className="size-[18px] text-primary" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-medium">
+              Bersihkan riwayat cari
+            </span>
+            <span className="block text-[11px] text-muted-foreground">
+              Hapus daftar “Baru Saja” di layar pencarian
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+
         {/* "Gambar fullscreen akun" DIHAPUS permanen sesuai permintaan. */}
 
-        {/* LATAR HOME — ganti background Home (yang hitam) dari GALERI,
+        {/* LATAR HOME — background Home (yang hitam) dari GALERI,
             dipotong 9:16 rata atas supaya lurus ke atas dan tetap kelihatan
             di seluruh layar YoruNime. */}
+        <BlockTitle>Tampilan</BlockTitle>
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[13px] font-medium">Ganti Home Screen (9:16)</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -977,6 +977,66 @@ function SettingsScreen({
         </div>
 
         {panelLevel !== "none" && <StaffPanel level={panelLevel} />}
+
+      {/* -------- TITLE & KARTU — dipindah ke bawah (penempatan baru) -------- */}
+      <BlockTitle>Title & Kartu</BlockTitle>
+      <div className="rounded-xl border border-border bg-card p-3">
+        <p className="text-[13px] font-medium">Title aktif (maks 3)</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Muncul di bawah nama kamu di layar detail akun. Kelola semua di
+          tombol Title (tekan lama tombol Subscribe).
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(myCosmetics?.defs ?? [])
+            .filter((d) => !!myCosmetics?.earnedAt[d.id])
+            .map((d) => {
+              const eq =
+                myCosmetics?.equippedTitles ??
+                (myCosmetics?.equippedTitle
+                  ? [myCosmetics.equippedTitle]
+                  : []);
+              const active = eq.includes(d.id);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  disabled={busyCosmetic !== null}
+                  onClick={() => void pickTitle(d.id)}
+                  title={d.desc}
+                  className="transition active:scale-95 disabled:opacity-60"
+                >
+                  {/* Preview pita title — bentuk medali, bukan teks polos */}
+                  <TitleRibbon
+                    name={d.name}
+                    size="sm"
+                    dim={!active}
+                    className={active ? "ring-1 ring-gold/70" : ""}
+                  />
+                </button>
+              );
+            })}
+          {myCosmetics?.equippedTitle && (
+            <button
+              type="button"
+              disabled={busyCosmetic !== null}
+              onClick={() => void pickTitle(null)}
+              className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
+            >
+              Lepas semua title
+            </button>
+          )}
+          {(myCosmetics?.defs ?? []).every(
+            (d) => !myCosmetics?.earnedAt[d.id],
+          ) && (
+            <p className="text-[11px] text-muted-foreground">
+              Belum ada title — tonton anime atau menangkan gacha!
+            </p>
+          )}
+        </div>
+
+        {/* GACHA KARTU ANIME DIHAPUS PERMANEN — tidak ada lagi grid kartu
+            di pengaturan; hadiah vending machine langsung masuk akun. */}
+      </div>
       </div>
 
       {/* CS + email + log out */}
@@ -1062,13 +1122,13 @@ function ToggleRow({
       <button
         onClick={() => onToggle(!value)}
         className={cn(
-          "relative h-6 w-11 rounded-full transition",
-          value ? "bg-primary" : "bg-zinc-600",
+          "relative h-6 w-11 shrink-0 rounded-full transition",
+          value ? "bg-gradient-to-r from-emerald-400 to-primary shadow-[0_0_12px_-4px_rgba(var(--primary),0.9)]" : "bg-zinc-600",
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 size-5 rounded-full bg-white transition-all",
+            "absolute top-0.5 size-5 rounded-full bg-white shadow-md transition-all",
             value ? "left-[22px]" : "left-0.5",
           )}
         />
@@ -1092,7 +1152,9 @@ function QualityRow({
     <div className="rounded-xl border border-border bg-card p-3">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-[13px] font-medium">{label}</p>
-        <span className="text-[11px] text-primary">{value}</span>
+        <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+          {value}
+        </span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1132,7 +1194,9 @@ function SpeedRow({
     <div className="rounded-xl border border-border bg-card p-3">
       <button className="flex w-full items-center justify-between" onClick={() => setOpen((v) => !v)}>
         <p className="text-[13px] font-medium">{label}</p>
-        <span className="text-[11px] text-primary">{value}x</span>
+        <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+          {value}x
+        </span>
       </button>
       {open && (
         <div className="mt-2 flex flex-wrap gap-1.5">

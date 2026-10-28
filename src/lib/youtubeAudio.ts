@@ -176,6 +176,22 @@ export function youtubeToggle(): void {
   else player.playVideo();
 }
 
+/** Jeda video — dipakai kontrol pause Luna Bot. */
+export function youtubePause(): void {
+  player?.pauseVideo();
+}
+
+/** Lanjutkan video yang dijeda — dipakai kontrol resume Luna Bot. */
+export function youtubeResume(): void {
+  player?.playVideo();
+}
+
+/** Hentikan video — dipakai kontrol stop Luna Bot. */
+export function youtubeStop(): void {
+  player?.pauseVideo();
+  player?.seekTo(0, true);
+}
+
 export function youtubeSeek(sec: number): void {
   player?.seekTo(sec, true);
 }

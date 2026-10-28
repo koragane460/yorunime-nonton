@@ -66,6 +66,7 @@ export const state = query({
       crystals: s?.crystals ?? 0,
       scenes: s?.scenes ?? ["hutan"],
       scene: s?.scene ?? "hutan",
+      freeEggUsed: s?.freeEggUsed ?? false,
       claimAt,
       claimReady: now - claimAt >= CLAIM_MS,
       claimIn: Math.max(0, CLAIM_MS - (now - claimAt)),
@@ -114,7 +115,9 @@ export const view = query({
   },
 });
 
-/** Gacha — membeli telur Misteri (1x 1.000 / 10x 10.000 Sacret). */
+/** Gacha — membeli telur Misteri (1x 1.000 / 10x 10.000 Sacret).
+    PERTAMA KALI GRATIS — user yang belum pernah Gacha dapat 1 telur
+    gratis (1×), tanpa memotong Sacret sama sekali. */
 export const pull = mutation({
   args: { count: v.union(v.literal(1), v.literal(10)) },
   handler: async (ctx, { count }) => {
@@ -122,12 +125,17 @@ export const pull = mutation({
     if (userId === null) throw new Error("Belum masuk");
     const u = await ctx.db.get(userId);
     if (!u) throw new Error("Akun tidak ada");
-    const cost = count === 1 ? GACHA_X1 : GACHA_X10;
-    if ((u.diamonds ?? 0) < cost) throw new Error("Sacret tidak cukup");
-    await ctx.db.patch(userId, { diamonds: (u.diamonds ?? 0) - cost });
     const s = await loadOrCreate(ctx, userId);
+    // Gacha gratis pertama (baru bisa dipakai untuk 1×, bukan 10×).
+    const free = count === 1 && !s.freeEggUsed;
+    const cost = free ? 0 : count === 1 ? GACHA_X1 : GACHA_X10;
+    if ((u.diamonds ?? 0) < cost) throw new Error("Sacret tidak cukup");
+    if (cost > 0) {
+      await ctx.db.patch(userId, { diamonds: (u.diamonds ?? 0) - cost });
+    }
+    if (free) await ctx.db.patch(s._id, { freeEggUsed: true });
     await ctx.db.patch(s._id, { eggs: s.eggs + count });
-    return { eggs: s.eggs + count };
+    return { eggs: s.eggs + count, free };
   },
 });
 

@@ -876,6 +876,8 @@ const schema = defineSchema(
       scenes: v.array(v.string()),
       /** Scene aktif (mengubah panggung DAN latar layar). */
       scene: v.string(),
+      /** Gacha GRATIS pertama kali sudah dipakai (telur gratis 1×). */
+      freeEggUsed: v.optional(v.boolean()),
     }).index("by_user", ["userId"]),
 
     /**

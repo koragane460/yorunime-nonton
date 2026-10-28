@@ -23,6 +23,14 @@ import {
   lunaSetVolume,
   lunaStop,
 } from "@/lib/lunaAudio";
+import {
+  ensureYouTubePlayer,
+  youtubePause,
+  youtubeResume,
+  youtubeStop,
+  youtubeTime,
+  youtubeVolume,
+} from "@/lib/youtubeAudio";
 
 /** Avatar Luna Bot — bulan sabit gradasi violet + bintang, tanpa foto external. */
 function LunaAvatar({ className = "size-8" }: { className?: string }) {
@@ -65,14 +73,21 @@ function NowPlayingCard({ d }: { d: any }) {
   const art = t.art || "";
   const getLyrics = useAction(api.music.lyrics);
   // Jam berjalan (tick 500ms) — sumber waktu untuk bar, menit & lirik.
+  // Kalau lagu diputar lewat YouTube, waktu asli diambil dari pemutar.
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const iv = setInterval(() => setTick((v) => v + 1), 500);
     return () => clearInterval(iv);
   }, []);
-  const elapsed = Math.min(totalSec, Math.floor(tick / 2));
-  // Lirik diambil sekali; baris aktif diganti bertahap dengan fade in.
-  const [lines, setLines] = useState<string[] | null>(null);
+  const ytNow = t.videoId ? youtubeTime().now : 0;
+  const elapsed = Math.min(
+    totalSec,
+    ytNow > 0 ? Math.floor(ytNow) : Math.floor(tick / 2),
+  );
+  // Lirik diambil sekali — utamakan lirik SINKRON (timestamp), jadi tiap
+  // baris muncul TEPAT sesuai lagu (kayak pemutar musik YoruVerse).
+  type LyricLine = { t?: number; text: string };
+  const [lines, setLines] = useState<LyricLine[] | null>(null);
   useEffect(() => {
     if (!t.title) return;
     let alive = true;
@@ -83,8 +98,16 @@ function NowPlayingCard({ d }: { d: any }) {
     })
       .then((r: any) => {
         if (!alive) return;
-        const l: string[] | null =
-          r?.synced?.map((x: any) => x.text) ?? r?.plain ?? null;
+        const synced: LyricLine[] | null = r?.synced?.length
+          ? r.synced.map((x: any) => ({
+              t: Number(x.t),
+              text: String(x.text),
+            }))
+          : null;
+        const plain: LyricLine[] | null = r?.plain?.length
+          ? r.plain.map((text: string) => ({ text }))
+          : null;
+        const l = synced ?? plain;
         if (l && l.length) setLines(l);
       })
       .catch(() => {});
@@ -93,19 +116,28 @@ function NowPlayingCard({ d }: { d: any }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const idx =
-    lines && lines.length
-      ? Math.min(
-          lines.length - 1,
-          Math.floor((elapsed / totalSec) * lines.length),
-        )
-      : -1;
-  const lyric = idx >= 0 ? lines![idx] : null;
+  // Pilih baris lirik: sinkron pakai timestamp (belum waktunya → diam);
+  // kalau tidak ada timestamp, baru dibagi rata sepanjang durasi.
+  let idx = -1;
+  if (lines && lines.length) {
+    if (lines[0].t !== undefined) {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].t! <= elapsed) idx = i;
+        else break;
+      }
+    } else {
+      idx = Math.min(
+        lines.length - 1,
+        Math.floor((elapsed / totalSec) * lines.length),
+      );
+    }
+  }
+  const lyric = idx >= 0 ? lines![idx].text : null;
   const fmt = (s: number) =>
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const pct = Math.min(100, (elapsed / totalSec) * 100);
   return (
-    <div className="mb-1.5 flex w-[244px] flex-col items-center rounded-2xl border border-violet-400/25 bg-[linear-gradient(150deg,#241a3d_0%,#141126_60%,#0d0b16_100%)] px-4 pb-3 pt-4 shadow-[0_14px_34px_-20px_rgba(139,92,246,0.9)]">
+    <div className="mb-1.5 flex w-full flex-col items-center rounded-2xl border border-violet-400/25 bg-[linear-gradient(150deg,#241a3d_0%,#141126_60%,#0d0b16_100%)] px-4 pb-3 pt-4 shadow-[0_14px_34px_-20px_rgba(139,92,246,0.9)]">
       <div className="flex flex-col items-center">
         {/* Kaset puter: poster di tengah piringan berputar */}
         <span className="relative size-24 shrink-0">
@@ -183,6 +215,41 @@ export function VoiceChatSheet({
   const send = useMutation(api.chat.sendMessage);
   const luna = useAction(api.music.luna);
   const { user } = useAuth();
+  const lunaEndedM = useAction(api.music.lunaEnded);
+  // Mode pemutar terakhir: YouTube (lagu penuh) atau preview HTMLAudio.
+  const ytMode = useRef(false);
+
+  /** Putar lagu Luna — YouTube dulu (lagu PENUH), jatuh ke preview 30 dtk.
+      Begitu habis → panggil lunaEnded (lanjut antrian / bilang habis). */
+  const playTrack = (t: any, vol: number) => {
+    const ended = () => {
+      ytMode.current = false;
+      if (user?._id) {
+        void lunaEndedM({
+          roomId,
+          userId: user._id as Id<"users">,
+        }).catch(() => {});
+      }
+    };
+    if (t?.videoId) {
+      ytMode.current = true;
+      void ensureYouTubePlayer(
+        String(t.videoId),
+        {
+          onPlay: () => {},
+          onPause: () => {},
+          onReady: () => youtubeVolume(vol),
+          onDuration: () => {},
+          onEnded: ended,
+        },
+        false,
+      );
+      youtubeVolume(vol);
+    } else {
+      ytMode.current = false;
+      if (t?.preview) lunaPlay(String(t.preview), vol, ended);
+    }
+  };
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -195,8 +262,8 @@ export function VoiceChatSheet({
     endRef.current?.scrollIntoView({ block: "end" });
   }, [count]);
 
-  // Reaksi terhadap pesan bot: putar lagu, pause/resume/stop/skip/volume.
-  // Pesan LAMA tidak diproses ulang walau panel dibuka lagi (lunaSeen).
+  // Reaksi terhadap pesan bot: putar lagu (YouTube penuh / preview),
+  // pause/resume/stop/skip/volume. Pesan LAMA tidak diproses ulang lagi.
   useEffect(() => {
     if (!msgs) return;
     for (const m of msgs) {
@@ -204,15 +271,24 @@ export function VoiceChatSheet({
       if (!m.bot || !d) continue;
       if (lunaSeen(String(m._id))) continue;
       const vol = Math.max(0, Math.min(1, (d.volume ?? 80) / 100));
-      if (d.kind === "np" && d.track?.preview) {
-        lunaPlay(d.track.preview, vol);
+      if (d.kind === "np" && d.track) {
+        playTrack(d.track, vol);
       } else if (d.kind === "control") {
-        if (d.action === "pause") lunaPause();
-        else if (d.action === "resume") lunaResume();
-        else if (d.action === "stop") lunaStop();
-        else if (d.action === "volume") lunaSetVolume(vol);
-        else if (d.action === "skip" && d.track?.preview) {
-          lunaPlay(d.track.preview, vol);
+        if (d.action === "pause") {
+          if (ytMode.current) youtubePause();
+          else lunaPause();
+        } else if (d.action === "resume") {
+          if (ytMode.current) youtubeResume();
+          else lunaResume();
+        } else if (d.action === "stop") {
+          lunaStop();
+          youtubeStop();
+          ytMode.current = false;
+        } else if (d.action === "volume") {
+          lunaSetVolume(vol);
+          youtubeVolume(vol);
+        } else if (d.action === "skip" && d.track) {
+          playTrack(d.track, vol);
         }
       }
     }

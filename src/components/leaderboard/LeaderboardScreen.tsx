@@ -67,22 +67,25 @@ function DashedNum({ rank }: { rank: number }) {
   );
 }
 
-/* Podium top 1-3 dengan gradasi warna bagus. */
+/* Podium top 1-3 — gaya SAMA dengan podium Home yang sudah di-rework:
+   kartu gelap keemasan + ornamen sudut, blok medal emas/perak/perunggu
+   dengan angka rank besar di dasar blok. */
 function Podium({
   rank, username, image, xp,
 }: { rank: number; username?: string; image?: string; xp: number }) {
   const grad =
     rank === 1
-      ? "from-yellow-300 via-amber-400 to-orange-500"
+      ? "border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.45)_45%,rgba(251,191,36,.12)_100%)]"
       : rank === 2
-        ? "from-zinc-200 via-zinc-300 to-zinc-500"
-        : "from-amber-500 via-amber-600 to-amber-800";
-  const h = rank === 1 ? "h-20" : rank === 2 ? "h-16" : "h-14";
+        ? "border-zinc-300/45 bg-[linear-gradient(to_top,#cbd5e1_0%,rgba(203,213,225,.35)_50%,rgba(255,255,255,.08)_100%)]"
+        : "border-amber-600/50 bg-[linear-gradient(to_top,#b45309_0%,rgba(180,83,9,.4)_50%,rgba(251,146,60,.1)_100%)]";
+  const ring =
+    rank === 1 ? "ring-amber-300" : rank === 2 ? "ring-zinc-300" : "ring-amber-600";
+  const h = rank === 1 ? "h-24" : rank === 2 ? "h-16" : "h-14";
   return (
     <div className="lb-rise flex min-w-0 flex-col items-center" style={{ animationDelay: `${rank * 70}ms` }}>
       <div className="relative">
-        <span aria-hidden className={cn("absolute -inset-1 rounded-full opacity-70 blur-md bg-gradient-to-br", grad)} />
-        <Avatar src={image} seed={username} className="relative size-10 ring-2 ring-white/70" />
+        <Avatar src={image} seed={username} className={cn("relative size-10 ring-2", ring)} />
         <svg className="pointer-events-none absolute -inset-[4px] overflow-visible text-white/90" viewBox="0 0 100 100" aria-hidden>
           <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="6"
             strokeLinecap="round" pathLength={100} strokeDasharray="55 45" className="lb-dash-spin" />
@@ -91,10 +94,14 @@ function Podium({
           <Crown className="absolute -top-3.5 left-1/2 size-4 -translate-x-1/2 text-yellow-300 drop-shadow" aria-hidden />
         )}
       </div>
-      <p className="mt-1.5 w-full truncate text-center text-[10px] font-semibold leading-tight">{username ?? "user"}</p>
+      <p className="mt-1.5 w-full truncate text-center text-[10px] font-black leading-tight">{username ?? "user"}</p>
       <p className="text-[9px] leading-tight text-white/70">{xp.toLocaleString("id-ID")} XP</p>
-      <div className={cn("mt-1.5 flex w-full items-start justify-center rounded-t-xl pt-1 text-base font-black text-black bg-gradient-to-t", grad, h)}>
-        {rank}
+      <div className={cn("relative mt-1.5 flex w-full items-start justify-center overflow-hidden rounded-t-2xl border pt-1.5 text-base font-black text-black", grad, h)}>
+        {/* Angka rank besar semi-transparan di dasar blok — sama dengan Home */}
+        <span aria-hidden className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-4xl font-black text-black/25">
+          {rank}
+        </span>
+        <span className="relative">{rank}</span>
       </div>
     </div>
   );
@@ -155,8 +162,9 @@ function XpView() {
       {!data && <p className="py-8 text-center text-sm text-white/50">Memuat…</p>}
       {data?.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada data XP periode ini</p>}
       {data && data.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-white/12 bg-white/[0.05] p-2">
-          <div className="grid grid-cols-3 items-end gap-2">
+        <div className="mb-3 rounded-3xl border border-amber-300/30 bg-[radial-gradient(120%_85%_at_50%_-25%,rgba(251,191,36,.20),transparent_60%),linear-gradient(165deg,#191306_0%,#111019_60%,#0a0a10_100%)] p-3 shadow-[0_24px_54px_-30px_rgba(251,191,36,.55)]">
+          <span aria-hidden className="absolute" />
+          <div className="relative grid grid-cols-3 items-end gap-2">
             {t2 && <Podium {...t2} rank={2} />}
             {t1 && <Podium {...t1} rank={1} />}
             {t3 && <Podium {...t3} rank={3} />}

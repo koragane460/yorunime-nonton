@@ -291,30 +291,40 @@ export function TopAiringRow({
           <button
             key={a.id}
             onClick={() => onPick(a.id, a.title)}
-            className="w-44 shrink-0 text-left"
+            className="w-56 shrink-0 text-left"
           >
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1220] shadow-[0_16px_30px_-24px_rgba(0,0,0,.9)] transition hover:border-white/30">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,#141827_0%,#0e1120_100%)] shadow-[0_18px_34px_-24px_rgba(0,0,0,.95)] transition hover:border-white/30">
               {/* Banner + badge rating di pojok kanan atas */}
-              <div className="relative h-24 bg-black">
+              <div className="relative h-28 bg-black">
                 <img
                   src={a.image}
                   alt=""
                   loading="lazy"
                   className="h-full w-full object-cover"
                 />
-                <span className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-black text-amber-300 backdrop-blur">
+                <span className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-black text-amber-300 ring-1 ring-amber-300/40 backdrop-blur">
                   <Star className="size-3 fill-amber-300" />
                   {(a.score ?? 0).toFixed(1)}
                 </span>
+                {/* Scrim gradasi biar banner menyatu ke panel bawah */}
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#141827] to-transparent"
+                />
               </div>
               {/* Panel bawah TERPISAH: judul + jumlah nonton rapi */}
-              <div className="px-2.5 pb-2.5 pt-2">
-                <p className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
+              <div className="px-3 pb-2.5 pt-2">
+                <p className="line-clamp-2 text-[12.5px] font-bold leading-snug tracking-tight text-white">
                   {a.title}
                 </p>
-                <p className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-white/55">
-                  <Play className="size-3 shrink-0 text-sky-300" />
-                  {fmtShort(viewsOf(a.id))} nonton
+                <p className="mt-1.5 flex items-center gap-1.5">
+                  <span className="flex items-center gap-1 rounded-md bg-sky-400/12 px-1.5 py-0.5 text-[10px] font-bold text-sky-200 ring-1 ring-sky-400/25">
+                    <Play className="size-2.5" />
+                    {fmtShort(viewsOf(a.id))}
+                  </span>
+                  <span className="text-[10px] font-semibold text-white/45">
+                    nonton
+                  </span>
                 </p>
               </div>
             </div>
@@ -642,10 +652,12 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
 
       {/* Kotak podium PREMIUM — latar gradasi gelap keemasan + glow,
           border neon tipis, bukan abu-abu polos. */}
-      <div className="relative mt-2 overflow-hidden rounded-2xl border border-amber-400/30 bg-[linear-gradient(160deg,#1f1608_0%,#14100b_55%,#0a0a10_100%)] p-2.5 shadow-[0_20px_44px_-26px_rgba(251,191,36,0.5)] yn-cut-alt">
-        <span aria-hidden className="absolute -left-10 -top-12 size-36 rounded-full bg-amber-400/20 blur-3xl" />
-        <span aria-hidden className="absolute -bottom-14 -right-8 size-36 rounded-full bg-orange-500/15 blur-3xl" />
-        <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+      <div className="relative mt-2 overflow-hidden rounded-3xl border border-amber-300/30 bg-[radial-gradient(120%_85%_at_50%_-25%,rgba(251,191,36,.20),transparent_60%),linear-gradient(165deg,#191306_0%,#111019_60%,#0a0a10_100%)] p-3 shadow-[0_24px_54px_-30px_rgba(251,191,36,.55)] yn-cut-alt">
+        {/* Titik bintik halus + ornamen sudut emas (bukan blur menyilaukan) */}
+        <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.3px)] [background-size:22px_22px] opacity-60" />
+        <span aria-hidden className="absolute left-2.5 top-2.5 size-3.5 border-l-2 border-t-2 border-amber-300/60 rounded-tl-md" />
+        <span aria-hidden className="absolute right-2.5 top-2.5 size-3.5 border-r-2 border-t-2 border-amber-300/60 rounded-tr-md" />
+        <span aria-hidden className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
         <div className="relative grid grid-cols-3 items-end">
           {byRank.map((e, i) => {
             const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
@@ -664,18 +676,39 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.45 }}
                     className={cn(
-                      "flex w-full min-w-0 flex-col items-center justify-center gap-0.5 border px-1 py-2 backdrop-blur-[2px]",
+                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden border px-1 py-2 backdrop-blur-[2px]",
                       rank === 1
-                        ? "h-20 border-amber-300/55 bg-[linear-gradient(to_top,rgba(251,191,36,.32),rgba(251,191,36,.10))] shadow-[0_0_22px_-8px_rgba(251,191,36,.75)]"
-                        : "h-14 border-white/20 bg-white/[0.07]",
-                      rank === 2 && "rounded-l-2xl",
-                      rank === 3 && "rounded-r-2xl",
+                        ? "h-24 border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.42)_45%,rgba(251,191,36,.10)_100%)] shadow-[0_18px_36px_-22px_rgba(251,191,36,.9)]"
+                        : rank === 2
+                          ? "h-16 border-zinc-300/45 bg-[linear-gradient(to_top,#cbd5e1_0%,rgba(203,213,225,.32)_50%,rgba(255,255,255,.06)_100%)]"
+                          : "h-14 border-amber-600/50 bg-[linear-gradient(to_top,#b45309_0%,rgba(180,83,9,.38)_50%,rgba(251,146,60,.08)_100%)]",
+                      rank === 2 && "rounded-l-3xl",
+                      rank === 3 && "rounded-r-3xl",
+                      rank === 1 && "rounded-b-md",
                     )}
                   >
-                    <p className="w-full truncate px-1 text-center text-[10px] font-bold leading-tight">
+                    {/* Angka rank besar semi-transparan di dasar blok */}
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute -bottom-2 left-1/2 -translate-x-1/2 text-4xl font-black text-black/20",
+                      )}
+                    >
+                      {rank}
+                    </span>
+                    <p className="relative w-full truncate px-1 text-center text-[10px] font-black leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.6)]">
                       {e?.username ?? "-"}
                     </p>
-                    <p className="w-full truncate px-1 text-center text-[10px] font-black leading-tight text-amber-300">
+                    <p
+                      className={cn(
+                        "relative w-full truncate px-1 text-center text-[10px] font-black leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.55)]",
+                        rank === 1
+                          ? "text-amber-50"
+                          : rank === 2
+                            ? "text-zinc-900"
+                            : "text-orange-50",
+                      )}
+                    >
                       {e?.value ?? "-"}
                     </p>
                   </motion.div>

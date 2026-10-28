@@ -2510,24 +2510,36 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       const [animeRes, donghuaRes, filmRes] = await Promise.all([animeP, donghuaP, filmP]);
       const seen = new Set<string>();
       const merged: AnimeCardT[] = [];
-      // Donghua selalu ditandai "sanka" supaya kliknya membuka detail donghua,
-      // bukan layar detail anime dengan id yang sama sekali tidak ada.
-      const pairs: readonly (readonly [AnimeCardT, CatalogPickSource])[] = [
-        ...(animeRes ?? []).map((c) => [c, "anilist"] as const),
-        ...(donghuaRes ?? []).map((c) => [c, "sanka"] as const),
-      ];
-      for (const [c, src] of pairs) {
-        if (!c?.id || seen.has(c.id)) continue;
-        seen.add(c.id);
-        merged.push({ ...c, type: c.type, source: src });
-      }
-      // Film ditambahkan belakangan; id-nya diawali "film:" supaya tidak
-      // tabrakan dengan id AniList/donghua yang bisa sama persis.
-      for (const f of filmRes ?? []) {
+      // Cari film: kalau query COCOK dengan judul film tapi TIDAK cocok
+      // dengan judul anime/donghua mana pun → hasilnya FILM SAJA
+      // (permintaan: "search film hasilnya ya film, tanpa campuran").
+      const qn = query.trim().toLowerCase();
+      const filmHits = (filmRes ?? []).filter((f) =>
+        String(f.title ?? "").toLowerCase().includes(qn),
+      );
+      const animeHit = [...(animeRes ?? []), ...(donghuaRes ?? [])].some((c) =>
+        String(c.title ?? "").toLowerCase().includes(qn),
+      );
+      const filmOnly = qn.length >= 2 && filmHits.length > 0 && !animeHit;
+      const pushFilm = (f: AnimeCardT) => {
         const key = `film:${f.id}`;
-        if (seen.has(key)) continue;
+        if (seen.has(key)) return;
         seen.add(key);
         merged.push({ ...f, id: key, source: "film" } as unknown as AnimeCardT);
+      };
+      // Film dulu di atas supaya judul film tidak terkubur hasil anime.
+      for (const f of filmOnly ? filmHits : filmRes ?? []) pushFilm(f);
+      if (!filmOnly) {
+        // Donghua selalu ditandai "sanka" supaya kliknya membuka detail donghua.
+        const pairs: readonly (readonly [AnimeCardT, CatalogPickSource])[] = [
+          ...(animeRes ?? []).map((c) => [c, "anilist"] as const),
+          ...(donghuaRes ?? []).map((c) => [c, "sanka"] as const),
+        ];
+        for (const [c, src] of pairs) {
+          if (!c?.id || seen.has(c.id)) continue;
+          seen.add(c.id);
+          merged.push({ ...c, type: c.type, source: src });
+        }
       }
       setResults(merged);
     } catch {
@@ -3351,17 +3363,17 @@ function MetaTile({
 }) {
   const inner = (
     <>
-      <Icon className={cn("size-4", accent ?? "text-white/80")} aria-hidden />
-      <p className="mt-1 line-clamp-1 text-[12px] font-black text-white">
+      <Icon className={cn("size-3.5", accent ?? "text-white/80")} aria-hidden />
+      <p className="mt-0.5 line-clamp-1 text-[11px] font-black text-white">
         {value}
       </p>
-      <p className="text-[9px] font-bold uppercase tracking-wider text-white/45">
+      <p className="text-[8px] font-bold uppercase tracking-wider text-white/45">
         {label}
       </p>
     </>
   );
   const cls =
-    "flex min-w-0 flex-col items-center justify-center rounded-2xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-center";
+    "flex min-w-0 flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] px-1.5 py-1.5 text-center";
   return onClick ? (
     <button
       type="button"
@@ -3602,7 +3614,7 @@ function AnimeDetailScreen({
           {/* GRID metadata — tersusun rapi 2 kolom (rata TENGAH, bukan
               menumpuk di kiri): Rating · Studio · Tahun · Tipe · Durasi ·
               Favorite · tombol BERI RATING. */}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
             <MetaTile
               icon={Star}
               value={
@@ -3639,19 +3651,19 @@ function AnimeDetailScreen({
             <button
               type="button"
               onClick={() => setRateOpen(true)}
-              className="flex min-w-0 flex-col items-center justify-center rounded-2xl border border-yellow-400/40 bg-yellow-500/10 px-2 py-2.5 text-center transition hover:border-yellow-300/60 active:scale-[0.97]"
+              className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-yellow-400/40 bg-yellow-500/10 px-1.5 py-1.5 text-center transition hover:border-yellow-300/60 active:scale-[0.97]"
             >
               <Star
                 className={cn(
-                  "size-4",
+                  "size-3.5",
                   myRating > 0 ? "fill-yellow-300 text-yellow-300" : "text-yellow-300",
                 )}
                 aria-hidden
               />
-              <p className="mt-1 text-[12px] font-black text-white">
+              <p className="mt-0.5 text-[11px] font-black text-white">
                 {myRating > 0 ? `${myRating}.0` : "Beri Rating"}
               </p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-yellow-100/60">
+              <p className="text-[8px] font-bold uppercase tracking-wider text-yellow-100/60">
                 {myRating > 0 ? "Rating kamu" : "Ketuk untuk nilai"}
               </p>
             </button>

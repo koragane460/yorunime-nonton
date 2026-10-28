@@ -511,8 +511,17 @@ let miniListeners: ((s: MiniState | null) => void)[] = [];
 let miniCurrent: MiniState | null = null;
 /** Posisi terakhir playback, dipakai untuk lanjut dari tempat yang sama. */
 let miniTime = 0;
+/** Teks CC terakhir dari layar Nonton — ditampilkan mini player. */
+let miniCueText = "";
+export function setMiniCue(t: string) {
+  miniCueText = t;
+}
+function getMiniCue() {
+  return miniCueText;
+}
 export function setMiniPlayer(s: MiniState | null) {
   if (s?.streamUrl !== miniCurrent?.streamUrl) miniTime = 0;
+  if (!s) miniCueText = "";
   miniCurrent = s;
   miniListeners.forEach((l) => l(s));
 }
@@ -537,13 +546,15 @@ export function MiniPlayerHost() {
   // Ukuran compact: tidak menutupi konten di HP, tetap comfy di tablet/PC.
   const [size] = useState(() =>
     typeof window !== "undefined" && window.innerWidth >= 640
-      ? { w: 210, h: 140 }
-      : { w: 164, h: 108 },
+      ? { w: 264, h: 168 }
+      : { w: 208, h: 132 },
   );
   const [pos, setPos] = useState({ x: 14, y: 100 });
   // UI mini player: tap layar → UI disembunyikan (video tetap jalan).
   // Muncul lagi kalau video dijeda atau user mengetuk dua kali.
   const [uiOn, setUiOn] = useState(true);
+  // Teks CC (subtitle) — di-push layar Nonton lewat setMiniCue.
+  const [cue, setCue] = useState("");
   const lastTapRef = useRef(0);
   // Drag: pakai pointer event (mouse + sentuh), tap tanpa geser = buka episode.
   const drag = useRef<{
@@ -646,6 +657,8 @@ export function MiniPlayerHost() {
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => {
               miniTime = e.currentTarget.currentTime;
+              const c = getMiniCue();
+              setCue((prev) => (prev === c ? prev : c));
             }}
             onLoadedMetadata={(e) => {
               // Lanjut dari posisi terakhir, jangan mulai dari nol.
@@ -705,6 +718,12 @@ export function MiniPlayerHost() {
             {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
           </button>
         </div>
+        {/* CC — teks subtitle yang sama dengan layar Nonton. */}
+        {cue && (
+          <span className="pointer-events-none absolute inset-x-2 bottom-1.5 rounded bg-black/70 px-1.5 py-0.5 text-center text-[9px] font-semibold leading-tight text-white/95">
+            {cue}
+          </span>
+        )}
       </div>
     </div>
   );

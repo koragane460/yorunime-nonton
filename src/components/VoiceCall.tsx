@@ -184,10 +184,13 @@ function VoiceHomeScreen({
         </div>
 
         {/* SATU KOTAK PREMIUM: judul + status + tombol create, rata tengah. */}
-        <div className="relative mt-2 overflow-hidden rounded-3xl border border-emerald-400/30 bg-[linear-gradient(165deg,#0b1f1a_0%,#0d1420_55%,#0a0c12_100%)] p-5 text-center shadow-[0_26px_54px_-30px_rgba(16,185,129,.8)] yn-cut">
-          <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
-          <span aria-hidden className="absolute -left-12 -top-12 size-36 rounded-full bg-emerald-500/18 blur-3xl" />
-          <span aria-hidden className="absolute -bottom-16 -right-10 size-40 rounded-full bg-violet-500/15 blur-3xl" />
+        <div className="relative mt-2 overflow-hidden rounded-3xl border border-emerald-400/25 bg-[linear-gradient(165deg,#0b1f1a_0%,#0d1420_55%,#0a0c12_100%)] p-5 text-center shadow-[0_22px_44px_-30px_rgba(16,185,129,.45)] yn-cut">
+          <span aria-hidden className="absolute inset-x-10 top-px h-px bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent" />
+          {/* Hiasan halus: taburan titik + ornamen sudut — BUKAN blur besar
+              yang menyilaukan. */}
+          <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.2px)] [background-size:24px_24px] opacity-70" />
+          <span aria-hidden className="absolute left-3 top-3 size-3 border-l-2 border-t-2 border-emerald-300/45 rounded-tl-md" />
+          <span aria-hidden className="absolute right-3 top-3 size-3 border-r-2 border-t-2 border-emerald-300/45 rounded-tr-md" />
           <span
             aria-hidden
             className="relative mx-auto flex h-12 items-center gap-1.5 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 shadow-[0_0_26px_-10px_rgba(16,185,129,.95)]"
@@ -225,7 +228,7 @@ function VoiceHomeScreen({
               }
               onCreate();
             }}
-            className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-emerald-300 to-emerald-500 py-3.5 text-sm font-black text-black shadow-[0_16px_34px_-16px_rgba(16,185,129,.95)] transition hover:brightness-110 active:scale-[0.98]"
+            className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-emerald-300 to-emerald-500 py-3.5 text-sm font-black text-black shadow-[0_14px_28px_-18px_rgba(16,185,129,.7)] transition hover:brightness-110 active:scale-[0.98]"
           >
             <span className="flex size-6 items-center justify-center rounded-full bg-black/20">
               <Plus className="size-4" />
@@ -267,9 +270,9 @@ function VoiceHomeScreen({
               return (
                 <div
                   key={r._id}
-                  className="relative overflow-hidden rounded-3xl border border-emerald-400/25 bg-[linear-gradient(160deg,#0b1a16_0%,#0d1220_58%,#0a0c12_100%)] p-4 shadow-[0_22px_46px_-30px_rgba(16,185,129,.75)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:shadow-[0_28px_56px_-30px_rgba(16,185,129,.9)] yn-cut-alt"
+                  className="relative overflow-hidden rounded-3xl border border-emerald-400/20 bg-[linear-gradient(160deg,#0b1a16_0%,#0d1220_58%,#0a0c12_100%)] p-4 shadow-[0_16px_34px_-26px_rgba(16,185,129,.5)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/40 yn-cut-alt"
                 >
-                  <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
+                  <span aria-hidden className="absolute inset-x-10 top-px h-px bg-gradient-to-r from-transparent via-emerald-300/50 to-transparent" />
                   <div className="relative flex items-center gap-3">
                     <span
                       className={cn(

@@ -22,8 +22,14 @@ function clampVol(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
-/** Putar lagu. URL sama → lanjutkan yang lama (tanpa restart dari 0). */
-export function lunaPlay(url: string, volume: number): void {
+/** Putar lagu. URL sama → lanjutkan yang lama (tanpa restart dari 0).
+    `onEnded` dipanggil sekali saat lagu habis (dipakai Luna untuk
+    melanjutkan antrian / bilang "tidak ada lagi di antrean"). */
+export function lunaPlay(
+  url: string,
+  volume: number,
+  onEnded?: () => void,
+): void {
   if (el && curUrl === url) {
     el.volume = clampVol(volume);
     if (el.paused) void el.play().catch(() => {});
@@ -33,6 +39,7 @@ export function lunaPlay(url: string, volume: number): void {
   const na = new Audio(url);
   na.volume = clampVol(volume);
   na.preload = "auto";
+  if (onEnded) na.addEventListener("ended", onEnded, { once: true });
   el = na;
   curUrl = url;
   void na.play().catch(() => {});
