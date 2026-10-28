@@ -104,9 +104,11 @@ export const listMessages = query({
     const giveIds = uniq(
       ordered.map((r) => r.premiumGiveId).filter((x): x is string => !!x),
     );
-    const replyIds = uniq(
-      ordered.map((r) => r.replyToId).filter((x): x is string => !!x),
-    );
+    const replyIds = kind === "voice"
+      ? []
+      : uniq(
+          ordered.map((r) => r.replyToId).filter((x): x is string => !!x),
+        );
     const [userDocs, giveDocs, replyDocs] = await Promise.all([
       Promise.all(userIds.map((id) => ctx.db.get(id as never))),
       Promise.all(giveIds.map((id) => ctx.db.get(id as never))),
@@ -165,7 +167,9 @@ export const listMessages = query({
         _id: r._id,
         kind: r.kind,
         userId: r.userId,
-        username: u?.username ?? "user",
+        username: r.bot ? "Luna Bot 24/7" : (u?.username ?? "user"),
+        bot: !!r.bot,
+        botData: r.botData,
         image: u?.image,
         level: u?.level ?? 1,
         premium: (u?.premiumUntil ?? 0) > Date.now(),

@@ -1,14 +1,107 @@
 // CHAT ROOM (VOICE) — panel SETENGAH layar di dalam voice room, gaya Discord:
-// handle garis pendek di tengah atas, daftar pesan (foto + username + centang
-// biru + tag clan + id) dengan bubble abu-abu, dan kolom input + tombol kirim
-// di paling bawah. Bukan fullscreen — menutupi sekitar 58% layar dari bawah.
+// handle garis pendek di tengah atas, koton hint command Luna Bot, daftar pesan
+// (foto + username + centang biru + tag clan + id) tanpa outline bubble, pesan
+// sendiri rata kanan, dan kolom input + tombol kirim di paling bawah.
+//
+// Command musik diawali & diakhiri tanda seru (!help!, !play judul!) diproses
+// action `music.luna` → Luna Bot 24/7 membalas di chat (avatar bulan + centang
+// ungu) lengkap dengan kartu kaset now-playing yang bisa benar-benar bunyi
+// (pratinjau audio dari API musik).
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, PurpleCheck } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
-import { Send, X } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Music, Send, X } from "lucide-react";
+
+/** Avatar Luna Bot — bulan sabit gradasi violet + bintang, tanpa foto external. */
+function LunaAvatar({ className = "size-8" }: { className?: string }) {
+  return (
+    <span
+      className={`${className} flex shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 ring-violet-400/50`}
+      style={{
+        background:
+          "radial-gradient(120% 120% at 25% 15%, #7c3aed 0%, #4c1d95 45%, #1e1b4b 100%)",
+      }}
+      aria-label="Luna Bot 24/7"
+    >
+      <svg viewBox="0 0 24 24" className="size-[70%]" aria-hidden>
+        <defs>
+          <linearGradient id="luna-moon" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#fde68a" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M20.4 14.2A8.6 8.6 0 0 1 9.8 3.6a8.9 8.9 0 1 0 10.6 10.6Z"
+          fill="url(#luna-moon)"
+        />
+        <circle cx="17.6" cy="6.4" r="1" fill="#fde68a" />
+        <circle cx="20.4" cy="9.6" r="0.6" fill="#fde68a" />
+      </svg>
+    </span>
+  );
+}
+
+/** Kartu kaset now-playing: poster berputar + judul + pembuat + bar jalan. */
+function NowPlayingCard({ d }: { d: any }) {
+  const t = d.track ?? {};
+  const preview = !!t.preview;
+  const effMs = preview ? 30000 : Number(t.durationMs || 30000);
+  const art = t.art || "";
+  return (
+    <div className="mb-1.5 w-fit max-w-[260px] overflow-hidden rounded-2xl border border-violet-400/25 bg-[linear-gradient(150deg,#241a3d_0%,#141126_60%,#0d0b16_100%)] shadow-[0_14px_34px_-20px_rgba(139,92,246,0.9)]">
+      <div className="flex items-center gap-2.5 p-2.5">
+        {/* Kaset puter: poster di tengah piringan berputar */}
+        <span className="relative size-12 shrink-0">
+          <span
+            className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#1b1b22,#3f3f4d,#131318,#4b4b5c,#1b1b22)] animate-[spin_4s_linear_infinite]"
+            aria-hidden
+          />
+          <span className="absolute inset-[7px] rounded-full bg-black/70" aria-hidden />
+          {art ? (
+            <img
+              src={art}
+              alt=""
+              className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-full object-cover"
+            />
+          ) : (
+            <span className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/40" />
+          )}
+          <span className="absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[11px] font-black text-white">
+            {t.title ?? "—"}
+          </p>
+          <p className="truncate text-[10px] font-semibold text-violet-200/80">
+            {t.artist ?? ""}
+          </p>
+        </div>
+      </div>
+      {/* Bar lagu berjalan */}
+      <div className="px-2.5 pb-2.5">
+        <div className="h-1 overflow-hidden rounded-full bg-white/15">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-300"
+            style={{
+              animation: `luna-np ${effMs}ms linear forwards`,
+              width: "0%",
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Command Luna Bot: teks diawali DAN diakhiri tanda seru. */
+function isLunaCommand(text: string) {
+  const t = text.trim();
+  return t.length >= 3 && t.startsWith("!") && t.endsWith("!");
+}
 
 export function VoiceChatSheet({
   roomId,
@@ -18,21 +111,68 @@ export function VoiceChatSheet({
   onClose: () => void;
 }) {
   const channel = `voice:${roomId}`;
+  // 40 terakhir cukup & jauh lebih ringan dari 60 (chat sering lag).
   const msgs = useQuery(api.chat.listMessages, {
     kind: "voice",
     channel,
-    limit: 60,
+    limit: 40,
   });
   const send = useMutation(api.chat.sendMessage);
+  const luna = useAction(api.music.luna);
+  const { user } = useAuth();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
   const count = msgs?.length ?? 0;
 
+  // Pemutar audio Luna Bot (pratinjau lagu benar-benar bunyi di room ini).
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const seenRef = useRef<Set<string>>(new Set());
+
   // Selalu pipih ke bawah — pesan baru langsung terlihat.
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [count]);
+
+  // Reaksi terhadap pesan bot: putar lagu, pause/resume/stop/skip.
+  useEffect(() => {
+    if (!msgs) return;
+    for (const m of msgs) {
+      const d: any = m.botData;
+      if (!m.bot || !d) continue;
+      if (seenRef.current.has(String(m._id))) continue;
+      seenRef.current.add(String(m._id));
+      const a = audioRef.current;
+      if (d.kind === "np" && d.track?.preview) {
+        a?.pause();
+        const na = new Audio(d.track.preview);
+        na.volume = Math.max(0, Math.min(1, (d.volume ?? 80) / 100));
+        audioRef.current = na;
+        void na.play().catch(() => {});
+      } else if (d.kind === "control") {
+        if (d.action === "pause") a?.pause();
+        else if (d.action === "resume") void a?.play().catch(() => {});
+        else if (d.action === "stop") {
+          a?.pause();
+          audioRef.current = null;
+        } else if (d.action === "skip" && d.track?.preview) {
+          a?.pause();
+          const na = new Audio(d.track.preview);
+          na.volume = Math.max(0, Math.min(1, 80 / 100));
+          audioRef.current = na;
+          void na.play().catch(() => {});
+        }
+      }
+    }
+  }, [msgs]);
+
+  // Berhentikan audio saat panel ditutup.
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
+    };
+  }, []);
 
   const submit = async () => {
     const t = text.trim();
@@ -41,6 +181,15 @@ export function VoiceChatSheet({
     setText("");
     try {
       await send({ kind: "voice", channel, text: t });
+      // Command Luna Bot (!help!, !play judul!, …) diproses di action.
+      if (isLunaCommand(t) && user?._id) {
+        void luna({
+          roomId,
+          text: t,
+          userId: user._id as Id<"users">,
+          username: user.username ?? "user",
+        }).catch(() => {});
+      }
     } catch {
       setText(t); // kembalikan teks kalau gagal kirim
     } finally {
@@ -65,6 +214,15 @@ export function VoiceChatSheet({
         Chat Room
       </p>
 
+      {/* Kotak hint command musik (paling atas, di atas daftar pesan) */}
+      <div className="mx-3 mt-2 flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
+        <Music className="size-3.5 shrink-0 text-violet-300" />
+        <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-violet-100/90">
+          Ketik <span className="font-black text-white">!invite!</span> untuk
+          melihat daftar musik
+        </p>
+      </div>
+
       {/* Daftar pesan */}
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-3 pb-2">
         {msgs === undefined && (
@@ -76,47 +234,76 @@ export function VoiceChatSheet({
           </p>
         )}
         <div className="flex flex-col gap-3">
-          {msgs?.map((m) => (
-            <div key={m._id} className="flex items-start gap-2.5">
-              <Avatar
-                src={m.image}
-                seed={m.username}
-                className="size-8 shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                {/* Baris nama: username + centang biru + tag clan + id */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[12px] font-black text-white">
-                    {m.username}
-                  </span>
-                  {m.premium && <BlueCheck className="size-3.5 shrink-0" />}
-                  {m.clanTag && (
-                    <ClanTag
-                      icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                      tag={m.clanTag}
-                      color={m.clanNameColor}
-                      level={m.clanLevel}
-                      className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
-                    />
-                  )}
-                  {typeof m.seqId === "number" && (
-                    <span className="text-[9px] font-bold text-white/35">
-                      #{m.seqId}
+          {msgs?.map((m) => {
+            const mine = !m.bot && !!user && m.userId === user._id;
+            const bot: any = m.botData;
+            return (
+              <div
+                key={m._id}
+                className={`flex items-start gap-2.5 ${mine ? "flex-row-reverse" : ""}`}
+              >
+                {m.bot ? (
+                  <LunaAvatar />
+                ) : (
+                  <Avatar
+                    src={m.image}
+                    seed={m.username}
+                    className="size-8 shrink-0"
+                  />
+                )}
+                <div
+                  className={`min-w-0 flex-1 ${mine ? "flex flex-col items-end" : ""}`}
+                >
+                  {/* Baris nama: username + centang + tag clan + id */}
+                  <div
+                    className={`flex flex-wrap items-center gap-1.5 ${mine ? "justify-end" : ""}`}
+                  >
+                    <span
+                      className={`text-[12px] font-black ${m.bot ? "text-violet-200" : "text-white"}`}
+                    >
+                      {m.username}
                     </span>
-                  )}
-                </div>
-                {/* Bubble abu-abu */}
-                <div className="mt-1 w-fit max-w-full rounded-2xl rounded-tl-md bg-white/12 px-3 py-2 text-[12px] leading-snug text-white/90">
-                  {m.text}
+                    {m.bot ? (
+                      <PurpleCheck className="size-3.5 shrink-0" />
+                    ) : (
+                      m.premium && <BlueCheck className="size-3.5 shrink-0" />
+                    )}
+                    {!mine && m.clanTag && (
+                      <ClanTag
+                        icon={m.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                        tag={m.clanTag}
+                        color={m.clanNameColor}
+                        level={m.clanLevel}
+                        className="shrink-0 scale-90 px-1.5 py-0 text-[9px]"
+                      />
+                    )}
+                    {!mine && typeof m.seqId === "number" && (
+                      <span className="text-[9px] font-bold text-white/35">
+                        #{m.seqId}
+                      </span>
+                    )}
+                  </div>
+                  {/* Kartu kaset now-playing (di ATAS teks) */}
+                  {m.bot && bot?.kind === "np" && <NowPlayingCard d={bot} />}
+                  {/* Bubble — TANPA outline, abu-abu polos */}
+                  <div
+                    className={`mt-1 w-fit max-w-full rounded-2xl px-3 py-2 text-[12px] leading-snug text-white/90 ${
+                      mine
+                        ? "rounded-tr-md bg-gradient-to-b from-indigo-500/70 to-indigo-700/70 text-white"
+                        : "rounded-tl-md bg-white/12"
+                    }`}
+                  >
+                    <span className="whitespace-pre-wrap break-words">{m.text}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div ref={endRef} />
       </div>
 
-      {/* Kolom input + tombol kirim */}
+      {/* Kolom input + tombol kirim (tanpa outline) */}
       <div className="flex items-center gap-2 border-t border-white/10 bg-black/40 px-3 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
         <input
           value={text}
@@ -125,7 +312,7 @@ export function VoiceChatSheet({
             if (e.key === "Enter") void submit();
           }}
           placeholder="Tulis pesan…"
-          className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.07] px-4 py-2.5 text-[13px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
+          className="min-w-0 flex-1 rounded-full bg-white/[0.09] px-4 py-2.5 text-[13px] text-white outline-none placeholder:text-white/35"
         />
         <button
           onClick={() => void submit()}

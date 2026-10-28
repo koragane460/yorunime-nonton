@@ -827,6 +827,30 @@
   height: 100%;
 }
 
+@keyframes dice-tumble {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  30% {
+    transform: rotate(90deg) scale(1.1);
+  }
+  60% {
+    transform: rotate(200deg) scale(0.94);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes luna-np {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 @keyframes yn-sheen {
   0% { background-position: 120% 0; }
   100% { background-position: -120% 0; }

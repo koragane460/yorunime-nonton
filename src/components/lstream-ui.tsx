@@ -336,6 +336,16 @@ export function BlueCheck({ className }: { className?: string }) {
   );
 }
 
+/** Centang UNGU — bot official YoruNime (Luna Bot musik). */
+export function PurpleCheck({ className }: { className?: string }) {
+  return (
+    <BadgeCheck
+      className={cn("size-4 shrink-0 fill-violet-500 text-white", className)}
+      aria-label="Bot Official YoruNime"
+    />
+  );
+}
+
 /** Logo merah untuk akun yang ditandai developer lewat "@username". */
 export function RedMark({ className }: { className?: string }) {
   return (

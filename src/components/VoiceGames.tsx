@@ -6,7 +6,7 @@
 //  4. Catur      — papan 8x8 validasi server (kastel/en passant/skak)
 //
 // Semua overlay full-screen (fixed inset-0 z-[80]) di atas voice room.
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -20,7 +20,6 @@ import {
   ChevronRight,
   Crown,
   Gamepad2,
-  Lightbulb,
   Send,
   Sparkles,
   UserPlus,
@@ -598,30 +597,68 @@ function LobbyView({
   const seats = Array.from({ length: s.seats });
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4">
-      <div className="grid grid-cols-2 gap-3">
+      {/* Kepala lobby premium */}
+      <div className="relative overflow-hidden rounded-3xl border border-amber-300/25 bg-[linear-gradient(155deg,#241a08_0%,#14101f_55%,#0b0a12_100%)] p-4 text-center shadow-[0_24px_50px_-30px_rgba(251,191,36,.8)]">
+        <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
+        <span
+          aria-hidden
+          className="absolute -right-10 -top-12 size-40 rounded-full bg-amber-500/15 blur-3xl"
+        />
+        <p className="text-[10px] font-black uppercase tracking-[0.34em] text-amber-300/85">
+          Menunggu Pemain
+        </p>
+        <p className="mt-1.5 bg-gradient-to-r from-amber-200 via-white to-amber-200 bg-clip-text text-xl font-black text-transparent">
+          {s.players.length}
+          <span className="text-white/50"> / {s.seats} kursi terisi</span>
+        </p>
+        {/* Bar kursi */}
+        <div className="mt-3 flex justify-center gap-1.5">
+          {seats.map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                "h-1.5 w-9 rounded-full transition",
+                i < s.players.length
+                  ? "bg-gradient-to-r from-amber-300 to-amber-500 shadow-[0_0_10px_-2px_rgba(251,191,36,.9)]"
+                  : "bg-white/15",
+              )}
+            />
+          ))}
+        </div>
+        <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-white/55">
+          <Sparkles className="size-3.5 text-amber-300" />
+          {isHost
+            ? "Ajak pemain di room — otomatis mulai saat penuh"
+            : "Menunggu host mengajak pemain lain…"}
+        </p>
+      </div>
+
+      {/* Kursi pemain */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
         {seats.map((_, i) => {
           const p = s.players[i];
           return (
             <motion.div
               key={i}
-              initial={{ opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
               className={cn(
-                "flex flex-col items-center gap-2 rounded-3xl border p-4",
+                "relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border p-4",
                 p
-                  ? "border-emerald-400/35 bg-emerald-400/8"
+                  ? "border-amber-300/40 bg-[linear-gradient(160deg,rgba(251,191,36,.14),rgba(255,255,255,.04))] shadow-[0_16px_34px_-24px_rgba(251,191,36,.9)]"
                   : "border-dashed border-white/18 bg-white/[0.03]",
               )}
             >
               {p ? (
                 <>
-                  <Avatar src={p.image} seed={p.username} className="size-14" />
+                  <span className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+                  <Avatar src={p.image} seed={p.username} className="size-14 ring-2 ring-amber-300/70" />
                   <p className="max-w-full truncate text-xs font-black">
                     {p.username}
                   </p>
-                  <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-200">
-                    Siap
+                  <span className="flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-200 ring-1 ring-amber-300/40">
+                    ✓ Siap
                   </span>
                 </>
               ) : (
@@ -630,7 +667,8 @@ function LobbyView({
                     <UserPlus className="size-6" />
                   </span>
                   <p className="text-[11px] text-white/45">Kursi kosong</p>
-                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/45">
+                  <span className="flex items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/45">
+                    <span className="size-1.5 animate-ping rounded-full bg-amber-300" />
                     Menunggu
                   </span>
                 </>
@@ -640,24 +678,11 @@ function LobbyView({
         })}
       </div>
 
-      <div className="mt-5 rounded-3xl border border-white/12 bg-white/[0.04] p-4">
-        <p className="flex items-center gap-2 text-xs font-bold text-white/75">
-          <Lightbulb className="size-4 text-amber-300" />
-          {s.players.length}/{s.seats} pemain — game otomatis mulai saat kursi
-          penuh.
-        </p>
-        <p className="mt-1.5 text-[11px] leading-snug text-white/50">
-          {isHost
-            ? "Tekan tombol ajak untuk mengundang semua orang yang ada di voice room."
-            : "Menunggu host mengajak pemain lain masuk ke game…"}
-        </p>
-      </div>
-
       {isHost && (
         <button
           onClick={() => void onInvite()}
           disabled={inviting}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-400/12 py-3.5 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20 active:scale-[0.98] disabled:opacity-60"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 py-3.5 text-sm font-black text-black shadow-[0_18px_36px_-18px_rgba(251,191,36,.95)] transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
         >
           <Send className="size-4" />
           {inviting ? "Mengirim…" : "Ajak pemain di room"}
@@ -704,37 +729,66 @@ function UnoCard({
   className?: string;
 }) {
   const wild = c === "w" || c === "w4";
+  const glyph = unoGlyph(c);
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "relative h-[86px] w-14 shrink-0 overflow-hidden rounded-xl border-2 shadow-lg transition",
+        "group/card relative h-[92px] w-[58px] shrink-0 overflow-hidden rounded-[14px] border-[3px] shadow-[0_10px_20px_-8px_rgba(0,0,0,.85)] transition",
         wild
-          ? "border-white/85 bg-[conic-gradient(from_45deg,#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)]"
-          : `border-white/85 bg-gradient-to-b ${UNO_BG[c[0]]}`,
+          ? "border-white/90 bg-[conic-gradient(from_45deg,#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)]"
+          : `border-white/90 bg-gradient-to-br ${UNO_BG[c[0]]}`,
         onClick && !disabled
-          ? "hover:-translate-y-1.5 hover:shadow-xl focus-visible:-translate-y-1.5"
+          ? "hover:-translate-y-2 hover:shadow-[0_18px_28px_-10px_rgba(0,0,0,.9)] focus-visible:-translate-y-2"
           : "",
         className,
       )}
     >
+      {/* Kilau kaca kartu */}
       <span
         aria-hidden
-        className="absolute inset-1.5 rounded-[45%_55%_50%_50%/55%_45%_55%_45%] bg-white/95"
+        className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent"
+      />
+      {/* Oval putih klasik ala kartu UNO */}
+      <span
+        aria-hidden
+        className="absolute inset-x-[7px] inset-y-[13px] -rotate-[18deg] rounded-[50%] border border-black/10 bg-white/95 shadow-[inset_0_-2px_4px_rgba(0,0,0,.12)]"
       />
       <span
         className={cn(
-          "relative flex h-full items-center justify-center text-lg font-black",
+          "relative flex h-full items-center justify-center text-xl font-black italic tracking-tight",
           wild ? "text-zinc-800" : "text-zinc-900",
         )}
       >
-        {unoGlyph(c)}
+        {glyph}
       </span>
-      <span className="absolute left-1 top-0.5 text-[9px] font-black text-white drop-shadow">
-        {unoGlyph(c)}
+      {/* Sudut kiri-atas & kanan-bawah */}
+      <span className="absolute left-1.5 top-1 text-[10px] font-black italic text-white drop-shadow-[0_1px_1px_rgba(0,0,0,.7)]">
+        {glyph}
+      </span>
+      <span className="absolute bottom-1 right-1.5 rotate-180 text-[10px] font-black italic text-white drop-shadow-[0_1px_1px_rgba(0,0,0,.7)]">
+        {glyph}
       </span>
     </button>
+  );
+}
+
+/** Punggung kartu UNO (untuk tumpukan lawan). */
+function UnoBack({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "relative block h-[38px] w-[26px] overflow-hidden rounded-[6px] border-2 border-white/85 bg-[linear-gradient(140deg,#1d1d27,#0c0c12)] shadow",
+        className,
+      )}
+    >
+      <span className="absolute inset-[3px] rounded-[4px] border border-white/25" />
+      <span className="absolute inset-0 flex items-center justify-center text-[7px] font-black italic text-red-400">
+        UNO
+      </span>
+    </span>
   );
 }
 
@@ -758,8 +812,15 @@ function UnoTable({
   const passMut = useMutation(api.games.passTurn);
   const playMut = useMutation(api.games.playCard);
   const unoMut = useMutation(api.games.shoutUno);
+  const dorongMut = useMutation(api.games.dorong);
   const [pickWild, setPickWild] = useState<number | null>(null);
   const [drew, setDrew] = useState(false);
+  /** Tangan DISPREAD miring (default) atau dibuka jadi barisan lurus. */
+  const [fan, setFan] = useState(true);
+  /** Kartu yang sedang diterbangkan ke papan saat dibuang. */
+  const [fly, setFly] = useState<{ c: string; id: number } | null>(null);
+  /** Efek tembakan DORONG ke lawan. */
+  const [shot, setShot] = useState<{ name: string; id: number } | null>(null);
 
   const uno = s.uno;
   const myTurn = !!myId && uno.turn === myId;
@@ -783,24 +844,42 @@ function UnoTable({
     try {
       await playMut({ sessionId, index: i });
       setDrew(false);
+      // Animasi: kartu TERBANG dari tangan ke papan.
+      setFly({ c: card, id: Date.now() });
+      window.setTimeout(() => setFly(null), 520);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal main kartu");
     }
   };
 
+  /** Tembak/DORONG lawan yang sisa 1 kartu tapi belum teriak UNO. */
+  const doDorong = async (t: { userId: string; username: string }) => {
+    try {
+      await dorongMut({
+        sessionId,
+        targetId: t.userId as Id<"users">,
+      });
+      setShot({ name: t.username, id: Date.now() });
+      window.setTimeout(() => setShot(null), 950);
+      toast.success(`Dorong ${t.username}! +2 kartu hukuman`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mendorong");
+    }
+  };
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Lawan */}
-      <div className="flex gap-2 overflow-x-auto px-3 py-2">
+    <div className="relative flex min-h-0 flex-1 flex-col">{/* Lawan */}
+      <div className="thin-scroll flex gap-2 overflow-x-auto px-3 py-2">
         {opponents.map((p) => {
           const count = uno.counts[p.userId] ?? 0;
           const active = uno.turn === p.userId;
           const called = uno.unoCalled[p.userId];
+          const pushable = count === 1 && !called;
           return (
             <div
               key={p.userId}
               className={cn(
-                "flex shrink-0 flex-col items-center gap-1 rounded-2xl border px-3 py-2 transition",
+                "relative flex shrink-0 flex-col items-center gap-1 rounded-2xl border px-3 py-2 transition",
                 active
                   ? "border-amber-300/70 bg-amber-400/10"
                   : "border-white/10 bg-white/[0.04]",
@@ -814,15 +893,37 @@ function UnoTable({
               <p className="max-w-16 truncate text-[10px] font-bold">
                 {p.username}
               </p>
-              <span className="flex items-center gap-1 text-[10px] font-black text-white/70">
-                <span className="inline-block h-3 w-2 rounded-[3px] bg-gradient-to-b from-red-500 to-red-800 ring-1 ring-white/70" />
-                {count}
-                {count === 1 && called && (
-                  <span className="ml-0.5 rounded bg-amber-400 px-1 text-[8px] font-black text-black">
-                    UNO
-                  </span>
-                )}
+              {/* Tumpukan kartu lawan — punggung kartu UNO, bukan angka polos. */}
+              <span className="flex h-[42px] items-center justify-center">
+                {Array.from({ length: Math.min(count, 4) }, (_, k) => (
+                  <UnoBack
+                    key={k}
+                    className={cn(
+                      "-ml-4 first:ml-0",
+                      k > 0 && "-rotate-[10deg]",
+                      k % 2 === 0 && "rotate-[6deg]",
+                    )}
+                  />
+                ))}
+                <span className="ml-1 flex items-center gap-0.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-black text-white ring-1 ring-white/25">
+                  {count}
+                </span>
               </span>
+              {count === 1 && called && (
+                <span className="rounded bg-amber-400 px-1.5 text-[8px] font-black text-black">
+                  UNO!
+                </span>
+              )}
+              {/* Tombol DORONG — muncul saat lawan sisa 1 kartu & belum UNO. */}
+              {pushable && (
+                <button
+                  type="button"
+                  onClick={() => void doDorong(p)}
+                  className="mt-0.5 w-full rounded-lg bg-gradient-to-b from-orange-400 to-red-600 px-2 py-1 text-[10px] font-black text-white shadow-[0_8px_16px_-8px_rgba(239,68,68,.9)] transition hover:brightness-110 active:scale-95"
+                >
+                  DORONG!
+                </button>
+              )}
             </div>
           );
         })}
@@ -853,7 +954,7 @@ function UnoTable({
               </span>
             </span>
           </div>
-          {/* Kartu teratas */}
+          {/* Kartu teratas — animasi jatuh dari atas tiap kali kartu baru */}
           {uno.top && (
             <div className="relative">
               <span
@@ -866,12 +967,20 @@ function UnoTable({
                   uno.color === "b" && "bg-sky-500/35",
                 )}
               />
-              <UnoCard c={uno.top} className="relative" />
+              <motion.div
+                key={`${uno.top}-${uno.color}-${uno.deckCount}`}
+                initial={{ scale: 0.55, y: -70, rotate: -38, opacity: 0 }}
+                animate={{ scale: 1, y: 0, rotate: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 320, damping: 17 }}
+                className="relative"
+              >
+                <UnoCard c={uno.top} />
+              </motion.div>
             </div>
           )}
         </div>
 
-        {/* Aksi giliran */}
+        {/* Aksi giliran — desain pill premium */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={async () => {
@@ -883,9 +992,9 @@ function UnoTable({
               }
             }}
             disabled={!myTurn}
-            className="rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-[11px] font-black text-white transition active:scale-95 disabled:opacity-35"
+            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.08] px-4 py-2 text-[11px] font-black text-white transition hover:bg-white/15 active:scale-95 disabled:opacity-35"
           >
-            Tarik Kartu
+            <span aria-hidden>🂠</span> Tarik Kartu
           </button>
           <button
             onClick={async () => {
@@ -897,7 +1006,7 @@ function UnoTable({
               }
             }}
             disabled={!myTurn || !drew}
-            className="rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-[11px] font-black text-white transition active:scale-95 disabled:opacity-35"
+            className="rounded-full border border-white/20 bg-white/[0.08] px-4 py-2 text-[11px] font-black text-white transition hover:bg-white/15 active:scale-95 disabled:opacity-35"
           >
             Lewat
           </button>
@@ -912,9 +1021,9 @@ function UnoTable({
             }}
             disabled={myCount !== 1}
             className={cn(
-              "rounded-xl px-4 py-2 text-[11px] font-black transition active:scale-95",
+              "rounded-full px-5 py-2 text-[11px] font-black italic tracking-wide transition active:scale-95",
               myCount === 1
-                ? "bg-gradient-to-b from-amber-300 to-amber-500 text-black shadow-lg shadow-amber-600/30 animate-pulse"
+                ? "bg-gradient-to-b from-amber-300 to-amber-500 text-black shadow-[0_0_20px_-4px_rgba(251,191,36,.9)] animate-pulse"
                 : "border border-white/15 bg-white/5 text-white/40",
             )}
           >
@@ -923,33 +1032,81 @@ function UnoTable({
         </div>
       </div>
 
-      {/* Tangan saya */}
+      {/* Tangan saya — kartu menyebar MIRING dari kiri, ketuk judulnya
+          untuk membuka jadi barisan lurus. */}
       <div className="border-t border-white/10 px-3 pb-6 pt-3">
-        <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-white/45">
-          Kartu kamu · {myHand.length}
-        </p>
-        <div className="thin-scroll flex gap-2 overflow-x-auto pb-1">
-          {myHand.map((c, i) => (
-            <div key={`${c}-${i}`} className="relative">
-              <UnoCard
-                c={c}
-                onClick={() => void play(i)}
-                disabled={!myTurn || !canPlayClient(c, uno.top, uno.color)}
-                className={cn(
-                  !myTurn || !canPlayClient(c, uno.top, uno.color)
-                    ? "opacity-45 grayscale-[0.35]"
-                    : "ring-2 ring-amber-300/80",
-                )}
-              />
-            </div>
-          ))}
+        <button
+          type="button"
+          onClick={() => setFan((f) => !f)}
+          className="mb-2.5 w-full text-center text-[10px] font-bold uppercase tracking-widest text-white/45 transition hover:text-white/70"
+        >
+          Kartu kamu · {myHand.length} {fan ? "· ketuk untuk barisan" : "· ketuk untuk menyebar"}
+        </button>
+        <div className="thin-scroll flex items-end gap-0.5 overflow-x-auto pb-1 pt-4">
+          {myHand.map((c, i) => {
+            const mid = (myHand.length - 1) / 2;
+            const rot = fan ? (i - mid) * 3.6 : 0;
+            const lift = fan ? Math.abs(i - mid) * 3 : 0;
+            return (
+              <span
+                key={`${c}-${i}`}
+                className="shrink-0 transition-transform duration-300"
+                style={{
+                  transform: `translateY(${lift}px) rotate(${rot}deg)`,
+                  marginLeft: i === 0 ? 0 : fan ? -14 : 8,
+                  zIndex: i,
+                }}
+              >
+                <UnoCard
+                  c={c}
+                  onClick={() => void play(i)}
+                  disabled={!myTurn || !canPlayClient(c, uno.top, uno.color)}
+                  className={cn(
+                    !myTurn || !canPlayClient(c, uno.top, uno.color)
+                      ? "opacity-45 grayscale-[0.35]"
+                      : "ring-2 ring-amber-300/80",
+                  )}
+                />
+              </span>
+            );
+          })}
           {myHand.length === 0 && (
-            <p className="py-6 text-center text-xs text-white/40">
+            <p className="py-6 w-full text-center text-xs text-white/40">
               Menunggu kartu dibagikan…
             </p>
           )}
         </div>
       </div>
+
+      {/* Animasi kartu TERBANG dari tangan ke papan */}
+      {fly && (
+        <motion.span
+          key={fly.id}
+          initial={{ y: 0, scale: 1, rotate: 0, opacity: 1 }}
+          animate={{ y: -170, scale: 0.92, rotate: 420, opacity: 0 }}
+          transition={{ duration: 0.5, ease: "easeIn" }}
+          className="pointer-events-none absolute bottom-24 left-1/2 z-20 -translate-x-1/2"
+          aria-hidden
+        >
+          <UnoCard c={fly.c} />
+        </motion.span>
+      )}
+
+      {/* Efek tembakan DORONG ke lawan */}
+      {shot && (
+        <motion.div
+          key={shot.id}
+          initial={{ opacity: 0, scale: 0.5, y: 40 }}
+          animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.15, 1, 1.4], y: [40, 0, 0, -30] }}
+          transition={{ duration: 0.95, times: [0, 0.25, 0.7, 1] }}
+          className="pointer-events-none absolute left-1/2 top-16 z-30 -translate-x-1/2"
+          aria-hidden
+        >
+          <span className="flex items-center gap-2 rounded-2xl border-2 border-orange-400/70 bg-gradient-to-b from-orange-500/90 to-red-700/90 px-5 py-3 text-lg font-black italic text-white shadow-[0_0_40px_-6px_rgba(249,115,22,.95)]">
+            💥 DORONG {shot.name}!
+          </span>
+        </motion.div>
+      )}
 
       {/* Pilih warna untuk kartu liar */}
       {pickWild !== null && (
@@ -1056,6 +1213,46 @@ function ChessTable({
     return flip ? all.reverse() : all;
   }, [flip]);
 
+  /** Posisi petak (dalam % papan) sesuai tampilan (flip untuk hitam). */
+  const cellPos = (i: number) => {
+    const disp = flip ? 63 - i : i;
+    const col = disp % 8;
+    const row = Math.floor(disp / 8);
+    return { x: (col + 0.5) * 12.5, y: (row + 0.5) * 12.5 };
+  };
+
+  /** Animasi langkah terakhir — bidak DITERBANGKAN dari petak lama ke
+      petak baru (bukan teleport). Reset tiap `chess.last` berubah. */
+  const [anim, setAnim] = useState<{
+    from: number;
+    to: number;
+    piece: string;
+    id: number;
+  } | null>(null);
+  const lastKey = chess.last ? `${chess.last.from}-${chess.last.to}` : "";
+  const lastRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!chess.last) return;
+    // Jangan animasikan langkah lama saat baru membuka layar.
+    if (lastRef.current === null) {
+      lastRef.current = lastKey;
+      return;
+    }
+    if (lastRef.current === lastKey) return;
+    lastRef.current = lastKey;
+    const piece = chess.board[chess.last.to];
+    if (!piece) return;
+    setAnim({
+      from: chess.last.from,
+      to: chess.last.to,
+      piece,
+      id: Date.now(),
+    });
+    const t = window.setTimeout(() => setAnim(null), 500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastKey]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6 pt-2">
       {/* Pemain */}
@@ -1105,14 +1302,14 @@ function ChessTable({
         )}
       </p>
 
-      {/* Papan */}
-      <div className="mx-auto mt-3 w-full max-w-md overflow-hidden rounded-2xl border border-white/20 shadow-[0_20px_50px_-30px_rgba(0,0,0,1)]">
-        <div className="grid aspect-square grid-cols-8">
+      {/* Papan — petak persegi SERAGAM (grid-rows-8 penuh) + bidak yang
+          GERAK halus antar petak (transisi), bukan teleport. */}
+      <div className="relative mx-auto mt-3 aspect-square w-full max-w-md overflow-hidden rounded-2xl border border-white/20 shadow-[0_20px_50px_-30px_rgba(0,0,0,1)]">
+        <div className="grid h-full w-full grid-cols-8 grid-rows-8">
           {order.map((i) => {
             const f = i % 8;
             const r = Math.floor(i / 8);
             const light = (f + r) % 2 === 0;
-            const piece = chess.board[i];
             const isSel = sel === i;
             const isLast =
               chess.last && (chess.last.from === i || chess.last.to === i);
@@ -1130,18 +1327,6 @@ function ChessTable({
                 {isSel && (
                   <span aria-hidden className="absolute inset-0 ring-[3px] ring-inset ring-amber-300" />
                 )}
-                {piece && (
-                  <span
-                    className={cn(
-                      "relative z-[1] select-none text-[clamp(18px,7vw,30px)] leading-none",
-                      piece[0] === "w"
-                        ? "text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.65)]"
-                        : "text-zinc-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.35)]",
-                    )}
-                  >
-                    {GLYPH[piece]}
-                  </span>
-                )}
                 {isLegal && (
                   <span
                     aria-hidden
@@ -1157,6 +1342,62 @@ function ChessTable({
             );
           })}
         </div>
+
+        {/* Bidak — diposisikan absolut; yang sedang bergerak disembunyikan
+            di petak tujuan dan digantikan ghost yang meluncur. */}
+        {chess.board.map((piece, i) => {
+          if (!piece) return null;
+          if (anim && anim.to === i) return null; // sementara digantikan ghost
+          const p = cellPos(i);
+          return (
+            <span
+              key={`${i}-${piece}`}
+              aria-hidden={false}
+              className="pointer-events-none absolute z-[1] -translate-x-1/2 -translate-y-1/2 select-none text-[clamp(18px,7vw,30px)] leading-none transition-all duration-300 ease-out"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            >
+              <span
+                className={cn(
+                  piece[0] === "w"
+                    ? "text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.65)]"
+                    : "text-zinc-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.35)]",
+                )}
+              >
+                {GLYPH[piece]}
+              </span>
+            </span>
+          );
+        })}
+
+        {/* Ghost langkah — meluncur dari petak lama ke petak baru. */}
+        {anim && (
+          <motion.span
+            key={anim.id}
+            aria-hidden
+            initial={{
+              left: `${cellPos(anim.from).x}%`,
+              top: `${cellPos(anim.from).y}%`,
+              scale: 1.15,
+            }}
+            animate={{
+              left: `${cellPos(anim.to).x}%`,
+              top: `${cellPos(anim.to).y}%`,
+              scale: 1,
+            }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="pointer-events-none absolute z-[3] -translate-x-1/2 -translate-y-1/2 text-[clamp(18px,7vw,30px)] leading-none"
+          >
+            <span
+              className={cn(
+                anim.piece[0] === "w"
+                  ? "text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.65)]"
+                  : "text-zinc-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.35)]",
+              )}
+            >
+              {GLYPH[anim.piece]}
+            </span>
+          </motion.span>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-2">
@@ -1419,7 +1660,7 @@ function SnakesTable({
           return (
             <span
               key={p.userId}
-              className="absolute z-[2] -translate-x-1/2 -translate-y-1/2"
+              className="absolute z-[2] -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-700 ease-in-out"
               style={{ left: `${c.x + ox}%`, top: `${c.y + oy}%` }}
             >
               <Avatar
@@ -1462,10 +1703,19 @@ function SnakesTable({
             myTurn
               ? "border-amber-300 shadow-[0_0_22px_-6px_rgba(251,191,36,.95)]"
               : "border-white/30 opacity-55",
-            rolling && "animate-spin",
+            rolling && "animate-[dice-tumble_0.5s_ease-in-out_infinite]",
           )}
         >
-          <DiceFace n={st.lastRoll ?? 0} />
+          {/* Wajah dadu POP muncul tiap hasil lemparan baru. */}
+          <motion.span
+            key={`d-${st.lastRoll ?? 0}-${st.lastBy ?? ""}`}
+            initial={{ scale: 0.55, rotate: -35, opacity: 0.3 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 380, damping: 15 }}
+            className="block h-full w-full"
+          >
+            <DiceFace n={st.lastRoll ?? 0} />
+          </motion.span>
         </button>
         <p className="text-[11px] font-bold text-white/60">
           {myTurn

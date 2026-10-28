@@ -368,11 +368,12 @@ export function ProfileSheet({
               );
             })()}
 
-            {/* KOTAK ROUNDED — 3 tombol DIGABUNG (Add Friend · YoruPet ·
-                Afinitas) dengan garis pembatas di antaranya. */}
+            {/* 3 tombol DIGABUNG (Add Friend · YoruPet · Afinitas) dengan
+                garis pembatas di antaranya — TANPA kotak background:
+                cuma pemisah garis, menempel langsung di latar sheet. */}
             <div
               className={cn(
-                "mt-4 grid divide-x divide-white/15 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]",
+                "mt-4 grid divide-x divide-white/15",
                 isMe ? "grid-cols-2" : "grid-cols-3",
               )}
             >

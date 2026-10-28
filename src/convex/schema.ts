@@ -132,6 +132,11 @@ const schema = defineSchema(
       premiumGiveId: v.optional(v.id("premiumGives")),
       createdAt: v.number(),
       deleted: v.optional(v.boolean()),
+      /** Pesan dari bot resmi (Luna Bot musik) — tampil seperti user lain
+          tapi dengan avatar & centang ungu bot official. */
+      bot: v.optional(v.boolean()),
+      /** Data terstruktur bot (kartu now-playing, kontrol pemutar, dll). */
+      botData: v.optional(v.any()),
     })
       .index("kind_clan_created", ["kind", "clanId", "createdAt"])
       .index("roomId_created", ["roomId", "createdAt"])
@@ -905,6 +910,26 @@ const schema = defineSchema(
       .index("linkCode", ["linkCode"])
       .index("oneTimeCode", ["oneTimeCode"])
       .index("updatedAt", ["updatedAt"]),
+
+    /**
+     * ANTRIAN MUSIK per voice room — dikendalikan Luna Bot 24/7 lewat
+     * command chat (semua command diawali & diakhiri tanda seru).
+     */
+    voiceMusic: defineTable({
+      roomId: v.id("voiceRooms"),
+      /** Lagu yang sedang diputar (null = berhenti). */
+      current: v.optional(v.any()),
+      /** Antrian lagu berikutnya. */
+      queue: v.array(v.any()),
+      botInRoom: v.boolean(),
+      paused: v.boolean(),
+      /** 0-100 */
+      volume: v.number(),
+      /** off | bassboost | nightcore | 8d */
+      fx: v.string(),
+      /** Riwayat lagu yang sudah diputar (untuk pesan skip). */
+      last: v.optional(v.any()),
+    }).index("roomId", ["roomId"]),
 
     /**
      * PRESENCE ringan — ditandai tiap 30 detik selama aplikasi terbuka.

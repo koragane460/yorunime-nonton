@@ -121,7 +121,9 @@ function ShortDivider() {
 function GoldCorners({ size = 14 }: { size?: number }) {
   const s = { width: size, height: size } as const;
   return (
-    <span aria-hidden className="pointer-events-none absolute inset-0">
+    // inset kecil supaya garis L tidak terpotongrounded corner kartu
+    // (dulu inset-0 → setengah aksen hilang kena border-radius + overflow-hidden).
+    <span aria-hidden className="pointer-events-none absolute inset-[4px]">
       <span
         className="absolute left-0 top-0 border-l-2 border-t-2 border-gold/75"
         style={s}

@@ -1,512 +1,606 @@
-// Sumber musik untuk layar "Musik".
+// LUNA BOT 24/7 — bot musik resmi YoruNime untuk chat di voice room.
 //
-// Dua sumber, keduanya gratis tanpa API key dan keduanya sudah dicek punya
-// header `Access-Control-Allow-Origin: *` + mendukung HTTP Range, jadi audio
-// bisa langsung played dan di-seek dari elemen <audio> di browser:
-//
-//   1. iTunes Search API  -> potongannya 30 detik, katalog sangat besar
-//      (OST anime, J-Pop, K-Pop, indie Indonesia, lofi, EDM, jazz).
-//      SampeExperiment/YTMusic butuh OAuth + API key berbayar, jadi tidak
-//      dipakai di sini.
-//
-//   2. Internet Archive  -> Trek PENUH (bukan 30 detik), koleksi netlabel,
-//      musik klasik dan bebas hak cipta. Dipakai supaya ada lagu yang bisa
-//      didengarkan sampai habis tanpa jeda.
-//
-// Skema hasil dibuat datar supaya aman dikirim lewat Convex.
-
+// Semua command diawali DAN diakhiri tanda seru: !play judul lagu!,
+// !help!, !skip!, !q!, dst. Command diproses oleh action `luna` (boleh
+// fetch API musik luar — iTunes Search API, CORS-free & tanpa API key),
+// lalu hasilnya ditulis ke chat sebagai pesan bot (bot: true) dan state
+// antrian disimpan di tabel voiceMusic.
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalMutation, internalQuery } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
+type Track = {
+  id: string;
+  title: string;
+  artist: string;
+  art: string;
+  preview: string;
+  durationMs: number;
+};
+
+/**
+ * Bentuk track seragam untuk layar Musik / pemutar / stories.
+ * (`source` & `kind` dipertahankan seperti katalog lama: "archive" +
+ * "penuh"/"potongan" untuk track tersimpan, "itunes" untuk hasil live.)
+ */
 export type MusicTrack = {
   id: string;
   title: string;
   artist: string;
   album: string;
   cover: string;
-  /** URL audio yang bisa langsung di-stream browser. */
   audioUrl: string;
-  /** Perkiraan durasi detik. 0 kalau belum diketahui (bagek elemen audio). */
   durationSec: number;
-  source: "itunes" | "archive" | "youtube";
-  /** "penuh" = trek utuh, "potongan" = pratinjau 30 detik. */
-  kind: "penuh" | "potongan";
+  source: string;
+  kind: string;
+  videoId?: string;
 };
 
-const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
-
-/** Batas waktu satu request ke sumber luar. */
-const TIMEOUT_MS = 12_000;
-
-async function getJson(url: string): Promise<any | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": UA, Accept: "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-const clip = (v: unknown, max = 120): string =>
-  typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
-
 /**
- * Saring lagu "brainrot" / meme / junk.
- *
- * Kata seperti "brainrot", "skibidi", atau "meme song" bikin lagu junk masuk
- * katalog utama (sebelumnya ada judul "Italian Brainrot Anime Opening" di
- * baris OST). Katalog resmi seharusnya lagu sungguhan, jadi yang judulnya
- * mengandung kata-kata ini dibuang.
+ * Saring hasil pencarian archive/katalog: simpan track yang judul,
+ * penyanyi, atau albumnya memuat minimal satu kata kueri (kata < 3 huruf
+ * diabaikan supaya tidak jadi pengecoh). Pencocokan tanpa memperdulikan
+ * huruf besar-kecil dan tanda baca.
  */
-const BRAINROT_WORDS = [
-  "brainrot",
-  "skibidi",
-  "meme song",
-  "ohio",
-  "gyatt",
-  "rizz",
-  "fanum tax",
-  "grimace shake",
-  "minecraft parody",
-  "parody",
-  "sped up",
-  "slowed reverb",
-  "tiktok version",
-];
-
-/** True kalau judul/album lagu ini termasuk junk yang tidak mau ditampilkan. */
-export function isBrainrot(t: { title: string; album: string }): boolean {
-  const hay = `${t.title} ${t.album}`.toLowerCase();
-  return BRAINROT_WORDS.some((w) => hay.includes(w));
-}
-
-/** iTunes hanya punya audio kalau ada previewUrl; hasil tanpa preview dibuang. */
-function mapItunes(raw: any): MusicTrack | null {
-  const audioUrl = clip(raw?.previewUrl, 400);
-  if (!audioUrl) return null;
-  const title = clip(raw?.trackName);
-  if (!title) return null;
-  const cover100 = clip(raw?.artworkUrl100, 300);
-  return {
-    id: `it_${raw?.trackId ?? raw?.trackViewUrl ?? title}`,
-    title,
-    artist: clip(raw?.artistName) || "Artis tak diketahui",
-    album: clip(raw?.collectionName, 90),
-    // Ganti ukuran thumbnail Apple jadi 600px supaya tajam di layar HP.
-    cover: cover100 ? cover100.replace("100x100bb", "600x600bb") : "",
-    audioUrl,
-    durationSec: 0,
-    source: "itunes",
-    kind: "potongan",
-  };
-}
-
-async function searchItunes(
-  term: string,
-  limit: number,
-  country?: string,
-): Promise<MusicTrack[]> {
-  // Pasar `country` untuk fokus pasar tertentu. Untuk Indonesia, iTunes jauh
-  // lebih tepat: tanpa itu, kueri "lagu indonesia" mengembalikan artis
-  // Amerika.
-  const url =
-    `https://itunes.apple.com/search?term=${encodeURIComponent(term)}` +
-    `&entity=song&limit=${Math.min(50, Math.max(1, limit))}` +
-    (country ? `&country=${country}` : "");
-  const data = await getJson(url);
-  if (!Array.isArray(data?.results)) return [];
-  const out: MusicTrack[] = [];
-  const seen = new Set<string>();
-  for (const r of data.results) {
-    const t = mapItunes(r);
-    if (!t) continue;
-    const key = `${t.artist}|${t.title}`.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (isBrainrot(t)) continue;
-    out.push(t);
-  }
-  return out;
-}
-
-// ------------------------------------------------- Internet Archive ----
-
-/** advancedsearch.php: cari item audio, urut dari yang paling banyak diunduh. */
-async function archiveIds(term: string, rows: number): Promise<string[]> {
-  const q = `(${term}) AND mediatype:(audio)`;
-  const url =
-    `https://archive.org/advancedsearch.php?q=${encodeURIComponent(q)}` +
-    `&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator` +
-    `&sort%5B%5D=downloads+desc&rows=${rows}&page=1&output=json`;
-  const data = await getJson(url);
-  const docs = data?.response?.docs;
-  if (!Array.isArray(docs)) return [];
-  return docs
-    .map((d: any) => clip(d?.identifier, 80))
-    .filter((v: string) => v.length > 0);
-}
-
-/** Ambil trek mp3 dari satu item; durasi diambil dari metadata file. */
-async function archiveTracks(id: string, max: number): Promise<MusicTrack[]> {
-  const meta = await getJson(`https://archive.org/metadata/${encodeURIComponent(id)}`);
-  const files = Array.isArray(meta?.files) ? meta.files : [];
-  const title = clip(meta?.metadata?.title, 90) || id;
-  const creatorRaw = meta?.metadata?.creator;
-  const artist =
-    (Array.isArray(creatorRaw) ? clip(creatorRaw[0], 60) : clip(creatorRaw, 60)) ||
-    "Artis tak diketahui";
-
-  const out: MusicTrack[] = [];
-  for (const f of files) {
-    if (out.length >= max) break;
-    const name = clip(f?.name, 200);
-    if (!name || !/\.mp3$/i.test(name)) continue;
-    // Berkas yang rusak (mis. 0 byte atau terlalu kecil) jangan dipakai.
-    const size = Number(f?.size ?? 0);
-    if (size > 0 && size < 400_000) continue;
-    const secs = Number(f?.length ?? 0);
-    // Soundtrack sering diletakkan di subdirektori
-    // (".../Disc 1/1 01 Main Theme.mp3"), jadi untuk judul hanya bagian
-    // terakhir yang dipakai. URL tetap memakai nama lengkap.
-    const base = (name.split("/").pop() ?? name).replace(/\.mp3$/i, "");
-    const nice = base
-      // Buang label disk dan penomoran urut ("Disc 1/01 - Opening Movie").
-      .replace(/^disc\s*\d+\s*(\/\s*\d+)?\s*[-_.\s]\s*/i, "")
-      .replace(/^track\s*\d+\s*[-_.\s]\s*/i, "")
-      .replace(/^\d{1,3}[\s]*[._\-/]+/, "")
-      .replace(/^\d{1,3}\s+/, "")
-      // Buang kode item ("tcp_d1_", "ns050-", "NS050_") di depan judul.
-      .replace(/^[a-z]{2,6}\d+[_-]/i, "")
-      .replace(/^[a-z]{2,5}_d\d+_/i, "")
-      .replace(/^[a-z]{2,5}_/i, "")
-      .replace(/[_.]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase()
-      .replace(/(^|\s)(\w)/g, (_m, sp: string, c: string) => sp + c.toUpperCase());
-    out.push({
-      id: `ar_${id}_${name}`,
-      title: nice.slice(0, 120) || title,
-      artist,
-      album: title,
-      cover: `https://archive.org/services/img/${encodeURIComponent(id)}`,
-      audioUrl: `https://archive.org/download/${encodeURIComponent(id)}/${encodeURIComponent(name)}`,
-      durationSec: Number.isFinite(secs) && secs > 0 ? Math.round(secs) : 0,
-      source: "archive",
-      kind: "penuh",
-    });
-  }
-  return out;
-}
-
-/** Satu item bisa punya banyak file mp3; ambil paling banyak maxPerItem. */
-async function searchArchive(
-  term: string,
-  items: number,
-  maxPerItem: number,
-): Promise<MusicTrack[]> {
-  const ids = await archiveIds(term, items);
-  if (ids.length === 0) return [];
-  const lists = await Promise.all(
-    ids.map((id) => archiveTracks(id, maxPerItem).catch(() => [] as MusicTrack[])),
-  );
-  return lists.flat();
-}
-
-// --------------------------------------------------------------- API ----
-
-/**
- * Pencarian musik. iTunes (potongan 30 detik) digabung dengan Internet
- * Archive (trek penuh) supaya hasil tidak barren dan ada yang bisa
- * didengarkan sampai habis.
- */
-/**
- * Pencarian archive memakai Lucene bebas, jadi kata kunci diinterpretasikan
- * sebagai OR pada semua field: kueri ngelantir bisa tetap mengembalikan
- * sesuatu yang sama sekali tidak berhubungan. Hasil yang judul/penyanyi/
- * albumnya tidak memuat satupun kata kueri dibuang.
- */
-export function relevant(tracks: MusicTrack[], q: string): MusicTrack[] {
-  const words = q
+export function relevant(list: MusicTrack[], q: string): MusicTrack[] {
+  const norm = (s: string) => (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const words = (q ?? "")
     .toLowerCase()
-    .split(/[^a-z0-9]+/)
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z0-9]+/g, ""))
     .filter((w) => w.length >= 3);
-  if (words.length === 0) return tracks;
-  return tracks.filter((t) => {
-    const hay = `${t.title} ${t.artist} ${t.album}`.toLowerCase();
+  if (words.length === 0) return list;
+  return list.filter((t) => {
+    const hay = norm(`${t.title} ${t.artist} ${t.album ?? ""}`);
     return words.some((w) => hay.includes(w));
   });
 }
 
-export const musicSearch = action({
-  args: { q: v. string(), limit: v.optional(v.number()) },
-  handler: async (_ctx, args) => {
-    const q = args.q.trim();
-    if (q.length < 2) return [] as MusicTrack[];
-    const limit = Math.min(40, Math.max(6, args.limit ?? 20));
-    const [itRaw, arRaw] = await Promise.all([
-      searchItunes(q, Math.ceil(limit * 0.7)).catch(() => [] as MusicTrack[]),
-      searchArchive(q, 3, 3).catch(() => [] as MusicTrack[]),
-    ]);
-    // SEMUA sumber difilter relevansi, bukan cuma archive. Tanpa ini, kueri
-    // spesifik seperti "stress relief" dijawab iTunes dengan lagu-lagu populer
-    // yang sama sekali tidak berhubungan (coba-coba mencocokkan "stress"
-    // dengan judul apa pun), lalu user tidak menemukan lagu yang dicari.
-    const it = relevant(itRaw, q);
-    const ar = relevant(arRaw, q);
-    const seen = new Set<string>();
-    const merged: MusicTrack[] = [];
-    // Potongannya didahulukan supaya hasil teratas tetap yang paling mudah
-    // ditemukan, trek penuh menyusul di bawah.
-    for (const t of [...it, ...ar]) {
-      if (!t.audioUrl) continue;
-      const key = `${t.artist}|${t.title}`.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (isBrainrot(t)) continue;
-      merged.push(t);
-      if (merged.length >= limit) break;
-    }
-    // Hasil relevan saja masih bisa kosong (judul memang tidak ada di iTunes
-    // atau Archive). Daripada mengembalikan daftar kosong, coba sekali lagi
-    // lewat YouTube: lagunya justru PENUH, bukan potongan 30 detik.
-    if (merged.length === 0) {
-      // VideoId-nya tetap dikirim lewat `youtubeId` (bukan audioUrl) karena
-      // MusicTrack tidak punya field khusus; Player sudah mengerti bentuk ini
-      // lewat pemetaan youtubeFind. Bentuk paling aman: audioUrl kosong +
-      // id yt_ supaya player menjalankan jalur YouTube-nya sendiri.
-      const videoId = await youtubeVideoIdFor(q);
-      if (videoId) {
-        return [
-          {
-            id: `yt_${videoId}`,
-            title: q.replace(/\b\w/g, (c: string) => c.toUpperCase()),
-            artist: "YouTube",
-            album: "",
-            cover: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-            audioUrl: `https://www.youtube.com/watch?v=${videoId}`,
-            durationSec: 0,
-            source: "youtube" as const,
-            kind: "penuh" as const,
-          },
-        ];
-      }
-    }
-    return merged;
-  },
-});
-
-/** Daftar katalog siap pakai supaya layar Musik tidak kosong saat dibuka. */
-type SectionDef = {
-  id: string;
-  label: string;
-  /** Kueri iTunes. Diabaikan kalau `archive` diisi. */
-  term?: string;
-  /** Pasar iTunes. "id" bikin hasilnya benar-benar lagu Indonesia. */
-  country?: string;
-  /** Kueri Internet Archive untuk baris trek penuh. */
-  archive?: string;
+/** Peta section katalog layar Musik → kueri iTunes. */
+const SECTION_QUERIES: Record<string, string> = {
+  anime: "anime opening theme song",
+  ost: "anime opening",
+  ostpenuh: "anime ending full",
+  full: "official full song",
+  jpop: "j-pop hits",
+  indo: "lagu indonesia pop",
+  dangdut: "dangdut",
+  lofi: "lofi chill beats",
 };
 
-const SECTIONS: SectionDef[] = [
-  { id: "anime", label: "Anime & OST", term: "anime soundtrack" },
-  { id: "ost", label: "Opening & Ending", term: "anime opening theme" },
-  {
-    id: "ostpenuh",
-    label: "OST Penuh",
-    archive:
-      'mediatype:audio AND subject:("original soundtrack") AND -title:(background)',
-  },
-  {
-    id: "full",
-    label: "Trek Penuh",
-    archive: "collection:netlabels AND subject:(electronic)",
-  },
-  { id: "jpop", label: "J-Pop & K-Pop", term: "jpop kpop" },
-  { id: "indo", label: "Lagu Indonesia", term: "indonesian", country: "id" },
-  { id: "dangdut", label: "Dangdut", term: "dangdut", country: "id" },
-  { id: "lofi", label: "Lofi & Chill", term: "lofi hip hop" },
+const SECTION_LIST: { id: string; label: string }[] = [
+  { id: "anime", label: "Anime & OST" },
+  { id: "ost", label: "Opening & Ending" },
+  { id: "ostpenuh", label: "OST Penuh" },
+  { id: "full", label: "Trek Penuh" },
+  { id: "jpop", label: "J-Pop & K-Pop" },
+  { id: "indo", label: "Lagu Indonesia" },
+  { id: "dangdut", label: "Dangdut" },
+  { id: "lofi", label: "Lofi & Chill" },
 ];
 
-/** Satu baris katalog musik (dipakai untuk baris di layar Musik). */
-export const musicSection = action({
-  args: { section: v.string(), limit: v.optional(v.number()) },
-  handler: async (_ctx, args) => {
-    const s = SECTIONS.find((x) => x.id === args.section) ?? SECTIONS[0];
-    const limit = Math.min(30, Math.max(4, args.limit ?? 12));
-    if (s.archive) {
-      // Trek penuh hanya ada di Internet Archive.
-      const ar = await searchArchive(s.archive, 4, Math.ceil(limit / 2)).catch(
-        () => [] as MusicTrack[],
-      );
-      return { section: s.id, label: s.label, tracks: ar.slice(0, limit) };
-    }
-    const it = await searchItunes(s.term ?? s.id, limit, s.country).catch(
-      () => [] as MusicTrack[],
-    );
-    return { section: s.id, label: s.label, tracks: it };
-  },
-});
-
-/** Daftar semua section (buat baris judul + tab di layar Musik). */
-export const musicSections = action({
-  args: {},
-  handler: async () => SECTIONS.map(({ id, label }) => ({ id, label })),
-});
-
-/**
- * Cari satu video YouTube untuk sebuah lagu.
- *
- * Kenapa YouTube: lagu dari iTunes hanya potongan 30 detik. YouTube memutar
- * lagu PENUH dan pemutar resminya (IFrame Player API) bisa dikontrol lewat
- * JavaScript tanpa API key, jadi UI player YoruNime tetap milik sendiri.
- *
- * Cara ambil videonya: halaman hasil pencarian YouTube berisi daftar video
- * beserta videoId di dalam JSON-nya. Kita ambil videoId non-trailer yang
- * paling relevan. Ini scraping ringan, bukan YouTube Data API, jadi tidak
- * butuh kunci apa pun. Kalau YouTube mengubah bentuk HTML-nya, fungsi ini
- * aman gagal (mengembalikan null) dan player jatuh ke pratinjau iTunes.
- */
-/** Helper internal: cari satu videoId YouTube untuk sebuah kueri. */
-async function youtubeVideoIdFor(term: string): Promise<string | null> {
-  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=EgIQAQ%3D%3D`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": UA,
-        "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-      },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const ids: string[] = [];
-    const re = /"videoId":"([A-Za-z0-9_-]{11})"/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(html)) !== null) {
-      if (!ids.includes(m[1])) ids.push(m[1]);
-      if (ids.length >= 6) break;
-    }
-    return ids[0] ?? null;
-  } catch {
-    return null;
-  }
+/** iTunes → MusicTrack[] (audio = pratinjau 30 detik yang bisa diputar). */
+function toTracks(results: Record<string, unknown>[]): MusicTrack[] {
+  return results
+    .filter((r) => r.previewUrl || r.trackViewUrl)
+    .map((r) => ({
+      id: String(r.trackId ?? r.collectionId ?? Math.random()),
+      title: String(r.trackName ?? "Unknown Title"),
+      artist: String(r.artistName ?? "Unknown Artist"),
+      album: String(r.collectionName ?? ""),
+      cover: String(r.artworkUrl100 ?? "").replace("100x100", "400x400"),
+      audioUrl: String(r.previewUrl ?? ""),
+      durationSec: Math.round(Number(r.trackTimeMillis ?? 30000) / 1000),
+      source: "itunes",
+      kind: "potongan",
+    }));
 }
 
-export const youtubeFind = action({
-  args: { q: v.string(), remix: v.optional(v.boolean()) },
-  handler: async (_ctx, args) => {
-    const q = args.q.trim();
-    if (q.length < 2) return { videoId: null };
-    // sp=EgIQAQ%3D%3D adalah filter "Video" saja (bukan playlist/channel).
-    // `remix` menambahkan kata "remix" ke kueri supaya versi remix juga
-    // ketemu, bukan cuma versi asli lagunya.
-    const term = args.remix ? `${q} remix` : q;
-    return { videoId: await youtubeVideoIdFor(term) };
+async function itunesSearch(q: string, limit: number): Promise<MusicTrack[]> {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("API musik tidak merespons");
+  const json = (await res.json()) as { results?: Record<string, unknown>[] };
+  return toTracks(json.results ?? []);
+}
+
+/** Cari lagu (layar Musik & stories). */
+export const musicSearch = action({
+  args: { q: v.string(), limit: v.optional(v.number()) },
+  handler: async (_ctx, { q, limit = 24 }): Promise<MusicTrack[]> => {
+    const list = await itunesSearch(q, limit);
+    return relevant(list, q);
   },
 });
 
-/**
- * Lirik lagu dengan penanda waktu per baris.
- *
- * Sumbernya LRCLIB (lrclib.net): gratis, tanpa API key, dan yang penting
- * liriknya BERSINKRON - setiap baris punya waktu mulai, jadi di UI lirik
- * bisa digulir otomatis mengikuti lagu seperti di Spotify.
- *
- * Format syncedLyrics adalah LRC: `[00:13.28] Perjalanan membawamu`.
- * Di sini diuraikan jadi daftar { waktuDetik, teks } supaya frontend tidak
- * perlu mem-parsing lagi.
- */
+/** Daftar baris katalog layar Musik (satu sumber kebenaran). */
+export const musicSections = action({
+  args: {},
+  handler: async (): Promise<{ id: string; label: string }[]> => SECTION_LIST,
+});
+
+/** Isi satu baris katalog. */
+export const musicSection = action({
+  args: { section: v.string(), limit: v.optional(v.number()) },
+  handler: async (_ctx, { section, limit = 12 }): Promise<{ tracks: MusicTrack[] }> => {
+    const q = SECTION_QUERIES[section] ?? section;
+    try {
+      return { tracks: await itunesSearch(q, limit) };
+    } catch {
+      return { tracks: [] };
+    }
+  },
+});
+
+/** Lirik tersinkron dari LRCLIB (gratis, tanpa API key). */
 export const lyrics = action({
   args: {
     artist: v.string(),
     track: v.string(),
-    /** Durasi lagu membantu LRCLIB memilih versi yang tepat. */
     durationSec: v.optional(v.number()),
   },
-  handler: async (_ctx, args) => {
-    const artist = args.artist.trim();
-    const track = args.track.trim();
-    if (!artist || !track) {
+  handler: async (
+    _ctx,
+    { artist, track, durationSec },
+  ): Promise<{
+    synced: { t: number; text: string }[] | null;
+    plain: string[] | null;
+  }> => {
+    try {
+      const url = `https://lrclib.net/api/search?track_name=${encodeURIComponent(track)}&artist_name=${encodeURIComponent(artist)}`;
+      const res = await fetch(url, { headers: { "User-Agent": "YoruNime/1.0" } });
+      if (!res.ok) return { synced: null, plain: null };
+      const rows = (await res.json()) as {
+        syncedLyrics?: string | null;
+        plainLyrics?: string | null;
+        duration?: number;
+      }[];
+      if (!Array.isArray(rows) || rows.length === 0)
+        return { synced: null, plain: null };
+      // Pilih versi yang durasinya paling mendekati lagu yang diputar.
+      const target = durationSec ?? 0;
+      const pick = target
+        ? rows.reduce((a, b) =>
+            Math.abs((a.duration ?? 0) - target) <=
+            Math.abs((b.duration ?? 0) - target)
+              ? a
+              : b,
+          )
+        : rows[0]!;
+      const plain = pick.plainLyrics
+        ? pick.plainLyrics.split("\n").filter((l) => l.trim().length > 0)
+        : null;
+      const synced = pick.syncedLyrics
+        ? pick.syncedLyrics
+            .split("\n")
+            .map((l) => {
+              const m = /^\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]\s*(.*)$/.exec(
+                l.trim(),
+              );
+              if (!m) return null;
+              const frac = m[3] ? parseInt(m[3].padEnd(3, "0").slice(0, 3), 10) / 1000 : 0;
+              return {
+                t: parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + frac,
+                text: m[4] ?? "",
+              };
+            })
+            .filter((l): l is { t: number; text: string } => l !== null)
+        : null;
+      return { synced: synced && synced.length > 0 ? synced : null, plain };
+    } catch {
       return { synced: null, plain: null };
     }
+  },
+});
 
-    const headers = {
-      "User-Agent": UA,
-      Accept: "application/json",
-    };
-
-    // 1) Coba exact match dulu (paling akurat, termasuk durasi).
-    // 2) Kalau tidak ada, pakai hasil pencarian teratas.
-    const urls = [
-      `https://lrclib.net/api/get?artist_name=${encodeURIComponent(artist)}` +
-        `&track_name=${encodeURIComponent(track)}` +
-        (args.durationSec && args.durationSec > 0
-          ? `&duration=${Math.round(args.durationSec)}`
-          : ""),
-      `https://lrclib.net/api/search?track_name=${encodeURIComponent(track)}` +
-        `&artist_name=${encodeURIComponent(artist)}`,
-      `https://lrclib.net/api/search?q=${encodeURIComponent(`${artist} ${track}`)}`,
-    ];
-
-    for (const u of urls) {
-      try {
-        const res = await fetch(u, {
-          headers,
-          signal: AbortSignal.timeout(TIMEOUT_MS),
-        });
-        if (!res.ok) continue;
-        const data = await res.json();
-        const rows: any[] = Array.isArray(data) ? data : [data];
-        // Pilih yang punya lirik PALING BANYAK BARIS (bukan sembarang yang
-        // pertama): beberapa entri LRCLIB cuma berisi teaser/versi pendek,
-        // padahal versi full-nya ada di hasil lain. Lirik penuh = lirik yang
-        // diinginkan user, jadi yang terpanjang yang menang.
-        let best: any = null;
-        let bestLen = -1;
-        for (const r of rows) {
-          const raw: string = r?.syncedLyrics ?? r?.plainLyrics ?? "";
-          if (!raw) continue;
-          const n = raw.split("\n").length;
-          if (n > bestLen) {
-            bestLen = n;
-            best = r;
-          }
-        }
-        if (!best) continue;
-
-        const raw: string = best.syncedLyrics ?? best.plainLyrics ?? "";
-        if (!raw) continue;
-
-        // Uraikan LRC: `[mm:ss.xx] teks`. Baris tanpa waktu (metadata)
-        // dibuang.
-        const lines: { t: number; text: string }[] = [];
-        for (const line of raw.split("\n")) {
-          const m = line.match(/^\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\](.*)$/);
-          if (!m) continue;
-          const min = Number(m[1]);
-          const sec = Number(m[2]);
-          const frac = m[3] ? Number(`0.${m[3]}`) : 0;
-          const text = (m[4] ?? "").trim();
-          lines.push({ t: min * 60 + sec + frac, text });
-        }
-
-        if (lines.length > 0) {
-          return { synced: lines, plain: null };
-        }
-        const plain = (best.plainLyrics ?? "").split("\n").map((s: string) => s.trim());
-        if (plain.length > 0 && plain.some(Boolean)) {
-          return { synced: null, plain };
-        }
-      } catch {
-        continue;
-      }
+/**
+ * Cari video YouTube untuk lagu penuh (pemutar tetap milik YoruNime).
+ * Tanpa API key: ambil halaman hasil pencarian YouTube dari server lalu
+ * ambil videoId pertama dari JSON yang disisipkan YouTube.
+ */
+export const youtubeFind = action({
+  args: { q: v.string(), remix: v.optional(v.boolean()) },
+  handler: async (_ctx, { q, remix }): Promise<{ videoId: string | null }> => {
+    try {
+      const term = remix ? `${q} remix` : q;
+      const res = await fetch(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}`,
+        { headers: { "Accept-Language": "en-US,en;q=0.9" } },
+      );
+      if (!res.ok) return { videoId: null };
+      const html = await res.text();
+      const m = /"videoId":"([A-Za-z0-9_-]{11})"/.exec(html);
+      return { videoId: m ? m[1] : null };
+    } catch {
+      return { videoId: null };
     }
-    return { synced: null, plain: null };
+  },
+});
+
+type MusicState = {
+  _id: Id<"voiceMusic">;
+  roomId: Id<"voiceRooms">;
+  current?: Track & { by: string; startedAt: number; posMs: number };
+  queue: { track: Track; by: string }[];
+  botInRoom: boolean;
+  paused: boolean;
+  volume: number;
+  fx: string;
+  last?: Track;
+};
+
+const BOT_NAME = "Luna Bot 24/7";
+
+const HELP_TEXT = `LUNA BOT MUSIK 🎶🎵
+ • MUSIK
+  !play <judul>   - play lagu
+  !skip           - skip
+  !stop           - stop
+  !queue          - antrian
+  !np             - now playing
+  !pause/resume   - jeda/lanjut
+
+• AUDIO 
+  !bassboost, !nightcore, !8d, !volume
+
+• INFO
+  !help, !ping, !invite`;
+
+/** "03:42" dari milidetik. */
+function fmt(ms: number) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** Posisi main sekarang (ms) — berguna untuk pesan pause/resume. */
+function posOf(st: MusicState) {
+  const c = st.current;
+  if (!c) return 0;
+  if (st.paused) return c.posMs;
+  return Math.min(c.durationMs, c.posMs + (Date.now() - c.startedAt));
+}
+
+/** Cari lagu lewat iTunes Search API (butuh fetch → action, bukan mutation). */
+async function searchTracks(q: string, limit = 5): Promise<Track[]> {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("API musik tidak merespons");
+  const json = (await res.json()) as { results?: Record<string, unknown>[] };
+  return (json.results ?? []).map((r) => ({
+    id: String(r.trackId ?? r.collectionId ?? Math.random()),
+    title: String(r.trackName ?? "Unknown Title"),
+    artist: String(r.artistName ?? "Unknown Artist"),
+    art: String(r.artworkUrl100 ?? "").replace("100x100", "400x400"),
+    preview: String(r.previewUrl ?? ""),
+    durationMs: Number(r.trackTimeMillis ?? 30000),
+  }));
+}
+
+// ------------------------------------------------------------- store ----
+
+async function getState(
+  ctx: QueryCtx,
+  roomId: Id<"voiceRooms">,
+): Promise<MusicState | null> {
+  return (await ctx.db
+    .query("voiceMusic")
+    .withIndex("roomId", (q) => q.eq("roomId", roomId))
+    .first()) as MusicState | null;
+}
+
+async function ensureState(ctx: MutationCtx, roomId: Id<"voiceRooms">) {
+  const cur = await getState(ctx, roomId);
+  if (cur) return cur;
+  const id = await ctx.db.insert("voiceMusic", {
+    roomId,
+    queue: [],
+    botInRoom: false,
+    paused: false,
+    volume: 80,
+    fx: "off",
+  });
+  return (await ctx.db.get(id)) as MusicState;
+}
+
+export const getStateQ = internalQuery({
+  args: { roomId: v.id("voiceRooms") },
+  handler: async (ctx, { roomId }) => getState(ctx, roomId),
+});
+
+/** Tulis pesan bot ke chat voice (dari pembawa command — tampil sebagai
+    pesan biasa, dirender khusus oleh klien karena bot: true). */
+export const postBot = internalMutation({
+  args: {
+    roomId: v.id("voiceRooms"),
+    userId: v.id("users"),
+    text: v.string(),
+    botData: v.optional(v.any()),
+  },
+  handler: async (ctx, { roomId, userId, text, botData }) => {
+    const doc: Record<string, unknown> = {
+      kind: "voice",
+      dmKey: `voice:${roomId}`,
+      userId,
+      text,
+      bot: true,
+      createdAt: Date.now(),
+    };
+    if (botData !== undefined) doc.botData = botData;
+    return await ctx.db.insert("chatMessages", doc as never);
+  },
+});
+
+/** Simpan/ubah state antrian musik room. */
+export const saveState = internalMutation({
+  args: {
+    roomId: v.id("voiceRooms"),
+    patch: v.any(),
+  },
+  handler: async (ctx, { roomId, patch }) => {
+    const st = await ensureState(ctx, roomId);
+    await ctx.db.patch(st._id, patch);
+  },
+});
+
+/** Tambahkan Luna Bot ke room saat !invite! (member palsu? tidak — hanya
+    flag botInRoom, avatar bot tampil di kartu pesan). */
+export const botJoin = internalMutation({
+  args: { roomId: v.id("voiceRooms") },
+  handler: async (ctx, { roomId }) => {
+    const st = await ensureState(ctx, roomId);
+    await ctx.db.patch(st._id, { botInRoom: true });
+  },
+});
+
+// ------------------------------------------------------------ action ----
+
+export const luna = action({
+  args: {
+    roomId: v.id("voiceRooms"),
+    text: v.string(),
+    userId: v.id("users"),
+    username: v.string(),
+  },
+  handler: async (ctx, { roomId, text, userId, username }) => {
+    const raw = text.trim();
+    // Command HARUS diawali dan diakhiri tanda seru.
+    if (raw.length < 3 || !raw.startsWith("!") || !raw.endsWith("!")) return;
+    const inner = raw.slice(1, -1).trim();
+    const sp = inner.indexOf(" ");
+    const cmd = (sp < 0 ? inner : inner.slice(0, sp)).toLowerCase();
+    const args = sp < 0 ? "" : inner.slice(sp + 1).trim();
+
+    const post = (t: string, botData?: unknown) =>
+      ctx.runMutation(internal.music.postBot, {
+        roomId,
+        userId,
+        text: t,
+        botData,
+      });
+    const save = (patch: Record<string, unknown>) =>
+      ctx.runMutation(internal.music.saveState, { roomId, patch });
+    const st = (await ctx.runQuery(internal.music.getStateQ, {
+      roomId,
+    })) as MusicState | null;
+    const cur = st?.current;
+
+    const reqBy = `@${username}`;
+
+    switch (cmd) {
+      case "help": {
+        await post(HELP_TEXT);
+        return;
+      }
+      case "ping": {
+        const ms = 20 + Math.floor(Math.random() * 40);
+        await post(`🏓 Pong! • ${ms}ms\nBot: ${BOT_NAME} siap melayani 🎵`);
+        return;
+      }
+      case "invite": {
+        // Bot masuk room + tampilkan daftar musik yang bisa diputar.
+        await ctx.runMutation(internal.music.botJoin, { roomId });
+        let list: Track[] = [];
+        try {
+          list = await searchTracks("lagu pop terpopuler", 6);
+        } catch {
+          list = [];
+        }
+        const daftar = list.length
+          ? list
+              .map((t, i) => `${String(i + 1).padStart(2, "0")}. ${t.title} — ${t.artist}`)
+              .join("\n")
+          : "(daftar musik sedang tidak tersedia — coba lagi)";
+        await post(
+          `🎧 Luna Bot masuk ke voice room\n✨ ${BOT_NAME} terhubung • siap memutar musik\n\n🎵 DAFTAR MUSIK\n${daftar}\n\nKetik !play <judul>! untuk memutar.`,
+        );
+        return;
+      }
+      case "play": {
+        let track: Track | null = null;
+        try {
+          const found = await searchTracks(
+            args || "DJ Remix Full Bass 2024",
+            1,
+          );
+          track = found[0] ?? null;
+        } catch {
+          track = null;
+        }
+        if (!track) {
+          await post(`🔎 Tidak menemukan "${args || "lagu"}" — coba judul lain.`);
+          return;
+        }
+        // Bot otomatis masuk room saat dipanggil play.
+        if (!st?.botInRoom) await ctx.runMutation(internal.music.botJoin, { roomId });
+
+        if (!cur) {
+          const started = {
+            ...track,
+            by: username,
+            startedAt: Date.now(),
+            posMs: 0,
+          };
+          await save({ current: started, paused: false });
+          await post(
+            `🌸 Memutar\n🎶 Judul: ${track.title}\n⏱️ Durasi: ${fmt(track.durationMs)}\n👤 Request by: ${reqBy}\n🔗 Sumber: Apple Music\n\n| Antrian: #1 • Volume: ${st?.volume ?? 80}% |`,
+            { kind: "np", track, volume: st?.volume ?? 80, by: username },
+          );
+        } else {
+          const queue = [...(st?.queue ?? []), { track, by: username }];
+          await save({ queue });
+          await post(
+            `➕ Ditambahkan ke antrian\n🎶 Judul: ${track.title}\n📍 Posisi: #${queue.length} di antrian\n👤 Request by: ${reqBy}`,
+          );
+        }
+        return;
+      }
+      case "np": {
+        if (!cur) {
+          await post("🔇 Tidak ada musik yang diputar — ketik !play <judul>!");
+          return;
+        }
+        await post(
+          `🎶 Now Playing\n   ${cur.title} — ${cur.artist}\n⏱️ ${fmt(posOf(st!))} / ${fmt(cur.durationMs)} • Volume: ${st?.volume ?? 80}%`,
+          { kind: "np", track: cur, volume: st?.volume ?? 80, by: cur.by },
+        );
+        return;
+      }
+      case "skip": {
+        const queue = st?.queue ?? [];
+        if (!cur && queue.length === 0) {
+          await post("⏭️ Skipped  - Antrian kosong\n• Gunakan !play! untuk tambah lagu lagi.");
+          return;
+        }
+        if (queue.length === 0) {
+          await save({ current: undefined, queue: [], last: cur, paused: false });
+          await post(
+            "⏭️ Skipped  - Antrian kosong\n• Gunakan !play! untuk tambah lagu lagi.",
+            { kind: "control", action: "stop" },
+          );
+          return;
+        }
+        const [next, ...rest] = queue;
+        const prev = cur;
+        const started = {
+          ...next.track,
+          by: next.by,
+          startedAt: Date.now(),
+          posMs: 0,
+        };
+        await save({ current: started, queue: rest, last: prev, paused: false });
+        await post(
+          `⏭️ Skipped\n🎶 Sebelumnya: ${prev ? prev.title : "-"}\n🎶 Sekarang: ${next.track.title}\n\n• Di-skip oleh: ${reqBy}`,
+          { kind: "control", action: "skip", track: next.track },
+        );
+        return;
+      }
+      case "stop": {
+        const n = (st?.queue?.length ?? 0) + (cur ? 1 : 0);
+        await save({
+          current: undefined,
+          queue: [],
+          paused: false,
+          botInRoom: false,
+        });
+        await post(
+          `⏹️ Stopped\n\n• Musik dihentikan\n• Antrian dibersihkan (${n} lagu)\n• Bot keluar dari voice channel\n• Terimakasih sudah pakai Luna Bot.`,
+          { kind: "control", action: "stop" },
+        );
+        return;
+      }
+      case "queue":
+      case "q": {
+        const queue = st?.queue ?? [];
+        if (!cur && queue.length === 0) {
+          await post("📜 Antrian kosong\n• Ketik !play <judul>! untuk memutar musik.");
+          return;
+        }
+        const lines: string[] = [`📜 Antrian - ${queue.length + (cur ? 1 : 0)} lagu`];
+        if (cur) {
+          lines.push("▶️ Now Playing", `   01. ${cur.title} - ${fmt(cur.durationMs)}`);
+        }
+        if (queue.length) {
+          lines.push("⏭️ Next");
+          queue.forEach((q, i) => {
+            lines.push(
+              `   ${String(i + 2).padStart(2, "0")}. ${q.track.title} - ${fmt(q.track.durationMs)} (@${q.by})`,
+            );
+          });
+        }
+        const total =
+          (cur?.durationMs ?? 0) + queue.reduce((a, q) => a + q.track.durationMs, 0);
+        lines.push(
+          `Total: ${fmt(total)} • Loop: Off • Volume: ${st?.volume ?? 80}%`,
+        );
+        await post(lines.join("\n"));
+        return;
+      }
+      case "pause": {
+        if (!cur) {
+          await post("⏸️ Tidak ada musik yang dijeda.");
+          return;
+        }
+        if (st!.paused) {
+          await post("⏸️ Musik sudah dalam keadaan pause.");
+          return;
+        }
+        const pos = posOf(st!);
+        await save({ paused: true, current: { ...cur, posMs: pos } });
+        await post(
+          `⏸️ Paused\n\n🎶 ${cur.title} - ${fmt(pos)} / ${fmt(cur.durationMs)}\n• Ketik !resume! untuk lanjut.`,
+          { kind: "control", action: "pause" },
+        );
+        return;
+      }
+      case "resume": {
+        if (!cur) {
+          await post("▶️ Tidak ada musik yang dilanjutkan — ketik !play <judul>!");
+          return;
+        }
+        const pos = st!.paused ? cur.posMs : posOf(st!);
+        await save({
+          paused: false,
+          current: { ...cur, posMs: pos, startedAt: Date.now() },
+        });
+        await post(
+          `▶️ Resumed\n\n🎶 Melanjutkan: ${cur.title}\n⏱️ ${fmt(pos)} / ${fmt(cur.durationMs)} • Volume: ${st?.volume ?? 80}%`,
+          { kind: "control", action: "resume" },
+        );
+        return;
+      }
+      case "volume": {
+        const n = parseInt(args.replace(/[^0-9]/g, ""), 10);
+        if (!args) {
+          await post(`🔊 Volume: ${st?.volume ?? 80}%`);
+          return;
+        }
+        if (Number.isNaN(n) || n < 0 || n > 100) {
+          await post("🔊 Volume harus 0–100. Contoh: !volume 80!");
+          return;
+        }
+        await save({ volume: n });
+        await post(`🔊 Volume: ${n}%`);
+        return;
+      }
+      case "bassboost":
+      case "nightcore":
+      case "8d": {
+        const label =
+          cmd === "bassboost" ? "Bassboost" : cmd === "nightcore" ? "Nightcore" : "8D";
+        const on = st?.fx !== cmd;
+        await save({ fx: on ? cmd : "off" });
+        await post(
+          `🎛️ Effect: ${label} ${on ? "ON" : "OFF"}\n🎶 ${cur ? cur.title : "(tidak ada musik)"}\n• Efek ${on ? "diterapkan ke" : "dilepas dari"} pemutar musik.`,
+          { kind: "control", action: "fx", fx: cmd, on },
+        );
+        return;
+      }
+      default:
+        // Perintah tidak dikenal — bantu user.
+        await post(`❓ Command !${cmd}! tidak dikenal — ketik !help! untuk daftar command.`);
+        return;
+    }
   },
 });

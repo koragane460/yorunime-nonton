@@ -247,15 +247,6 @@ export function AfinitasScreen({
     }
   };
 
-  /** Semua baris relasi target (dibawah panggung) — ketuk = sheet Bond. */
-  const rows = useMemo(
-    () =>
-      ALL_KINDS.flatMap((kind) =>
-        (circles[kind] ?? []).map((m) => ({ kind, member: m })),
-      ),
-    [circles],
-  );
-
   const filteredFriends = useMemo(() => {
     const list = friends ?? [];
     const s = q.trim().toLowerCase();
@@ -674,65 +665,9 @@ export function AfinitasScreen({
             })}
           </div>
 
-          {/* ----------------- DAFTAR RELASI (grid ke bawah) -------------- */}
-          {rows.length > 0 && (
-            <div className="mx-auto mt-2 w-full max-w-md space-y-2 px-3">
-              {rows.map(({ kind, member }) => {
-                const meta = KIND_META[kind];
-                return (
-                  <div
-                    key={String(member.linkId)}
-                    className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] p-2"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setBondRow({ kind, member })}
-                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-                    >
-                      <Avatar
-                        src={member.image}
-                        seed={member.username}
-                        className="size-9 shrink-0"
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-bold text-white">
-                          {member.username}
-                        </span>
-                        <span
-                          className={cn(
-                            "flex items-center gap-1 text-[10px] font-bold",
-                            meta.cls,
-                          )}
-                        >
-                          <meta.Icon className="size-3" /> {meta.label} · Lv.
-                          {" "}{member.bond.level}
-                        </span>
-                      </span>
-                    </button>
-                    {member.mine && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setConfirmBreak({
-                            linkId: member.linkId,
-                            name: member.username,
-                          })
-                        }
-                        className="flex shrink-0 items-center gap-1 rounded-full border border-rose-400/40 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-black text-rose-200 transition active:scale-95"
-                      >
-                        {/* Hati + garis miring */}
-                        <span className="relative flex size-3.5 items-center justify-center">
-                          <Heart className="size-3.5 fill-current" />
-                          <span className="absolute h-[1.5px] w-4 rotate-45 rounded bg-rose-200" />
-                        </span>
-                        Putuskan
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {/* Daftar relasi lama (kartu terpisah di paling bawah) DIHAPUS —
+              kartu profil + Putuskan sekarang ada di dalam sheet Bond
+              (dibuka dengan mengetuk bulatan relasi). */}
         </div>
       )}
 
@@ -820,7 +755,7 @@ export function AfinitasScreen({
                 className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/25"
               />
               <p className="text-center text-sm font-black text-white">
-                Ajak jadi…
+                Afinitas Bond
               </p>
               {/* 4 jenis — Lover di kiri atas */}
               <div className="mt-3 grid grid-cols-4 gap-2">
@@ -848,14 +783,25 @@ export function AfinitasScreen({
                   Baru putus — tunggu beberapa hari lagi untuk mengajak lagi.
                 </p>
               )}
+              {/* Slot jenis sudah PENUH → tidak bisa ajak lagi. */}
+              {(circles[pickKind]?.length ?? 0) >= SLOT_POS[pickKind].length && (
+                <p className="mt-2.5 text-center text-[10px] font-bold text-rose-300">
+                  Slot {KIND_META[pickKind].label} sudah penuh — tidak bisa
+                  mengajak lagi.
+                </p>
+              )}
               <button
                 onClick={() => {
                   setKindSheet(false);
                   setQ("");
                   setPicker(true);
                 }}
-                disabled={busy}
-                className="mt-3 w-full rounded-2xl bg-gradient-to-b from-pink-400 to-pink-600 py-3 text-sm font-black text-white transition active:scale-[0.98] disabled:opacity-50"
+                disabled={
+                  busy ||
+                  st.onCooldown ||
+                  (circles[pickKind]?.length ?? 0) >= SLOT_POS[pickKind].length
+                }
+                className="mt-3 w-full rounded-2xl bg-gradient-to-b from-pink-400 to-pink-600 py-3 text-sm font-black text-white transition active:scale-[0.98] disabled:opacity-45"
               >
                 Ajak {KIND_META[pickKind].label}
               </button>
@@ -967,14 +913,16 @@ export function AfinitasScreen({
                 aria-hidden
                 className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/25"
               />
-              {/* Kepala: foto + username */}
+              {/* Kepala: foto + username + jenis + TOMBOL PUTUSKAN
+                  (kartu pasangan ada DI DALAM sheet ini, bukan di luar /
+                  paling bawah — grid level & misi di bawahnya). */}
               <div className="flex items-center gap-3">
                 <Avatar
                   src={bondRow.member.image}
                   seed={bondRow.member.username}
                   className="size-14 rounded-full ring-2 ring-white/25"
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black text-white">
                     {bondRow.member.username}
                   </p>
@@ -985,9 +933,28 @@ export function AfinitasScreen({
                     )}
                   >
                     <KindIcon kind={bondRow.kind} className="size-3.5" />
-                    {KIND_META[bondRow.kind].label}
+                    {KIND_META[bondRow.kind].label} · Lv.
+                    {" "}{bondRow.member.bond.level}
                   </p>
                 </div>
+                {bondRow.member.mine && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setConfirmBreak({
+                        linkId: bondRow.member.linkId,
+                        name: bondRow.member.username,
+                      })
+                    }
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-3 py-2 text-[11px] font-black text-rose-200 transition active:scale-95"
+                  >
+                    <span className="relative flex size-3.5 items-center justify-center">
+                      <Heart className="size-3.5 fill-current" />
+                      <span className="absolute h-[1.5px] w-4 rotate-45 rounded bg-rose-200" />
+                    </span>
+                    Putuskan
+                  </button>
+                )}
               </div>
 
               {/* Bar level bond + level saat ini */}

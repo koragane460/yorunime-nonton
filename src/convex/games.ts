@@ -986,6 +986,29 @@ export const shoutUno = mutation({
   },
 });
 
+/**
+ * DORONG — pemain lain menekan tombol dorong saat ada yang sisa 1 kartu
+ * tapi belum teriak UNO: korban ditembak/dorong dan menarik 2 kartu hukuman.
+ */
+export const dorong = mutation({
+  args: { sessionId: v.id("gameSessions"), targetId: v.id("users") },
+  handler: async (ctx, { sessionId, targetId }) => {
+    const { s, userId } = await requirePlayer(ctx, sessionId);
+    if (s.game !== "uno") throw new Error("Bukan UNO");
+    if (s.status !== "playing") throw new Error("Game belum berjalan");
+    if (targetId === userId) throw new Error("Tidak bisa mendorong diri sendiri");
+    const st = s.state as UnoState;
+    if ((st.hands[targetId]?.length ?? 0) !== 1)
+      throw new Error("Target sudah tidak sisa 1 kartu");
+    if (st.unoCalled[targetId])
+      throw new Error("Target sudah teriak UNO — tidak bisa didorong!");
+    drawCards(st, targetId, 2);
+    st.unoCalled[targetId] = true;
+    await ctx.db.patch(sessionId, { state: st, updatedAt: Date.now() });
+    return { ok: true };
+  },
+});
+
 /* ------------------------------ CATUR -------------------------------- */
 
 export const chessMove = mutation({
