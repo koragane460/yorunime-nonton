@@ -181,7 +181,14 @@ function applyLevel(hls: Hls | null, quality: string) {
   // Mengeset `currentLevel` (bukan `nextLevel`) inilah yang mematikan ABR:
   // hanya `nextLevel` yang masih boleh ditimpa hls.js saat bitrate berubah,
   // jadi itulah yang mengunci pilihan user.
-  hls.currentLevel = best;
+  //
+  // `autoLevelCapping` ikut dikunci: kalau ABR masih bebas, level yang baru
+  // dipilih bisa langsung ditimpa lagi saat bitrate berubah — akibatnya
+  // resolusi tidak berpindah sampai user memilih jauh lebih tinggi.
+  hls.autoLevelCapping = best;
+  // Sudah berada di level itu? jangan diset ulang: `currentLevel` yang diset
+  // ulang memicu flush buffer (jeda/buffering) tanpa ada yang berubah.
+  if (hls.currentLevel !== best) hls.currentLevel = best;
 }
 
 /** Ubah timestamp WebVTT (00:01:02.500 / 01:02.500) menjadi detik. */
@@ -430,6 +437,10 @@ function WatchContent() {
   const [qualityOpen, setQualityOpen] = useState(false);
   // Kualitas yang dipilih di popup (menunggu disimpan), null = belum pilih.
   const [qualityDraft, setQualityDraft] = useState<string | null>(null);
+  // Tinggi video yang benar-benar sedang diputar, dibaca dari metadata
+  // elemen video. Dipakai di label tombol "HD" supaya pergantian resolusi
+  // langsung terlihat angkanya, bukan ditebak dari gambar.
+  const [playingRes, setPlayingRes] = useState(0);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   // Kualitas yang sedang dikirim ke server, supaya tombolnya tidak bisa
@@ -735,18 +746,16 @@ function WatchContent() {
    * Filter video. Naikkan kecerahan (lift) memang boleh mengubah kontras dan
    * saturasi — itu memang efek "lebih terang".
    *
-   * Ketajaman (unsharp mask lewat filter SVG) otomatis menyala saat resolusi
-   * yang dipakai 1080p. Tombol "HD" sudah dihapus permanen, jadi satu-satunya
-   * cara mengaktifkan ini adalah memilih 1080p di popup Kualitas.
+   * Filter ketajaman SVG (unsharp mask) DIHAPUS: konvolusi 3x3 dijalankan
+   * lewat filter SVG dihitung ulang untuk tiap frame video, dan di HP itu
+   * bikin frame dropped + buffering. Ketajaman 1080p sudah datang dari
+   * resolusinya sendiri, jadi tidak perlu filter tambahan.
    */
-  const hdOn = quality === PREMIUM_QUALITY;
   const videoFilter = [
     `contrast(${(1.06 + liftAmount * 0.18).toFixed(3)})`,
     `saturate(${(1.04 + liftAmount * 0.22).toFixed(3)})`,
     // Naikkan kecerahan sedikit tanpa menutupi gambar dengan cat putih.
     liftAmount > 0 ? `brightness(${(1 + liftAmount * 0.24).toFixed(3)})` : "",
-    // Ketajaman murni, bukan koreksi warna.
-    hdOn ? "url(#yn-sharpen)" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1404,13 +1413,16 @@ function WatchContent() {
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        backBufferLength: 60,
+        backBufferLength: 30,
         // Buffer lebih dalam = buffering lebih jarang. Nilai sebelumnya
         // (20/60) sering kehabisan di tengah episode dan video berhenti
         // sesaat, padahal jaringan sebenarnya masih bagus.
         maxBufferLength: 45,
-        maxMaxBufferLength: 120,
-        maxBufferSize: 80 * 1000 * 1000,
+        maxMaxBufferLength: 90,
+        // Buffer 80MB membuat HP menahan banyak memori sekaligus → GC sering
+        // jalan dan frame video tersendat. 30MB sudah cukup dalam (±1 menit)
+        // tanpa membebani perangkat kelas menengah.
+        maxBufferSize: 30 * 1000 * 1000,
         // Fragmen berikutnya langsung diunduh begitu mungkin — mengurangi
         // jeda saat seek atau saat buffer habis.
         startFragPrefetch: true,
@@ -1482,6 +1494,22 @@ function WatchContent() {
     applyQuality(wanted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quality, isFs, isPremiumNow, applyQuality]);
+
+  // Pantau resolusi nyata yang diputar. Event `resize` pada elemen video
+  // berapi saat dimensi berubah — persis momen pergantian level HLS atau
+  // pindah server MP4 selesai.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const sync = () => setPlayingRes(v.videoHeight || 0);
+    sync();
+    v.addEventListener("loadedmetadata", sync);
+    v.addEventListener("resize", sync);
+    return () => {
+      v.removeEventListener("loadedmetadata", sync);
+      v.removeEventListener("resize", sync);
+    };
+  }, [epParam, sourceType, streamUrl]);
 
   // Catat history (sekali per episode)
   useEffect(() => {
@@ -1955,21 +1983,6 @@ function WatchContent() {
           />
         )}
 
-        {/* Filter ketajaman untuk tombol HD: unsharp mask lewat matriks 3x3.
-            Kernel jumlahnya 1.0 jadi kecerahan rata-rata tidak berubah —
-            yang berbeda cuma tepi detail, tidak ada koreksi warna sama sekali.
-            Bobot dinaikkan (2.4 / -0.35) supaya efeknya benar-benar menghilangkan
-            burem & blur, bukan cuma memberi sedikit ketajaman. */}
-        <svg aria-hidden className="pointer-events-none absolute h-0 w-0">
-          <filter id="yn-sharpen" colorInterpolationFilters="sRGB">
-            <feConvolveMatrix
-              order="3"
-              preserveAlpha="true"
-              kernelMatrix="0 -0.35 0 -0.35 2.4 -0.35 0 -0.35 0"
-            />
-          </filter>
-        </svg>
-
         {/* KOTAK "MEMUAT" di TENGAH ATAS player — muncul selama episode
             masih dimuat (1-15 detik) dan HILANG begitu video siap. */}
         {(!streamUrl || videoHolding) && !directErr && (
@@ -2337,7 +2350,7 @@ function WatchContent() {
           <div
             className={cn(
               "pointer-events-auto flex items-center justify-center",
-              isFs ? "gap-9 pb-3" : "gap-4 pb-2",
+              isFs ? "gap-9 pt-3" : "gap-5 pt-2",
             )}
           >
             <button
@@ -2353,36 +2366,34 @@ function WatchContent() {
                 navigate(epUrl(epList[epIndex - 1].id));
               }}
               className={cn(
-                "rounded-full bg-black/50 p-1.5",
+                "rounded-full bg-black/50 p-3",
                 (room ? (currentEp?.number ?? 1) <= 1 : epIndex <= 0) && "opacity-30",
               )}
             >
-              <SkipBack className="size-4 text-white" />
+              <SkipBack className="size-6 text-white" />
             </button>
             <button
               onClick={() => skip(-10)}
-              className="flex flex-col items-center gap-0.5 rounded-full bg-black/50 px-2 py-1.5"
+              className="flex flex-col items-center gap-1 rounded-full bg-black/50 px-3.5 py-2.5"
             >
-              <RotateCcw className="size-5 text-white" />
-              <span className="text-[9px] font-black leading-none text-white/85">
+              <RotateCcw className="size-7 text-white" />
+              <span className="text-[11px] font-black leading-none text-white/85">
                 -10
               </span>
             </button>
-            {/* Play/pause diperkecil supaya tombol Auto next di bawahnya
-                tidak ketutup dan tetap bisa dipencet. */}
-            <button onClick={togglePlay} className="rounded-full bg-primary p-2.5">
+            <button onClick={togglePlay} className="rounded-full bg-primary p-4">
               {playing ? (
-                <Pause className="size-6 text-primary-foreground" />
+                <Pause className="size-8 text-primary-foreground" />
               ) : (
-                <Play className="size-6 text-primary-foreground" />
+                <Play className="size-8 text-primary-foreground" />
               )}
             </button>
             <button
               onClick={() => skip(10)}
-              className="flex flex-col items-center gap-0.5 rounded-full bg-black/50 px-2 py-1.5"
+              className="flex flex-col items-center gap-1 rounded-full bg-black/50 px-3.5 py-2.5"
             >
-              <RotateCw className="size-5 text-white" />
-              <span className="text-[9px] font-black leading-none text-white/85">
+              <RotateCw className="size-7 text-white" />
+              <span className="text-[11px] font-black leading-none text-white/85">
                 +10
               </span>
             </button>
@@ -2399,13 +2410,13 @@ function WatchContent() {
                 navigate(epUrl(epList[epIndex + 1].id));
               }}
               className={cn(
-                "rounded-full bg-black/50 p-1.5",
+                "rounded-full bg-black/50 p-3",
                 (room
                   ? (currentEp?.number ?? 1) >= epList.length
                   : epIndex >= epList.length - 1) && "opacity-30",
               )}
             >
-              <SkipForward className="size-4 text-white" />
+              <SkipForward className="size-6 text-white" />
             </button>
             {/* Tombol keluar layar penuh yang posisinya tetap (di baris atas) */}
           </div>
@@ -2487,9 +2498,10 @@ function WatchContent() {
                   )}
                   aria-label="Kualitas"
                 >
-                  HD
+                  {playingRes ? `${playingRes}p` : "HD"}
                 </button>
-                {/* Auto next — DIGABUNG ke baris kontrol, TANPA outline. */}
+                {/* Auto next — di kiri kotak HD, TANPA background (teks saja,
+                    warnanya yang memberi tahu statusnya). */}
                 <button
                   onClick={() => {
                     const nv = !autoNext;
@@ -2504,11 +2516,11 @@ function WatchContent() {
                     }
                   }}
                   className={cn(
-                    "rounded px-2 py-1 text-[10px] font-bold",
-                    autoNext
-                      ? "bg-emerald-500/85 text-black"
-                      : "bg-white/15 text-white/85",
+                    "px-0.5 text-[11px] font-black",
+                    autoNext ? "text-emerald-300" : "text-white/55",
                   )}
+                  aria-pressed={autoNext}
+                  aria-label="Auto next"
                 >
                   Auto next {autoNext ? "ON" : "OFF"}
                 </button>
@@ -2568,44 +2580,62 @@ function WatchContent() {
             {/* Pemilih kualitas INLINE — video tetap terlihat & semua tombol
                 tetap bisa dipencet (bukan modal yang menutupi). */}
             {qualityOpen && (
-              <div className="thin-scroll flex max-h-40 flex-wrap gap-1.5 overflow-y-auto rounded-lg bg-black/85 p-2">
-                {QUALITIES.map((q) => {
-                  const locked = q === PREMIUM_QUALITY && !isPremium;
-                  const active = (qualityDraft ?? quality) === q;
-                  return (
-                    <button
-                      key={q}
-                      onClick={() => {
-                        if (locked) {
-                          setPremiumTapHint(true);
-                          window.setTimeout(
-                            () => setPremiumTapHint(false),
-                            1800,
-                          );
-                          return;
-                        }
-                        setQualityDraft(q);
-                        setQuality(q);
-                        setQualityTouched(true);
-                        applyQuality(q);
-                        setQualityOpen(false);
-                      }}
-                      className={cn(
-                        "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition",
-                        locked
-                          ? "cursor-not-allowed border-amber-500/40 bg-amber-500/5 text-amber-300"
-                          : active
-                            ? "border-foreground/40 bg-primary/15 text-primary"
-                            : "border-border text-white hover:border-foreground/40",
-                      )}
-                    >
-                      {q}
-                      {q === PREMIUM_QUALITY && !isPremium && " ★"}
-                    </button>
-                  );
-                })}
+              <div className="mx-auto w-3/5 min-w-[236px] max-w-md animate-in fade-in-0 slide-in-from-top-2 duration-200 rounded-3xl border border-white/15 bg-black/90 px-3 pb-3 pt-2.5 shadow-2xl backdrop-blur-md">
+                {/* Garis penanda di tengah atas — isyarat sheet bisa ditarik. */}
+                <div
+                  aria-hidden
+                  className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-white/45"
+                />
+                <div className="grid grid-cols-2 gap-1.5">
+                  {QUALITIES.map((q, qi) => {
+                    const locked = q === PREMIUM_QUALITY && !isPremium;
+                    const active = (qualityDraft ?? quality) === q;
+                    return (
+                      <button
+                        key={q}
+                        onClick={() => {
+                          if (locked) {
+                            setPremiumTapHint(true);
+                            window.setTimeout(
+                              () => setPremiumTapHint(false),
+                              1800,
+                            );
+                            return;
+                          }
+                          setQualityDraft(q);
+                          setQuality(q);
+                          setQualityTouched(true);
+                          applyQuality(q);
+                          setQualityOpen(false);
+                        }}
+                        style={{ animationDelay: `${qi * 45}ms` }}
+                        className={cn(
+          "animate-in fade-in-0 slide-in-from-top-1 rounded-2xl border px-2.5 py-2 text-left transition duration-300",
+                          locked
+                            ? "cursor-not-allowed border-amber-500/40 bg-amber-500/10"
+                            : active
+                              ? "border-primary/60 bg-primary/15"
+                              : "border-white/12 bg-white/[0.04]",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "block text-[15px] font-black leading-none",
+                            locked ? "text-amber-300" : QUALITY_COLOR[q],
+                          )}
+                        >
+                          {q}
+                          {q === PREMIUM_QUALITY && !isPremium && " ★"}
+                        </span>
+                        <span className="mt-1.5 block text-[11px] font-semibold leading-tight text-white/60">
+                          {QUALITY_INFO[q]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
                 {premiumTapHint && (
-                  <p className="w-full text-[10px] text-amber-200">
+                  <p className="mt-2 text-[11px] font-semibold text-amber-200">
                     1080p khusus akun Premium.
                   </p>
                 )}
@@ -2731,28 +2761,9 @@ function WatchContent() {
             </button>
           )}
 
-        {/* Auto next: z-30 DI ATAS lapisan tap (z-10) supaya:
-            1) tombolnya benar-benar bisa dipencet, dan
-            2) menekannya TIDAK men-toggle kontrol — UI player tetap tampil.
-            Tanpa background: hanya teks + garis pinggir tipis. */}
-        {!uiLocked && controlsOn && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setAutoNext((v) => !v);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            className={cn(
-              "absolute bottom-28 left-3 z-30 rounded-full border px-3 py-1.5 text-xs font-bold transition drop-shadow-[0_2px_6px_rgba(0,0,0,.9)]",
-              autoNext
-                ? "border-white text-white"
-                : "border-white/45 text-white/85",
-            )}
-          >
-            Auto next {autoNext ? "ON" : "OFF"}
-          </button>
-        )}
+        {/* Auto next sudah ada di baris kontrol (di kiri kotak "HD"), jadi
+            tombol melayang di atas video DIHAPUS — tidak ada dua kontrol
+            ganda yang menutupi gambar. */}
       </div>
       </div>
 

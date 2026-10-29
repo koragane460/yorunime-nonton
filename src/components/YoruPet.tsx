@@ -239,15 +239,39 @@ export function YoruPetScreen({
               className="absolute inset-0 size-full object-cover"
             />
           )}
-          {/* Lapisan tekstur — grain titik + scanline + vignette supaya
-              scene tidak terlihat "mulus"/datar. */}
+          {/* Lapisan tekstur — grain film (feTurbulence) + titik rapat +
+              scanline + arsir diagonal + vignette: permukaan scene jadi
+              bertekstur, bukan mulus/plastik. Filter SVG digambar sekali
+              (elemen statis), bukan tiap frame, jadi tidak menambah beban. */}
+          <svg
+            aria-hidden
+            className="pointer-events-none absolute inset-0 size-full opacity-30 mix-blend-overlay"
+          >
+            <filter id="yn-scene-noise">
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.9"
+                numOctaves="3"
+                stitchTiles="stitch"
+              />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#yn-scene-noise)" />
+          </svg>
           <span
             aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1.2px)] opacity-50 mix-blend-overlay [background-size:13px_13px]"
+            className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.16)_1px,transparent_1.2px)] opacity-60 mix-blend-overlay [background-size:9px_9px]"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.24)_1px,transparent_1.1px)] opacity-70 [background-size:11px_11px] [background-position:4px_5px]"
           />
           <span
             aria-hidden
             className="absolute inset-0 opacity-70 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.16)_0px,rgba(0,0,0,0.16)_1px,transparent_1px,transparent_3px)]"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 opacity-40 mix-blend-soft-light bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.16)_0px,rgba(255,255,255,0.16)_1px,transparent_1px,transparent_6px)]"
           />
           <span
             aria-hidden
@@ -272,7 +296,7 @@ export function YoruPetScreen({
 
       {/* debu/kilau melayang tambahan — scene jadi lebih ramai. */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        {Array.from({ length: 16 }).map((_, i) => (
+        {Array.from({ length: 24 }).map((_, i) => (
           <span
             key={`dust-${i}`}
             className="absolute animate-pulse rounded-full bg-white/70"
@@ -337,10 +361,33 @@ export function YoruPetScreen({
                 className="absolute inset-0 size-full object-cover"
               />
             )}
-            {/* Grain + vignette panggung — tekstur biar tidak terlalu smooth. */}
+            {/* Grain film + titik rapat + vignette panggung — tekstur biar
+                tidak terlalu smooth. */}
+            <svg
+              aria-hidden
+              className="pointer-events-none absolute inset-0 size-full opacity-30 mix-blend-overlay"
+            >
+              <filter id="yn-stage-noise">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.9"
+                  numOctaves="3"
+                  stitchTiles="stitch"
+                />
+              </filter>
+              <rect width="100%" height="100%" filter="url(#yn-stage-noise)" />
+            </svg>
             <span
               aria-hidden
-              className="absolute inset-0 opacity-50 mix-blend-overlay bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1.2px)] [background-size:13px_13px]"
+              className="absolute inset-0 opacity-60 mix-blend-overlay bg-[radial-gradient(rgba(255,255,255,0.16)_1px,transparent_1.2px)] [background-size:9px_9px]"
+            />
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.24)_1px,transparent_1.1px)] opacity-70 [background-size:11px_11px] [background-position:4px_5px]"
+            />
+            <span
+              aria-hidden
+              className="absolute inset-0 opacity-35 mix-blend-soft-light bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.16)_0px,rgba(255,255,255,0.16)_1px,transparent_1px,transparent_6px)]"
             />
             <span
               aria-hidden
