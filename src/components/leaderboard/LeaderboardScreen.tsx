@@ -96,9 +96,15 @@ function Podium({
       </div>
       <p className="mt-1.5 w-full truncate text-center text-[10px] font-black leading-tight">{username ?? "user"}</p>
       <p className="text-[9px] leading-tight text-white/70">{xp.toLocaleString("id-ID")} XP</p>
-      <div className={cn("relative mt-1.5 flex w-full items-start justify-center overflow-hidden rounded-t-2xl border pt-1.5 text-base font-black text-black", grad, h)}>
+      <div
+        style={{
+          // Bentuk PERISAI (lancip di bawah) — bukan kotak biasa.
+          clipPath: "polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%)",
+        }}
+        className={cn("relative mt-1.5 flex w-full items-start justify-center overflow-hidden rounded-t-2xl border pb-4 pt-1.5 text-base font-black text-black", grad, h)}
+      >
         {/* Angka rank besar semi-transparan di dasar blok — sama dengan Home */}
-        <span aria-hidden className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-4xl font-black text-black/25">
+        <span aria-hidden className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-4xl font-black text-black/25">
           {rank}
         </span>
         <span className="relative">{rank}</span>
@@ -110,8 +116,9 @@ function Podium({
 function Row({
   rank, username, image, xp, suffix, staffRole, clanTag, clanTagIcon, clanNameColor, level, premium, seqId, givePremiumCount,
 }: any) {
+  // Top 4 ke bawah: TANPA kotak — hanya baris polos di atas latar.
   return (
-    <div className="lb-rise flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2 transition hover:border-white/25 hover:bg-white/[0.08]"
+    <div className="lb-rise flex w-full items-center gap-2 px-2.5 py-2 transition hover:bg-white/[0.05]"
       style={{ animationDelay: `${Math.min(rank, 16) * 40}ms` }}>
       <DashedNum rank={rank} />
       <Avatar src={image} seed={username} className="size-8 shrink-0" />

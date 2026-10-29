@@ -1755,17 +1755,6 @@ function PodiumCard({
     >
       <div className="relative">
         {/* Cincin glow peringkat: emas / perak / perunggu */}
-        <span
-          aria-hidden
-          className={cn(
-            "absolute -inset-1 rounded-full opacity-70 blur-[6px]",
-            rank === 1
-              ? "bg-yellow-400/60"
-              : rank === 2
-                ? "bg-zinc-300/50"
-                : "bg-amber-600/50",
-          )}
-        />
         <Avatar
           src={image}
           seed={username}
@@ -1822,17 +1811,28 @@ function PodiumCard({
         </>
       )}
       <div
+        style={{
+          // Bentuk PERISAI (lancip di bawah) — sama dengan podium Home
+          // & layar "Lihat selengkapnya", bukan kotak biasa.
+          clipPath: "polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%)",
+        }}
         className={cn(
-          "mt-1.5 flex w-full items-start justify-center rounded-t-xl border border-b-0 border-foreground/40 pt-1 text-lg font-black text-white",
+          "relative mt-1.5 flex w-full items-start justify-center overflow-hidden rounded-t-xl border pb-4 pt-1.5 text-lg font-black text-white",
           rank === 1
-            ? "bg-gradient-to-t from-yellow-500/30 to-yellow-300/60 animate-pulse"
+            ? "border-amber-200/60 bg-gradient-to-t from-amber-600/75 to-amber-300/45"
             : rank === 2
-              ? "bg-gradient-to-t from-zinc-500/25 to-zinc-300/50"
-              : "bg-gradient-to-t from-amber-700/30 to-amber-500/50",
+              ? "border-zinc-300/45 bg-gradient-to-t from-zinc-600/55 to-zinc-300/40"
+              : "border-amber-700/60 bg-gradient-to-t from-amber-800/65 to-amber-600/45",
           height,
         )}
       >
-        {rank}
+        <span
+          aria-hidden
+          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-3xl font-black text-black/25"
+        >
+          {rank}
+        </span>
+        <span className="relative">{rank}</span>
       </div>
       {/* Slot kode rahasia di pojok podum: tidak begitu terlihat, tapi
           kalau ditekan langsung buka aplikasi pemutar musik. */}
@@ -3982,7 +3982,7 @@ function AnimeDetailScreen({
                   onChange={(e) => setEpisodeQuery(e.target.value)}
                   placeholder="Cari episode… (mis. 12)"
                   inputMode="numeric"
-                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-primary/60 focus:outline-none"
+                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-white/45 focus:outline-none"
                 />
 
                 {minEp > 1 && (
@@ -4789,7 +4789,7 @@ function DonghuaDetailScreen({
                   onChange={(e) => setEpQuery(e.target.value)}
                   placeholder="Cari episode… (mis. 12)"
                   inputMode="numeric"
-                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-primary/60 focus:outline-none"
+                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-white/45 focus:outline-none"
                 />
                 {minEpNo > 1 && (
                   <p className="mt-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">

@@ -561,24 +561,10 @@ function PodiumAvatar({
       : rank === 2
         ? "ring-zinc-300"
         : "ring-amber-600";
-  const glow =
-    rank === 1
-      ? "bg-yellow-400/60"
-      : rank === 2
-        ? "bg-zinc-300/50"
-        : "bg-amber-600/50";
   const dash =
     rank === 1 ? "text-yellow-400" : rank === 2 ? "text-zinc-300" : "text-amber-500";
   return (
     <div className="relative">
-      <span
-        aria-hidden
-        className={cn(
-          "absolute -inset-1.5 rounded-full opacity-70 blur-md",
-          glow,
-          rank === 1 && "animate-pulse",
-        )}
-      />
       <Avatar src={image} seed={username} className={cn("relative size-11 ring-2", ring)} />
       {/* Outline berputar mengelilingi foto juara. */}
       <svg
@@ -675,23 +661,25 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.45 }}
+                    style={{
+                      // Bentuk PERISAI (lancip di bawah) — bukan kotak biasa.
+                      clipPath:
+                        "polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%)",
+                    }}
                     className={cn(
-                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden border px-1 py-2 backdrop-blur-[2px]",
+                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-t-2xl border px-1 pb-5 pt-2 backdrop-blur-[2px]",
                       rank === 1
-                        ? "h-24 border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.42)_45%,rgba(251,191,36,.10)_100%)] shadow-[0_18px_36px_-22px_rgba(251,191,36,.9)]"
+                        ? "h-28 border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.42)_45%,rgba(251,191,36,.10)_100%)]"
                         : rank === 2
-                          ? "h-16 border-zinc-300/45 bg-[linear-gradient(to_top,#cbd5e1_0%,rgba(203,213,225,.32)_50%,rgba(255,255,255,.06)_100%)]"
-                          : "h-14 border-amber-600/50 bg-[linear-gradient(to_top,#b45309_0%,rgba(180,83,9,.38)_50%,rgba(251,146,60,.08)_100%)]",
-                      rank === 2 && "rounded-l-3xl",
-                      rank === 3 && "rounded-r-3xl",
-                      rank === 1 && "rounded-b-md",
+                          ? "h-20 border-zinc-300/45 bg-[linear-gradient(to_top,#cbd5e1_0%,rgba(203,213,225,.32)_50%,rgba(255,255,255,.06)_100%)]"
+                          : "h-16 border-amber-600/50 bg-[linear-gradient(to_top,#b45309_0%,rgba(180,83,9,.38)_50%,rgba(251,146,60,.08)_100%)]",
                     )}
                   >
                     {/* Angka rank besar semi-transparan di dasar blok */}
                     <span
                       aria-hidden
                       className={cn(
-                        "absolute -bottom-2 left-1/2 -translate-x-1/2 text-4xl font-black text-black/20",
+                        "absolute bottom-3 left-1/2 -translate-x-1/2 text-4xl font-black text-black/20",
                       )}
                     >
                       {rank}

@@ -302,6 +302,9 @@ export function AfinitasScreen({
     );
   };
 
+  // Sheet daftar anggota per jenis relasi — dibuka dari 4 kotak bawah.
+  const [listKind, setListKind] = useState<Kind | null>(null);
+
   if (st == null || target === undefined) {
     return (
       <div className="fixed inset-0 z-[85] flex items-center justify-center bg-background text-sm font-bold text-muted-foreground">
@@ -360,7 +363,7 @@ export function AfinitasScreen({
                   className={cn(
                     "relative flex items-center gap-2.5 rounded-2xl border py-2.5 pl-7 pr-2.5",
                     i === 0
-                      ? "border-amber-300/55 bg-[linear-gradient(150deg,rgba(251,191,36,.16),rgba(16,19,26,.92))] shadow-[0_18px_36px_-26px_rgba(251,191,36,.8)]"
+                      ? "border-amber-300/55 bg-[linear-gradient(150deg,rgba(251,191,36,.16),rgba(16,19,26,.92))]"
                       : "border-white/12 bg-white/[0.05]",
                     r.isMine && KIND_META[lbKind].cls,
                   )}
@@ -369,9 +372,9 @@ export function AfinitasScreen({
                       kiri supaya isi kotak lega tapi angka tetap jelas. */}
                   <span
                     className={cn(
-                      "absolute -left-2 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-[13px] font-black tabular-nums ring-2 ring-[#0b0f19]",
+                      "absolute -left-2 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-[11px] font-black tabular-nums ring-2 ring-[#0b0f19]",
                       i === 0
-                        ? "bg-gradient-to-b from-amber-200 to-amber-500 text-black shadow-[0_6px_14px_-6px_rgba(251,191,36,.9)]"
+                        ? "bg-gradient-to-b from-amber-200 to-amber-500 text-black"
                         : i === 1
                           ? "bg-gradient-to-b from-zinc-200 to-zinc-400 text-black"
                           : "bg-gradient-to-b from-orange-400 to-amber-700 text-black",
@@ -759,6 +762,90 @@ export function AfinitasScreen({
           {/* Daftar relasi lama (kartu terpisah di paling bawah) DIHAPUS —
               kartu profil + Putuskan sekarang ada di dalam sheet Bond
               (dibuka dengan mengetuk bulatan relasi). */}
+
+          {/* 4 KOTAK JENIS RELASI — ikon kiri, nama, kotak bulat x/y di
+              kanan. Dipencet → sheet berisi daftar siapa saja. */}
+          <div className="mt-4 grid grid-cols-2 gap-2 px-3">
+            {ALL_KINDS.map((kind) => {
+              const meta = KIND_META[kind];
+              const used = (circles[kind]?.length ?? 0);
+              const total = SLOT_POS[kind].length;
+              return (
+                <button
+                  key={`box-${kind}`}
+                  onClick={() => setListKind(kind)}
+                  className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.05] px-3 py-2.5 text-left transition hover:bg-white/[0.09] active:scale-[0.98]"
+                >
+                  <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06]", meta.cls)}>
+                    <meta.Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">
+                    {meta.label}
+                  </span>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 text-[10px] font-black tabular-nums text-white/85">
+                    {used}/{total}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sheet daftar anggota satu jenis relasi. */}
+          <AnimatePresence>
+            {listKind && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="fixed inset-0 z-[90] flex flex-col justify-end"
+                onClick={() => setListKind(null)}
+              >
+                <div className="flex-1 bg-black/60 backdrop-blur-[2px]" />
+                <motion.div
+                  initial={{ y: 60 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: 60 }}
+                  transition={{ duration: 0.24, ease: "easeOut" }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full rounded-t-3xl border-t border-white/15 bg-[#10131a] p-4 pb-6"
+                >
+                  <span aria-hidden className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/25" />
+                  <p className="flex items-center justify-center gap-2 text-center text-sm font-black text-white">
+                    <span className={KIND_META[listKind].cls}>
+                      {(() => {
+                        const Icon = KIND_META[listKind].Icon;
+                        return <Icon className="size-4" />;
+                      })()}
+                    </span>
+                    Daftar {KIND_META[listKind].label}
+                  </p>
+                  <div className="thin-scroll mt-3 max-h-[52vh] space-y-2 overflow-y-auto">
+                    {(circles[listKind]?.length ?? 0) === 0 && (
+                      <p className="py-8 text-center text-xs text-zinc-500">
+                        Belum ada {KIND_META[listKind].label.toLowerCase()} — ajak lewat bulatan di atas.
+                      </p>
+                    )}
+                    {(circles[listKind] ?? []).map((m: any) => (
+                      <div
+                        key={String(m.userId ?? m.username)}
+                        className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.05] p-2.5"
+                      >
+                        <Avatar src={m.image} seed={m.username} className="size-10" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-black text-white">{m.username}</p>
+                          <p className="text-[10px] font-bold text-zinc-400">
+                            {KIND_META[listKind].label}
+                            {m.bond ? ` · Lv. ${m.bond.level}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

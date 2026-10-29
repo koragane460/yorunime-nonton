@@ -1011,6 +1011,42 @@ const schema = defineSchema(
     })
       .index("by_to_status", ["toUserId", "status"])
       .index("by_session", ["sessionId"]),
+
+    /** FOLLOW — relasi follow antar user untuk fitur Feed & detail Konten. */
+    follows: defineTable({
+      followerId: v.id("users"),
+      followingId: v.id("users"),
+      createdAt: v.number(),
+    })
+      .index("by_pair", ["followerId", "followingId"])
+      .index("by_follower", ["followerId"])
+      .index("by_following", ["followingId"]),
+
+    /**
+     * FEED — konten yang di-post user (gambar / musik / teks), mirip TikTok.
+     * `privacy`: "all" (semua orang) atau "teman" (hanya teman/follow).
+     * Gambar disimpan di file storage (bukan base64) supaya aman batas 1 MiB.
+     */
+    feedPosts: defineTable({
+      userId: v.id("users"),
+      kind: v.union(v.literal("image"), v.literal("music"), v.literal("text")),
+      caption: v.optional(v.string()),
+      imageStorageId: v.optional(v.string()),
+      music: v.optional(
+        v.object({
+          title: v.string(),
+          artist: v.optional(v.string()),
+          cover: v.optional(v.string()),
+          audioUrl: v.optional(v.string()),
+        }),
+      ),
+      privacy: v.union(v.literal("all"), v.literal("teman")),
+      likes: v.array(v.id("users")),
+      views: v.number(),
+      createdAt: v.number(),
+    })
+      .index("by_created", ["createdAt"])
+      .index("by_user", ["userId", "createdAt"]),
   },
   {
     schemaValidation: false,

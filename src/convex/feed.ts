@@ -1,0 +1,278 @@
+// YoruNime — FEED + FOLLOW.
+//
+// Fitur sosial ala TikTok: post gambar/musik/teks, like, view, follow.
+// Gambar diunggah ke file storage (storage.getUploadUrl) lalu disimpan sebagai
+// storageId — bukan base64 — supaya jauh di bawah batas 1 MiB per dokumen.
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
+import { mutation, query, type QueryCtx } from "./_generated/server";
+
+async function meOr(ctx: QueryCtx) {
+  try {
+    return await getAuthUserId(ctx);
+  } catch {
+    return null;
+  }
+}
+
+/** Gabungkan info user + URL gambar untuk satu post. */
+async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
+  const u: any = await ctx.db.get(p.userId);
+  let imageUrl: string | null = null;
+  if (p.imageStorageId) {
+    try {
+      imageUrl = await ctx.storage.getUrl(p.imageStorageId);
+    } catch {
+      imageUrl = null;
+    }
+  }
+  return {
+    postId: p._id,
+    userId: p.userId,
+    kind: p.kind,
+    caption: p.caption ?? "",
+    imageUrl,
+    music: p.music ?? null,
+    privacy: p.privacy,
+    likeCount: (p.likes ?? []).length,
+    liked: viewer ? (p.likes ?? []).includes(viewer) : false,
+    views: p.views ?? 0,
+    createdAt: p.createdAt,
+    username: u?.username ?? "user",
+    image: u?.image ?? null,
+    level: u?.level ?? 1,
+    clanTag: u?.clanTag,
+    premium: (u?.premiumUntil ?? 0) > Date.now(),
+    isMe: viewer !== null && viewer === p.userId,
+  };
+}
+
+/** Semua post yang boleh dilihat viewer (publik + milik sendiri). */
+export const listFeed = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const viewer = await meOr(ctx);
+    const rows = await ctx.db
+      .query("feedPosts")
+      .withIndex("by_created", (q) => q)
+      .order("desc")
+      .take(Math.min(limit ?? 50, 100));
+    const out = [];
+    for (const p of rows) {
+      if (p.privacy === "teman" && p.userId !== viewer) continue;
+      out.push(await decorate(ctx, p, viewer));
+    }
+    return out;
+  },
+});
+
+/** Post milik satu user (untuk grid Konten di detail akun). */
+export const userPosts = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const viewer = await meOr(ctx);
+    const rows = await ctx.db
+      .query("feedPosts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(100);
+    const out = [];
+    for (const p of rows) {
+      if (p.privacy === "teman" && p.userId !== viewer) continue;
+      const d = await decorate(ctx, p, viewer);
+      out.push({
+        postId: d.postId,
+        kind: d.kind,
+        imageUrl: d.imageUrl,
+        cover: d.music?.cover ?? null,
+        caption: d.caption,
+        likeCount: d.likeCount,
+        views: d.views,
+        createdAt: d.createdAt,
+      });
+    }
+    return out;
+  },
+});
+
+/** Total like semua post milik user — tampil sebagai jumlah Like di profil. */
+export const userLikeTotal = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const rows = await ctx.db
+      .query("feedPosts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    return rows.reduce((n, p) => n + (p.likes?.length ?? 0), 0);
+  },
+});
+
+/** Buat post baru. `imageStorageId` wajib untuk kind "image". */
+export const createPost = mutation({
+  args: {
+    kind: v.union(v.literal("image"), v.literal("music"), v.literal("text")),
+    caption: v.optional(v.string()),
+    imageStorageId: v.optional(v.string()),
+    music: v.optional(
+      v.object({
+        title: v.string(),
+        artist: v.optional(v.string()),
+        cover: v.optional(v.string()),
+        audioUrl: v.optional(v.string()),
+      }),
+    ),
+    privacy: v.union(v.literal("all"), v.literal("teman")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    if (args.kind === "image" && !args.imageStorageId)
+      throw new Error("Gambar belum terunggah");
+    const postId = await ctx.db.insert("feedPosts", {
+      userId,
+      kind: args.kind,
+      caption: (args.caption ?? "").slice(0, 500),
+      imageStorageId: args.imageStorageId,
+      music: args.music,
+      privacy: args.privacy,
+      likes: [],
+      views: 0,
+      createdAt: Date.now(),
+    });
+    return { postId };
+  },
+});
+
+/** Hapus post milik sendiri. */
+export const deletePost = mutation({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    const p = await ctx.db.get(postId);
+    if (!p || p.userId !== userId) throw new Error("Tidak bisa hapus post ini");
+    await ctx.db.delete(postId);
+    return { ok: true };
+  },
+});
+
+/** Like / unlike post. */
+export const toggleLike = mutation({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    const p = await ctx.db.get(postId);
+    if (!p) throw new Error("Post tidak ada");
+    const likes = (p.likes ?? []).filter((l) => l !== userId);
+    const liked = likes.length === (p.likes ?? []).length;
+    if (liked) likes.push(userId);
+    await ctx.db.patch(postId, { likes });
+    return { liked, likeCount: likes.length };
+  },
+});
+
+/** Tambah 1 view saat post dibuka (dipanggil sekali per pembukaan). */
+export const addView = mutation({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const p = await ctx.db.get(postId);
+    if (!p) return { ok: false };
+    await ctx.db.patch(postId, { views: (p.views ?? 0) + 1 });
+    return { ok: true };
+  },
+});
+
+// ------------------------------------------------------------- follow ----
+
+/** Follow / unfollow user. */
+export const toggleFollow = mutation({
+  args: { targetId: v.id("users") },
+  handler: async (ctx, { targetId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    if (userId === targetId) throw new Error("Tidak bisa follow diri sendiri");
+    const existing = await ctx.db
+      .query("follows")
+      .withIndex("by_pair", (q) =>
+        q.eq("followerId", userId).eq("followingId", targetId),
+      )
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { following: false };
+    }
+    await ctx.db.insert("follows", {
+      followerId: userId,
+      followingId: targetId,
+      createdAt: Date.now(),
+    });
+    return { following: true };
+  },
+});
+
+/** Apakah viewer sedang follow user ini? */
+export const isFollowing = query({
+  args: { targetId: v.id("users") },
+  handler: async (ctx, { targetId }) => {
+    const userId = await meOr(ctx);
+    if (userId === null) return false;
+    const row = await ctx.db
+      .query("follows")
+      .withIndex("by_pair", (q) =>
+        q.eq("followerId", userId).eq("followingId", targetId),
+      )
+      .first();
+    return row !== null;
+  },
+});
+
+/** Jumlah Mengikuti / Followers / Like untuk satu user (detail Konten). */
+export const followCounts = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const following = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q) => q.eq("followerId", userId))
+      .collect();
+    const followers = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q) => q.eq("followingId", userId))
+      .collect();
+    const posts = await ctx.db
+      .query("feedPosts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const likes = posts.reduce((n, p) => n + (p.likes?.length ?? 0), 0);
+    return { following: following.length, followers: followers.length, likes };
+  },
+});
+
+/** Daftar user yang diikuti / followers (sheet Konten). */
+export const followList = query({
+  args: {
+    userId: v.id("users"),
+    mode: v.union(v.literal("following"), v.literal("followers")),
+  },
+  handler: async (ctx, { userId, mode }) => {
+    const rows = await ctx.db
+      .query("follows")
+      .withIndex(mode === "following" ? "by_follower" : "by_following", (q) =>
+        q.eq(mode === "following" ? "followerId" : "followingId", userId),
+      )
+      .order("desc")
+      .take(200);
+    const out = [];
+    for (const f of rows) {
+      const uid = mode === "following" ? f.followingId : f.followerId;
+      const u: any = await ctx.db.get(uid);
+      out.push({
+        userId: uid,
+        username: u?.username ?? "user",
+        image: u?.image ?? null,
+        level: u?.level ?? 1,
+      });
+    }
+    return out;
+  },
+});

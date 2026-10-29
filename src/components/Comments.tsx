@@ -81,7 +81,7 @@ export function CommentsSection({
     <div>
       {/* Kolom komentar utama: KOTAK LURUS (tanpa rounded) yang melebar
           penuh ke samping sampai mentok tepi — permintaan pemilik. */}
-      <div className="flex w-full items-center gap-2 border-y border-white/10 bg-white/[0.06] py-1.5 pl-4 pr-2 transition focus-within:border-primary/50 focus-within:bg-white/[0.09]">
+      <div className="flex w-full items-center gap-2 border-y border-white/10 bg-white/[0.06] py-1.5 pl-4 pr-2 transition focus-within:border-white/25 focus-within:bg-white/[0.09]">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -217,7 +217,7 @@ function ReplySheet({
             onKeyDown={(e) => e.key === "Enter" && onSend()}
             placeholder={muted ? "Kamu sedang dimute…" : `Balas ${target.username}…`}
             disabled={muted}
-            className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-black/40 px-4 text-sm outline-none focus:border-primary disabled:opacity-50"
+            className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-black/40 px-4 text-sm outline-none focus:border-white/45 disabled:opacity-50"
           />
           <button
             onClick={onSend}

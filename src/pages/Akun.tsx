@@ -1040,6 +1040,8 @@ function SettingsScreen({
       </div>
 
       {/* CS + email + log out */}
+      <NotifPrefs />
+
       <BlockTitle>Lainnya</BlockTitle>
       <div className="space-y-2">
         <button
@@ -1134,6 +1136,73 @@ function ToggleRow({
         />
       </button>
     </div>
+  );
+}
+
+/* Preferensi notifikasi per perangkat — anime update, reply, request,
+   clan, & Afinitas. Disimpan di localStorage supaya langsung aktif. */
+const NOTIF_PREFS = [
+  {
+    key: "anime",
+    label: "Anime update",
+    desc: "Episode baru dari judul yang kamu Subscribe",
+  },
+  {
+    key: "reply",
+    label: "Reply & like",
+    desc: "Balasan dan like di komentar kamu",
+  },
+  {
+    key: "friend",
+    label: "Request teman",
+    desc: "Permintaan pertemanan yang masuk",
+  },
+  { key: "clan", label: "Clan", desc: "Info dan undangan dari clan kamu" },
+  {
+    key: "bond",
+    label: "Afinitas",
+    desc: "Ajakan bond & pemberitahuan relasi",
+  },
+] as const;
+
+function NotifPrefs() {
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = window.localStorage.getItem("yn:notif-prefs");
+      if (raw) return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      /* storage diblokir */
+    }
+    return { anime: true, reply: true, friend: true, clan: true, bond: true };
+  });
+
+  const toggle = (k: string) => {
+    setPrefs((p) => {
+      const next = { ...p, [k]: !p[k] };
+      try {
+        window.localStorage.setItem("yn:notif-prefs", JSON.stringify(next));
+      } catch {
+        /* storage diblokir */
+      }
+      return next;
+    });
+  };
+
+  return (
+    <>
+      <BlockTitle>Notifikasi</BlockTitle>
+      <div className="space-y-2">
+        {NOTIF_PREFS.map((n) => (
+          <ToggleRow
+            key={n.key}
+            label={n.label}
+            desc={n.desc}
+            value={prefs[n.key] ?? true}
+            onToggle={() => toggle(n.key)}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 

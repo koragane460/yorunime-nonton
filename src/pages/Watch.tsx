@@ -2060,12 +2060,9 @@ const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
           />
-        ) : (
-          <video
+        ) : (          <video
             key={epParam}
-            
-
-  // Ref ke elemen <video> di player (digunakan untuk posisi playback, currentTime, dst.).ref={videoRef}
+            ref={videoRef}
             src={sourceType === "mp4" ? streamUrl : undefined}
             poster={D.image}
             className="h-full w-full object-contain"

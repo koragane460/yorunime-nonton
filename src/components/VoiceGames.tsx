@@ -121,10 +121,6 @@ function GameMenu({
       {/* Latar premium: grid halus + tiga orb warna + sinar emas atas. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.2px)] [background-size:24px_24px]" />
-        <span className="absolute -left-20 -top-10 size-64 rounded-full bg-fuchsia-600/20 blur-3xl" />
-        <span className="absolute -right-24 top-40 size-64 rounded-full bg-sky-600/15 blur-3xl" />
-        <span className="absolute -bottom-24 left-1/4 size-72 rounded-full bg-amber-600/15 blur-3xl" />
-        <span className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.16),transparent_70%)]" />
       </div>
 
       <div className="relative mx-auto w-full max-w-md px-4 pb-20 pt-3">
@@ -145,7 +141,7 @@ function GameMenu({
               Game Room
             </h1>
           </div>
-          <span className="flex size-10 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold shadow-[0_0_18px_-8px_rgba(251,191,36,0.9)]">
+          <span className="flex size-10 items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-gold">
             <Gamepad2 className="size-5" />
           </span>
         </div>
@@ -598,12 +594,8 @@ function LobbyView({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4">
       {/* Kepala lobby premium */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-300/25 bg-[linear-gradient(155deg,#241a08_0%,#14101f_55%,#0b0a12_100%)] p-4 text-center shadow-[0_24px_50px_-30px_rgba(251,191,36,.8)]">
+      <div className="relative overflow-hidden rounded-3xl border border-amber-300/20 bg-[linear-gradient(155deg,#241a08_0%,#14101f_55%,#0b0a12_100%)] p-4 text-center">
         <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
-        <span
-          aria-hidden
-          className="absolute -right-10 -top-12 size-40 rounded-full bg-amber-500/15 blur-3xl"
-        />
         <p className="text-[10px] font-black uppercase tracking-[0.34em] text-amber-300/85">
           Menunggu Pemain
         </p>
@@ -619,7 +611,7 @@ function LobbyView({
               className={cn(
                 "h-1.5 w-9 rounded-full transition",
                 i < s.players.length
-                  ? "bg-gradient-to-r from-amber-300 to-amber-500 shadow-[0_0_10px_-2px_rgba(251,191,36,.9)]"
+                  ? "bg-gradient-to-r from-amber-300 to-amber-500"
                   : "bg-white/15",
               )}
             />
@@ -651,7 +643,7 @@ function LobbyView({
               className={cn(
                 "relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border p-4",
                 p
-                  ? "border-amber-300/40 bg-[linear-gradient(160deg,rgba(251,191,36,.14),rgba(255,255,255,.04))] shadow-[0_16px_34px_-24px_rgba(251,191,36,.9)]"
+                  ? "border-amber-300/40 bg-[linear-gradient(160deg,rgba(251,191,36,.14),rgba(255,255,255,.04))]"
                   : "border-dashed border-white/18 bg-white/[0.03]",
               )}
             >
@@ -687,7 +679,7 @@ function LobbyView({
         <button
           onClick={() => void onInvite()}
           disabled={inviting}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 py-3.5 text-sm font-black text-black shadow-[0_18px_36px_-18px_rgba(251,191,36,.95)] transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 py-3.5 text-sm font-black text-black transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
         >
           <Send className="size-4" />
           {inviting ? "Mengirim…" : "Ajak pemain di room"}
