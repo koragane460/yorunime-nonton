@@ -67,6 +67,7 @@ import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import {
   AfinitasPromo,
+  FeedPromo,
   ChatVoiceRow,
   ContinueWatchingRow,
   DailyQuestRow,
@@ -196,19 +197,22 @@ function HeroSlides({
   onPick,
   onTop,
   promo,
+  promo2,
 }: {
   items: AnimeCardT[];
   onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
   onTop: () => void;
   /** Slide pertama (index 0): promosi Afinitas. */
   promo: ReactNode;
+  /** Slide kedua (index 1): promosi Feed. */
+  promo2?: ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [idx, setIdx] = useState(0);
   // Halaman anime/donghua cuma 1 — isinya ditumpuk & saling FADE.
   const [ai, setAi] = useState(0);
-  // Slide 0 = promo Afinitas, slide 1 = grup anime/donghua (FADE).
-  const total = 2;
+  // Slide 0 = promo Afinitas, 1 = promo Feed, 2 = grup anime/donghua (FADE).
+  const total = promo2 ? 3 : 2;
 
   const scrollToIdx = (i: number) => {
     const el = trackRef.current;
@@ -250,7 +254,11 @@ function HeroSlides({
       >
       {/* Slide 0 — promosi Afinitas (selalu tampil pertama). */}
       <div className="h-full w-full shrink-0 snap-start">{promo}</div>
-      {/* Slide 1 — grup anime & donghua di SATU tempat: saling FADE
+      {/* Slide 1 — promosi FEED. */}
+      {promo2 && (
+        <div className="h-full w-full shrink-0 snap-start">{promo2}</div>
+      )}
+      {/* Slide terakhir — grup anime & donghua di SATU tempat: saling FADE
           (transisi opacity halus), tidak digeser ke kanan. */}
       <div className="relative h-full w-full shrink-0 snap-start overflow-hidden">
       {items.map((a, i) => (
@@ -310,15 +318,15 @@ function HeroSlides({
       ))}
       </div>
     </div>
-      {/* TITIK SLIDE — cuma 2: promo (kiri) & grup anime/donghua (kanan). */}
+      {/* TITIK SLIDE — promo afinitas · promo feed · grup anime/donghua. */}
       <div className="mt-2 flex items-center justify-center gap-1.5">
-        {[0, 1].map((d) => {
-          const active = d === 0 ? idx === 0 : idx > 0;
+        {(promo2 ? [0, 1, 2] : [0, 1]).map((d) => {
+          const active = d === 0 ? idx === 0 : d === 1 ? idx === 1 : idx > (promo2 ? 1 : 0);
           return (
             <button
               key={d}
               onClick={() => {
-                const target = d === 0 ? 0 : idx === 0 ? 1 : idx;
+                const target = d === 0 ? 0 : d === 1 ? 1 : 2;
                 setIdx(target);
                 scrollToIdx(target);
               }}
@@ -1203,6 +1211,7 @@ function HomeContent() {
                   .filter(Boolean)}
               />
             }
+            promo2={<FeedPromo onOpen={() => navigate("/feed")} />}
           />
 
           {/* ---- Leaderboard DIHAPUS dari hero (sudah pindah ke Catalog). */}

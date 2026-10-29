@@ -24,6 +24,10 @@ const Jadwal = lazy(() => import("./pages/Jadwal.tsx"));
 const Akun = lazy(() => import("./pages/Akun.tsx"));
 const Info = lazy(() => import("./pages/Info.tsx"));
 const Catalog = lazy(() => import("./pages/Catalog.tsx"));
+// Feed — layar fullscreen ala TikTok, dibuka dari tab Feed di navbar.
+const FeedScreen = lazy(() =>
+  import("./components/FeedScreen.tsx").then((m) => ({ default: m.FeedScreen })),
+);
 const Premium = lazy(() => import("./pages/Premium.tsx"));
 const Manga = lazy(() => import("./pages/Manga.tsx"));
 const Manhwa = lazy(() => import("./pages/Manhwa.tsx"));
@@ -246,6 +250,16 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Catalog />
+                  </RequireAuth>
+                }
+              />
+              {/* Feed — konten user. Navbar & footer disembunyikan (sama
+                  seperti /catalog) supaya benar-benar fullscreen. */}
+              <Route
+                path="/feed"
+                element={
+                  <RequireAuth>
+                    <FeedScreen />
                   </RequireAuth>
                 }
               />

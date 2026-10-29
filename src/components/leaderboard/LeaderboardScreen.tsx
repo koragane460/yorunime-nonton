@@ -52,13 +52,13 @@ function DashedNum({ rank }: { rank: number }) {
   return (
     <span
       className={cn(
-        "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ring-2",
+        "relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black ring-1",
         dashedCls(rank),
       )}
     >
-      <svg className="pointer-events-none absolute -inset-[3px]" viewBox="0 0 100 100" aria-hidden>
+      <svg className="pointer-events-none absolute -inset-[2px]" viewBox="0 0 100 100" aria-hidden>
         <circle
-          cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="6"
+          cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="8"
           strokeLinecap="round" pathLength={100} strokeDasharray="42 58" className="lb-dash-spin"
         />
       </svg>

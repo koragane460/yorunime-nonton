@@ -470,6 +470,15 @@ function WatchContent() {
     const t = window.setInterval(() => setNowTick(Date.now()), 200);
     return () => window.clearInterval(t);
   }, [holdUntil > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // <video> baru dimount SETELAH hitungan mundur habis, sehingga atribut
+  // autoplay bawaan tidak pernah menangkap momen itu dan episode selalu
+  // berhenti di poster (beda dengan miniplayer yang dipanggil manual).
+  // Mulai putar otomatis begitu layar hitungan lewat dan sumber siap.
+  const autoStartRef = useRef(true);
+  useEffect(() => {
+    autoStartRef.current = true;
+  }, [epParam]);
   const [sourceIdx, setSourceIdx] = useState(0);
   // Server yang sudah dicoba dan gagal untuk episode ini, supaya auto-failover
   // tidak berputar ke server yang sama.
@@ -528,9 +537,26 @@ function WatchContent() {
   const [levels, setLevels] = useState<number[]>([]);
   const isPremium = (user?.premiumUntil ?? 0) > Date.now();
   // Tampilkan info "1080p khusus Premium" ketika user menekan 1080p.
-  const [premiumTapHint, setPremiumTapHint] = useState(false);
+  const [premiumTapHint, setPremiumTapHint] = useState(false); const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
 
-const streamUrl = sources[sourceIdx]?.url ?? sources[0]?.url ?? "";
+  // <video> baru dimount SETELAH hitungan mundur habis, jadi tidak ada
+  // momen untuk autoplay bawaan — episode selalu berhenti di poster.
+  // Mulai putar otomatis begitu layar hitungan lewat dan sumber siap.
+  useEffect(() => {
+    if (videoHolding || !streamUrl) return;
+    const v = videoRef.current;
+    if (!v || !autoStartRef.current || !v.paused) return;
+    v.play()
+      .then(() => {
+        autoStartRef.current = false;
+      })
+      .catch(() => {
+        // Ditolak kebijakan autoplay browser: biarkan, user tetap bisa
+        // menekan tombol play seperti biasa.
+        autoStartRef.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoHolding, streamUrl, epParam]);
 
   /**
    * Resolusi asli tiap file MP4 di daftar server episode ini.

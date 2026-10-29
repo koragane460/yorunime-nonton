@@ -46,6 +46,12 @@ import { StoryRing, StoryViewer } from "@/components/StoriesUI";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import type { Id } from "@/convex/_generated/dataModel";
 
+import {
+  ContentGrid,
+  FeedPostOverlay,
+  FollowButton,
+} from "@/components/FeedScreen";
+
 type Tab = "komen" | "history" | "favorite";
 
 /**
@@ -82,6 +88,13 @@ export function ProfileSheet({
   const comicHistory = useQuery(api.comics.historyOf, { userId });
   const comicFavorites = useQuery(api.comics.favoritesOf, { userId });
   const [tab, setTab] = useState<Tab>("komen");
+  // ---- MODE DETAIL KONTEN (feed) — tombol swipe di kanan atas banner.
+  // Berganti dengan fade: stats jadi Mengikuti · Followers · Like, dan
+  // bagian bawah jadi grid Konten (3 per baris + jumlah views).
+  const [detailKonten, setDetailKonten] = useState(false);
+  const followData = useQuery(api.feed.followCounts, { userId });
+  const myPosts = useQuery(api.feed.userPosts, { userId }) as any[] | undefined;
+  const [openPost, setOpenPost] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   // Story pemilik profil ini: cincin biru muda + penampil saat avatar
   // ditekan. Sama seperti story di halaman Akun.
@@ -194,6 +207,34 @@ export function ProfileSheet({
               aria-label="Tutup"
             >
               <StripBackIcon />
+            </button>
+            {/* Tombol SWIPE di kanan atas — TANPA background. Berganti
+                antara Detail akun ⇄ Detail Konten dengan fade halus. */}
+            <button
+              type="button"
+              onClick={() => setDetailKonten((v) => !v)}
+              aria-label={detailKonten ? "Lihat detail akun" : "Lihat detail konten"}
+              aria-pressed={detailKonten}
+              className="absolute right-3 top-3 z-10 flex items-center gap-1.5 py-1 text-white transition active:scale-95"
+            >
+              <span className="text-[11px] font-black tracking-wide drop-shadow">
+                {detailKonten ? "Detail akun" : "Detail Konten"}
+              </span>
+              <svg
+                width="22"
+                height="16"
+                viewBox="0 0 22 16"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M8 3 3 8l5 5M14 3l5 5-5 5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
             {/* Kotak info di banner DIHAPUS permanen — isinya sudah pindah
                 ke kotak ringkas (Top XP / Top Give / tag clan) di bawah
@@ -317,16 +358,43 @@ export function ProfileSheet({
             {/* Tombol pindah ke kotak 3-tombol (di bawah title). */}
 
 
-            {/* STATS dulu (History · Komen · Bergabung · Menit), baru bar
-                level besar — sesuai urutan yang diminta. */}
-            <div className="mt-3 grid grid-cols-4 divide-x divide-white/15 text-center">
-              <StatCell label="History" value={profile.watchCount} />
-              <StatCell label="Komen" value={profile.commentCount} />
-              <StatCell
-                label="Bergabung"
-                value={`${Math.max(0, Math.floor((Date.now() - profile.joinedAt) / 86400000))}h`}
-              />
-              <StatCell label="Menit" value={profile.minutesWatched} />
+            {/* STATS — Detail akun: History · Komen · Bergabung · Menit.
+                Detail Konten: Mengikuti · Followers · Like (lebih besar,
+                tanpa background, karena cuma tiga). */}
+            <div
+              key={detailKonten ? "konten" : "akun"}
+              className="fade-enter mt-3"
+            >
+              {detailKonten ? (
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {(
+                    [
+                      ["Mengikuti", followData?.following ?? 0],
+                      ["Followers", followData?.followers ?? 0],
+                      ["Like", followData?.likes ?? 0],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <div key={label} className="py-1.5">
+                      <p className="text-2xl font-black leading-none text-white">
+                        {Number(value).toLocaleString("id-ID")}
+                      </p>
+                      <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-white/55">
+                        {label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 divide-x divide-white/15 text-center">
+                  <StatCell label="History" value={profile.watchCount} />
+                  <StatCell label="Komen" value={profile.commentCount} />
+                  <StatCell
+                    label="Bergabung"
+                    value={`${Math.max(0, Math.floor((Date.now() - profile.joinedAt) / 86400000))}h`}
+                  />
+                  <StatCell label="Menit" value={profile.minutesWatched} />
+                </div>
+              )}
             </div>
 
             {/* BAR LEVEL BESAR — tulisan kiri (Level n) & kanan (x/y) di
@@ -421,9 +489,42 @@ export function ProfileSheet({
             </div>
             </div>
 
+            {/* BAGIAN BAWAH — mode Detail Konten menampilkan grid Konten
+                (3 per baris + jumlah views); mode detail akun tetap tab
+                Komen / History / Favorite. */}
+            {detailKonten && (
+              <div className="fade-enter px-4 pb-6">
+                <div className="mt-5 flex items-end justify-between">
+                  <p className="text-[13px] font-black text-white">
+                    {isMe ? "Konten Mu" : "Konten"}
+                  </p>
+                  <span className="text-[11px] font-bold text-white/45">
+                    {myPosts?.length ?? 0} konten
+                  </span>
+                </div>
+                <div className="mt-2.5">
+                  {!myPosts ? (
+                    <p className="py-8 text-center text-xs text-white/50">
+                      Memuat konten…
+                    </p>
+                  ) : (
+                    <ContentGrid
+                      posts={myPosts}
+                      onOpen={(i) => setOpenPost(i)}
+                    />
+                  )}
+                </div>
+                {!isMe && (
+                  <div className="mt-4 flex justify-center">
+                    <FollowButton targetId={userId} />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* BAGIAN BAWAH TANPA BUNGKUS — tab & daftar menempel
                 langsung di latar sheet, bukan di dalam kotak kartu. */}
-            <div className="px-4 pb-2">
+            <div className={cn("px-4 pb-2", detailKonten && "hidden")}>
 
             {/* Tab tanpa background: garis bawah, bisa pindah */}
             <div className="mt-5 flex border-b border-white/15">
@@ -858,6 +959,24 @@ export function ProfileSheet({
             </div>
           </div>
         </div>
+      )}
+
+      {/* DETAIL KONTEN — satu post fullscreen + rail like/komen/share */}
+      {detailKonten && openPost !== null && myPosts && (
+        <FeedPostOverlay
+          posts={myPosts}
+          index={openPost}
+          onClose={() => setOpenPost(null)}
+          onOpenProfile={(id) => {
+            if (String(id) === String(userId)) {
+              setOpenPost(null);
+              return;
+            }
+            setOpenPost(null);
+            onClose();
+            navigate(`/akun?user=${String(id)}`);
+          }}
+        />
       )}
 
       {/* YORUPET — kebun binatang milik user ini (mode lihat) */}

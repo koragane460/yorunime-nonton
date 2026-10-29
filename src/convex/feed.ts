@@ -36,6 +36,12 @@ async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
     privacy: p.privacy,
     likeCount: (p.likes ?? []).length,
     liked: viewer ? (p.likes ?? []).includes(viewer) : false,
+    commentCount: (
+      await ctx.db
+        .query("feedComments")
+        .withIndex("by_post", (q) => q.eq("postId", p._id))
+        .collect()
+    ).length,
     views: p.views ?? 0,
     createdAt: p.createdAt,
     username: u?.username ?? "user",
@@ -80,16 +86,9 @@ export const userPosts = query({
     for (const p of rows) {
       if (p.privacy === "teman" && p.userId !== viewer) continue;
       const d = await decorate(ctx, p, viewer);
-      out.push({
-        postId: d.postId,
-        kind: d.kind,
-        imageUrl: d.imageUrl,
-        cover: d.music?.cover ?? null,
-        caption: d.caption,
-        likeCount: d.likeCount,
-        views: d.views,
-        createdAt: d.createdAt,
-      });
+      // Bentuknya SAMA dengan listFeed supaya overlay post bisa dipakai
+      // langsung dari grid Konten di profil.
+      out.push({ ...d, cover: d.music?.cover ?? null });
     }
     return out;
   },
@@ -248,8 +247,7 @@ export const followCounts = query({
   },
 });
 
-/** Daftar user yang diikuti / followers (sheet Konten). */
-export const followList = query({
+/** Daftar user yang diikuti / followers (sheet Konten). */export const followList = query({
   args: {
     userId: v.id("users"),
     mode: v.union(v.literal("following"), v.literal("followers")),
@@ -276,3 +274,51 @@ export const followList = query({
     return out;
   },
 });
+
+// ----------------------------------------------------------- komentar ---
+
+/** Komentar satu post Feed, terlama di atas. */
+export const listComments = query({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const rows = await ctx.db
+      .query("feedComments")
+      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .order("asc")
+      .take(200);
+    const out = [];
+    for (const c of rows) {
+      const u: any = await ctx.db.get(c.userId);
+      out.push({
+        commentId: c._id,
+        text: c.text,
+        createdAt: c.createdAt,
+        userId: c.userId,
+        username: u?.username ?? "user",
+        image: u?.image ?? null,
+      });
+    }
+    return out;
+  },
+});
+
+/** Tulis komentar pada post Feed. */
+export const addComment = mutation({
+  args: { postId: v.id("feedPosts"), text: v.string() },
+  handler: async (ctx, { postId, text }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    const t = text.trim();
+    if (!t) throw new Error("Komentar kosong");
+    const p = await ctx.db.get(postId);
+    if (!p) throw new Error("Post tidak ada");
+    await ctx.db.insert("feedComments", {
+      postId,
+      userId,
+      text: t.slice(0, 400),
+      createdAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+

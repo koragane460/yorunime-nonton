@@ -34,8 +34,6 @@ import {
   PersonIconFill,
   InfoIcon,
   InfoIconFill,
-  CatalogIcon,
-  CatalogIconFill,
   BookmarkIcon,
   BookmarkIconFill,
   BookIcon,
@@ -207,11 +205,11 @@ export function AppLayout({
       </div>
       {/* CATALOG = layar fullscreen: navbar bawah & footer TIDAK tampil
           sama sekali selama di halaman ini (permintaan user). */}
-      {!overlayOpen && location.pathname !== "/catalog" && (
+      {!overlayOpen && location.pathname !== "/catalog" && location.pathname !== "/feed" && (
         <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
       )}
       <TopPanelHost topPanel={topPanel} onClose={closeTopPanel} onOpen={openTopPanel} />
-      {!overlayOpen && location.pathname !== "/catalog" && <AppFooter />}
+      {!overlayOpen && location.pathname !== "/catalog" && location.pathname !== "/feed" && <AppFooter />}
       <MusicMiniBar />
       <MiniPlayerHost />
 
@@ -839,6 +837,25 @@ function AppFooter() {
   );
 }
 
+/** Ikon tab Feed — kartu konten dengan tiga baris (menggantikan History). */
+function FeedIcon({ className, strokeWidth = 1.8 }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="3" y="3.5" width="18" height="17" rx="4.5" />
+      <path d="M7 8.5h10M7 12.5h6.5M7 16.5h8" />
+    </svg>
+  );
+}
+
 function BottomNav({
   navPanel,
   onOpenPanel,
@@ -874,7 +891,11 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    { path: "/catalog", label: "History", icon: CatalogIcon, iconFill: CatalogIconFill },
+    {
+      path: "/feed",
+      label: "Feed",
+      icon: FeedIcon,
+    },
     // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
     // Home). Ikon buku, di kanan History.
     { path: "/baca", label: "Baca", icon: BookIcon },

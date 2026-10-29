@@ -372,7 +372,7 @@ export function AfinitasScreen({
                       kiri supaya isi kotak lega tapi angka tetap jelas. */}
                   <span
                     className={cn(
-                      "absolute -left-2 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-[11px] font-black tabular-nums ring-2 ring-[#0b0f19]",
+                      "absolute -left-1.5 top-1/2 z-10 flex size-4 -translate-y-1/2 items-center justify-center rounded-full text-[9px] font-black tabular-nums ring-2 ring-[#0b0f19]",
                       i === 0
                         ? "bg-gradient-to-b from-amber-200 to-amber-500 text-black"
                         : i === 1
@@ -431,10 +431,10 @@ export function AfinitasScreen({
               <div
                 key={r.linkId}
                 className={cn(
-                  "flex items-center gap-2 rounded-2xl border p-2.5",
+                  "flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-white/[0.05]",
                   r.isMine
-                    ? "border-current bg-white/[0.07]"
-                    : "border-white/10 bg-white/[0.04]",
+                    ? "bg-white/[0.06]"
+                    : "",
                   r.isMine && KIND_META[lbKind].cls,
                 )}
               >

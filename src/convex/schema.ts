@@ -1047,6 +1047,16 @@ const schema = defineSchema(
     })
       .index("by_created", ["createdAt"])
       .index("by_user", ["userId", "createdAt"]),
+
+    /** Komentar pada post Feed. */
+    feedComments: defineTable({
+      postId: v.id("feedPosts"),
+      userId: v.id("users"),
+      text: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_post", ["postId", "createdAt"])
+      .index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

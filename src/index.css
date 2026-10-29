@@ -1153,10 +1153,19 @@ body {
   }
 }
 
-/* 4) FOKUS EMAS + seleksi emas + hilangkan tap-highlight biru bawaan. */
+/* 4) FOKUS EMAS + seleksi emas + hilangkan tap-highlight biru bawaan.
+   Kolom teks (pesan/komentar) TIDAK pakai kotak emas: di sana fokus
+   selalu terlihat begitu kursor masuk, jadi outline-nya dibuang dan
+   diganti sorotan border yang jauh lebih halus. */
 :focus-visible {
   outline: 2px solid oklch(0.86 0.16 92 / 0.85);
   outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px oklch(1 0 0 / 0.14);
 }
 ::selection {
   background: oklch(0.86 0.18 88 / 0.38);

@@ -948,6 +948,73 @@ export function AfinitasPromo({
   );
 }
 
+/**
+ * PROMO FEED — slide hero kedua. Menampilkan tumpukan miniatur konten di
+ * kanan (mirip grid 3-per-baris di profil) tanpa glow mencolok: permukaan
+ * solid, garis tipis, dan aksen hangat.
+ */
+export function FeedPromo({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(150deg,#2a1608_0%,#1a1119_55%,#0b0a11_100%)]">
+      {/* Garis emas tipis di atas — pengganti glow. */}
+      <span
+        aria-hidden
+        className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent"
+      />
+
+      {/* Tumpukan konten di kanan — tiga kartu miring, gaya grid Feed. */}
+      <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-end gap-1.5">
+        {[
+          { r: "-8deg", c: "border-amber-300/55" },
+          { r: "0deg", c: "border-white/35" },
+          { r: "8deg", c: "border-rose-300/55" },
+        ].map((k, i) => (
+          <span
+            key={i}
+            style={{ transform: `rotate(${k.r})` }}
+            className={cn(
+              "flex h-[96px] w-[56px] flex-col items-center justify-end gap-1 overflow-hidden rounded-lg border-2 bg-[#15111b] pb-2",
+              k.c,
+            )}
+          >
+            <span className="relative flex flex-col items-center gap-1">
+              <span className="flex size-6 items-center justify-center rounded-full bg-white/10 text-white/80">
+                {i === 1 ? (
+                  <Play className="size-3 fill-white" />
+                ) : i === 0 ? (
+                  <Sparkles className="size-3 text-amber-200" />
+                ) : (
+                  <Heart className="size-3 text-rose-300" />
+                )}
+              </span>
+              <span className="h-1 w-8 rounded-full bg-white/25" />
+              <span className="h-1 w-5 rounded-full bg-white/15" />
+            </span>
+          </span>
+        ))}
+      </div>
+
+      <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-1 px-4">
+        <span className="w-fit rounded-full border border-amber-400/45 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">
+          Feed
+        </span>
+        <p className="text-[15px] font-black leading-tight text-white">
+          Pamer konten, kumpulkan like
+        </p>
+        <p className="text-[10px] leading-snug text-white/65">
+          Foto · Musik · Text — bagikan ke teman langsung ke chat mereka
+        </p>
+        <button
+          onClick={onOpen}
+          className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-3 py-1.5 text-[11px] font-black text-black transition active:scale-95"
+        >
+          Buka Feed <ChevronRight className="size-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const RECENT_KEY = "yn:recent-search";
 
 export function readRecentSearch(): string[] {
