@@ -77,8 +77,9 @@ export function GreetingBar() {
     const t = setInterval(() => tick((v) => v + 1), 60_000);
     return () => clearInterval(t);
   }, []);
+  // Sapaan polos TANPA background/kotak — hanya teks.
   return (
-    <div className="fade-enter yn-cut flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 backdrop-blur-md">
+    <div className="fade-enter flex w-full items-center justify-center px-1 py-1.5">
       <p className="text-center text-base font-black tracking-tight">
         {greetingOf()},{" "}
         <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
@@ -93,7 +94,13 @@ export function GreetingBar() {
 
 export function ProfileBar() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [yv, setYv] = useState(false);
   const level = user?.level ?? 1;
+  const premiumDays =
+    user && (user.premiumUntil ?? 0) > Date.now()
+      ? Math.max(0, Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86_400_000))
+      : 0;
   const need = xpForLevel(level);
   const have = Math.max(0, Math.min(user?.xp ?? 0, need));
   const pct = Math.min(100, Math.round((have / Math.max(1, need)) * 100));
@@ -154,7 +161,32 @@ export function ProfileBar() {
         <p className="mt-1 text-[10px] font-semibold text-white/60">
           {have.toLocaleString("id-ID")}/{need.toLocaleString("id-ID")} - {pct}%
         </p>
+        {/* Ringkasan akun — dulunya 3 kotak terpisah (Sacret · Premium ·
+            YoruVerse), sekarang menyatu sebagai chip di header akun. */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="flex items-center gap-1 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[10px] font-black text-white">
+            <SacretIcon className="size-3.5 text-sky-300" />
+            {fmtShort(user?.diamonds ?? 0)} Sacret
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate("/premium")}
+            className="flex items-center gap-1 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[10px] font-black text-white transition active:scale-95"
+          >
+            <CrownIcon className="size-3.5 text-amber-300" />
+            {premiumDays} hari
+          </button>
+          <button
+            type="button"
+            onClick={() => setYv(true)}
+            className="flex items-center gap-1 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[10px] font-black text-white transition active:scale-95"
+          >
+            <SaturnIcon className="size-3.5 text-violet-300" />
+            YoruVerse
+          </button>
+        </div>
       </div>
+      {yv && <YoruVerseScreen onClose={() => setYv(false)} />}
     </div>
   );
 }
@@ -184,84 +216,9 @@ function SaturnIcon({ className }: { className?: string }) {
   );
 }
 
-function TileBox({
-  icon,
-  label,
-  value,
-  onClick,
-  cut = "",
-  pushDown = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value?: React.ReactNode;
-  onClick?: () => void;
-  /** Variasi sudut (chamfer) supaya kotak tidak seragam rounded. */
-  cut?: string;
-  /** Dorong isi ke bawah (kotak YoruVerse tanpa baris angka). */
-  pushDown?: boolean;
-}) {
-  const inner = (
-    <>
-      {/* Ikon TANPA kotak background (permintaan). */}
-      <span className={cn("flex items-center justify-center", pushDown && "mt-4")}>
-        {icon}
-      </span>
-      <span className="mt-1.5 text-[11px] font-black text-white">{label}</span>
-      {value !== undefined && (
-        <span className="text-[11px] font-bold text-white/55">{value}</span>
-      )}
-    </>
-  );
-  const cls = cn(
-    "flex min-w-0 flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-1.5 py-3 transition hover:border-white/25",
-    cut,
-  );
-  return onClick ? (
-    <button onClick={onClick} className={cls}>
-      {inner}
-    </button>
-  ) : (
-    <div className={cls}>{inner}</div>
-  );
-}
-
-export function StatBoxes() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [yv, setYv] = useState(false);
-  const premiumDays =
-    user && (user.premiumUntil ?? 0) > Date.now()
-      ? Math.max(0, Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86_400_000))
-      : 0;
-  return (
-    <>
-      <div className="fade-enter mt-3 grid grid-cols-3 gap-2.5">
-        <TileBox
-          cut="yn-cut"
-          icon={<SacretIcon className="size-5 text-sky-300" />}
-          label="Sacret"
-          value={fmtShort(user?.diamonds ?? 0)}
-        />
-        <TileBox
-          cut="yn-cut-alt"
-          icon={<CrownIcon className="size-5 text-amber-300" />}
-          label="Premium"
-          value={`${premiumDays} hari`}
-          onClick={() => navigate("/premium")}
-        />
-        <TileBox
-          cut="yn-cut"
-          pushDown
-          icon={<SaturnIcon className="size-5 text-violet-300" />}
-          label="YoruVerse"
-          onClick={() => setYv(true)}
-        />
-      </div>
-      {yv && <YoruVerseScreen onClose={() => setYv(false)} />}
-    </>
-  );
-}
+/* ---------------------------------------------- sisa lama: kotak tile -- */
+/* StatBoxes (Sacret · Premium · YoruVerse) DIHAPUS — isinya pindah jadi
+   chip ringkas di dalam ProfileBar (header akun). */
 
 /* --------------------------------------------------------- top airing -- */
 
@@ -662,12 +619,13 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.45 }}
                     style={{
-                      // Bentuk PERISAI (lancip di bawah) — bukan kotak biasa.
+                      // Bentuk TAJAM atas & bawah (pacman/ribbon lancip),
+                      // bukan datar di atas.
                       clipPath:
-                        "polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%)",
+                        "polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%)",
                     }}
                     className={cn(
-                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-t-2xl border px-1 pb-5 pt-2 backdrop-blur-[2px]",
+                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-t-2xl border px-1 pb-6 pt-4 backdrop-blur-[2px]",
                       rank === 1
                         ? "h-28 border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.42)_45%,rgba(251,191,36,.10)_100%)]"
                         : rank === 2
@@ -742,18 +700,16 @@ export function ChatVoiceRow({
           konten di TENGAH kotak, angka online pil rounded di kanan bawah. */}
       <button
         onClick={onOpenChat}
-        className="yn-cut relative row-span-2 flex min-h-[228px] flex-col items-center justify-center gap-3 overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(160deg,#0a1725_0%,#0b1220_55%,#07090f_100%)] shadow-[0_20px_46px_-26px_rgba(56,189,248,0.55)] transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut relative row-span-2 flex min-h-[228px] flex-col items-center justify-center gap-3 overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(160deg,#0a1725_0%,#0b1220_55%,#07090f_100%)] transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span aria-hidden className="absolute -left-10 -top-12 size-36 rounded-full bg-sky-400/20 blur-3xl" />
-        <span aria-hidden className="absolute -bottom-14 -right-8 size-36 rounded-full bg-cyan-500/15 blur-3xl" />
         <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent" />
-        <span className="relative flex size-12 items-center justify-center rounded-2xl border border-sky-300/45 bg-[linear-gradient(to_bottom,rgba(56,189,248,.28),rgba(56,189,248,.10))] shadow-[0_0_20px_-4px_rgba(56,189,248,.7)]">
+        <span className="relative flex size-12 items-center justify-center rounded-2xl border border-sky-300/45 bg-[linear-gradient(to_bottom,rgba(56,189,248,.28),rgba(56,189,248,.10))]">
           <MessageSquare className="size-6 text-sky-200" />
         </span>
-        <span className="relative text-sm font-extrabold text-sky-50 [text-shadow:0_0_14px_rgba(56,189,248,.55)]">
+        <span className="relative text-sm font-extrabold text-sky-50">
           Chat Global
         </span>
-        <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-emerald-400/45 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black text-emerald-200 shadow-[0_0_14px_-6px_rgba(52,211,153,.9)]">
+        <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-emerald-400/45 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black text-emerald-200">
           <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
           {online ?? 0} online
         </span>
@@ -762,14 +718,13 @@ export function ChatVoiceRow({
       {/* VOICE CALL — kotak tegak di kanan atas, glow hijau. */}
       <button
         onClick={onOpenVoice}
-        className="yn-cut-alt relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(160deg,#08180f_0%,#0a1310_55%,#07090c_100%)] shadow-[0_20px_44px_-26px_rgba(52,211,153,0.5)] transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut-alt relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(160deg,#08180f_0%,#0a1310_55%,#07090c_100%)] transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span aria-hidden className="absolute -left-8 -top-10 size-28 rounded-full bg-emerald-400/20 blur-3xl" />
         <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
-        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-emerald-300/45 bg-[linear-gradient(to_bottom,rgba(52,211,153,.26),rgba(52,211,153,.08))] shadow-[0_0_18px_-4px_rgba(52,211,153,.7)]">
+        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-emerald-300/45 bg-[linear-gradient(to_bottom,rgba(52,211,153,.26),rgba(52,211,153,.08))]">
           <Mic className="size-5 text-emerald-200" />
         </span>
-        <span className="relative text-sm font-extrabold text-emerald-50 [text-shadow:0_0_14px_rgba(52,211,153,.5)]">
+        <span className="relative text-sm font-extrabold text-emerald-50">
           Voice Call
         </span>
       </button>
@@ -777,14 +732,13 @@ export function ChatVoiceRow({
       {/* PREMIUM — kotak tegak, tepat DI BAWAH Voice Call, glow emas. */}
       <button
         onClick={onOpenPremium}
-        className="yn-cut relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-amber-400/40 bg-[linear-gradient(160deg,#1d1408_0%,#14100b_55%,#0a0a10_100%)] shadow-[0_20px_44px_-26px_rgba(251,191,36,0.5)] transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-cut relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-amber-400/40 bg-[linear-gradient(160deg,#1d1408_0%,#14100b_55%,#0a0a10_100%)] transition hover:brightness-110 active:scale-[0.97]"
       >
-        <span aria-hidden className="absolute -left-8 -top-10 size-28 rounded-full bg-amber-400/20 blur-3xl" />
         <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
-        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-amber-300/50 bg-[linear-gradient(to_bottom,rgba(251,191,36,.28),rgba(251,191,36,.10))] shadow-[0_0_18px_-4px_rgba(251,191,36,.75)]">
+        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-amber-300/50 bg-[linear-gradient(to_bottom,rgba(251,191,36,.28),rgba(251,191,36,.10))]">
           <CrownIcon className="size-5 text-amber-200" />
         </span>
-        <span className="relative text-sm font-extrabold text-amber-50 [text-shadow:0_0_14px_rgba(251,191,36,.5)]">
+        <span className="relative text-sm font-extrabold text-amber-50">
           Premium
         </span>
         <span className="relative text-[10px] font-bold text-amber-100/55">

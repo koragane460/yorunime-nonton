@@ -400,8 +400,8 @@ function AkunCommentsFeed() {
                     />
                   )}
                   {typeof c.level === "number" && (
-                    <span className="shrink-0 rounded bg-white/10 px-1 text-[9px] font-bold text-white/70">
-                      Lv.{c.level}
+                    <span className="shrink-0 inline-flex">
+                      <LevelBadge level={c.level} className="scale-90" />
                     </span>
                   )}
                   {c.source === "dev" && (
@@ -1040,6 +1040,7 @@ function SettingsScreen({
       </div>
 
       {/* CS + email + log out */}
+      <RewardClaim />
       <NotifPrefs />
 
       <BlockTitle>Lainnya</BlockTitle>
@@ -1164,6 +1165,57 @@ const NOTIF_PREFS = [
     desc: "Ajakan bond & pemberitahuan relasi",
   },
 ] as const;
+
+/* REWARDS pengaturan — klaim sekali, dapat 5000 Sacret. */
+function RewardClaim() {
+  const claimM = useMutation(api.account.claimSettingReward);
+  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+  const [msg, setMsg] = useState("");
+
+  const claim = async () => {
+    if (state !== "idle") return;
+    setState("busy");
+    setMsg("");
+    try {
+      await claimM({});
+      setState("done");
+    } catch (e) {
+      setState("idle");
+      setMsg(e instanceof Error ? e.message : "Gagal klaim rewards");
+    }
+  };
+
+  return (
+    <>
+      <BlockTitle>Rewards</BlockTitle>
+      <div className="rounded-xl border border-border bg-card p-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/15">
+            <SacretIcon className="size-5 text-sky-300" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-semibold">
+              Hadiah pengaturan
+            </span>
+            <span className="block text-[11px] text-muted-foreground">
+              {state === "done"
+                ? "5000 Sacret sudah masuk ke akunmu"
+                : "Klaim 5000 Sacret (sekali per akun)"}
+            </span>
+          </span>
+          <button
+            onClick={() => void claim()}
+            disabled={state !== "idle"}
+            className="shrink-0 rounded-lg bg-primary px-3 py-2 text-[12px] font-black text-primary-foreground transition active:scale-95 disabled:opacity-60"
+          >
+            {state === "done" ? "Diklaim" : state === "busy" ? "…" : "Klaim"}
+          </button>
+        </div>
+        {msg && <p className="mt-2 text-[11px] text-rose-300">{msg}</p>}
+      </div>
+    </>
+  );
+}
 
 function NotifPrefs() {
   const [prefs, setPrefs] = useState<Record<string, boolean>>(() => {

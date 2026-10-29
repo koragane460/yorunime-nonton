@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { Crown, Users, Gift, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ function Podium({
       <div
         style={{
           // Bentuk PERISAI (lancip di bawah) — bukan kotak biasa.
-          clipPath: "polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%)",
+          clipPath: "polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%)",
         }}
         className={cn("relative mt-1.5 flex w-full items-start justify-center overflow-hidden rounded-t-2xl border pb-4 pt-1.5 text-base font-black text-black", grad, h)}
       >
@@ -134,7 +134,11 @@ function Row({
         </div>
         <p className="text-[11px] text-white/60">
           {suffix ? suffix : `${xp?.toLocaleString?.("id-ID") ?? xp} XP`}
-          {level !== undefined && <span className="ml-1.5">Lv.{level}</span>}
+          {level !== undefined && (
+            <span className="ml-1.5 inline-flex">
+              <LevelBadge level={level} className="scale-90" />
+            </span>
+          )}
           {seqId !== undefined && <span className="ml-1.5">#{seqId}</span>}
           {typeof givePremiumCount === "number" && givePremiumCount > 0 && (
             <span className="ml-1.5 text-yellow-300">★ {givePremiumCount} give</span>

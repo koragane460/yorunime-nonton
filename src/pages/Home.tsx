@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, TitleBadge, clanNameClass } from "@/components/lstream-ui";
+import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge, clanNameClass } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
@@ -75,7 +75,6 @@ import {
   LeaderPodium,
   PillButton,
   ProfileBar,
-  StatBoxes,
   TopAiringRow,
   bumpQuestLocal,
   pushRecentSearch,
@@ -1176,11 +1175,10 @@ function HomeContent() {
           </button>
         </div>
       )}
-      {/* 1) SAPAAN WAKTU + KOTAK PROFIL & LEVEL + 3 KOTAK
-          (Sacret · Premium · YoruVerse) — bagian paling atas Home. */}
+      {/* 1) SAPAAN WAKTU + KOTAK PROFIL & LEVEL (kini termasuk chip
+          Sacret · Premium · YoruVerse di dalamnya). */}
       <GreetingBar />
       <ProfileBar />
-      <StatBoxes />
 
       {/* 2) HERO BANNER — SATU anime tampil (fade antar judul, selalu hanya
           1 slide terlihat) + Leaderboard sebagai kolom DI KANAN banner. */}
@@ -1730,7 +1728,11 @@ function LeaderEntryRow({
         </div>
         <p className="text-xs text-muted-foreground">
           {xp.toLocaleString("id-ID")} {suffix}
-          {level !== undefined && <span className="ml-1.5">Lv.{level}</span>}
+          {level !== undefined && (
+            <span className="ml-1.5 inline-flex">
+              <LevelBadge level={level} className="scale-90" />
+            </span>
+          )}
           {seqId !== undefined && <span className="ml-1.5">#{seqId}</span>}
           {typeof givePremiumCount === "number" && givePremiumCount > 0 && (
             <span className="ml-1.5 text-gold">★ {givePremiumCount} give</span>
@@ -2096,13 +2098,11 @@ function LeaderboardRow({ e, dense }: { e: LbEntry; dense?: boolean }) {
             />
           )}
           {typeof e.level === "number" && (
-            <span
-              className={cn(
-                "shrink-0 rounded bg-white/12 px-1 font-bold text-white/75",
-                dense ? "text-[9px]" : "text-[10px]",
-              )}
-            >
-              Lv.{e.level}
+            <span className="shrink-0 inline-flex">
+              <LevelBadge
+                level={e.level}
+                className={dense ? "scale-75" : "scale-90"}
+              />
             </span>
           )}
         </span>

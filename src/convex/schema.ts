@@ -41,6 +41,8 @@ const schema = defineSchema(
       /** Animasi intro FULLSCREEN saat detail profil dibuka:
           "awan" | "gagak" | "none" (diatur di Pengaturan). */
       introStyle: v.optional(v.string()),
+      /** Rewards Pengaturan: sudah klaim 5000 Sacret atau belum. */
+      settingsRewardClaimed: v.optional(v.boolean()),
       /** SHOP BORDER — bingkai foto profile yang sedang dipakai
           (id dari BORDERS di src/lib/borders.ts, "none" = tanpa bingkai). */
       avatarBorder: v.optional(v.string()),
@@ -1029,9 +1031,16 @@ const schema = defineSchema(
      */
     feedPosts: defineTable({
       userId: v.id("users"),
-      kind: v.union(v.literal("image"), v.literal("music"), v.literal("text")),
+      kind: v.union(
+        v.literal("image"),
+        v.literal("music"),
+        v.literal("text"),
+        v.literal("video"),
+      ),
       caption: v.optional(v.string()),
       imageStorageId: v.optional(v.string()),
+      /** Frame hasil clip video — dipakai sebagai thumbnail grid Konten. */
+      thumbStorageId: v.optional(v.string()),
       music: v.optional(
         v.object({
           title: v.string(),

@@ -581,7 +581,11 @@ export function ClanTag({
   const inner = (
     <>
       <span
-        className="inline-flex size-3.5 shrink-0 items-center justify-center drop-shadow-[0_0_5px_currentColor]"
+        className={cn(
+          // Latar gelap kecil di belakang ikon: warna ikon tetap stabil
+          // walau background tag diganti (tidak ikut menyesuaikan).
+          "inline-flex size-3.5 shrink-0 items-center justify-center rounded-[3px] bg-black/35 drop-shadow-[0_0_5px_currentColor]",
+        )}
         style={{ color: tone }}
         aria-hidden
       >
@@ -617,7 +621,8 @@ export function ClanTag({
       >
         <span
           className={cn(
-            "clan-tag-ribbon inline-flex items-center gap-1 px-2 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
+            // KOTAK (siku) — bukan rounded, biar seragam dengan tag lainnya.
+            "clan-tag-ribbon inline-flex items-center gap-1 rounded-none px-2 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]",
             !bg && "bg-gradient-to-r from-zinc-600 to-zinc-800",
           )}
           style={bodyStyle}
@@ -646,7 +651,7 @@ export function ClanTag({
       >
         <span
           className={cn(
-            "inline-flex items-center gap-1 px-2 py-1",
+            "inline-flex items-center gap-1 rounded-none px-2 py-1",
             shapeCls,
             !bg && CLAN_TAG_BODY_CLS[shape],
           )}

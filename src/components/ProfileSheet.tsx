@@ -397,8 +397,9 @@ export function ProfileSheet({
               )}
             </div>
 
-            {/* BAR LEVEL BESAR — tulisan kiri (Level n) & kanan (x/y) di
-                atasnya, seukuran judul besar di bawahnya. */}
+            {/* BAR LEVEL BESAR — DISIMPAN di mode Detail Konten (diminta
+                hilang di mode swipe konten). */}
+            {!detailKonten && (
             <div className="mt-4">
               <div className="mb-1.5 flex items-center justify-between text-[12px]">
                 <span className="font-black text-white">Level {profile.level}</span>
@@ -413,6 +414,7 @@ export function ProfileSheet({
                 />
               </div>
             </div>
+            )}
 
             {/* TITLE terpasang — sebesar bar level, geser ke kanan. */}
             {(() => {
@@ -436,8 +438,9 @@ export function ProfileSheet({
               );
             })()}
 
-            {/* 3 tombol DIGABUNG (Add Friend · YoruPet · Afinitas) DALAM satu
-                kotak rounded dengan garis pembatas di antaranya. */}
+            {/* 3 tombol DIGABUNG (Add Friend · YoruPet · Afinitas) —
+                DISIMPAN di mode Detail Konten (diminta tak terlihat di sana). */}
+            {!detailKonten && (
             <div
               className={cn(
                 "mt-4 grid divide-x divide-white/15 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]",
@@ -487,6 +490,7 @@ export function ProfileSheet({
                 Afinitas
               </button>
             </div>
+            )}
             </div>
 
             {/* BAGIAN BAWAH — mode Detail Konten menampilkan grid Konten
@@ -495,9 +499,16 @@ export function ProfileSheet({
             {detailKonten && (
               <div className="fade-enter px-4 pb-6">
                 <div className="mt-5 flex items-end justify-between">
-                  <p className="text-[13px] font-black text-white">
-                    {isMe ? "Konten Mu" : "Konten"}
-                  </p>
+                  <div className="flex items-center gap-2.5">
+                    {/* Garis vertikal tegas — gaya judul chapter manga/manhwa. */}
+                    <span
+                      aria-hidden
+                      className="h-6 w-[5px] shrink-0 rounded-sm bg-gradient-to-b from-white via-white/80 to-transparent"
+                    />
+                    <p className="text-[15px] font-black tracking-tight text-white">
+                      {isMe ? "Konten Mu" : "Konten"}
+                    </p>
+                  </div>
                   <span className="text-[11px] font-bold text-white/45">
                     {myPosts?.length ?? 0} konten
                   </span>

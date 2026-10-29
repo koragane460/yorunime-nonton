@@ -3,7 +3,8 @@ import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
-import { Avatar } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -20,17 +21,34 @@ import {
   Send,
   Share2,
   Type as TypeIcon,
+  Video as VideoIcon,
   UserPlus,
   Users,
   X,
 } from "lucide-react";
 
+/** Waktu relatif singkat — "baru", "5 mnt", "2 jam", "3 hr". */
+function timeAgo(ts: number): string {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return "baru";
+  if (s < 3600) return `${Math.floor(s / 60)} mnt`;
+  if (s < 86400) return `${Math.floor(s / 3600)} jam`;
+  if (s < 2592000) return `${Math.floor(s / 86400)} hr`;
+  return `${Math.floor(s / 2592000)} bln`;
+}
+
 type Post = {
   postId: Id<"feedPosts">;
   userId: Id<"users">;
-  kind: "image" | "music" | "text";
+  kind: "image" | "music" | "text" | "video";
   caption: string;
   imageUrl: string | null;
+  thumbUrl: string | null;
+  level?: number;
+  clanTag?: string;
+  clanTagIcon?: string;
+  clanNameColor?: string;
+  premium?: boolean;
   music: { title: string; artist?: string; cover?: string } | null;
   privacy: "all" | "teman";
   likeCount: number;
@@ -49,11 +67,11 @@ type Post = {
 function CaptionBlock({ p }: { p: Post }) {
   return (
     <div className="pointer-events-auto absolute bottom-0 left-0 right-16 z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-5 pt-16">
-      <p className="text-[15px] font-black leading-tight text-white drop-shadow">
+      <p className="text-[22px] font-black leading-tight text-white drop-shadow">
         {p.username}
       </p>
       {p.caption && (
-        <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-[13px] font-medium leading-snug text-white/90">
+        <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-[16px] font-semibold leading-snug text-white/95">
           {p.caption}
         </p>
       )}
@@ -89,10 +107,10 @@ function RightRail({
   onShare: () => void;
 }) {
   return (
-    <div className="absolute bottom-6 right-2 z-20 flex flex-col items-center gap-4">
+    <div className="absolute right-2 top-[36%] z-20 flex flex-col items-center gap-5">
       {/* Foto profil + tombol + (hanya untuk orang lain) */}
       <div className="relative">
-        <Avatar src={p.image ?? undefined} seed={p.username} className="size-12 ring-2 ring-white/60" />
+        <Avatar src={p.image ?? undefined} seed={p.username} className="size-14 ring-2 ring-white/60" />
         {!p.isMe && (
           <button
             onClick={onFollow}
@@ -107,26 +125,25 @@ function RightRail({
         )}
       </div>
 
-      <button onClick={onLike} className="flex flex-col items-center gap-0.5 transition active:scale-90">
+      <button onClick={onLike} className="flex flex-col items-center gap-1 transition active:scale-90">
         <Heart
           className={cn(
-            "size-7 transition",
+            "size-9 transition",
             p.liked ? "fill-rose-500 text-rose-500" : "text-white drop-shadow",
           )}
         />
-        <span className="text-[11px] font-black text-white drop-shadow">{p.likeCount}</span>
+        <span className="text-xs font-black text-white drop-shadow">{p.likeCount}</span>
       </button>
 
-      <button onClick={onComment} className="flex flex-col items-center gap-0.5 transition active:scale-90">
-        <span className="flex size-9 items-center justify-center rounded-full border border-white/35 bg-black/45 backdrop-blur">
-          <MessageCircle className="size-5 text-white" />
-        </span>
-        <span className="text-[11px] font-black text-white drop-shadow">{p.commentCount}</span>
+      <button onClick={onComment} className="flex flex-col items-center gap-1 transition active:scale-90">
+        {/* Ikon chat TANPA background — polos seperti ikon share. */}
+        <MessageCircle className="size-8 text-white drop-shadow" />
+        <span className="text-xs font-black text-white drop-shadow">{p.commentCount}</span>
       </button>
 
-      <button onClick={onShare} className="flex flex-col items-center gap-0.5 transition active:scale-90">
-        <Share2 className="size-6 text-white drop-shadow" />
-        <span className="text-[11px] font-black text-white drop-shadow">Bagikan</span>
+      <button onClick={onShare} className="flex flex-col items-center gap-1 transition active:scale-90">
+        <Share2 className="size-8 text-white drop-shadow" />
+        <span className="text-xs font-black text-white drop-shadow">Bagikan</span>
       </button>
     </div>
   );
@@ -176,7 +193,17 @@ function PostView({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {p.kind === "image" && p.imageUrl ? (
+      {p.kind === "video" && p.imageUrl ? (
+        <video
+          src={p.imageUrl}
+          poster={p.thumbUrl ?? undefined}
+          className="h-full w-full object-cover"
+          autoPlay
+          loop
+          playsInline
+          controls
+        />
+      ) : p.imageUrl ? (
         <img src={p.imageUrl} alt={p.caption} className="h-full w-full object-cover" />
       ) : p.kind === "music" ? (
         <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(120%_80%_at_50%_0%,#2a1330_0%,#0d0a14_65%,#070609_100%)]">
@@ -255,41 +282,67 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[95] flex flex-col justify-end"
-      onClick={onClose}
-    >
-      <div className="flex-1 bg-black/60 backdrop-blur-[2px]" />
-      <motion.div
-        initial={{ y: 60 }}
-        animate={{ y: 0 }}
-        exit={{ y: 60 }}
-        transition={{ duration: 0.24, ease: "easeOut" }}
-        onClick={(e) => e.stopPropagation()}
-        className="rounded-t-3xl border-t border-white/15 bg-[#10131a] p-4 pb-6"
+      exit={{ opacity: 0 }}        className="fixed inset-0 z-[95] flex flex-col justify-end"
+        onClick={onClose}
       >
-        <div className="mb-3 flex items-center gap-2">
-          <span aria-hidden className="mx-auto block h-1 w-10 rounded-full bg-white/25" />
-        </div>
-        <p className="mb-2 text-center text-sm font-black text-white">Komentar</p>
-        <div className="thin-scroll max-h-[46vh] space-y-2.5 overflow-y-auto pb-2">
-          {!list && <p className="py-6 text-center text-xs text-zinc-500">Memuat…</p>}
-          {list?.length === 0 && (
-            <p className="py-6 text-center text-xs text-zinc-500">
-              Belum ada komentar — jadi yang pertama.
-            </p>
-          )}
-          {list?.map((c) => (
-            <div key={c.commentId} className="flex items-start gap-2.5">
-              <Avatar src={c.image} seed={c.username} className="size-8 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-black text-white">{c.username}</p>
-                <p className="text-[13px] leading-snug text-white/80">{c.text}</p>
+        <div className="flex-1 bg-black/60 backdrop-blur-[2px]" />
+        <motion.div
+          initial={{ y: 60 }}
+          animate={{ y: 0 }}
+          exit={{ y: 60 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-[50vh] flex-col rounded-t-3xl border-t border-white/15 bg-[#10131a] p-4 pb-6"
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span aria-hidden className="mx-auto block h-1 w-10 rounded-full bg-white/25" />
+          </div>
+          <p className="mb-2 shrink-0 text-center text-sm font-black text-white">
+            Komentar
+          </p>
+          <div className="thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-2">
+            {!list && <p className="py-6 text-center text-xs text-zinc-500">Memuat…</p>}
+            {list?.length === 0 && (
+              <p className="py-6 text-center text-xs text-zinc-500">
+                Belum ada komentar — jadi yang pertama.
+              </p>
+            )}
+            {list?.map((c: any) => (
+              <div key={c.commentId} className="flex items-start gap-2.5">
+                <Avatar src={c.image} seed={c.username} className="size-9 shrink-0" />
+                <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.06] px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[13px] font-black text-white">
+                      {c.username}
+                    </span>
+                    {c.premium && <BlueCheck className="size-3.5 shrink-0" />}
+                    {c.clanTag && (
+                      <ClanTag
+                        icon={c.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                        tag={c.clanTag}
+                        color={c.clanNameColor}
+                        level={c.level}
+                        className="scale-[0.72] px-1 py-0 text-[9px]"
+                      />
+                    )}
+                    {c.level !== undefined && (
+                      <LevelBadge
+                        level={c.level}
+                        className="scale-[0.85] px-1 py-0"
+                      />
+                    )}
+                    <span className="ml-auto shrink-0 text-[10px] font-semibold text-white/45">
+                      {timeAgo(c.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[14px] leading-snug text-white/90">
+                    {c.text}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex items-center gap-2">
+            ))}
+          </div>
+          <div className="mt-2 flex shrink-0 items-center gap-2">
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -440,7 +493,7 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
 export function CreatePostSheet({ onClose }: { onClose: () => void }) {
   const create = useMutation(api.feed.createPost);
   const upload = useMutation(api.storage.getUploadUrl);
-  const [kind, setKind] = useState<"image" | "text" | "music">("image");
+  const [kind, setKind] = useState<"image" | "text" | "music" | "video">("image");
   const [caption, setCaption] = useState("");
   const [privacy, setPrivacy] = useState<"all" | "teman">("all");
   const [file, setFile] = useState<File | null>(null);
@@ -452,19 +505,54 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
 
   const pick = (f: File | undefined) => {
     if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error("Pilih gambar dari galeri");
+    if (!f.type.startsWith("image/") && !f.type.startsWith("video/")) {
+      toast.error("Pilih gambar atau video dari galeri");
       return;
     }
     setFile(f);
     setPreview(URL.createObjectURL(f));
-    setKind("image");
+    setKind(f.type.startsWith("video/") ? "video" : "image");
   };
+
+  /** Ambil satu frame video (≈0.5 dtk) sebagai thumbnail grid konten. */
+  const grabFrame = (v: File): Promise<Blob | null> =>
+    new Promise((resolve) => {
+      const url = URL.createObjectURL(v);
+      const el = document.createElement("video");
+      el.muted = true;
+      el.playsInline = true;
+      el.preload = "metadata";
+      el.src = url;
+      el.onloadeddata = () => {
+        el.currentTime = Math.min(0.5, (el.duration || 1) / 2);
+      };
+      el.onseeked = () => {
+        try {
+          const c = document.createElement("canvas");
+          const w = 360;
+          const h =
+            Math.round((el.videoHeight / Math.max(1, el.videoWidth)) * w) ||
+            480;
+          c.width = w;
+          c.height = h;
+          c.getContext("2d")?.drawImage(el, 0, 0, w, h);
+          c.toBlob((b) => resolve(b), "image/jpeg", 0.82);
+        } catch {
+          resolve(null);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      el.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+    });
 
   const submit = async () => {
     if (busy) return;
-    if (kind === "image" && !file) {
-      toast.error("Pilih gambar dulu");
+    if ((kind === "image" || kind === "video") && !file) {
+      toast.error(kind === "video" ? "Pilih video dulu" : "Pilih gambar dulu");
       return;
     }
     if (kind === "text" && !caption.trim()) {
@@ -474,7 +562,8 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       let imageStorageId: string | undefined;
-      if (kind === "image" && file) {
+      let thumbStorageId: string | undefined;
+      if ((kind === "image" || kind === "video") && file) {
         const url = await upload({});
         const res = await fetch(url, {
           method: "POST",
@@ -484,11 +573,30 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
         if (!res.ok) throw new Error("Unggahan gagal");
         const { storageId } = (await res.json()) as { storageId: string };
         imageStorageId = storageId;
+        // Video: unggah 1 frame sebagai thumbnail grid konten.
+        if (kind === "video") {
+          const blob = await grabFrame(file);
+          if (blob) {
+            const tUrl = await upload({});
+            const tRes = await fetch(tUrl, {
+              method: "POST",
+              headers: { "Content-Type": "image/jpeg" },
+              body: blob,
+            });
+            if (tRes.ok) {
+              const { storageId: tId } = (await tRes.json()) as {
+                storageId: string;
+              };
+              thumbStorageId = tId;
+            }
+          }
+        }
       }
       await create({
         kind,
         caption: caption.trim() || undefined,
         imageStorageId,
+        thumbStorageId,
         music:
           kind === "music" && musicTitle.trim()
             ? { title: musicTitle.trim(), artist: musicArtist.trim() || undefined }
@@ -506,6 +614,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
 
   const KINDS = [
     { key: "image" as const, label: "Galeri", Icon: ImageIcon },
+    { key: "video" as const, label: "Video", Icon: VideoIcon },
     { key: "text" as const, label: "Text", Icon: TypeIcon },
     { key: "music" as const, label: "Musik", Icon: Music },
   ];
@@ -541,7 +650,16 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
 
         {/* Pratinjau / pilih sumber */}
         <div className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/50">
-          {preview && kind === "image" ? (
+          {preview && kind === "video" ? (
+            <video
+              src={preview}
+              className="h-full w-full object-cover"
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+          ) : preview && kind === "image" ? (
             <img src={preview} alt="" className="h-full w-full object-cover" />
           ) : kind === "text" ? (
             <p className="px-6 text-center text-lg font-black text-white/85">
@@ -569,26 +687,29 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
               className="flex flex-col items-center gap-2 text-white/60"
             >
               <ImageIcon className="size-8" />
-              <span className="text-xs font-bold">Pilih dari galeri</span>
+              <span className="text-xs font-bold">
+                Pilih gambar / video dari galeri
+              </span>
             </button>
           )}
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             className="hidden"
             onChange={(e) => pick(e.target.files?.[0])}
           />
         </div>
 
         {/* Aksi sampingan: ganti sumber */}
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-4 gap-2">
           {KINDS.map((k) => (
             <button
               key={k.key}
               onClick={() => {
                 setKind(k.key);
-                if (k.key === "image") setTimeout(() => fileRef.current?.click(), 0);
+                if (k.key === "image" || k.key === "video")
+                  setTimeout(() => fileRef.current?.click(), 0);
               }}
               className={cn(
                 "flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-[11px] font-black transition",
@@ -893,6 +1014,7 @@ export function ContentGrid({
     postId: Id<"feedPosts">;
     kind: string;
     imageUrl: string | null;
+    thumbUrl: string | null;
     cover: string | null;
     caption: string;
     likeCount: number;
@@ -917,9 +1039,9 @@ export function ContentGrid({
           onClick={() => onOpen(i)}
           className="group relative aspect-[3/4] overflow-hidden rounded-lg border border-border bg-muted"
         >
-          {p.imageUrl ?? p.cover ? (
+          {p.thumbUrl ?? (p.kind === "video" ? null : p.imageUrl) ?? p.cover ? (
             <img
-              src={(p.imageUrl ?? p.cover) as string}
+              src={(p.thumbUrl ?? (p.kind === "video" ? null : p.imageUrl) ?? p.cover) as string}
               alt=""
               className="h-full w-full object-cover transition group-hover:scale-105"
             />

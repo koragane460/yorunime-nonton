@@ -291,6 +291,27 @@ export const updateSettings = mutation({
  * Simpan pengaturan BUBBLE CHAT — khusus user premium.
  * Fields: bubbleColor (warna), bubbleBg (URL PNG), bubbleBorder (frame).
  */
+/**
+ * REWARDS PENGATURAN — klaim sekali per akun, dapat 5000 Sacret.
+ * Dipakai tombol "Klaim" di layar Akun → blok Rewards.
+ */
+export const claimSettingReward = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const u = await ctx.db.get(userId);
+    if (!u) throw new Error("User not found");
+    if (u.settingsRewardClaimed)
+      throw new Error("Rewards sudah diklaim sebelumnya");
+    await ctx.db.patch(userId, {
+      settingsRewardClaimed: true,
+      diamonds: (u.diamonds ?? 0) + 5000,
+    });
+    return { amount: 5000 };
+  },
+});
+
 export const saveBubble = mutation({
   args: {
     bubbleColor: v.optional(v.string()),

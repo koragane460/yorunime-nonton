@@ -1,7 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
-import { ClanTag, TitleBadge, BlueCheck } from "@/components/lstream-ui";
+import { ClanTag, LevelBadge, TitleBadge, BlueCheck } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { avatarFallback, usernameColor } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
@@ -66,8 +66,8 @@ export function GlobalChatPreview() {
           />
         )}
         {typeof m.level === "number" && (
-          <span className="shrink-0 rounded bg-white/10 px-1 py-0 text-[9px] font-bold text-white/70">
-            Lv.{m.level}
+          <span className="shrink-0 inline-flex">
+            <LevelBadge level={m.level} className="scale-90" />
           </span>
         )}
       </span>

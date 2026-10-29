@@ -950,7 +950,7 @@ function RoomScreen({
         <div
           className={cn(
             "grid w-full gap-3",
-            alone ? "max-w-xs grid-cols-1" : "grid-cols-2",
+            alone ? "max-w-[17rem] grid-cols-1" : "grid-cols-2",
           )}
         >
           {ordered.map((p) => {
@@ -967,7 +967,7 @@ function RoomScreen({
                 <div
                   className={cn(
                     "relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border py-6 transition",
-                    alone ? "aspect-[4/5]" : "aspect-[3/4]",
+                    alone ? "aspect-[3/5]" : "aspect-[3/4]",
                   )}
                   style={{ backgroundColor: participantTint(p.username) }}
                 >
@@ -990,7 +990,7 @@ function RoomScreen({
                         talking
                           ? "ring-emerald-400 animate-pulse"
                           : "ring-white/25",
-                        alone ? "size-28" : "size-20",
+                        alone ? "size-32" : "size-20",
                       )}
                     />
                     {!micOn && (

@@ -239,6 +239,20 @@ export function YoruPetScreen({
               className="absolute inset-0 size-full object-cover"
             />
           )}
+          {/* Lapisan tekstur — grain titik + scanline + vignette supaya
+              scene tidak terlihat "mulus"/datar. */}
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1.2px)] opacity-50 mix-blend-overlay [background-size:13px_13px]"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 opacity-70 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.16)_0px,rgba(0,0,0,0.16)_1px,transparent_1px,transparent_3px)]"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.5)_100%)]"
+          />
         </motion.div>
       </AnimatePresence>
       {/* partikel melayang khas scene */}
@@ -253,6 +267,24 @@ export function YoruPetScreen({
           >
             {scene.particle}
           </motion.span>
+        ))}
+      </div>
+
+      {/* debu/kilau melayang tambahan — scene jadi lebih ramai. */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        {Array.from({ length: 16 }).map((_, i) => (
+          <span
+            key={`dust-${i}`}
+            className="absolute animate-pulse rounded-full bg-white/70"
+            style={{
+              left: `${(i * 37) % 97}%`,
+              top: `${6 + ((i * 53) % 88)}%`,
+              width: i % 3 === 0 ? 4 : 2,
+              height: i % 3 === 0 ? 4 : 2,
+              animationDelay: `${(i % 7) * 0.45}s`,
+              animationDuration: `${2.4 + (i % 5) * 0.7}s`,
+            }}
+          />
         ))}
       </div>
 
@@ -305,8 +337,16 @@ export function YoruPetScreen({
                 className="absolute inset-0 size-full object-cover"
               />
             )}
-            {/* Sinar matahari/bulan — halus, tanpa glow menyilaukan. */}
+            {/* Grain + vignette panggung — tekstur biar tidak terlalu smooth. */}
             <span
+              aria-hidden
+              className="absolute inset-0 opacity-50 mix-blend-overlay bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1.2px)] [background-size:13px_13px]"
+            />
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.45)_100%)]"
+            />
+            {/* Sinar matahari/bulan — halus, tanpa glow menyilaukan. */}            <span
               aria-hidden
               className="absolute -right-10 -top-12 size-32 rounded-full bg-white/15 blur-2xl"
             />
@@ -404,9 +444,10 @@ export function YoruPetScreen({
                       scaleX: { duration: 0.35 },
                       y: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
                     }}
+                    // PET EQUIP TANPA bulatan: tanpa latar putih, tanpa ring
+                    // outline, tanpa highlight lingkaran — tinggal pet-nya saja.
                     className={cn(
-                      "relative size-24 rounded-full bg-white/10 ring-2 backdrop-blur-sm",
-                      equippedDef?.ring,
+                      "relative size-24",
                       equippedDef?.glow,
                     )}
                   >
@@ -417,10 +458,6 @@ export function YoruPetScreen({
                         "absolute -inset-2 rounded-full blur-xl",
                         equippedDef?.glow,
                       )}
-                    />
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.28),transparent_65%)]"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <PetArt petId={equipped.petId} />

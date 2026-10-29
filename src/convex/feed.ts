@@ -26,12 +26,21 @@ async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
       imageUrl = null;
     }
   }
+  let thumbUrl: string | null = null;
+  if (p.thumbStorageId) {
+    try {
+      thumbUrl = await ctx.storage.getUrl(p.thumbStorageId);
+    } catch {
+      thumbUrl = null;
+    }
+  }
   return {
     postId: p._id,
     userId: p.userId,
     kind: p.kind,
     caption: p.caption ?? "",
     imageUrl,
+    thumbUrl,
     music: p.music ?? null,
     privacy: p.privacy,
     likeCount: (p.likes ?? []).length,
@@ -88,7 +97,7 @@ export const userPosts = query({
       const d = await decorate(ctx, p, viewer);
       // Bentuknya SAMA dengan listFeed supaya overlay post bisa dipakai
       // langsung dari grid Konten di profil.
-      out.push({ ...d, cover: d.music?.cover ?? null });
+      out.push({ ...d, cover: d.thumbUrl ?? d.music?.cover ?? null });
     }
     return out;
   },
@@ -109,9 +118,15 @@ export const userLikeTotal = query({
 /** Buat post baru. `imageStorageId` wajib untuk kind "image". */
 export const createPost = mutation({
   args: {
-    kind: v.union(v.literal("image"), v.literal("music"), v.literal("text")),
+    kind: v.union(
+      v.literal("image"),
+      v.literal("music"),
+      v.literal("text"),
+      v.literal("video"),
+    ),
     caption: v.optional(v.string()),
     imageStorageId: v.optional(v.string()),
+    thumbStorageId: v.optional(v.string()),
     music: v.optional(
       v.object({
         title: v.string(),
@@ -125,13 +140,14 @@ export const createPost = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Belum masuk akun");
-    if (args.kind === "image" && !args.imageStorageId)
-      throw new Error("Gambar belum terunggah");
+    if ((args.kind === "image" || args.kind === "video") && !args.imageStorageId)
+      throw new Error("Konten belum terunggah");
     const postId = await ctx.db.insert("feedPosts", {
       userId,
       kind: args.kind,
       caption: (args.caption ?? "").slice(0, 500),
       imageStorageId: args.imageStorageId,
+      thumbStorageId: args.thumbStorageId,
       music: args.music,
       privacy: args.privacy,
       likes: [],
@@ -296,6 +312,14 @@ export const listComments = query({
         userId: c.userId,
         username: u?.username ?? "user",
         image: u?.image ?? null,
+        // Metadata biar sheet komentar bisa tampil seperti chat:
+        // centang biru, clan tag, tag level berikon.
+        level: u?.level ?? 1,
+        clanTag: u?.clanTag,
+        clanTagIcon: u?.clanTagIcon,
+        clanNameColor: u?.clanNameColor,
+        clanLevel: u?.clanLevel,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
       });
     }
     return out;

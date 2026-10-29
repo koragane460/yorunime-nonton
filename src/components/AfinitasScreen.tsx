@@ -12,7 +12,7 @@ import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Avatar } from "@/components/lstream-ui";
+import { Avatar, LevelBadge } from "@/components/lstream-ui";
 import { StripBackIcon } from "@/components/StripBack";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -1037,7 +1037,9 @@ export function AfinitasScreen({
                   <p className="truncate text-xs font-bold text-white">
                     {f.username}
                   </p>
-                  <p className="text-[10px] text-zinc-500">Lv.{f.level ?? 1}</p>
+                  <p className="mt-0.5 inline-flex">
+                    <LevelBadge level={f.level ?? 1} className="scale-90" />
+                  </p>
                 </div>
                 <button
                   onClick={() => void doInvite(f.userId)}
