@@ -344,7 +344,8 @@ function HeroSlides({
 
 function GridSkeleton({ count = 10 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+    /* Siluet mengikuti grid utama Home: 2 kolom besar dulu, lalu melebar. */
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i}>
           <div className="skeleton aspect-[2/3] w-full rounded-xl" />
@@ -379,11 +380,12 @@ function SectionRow({
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <h2 className="yn-sec text-lg font-bold tracking-tight">{title}</h2>
         {count > shown && (
+          /* Pill halus (bukan link polos) — aksen keemasan tipis biar rapi. */
           <button
             onClick={onMore}
-            className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-primary underline-offset-4 hover:underline"
+            className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-gold-strong transition hover:border-gold-strong/50 hover:bg-gold-soft active:scale-95"
           >
-            Lihat selengkapnya
+            Lihat selengkapnya <ChevronRight className="size-3" aria-hidden />
           </button>
         )}
       </div>
@@ -2604,12 +2606,37 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="w-full p-3">
-        <div className="mb-3 mt-3 flex items-center gap-3">
-          <button onClick={onClose} className="rounded-full border border-border p-2">
-            <ChevronLeft className="size-4" />
+        {/* Header pencarian: judul TETAP tampil (ciri khas YoruNime, tidak
+            disembunyikan) tapi dibuat lebih besar + aksen keemasan kecil:
+            batang emas, eyebrow huruf lebar, dan ikon kaca pembesar. */}
+        <div className="mb-4 mt-3 flex items-center gap-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] transition hover:border-gold-strong/50 active:scale-95"
+          >
+            <ChevronLeft className="size-5" />
           </button>
-          <h1 className="text-lg font-bold">Cari anime &amp; donghua</h1>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-gold-strong/85">
+              <span
+                aria-hidden
+                className="inline-block h-2.5 w-[3px] rounded-full bg-gradient-to-b from-gold-strong to-gold-strong/0"
+              />
+              YoruNime Search
+            </p>
+            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text text-[26px] font-black leading-tight tracking-tight text-transparent">
+              Cari anime &amp; donghua
+            </h1>
+          </div>
+          <span
+            aria-hidden
+            className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-gold-strong/35 bg-gold-soft text-gold-strong shadow-[0_0_18px_-8px_rgba(246,200,53,.9)]"
+          >
+            <Search className="size-4" />
+          </span>
         </div>
+        <div className="yn-hairline-gold mb-3" />
 
         {/* Input + tombol Cari */}
         <div className="flex w-full items-center gap-2 rounded-full border border-border bg-card px-4 py-3">

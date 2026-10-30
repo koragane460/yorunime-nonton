@@ -879,7 +879,7 @@ export function ForYouPanel({
       inline={inline}
     >
       {loading ? (
-        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i}>
               <div className="skeleton aspect-[2/3] w-full rounded-xl" />
@@ -902,7 +902,7 @@ export function ForYouPanel({
               <HeroPick key={c.id} card={c} rank={i} onClose={onClose} />
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {grid.slice(2).map((c) => (
               <MiniPick key={c.id} card={c} onClose={onClose} />
             ))}

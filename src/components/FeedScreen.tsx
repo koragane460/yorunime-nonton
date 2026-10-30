@@ -211,15 +211,37 @@ function PostView({
       onTouchEnd={onTouchEnd}
     >
       {p.kind === "video" && p.imageUrl ? (
-        <video
-          src={p.imageUrl}
-          poster={p.thumbUrl ?? undefined}
-          className="h-full w-full object-cover"
-          autoPlay
-          loop
-          playsInline
-          controls
-        />
+        <>
+          <video
+            src={p.imageUrl}
+            poster={p.thumbUrl ?? undefined}
+            className="h-full w-full object-cover"
+            autoPlay
+            loop
+            playsInline
+            controls
+            ref={(el) => {
+              if (!el) return;
+              // Volume suara asli video diatur hasil mix di editor post.
+              el.volume = Math.max(0, Math.min(1, (p.audio?.videoVol ?? 100) / 100));
+            }}
+          />
+          {/* Backsound musik — diputar seiring video (loop). */}
+          {p.music?.audioUrl && (
+            <audio
+              src={p.music.audioUrl}
+              autoPlay
+              loop
+              ref={(el) => {
+                if (!el) return;
+                el.volume = Math.max(
+                  0,
+                  Math.min(1, (p.audio?.musicVol ?? 100) / 100),
+                );
+              }}
+            />
+          )}
+        </>
       ) : p.imageUrl ? (
         <img src={p.imageUrl} alt={p.caption} className="h-full w-full object-cover" />
       ) : p.kind === "music" ? (
@@ -246,6 +268,25 @@ function PostView({
             {p.caption || "—"}
           </p>
         </div>
+      )}
+
+      {/* Teks overlay hasil editor post — font, miring, outline, ukuran. */}
+      {p.overlay?.text && (p.imageUrl || p.kind === "video") && (
+        <p
+          className="pointer-events-none absolute inset-x-5 top-1/2 z-10 -translate-y-1/2 whitespace-pre-wrap text-center"
+          style={{
+            fontFamily: `var(--font-${p.overlay.font === "display" ? "display" : p.overlay.font === "mono" ? "mono" : "sans"})`,
+            fontStyle: p.overlay.italic ? "italic" : "normal",
+            fontSize: `${p.overlay.size * 4}px`,
+            lineHeight: 1.15,
+            color: "#fff",
+            textShadow: p.overlay.outline
+              ? "0 0 3px #000, 0 0 6px rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.9)"
+              : "0 2px 8px rgba(0,0,0,.55)",
+          }}
+        >
+          {p.overlay.text}
+        </p>
       )}
 
       {/* Foto pembuat di tengah-atas (hanya konten orang lain) */}
@@ -1410,6 +1451,13 @@ export function ContentGrid({
     thumbUrl: string | null;
     cover: string | null;
     caption: string;
+    overlay?: {
+      text: string;
+      font: string;
+      italic: boolean;
+      outline: boolean;
+      size: number;
+    } | null;
     likeCount: number;
     commentCount?: number;
     views: number;
@@ -1438,9 +1486,36 @@ export function ContentGrid({
               alt=""
               className="h-full w-full object-cover transition group-hover:scale-105"
             />
+          ) : p.kind === "video" && p.imageUrl ? (
+            /* Video lama tanpa thumbnail — tampilkan frame videonya sendiri
+               (bukan teks) supaya grid akun tidak cuma tulisan. */
+            <video
+              src={p.imageUrl}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="h-full w-full object-cover transition group-hover:scale-105"
+            />
           ) : (
             <span className="flex h-full w-full items-center justify-center px-1.5 text-center text-[9px] font-bold text-muted-foreground">
               {p.caption || p.kind}
+            </span>
+          )}
+          {/* Teks overlay — ikut tampil di grid supaya konsisten dengan feed. */}
+          {p.overlay?.text && (p.thumbUrl ?? p.imageUrl) && (
+            <span
+              className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 px-1 text-center leading-tight text-white"
+              style={{
+                fontFamily: `var(--font-${p.overlay.font === "mono" ? "mono" : "sans"})`,
+                fontStyle: p.overlay.italic ? "italic" : "normal",
+                fontSize: `${Math.max(8, p.overlay.size * 1.8)}px`,
+                textShadow: p.overlay.outline
+                  ? "0 0 3px #000, 0 0 5px rgba(0,0,0,.9)"
+                  : "0 1px 4px rgba(0,0,0,.6)",
+              }}
+            >
+              {p.overlay.text}
             </span>
           )}
           <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-black text-white">
