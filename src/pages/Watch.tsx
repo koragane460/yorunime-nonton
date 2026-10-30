@@ -2579,14 +2579,23 @@ function WatchContent() {
             </div>
             {/* Pemilih kualitas INLINE — video tetap terlihat & semua tombol
                 tetap bisa dipencet (bukan modal yang menutupi). */}
+            {/* Pemilih kualitas → OVERLAY DI TENGAH LAYAR (±50% layar),
+                satu kotak per baris menumpuk ke bawah. Klik area gelap
+                di sekitarnya untuk menutup. */}
             {qualityOpen && (
-              <div className="mx-auto w-3/5 min-w-[236px] max-w-md animate-in fade-in-0 slide-in-from-top-2 duration-200 rounded-3xl border border-white/15 bg-black/90 px-3 pb-3 pt-2.5 shadow-2xl backdrop-blur-md">
-                {/* Garis penanda di tengah atas — isyarat sheet bisa ditarik. */}
+              <div
+                className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 px-6 backdrop-blur-[2px]"
+                onClick={() => setQualityOpen(false)}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="max-h-[55vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/15 bg-black/92 px-3 pb-3 pt-2.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-200 thin-scroll"
+                >
                 <div
                   aria-hidden
                   className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-white/45"
                 />
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   {QUALITIES.map((q, qi) => {
                     const locked = q === PREMIUM_QUALITY && !isPremium;
                     const active = (qualityDraft ?? quality) === q;
@@ -2639,6 +2648,7 @@ function WatchContent() {
                     1080p khusus akun Premium.
                   </p>
                 )}
+                </div>
               </div>
             )}
             {speedOpen && (

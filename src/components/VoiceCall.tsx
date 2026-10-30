@@ -950,7 +950,9 @@ function RoomScreen({
         <div
           className={cn(
             "grid w-full gap-3",
-            alone ? "max-w-[17rem] grid-cols-1" : "grid-cols-2",
+            // Sendiri: kotak MEMUAT LEBAR layar (dulu dibatasi 17rem jadi
+            // terasa kecil) — aspect tetap supaya tinggi ikut membesar.
+            alone ? "grid-cols-1" : "grid-cols-2",
           )}
         >
           {ordered.map((p) => {

@@ -270,17 +270,14 @@ function CommentRow({
   };
 
   return (
-    /* Kartu komentar TANPA outline — garis tepinya dihapus total (permintaan
-       "outline nya jangan keliatan"), hanya latar samar yang memisahkan. */
-    <div
-      className="border-0 bg-white/[0.045]"
-      style={{ borderRadius: "4px" }}
-    >
-      <div className="flex items-center justify-between px-2.5 pt-2">
-        <Avatar src={c.image} seed={c.username} className="size-7" />
+    /* Komentar TANPA kotak/latar — polos seperti feed premium:
+       avatar bulat, nama + waktu, lalu pesan tanpa bubble. */
+    <div className="border-0 bg-transparent px-0.5 py-1.5">
+      <div className="flex items-start gap-2.5 px-2.5 pt-1">
+        <Avatar src={c.image} seed={c.username} className="size-8 ring-1 ring-white/15" />
         <div className="min-w-0 flex-1 pl-2">
           <div className="flex items-center gap-1">
-            <p className="truncate text-xs font-bold">{c.username}</p>
+            <p className="truncate text-[13px] font-black">{c.username}</p>
             {c.premium && <BlueCheck className="size-3.5" />}
             <TitleBadge role={c.staffRole} compact />
             {c.clanTag && (
@@ -295,8 +292,10 @@ function CommentRow({
           <p className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</p>
         </div>
       </div>
-      <p className="break-words px-3 pb-1.5 pt-1.5 text-sm leading-5">{c.text}</p>
-      <div className="flex items-center gap-4 px-2.5 pb-2 text-[11px] text-muted-foreground">
+      <p className="break-words px-3 pb-0.5 pl-[42px] pt-1.5 text-[14.5px] leading-relaxed text-foreground/90">
+        {c.text}
+      </p>
+      <div className="flex items-center gap-4 px-3 pb-1 pl-[42px] pt-0.5 text-[11px] text-muted-foreground">
         <button
           title="Suka"
           className={cn("flex items-center gap-1", liked && "text-primary")}

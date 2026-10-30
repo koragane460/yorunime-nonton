@@ -112,8 +112,12 @@ export default function Film() {
     if (cached && (filmListAt.get(key) ?? 0) + FILM_STALE_MS > Date.now()) {
       return; // masih segar → tidak perlu fetch ulang
     }
+    // Pencarian tanpa toggle: cari Film DAN Series sekaligus, gabung.
     const run = term
-      ? searchFilms({ q: term, kind })
+      ? Promise.all([
+          searchFilms({ q: term, kind: "movie" }),
+          searchFilms({ q: term, kind: "tv" }),
+        ]).then(([a, b]) => [...(a ?? []), ...(b ?? [])])
       : genreId
         ? byGenre({ genreId, kind })
         : searchFilms({ kind });
@@ -188,21 +192,7 @@ export default function Film() {
             <Clapperboard className="size-5 text-gold" aria-hidden />
             Film
           </h1>
-          {/* Toggle Movie / Series */}
-          <div className="flex rounded-full border border-border bg-card p-0.5 text-[11px] font-black">
-            {(["movie", "tv"] as const).map((k) => (
-              <button
-                key={k}
-                onClick={() => setKind(k)}
-                className={cn(
-                  "rounded-full px-3 py-1 capitalize transition",
-                  kind === k ? "bg-gold text-black" : "text-muted-foreground",
-                )}
-              >
-                {k === "movie" ? "Film" : "Series"}
-              </button>
-            ))}
-          </div>
+          {/* Toggle "Film / Series" DIHAPUS (permintaan: hapus menu-nya). */}
         </div>
 
         {/* Kolom pencarian */}
@@ -451,28 +441,14 @@ function FilmDetail({
           }
         >
           <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 p-3">
+            {/* Chip "Film" kiri atas & tombol love kanan atas DIHAPUS —
+                subscribe sudah ada di baris tombol Nonton di bawah. */}
             <button
               onClick={onClose}
               aria-label="Kembali"
               className="flex items-center py-1 pr-1 text-white transition active:opacity-60"
             >
               <StripBackIcon />
-            </button>
-            <span className="rounded-full border border-gold/40 bg-black/40 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gold backdrop-blur">
-              {kind === "tv" ? "Series" : "Film"}
-            </span>
-            <button
-              onClick={() => void onSubscribe()}
-              aria-label={favorited ? "Hapus dari Subscribe" : "Subscribe"}
-              className="ml-auto flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur transition active:scale-90"
-            >
-              <Heart
-                className={cn(
-                  "size-5 transition-colors",
-                  favorited ? "fill-gold text-gold" : "text-white",
-                )}
-                aria-hidden
-              />
             </button>
           </div>
 

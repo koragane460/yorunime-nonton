@@ -578,43 +578,22 @@ export function ClanTag({
   const shape = clanTagShape(level);
   const shapeCls = CLAN_TAG_SHAPE_CLS[shape];
 
-  // Balok warna di ujung kanan — penanda tier, diganti dari tampilan lama
-  // (teks miring + pita bergerigi) jadi pelat kotak dengan pemisah garis.
-  const tierBarCls =
-    shape === "royal"
-      ? "bg-gradient-to-b from-yellow-200 to-amber-500"
-      : shape === "hex"
-        ? "bg-gradient-to-b from-fuchsia-300 to-emerald-300"
-        : shape === "shield"
-          ? "bg-gradient-to-b from-rose-300 to-red-600"
-          : shape === "cut"
-            ? "bg-gradient-to-b from-amber-200 to-yellow-600"
-            : "bg-white/75";
-
   const inner = (
     <>
+      {/* Ikon clan BERSIH: warna dari tone ikon saja — tanpa kotak hitam,
+          tanpa ring, tanpa garis pemisah (permintaan: ikonnya aneh +
+          ada garisnya, perbaiki). */}
       <span
-        className={cn(
-          // Latar gelap kecil di belakang ikon: warna ikon tetap stabil
-          // walau background tag diganti (tidak ikut menyesuaikan).
-          "inline-flex size-3.5 shrink-0 items-center justify-center rounded-[2px] bg-black/45 ring-1 ring-white/20 drop-shadow-[0_0_5px_currentColor]",
-        )}
+        className="inline-flex size-3.5 shrink-0 items-center justify-center"
         style={{ color: tone }}
         aria-hidden
       >
         <Icon strokeWidth={2.4} className="size-3.5" />
       </span>
-      {/* Pemisah vertikal — gaya pelat, bukan teks miring nempel ikon. */}
-      <span aria-hidden className="h-3.5 w-px shrink-0 bg-white/35" />
       {/* Tag clan selalu PUTIH, kapital, tanpa miring. */}
       <span className="text-[11px] font-black uppercase not-italic tracking-[0.1em] text-white">
         {tag}
       </span>
-      {/* Balok tier di ujung kanan. */}
-      <span
-        aria-hidden
-        className={cn("ml-0.5 h-3.5 w-[3px] shrink-0", tierBarCls)}
-      />
     </>
   );
 

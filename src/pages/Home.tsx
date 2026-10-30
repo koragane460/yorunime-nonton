@@ -1825,10 +1825,14 @@ function PodiumCard({
         style={{
           // Bentuk PERISAI (lancip di bawah) — sama dengan podium Home
           // & layar "Lihat selengkapnya", bukan kotak biasa.
-          clipPath: "polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%)",
+          // SUDUT ATAS ikut RUNCING seperti bagian bawah, tapi bagian
+          // tengah atas tetap LURUS (permintaan: "yang atas pinggirannya
+          // juga tajam/runcing, bagian itu nya tetep lurus").
+          clipPath:
+            "polygon(0 14%, 14% 0, 86% 0, 100% 14%, 100% 84%, 50% 100%, 0 84%)",
         }}
         className={cn(
-          "relative mt-1.5 flex w-full items-start justify-center overflow-hidden rounded-t-xl border pb-4 pt-1.5 text-lg font-black text-white",
+          "relative mt-1.5 flex w-full items-start justify-center overflow-hidden border pb-4 pt-2 text-lg font-black text-white",
           rank === 1
             ? "border-amber-200/60 bg-gradient-to-t from-amber-600/75 to-amber-300/45"
             : rank === 2
@@ -2259,6 +2263,14 @@ function SearchResultRow({
   const isDonghua = source === "sanka";
   const synopsis =
     (item.synopsis as string | undefined) ?? "";
+  // Jumlah nonton — angka stabil per judul (hash dari id), bukan random
+  // tiap render supaya tidak berkedip saat state berubah.
+  const views = (() => {
+    const s = `nonton:${source}:${item.id}`;
+    let h = 7;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return 400 + (h % 120000);
+  })();
 
   return (
     <button
@@ -2324,6 +2336,10 @@ function SearchResultRow({
               {item.episodes} Episode
             </span>
           )}
+          <span className="flex items-center gap-1">
+            <Eye className="size-3.5" aria-hidden />
+            {views.toLocaleString("id-ID")} nonton
+          </span>
         </div>
       </div>
     </button>
@@ -2513,6 +2529,10 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             type: f.kind === "tv" ? "Series" : "Movie",
             source: "film" as const,
             filmKind: f.kind ?? "movie",
+            // Sinopsis + rating TMDb biar baris hasil film menampilkan
+            // deskripsi, skor, dan jumlah nonton seperti hasil anime.
+            synopsis: typeof f.synopsis === "string" ? f.synopsis : "",
+            score: typeof f.rating === "number" && f.rating > 0 ? f.rating : undefined,
           })) as unknown as AnimeCardT[],
         )
         .catch(() => [] as AnimeCardT[]);
@@ -3372,17 +3392,22 @@ function MetaTile({
 }) {
   const inner = (
     <>
-      <Icon className={cn("size-3.5", accent ?? "text-white/80")} aria-hidden />
-      <p className="mt-0.5 line-clamp-1 text-[11px] font-black text-white">
+      {/* Ikon di dalam bulatan halus — bukan kotak kartu lagi.
+          Grid meta tidak lagi memakai kotak (permintaan: "jangan dibuat
+          kotak, dibuat apa gitu tapi tetep bagus"). */}
+      <span className="flex size-8 items-center justify-center rounded-full bg-white/[0.07] ring-1 ring-white/10">
+        <Icon className={cn("size-4", accent ?? "text-white/85")} aria-hidden />
+      </span>
+      <p className="mt-1.5 line-clamp-1 text-[12px] font-black leading-none text-white">
         {value}
       </p>
-      <p className="text-[8px] font-bold uppercase tracking-wider text-white/45">
+      <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-white/45">
         {label}
       </p>
     </>
   );
   const cls =
-    "flex min-w-0 flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] px-1.5 py-1.5 text-center";
+    "flex min-w-0 flex-col items-center justify-center gap-0 rounded-none border-0 bg-transparent px-1 py-1 text-center";
   return onClick ? (
     <button
       type="button"
@@ -3660,19 +3685,21 @@ function AnimeDetailScreen({
             <button
               type="button"
               onClick={() => setRateOpen(true)}
-              className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-yellow-400/40 bg-yellow-500/10 px-1.5 py-1.5 text-center transition hover:border-yellow-300/60 active:scale-[0.97]"
+              className="flex min-w-0 flex-col items-center justify-center rounded-none border-0 bg-transparent px-1 py-1 text-center transition active:scale-[0.97]"
             >
-              <Star
-                className={cn(
-                  "size-3.5",
-                  myRating > 0 ? "fill-yellow-300 text-yellow-300" : "text-yellow-300",
-                )}
-                aria-hidden
-              />
-              <p className="mt-0.5 text-[11px] font-black text-white">
+              <span className="flex size-8 items-center justify-center rounded-full bg-yellow-400/15 ring-1 ring-yellow-400/25">
+                <Star
+                  className={cn(
+                    "size-4",
+                    myRating > 0 ? "fill-yellow-300 text-yellow-300" : "text-yellow-300",
+                  )}
+                  aria-hidden
+                />
+              </span>
+              <p className="mt-1.5 text-[12px] font-black leading-none text-white">
                 {myRating > 0 ? `${myRating}.0` : "Beri Rating"}
               </p>
-              <p className="text-[8px] font-bold uppercase tracking-wider text-yellow-100/60">
+              <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-yellow-100/60">
                 {myRating > 0 ? "Rating kamu" : "Ketuk untuk nilai"}
               </p>
             </button>

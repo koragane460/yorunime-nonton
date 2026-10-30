@@ -42,6 +42,8 @@ async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
     imageUrl,
     thumbUrl,
     music: p.music ?? null,
+    overlay: p.overlay ?? null,
+    audio: p.audio ?? null,
     privacy: p.privacy,
     likeCount: (p.likes ?? []).length,
     liked: viewer ? (p.likes ?? []).includes(viewer) : false,
@@ -135,6 +137,21 @@ export const createPost = mutation({
         audioUrl: v.optional(v.string()),
       }),
     ),
+    overlay: v.optional(
+      v.object({
+        text: v.string(),
+        font: v.string(),
+        italic: v.boolean(),
+        outline: v.boolean(),
+        size: v.number(),
+      }),
+    ),
+    audio: v.optional(
+      v.object({
+        musicVol: v.number(),
+        videoVol: v.number(),
+      }),
+    ),
     privacy: v.union(v.literal("all"), v.literal("teman")),
   },
   handler: async (ctx, args) => {
@@ -149,6 +166,8 @@ export const createPost = mutation({
       imageStorageId: args.imageStorageId,
       thumbStorageId: args.thumbStorageId,
       music: args.music,
+      overlay: args.overlay,
+      audio: args.audio,
       privacy: args.privacy,
       likes: [],
       views: 0,

@@ -1049,6 +1049,23 @@ const schema = defineSchema(
           audioUrl: v.optional(v.string()),
         }),
       ),
+      /** Teks overlay hasil editor (font, miring, outline, ukuran). */
+      overlay: v.optional(
+        v.object({
+          text: v.string(),
+          font: v.string(),
+          italic: v.boolean(),
+          outline: v.boolean(),
+          size: v.number(),
+        }),
+      ),
+      /** Campuran audio: volume backsound musik vs suara asli video (0-100). */
+      audio: v.optional(
+        v.object({
+          musicVol: v.number(),
+          videoVol: v.number(),
+        }),
+      ),
       privacy: v.union(v.literal("all"), v.literal("teman")),
       likes: v.array(v.id("users")),
       views: v.number(),

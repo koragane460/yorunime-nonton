@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -186,7 +187,15 @@ export function ProfileBar() {
           </button>
         </div>
       </div>
-      {yv && <YoruVerseScreen onClose={() => setYv(false)} />}
+      {/* Layar YoruVerse di-PORTAL ke <body>: header profil memakai
+          backdrop-blur yang menjadikan dirinya "containing block" untuk
+          position:fixed — akibatnya layarnya mengecil ikut kotak header.
+          Dipindah ke body → kembali FULLSCREEN (permintaan user). */}
+      {yv &&
+        createPortal(
+          <YoruVerseScreen onClose={() => setYv(false)} />,
+          document.body,
+        )}
     </div>
   );
 }

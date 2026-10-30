@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { type Id } from "@/convex/_generated/dataModel";
 import { Avatar, BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Check,
   ChevronLeft,
   Eye,
   Globe,
@@ -20,6 +21,8 @@ import {
   Plus,
   Send,
   Share2,
+  Search,
+  Volume2,
   Type as TypeIcon,
   Video as VideoIcon,
   UserPlus,
@@ -49,7 +52,15 @@ type Post = {
   clanTagIcon?: string;
   clanNameColor?: string;
   premium?: boolean;
-  music: { title: string; artist?: string; cover?: string } | null;
+  music: { title: string; artist?: string; cover?: string; audioUrl?: string } | null;
+  overlay?: {
+    text: string;
+    font: string;
+    italic: boolean;
+    outline: boolean;
+    size: number;
+  } | null;
+  audio?: { musicVol: number; videoVol: number } | null;
   privacy: "all" | "teman";
   likeCount: number;
   liked: boolean;
@@ -107,7 +118,7 @@ function RightRail({
   onShare: () => void;
 }) {
   return (
-    <div className="absolute right-2 top-[36%] z-20 flex flex-col items-center gap-5">
+    <div className="absolute right-2 top-[34%] z-20 flex flex-col items-center gap-7">
       {/* Foto profil + tombol + (hanya untuk orang lain) */}
       <div className="relative">
         <Avatar src={p.image ?? undefined} seed={p.username} className="size-14 ring-2 ring-white/60" />
@@ -120,12 +131,18 @@ function RightRail({
               following ? "bg-white text-black" : "bg-primary text-primary-foreground",
             )}
           >
-            {following ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+            {/* Pas dicentang: tampilkan CENTANG dulu sejenak, lalu bulatan
+                tombolnya menghilang (tinggal ikon centang polos). */}
+            {following ? (
+              <Check className="size-4" />
+            ) : (
+              <Plus className="size-3.5" />
+            )}
           </button>
         )}
       </div>
 
-      <button onClick={onLike} className="flex flex-col items-center gap-1 transition active:scale-90">
+      <button onClick={onLike} className="flex flex-col items-center gap-1.5 transition active:scale-90">
         <Heart
           className={cn(
             "size-9 transition",
@@ -135,13 +152,13 @@ function RightRail({
         <span className="text-xs font-black text-white drop-shadow">{p.likeCount}</span>
       </button>
 
-      <button onClick={onComment} className="flex flex-col items-center gap-1 transition active:scale-90">
+      <button onClick={onComment} className="flex flex-col items-center gap-1.5 transition active:scale-90">
         {/* Ikon chat TANPA background — polos seperti ikon share. */}
         <MessageCircle className="size-8 text-white drop-shadow" />
         <span className="text-xs font-black text-white drop-shadow">{p.commentCount}</span>
       </button>
 
-      <button onClick={onShare} className="flex flex-col items-center gap-1 transition active:scale-90">
+      <button onClick={onShare} className="flex flex-col items-center gap-1.5 transition active:scale-90">
         <Share2 className="size-8 text-white drop-shadow" />
         <span className="text-xs font-black text-white drop-shadow">Bagikan</span>
       </button>
@@ -300,7 +317,7 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
           <p className="mb-2 shrink-0 text-center text-sm font-black text-white">
             Komentar
           </p>
-          <div className="thin-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-2">
+          <div className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto pb-2 pt-1">
             {!list && <p className="py-6 text-center text-xs text-zinc-500">Memuat…</p>}
             {list?.length === 0 && (
               <p className="py-6 text-center text-xs text-zinc-500">
@@ -308,9 +325,9 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
               </p>
             )}
             {list?.map((c: any) => (
-              <div key={c.commentId} className="flex items-start gap-2.5">
-                <Avatar src={c.image} seed={c.username} className="size-9 shrink-0" />
-                <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.06] px-3 py-2">
+              <div key={c.commentId} className="flex items-start gap-2.5 px-0.5">
+                <Avatar src={c.image} seed={c.username} className="size-8 shrink-0 ring-1 ring-white/15" />
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-[13px] font-black text-white">
                       {c.username}
@@ -335,20 +352,21 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
                       {timeAgo(c.createdAt)}
                     </span>
                   </div>
-                  <p className="mt-1 text-[14px] leading-snug text-white/90">
+                  {/* Pesan TANPA kotak bubble — teks polos lembut. */}
+                  <p className="mt-0.5 text-[14.5px] leading-relaxed text-white/85">
                     {c.text}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-2 flex shrink-0 items-center gap-2">
+          <div className="mt-2 flex shrink-0 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-4 py-1">
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void submit()}
             placeholder="Tulis komentar…"
-            className="h-11 flex-1 rounded-full border border-white/20 bg-black/50 px-4 text-[15px] text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
+            className="h-10 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
           />
           <button
             onClick={() => void submit()}
@@ -493,15 +511,39 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
 export function CreatePostSheet({ onClose }: { onClose: () => void }) {
   const create = useMutation(api.feed.createPost);
   const upload = useMutation(api.storage.getUploadUrl);
-  const [kind, setKind] = useState<"image" | "text" | "music" | "video">("image");
+  const musicSearch = useAction(api.music.musicSearch);
+  const [kind, setKind] = useState<"image" | "text" | "video">("image");
   const [caption, setCaption] = useState("");
   const [privacy, setPrivacy] = useState<"all" | "teman">("all");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [musicTitle, setMusicTitle] = useState("");
-  const [musicArtist, setMusicArtist] = useState("");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Alur 3 langkah: PILIH (foto/video) → EDIT (teks/audio/privasi) → CAPTION.
+  const [step, setStep] = useState<"pick" | "edit" | "caption">("pick");
+  const [tool, setTool] = useState<"text" | "audio" | "privacy" | null>(null);
+  // Editor teks overlay — font, miring, outline, ukuran.
+  const [overlay, setOverlay] = useState({
+    text: "",
+    font: "display",
+    italic: false,
+    outline: true,
+    size: 4,
+  });
+  // Campuran audio: backsound musik vs suara asli video (0-100).
+  const [musicVol, setMusicVol] = useState(100);
+  const [videoVol, setVideoVol] = useState(100);
+  // Lagu dipilih lewat PENCARIAN (bukan diketik manual) — ala musik YoruVerse.
+  const [track, setTrack] = useState<{
+    title: string;
+    artist?: string;
+    cover?: string;
+    audioUrl?: string;
+  } | null>(null);
+  const [mq, setMq] = useState("");
+  const [mres, setMres] = useState<any[]>([]);
+  const [mSearching, setMSearching] = useState(false);
 
   const pick = (f: File | undefined) => {
     if (!f) return;
@@ -512,6 +554,9 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setKind(f.type.startsWith("video/") ? "video" : "image");
+    // Setelah pilih dari galeri → langsung masuk layar EDIT.
+    setStep("edit");
+    setTool(null);
   };
 
   /** Ambil satu frame video (≈0.5 dtk) sebagai thumbnail grid konten. */
@@ -551,14 +596,11 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
 
   const submit = async () => {
     if (busy) return;
-    if ((kind === "image" || kind === "video") && !file) {
-      toast.error(kind === "video" ? "Pilih video dulu" : "Pilih gambar dulu");
+    if (!file && !caption.trim()) {
+      toast.error("Pilih foto/video atau tulis caption dulu");
       return;
     }
-    if (kind === "text" && !caption.trim()) {
-      toast.error("Tulis sesuatu dulu");
-      return;
-    }
+    const postKind = file ? (kind === "video" ? "video" : "image") : "text";
     setBusy(true);
     try {
       let imageStorageId: string | undefined;
@@ -593,14 +635,28 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
         }
       }
       await create({
-        kind,
+        kind: postKind,
         caption: caption.trim() || undefined,
         imageStorageId,
         thumbStorageId,
-        music:
-          kind === "music" && musicTitle.trim()
-            ? { title: musicTitle.trim(), artist: musicArtist.trim() || undefined }
-            : undefined,
+        music: track
+          ? {
+              title: track.title,
+              artist: track.artist || undefined,
+              cover: track.cover || undefined,
+              audioUrl: track.audioUrl || undefined,
+            }
+          : undefined,
+        overlay: overlay.text.trim()
+          ? {
+              text: overlay.text.trim().slice(0, 140),
+              font: overlay.font,
+              italic: overlay.italic,
+              outline: overlay.outline,
+              size: overlay.size,
+            }
+          : undefined,
+        audio: file ? { musicVol, videoVol } : undefined,
         privacy,
       });
       toast.success("Konten sudah diposting ke profilmu");
@@ -612,12 +668,183 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const KINDS = [
-    { key: "image" as const, label: "Galeri", Icon: ImageIcon },
-    { key: "video" as const, label: "Video", Icon: VideoIcon },
-    { key: "text" as const, label: "Text", Icon: TypeIcon },
-    { key: "music" as const, label: "Musik", Icon: Music },
+  /** Font yang tersedia untuk teks overlay. */
+  const FONTS: { key: string; label: string; css: string }[] = [
+    { key: "display", label: "Display", css: "var(--font-display)" },
+    { key: "sans", label: "Sans", css: "var(--font-sans)" },
+    { key: "mono", label: "Mono", css: "var(--font-mono)" },
+    { key: "serif", label: "Serif", css: "Georgia, 'Times New Roman', serif" },
+    {
+      key: "impact",
+      label: "Impact",
+      css: "Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif",
+    },
   ];
+  const fontCss = (k: string) =>
+    FONTS.find((f) => f.key === k)?.css ?? "var(--font-sans)";
+
+  /** Cari lagu — lagu DIPILIH dari hasil pencarian, bukan diketik manual. */
+  const runMusicSearch = async () => {
+    const q = mq.trim();
+    if (!q || mSearching) return;
+    setMSearching(true);
+    try {
+      const r = (await musicSearch({ q, limit: 15 })) as any[];
+      setMres((r ?? []).filter((t) => t?.audioUrl));
+    } catch {
+      setMres([]);
+    } finally {
+      setMSearching(false);
+    }
+  };
+
+  /** Gaya teks overlay pada pratinjau edit & feed. */
+  const overlayStyle: CSSProperties = {
+    fontFamily: fontCss(overlay.font),
+    fontStyle: overlay.italic ? "italic" : "normal",
+    fontSize: `${overlay.size * 4}px`,
+    lineHeight: 1.15,
+    color: "#fff",
+    textShadow: overlay.outline
+      ? "0 0 3px #000, 0 0 6px rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.9)"
+      : "0 2px 8px rgba(0,0,0,.55)",
+  };
+
+  /** Pilihan privasi — dipakai di panel edit & layar caption. */
+  const privacyBlock = (
+    <>
+      <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-white/45">
+        Privasi
+      </p>
+      <div className="mt-1.5 grid grid-cols-2 gap-2">
+        {(
+          [
+            { key: "all" as const, label: "Semua orang", desc: "Semua bisa melihat", Icon: Globe },
+            { key: "teman" as const, label: "Teman only", desc: "Hanya teman", Icon: Users },
+          ] as const
+        ).map((o) => (
+          <button
+            key={o.key}
+            onClick={() => setPrivacy(o.key)}
+            className={cn(
+              "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition",
+              privacy === o.key
+                ? "border-primary/60 bg-primary/12"
+                : "border-white/12 bg-black/30",
+            )}
+          >
+            <span
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-lg border",
+                privacy === o.key
+                  ? "border-primary/50 bg-primary/20 text-primary"
+                  : "border-white/15 bg-white/5 text-white/60",
+              )}
+            >
+              <o.Icon className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[12px] font-bold text-white">{o.label}</span>
+              <span className="block text-[10px] text-white/50">{o.desc}</span>
+            </span>
+            {privacy === o.key && (
+              <Lock className="ml-auto size-3.5 shrink-0 text-primary" aria-hidden />
+            )}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
+  /** Picker lagu — pencarian + hasil yang bisa diketuk (dipakai panel audio
+      & layar caption, persis konsep musik di YoruVerse: pilih, bukan ketik). */
+  const musicPicker = (
+    <div className="space-y-2">
+      {track && (
+        <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-2.5 py-2">
+          {track.cover ? (
+            <img src={track.cover} alt="" className="size-8 rounded-lg object-cover" />
+          ) : (
+            <Music className="size-4 shrink-0 text-white/70" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12px] font-black text-white">
+              {track.title}
+            </span>
+            {track.artist && (
+              <span className="block truncate text-[10px] text-white/50">
+                {track.artist}
+              </span>
+            )}
+          </span>
+          <button
+            onClick={() => setTrack(null)}
+            aria-label="Hapus lagu"
+            className="shrink-0 text-white/50 transition hover:text-white"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          value={mq}
+          onChange={(e) => setMq(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && void runMusicSearch()}
+          placeholder="Cari lagu…"
+          className="h-9 min-w-0 flex-1 rounded-xl border border-white/15 bg-black/50 px-3 text-sm text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
+        />
+        <button
+          onClick={() => void runMusicSearch()}
+          disabled={mSearching}
+          className="flex shrink-0 items-center gap-1 rounded-xl bg-primary px-3 text-[11px] font-black text-primary-foreground transition active:scale-95 disabled:opacity-50"
+        >
+          <Search className="size-3.5" />
+          {mSearching ? "…" : "Cari"}
+        </button>
+      </div>
+      {mres.length > 0 && (
+        <div className="thin-scroll max-h-40 space-y-1 overflow-y-auto">
+          {mres.map((t: any) => (
+            <button
+              key={String(t.id)}
+              onClick={() =>
+                setTrack({
+                  title: t.title,
+                  artist: t.artist,
+                  cover: t.cover,
+                  audioUrl: t.audioUrl,
+                })
+              }
+              className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-white/[0.07]"
+            >
+              {t.cover ? (
+                <img src={t.cover} alt="" className="size-8 shrink-0 rounded object-cover" />
+              ) : (
+                <Music className="size-4 shrink-0 text-white/50" />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12px] font-bold text-white">
+                  {t.title}
+                </span>
+                <span className="block truncate text-[10px] text-white/45">
+                  {t.artist}
+                </span>
+              </span>
+              {track?.audioUrl === t.audioUrl && (
+                <Check className="size-4 shrink-0 text-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+      {!track && mres.length === 0 && (
+        <p className="text-[10px] leading-relaxed text-white/40">
+          Cari lagu lalu ketuk hasilnya — lagunya jadi backsound video kamu.
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <motion.div
@@ -638,7 +865,22 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
       >
         <span aria-hidden className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/25" />
         <div className="mb-3 flex items-center gap-2">
-          <p className="flex-1 text-sm font-black text-white">Buat konten</p>
+          <p className="flex-1 text-sm font-black text-white">
+            {step === "pick"
+              ? "Buat konten"
+              : step === "edit"
+                ? "Edit konten"
+                : "Caption & posting"}
+          </p>
+          {step !== "pick" && (
+            <button
+              onClick={() => setStep(step === "caption" ? "edit" : "pick")}
+              aria-label="Kembali"
+              className="flex size-8 items-center justify-center rounded-full border border-white/15 text-white/70"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+          )}
           <button
             onClick={onClose}
             aria-label="Tutup"
@@ -648,144 +890,295 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* Pratinjau / pilih sumber */}
-        <div className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/50">
-          {preview && kind === "video" ? (
-            <video
-              src={preview}
-              className="h-full w-full object-cover"
-              muted
-              loop
-              autoPlay
-              playsInline
-            />
-          ) : preview && kind === "image" ? (
-            <img src={preview} alt="" className="h-full w-full object-cover" />
-          ) : kind === "text" ? (
-            <p className="px-6 text-center text-lg font-black text-white/85">
-              {caption || "Tulis teks…"}
-            </p>
-          ) : kind === "music" ? (
-            <div className="flex flex-col items-center gap-2 px-6 text-center">
-              <Music className="size-8 text-white/60" />
-              <input
-                value={musicTitle}
-                onChange={(e) => setMusicTitle(e.target.value)}
-                placeholder="Judul musik"
-                className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-center text-sm text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
-              />
-              <input
-                value={musicArtist}
-                onChange={(e) => setMusicArtist(e.target.value)}
-                placeholder="Artis"
-                className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-center text-sm text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
-              />
-            </div>
-          ) : (
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="flex flex-col items-center gap-2 text-white/60"
-            >
-              <ImageIcon className="size-8" />
-              <span className="text-xs font-bold">
-                Pilih gambar / video dari galeri
-              </span>
-            </button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={(e) => pick(e.target.files?.[0])}
-          />
-        </div>
-
-        {/* Aksi sampingan: ganti sumber */}
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {KINDS.map((k) => (
-            <button
-              key={k.key}
-              onClick={() => {
-                setKind(k.key);
-                if (k.key === "image" || k.key === "video")
+        {/* ============ LANGKAH 1 — PILIH: tombol Foto / Video ============ */}
+        {step === "pick" && (
+          <>
+            {/* Dua tombol rounded berikon di kiri atas. */}
+            <div className="mb-3 flex gap-2">
+              <button
+                onClick={() => {
+                  setKind("image");
                   setTimeout(() => fileRef.current?.click(), 0);
-              }}
-              className={cn(
-                "flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-[11px] font-black transition",
-                kind === k.key
-                  ? "border-primary/60 bg-primary/15 text-primary"
-                  : "border-white/12 bg-white/[0.05] text-white/70",
-              )}
-            >
-              <k.Icon className="size-3.5" />
-              {k.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Privasi — gaya TikTok: Semua orang / Teman only */}
-        <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-white/45">
-          Privasi
-        </p>
-        <div className="mt-1.5 grid grid-cols-2 gap-2">
-          {(
-            [
-              { key: "all" as const, label: "Semua orang", desc: "Semua bisa melihat", Icon: Globe },
-              { key: "teman" as const, label: "Teman only", desc: "Hanya teman", Icon: Users },
-            ] as const
-          ).map((o) => (
-            <button
-              key={o.key}
-              onClick={() => setPrivacy(o.key)}
-              className={cn(
-                "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition",
-                privacy === o.key
-                  ? "border-primary/60 bg-primary/12"
-                  : "border-white/12 bg-black/30",
-              )}
-            >
-              <span
+                }}
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-lg border",
-                  privacy === o.key
-                    ? "border-primary/50 bg-primary/20 text-primary"
-                    : "border-white/15 bg-white/5 text-white/60",
+                  "flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-black transition active:scale-95",
+                  kind === "image"
+                    ? "border-primary/60 bg-primary/15 text-primary"
+                    : "border-white/15 bg-white/[0.05] text-white/70",
                 )}
               >
-                <o.Icon className="size-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[12px] font-bold text-white">{o.label}</span>
-                <span className="block text-[10px] text-white/50">{o.desc}</span>
-              </span>
-              {privacy === o.key && (
-                <Lock className="ml-auto size-3.5 shrink-0 text-primary" aria-hidden />
+                <ImageIcon className="size-4" /> Foto
+              </button>
+              <button
+                onClick={() => {
+                  setKind("video");
+                  setTimeout(() => fileRef.current?.click(), 0);
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-black transition active:scale-95",
+                  kind === "video"
+                    ? "border-primary/60 bg-primary/15 text-primary"
+                    : "border-white/15 bg-white/[0.05] text-white/70",
+                )}
+              >
+                <VideoIcon className="size-4" /> Video
+              </button>
+            </div>
+
+            {/* Area tengah: ikon media + ajakan ketuk untuk menambahkan. */}
+            <div className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/50">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="flex flex-col items-center gap-3 px-6 text-center"
+              >
+                <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.06] text-white/70">
+                  {kind === "video" ? (
+                    <VideoIcon className="size-8" />
+                  ) : (
+                    <ImageIcon className="size-8" />
+                  )}
+                </span>
+                <span className="text-sm font-black text-white/85">
+                  Ketuk disini untuk menambahkan{" "}
+                  {kind === "video" ? "video" : "foto"}
+                </span>
+                <span className="text-[11px] text-white/40">
+                  Pilih dari galeri — nanti masuk layar edit
+                </span>
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={kind === "video" ? "video/*" : "image/*"}
+                className="hidden"
+                onChange={(e) => pick(e.target.files?.[0])}
+              />
+            </div>
+          </>
+        )}
+
+        {/* ============ LANGKAH 2 — EDIT: preview + tool kanan atas ============ */}
+        {step === "edit" && (
+          <>
+            {/* Tombol tool di KANAN ATAS: Teks, Audio, Privasi. */}
+            <div className="mb-2 flex justify-end gap-1.5">
+              {([
+                { key: "text" as const, label: "Teks", Icon: TypeIcon },
+                { key: "audio" as const, label: "Audio", Icon: Volume2 },
+                { key: "privacy" as const, label: "Privasi", Icon: Lock },
+              ]).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTool(tool === t.key ? null : t.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-black transition",
+                    tool === t.key
+                      ? "border-primary/60 bg-primary/15 text-primary"
+                      : "border-white/15 bg-white/[0.05] text-white/75",
+                  )}
+                >
+                  <t.Icon className="size-3.5" /> {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Preview di TENGAH — video/foto + teks overlay. */}
+            <div className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/50">
+              {preview && kind === "video" ? (
+                <video
+                  src={preview}
+                  className="h-full w-full object-cover"
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                />
+              ) : preview ? (
+                <img src={preview} alt="" className="h-full w-full object-cover" />
+              ) : null}
+              {overlay.text.trim() && (
+                <p
+                  style={overlayStyle}
+                  className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 whitespace-pre-wrap text-center"
+                >
+                  {overlay.text}
+                </p>
               )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => pick(e.target.files?.[0])}
+              />
+            </div>
+
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="mt-2 w-full rounded-xl border border-white/15 bg-white/[0.05] py-2 text-[11px] font-black text-white/70 transition active:scale-[0.98]"
+            >
+              Ganti media
             </button>
-          ))}
-        </div>
 
-        {/* Caption */}
-        <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-white/45">
-          Caption
-        </p>
-        <textarea
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          rows={3}
-          maxLength={500}
-          placeholder="Tulis caption…"
-          className="mt-1.5 w-full resize-none rounded-xl border border-white/15 bg-black/45 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
-        />
+            {/* Panel TEKS — font, miring, outline, ukuran. */}
+            {tool === "text" && (
+              <div className="mt-3 space-y-3 rounded-2xl border border-white/12 bg-black/45 p-3">
+                <input
+                  value={overlay.text}
+                  onChange={(e) =>
+                    setOverlay((o) => ({ ...o, text: e.target.value }))
+                  }
+                  maxLength={140}
+                  placeholder="Tulis teks di atas media…"
+                  className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {FONTS.map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setOverlay((o) => ({ ...o, font: f.key }))}
+                      style={{ fontFamily: f.css }}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-[11px] font-bold transition",
+                        overlay.font === f.key
+                          ? "border-primary/60 bg-primary/15 text-white"
+                          : "border-white/12 bg-white/[0.05] text-white/60",
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setOverlay((o) => ({ ...o, italic: !o.italic }))}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-[11px] font-black italic transition",
+                      overlay.italic
+                        ? "border-primary/60 bg-primary/15 text-white"
+                        : "border-white/12 bg-white/[0.05] text-white/60",
+                    )}
+                  >
+                    Miring
+                  </button>
+                  <button
+                    onClick={() => setOverlay((o) => ({ ...o, outline: !o.outline }))}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-[11px] font-black transition",
+                      overlay.outline
+                        ? "border-primary/60 bg-primary/15 text-white"
+                        : "border-white/12 bg-white/[0.05] text-white/60",
+                    )}
+                  >
+                    Outline
+                  </button>
+                </div>
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/45">
+                    Ukuran font — {overlay.size * 4}px
+                  </span>
+                  <input
+                    type="range"
+                    min={2}
+                    max={12}
+                    value={overlay.size}
+                    onChange={(e) =>
+                      setOverlay((o) => ({ ...o, size: Number(e.target.value) }))
+                    }
+                    className="mt-1.5 w-full accent-primary"
+                  />
+                </label>
+              </div>
+            )}
 
-        <button
-          onClick={() => void submit()}
-          disabled={busy}
-          className="mt-4 w-full rounded-2xl bg-gradient-to-b from-primary to-primary/85 py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
-        >
-          {busy ? "Mengunggah… memposting…" : "Post"}
-        </button>
+            {/* Panel AUDIO — pilih lagu + campur volume musik/suara asli. */}
+            {tool === "audio" && (
+              <div className="mt-3 space-y-3 rounded-2xl border border-white/12 bg-black/45 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/45">
+                  Backsound
+                </p>
+                {musicPicker}
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/45">
+                    Volume musik — {musicVol}%
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={musicVol}
+                    onChange={(e) => setMusicVol(Number(e.target.value))}
+                    className="mt-1.5 w-full accent-primary"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/45">
+                    Suara asli video — {videoVol}%
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={videoVol}
+                    onChange={(e) => setVideoVol(Number(e.target.value))}
+                    className="mt-1.5 w-full accent-primary"
+                  />
+                </label>
+                <p className="text-[10px] leading-relaxed text-white/45">
+                  {videoVol === 0
+                    ? "Suara asli dimatikan — hanya musik yang terdengar."
+                    : musicVol === 0
+                      ? "Musik dimatikan — hanya suara asli video."
+                      : "Musik jadi backsound di atas suara asli video."}
+                </p>
+              </div>
+            )}
+
+            {/* Panel PRIVASI. */}
+            {tool === "privacy" && <div className="mt-1">{privacyBlock}</div>}
+
+            <button
+              onClick={() => setStep("caption")}
+              className="mt-4 w-full rounded-2xl bg-gradient-to-b from-primary to-primary/85 py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98]"
+            >
+              Lanjut ke caption
+            </button>
+          </>
+        )}
+
+        {/* ============ LANGKAH 3 — CAPTION & POST ============ */}
+        {step === "caption" && (
+          <>
+            {/* Pilih lagu — bisa dilakukan sebelum post. */}
+            <p className="text-[11px] font-black uppercase tracking-widest text-white/45">
+              Musik (opsional)
+            </p>
+            <div className="mt-1.5">{musicPicker}</div>
+
+            {privacyBlock}
+
+            {/* Caption */}
+            <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-white/45">
+              Caption
+            </p>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Tulis caption…"
+              className="mt-1.5 w-full resize-none rounded-xl border border-white/15 bg-black/45 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
+            />
+
+            <button
+              onClick={() => void submit()}
+              disabled={busy}
+              className="mt-4 w-full rounded-2xl bg-gradient-to-b from-primary to-primary/85 py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+            >
+              {busy ? "Mengunggah… memposting…" : "Post"}
+            </button>
+          </>
+        )}
       </motion.div>
     </motion.div>
   );

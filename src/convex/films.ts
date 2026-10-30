@@ -62,6 +62,8 @@ export type FilmCard = {
   image?: string;
   year?: string;
   rating?: number;
+  /** Sinopsis singkat — ikut dipakai baris hasil pencarian di Home. */
+  synopsis?: string;
   kind: "movie" | "tv";
 };
 
@@ -72,6 +74,7 @@ function toCard(r: any, kind: "movie" | "tv"): FilmCard {
     image: poster(r.poster_path),
     year: String(r.release_date || r.first_air_date || "").slice(0, 4) || undefined,
     rating: r.vote_average ? Number(r.vote_average) : undefined,
+    synopsis: r.overview ? String(r.overview) : undefined,
     kind,
   };
 }
