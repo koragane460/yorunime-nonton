@@ -21,6 +21,7 @@ import {
   Crown,
   Headset,
   Infinity as InfinityIcon,
+  Megaphone,
   RefreshCw,
   Search,
   Shield,
@@ -108,6 +109,32 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
       toast.error(e instanceof Error ? e.message : "Gagal menyimpan versi");
     } finally {
       setSavingVersion(false);
+    }
+  };
+
+  // PENGUMUMAN — kotak besar di atas Home (update / error / info).
+  // Isinya atur di sini: kirim, matikan, atau hapus tanpa deploy.
+  const announcements = useQuery(
+    api.moderation.allAnnouncements,
+    level === "dev" ? {} : "skip",
+  );
+  const createAnnouncement = useMutation(api.moderation.createAnnouncement);
+  const setAnnouncementActive = useMutation(api.moderation.setAnnouncementActive);
+  const deleteAnnouncement = useMutation(api.moderation.deleteAnnouncement);
+  const [annText, setAnnText] = useState("");
+  const [annBusy, setAnnBusy] = useState(false);
+
+  const sendAnnouncement = async () => {
+    if (!annText.trim()) return;
+    setAnnBusy(true);
+    try {
+      await createAnnouncement({ message: annText.trim() });
+      setAnnText("");
+      toast.success("Pengumuman tampil di Home");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim");
+    } finally {
+      setAnnBusy(false);
     }
   };
 
@@ -244,6 +271,81 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
               ? `Minimal versi ${minVersion}. Yang di bawah itu kena update paksa.`
               : "Belum ada paksaan update."}
           </p>
+        </div>
+      )}
+
+      {/* KOTAK PENGUMUMAN HOME — teks besar di beranda. Awali [update] atau
+          [error] biar kotaknya ikut ganti warna (emas / merah). */}
+      {isDev && (
+        <div className="mt-2.5 rounded-xl border border-amber-300/35 bg-amber-500/[0.06] p-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
+            <Megaphone className="size-3.5" />
+            Pengumuman (kotak Home)
+          </p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+            Teks tampil di kotak besar paling atas Home. Awali{" "}
+            <b className="text-amber-300">[update]</b> atau{" "}
+            <b className="text-red-400">[error]</b> buat ganti warna kotaknya.
+          </p>
+          <textarea
+            value={annText}
+            onChange={(e) => setAnnText(e.target.value)}
+            rows={3}
+            placeholder="mis. [update] Server sudah normal, selamat menonton!"
+            className="mt-2 w-full resize-none rounded-lg border border-border bg-background/70 px-3 py-2 text-xs outline-none focus:border-amber-300/60"
+          />
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <button
+              disabled={annBusy || !annText.trim()}
+              onClick={() => void sendAnnouncement()}
+              className="h-9 flex-1 rounded-lg bg-amber-400 px-3 text-[11px] font-black text-black transition hover:brightness-105 disabled:opacity-40"
+            >
+              {annBusy ? "Mengirim..." : "Tayangkan"}
+            </button>
+            <span className="text-[10px] text-muted-foreground">
+              {(announcements ?? []).length} total
+            </span>
+          </div>
+          <div className="mt-2 space-y-1.5">
+            {(announcements ?? []).map((a) => (
+              <div
+                key={a._id}
+                className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-2"
+              >
+                <p
+                  className={cn(
+                    "min-w-0 flex-1 break-words text-[11px] leading-snug",
+                    a.active ? "text-foreground" : "text-muted-foreground line-through",
+                  )}
+                >
+                  {a.message}
+                </p>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() =>
+                      void setAnnouncementActive({ id: a._id, active: !a.active })
+                    }
+                    className="rounded-md border border-border px-2 py-1 text-[10px] font-bold transition hover:border-foreground/50"
+                    aria-label={a.active ? "Matikan pengumuman" : "Aktifkan pengumuman"}
+                  >
+                    {a.active ? "Aktif" : "Mati"}
+                  </button>
+                  <button
+                    onClick={() => void deleteAnnouncement({ id: a._id })}
+                    className="rounded-md border border-red-500/40 px-2 py-1 text-[10px] font-bold text-red-400 transition hover:bg-red-500/15"
+                    aria-label="Hapus pengumuman"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {(announcements ?? []).length === 0 && (
+              <p className="rounded-lg border border-dashed border-border px-2 py-3 text-center text-[10px] text-muted-foreground">
+                Belum ada pengumuman
+              </p>
+            )}
+          </div>
         </div>
       )}
 

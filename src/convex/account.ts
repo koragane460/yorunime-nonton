@@ -341,13 +341,21 @@ export const saveBubble = mutation({
  * (days * slots), bukan nilai nominal.
  */
 export const topGive = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit = 50 }) => {
+  // `period` = filter rentang waktu: "7" (7 hari), "30" (30 hari), selain
+  // itu = sepanjang masa. Dipakai tombol periode di papan peringkat Home.
+  args: { limit: v.optional(v.number()), period: v.optional(v.string()) },
+  handler: async (ctx, { limit = 50, period }) => {
     const takes = Math.min(limit ?? 50, 100);
-    const gives = await ctx.db
+    const since =
+      period === "7"
+        ? Date.now() - 7 * 86_400_000
+        : period === "30"
+          ? Date.now() - 30 * 86_400_000
+          : 0;
+    const gives = (await ctx.db
       .query("premiumGives")
       .withIndex("createdAt")
-      .collect();
+      .collect()).filter((g) => since === 0 || g._creationTime >= since);
     const byUser: Record<
       string,
       { userId: string; totalDays: number; totalSlots: number; sends: number }

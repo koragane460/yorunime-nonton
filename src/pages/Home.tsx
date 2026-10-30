@@ -65,6 +65,9 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
+import { AccountHeader, AnnouncementBox, Spotlight } from "@/components/HomeTop";
+import { LeaderCards } from "@/components/LeaderCards";
+import { NobarCatalogScreen } from "@/components/NobarCatalogScreen";
 import {
   AfinitasPromo,
   FeedPromo,
@@ -828,6 +831,8 @@ function HomeContent() {
   // Layar Top anime (dibuka dari badge TOP di hero banner).
   const [showTopAnime, setShowTopAnime] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  // Layar NOBAR — dibuka dari kotak "Nobar" di baris Chat/Voice Home.
+  const [showNobar, setShowNobar] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
   // Layar VOICE CALL (daftar room → buat room → panggilan). + popup Afinitas
@@ -1177,47 +1182,44 @@ function HomeContent() {
           </button>
         </div>
       )}
-      {/* 1) SAPAAN WAKTU + KOTAK PROFIL & LEVEL (kini termasuk chip
-          Sacret · Premium · YoruVerse di dalamnya). */}
-      <GreetingBar />
-      <ProfileBar />
+      {/* 1) HEADER AKUN — TANPA background: kiri = foto + username + level
+          + ID, kanan = tombol notif + pengaturan. */}
+      <AccountHeader />
 
-      {/* 2) HERO BANNER — SATU anime tampil (fade antar judul, selalu hanya
-          1 slide terlihat) + Leaderboard sebagai kolom DI KANAN banner. */}
-      {loading ? (
-        <HeroSkeleton />
-      ) : heroItems.length > 0 ? (
-        <>
-        <div className="fade-enter mt-3 flex w-full items-stretch gap-1">
-          {/* ---- Banner utama: SEMUA judul ditumpuk + fade, tapi selalu
-              hanya SATU slide yang terlihat (rotasi tiap 6 detik).
-              PENTING (performa): state rotasi + interval-nya DIPEISOLASI di
-              dalam <HeroSlides /> — jadi tiap 6 detik hanya banner kecil ini
-              yang re-render, BUKAN seluruh Home (4.000+ baris). Sebelumnya
-              HP user sampai restart sendiri karena render ulang raksasa
-              tiap 6 detik. ---- */}
-          <HeroSlides
-            items={heroItems}
-            onPick={openAnime}
-            onTop={() => setShowTopAnime(true)}
-            promo={
-              <AfinitasPromo
-                onOpen={() =>
-                  user ? setAfinitas(true) : toast.info("Login dulu ya")
-                }
-                images={heroItems
-                  .slice(0, 2)
-                  .map((h) => h.image)
-                  .filter(Boolean)}
-              />
-            }
-            promo2={<FeedPromo onOpen={() => navigate("/feed")} />}
-          />
+      {/* 2) KOTAK PENGUMUMAN — besar & memanjang ke bawah. Isi (update/error)
+          diatur lewat panel developer, jadi tidak perlu deploy. */}
+      <AnnouncementBox />
 
-          {/* ---- Leaderboard DIHAPUS dari hero (sudah pindah ke Catalog). */}
-        </div>
-        </>
-      ) : null}
+      {/* 3) SPOTLIGHT — 3 judul besar, geser snap: views · rating · status. */}
+      <Spotlight
+        items={topList}
+        viewsOf={viewCountFor}
+        onPick={(id, title, source) => openAnime(id, title, (source as any) ?? "anilist")}
+      />
+
+      {/* 4) KOTAK CHAT — dipindah ke sini (tepat di bawah spotlight). Isinya
+          pratinjau pesan terbaru dari Chat Global, ketuk untuk buka. */}
+      <button
+        onClick={() => setShowChat(true)}
+        className="yn-panel group mt-4 flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition hover:border-white/25 active:scale-[0.99]"
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-500/10">
+          <MessageSquare className="size-4 text-emerald-200" />
+        </span>
+        <GlobalChatPreview />
+        <ChevronRight className="size-4 shrink-0 text-white/40 transition group-hover:translate-x-0.5" />
+      </button>
+
+      {/* 5) PAPAN PERINGKAT — dua kartu lebar (Top XP · Top Give). Ketuk kartu
+          untuk periode 7 hari / 30 hari / sepanjang masa + podium + grid 4-50. */}
+      <LeaderCards />
+
+      {/* 6) GLOBAL CHAT · NOBAR · VOICE — tiap kotak dikasih warna. */}
+      <ChatVoiceRow
+        onOpenChat={() => setShowChat(true)}
+        onOpenNobar={() => setShowNobar(true)}
+        onOpenVoice={() => setShowVoice(true)}
+      />
 
       {/* 6a) TOP AIRING — anime populer & trending saat ini, geser ke kanan. */}
       <TopAiringRow
@@ -1229,24 +1231,23 @@ function HomeContent() {
       {/* 6b) DAILY QUEST — 3 misi ringan per hari, reset jam 00.00. */}
       <DailyQuestRow />
 
-      {/* 6c) LEADERBOARD — podium top 1-3 (ganti Top XP ⇄ Top Give tiap
-          6 detik) + daftar lengkap gaya Catalog saat "Lihat selengkapnya". */}
-      <LeaderPodium onSeeAll={() => setShowLeaderboard(true)} />
-      {showLeaderboard && (
-        <div className="screen-enter fixed inset-0 z-[75] overflow-y-auto bg-background">
-          <CatalogLeaderboard onClose={() => setShowLeaderboard(false)} />
+      {/* PROMO — Afinitas + Feed, kartu seukuran di samping (dulu 2 slide hero). */}
+      <div className="mt-4 grid grid-cols-1 gap-3 overflow-hidden rounded-3xl border border-white/10 sm:grid-cols-2">
+        <div className="h-[176px]">
+          <AfinitasPromo
+            onOpen={() =>
+              user ? setAfinitas(true) : toast.info("Login dulu ya")
+            }
+            images={heroItems
+              .slice(0, 2)
+              .map((h) => h.image)
+              .filter(Boolean)}
+          />
         </div>
-      )}
-
-      {/* 6d) CHAT GLOBAL + VOICE CALL + PREMIUM (kotak tegak sejajar). */}
-      <ChatVoiceRow
-        onOpenChat={() => setShowChat(true)}
-        onOpenVoice={() => setShowVoice(true)}
-        onOpenPremium={() => navigate("/premium")}
-      />
-
-      {/* 6e) LAMA "Beli Premium Ada Di Sini" — pindah jadi kotak tegak di
-          bawah Voice Call (lihat ChatVoiceRow). */}
+        <div className="h-[176px]">
+          <FeedPromo onOpen={() => navigate("/feed")} />
+        </div>
+      </div>
 
       {/* 5) CARI ANIME — hanya tombol pemicu; pencarian tampil di layar
           FULL SCREEN (SearchScreen), bukan nempel di Home.
@@ -1505,6 +1506,7 @@ function HomeContent() {
         </Suspense>
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
+      {showNobar && <NobarCatalogScreen onClose={() => setShowNobar(false)} />}
       {showVoice && <VoiceCallScreen onClose={() => setShowVoice(false)} />}
       {afinitas && user && (
         <AfinitasScreen
@@ -4253,7 +4255,11 @@ function formatCompactXp(n: number): string {
  * ratusan ribu/ratusan juta). Semakin tinggi peringkat, semakin besar angkanya.
  */
 function viewCountFor(_id: string): number {
-  return 1200 + (Math.floor(Math.random() * 4800) % 600);
+  // Angka STABIL per judul (dulu Math.random → angka berubah tiap render,
+  // jadi jumlah views kedip-kedip saat kartu digeser).
+  let h = 0;
+  for (let i = 0; i < _id.length; i++) h = (h * 31 + _id.charCodeAt(i)) % 100000;
+  return 1200 + (h % 600);
 }
 
 function topViewsFor(id: string, rank: number): number {

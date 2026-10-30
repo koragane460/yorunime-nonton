@@ -1527,6 +1527,152 @@ a {
   }
 }
 
+/* ------------------------------------------------------------------
+ * BORDER BERLAPIS KELAS — "semakin mahal semakin bagus": bentuk, tebal
+ * ring, dan efeknya naik kelas, bukan cuma ganti warna ring bulat.
+ *   500-900  : ring tipis polos (aurora, tide, bloom)
+ *   1.000-1.600: ring + kilau berjalan (ember, volt, prisma)
+ *   2.000-3.000: BENTUK khas + ring rangkap + glow (royal, storm, nova)
+ *   4.000-5.000: mahakarya — bentuk unik + efek bergerak (magma, holo)
+ * ------------------------------------------------------------------ */
+@keyframes yn-border-sheen {
+  0% { background-position: 220% 0; }
+  60%, 100% { background-position: -140% 0; }
+}
+@keyframes yn-border-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ROYAL (2.000) — oktagon emas, ring 5px, kilau mahkota menyapu. */
+.yn-frame-royal {
+  padding: 5px;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  background:
+    repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.5) 0 6deg, transparent 6deg 20deg),
+    linear-gradient(160deg, #fde68a, #d97706 44%, #fbbf24 64%, #fef3c7);
+  filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.85)) drop-shadow(0 0 16px rgba(251, 191, 36, 0.4));
+  animation: none;
+}
+.yn-frame-royal::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 11px;
+  height: 11px;
+  background: radial-gradient(circle, #fff 0%, #fde68a 45%, transparent 72%);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  animation: yn-twinkle 1.7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* STORM (2.500) — heksagon badai, sambaran kilau putih. */
+.yn-frame-storm {
+  padding: 5px;
+  clip-path: polygon(25% 2%, 75% 2%, 100% 50%, 75% 98%, 25% 98%, 0 50%);
+  background: linear-gradient(140deg, #e0f2fe 0%, #38bdf8 34%, #0369a1 66%, #bae6fd 100%);
+  filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.85)) drop-shadow(0 0 16px rgba(14, 116, 144, 0.5));
+  animation: none;
+}
+.yn-frame-storm::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.78) 50%, transparent 60%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: yn-border-sheen 3.2s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* NOVA (3.000) — bintang 8 sudut (starburst) galaksi + hujan bintang. */
+.yn-frame-nova {
+  padding: 4px;
+  clip-path: polygon(
+    50% 0, 64.5% 14.9%, 85.4% 14.6%, 85.1% 35.5%, 100% 50%,
+    85.1% 64.5%, 85.4% 85.4%, 64.5% 85.1%, 50% 100%, 35.5% 85.1%,
+    14.6% 85.4%, 14.9% 64.5%, 0 50%, 14.9% 35.5%, 14.6% 14.6%, 35.5% 14.9%
+  );
+  background:
+    conic-gradient(from 210deg, #0b1e4d, #38bdf8, #1d4ed8, #0f172a, #0b1e4d);
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9)) drop-shadow(0 0 18px rgba(37, 99, 235, 0.5));
+  animation: none;
+}
+.yn-frame-nova::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.95) 1px, transparent 1.6px);
+  background-size: 7px 7px;
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  animation: yn-border-pulse 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* MAGMA (4.000) — perisai heptagon, lahar menyala berdenyut. */
+.yn-frame-magma {
+  padding: 6px;
+  clip-path: polygon(50% 0, 89.1% 18.8%, 98.7% 61.1%, 71.7% 95.1%, 28.3% 95.1%, 1.3% 61.1%, 10.9% 18.8%);
+  background: conic-gradient(from 120deg, #7f1d1d, #f97316, #fde047, #ef4444, #7f1d1d);
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9)) drop-shadow(0 0 20px rgba(249, 115, 22, 0.55));
+  animation: none;
+}
+.yn-frame-magma::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(90% 70% at 50% 100%, rgba(253, 224, 71, 0.9), transparent 62%);
+  mix-blend-mode: screen;
+  animation: yn-border-pulse 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* HOLO (5.000) — squircle holografik: pelangi berjalan + ring rangkap + bintik. */
+.yn-frame-holo {
+  padding: 6px;
+  border-radius: 32%;
+  background: linear-gradient(120deg, #a5f3fc, #c4b5fd, #fbcfe8, #fef9c3, #a7f3d0, #a5f3fc);
+  background-size: 320% 320%;
+  animation: yn-holo 4.5s ease infinite;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.75),
+    0 0 0 2px rgba(165, 243, 252, 0.45),
+    0 12px 26px -18px rgb(0 0 0 / 0.95);
+  filter: drop-shadow(0 0 8px rgba(196, 181, 253, 0.85)) drop-shadow(0 0 18px rgba(165, 243, 252, 0.45));
+}
+.yn-frame-holo .yn-frame-in {
+  border-radius: 30%;
+}
+.yn-frame-holo .yn-frame-in > * {
+  border-radius: 30%;
+}
+.yn-frame-holo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 30%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.95) 1px, transparent 1.6px);
+  background-size: 9px 9px;
+  opacity: 0.4;
+  mix-blend-mode: screen;
+  animation: yn-border-pulse 3.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yn-frame-storm::after,
+  .yn-frame-nova::after,
+  .yn-frame-magma::after,
+  .yn-frame-royal::after,
+  .yn-frame-holo,
+  .yn-frame-holo::after {
+    animation: none !important;
+  }
+}
+
 /* ==================================================================
  * JARING PENGAMAN — menurunkan sisa gaya lama ke sistem yang sama.
  * Berlaku untuk kelas utilitas lama yang tersebar di ratusan tempat

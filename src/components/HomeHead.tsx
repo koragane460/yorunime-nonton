@@ -23,6 +23,7 @@ import {
   Play,
   Sparkles,
   Star,
+  Tv,
   Users,
   X,
 } from "lucide-react";
@@ -691,29 +692,33 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
 
 export function ChatVoiceRow({
   onOpenChat,
+  onOpenNobar,
   onOpenVoice,
-  onOpenPremium,
 }: {
   onOpenChat: () => void;
+  onOpenNobar: () => void;
   onOpenVoice: () => void;
-  onOpenPremium: () => void;
 }) {
   // Angka ONLINE beneran (presence tiap 30 detik), bukan tebakan dari chat.
   const online = useQuery(api.presence.onlineCount, {});
 
+  // Tiap kotak DIKASIH WARNA (permintaan): chat = hijau, nobar = merah muda,
+  // voice = biru. Warna diambil dari tint solid, bukan gradasi pelangi.
   return (
     <div className="mt-5 grid grid-cols-2 gap-3">
-      {/* CHAT GLOBAL — panel editorial: eyebrow emas, judul display besar,
-          status live sebagai tag kecil. Tidak ada gradasi per kartu. */}
+      {/* CHAT GLOBAL — panel paling tinggi (2 baris), status live di bawah. */}
       <button
         onClick={onOpenChat}
-        className="yn-panel group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden p-4 text-left transition hover:border-white/25 active:scale-[0.98]"
+        className="group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(165deg,rgba(16,185,129,.24)_0%,rgba(11,20,18,.92)_55%,rgba(8,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-emerald-300/60 active:scale-[0.98]"
       >
-        <span aria-hidden className="yn-scrim pointer-events-none absolute inset-0 opacity-60" />
+        <span
+          aria-hidden
+          className="absolute inset-0 opacity-40 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]"
+        />
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Obrolan</span>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06]">
-            <MessageSquare className="size-4 text-white/80" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/40 bg-emerald-400/15">
+            <MessageSquare className="size-4 text-emerald-100" />
           </span>
         </span>
         <span className="relative flex flex-col gap-1">
@@ -721,48 +726,44 @@ export function ChatVoiceRow({
             Chat Global
           </span>
           <span className="yn-meta">Ngobrol santai bareng penonton lain</span>
-          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-200">
-            <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/45 bg-emerald-400/20 px-2.5 py-1 text-[10px] font-bold text-emerald-100">
+            <span className="size-1.5 animate-pulse rounded-full bg-emerald-300" />
             {online ?? 0} online
           </span>
         </span>
       </button>
 
-      {/* VOICE CALL — panel seukuran, satu ikon, satu baris teks. */}
+      {/* NOBAR — nonton bareng, kotak warna merah muda. */}
+      <button
+        onClick={onOpenNobar}
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-rose-400/35 bg-[linear-gradient(165deg,rgba(244,63,94,.22)_0%,rgba(26,12,18,.92)_60%,rgba(12,9,13,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-rose-300/60 active:scale-[0.98]"
+      >
+        <span className="relative flex items-start justify-between gap-2">
+          <span className="yn-eyebrow">Nobar</span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-rose-300/40 bg-rose-400/15">
+            <Tv className="size-4 text-rose-100" />
+          </span>
+        </span>
+        <span className="relative flex flex-col">
+          <span className="text-base font-black leading-tight tracking-tight">Nobar</span>
+          <span className="yn-meta">Nonton bareng komunitas</span>
+        </span>
+      </button>
+
+      {/* VOICE — ngobrol suara, kotak warna biru langit. */}
       <button
         onClick={onOpenVoice}
-        className="yn-panel relative flex h-28 flex-col justify-between overflow-hidden p-4 text-left transition hover:border-white/25 active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(165deg,rgba(56,189,248,.22)_0%,rgba(10,18,28,.92)_60%,rgba(9,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-sky-300/60 active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Suara</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.06]">
-            <Mic className="size-4 text-white/80" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/40 bg-sky-400/15">
+            <Mic className="size-4 text-sky-100" />
           </span>
         </span>
         <span className="relative flex flex-col">
           <span className="text-base font-black leading-tight tracking-tight">Voice Call</span>
           <span className="yn-meta">Nobaron &amp; ngobrol</span>
-        </span>
-      </button>
-
-      {/* PREMIUM — aksen emas, satu-satunya kartu yang pakai warna aksen. */}
-      <button
-        onClick={onOpenPremium}
-        className="yn-panel relative flex h-28 flex-col justify-between overflow-hidden p-4 text-left transition hover:border-gold-strong/50 active:scale-[0.98]"
-        style={{
-          backgroundImage:
-            "linear-gradient(168deg, rgba(246,200,53,.10), transparent 52%)",
-        }}
-      >
-        <span className="relative flex items-start justify-between gap-2">
-          <span className="yn-eyebrow">Premium</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gold-strong/40 bg-gold-strong/10">
-            <CrownIcon className="size-4 text-gold-strong" />
-          </span>
-        </span>
-        <span className="relative flex flex-col">
-          <span className="text-base font-black leading-tight tracking-tight">Premium</span>
-          <span className="yn-meta">Beli premium ada di sini</span>
         </span>
       </button>
     </div>

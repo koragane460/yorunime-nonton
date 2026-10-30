@@ -56,12 +56,20 @@ const BOXES = [
 /** Potongan garis penghubung antar kotak (dihitung dari posisi nyata). */
 type LinkLine = { x1: number; y1: number; x2: number; y2: number };
 
-/** Layar penuh YoruVerse — dirender AppLayout di atas segalanya. */
-export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
+/** Layar penuh YoruVerse — dirender AppLayout di atas segalanya.
+ *  `initialView` = langsung buka satu layar isian (dipakai sheet PANEL:
+ *  kotak Music / YoruPet / Shop). */
+export function YoruVerseScreen({
+  onClose,
+  initialView = null,
+}: {
+  onClose: () => void;
+  initialView?: Extract<HubView, "shop" | "pet" | "music"> | null;
+}) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const petState = useQuery(api.pets.state, {});
-  const [view, setView] = useState<HubView>(null);
+  const [view, setView] = useState<HubView>(initialView);
 
   const sub =
     view === "clan" ? <ClanScreen onBack={() => setView(null)} /> :

@@ -50,6 +50,7 @@ import { MOST_MIN_TITLES, type TopPanel } from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { MusicMiniBar } from "@/components/MusicMiniBar";
 import { YoruVerseScreen } from "@/components/YoruVerse";
+import { PanelHub, type PanelKey } from "@/components/PanelHub";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -81,11 +82,58 @@ export function AppLayout({
   // BottomNav (dan dirinya sendiri) unmount.
   const [navPanel, setNavPanel] = useState<TopPanel>(null);
   const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  // PANEL (tombol tengah nav) — sheet setinggi 55% layar. Isinya profil +
+  // kotak Feed · Baca · History · Download · Clan · Music · YoruPet · Title
+  // · Shop (Feed & Baca sudah digabung jadi tombol ini, permintaan user).
+  const [hubOpen, setHubOpen] = useState(false);
+  // Tampilan awal YoruVerse saat dibuka dari sheet Panel (shop/pet/music).
+  const [yvView, setYvView] = useState<"shop" | "pet" | "music" | null>(null);
   // YORUVERSE — hub virtual (tombol kuning di panel akun). Layar penuh
   // yang dirender di atas segalanya (z-[70]).
   const [yvOpen, setYvOpen] = useState(false);
   const openTopPanel = useCallback((p: TopPanel) => setTopPanel(p), []);
   const closeTopPanel = useCallback(() => setTopPanel(null), []);
+
+  /**
+   * Kotak dipilih di sheet PANEL → tutup sheet lalu buka tujuannya.
+   * History & Download memakai layar panel atas yang sudah ada
+   * (Lanjutkan nonton & Unduhan); Music/YoruPet/Shop masuk ke YoruVerse.
+   */
+  const pickHub = (key: PanelKey) => {
+    setHubOpen(false);
+    switch (key) {
+      case "feed":
+        navigate("/feed");
+        break;
+      case "baca":
+        navigate("/baca");
+        break;
+      case "history":
+        setTopPanel("continue");
+        break;
+      case "download":
+        setTopPanel("downloads");
+        break;
+      case "clan":
+        navigate("/clan");
+        break;
+      case "music":
+        setYvView("music");
+        setYvOpen(true);
+        break;
+      case "pet":
+        setYvView("pet");
+        setYvOpen(true);
+        break;
+      case "title":
+        navigate("/title");
+        break;
+      case "shop":
+        setYvView("shop");
+        setYvOpen(true);
+        break;
+    }
+  };
 
   useEffect(() => {
     if (!navPanel) return;
@@ -206,7 +254,11 @@ export function AppLayout({
       {/* CATALOG = layar fullscreen: navbar bawah & footer TIDAK tampil
           sama sekali selama di halaman ini (permintaan user). */}
       {!overlayOpen && location.pathname !== "/catalog" && location.pathname !== "/feed" && (
-        <BottomNav navPanel={navPanel} onOpenPanel={setNavPanel} />
+        <BottomNav
+          navPanel={navPanel}
+          onOpenPanel={setNavPanel}
+          onOpenHub={() => setHubOpen(true)}
+        />
       )}
       <TopPanelHost topPanel={topPanel} onClose={closeTopPanel} onOpen={openTopPanel} />
       {!overlayOpen && location.pathname !== "/catalog" && location.pathname !== "/feed" && <AppFooter />}
@@ -215,7 +267,17 @@ export function AppLayout({
 
       <OverlayScrollLock />
       <AnnouncementPopup />
-      {yvOpen && <YoruVerseScreen onClose={() => setYvOpen(false)} />}
+      {yvOpen && (
+        <YoruVerseScreen
+          initialView={yvView}
+          onClose={() => {
+            setYvOpen(false);
+            setYvView(null);
+          }}
+        />
+      )}
+      {/* SHEET PANEL — tombol tengah navigasi bawah (55% layar). */}
+      {hubOpen && <PanelHub onClose={() => setHubOpen(false)} onPick={pickHub} />}
     </div>
   );
 }
@@ -856,13 +918,37 @@ function FeedIcon({ className, strokeWidth = 1.8 }: { className?: string; stroke
   );
 }
 
+/** Ikon tab PANEL — empat kotak kisi (pengganti tombol Feed & Baca). */
+function PanelIcon({ className, strokeWidth = 1.8 }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="3.2" y="3.2" width="7.4" height="7.4" rx="2.4" />
+      <rect x="13.4" y="3.2" width="7.4" height="7.4" rx="2.4" />
+      <rect x="3.2" y="13.4" width="7.4" height="7.4" rx="2.4" />
+      <rect x="13.4" y="13.4" width="7.4" height="7.4" rx="2.4" />
+    </svg>
+  );
+}
+
 function BottomNav({
   navPanel,
   onOpenPanel,
+  onOpenHub,
 }: {
   navPanel: TopPanel;
   /** null = tutup panel yang sedang terbuka (tekan tombolnya dua kali). */
   onOpenPanel: (p: TopPanel) => void;
+  /** Buka SHEET Panel (tombol tengah — gabungan Feed + Baca). */
+  onOpenHub: () => void;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -881,6 +967,8 @@ function BottomNav({
     iconFill?: ComponentType<{ className?: string; strokeWidth?: number }>;
     panel?: Exclude<TopPanel, null>;
     dim?: boolean;
+    /** Tombol tengah PANEL — bukan rute, membuka sheet 55% layar. */
+    hub?: boolean;
     /** Tombol ini punya pasangan (tekan-lama berpindah dengan fade). */
     swaps?: "a" | "b";
   }[] = [
@@ -891,14 +979,9 @@ function BottomNav({
       icon: CalendarIcon,
       iconFill: CalendarIconFill,
     },
-    {
-      path: "/feed",
-      label: "Feed",
-      icon: FeedIcon,
-    },
-    // Baca: layar ganti kategori Manga / Manhwa (dulu tekan-lama tombol
-    // Home). Ikon buku, di kanan History.
-    { path: "/baca", label: "Baca", icon: BookIcon },
+    // Tengah: PANEL — pengganti tombol Feed & Baca yang DIGABUNG jadi satu
+    // (permintaan). Tombolnya sengaja lebih besar dari yang lain.
+    { path: "__hub", label: "Panel", icon: PanelIcon, hub: true },
     {
       path: "",
       label: "Subscribe",
@@ -935,7 +1018,7 @@ function BottomNav({
         <div className="mx-auto w-full max-w-2xl px-3 lg:max-w-4xl">
           <div
             className={cn(
-              "relative grid grid-cols-6 rounded-[24px] border border-white/12 p-1.5",
+              "relative grid grid-cols-5 rounded-[24px] border border-white/12 p-1.5",
               "bg-[oklch(0.135_0.016_266_/_0.9)] shadow-[0_18px_40px_-28px_rgba(0,0,0,1)]",
               "backdrop-blur-2xl backdrop-saturate-150",
             )}
@@ -951,11 +1034,11 @@ function BottomNav({
                 activeIdx < 0 && "opacity-0",
               )}
               style={{
-                width: "calc((100% - 12px) / 6)",
+                width: "calc((100% - 12px) / 5)",
                 left:
                   activeIdx < 0
                     ? "6px"
-                    : `calc(6px + ${activeIdx} * (100% - 12px) / 6)`,
+                    : `calc(6px + ${activeIdx} * (100% - 12px) / 5)`,
               }}
             />
             {items.map((it) => {
@@ -980,6 +1063,12 @@ function BottomNav({
               <button
                 key={it.path || `panel-${it.label}`}
                 onClick={() => {
+                  // Tombol PANEL tidak punya rute: membuka sheet 55% layar
+                  // (Feed · Baca · History · Download · dst).
+                  if (it.hub) {
+                    onOpenHub();
+                    return;
+                  }
                   // Tombol panel tidak punya rute: dia membuka layar penuh
                   // yang dirender AppLayout (bukan di sini — lihat catatan
                   // pada state navPanel).
@@ -1008,10 +1097,13 @@ function BottomNav({
                 <Icon
                   strokeWidth={1.7}
                   className={cn(
-                    // 6 kolom: ikon dibuat besar supaya jelas dan mudah
+                    // 5 kolom: ikon dibuat besar supaya jelas dan mudah
                     // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
                     // supaya tidak terlihat tebel dan berat.
                     "size-[25px] md:size-[28px] transition-colors duration-200",
+                    // Tombol PANEL sengaja lebih besar + punya kotak emas.
+                    it.hub &&
+                      "size-[30px] text-gold-strong md:size-[32px]",
                     active
                       ? "text-white"
                       : it.dim
@@ -1024,6 +1116,7 @@ function BottomNav({
                 <span
                   className={cn(
                     "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none transition-colors duration-200",
+                    it.hub && "font-black tracking-wide text-white",
                     active
                       ? "font-semibold text-white"
                       : it.dim
