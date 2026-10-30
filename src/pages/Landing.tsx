@@ -117,22 +117,20 @@ export default function Landing() {
               transition={{ duration: 0.55, delay: 0.05 }}
               className="flex flex-wrap items-center gap-2.5"
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs text-zinc-300">
-                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              <span className="yn-eyebrow">
+                <Sparkles className="h-3.5 w-3.5" />
                 Anime + komik subs Indonesia — jodombo bareng clan
               </span>
-              <span className="text-xs text-zinc-500">
-                Senin–Minggu · update otomatis
-              </span>
+              <span className="yn-meta">Senin–Minggu · update otomatis</span>
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, delay: 0.15 }}
-              className="mt-6 text-5xl leading-[1.08] tracking-tight text-white sm:text-6xl"
+              className="yn-display mt-6 text-white"
             >
-              Nonton dengan <span className="text-amber-300">jodombo</span>
+              Nonton dengan <span className="text-gold-strong">jodombo</span>
               <br />
               pandu clan ke podium
             </motion.h1>
@@ -141,7 +139,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, delay: 0.25 }}
-              className="mt-5 max-w-xl text-lg leading-7 text-zinc-400"
+              className="yn-lede mt-5 max-w-xl"
             >
               YoruNime menggabungkan streaming anime + komik subs, chat global,
               clan, leaderboard XP, give premium, dan Sacret game dalam satu tempat.
@@ -157,7 +155,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 onClick={() => navigate("/auth?returnTo=/home")}
-                className="rounded-full bg-amber-300 px-8 py-3.5 font-bold text-[#0a0a0c] transition hover:bg-amber-200"
+                className="rounded-full bg-gold-strong px-8 py-3.5 font-bold text-[#0a0a0c] transition hover:brightness-105"
               >
                 Mulai Nonton — Gratis
                 <ChevronRight className="ml-2 h-4 w-4" />
@@ -180,8 +178,8 @@ export default function Landing() {
               className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4"
             >
               {stats.map((s) => (
-                <div key={s.label} className="rounded-2xl border border-white/5 bg-white/3 px-4 py-3.5 backdrop-blur-sm">
-                  <p className="text-2xl font-black text-white sm:text-3xl">{s.value}</p>
+                <div key={s.label} className="yn-panel-flat px-4 py-3.5 backdrop-blur-sm">
+                  <p className="yn-num text-2xl font-black text-white sm:text-3xl">{s.value}</p>
                   <p className="mt-1 text-xs text-zinc-500">{s.label}</p>
                 </div>
               ))}

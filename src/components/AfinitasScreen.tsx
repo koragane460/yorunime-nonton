@@ -510,16 +510,16 @@ export function AfinitasScreen({
               initial={{ opacity: 0, y: -14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="mx-3 mt-3 overflow-hidden rounded-3xl border border-pink-400/35 bg-[linear-gradient(160deg,#2b1033_0%,#170d23_55%,#0c0a14_100%)] shadow-[0_22px_48px_-28px_rgba(236,72,153,0.8)]"
+              className="yn-panel mx-3 mt-3 overflow-hidden rounded-2xl"
             >
               <div className="flex items-center gap-2 border-b border-white/10 bg-white/[0.05] px-3.5 py-2.5">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-pink-500/25 text-pink-200 ring-1 ring-pink-400/55 shadow-[0_0_16px_-6px_rgba(236,72,153,0.9)]">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gold-strong/15 text-gold ring-1 ring-gold-strong/45">
                   <HeartHandshake className="size-4" aria-hidden />
                 </span>
                 <p className="min-w-0 flex-1 text-[12px] font-black text-white">
                   Permintaan Masuk
                 </p>
-                <span className="rounded-full bg-pink-500/25 px-2 py-0.5 text-[10px] font-black text-pink-100 ring-1 ring-pink-400/55">
+                <span className="rounded-full bg-gold-strong/15 px-2 py-0.5 text-[10px] font-black text-gold ring-1 ring-gold-strong/45">
                   {incoming?.length ?? 0}
                 </span>
               </div>

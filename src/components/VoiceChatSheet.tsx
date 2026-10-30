@@ -137,7 +137,7 @@ function NowPlayingCard({ d }: { d: any }) {
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const pct = Math.min(100, (elapsed / totalSec) * 100);
   return (
-    <div className="mb-1.5 flex w-full flex-col items-center rounded-2xl border border-violet-400/25 bg-[linear-gradient(150deg,#241a3d_0%,#141126_60%,#0d0b16_100%)] px-4 pb-3 pt-4 shadow-[0_14px_34px_-20px_rgba(139,92,246,0.9)]">
+    <div className="yn-panel mb-1.5 flex w-full flex-col items-center rounded-2xl px-4 pb-3 pt-4">
       <div className="flex flex-col items-center">
         {/* Kaset puter: poster di tengah piringan berputar */}
         <span className="relative size-24 shrink-0">
@@ -179,7 +179,7 @@ function NowPlayingCard({ d }: { d: any }) {
       <div className="mt-1 w-full">
         <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-300 transition-[width] duration-500 ease-linear"
+            className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-500 ease-linear"
             style={{ width: `${pct}%` }}
           />
         </div>

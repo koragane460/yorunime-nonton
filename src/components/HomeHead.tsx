@@ -83,7 +83,7 @@ export function GreetingBar() {
     <div className="fade-enter flex w-full items-center justify-center px-1 py-1.5">
       <p className="text-center text-base font-black tracking-tight">
         {greetingOf()},{" "}
-        <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-white via-gold to-gold-strong bg-clip-text text-transparent">
           {name} Disini!
         </span>
       </p>
@@ -106,7 +106,7 @@ export function ProfileBar() {
   const have = Math.max(0, Math.min(user?.xp ?? 0, need));
   const pct = Math.min(100, Math.round((have / Math.max(1, need)) * 100));
   return (
-    <div className="fade-enter yn-cut-alt mt-3 flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-md">
+    <div className="fade-enter yn-panel mt-3 flex w-full items-center gap-3 p-3.5">
       {/* Foto profile besar, tepat di tengah vertikal sisi kiri. */}
       <Avatar
         src={user?.image}
@@ -145,16 +145,14 @@ export function ProfileBar() {
         {/* Label kecil + status level (TANPA background & outline) di baris
             yang sama, tepat di atas ujung kanan bar — jadi tidak menimpa. */}
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
-            Level progress
-          </span>
-          <span className="text-[10px] font-black text-white/75">
+          <span className="yn-eyebrow text-[9px]">Level progress</span>
+          <span className="yn-num text-[10px] font-black text-white/75">
             LV {fmtShort(level)}
           </span>
         </div>
-        <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/20">
+        <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/15">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-700"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -705,53 +703,66 @@ export function ChatVoiceRow({
 
   return (
     <div className="mt-5 grid grid-cols-2 gap-3">
-      {/* CHAT GLOBAL — latar gradasi gelap biru langit + glow neon,
-          konten di TENGAH kotak, angka online pil rounded di kanan bawah. */}
+      {/* CHAT GLOBAL — panel editorial: eyebrow emas, judul display besar,
+          status live sebagai tag kecil. Tidak ada gradasi per kartu. */}
       <button
         onClick={onOpenChat}
-        className="yn-cut relative row-span-2 flex min-h-[228px] flex-col items-center justify-center gap-3 overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(160deg,#0a1725_0%,#0b1220_55%,#07090f_100%)] transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-panel group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden p-4 text-left transition hover:border-white/25 active:scale-[0.98]"
       >
-        <span aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent" />
-        <span className="relative flex size-12 items-center justify-center rounded-2xl border border-sky-300/45 bg-[linear-gradient(to_bottom,rgba(56,189,248,.28),rgba(56,189,248,.10))]">
-          <MessageSquare className="size-6 text-sky-200" />
+        <span aria-hidden className="yn-scrim pointer-events-none absolute inset-0 opacity-60" />
+        <span className="relative flex items-start justify-between gap-2">
+          <span className="yn-eyebrow">Obrolan</span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06]">
+            <MessageSquare className="size-4 text-white/80" />
+          </span>
         </span>
-        <span className="relative text-sm font-extrabold text-sky-50">
-          Chat Global
-        </span>
-        <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-emerald-400/45 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black text-emerald-200">
-          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-          {online ?? 0} online
+        <span className="relative flex flex-col gap-1">
+          <span className="font-display text-xl font-black leading-none tracking-tight">
+            Chat Global
+          </span>
+          <span className="yn-meta">Ngobrol santai bareng penonton lain</span>
+          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-200">
+            <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+            {online ?? 0} online
+          </span>
         </span>
       </button>
 
-      {/* VOICE CALL — kotak tegak di kanan atas, glow hijau. */}
+      {/* VOICE CALL — panel seukuran, satu ikon, satu baris teks. */}
       <button
         onClick={onOpenVoice}
-        className="yn-cut-alt relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(160deg,#08180f_0%,#0a1310_55%,#07090c_100%)] transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-panel relative flex h-28 flex-col justify-between overflow-hidden p-4 text-left transition hover:border-white/25 active:scale-[0.98]"
       >
-        <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent" />
-        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-emerald-300/45 bg-[linear-gradient(to_bottom,rgba(52,211,153,.26),rgba(52,211,153,.08))]">
-          <Mic className="size-5 text-emerald-200" />
+        <span className="relative flex items-start justify-between gap-2">
+          <span className="yn-eyebrow">Suara</span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.06]">
+            <Mic className="size-4 text-white/80" />
+          </span>
         </span>
-        <span className="relative text-sm font-extrabold text-emerald-50">
-          Voice Call
+        <span className="relative flex flex-col">
+          <span className="text-base font-black leading-tight tracking-tight">Voice Call</span>
+          <span className="yn-meta">Nobaron &amp; ngobrol</span>
         </span>
       </button>
 
-      {/* PREMIUM — kotak tegak, tepat DI BAWAH Voice Call, glow emas. */}
+      {/* PREMIUM — aksen emas, satu-satunya kartu yang pakai warna aksen. */}
       <button
         onClick={onOpenPremium}
-        className="yn-cut relative flex h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border border-amber-400/40 bg-[linear-gradient(160deg,#1d1408_0%,#14100b_55%,#0a0a10_100%)] transition hover:brightness-110 active:scale-[0.97]"
+        className="yn-panel relative flex h-28 flex-col justify-between overflow-hidden p-4 text-left transition hover:border-gold-strong/50 active:scale-[0.98]"
+        style={{
+          backgroundImage:
+            "linear-gradient(168deg, rgba(246,200,53,.10), transparent 52%)",
+        }}
       >
-        <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
-        <span className="relative flex size-11 items-center justify-center rounded-2xl border border-amber-300/50 bg-[linear-gradient(to_bottom,rgba(251,191,36,.28),rgba(251,191,36,.10))]">
-          <CrownIcon className="size-5 text-amber-200" />
+        <span className="relative flex items-start justify-between gap-2">
+          <span className="yn-eyebrow">Premium</span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gold-strong/40 bg-gold-strong/10">
+            <CrownIcon className="size-4 text-gold-strong" />
+          </span>
         </span>
-        <span className="relative text-sm font-extrabold text-amber-50">
-          Premium
-        </span>
-        <span className="relative text-[10px] font-bold text-amber-100/55">
-          Beli Premium Ada Di Sini
+        <span className="relative flex flex-col">
+          <span className="text-base font-black leading-tight tracking-tight">Premium</span>
+          <span className="yn-meta">Beli premium ada di sini</span>
         </span>
       </button>
     </div>
@@ -862,38 +873,30 @@ export function AfinitasPromo({
   const [a, b] = images ?? [];
   return (
     <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(150deg,#241033_0%,#14101f_55%,#0a0a11_100%)]">
-      <span
-        aria-hidden
-        className="absolute -left-10 -top-12 size-44 rounded-full bg-pink-500/30 blur-3xl"
-      />
-      <span
-        aria-hidden
-        className="absolute -bottom-14 -right-8 size-44 rounded-full bg-indigo-500/30 blur-3xl"
-      />
+      <span aria-hidden className="absolute -left-10 -top-12 size-44 rounded-full bg-gold/15 blur-3xl" />
+      <span aria-hidden className="absolute -bottom-14 -right-8 size-44 rounded-full bg-white/[0.06] blur-3xl" />
       {/* Dua kartu KARAKTER miring + hati di tengahnya (sisi kanan). */}
       {(a || b) && (
         <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
           {a && (
-            <div className="relative h-[102px] w-[70px] -rotate-[9deg] overflow-hidden rounded-xl border-2 border-pink-400/60 shadow-[0_10px_24px_-8px_rgba(236,72,153,0.7)]">
+            <div className="relative h-[102px] w-[70px] -rotate-[9deg] overflow-hidden rounded-xl border border-white/20 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.8)]">
               <img src={a} alt="" className="size-full object-cover" />
-              <span className="absolute inset-0 bg-gradient-to-t from-pink-950/60 to-transparent" />
+              <span className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
           )}
           {b && (
-            <div className="relative -ml-6 h-[102px] w-[70px] rotate-[9deg] overflow-hidden rounded-xl border-2 border-indigo-400/60 shadow-[0_10px_24px_-8px_rgba(99,102,241,0.7)]">
+            <div className="relative -ml-6 h-[102px] w-[70px] rotate-[9deg] overflow-hidden rounded-xl border border-white/20 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.8)]">
               <img src={b} alt="" className="size-full object-cover" />
-              <span className="absolute inset-0 bg-gradient-to-t from-indigo-950/60 to-transparent" />
+              <span className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
           )}
-          <span className="absolute left-1/2 top-1/2 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-rose-600/50">
-            <Heart className="size-3.5 fill-white text-white" />
+          <span className="absolute left-1/2 top-1/2 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-black/30 bg-gold-strong text-black">
+            <Heart className="size-3.5 fill-black" />
           </span>
         </div>
       )}
       <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-1 px-4">
-        <span className="w-fit rounded-full border border-pink-400/40 bg-pink-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-pink-200">
-          Afinitas
-        </span>
+        <span className="yn-tag">Afinitas</span>
         <p className="text-[15px] font-black leading-tight text-white">
           Hubungkan akun, naikkan level bonding
         </p>
@@ -902,7 +905,7 @@ export function AfinitasPromo({
         </p>
         <button
           onClick={onOpen}
-          className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-pink-400 to-rose-400 px-3 py-1.5 text-[11px] font-black text-white shadow-lg shadow-pink-600/30 transition active:scale-95"
+          className="yn-btn-warm mt-1.5 flex w-fit items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-black transition active:scale-95"
         >
           Buka Afinitas <ChevronRight className="size-3.5" />
         </button>

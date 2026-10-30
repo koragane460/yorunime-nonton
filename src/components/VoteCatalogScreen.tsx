@@ -60,14 +60,7 @@ export function VoteCatalogScreen({
           konten) buat ganti jenis vote (Waifu ⇄ Husbu). Tiap pilihan juga
           kotaknya masing-masing — tidak digabung jadi satu list. */}
       <div className="relative flex items-center gap-2 pr-1">
-        <h2
-          className={cn(
-            "flex-1 bg-gradient-to-r bg-clip-text text-lg font-black text-transparent",
-            kind === "waifu"
-              ? "from-pink-300 via-fuchsia-300 to-purple-300"
-              : "from-sky-300 via-blue-300 to-indigo-300",
-          )}
-        >
+        <h2 className="yn-sec flex-1 text-lg font-black tracking-tight">
           Vote {kind}
         </h2>
         {/* Tombol ganti jenis vote — menunya muncul dari KANAN + animasi. */}

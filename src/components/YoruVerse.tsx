@@ -43,14 +43,14 @@ import { cn } from "@/lib/utils";
 
 type HubView = null | "clan" | "shop" | "title" | "pet" | "music";
 
-/** Kotak ketupat + gradien lembut per kotak (gaya sama kayak judul baris
- *  "Manga / Manhwa Terbaru & Populer" di Home — bukan neon). */
+/** Kotak ketupat — SATU keluarga warna (emas × kaca), bukan satu kotak
+ *  satu warna pelangi. Identitas tiap kotak datang dari ikon + labelnya. */
 const BOXES = [
-  { key: "clan", label: "Clan", Icon: Shield, grad: "from-violet-400/70 via-fuchsia-300/45 to-pink-400/60" },
-  { key: "shop", label: "Shop", Icon: ShoppingBag, grad: "from-sky-400/70 via-cyan-300/45 to-teal-400/60" },
-  { key: "title", label: "Title", Icon: Award, grad: "from-emerald-400/70 via-lime-300/45 to-yellow-300/60" },
-  { key: "pet", label: "YoruPet", Icon: Bone, grad: "from-rose-400/70 via-red-300/45 to-orange-400/60" },
-  { key: "music", label: "Music", Icon: Music, grad: "from-indigo-400/70 via-purple-300/45 to-fuchsia-400/60" },
+  { key: "clan", label: "Clan", Icon: Shield, grad: "from-gold/28 via-white/[0.07] to-transparent" },
+  { key: "shop", label: "Shop", Icon: ShoppingBag, grad: "from-white/[0.14] via-white/[0.05] to-transparent" },
+  { key: "title", label: "Title", Icon: Award, grad: "from-gold/20 via-white/[0.06] to-transparent" },
+  { key: "pet", label: "YoruPet", Icon: Bone, grad: "from-white/[0.1] via-gold/[0.07] to-transparent" },
+  { key: "music", label: "Music", Icon: Music, grad: "from-gold/14 via-white/[0.05] to-transparent" },
 ] as const;
 
 /** Potongan garis penghubung antar kotak (dihitung dari posisi nyata). */

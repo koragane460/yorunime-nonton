@@ -266,7 +266,7 @@ function AccountPanel({
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-3xl border border-white/15 bg-background/45 shadow-[0_0_28px_-6px] shadow-primary/25 backdrop-blur-xl">
+    <div className="pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-2xl border border-white/12 bg-black/55 shadow-[0_18px_40px_-30px_rgba(0,0,0,1)] backdrop-blur-xl">
       {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
           Keduanya di luar area teks supaya tidak saling nimpa. */}
       <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-2">
@@ -935,20 +935,19 @@ function BottomNav({
         <div className="mx-auto w-full max-w-2xl px-3 lg:max-w-4xl">
           <div
             className={cn(
-              "relative grid grid-cols-6 rounded-[28px] border border-white/15 p-1.5",
-              "bg-white/[0.07] shadow-[0_12px_36px_-14px_rgba(0,0,0,.95)]",
+              "relative grid grid-cols-6 rounded-[24px] border border-white/12 p-1.5",
+              "bg-[oklch(0.135_0.016_266_/_0.9)] shadow-[0_18px_40px_-28px_rgba(0,0,0,1)]",
               "backdrop-blur-2xl backdrop-saturate-150",
             )}
           >
-            {/* Indikator: kotak rounded ke-2 (glassmorphism) — bergerak
-                halus (transition left+width) mengikuti tombol aktif. */}
+            {/* Indikator: kotak rounded ke-2 — kaca beraksen emas tipis
+                (bukan kilau putih), supaya posisi aktif terbaca elegan. */}
             <span
               aria-hidden
               className={cn(
-                "pointer-events-none absolute bottom-1.5 top-1.5 rounded-[22px] border border-white/25",
-                "bg-gradient-to-b from-white/25 via-white/12 to-white/6",
-                "shadow-[inset_0_1px_0_rgba(255,255,255,.4),0_8px_20px_-8px_rgba(255,255,255,.3)]",
-                "backdrop-blur-xl transition-all duration-300 ease-out",
+                "pointer-events-none absolute bottom-1.5 top-1.5 rounded-[19px] border border-gold-strong/40",
+                "bg-gradient-to-b from-gold-strong/22 via-gold-strong/8 to-transparent",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,.22)] backdrop-blur-xl transition-all duration-300 ease-out",
                 activeIdx < 0 && "opacity-0",
               )}
               style={{
@@ -1001,7 +1000,7 @@ function BottomNav({
                 }
                 className={cn(
                   "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-2xl pb-2 pt-2.5 transition-colors duration-200",
-                  active && "text-primary",
+                  active && "text-gold-strong",
                 )}
               >
                 {/* Isi tombol (ikon + label). */}

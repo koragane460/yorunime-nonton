@@ -936,7 +936,7 @@ function RoomScreen({
                 toast.error(e instanceof Error ? e.message : "Gagal join game");
               }
             }}
-            className="shrink-0 rounded-xl bg-gradient-to-b from-fuchsia-300 to-fuchsia-500 px-4 py-2.5 text-xs font-black text-black shadow-lg shadow-fuchsia-600/25 transition active:scale-95"
+            className="shrink-0 rounded-xl bg-gold-strong px-4 py-2.5 text-xs font-black text-black transition hover:brightness-105 active:scale-95"
           >
             Gabung
           </button>
@@ -1680,7 +1680,7 @@ function InviteScreen({
             <div className="mt-1.5 flex items-center gap-2">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/15">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-500"
                   style={{ width: `${pct}%` }}
                 />
               </div>

@@ -20,20 +20,20 @@ const BORDERS = [
 ];
 
 /**
- * FRAME bubble — BUKAN sekadar outline tipis. Tiap frame punya:
- * border luar tebal + GLOW + border DALAM (rangkap dua), jadi kelihatan
- * seperti bingkai sungguhan, bukan garis pinggir doang.
+ * FRAME bubble — bingkai rangkap dua: border luar + cincin tipis + garis
+ * dalam lewat pseudo-element. SEMUA tanpa glow neon (design system v2:
+ * kedalaman datang dari bayangan jatuh, bukan kilau berpendar).
  */
 const FRAME_CLS: Record<string, string> = {
   none: "border border-black/10",
   gold:
-    "border-2 border-amber-300 shadow-[0_0_0_2px_rgba(252,211,77,0.32),0_0_18px_-2px_rgba(251,191,36,0.85)] before:border before:border-amber-100/50",
+    "border-2 border-gold-strong/85 ring-1 ring-gold-strong/30 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)] before:border before:border-gold-soft/60",
   neon:
-    "border-2 border-cyan-300 shadow-[0_0_0_2px_rgba(34,211,238,0.30),0_0_20px_-2px_rgba(34,211,238,0.85)] before:border before:border-cyan-100/50",
+    "border-2 border-cyan-200/75 ring-1 ring-cyan-200/25 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)] before:border before:border-white/40",
   rose:
-    "border-2 border-rose-400 shadow-[0_0_0_2px_rgba(251,113,133,0.30),0_0_20px_-2px_rgba(244,63,94,0.8)] before:border before:border-rose-100/45",
+    "border-2 border-rose-200/75 ring-1 ring-rose-200/25 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)] before:border before:border-white/40",
   galaxy:
-    "border-2 border-violet-400 shadow-[0_0_0_2px_rgba(167,139,250,0.32),0_0_22px_-2px_rgba(139,92,246,0.9)] before:border before:border-fuchsia-100/45",
+    "border-2 border-violet-200/75 ring-1 ring-violet-200/25 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)] before:border before:border-white/40",
 };
 
 /** Lapisan dalam rangkap-dua (dipasang lewat pseudo-element). */

@@ -274,7 +274,7 @@ function HeroSlides({
               a.image
                 ? {
                     backgroundImage:
-                      `linear-gradient(0deg, rgba(2,6,16,.95) 0%, rgba(2,6,16,.62) 48%, rgba(2,6,16,.18) 100%), radial-gradient(120% 70% at 8% -8%, rgba(120,160,255,.22) 0%, rgba(120,160,255,0) 55%), url(${a.image})`,
+                      `linear-gradient(0deg, rgba(4,5,10,.96) 0%, rgba(4,5,10,.64) 48%, rgba(4,5,10,.2) 100%), radial-gradient(120% 70% at 8% -8%, rgba(246,200,53,.16) 0%, rgba(246,200,53,0) 55%), url(${a.image})`,
                     backgroundSize: "100% 100%, 100% 100%, cover",
                     backgroundPosition: "center bottom, left top, center",
                     backgroundRepeat: "no-repeat, no-repeat, no-repeat",
@@ -307,8 +307,8 @@ function HeroSlides({
             </span>
             {/* Kotak hitam MENYATU ke banner: TANPA rounded, background 40%,
                 judul di tengah dengan font tebal. */}
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/40 px-3 py-3.5 backdrop-blur-[2px]">
-              <p className="min-w-0 flex-1 truncate text-center text-base font-black text-white">
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 border-t border-white/10 bg-black/55 px-3 py-3 backdrop-blur-[2px]">
+              <p className="min-w-0 flex-1 truncate text-center text-base font-black tracking-tight text-white">
                 {a.title}
               </p>
             </div>
@@ -1161,7 +1161,7 @@ function HomeContent() {
           lewat kotak search. Kotak lurus (samping hitam) + kolom cari lebih
           besar untuk anime / donghua / film. */}
       {showStickySearch && (
-        <div className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-black/92 px-3 py-2.5 backdrop-blur-xl">
+        <div className="yn-bar fixed inset-x-0 top-0 z-40 border-b border-white/10 px-3 py-2.5">
           <button
             onClick={() => {
               setSearchGenre(null);
@@ -1260,15 +1260,13 @@ function HomeContent() {
             setSearchOpenGenres(false);
             setShowSearch(true);
           }}
-          className="mt-3 flex w-full items-center gap-2 rounded-full border border-border bg-black/55 px-4 py-3.5 text-left backdrop-blur-md"
+          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-left backdrop-blur-md transition hover:border-gold-strong/40 active:scale-[0.99]"
         >
-          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Search className="size-4 shrink-0 text-gold-strong" />
           <span className="flex-1 text-sm text-muted-foreground">
             Cari disini
           </span>
-          <span className="px-3 py-1 text-xs font-bold text-white">
-            Cari
-          </span>
+          <span className="yn-tag">Cari</span>
         </button>
         {/* Tombol "Film & Series" lama DIHAPUS — akses film sekarang lewat
             kategori "Film" (3 baris geser) di bawah baris Manhwa. */}
@@ -1291,16 +1289,14 @@ function HomeContent() {
       {!loading && genreList.length > 0 && (
         <div className="fade-enter mt-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="bg-gradient-to-r from-sky-300 via-teal-200 to-emerald-300 bg-clip-text text-lg font-bold tracking-tight text-transparent">
-              Genre
-            </h2>
+            <h2 className="yn-sec text-lg font-bold tracking-tight">Genre</h2>
             <button
               onClick={() => {
                 setSearchGenre(null);
                 setSearchOpenGenres(true);
                 setShowSearch(true);
               }}
-              className="text-xs font-semibold text-primary"
+              className="text-xs font-bold text-gold-strong"
             >
               Lihat semua ›
             </button>
@@ -2967,30 +2963,34 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
     <>
       {/* Full screen beneran: nutupin navbar + panel akun sampai ke bawah */}
       <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
-        <div className="flex w-full items-center gap-3 px-4 py-3">
-          <button onClick={onClose} className="rounded-full border border-border p-2">
+        <div className="yn-bar flex w-full items-center gap-3 border-b border-white/10 px-4 py-3">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] transition active:scale-95"
+          >
             <ChevronLeft className="size-4" />
           </button>
-          <h1 className="truncate text-lg font-bold">Chat</h1>
+          <div className="min-w-0 flex-1">
+            <span className="yn-eyebrow text-[9px]">Obrolan</span>
+            <h1 className="truncate text-lg font-black tracking-tight">Chat</h1>
+          </div>
         </div>
         {/* Tab dikecualikan dari px-4: KOTAK PESAN (chat/clan/teman) harus
             full ke samping — hanya baris tab yang tetap punya jarak. */}
         <div className="w-full">
           {/* Tab: Chat · Clan · Teman — clan digabung kembali ke chat bareng */}
-          <div className="flex border-b border-border/60 px-4">
+          <div className="flex gap-1.5 px-4 py-2.5">
             {(["chat", "clan", "teman"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={cn(
-                  "relative flex-1 pb-2.5 pt-1 text-sm font-semibold capitalize transition",
-                  tab === t ? "text-foreground" : "text-muted-foreground",
+                  "yn-chip flex-1 justify-center py-2",
+                  tab === t && "yn-chip-on",
                 )}
               >
                 {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
-                {tab === t && (
-                  <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-gradient-to-r from-gold via-amber-300 to-gold shadow-[0_0_10px_2px_oklch(0.86_0.18_88/0.45)]" />
-                )}
               </button>
             ))}
           </div>
@@ -3090,7 +3090,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   clan: buka panduan singkat soal clan (buat/join/donasi). */}
               <button
                 onClick={() => setClanTutorial(true)}
-                className="mt-2 flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-violet-400/35 bg-violet-500/12 py-2.5 text-xs font-black tracking-wide text-violet-100 shadow-[0_0_18px_-8px_rgba(167,139,250,.8)] transition hover:bg-violet-500/20 active:scale-[0.98]"
+                className="mt-2 flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] py-2.5 text-xs font-black tracking-wide text-white/85 transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.98]"
               >
                 <BookOpen className="size-4 text-violet-300" aria-hidden />
                 Tutorial Clan
@@ -3228,17 +3228,18 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="screen-enter w-full max-w-md overflow-hidden rounded-3xl border border-violet-400/35 bg-[linear-gradient(160deg,#170f26_0%,#101018_60%,#0a0a10_100%)] p-5 shadow-[0_24px_60px_-24px_rgba(167,139,250,.65)]"
+            className="screen-enter yn-panel w-full max-w-md overflow-hidden p-5"
           >
             <div className="flex items-center gap-2.5">
-              <span className="flex size-10 items-center justify-center rounded-2xl border border-violet-300/45 bg-violet-500/20 shadow-[0_0_18px_-5px_rgba(167,139,250,.8)]">
-                <BookOpen className="size-5 text-violet-200" aria-hidden />
+              <span className="flex size-10 items-center justify-center rounded-xl border border-gold-strong/40 bg-gold-strong/12">
+                <BookOpen className="size-5 text-gold-strong" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-base font-black text-white [text-shadow:0_0_14px_rgba(167,139,250,.5)]">
+                <span className="yn-eyebrow text-[9px]">Clan</span>
+                <p className="text-base font-black text-white">
                   Tutorial Clan
                 </p>
-                <p className="text-[11px] text-violet-200/70">
+                <p className="text-[11px] text-white/55">
                   Panduan singkat biar cepat paham
                 </p>
               </div>
@@ -3271,7 +3272,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                 },
               ].map((s, i) => (
                 <li key={s.t} className="flex gap-3">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-violet-300/50 bg-violet-500/20 text-[11px] font-black text-violet-100">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-[11px] font-black text-white/80">
                     {i + 1}
                   </span>
                   <div className="min-w-0">
@@ -3288,7 +3289,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                 onClose();
                 navigate("/clan");
               }}
-              className="mt-4 w-full rounded-2xl border border-violet-300/45 bg-[linear-gradient(to_bottom,rgba(167,139,250,.30),rgba(167,139,250,.12))] py-3 text-sm font-black text-violet-50 shadow-[0_0_20px_-6px_rgba(167,139,250,.9)] transition active:scale-[0.98]"
+              className="mt-4 w-full rounded-2xl border border-gold-strong/45 bg-gold-strong/15 py-3 text-sm font-black text-gold transition hover:bg-gold-strong/25 active:scale-[0.98]"
             >
               Buka halaman Clan
             </button>
@@ -3770,7 +3771,7 @@ function AnimeDetailScreen({
             </button>
             <button
               aria-label="Favorite"
-              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-bold text-rose-100 transition hover:from-rose-500/30 hover:via-primary/25 hover:to-pink-500/25 active:scale-[0.98]"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.05] px-4 text-sm font-bold text-white transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.98]"
               onClick={async () => {
                 if (!user) return;
                 const r = await toggleFav({
@@ -4768,7 +4769,7 @@ function DonghuaDetailScreen({
             </button>
             <button
               aria-label="Favorite"
-              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-bold text-rose-100 transition hover:from-rose-500/30 hover:via-primary/25 hover:to-pink-500/25 active:scale-[0.98]"
+              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.05] px-4 text-sm font-bold text-white transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.98]"
               onClick={async () => {
                 if (!user) return;
                 const r = await toggleFav({

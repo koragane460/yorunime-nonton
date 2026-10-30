@@ -270,7 +270,7 @@ export function ProfileSheet({
                     type="button"
                     onClick={() => setPhotoSheet(true)}
                     aria-label="Ganti photo profile"
-                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-gradient-to-br from-sky-300 to-sky-500 text-sky-950 shadow-[0_4px_12px_-4px_rgba(56,189,248,0.55)] transition active:scale-90"
+                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-gold-strong text-black shadow-[0_4px_12px_-4px_rgba(0,0,0,0.6)] transition active:scale-90"
                   >
                     <Camera className="size-3.5" aria-hidden />
                   </button>
@@ -409,7 +409,7 @@ export function ProfileSheet({
               </div>
               <div className="h-3.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/25">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-700"
+                  className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-700"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -622,7 +622,7 @@ export function ProfileSheet({
                         "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
                         c.kind === "manhwa"
                           ? "bg-rose-600 text-white"
-                          : "bg-sky-600 text-white",
+                          : "bg-primary text-primary-foreground",
                       )}
                     >
                       {c.kind}
@@ -686,7 +686,7 @@ export function ProfileSheet({
                         "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
                         f.kind === "manhwa"
                           ? "bg-rose-600 text-white"
-                          : "bg-sky-600 text-white",
+                          : "bg-primary text-primary-foreground",
                       )}
                     >
                       {f.kind}
@@ -845,10 +845,10 @@ export function ProfileSheet({
                 type="button"
                 onClick={() => photoFileRef.current?.click()}
                 disabled={busyPhoto || busyRefresh}
-                className="flex w-full items-center gap-3 rounded-2xl border border-sky-400/25 bg-sky-400/[0.08] px-3.5 py-3 text-left transition hover:bg-sky-400/[0.14] active:scale-[0.99] disabled:opacity-50"
+                className="flex w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3.5 py-3 text-left transition hover:border-gold-strong/40 hover:bg-gold-strong/10 active:scale-[0.99] disabled:opacity-50"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-400/20">
-                  <Camera className="size-4 text-sky-300" aria-hidden />
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gold-strong/15">
+                  <Camera className="size-4 text-gold-strong" aria-hidden />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-bold text-foreground">

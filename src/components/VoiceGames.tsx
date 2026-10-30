@@ -161,15 +161,15 @@ function GameMenu({
         {/* ---- Strip statistik ---- */}
         <div className="mt-4 grid grid-cols-3 gap-2">
           {[
-            { k: "3", l: "Pilihan game", c: "text-amber-300" },
-            { k: "100%", l: "Validasi server", c: "text-emerald-300" },
-            { k: "Gratis", l: "Buat room", c: "text-sky-300" },
+            { k: "3", l: "Pilihan game" },
+            { k: "100%", l: "Validasi server" },
+            { k: "Gratis", l: "Buat room" },
           ].map((s) => (
             <div
               key={s.l}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-2 py-2 text-center"
+              className="yn-panel-flat px-2 py-2.5 text-center"
             >
-              <p className={cn("text-sm font-black", s.c)}>{s.k}</p>
+              <p className="yn-num text-sm font-black text-white">{s.k}</p>
               <p className="mt-0.5 text-[9px] font-bold leading-tight text-white/50">
                 {s.l}
               </p>

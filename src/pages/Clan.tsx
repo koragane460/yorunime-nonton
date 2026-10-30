@@ -377,7 +377,7 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
         {/* KOTAK HERO — ikon clan di tengah + tulisan di bawahnya.
             Hanya untuk yang BELUM punya clan. */}
         {!ownClan && (
-        <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-gradient-to-b from-violet-500/20 via-white/[0.04] to-transparent px-4 py-7 text-center">
+        <div className="flex flex-col items-center rounded-3xl border border-gold/30 bg-gradient-to-b from-gold/[0.14] via-white/[0.04] to-transparent px-4 py-7 text-center">
           <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
             <Shield className="size-8 text-violet-300" aria-hidden />
           </span>
@@ -1367,7 +1367,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
         <div className="space-y-4">
           {/* ===== KOTAK PREVIEW — kartu ungu + aksen sudut emas ===== */}
-          <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3 shadow-[0_18px_40px_-24px_rgba(168,85,247,0.6)]">
+          <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-3 shadow-[0_18px_40px_-24px_rgba(168,85,247,0.6)]">
             <GoldCorners />
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
               — PREVIEW —
@@ -1415,7 +1415,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               emas, persis gaya referensi. ===== */}
           <div className="grid grid-cols-2 gap-2.5">
             {/* KIRI — photo profile + nama clan */}
-            <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
+            <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-3">
               <GoldCorners />
               <p className="text-center text-[11px] font-black text-white/85">
                 Ganti photo profile
@@ -1426,7 +1426,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               >
                 <span
                   aria-hidden
-                  className="absolute inset-0 rounded-2xl bg-[linear-gradient(160deg,#fbbf24,#f472b6_50%,#818cf8)]"
+                  className="absolute inset-0 rounded-2xl bg-[linear-gradient(160deg,#fbbf24,#f59e0b_50%,#d97706)]"
                 />
                 <span className="absolute inset-[3px] overflow-hidden rounded-[13px] bg-[#241640]">
                   {avatarUrl.trim() ? (
@@ -1506,7 +1506,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </div>
 
             {/* KANAN — tag clan + pilihan warna background tag */}
-            <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] p-3">
+            <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-3">
               <GoldCorners />
               <p className="text-center text-[11px] font-black text-white/85">
                 Isi tag clan
@@ -1558,7 +1558,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           </div>
 
           {/* ===== KOTAK ICON TAG CLAN ===== */}
-          <div className="relative overflow-hidden rounded-[6px] border border-violet-400/25 bg-gradient-to-b from-[#1b1133] to-[#110b22] px-3 pb-3 pt-3">
+          <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] px-3 pb-3 pt-3">
             <GoldCorners />
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
               — ICON TAG CLAN —
@@ -1607,7 +1607,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </button>
             <button
               onClick={onDone}
-              className="rounded-xl border border-violet-300/30 bg-white/[0.05] py-3 text-sm font-black text-violet-100/85 transition hover:bg-white/10 active:scale-[0.98]"
+              className="rounded-xl border border-white/15 bg-white/[0.05] py-3 text-sm font-black text-white/85 transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.98]"
             >
               Batal
             </button>

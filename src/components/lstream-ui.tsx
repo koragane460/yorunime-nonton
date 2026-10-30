@@ -72,9 +72,13 @@ export function clanTierClass(level?: number) {
   return clanTextClass(level);
 }
 
+/** Judul seksi — SEMUA layar pakai perangkat yang sama: batang emas
+ *  vertikal + judul tegas (design system v2, gaya editorial). */
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2 mt-5 text-[15px] font-bold">{children}</h2>
+    <h2 className="yn-sec mb-2 mt-5 text-[15px] font-bold tracking-tight">
+      {children}
+    </h2>
   );
 }
 
