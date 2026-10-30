@@ -78,7 +78,7 @@ type Post = {
 function CaptionBlock({ p }: { p: Post }) {
   return (
     <div className="pointer-events-auto absolute bottom-0 left-0 right-16 z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-5 pt-16">
-      <p className="text-[22px] font-black leading-tight text-white drop-shadow">
+      <p className="text-[1.35rem] font-black leading-tight text-white drop-shadow">
         {p.username}
       </p>
       {p.caption && (

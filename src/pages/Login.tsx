@@ -206,7 +206,7 @@ export default function Login() {
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/20 ring-1 ring-white/15">
           <img src="/logo-source.jpg" alt="YoruNime" className="size-10 rounded-xl object-cover" />
         </div>
-        <h1 className="mt-6 w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(2.25rem,10vw,4rem)] font-black leading-[0.9] tracking-[-0.03em] text-transparent">
+        <h1          className="mt-6 w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(1.8rem,5.5vw,3.2rem)] font-black leading-[0.92] tracking-[-0.03em] text-transparent">
           YoruNime
         </h1>
         <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-widest text-zinc-400">

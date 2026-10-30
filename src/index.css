@@ -100,10 +100,19 @@
   #root {
     font-family: var(--font-sans);
   }
-  /* Teks seluruh aplikasi sedikit lebih kecil dari bawaan (16px -> 15px)
-     supaya layout terasa lebih padat dan enak dibaca di HP. */
+  /* SKALA SELURUH APLIKASI.
+     Semua ukuran Tailwind pakai rem (teks, padding, gap, radius, ikon),
+     jadi mengubah font-size html di sini mengecilkan SEMUA layar sekaligus
+     — bukan cuma nobar. */
   html {
-    font-size: 15px;
+    font-size: 14px;
+  }
+  /* Layar LANDSCAPE (HP dimiringkan / desktop / tablet): skala lebih kecil
+     lagi biar konten tidak terasa membengkak saat ruang tingginya sempit. */
+  @media (orientation: landscape) {
+    html {
+      font-size: 13px;
+    }
   }
   body {
     line-height: 1.45;
@@ -1348,7 +1357,8 @@ a {
   font-weight: 900;
   letter-spacing: -0.035em;
   line-height: 1.02;
-  font-size: clamp(1.9rem, 7vw, 3.1rem);
+  /* 7vw bikin judul meledak di layar lebar — dibatasi ketat. */
+  font-size: clamp(1.5rem, 4.2vw, 2.5rem);
 }
 .yn-lede {
   font-size: 0.9rem;

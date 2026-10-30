@@ -2621,7 +2621,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
               />
               YoruNime Search
             </p>
-            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text text-[26px] font-black leading-tight tracking-tight text-transparent">
+            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text text-[1.6rem] font-black leading-tight tracking-tight text-transparent">
               Cari anime &amp; donghua
             </h1>
           </div>

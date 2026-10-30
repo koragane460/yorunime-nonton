@@ -567,7 +567,7 @@ function WelcomeFlow() {
           // belum mendaftarkan font family custom, pakai fallback yang
           // halus dan monospace yang jelas: TTF Cryptic menghasilkan
           // huruf yang lurus & kaku (serif + digit bergaris tebal).
-          className="w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(2.25rem,10vw,4.5rem)] font-black leading-[0.9] tracking-[-0.03em] text-transparent"
+          className="w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(1.9rem,6vw,3.4rem)] font-black leading-[0.92] tracking-[-0.03em] text-transparent"
           initial={{ opacity: 0, y: 10, filter: "blur(14px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.9, ease: "easeOut" }}

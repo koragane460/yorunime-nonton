@@ -201,7 +201,7 @@ export function YoruVerseScreen({ onClose }: { onClose: () => void }) {
                   kecil — elegan, TANPA neon (tema YoruNime tidak neon). */}
               <div className="mt-6 flex items-center justify-center gap-3">
                 <span aria-hidden className="h-px w-16 bg-gradient-to-r from-transparent to-gold/70" />
-                <h1 className="bg-gradient-to-b from-amber-100 via-gold to-amber-600 bg-clip-text text-center text-[26px] font-black tracking-[0.3em] text-transparent drop-shadow-[0_2px_3px_rgba(0,0,0,.85)]">
+                <h1 className="bg-gradient-to-b from-amber-100 via-gold to-amber-600 bg-clip-text text-center text-[1.55rem] font-black tracking-[0.24em] text-transparent drop-shadow-[0_2px_3px_rgba(0,0,0,.85)]">
                   YORUVERSE
                 </h1>
                 <span aria-hidden className="h-px w-16 bg-gradient-to-l from-transparent to-gold/70" />
