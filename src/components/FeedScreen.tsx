@@ -78,7 +78,7 @@ type Post = {
 function CaptionBlock({ p }: { p: Post }) {
   return (
     <div className="pointer-events-auto absolute bottom-0 left-0 right-16 z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-5 pt-16">
-      <p className="text-[1.35rem] font-black leading-tight text-white drop-shadow">
+      <p className="yn-title text-[1.35rem] leading-tight text-white drop-shadow">
         {p.username}
       </p>
       {p.caption && (
@@ -355,7 +355,7 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
           <div className="mb-2 flex items-center gap-2">
             <span aria-hidden className="mx-auto block h-1 w-10 rounded-full bg-white/25" />
           </div>
-          <p className="mb-2 shrink-0 text-center text-sm font-black text-white">
+          <p className="mb-2 shrink-0 text-center text-sm text-white yn-title">
             Komentar
           </p>
           <div className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto pb-2 pt-1">
@@ -474,7 +474,7 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
         className="rounded-t-3xl border-t border-white/15 bg-[#10131a] p-4 pb-6"
       >
         <span aria-hidden className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/25" />
-        <p className="mb-3 text-center text-sm font-black text-white">Bagikan ke</p>
+        <p className="mb-3 text-center text-sm text-white yn-title">Bagikan ke</p>
 
         {/* Teman — geser ke kanan */}
         <div className="thin-scroll -mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
@@ -906,7 +906,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
       >
         <span aria-hidden className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/25" />
         <div className="mb-3 flex items-center gap-2">
-          <p className="flex-1 text-sm font-black text-white">
+          <p className="flex-1 text-sm text-white yn-title">
             {step === "pick"
               ? "Buat konten"
               : step === "edit"
@@ -1258,7 +1258,7 @@ export function FeedScreen() {
         >
           <ChevronLeft className="size-6" />
         </button>
-        <p className="flex-1 text-lg font-black text-white drop-shadow">Feed</p>
+        <p className="flex-1 text-lg text-white drop-shadow yn-title">Feed</p>
         <button
           onClick={() => setCreating(true)}
           aria-label="Buat konten"

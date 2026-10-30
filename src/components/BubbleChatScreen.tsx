@@ -114,7 +114,7 @@ export function BubbleChatScreen() {
         <span className="flex size-16 items-center justify-center rounded-full bg-amber-400/15 ring-1 ring-amber-400/30">
           <Lock className="size-7 text-amber-300" />
         </span>
-        <p className="mt-5 text-lg font-extrabold text-white">
+        <p className="mt-5 text-lg text-white yn-title">
           Bubble Chat hanya untuk premium user
         </p>
         <p className="mt-2 max-w-xs text-sm text-white/55">
@@ -160,7 +160,7 @@ export function BubbleChatScreen() {
 
       {/* Warna bubble. */}
       <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4">
-        <p className="mb-3 text-sm font-extrabold">Warna Bubble</p>
+        <p className="mb-3 text-sm yn-sec">Warna Bubble</p>
         <div className="flex flex-wrap gap-2.5">
           {COLORS.map((c) => (
             <button
@@ -181,7 +181,7 @@ export function BubbleChatScreen() {
 
       {/* Background PNG (URL). */}
       <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4">
-        <p className="mb-1 text-sm font-extrabold">Background (PNG)</p>
+        <p className="mb-1 text-sm yn-sec">Background (PNG)</p>
         <p className="mb-3 text-[11px] text-white/45">
           Tempel link gambar PNG — preview langsung berubah. GIF tidak didukung.
         </p>
@@ -203,7 +203,7 @@ export function BubbleChatScreen() {
 
       {/* Frame / border. */}
       <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4">
-        <p className="mb-3 text-sm font-extrabold">Frame / Border</p>
+        <p className="mb-3 text-sm yn-sec">Frame / Border</p>
         <div className="flex flex-wrap gap-2">
           {BORDERS.map((b) => (
             <button
@@ -242,7 +242,7 @@ export function BubbleChatScreen() {
       <button
         onClick={() => void save()}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 py-3 text-sm font-extrabold text-black transition active:scale-[0.98] disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-strong py-3 text-sm font-extrabold text-black transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
       >
         <MessageCircle className="size-4" />
         {busy ? "Menyimpan…" : "Simpan Bubble"}

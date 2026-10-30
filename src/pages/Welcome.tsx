@@ -712,7 +712,7 @@ function WelcomeFlow() {
               >
                     <div className="flex min-h-[64vh] flex-col items-center justify-center text-center">
                       <h1
-                        className="text-6xl font-black leading-none tracking-tight"
+                        className="text-6xl font-black leading-none tracking-tight yn-title"
                         style={{
                           // Huruf "putus-putus": gradasi garis horizontal
                           // yang memotong teks (background-clip: text).
@@ -743,7 +743,7 @@ function WelcomeFlow() {
 
                     {/* -------- Disclaimer — bagian kedua, di-scroll vertikal -------- */}
                     <div className="pt-10">
-                    <h2 className="text-4xl font-black leading-none tracking-tight">
+                    <h2 className="text-4xl leading-none tracking-tight yn-title">
                       Disclaimer
                     </h2>
                     <p className="mt-3 max-w-md text-[12px] leading-relaxed text-muted-foreground">
@@ -847,7 +847,7 @@ function WelcomeFlow() {
                   className="relative size-16 rounded-2xl object-cover ring-1 ring-white/15"
                 />
               </motion.div>
-              <h2 className="mt-5 bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text text-xl font-black tracking-wide text-transparent">
+              <h2 className="mt-5 bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text text-xl text-transparent yn-title">
                 YoruNime
               </h2>
               <p className="mt-2 max-w-xs text-center text-[11px] font-bold uppercase leading-relaxed tracking-wider text-zinc-300">

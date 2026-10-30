@@ -1198,26 +1198,40 @@ a {
     0 12px 26px -20px oklch(0.56 0.155 14 / 0.95);
 }
 
-/* 6) JUDUL SEKSI — bar emas vertikal + glow di kiri judul (Home & turunan)
-      supaya setiap bagian punya aksen yang sama dan mahal. */
+/* 6) JUDUL SEKSI — blok emas solid di kiri + bobot penuh. Sengaja TANPA
+      glow (editorial, bukan neon) supaya semua judul di seluruh app terbaca
+      sebagai satu keluarga tipografi. */
 .yn-sec {
   position: relative;
-  padding-left: 0.8rem;
+  padding-left: 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 .yn-sec::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 0.16em;
-  bottom: 0.16em;
-  width: 4px;
-  border-radius: 999px;
+  top: 0.1em;
+  bottom: 0.1em;
+  width: 5px;
+  border-radius: 2px;
   background: linear-gradient(
     180deg,
-    oklch(0.86 0.16 92),
-    oklch(0.62 0.19 18)
+    oklch(0.9 0.16 92),
+    oklch(0.66 0.19 18)
   );
-  box-shadow: 0 0 10px -2px oklch(0.86 0.16 92 / 0.85);
+}
+
+/* Judul LAYAR (top bar, hero kecil, judul modal) — sama kuatnya dengan
+   judul seksi, tapi tanpa blok emas. Ukuran tetap dari utility (text-*),
+   supaya tinggal tulis `yn-title` dan semua layar otomatis konsisten. */
+.yn-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 /* 7) Garis rambut emas opsional untuk panel premium (dipakai layar pilihan). */

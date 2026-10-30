@@ -216,7 +216,7 @@ export default function Login() {
 
       {/* Kartu login utama. */}
       <div className="relative z-10 mt-10 w-full max-w-[26rem] rounded-3xl border border-white/10 bg-background/70 p-6 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl">
-        <h2 className="text-center text-4xl font-black leading-none tracking-tight text-foreground">
+        <h2 className="text-center text-4xl leading-none tracking-tight text-foreground yn-title">
           Login
         </h2>
         <p className="mt-2 text-center text-xs leading-relaxed text-muted-foreground">

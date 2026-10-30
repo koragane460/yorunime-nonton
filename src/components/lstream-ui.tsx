@@ -76,7 +76,7 @@ export function clanTierClass(level?: number) {
  *  vertikal + judul tegas (design system v2, gaya editorial). */
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="yn-sec mb-2 mt-5 text-[15px] font-bold tracking-tight">
+    <h2 className="yn-sec mb-2.5 mt-6 text-[1.05rem]">
       {children}
     </h2>
   );

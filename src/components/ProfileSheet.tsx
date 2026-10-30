@@ -281,7 +281,7 @@ export function ProfileSheet({
                   <p
                     key={profile.username}
                     className={cn(
-                      "truncate text-xl font-black tracking-wide",
+                      "truncate text-xl yn-title",
                       usernameColor(profile.username),
                     )}
                   >
@@ -1306,7 +1306,7 @@ function ProfileIntro({
         >
           {ravens ? "Gagak melintas…" : "Awan berarak…"}
         </p>
-        <p className="mt-2 text-2xl font-black tracking-tight text-white">
+        <p className="mt-2 text-2xl tracking-tight text-white yn-title">
           Membuka profil
         </p>
         <p className="mt-1 text-[11px] font-semibold text-white/55">

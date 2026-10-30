@@ -275,7 +275,7 @@ export function LeaderboardScreen({
       <div className="w-full p-3">
         <div className="mb-3 mt-3 flex items-center gap-2">
           <StripBack onClose={onClose} />
-          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">
+          <h1 className="min-w-0 flex-1 truncate text-lg yn-title">
             Leaderboard
           </h1>
           <Crown className="size-5 shrink-0 text-yellow-300" aria-hidden />

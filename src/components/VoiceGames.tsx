@@ -137,7 +137,7 @@ function GameMenu({
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gold/80">
               YoruNime Party
             </p>
-            <h1 className="bg-gradient-to-r from-white via-white to-white/55 bg-clip-text text-2xl font-black tracking-tight text-transparent">
+            <h1 className="bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-2xl text-transparent">
               Game Room
             </h1>
           </div>
@@ -409,7 +409,7 @@ function GameCard({
 
       {/* Judul + jumlah pemain terpilih. */}
       <div className="relative mt-2.5 flex items-baseline justify-between gap-2">
-        <p className="text-lg font-black tracking-tight text-white">{title}</p>
+        <p className="text-lg tracking-tight text-white yn-title">{title}</p>
         <span className="shrink-0 text-[10px] font-bold text-white/40">
           {seats} pemain
         </span>
@@ -598,8 +598,7 @@ function LobbyView({
         <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
         <p className="text-[10px] font-black uppercase tracking-[0.34em] text-amber-300/85">
           Menunggu Pemain
-        </p>
-        <p className="mt-1.5 bg-gradient-to-r from-amber-200 via-white to-amber-200 bg-clip-text text-xl font-black text-transparent">
+        </p>          <p className="mt-1.5 bg-gradient-to-r from-amber-200 via-white to-amber-200 bg-clip-text text-xl yn-title text-transparent">
           {s.players.length}
           <span className="text-white/50"> / {s.seats} kursi terisi</span>
         </p>

@@ -378,7 +378,7 @@ function SectionRow({
   return (
     <>
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="yn-sec text-lg font-bold tracking-tight">{title}</h2>
+        <h2 className="yn-sec text-lg">{title}</h2>
         {count > shown && (
           /* Pill halus (bukan link polos) — aksen keemasan tipis biar rapi. */
           <button
@@ -439,7 +439,7 @@ function ComicHomeRow({
       <div className="mb-2 flex items-center justify-between">
         {/* Judul baris TANPA warna gradasi (permintaan: tulisan
             "…Terbaru & Populer" polos). */}
-        <h2 className="yn-sec text-lg font-bold tracking-tight">{title}</h2>
+        <h2 className="yn-sec text-lg">{title}</h2>
         <button
           onClick={onMore}
           className="shrink-0 text-xs font-semibold text-primary"
@@ -554,7 +554,7 @@ function FilmPosterRow({
     <div className={cn("fade-enter", hideHeader ? "mt-3" : "mt-4")}>
       {!hideHeader && (
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="yn-sec flex items-center gap-1.5 text-lg font-bold tracking-tight">
+          <h2 className="yn-sec flex items-center gap-1.5 text-lg">
             <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
             {title}
           </h2>
@@ -716,7 +716,7 @@ function FilmHomeSection() {
     <div className="fade-enter mt-4">
       {/* SATU judul kategori — 3 baris di bawahnya tanpa judul masing-masing. */}
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+        <h2 className="yn-sec flex items-center gap-1.5 text-lg">
           <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
           Film &amp; Series
         </h2>
@@ -1289,7 +1289,7 @@ function HomeContent() {
       {!loading && genreList.length > 0 && (
         <div className="fade-enter mt-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="yn-sec text-lg font-bold tracking-tight">Genre</h2>
+            <h2 className="yn-sec text-lg">Genre</h2>
             <button
               onClick={() => {
                 setSearchGenre(null);
@@ -2614,14 +2614,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             <ChevronLeft className="size-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-gold-strong/85">
-              <span
-                aria-hidden
-                className="inline-block h-2.5 w-[3px] rounded-full bg-gradient-to-b from-gold-strong to-gold-strong/0"
-              />
-              YoruNime Search
-            </p>
-            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text text-[1.6rem] font-black leading-tight tracking-tight text-transparent">
+            <p className="yn-eyebrow text-[10px]">YoruNime Search</p>
+            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-[1.6rem] leading-tight text-transparent">
               Cari anime &amp; donghua
             </h1>
           </div>
@@ -2973,7 +2967,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </button>
           <div className="min-w-0 flex-1">
             <span className="yn-eyebrow text-[9px]">Obrolan</span>
-            <h1 className="truncate text-lg font-black tracking-tight">Chat</h1>
+            <h1 className="yn-title truncate text-lg">Chat</h1>
           </div>
         </div>
         {/* Tab dikecualikan dari px-4: KOTAK PESAN (chat/clan/teman) harus
@@ -3626,7 +3620,7 @@ function AnimeDetailScreen({
               poster di samping judul), tapi gambarnya tetap tampil penuh
               sebagai banner di atas. */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
-            <h2 className="text-2xl font-black leading-tight tracking-tight text-white yn-outline">
+            <h2 className="yn-title text-2xl leading-tight text-white yn-outline">
               {detail.title}
             </h2>
             {/* Judul terjemahan Inggris — teks kecil di bawah judul asli. */}
@@ -4005,8 +3999,8 @@ function AnimeDetailScreen({
           <div className="mt-5">
             {/* Baris judul + kontrol: Grid dan Urut */}
             <div className="flex items-center gap-2">
-              <h2 className="flex-1 text-lg font-bold text-white">
-                Episode <span className="text-white/50">({eps.length})</span>
+              <h2 className="yn-sec flex-1 text-lg text-white">
+                Episode <span className="font-semibold text-white/50">({eps.length})</span>
               </h2>
               <button
                 onClick={() => setEpisodeGrid((v) => !v)}
@@ -4183,7 +4177,7 @@ function AnimeDetailScreen({
           {/* Yang serupa — tampil di tab Info, geser ke kanan */}
           {detailTab === "info" && similar.length > 0 && (
             <div className="mt-6">
-              <h2 className="mb-2 text-lg font-bold text-white">Yang serupa</h2>
+              <h2 className="yn-sec mb-2 text-lg text-white">Yang serupa</h2>
               <div className="thin-scroll -mx-1 grid auto-cols-[104px] grid-flow-col grid-rows-2 gap-x-2.5 gap-y-3 overflow-x-auto px-1 pb-1">
                 {similar.map((s) => (
                   <button
@@ -4442,7 +4436,7 @@ function CuplikanPanel({
     <div className="mt-4">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-bold text-white">Cuplikan {selected.name}</h2>
+          <h2 className="yn-title truncate text-lg text-white">Cuplikan {selected.name}</h2>
           <p className="text-[11px] text-muted-foreground">Klip pendek dari TikTok</p>
         </div>
         <button
@@ -4710,7 +4704,7 @@ function DonghuaDetailScreen({
           </div>
           {/* Judul lurus di bawah banner (bukan poster di samping). */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
-            <h2 className="yn-outline text-2xl font-black leading-tight tracking-tight text-white">
+            <h2 className="yn-outline yn-title text-2xl leading-tight text-white">
               {detail.title}
             </h2>
             <p className="mt-1.5 text-[11px] font-medium text-white/85">
@@ -4820,8 +4814,8 @@ function DonghuaDetailScreen({
           <div className="mt-5">
             {/* Judul + kontrol: Grid/List dan Urut */}
             <div className="flex items-center gap-2">
-              <h2 className="flex-1 text-lg font-bold text-white">
-                Episode <span className="text-white/50">({total})</span>
+              <h2 className="yn-sec flex-1 text-lg text-white">
+                Episode <span className="font-semibold text-white/50">({total})</span>
               </h2>
               <button
                 onClick={() => setEpGrid((v) => !v)}

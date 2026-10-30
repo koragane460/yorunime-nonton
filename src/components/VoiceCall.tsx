@@ -215,7 +215,7 @@ function VoiceHomeScreen({
               />
             ))}
           </span>
-          <h1 className="relative mt-3 bg-gradient-to-r from-emerald-200 via-white to-teal-200 bg-clip-text text-xl font-black tracking-tight text-transparent">
+          <h1 className="relative mt-3 yn-title text-xl text-white">
             YoruNime Voice Call Room
           </h1>
           <div className="relative mt-1.5 flex items-center justify-center gap-2 text-[11px]">
@@ -291,7 +291,7 @@ function VoiceHomeScreen({
                       <m.Icon className="size-7" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-lg font-black tracking-tight">{r.name}</p>
+                      <p className="truncate text-lg tracking-tight yn-title">{r.name}</p>
                       <p className="truncate text-[11px] font-bold text-white/55">{m.label}</p>
                     </div>
                     <button
@@ -418,7 +418,7 @@ function CreateRoomScreen({
               className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-[#0a0d12] bg-emerald-400"
             />
           </span>
-          <h1 className="mt-3 text-2xl font-black tracking-tight text-white">
+          <h1 className="mt-3 text-2xl tracking-tight text-white yn-title">
             Buat{" "}
             <span className="text-emerald-300">
               Voice Room
@@ -1618,7 +1618,7 @@ function InviteScreen({
           <span className="relative flex size-14 items-center justify-center rounded-full border border-gold/45 bg-[linear-gradient(to_bottom,rgba(251,191,36,.22),rgba(251,191,36,.06))]">
             <UserPlus className="size-6 text-gold" />
           </span>
-          <h1 className="mt-2.5 text-lg font-black tracking-tight">
+          <h1 className="mt-2.5 text-lg tracking-tight yn-title">
             Invite Private Room
           </h1>
           <p className="mt-0.5 text-[11px] font-bold text-gold/75">

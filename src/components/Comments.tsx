@@ -178,7 +178,7 @@ function ReplySheet({
       />
       <div className="pop-enter relative w-full max-h-[75vh] overflow-hidden rounded-t-2xl border-t border-white/15 bg-card shadow-2xl">
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-          <p className="text-sm font-bold">Balas {target.username}</p>
+          <p className="yn-title text-sm">Balas {target.username}</p>
           <button
             onClick={onClose}
             aria-label="Tutup"

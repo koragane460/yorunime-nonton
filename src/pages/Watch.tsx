@@ -2937,7 +2937,7 @@ function WatchContent() {
             className="aspect-[2/3] w-16 shrink-0 self-start rounded-lg object-cover"
           />
           <div className="min-w-0 flex-1">
-            <h1 className="line-clamp-2 text-base font-bold">{D.title}</h1>
+            <h1 className="yn-title line-clamp-2 text-base">{D.title}</h1>
             <p className={cn("mt-1 text-xs leading-5 text-zinc-400", !synopsisOpen && "line-clamp-3")}>
               {D.synopsisId ?? D.synopsis}
             </p>
@@ -2954,7 +2954,7 @@ function WatchContent() {
         {(isHost || !room) && (
           <>
             <div className="mb-2 mt-4 flex items-center justify-between">
-              <h2 className="text-base font-bold">Episode</h2>
+              <h2 className="yn-sec text-base">Episode</h2>
               <span className="text-xs text-muted-foreground">{epList.length} episode</span>
             </div>
             {epList.length === 0 && (
@@ -3505,7 +3505,7 @@ function ReportScreen({
             <Flag className="size-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-base font-black">Laporkan anime</p>
+            <p className="yn-title text-base">Laporkan anime</p>
             <p className="text-[11px] text-muted-foreground">
               Masuk ke notifikasi developer untuk ditinjau
             </p>
@@ -3525,7 +3525,7 @@ function ReportScreen({
             <span className="flex size-16 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/40">
               <Check className="size-8 text-emerald-300" />
             </span>
-            <p className="mt-4 text-lg font-black">Laporan terkirim</p>
+            <p className="yn-title mt-4 text-lg">Laporan terkirim</p>
             <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
               {animeTitle} sudah kami terima. Tim developer akan meninjau
               laporanmu lewat notifikasi.

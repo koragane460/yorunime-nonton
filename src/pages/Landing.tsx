@@ -76,7 +76,7 @@ export default function Landing() {
             onClick={() => navigate("/")}
             className="flex items-center gap-2.5 group"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-300 text-xl font-black text-[#0a0a0c]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-strong text-xl font-black text-[#0a0a0c]">
               Y
             </span>
             <span className="text-lg font-black tracking-tight text-white">
@@ -94,7 +94,7 @@ export default function Landing() {
 
           <Button
             onClick={() => navigate("/auth?returnTo=/home")}
-            className="rounded-full bg-amber-300 px-5 py-2 font-bold text-[#0a0a0c] transition hover:bg-amber-200"
+            className="rounded-full bg-gold-strong px-5 py-2 font-bold text-[#0a0a0c] transition hover:brightness-105"
           >
             Masuk
           </Button>
@@ -211,7 +211,7 @@ export default function Landing() {
               <Users className="h-3.5 w-3.5" />
               Cariin fitur buat kamu
             </span>
-            <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
+            <h2 className="mt-4 text-3xl tracking-tight text-white sm:text-4xl yn-title">
               Sekaligus <span className="text-amber-300">streaming</span>, social, dan game.
             </h2>
           </div>
@@ -229,7 +229,7 @@ export default function Landing() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-300/15 text-amber-300">
                   <s.icon className="h-6 w-6" />
                 </div>
-                <h3 className="mt-5 text-lg font-black text-white">{s.title}</h3>
+                <h3 className="mt-5 text-lg text-white yn-title">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{s.desc}</p>
                 <ul className="mt-4 space-y-2.5">
                   {s.items.map((item) => (
@@ -241,7 +241,7 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <button className="mt-4 text-sm font-semibold text-amber-300 transition group-hover:text-amber-200">
+                <button className="mt-4 text-sm font-semibold text-gold transition group-hover:text-gold-strong">
                   Pelajari selengkapnya <ChevronRight className="ml-1.5 h-4 w-4" />
                 </button>
               </motion.div>
@@ -262,10 +262,10 @@ export default function Landing() {
               transition={{ duration: 0.55, delay: 0.1 }}
               className="relative"
             >
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-300">
+              <span className="text-xs font-bold uppercase tracking-widest text-gold">
                 New user
               </span>
-              <h2 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">
+              <h2 className="mt-3 text-3xl leading-tight text-white sm:text-4xl yn-title">
                 Siap jadi top 1?
               </h2>
               <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-zinc-400">
@@ -275,7 +275,7 @@ export default function Landing() {
                 <Button
                   size="lg"
                   onClick={() => navigate("/auth?returnTo=/home")}
-                  className="rounded-full bg-amber-300 px-10 py-4 font-bold text-[#0a0a0c] transition hover:bg-amber-200"
+                  className="rounded-full bg-gold-strong px-10 py-4 font-bold text-[#0a0a0c] transition hover:brightness-105"
                 >
                   Gabung Sekarang
                   <ChevronRight className="ml-2 h-4 w-4" />

@@ -305,7 +305,7 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
           >
             <StripBackIcon />
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Cari clan</h1>
+          <h1 className="min-w-0 flex-1 truncate text-lg yn-title">Cari clan</h1>
         </div>
 
         {/* KOTAK CLAN KAMU SENDIRI — di TENGAH ATAS, hanya muncul kalau
@@ -683,7 +683,7 @@ function ClanDetailScreen({
           >
             <StripBackIcon />
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold">Detail Clan</h1>
+          <h1 className="min-w-0 flex-1 truncate text-lg yn-title">Detail Clan</h1>
           {/* Tombol PENGATURAN CLAN — hanya untuk leader/officer: kelola
               request masuk + role member + deskripsi clan. */}
           {canManage && (
@@ -1358,7 +1358,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             <StripBackIcon />
           </button>
           <div>
-            <h1 className="text-lg font-extrabold">Buat Clan</h1>
+            <h1 className="text-lg yn-title">Buat Clan</h1>
             <p className="text-[11px] text-violet-300/85">
               Bikin tim bareng teman — biaya 1.000 Sacret
             </p>
