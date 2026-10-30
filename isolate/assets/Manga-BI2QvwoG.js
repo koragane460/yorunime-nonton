@@ -1,1 +1,0 @@
-import{j as o}from"./framer-motion-DsHd0eBX.js";import{a4 as r}from"./index-d8cNddSu.js";import{C as t}from"./ComicBrowsePage-DYAXlI91.js";import"./react-vendor-AP_znqUj.js";import"./radix-ui-BvO8hIu1.js";import"./charts-Dx5KKLZy.js";import"./chevron-left-CX5RE-W2.js";function u(){return o.jsx(r,{hideAccountPanel:!0,children:o.jsx(t,{kind:"manga"})})}export{u as default};
