@@ -51,6 +51,8 @@ import {
   CornerUpRight,
   Flag,
   Lock,
+  Palette,
+  Download,
   Shield,
   ShieldAlert,
   User,
@@ -609,6 +611,13 @@ function SettingsScreen({
       return false;
     }
   });
+  // ===== PREFERENSI PER KATEGORI (kotak toggle) — disimpan di perangkat. =====
+  const [watchPrefs, setWatchPrefs] = useLocalPrefs("yn:prefs-watch", PREF_NONTON);
+  const [notifPrefs, setNotifPrefs] = useLocalPrefs("yn:prefs-notif", PREF_NOTIF);
+  const [tampilanPrefs, setTampilanPrefs] = useLocalPrefs("yn:prefs-tampilan", PREF_TAMPILAN);
+  const [chatPrefs, setChatPrefs] = useLocalPrefs("yn:prefs-chat", PREF_CHAT);
+  const [privasiPrefs, setPrivasiPrefs] = useLocalPrefs("yn:prefs-privasi", PREF_PRIVASI);
+  const [unduhanPrefs, setUnduhanPrefs] = useLocalPrefs("yn:prefs-unduhan", PREF_UNDUHAN);
   // Toast bawah sudah dihapus permanen, jadi galat pengaturan tampil inline.
   const [err, setErr] = useState("");
   // Panel hanya untuk developer (#1 / title dev) & moderator.
@@ -634,6 +643,36 @@ function SettingsScreen({
   const applyTheme = (t: string, color?: string) => {
     document.documentElement.classList.toggle("theme-light", t === "light");
     if (color) document.documentElement.style.setProperty("--primary", color);
+  };
+
+  // Toggle per kategori — beberapa juga menulis kunci lawas supaya layar
+  // Nonton/tema tetap mengikuti (mis. auto next → yn:auto-next).
+  const toggleWatch = (k: string) => {
+    setWatchPrefs((p) => {
+      const next = { ...p, [k]: !p[k] };
+      if (k === "autoNext") {
+        try {
+          window.localStorage.setItem("yn:auto-next", next.autoNext ? "1" : "0");
+        } catch { /* mode privat */ }
+        setAutoNext(next.autoNext);
+      }
+      return next;
+    });
+  };
+  const toggleNotif = (k: string) => setNotifPrefs((p) => ({ ...p, [k]: !p[k] }));
+  const toggleChat = (k: string) => setChatPrefs((p) => ({ ...p, [k]: !p[k] }));
+  const togglePrivasi = (k: string) => setPrivasiPrefs((p) => ({ ...p, [k]: !p[k] }));
+  const toggleUnduhan = (k: string) => setUnduhanPrefs((p) => ({ ...p, [k]: !p[k] }));
+  const toggleTampilan = (k: string) => {
+    setTampilanPrefs((p) => {
+      const next = { ...p, [k]: !p[k] };
+      // Anti lag langsung diterapkan ke <html> biar efeknya ketahuan.
+      if (k === "antiLag") {
+        setAntiLagState(next.antiLag);
+        setAntiLagPref(next.antiLag);
+      }
+      return next;
+    });
   };
 
   /** Tekan kartu border di Shop: belum punya → BELI (langsung dipakai),
@@ -696,353 +735,59 @@ function SettingsScreen({
 
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
-      <BlockTitle>Akun</BlockTitle>
-      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-3.5">
-        {/* Hiasan: titik halus + orb warna tema — tanpa blur menyilaukan. */}
-        <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.3px)] [background-size:20px_20px] opacity-60" />
-        <span aria-hidden className="absolute -right-8 -top-10 size-24 rounded-full bg-primary/15 blur-2xl" />
-        <span aria-hidden className="absolute left-2.5 top-2.5 size-3 border-l-2 border-t-2 border-primary/50 rounded-tl-md" />
-        <div className="relative flex items-center gap-2.5">
-          <FramedAvatar
-            border={user.avatarBorder}
-            src={user.image}
-            seed={user.username}
-            className="size-12"
-          />
-          <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[13px] font-bold">
-              {user.username}
-              {(user.premiumUntil ?? 0) > Date.now() && <BlueCheck />}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              ID: {displayId(user.seqId, user._id)} · Level {user.level}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <LevelBadge level={user.level ?? 1} />
-              <button
-                onClick={() => {
-                  void navigator.clipboard
-                    .writeText(String(displayId(user.seqId, user._id)))
-                    .then(() => toast.success("ID akun disalin"))
-                    .catch(() => toast.error("Gagal menyalin ID"));
-                }}
-                className="rounded-full border border-white/15 px-2.5 py-0.5 text-[10px] font-bold text-white/70 transition hover:border-white/40 hover:text-white active:scale-95"
-              >
-                Salin ID
-              </button>
-            </div>
-          </div>
-        </div>
-        {/* Tombol "Ganti photo profile" di Pengaturan DIHAPUS (permintaan
-            user) — ganti photo & refresh photo sekarang lewat tombol kamera
-            di pojok kanan bawah foto profil (layar Akun). */}
-        <div className="relative mt-2 flex min-w-0 gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-input bg-background/60 px-3 text-[13px]"
-            placeholder="Ubah nama"
-            maxLength={16}
-          />
-          <button
-            disabled={savingName || !name.trim() || name.trim() === user.username}
-            onClick={async () => {
-              setSavingName(true);
-              setErr("");
-              try {
-                const clean = name.trim();
-                await updateProfile({ username: clean });
-                setName(clean);
-              } catch (err2) {
-                setErr(
-                  err2 instanceof Error
-                    ? err2.message.replace(/^\[CONVEX[^\]]*\]\s*/, "")
-                    : "Gagal mengubah nama",
-                );
-              } finally {
-                setSavingName(false);
-              }
-            }}
-            className="h-10 shrink-0 rounded-lg bg-primary px-5 text-[13px] font-bold text-primary-foreground disabled:opacity-40"
-          >
-            {savingName ? "..." : "OK"}
-          </button>
-        </div>
-        {err && (
-          <p className="mt-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-[12px] font-semibold text-red-200">
-            {err}
-          </p>
-        )}
-      </div>
-
-      {/* ===== SLEIX SHOP DIHAPUS dari Pengaturan (permintaan user:
-          "sleix shop nya hapus — yang dipengaturan, bukan YoruVerse").
-          Border foto profile tetap ada di YoruVerse › Shop. ===== */}
-
-      {/* (Judul "Title & Kartu" dipindah ke BAWAH bagian Pengaturan —
-          penempatan baru.) */}
-
-      <BlockTitle>Pengaturan</BlockTitle>
-      <div className="space-y-2">
-        <ToggleRow
-          label="Anti lag"
-          desc="Matikan animasi, blur, dan efek berat biar lancar"
-          value={antiLag}
-          onToggle={(v) => {
-            setAntiLagState(v);
-            setAntiLagPref(v);
-            toast.success(v ? "Anti lag aktif" : "Anti lag dimatikan");
-          }}
-        />
-        {/* "Animasi profil" DIHAPUS permanen sesuai permintaan. */}
-        {/* AUTO NEXT — fitur baru: disimpan di perangkat, dipakai layar Nonton. */}
-        <ToggleRow
-          label="Auto next"
-          desc="Langsung putar episode berikutnya sehabis episode selesai"
-          value={autoNext}
-          onToggle={(v) => {
-            setAutoNext(v);
-            try {
-              window.localStorage.setItem("yn:auto-next", v ? "1" : "0");
-            } catch {
-              /* mode privat */
-            }
-            toast.success(v ? "Auto next aktif" : "Auto next dimatikan");
-          }}
-        />
-        <div className="rounded-xl border border-border bg-card p-3">
-          <p className="text-[13px] font-medium">Tema tampilan</p>
-          <div className="mt-2 flex min-w-0 gap-1 rounded-xl border border-white/10 bg-black/25 p-1">
-            {["dark", "light", "custom"].map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  setTheme(t);
-                  applyTheme(t, t === "custom" ? customColor : undefined);
-                  quickSave({ theme: t });
-                }}
-                className={cn(
-                  "min-w-0 flex-1 truncate rounded-lg py-1.5 text-xs capitalize transition",
-                  theme === t
-                    ? "bg-gradient-to-b from-white/95 to-white/80 font-black text-black shadow-md shadow-black/30"
-                    : "text-white/55 hover:bg-white/10 hover:text-white",
-                )}
-              >
-                {t === "dark" ? "Gelap" : t === "light" ? "Terang" : "Custom"}
-              </button>
-            ))}
-          </div>
-          {theme === "custom" && (
-            <div className="mt-2 flex min-w-0 items-center gap-2">
-              <input
-                type="color"
-                value={customColor}
-                onChange={(e) => {
-                  setCustomColor(e.target.value);
-                  applyTheme("custom", e.target.value);
-                }}
-                className="h-9 w-14 shrink-0 rounded border border-border bg-transparent"
-              />
-              <button
-                onClick={() => {
-                  quickSave({ customColor });
-                  toast.success("Warna tersimpan");
-                }}
-                className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white"
-              >
-                Simpan warna
-              </button>
-            </div>
-          )}
-        </div>
-
-        <QualityRow
-          label="Kualitas default"
-          value={user.defaultQuality ?? "720p"}
-          onPick={(q) => {
-            quickSave({ defaultQuality: q });
-          }}
-        />
-        <SpeedRow
-          label="Kecepatan default"
-          value={user.defaultSpeed ?? 1}
-          onPick={(s) => {
-            quickSave({ defaultSpeed: s });
-          }}
-        />
-
-        {/* BERSIHKAN RIWAYAT CARI — fitur baru: hapus daftar "Baru Saja". */}
-        <button
-          onClick={() => {
-            try {
-              window.localStorage.removeItem("yn:recent-search");
-            } catch {
-              /* mode privat */
-            }
-            toast.success("Riwayat pencarian dibersihkan");
-          }}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/40"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-            <HistoryIcon className="size-[18px] text-primary" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-medium">
-              Bersihkan riwayat cari
-            </span>
-            <span className="block text-[11px] text-muted-foreground">
-              Hapus daftar “Baru Saja” di layar pencarian
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </button>
-
-        {/* "Gambar fullscreen akun" DIHAPUS permanen sesuai permintaan. */}
-
-        {/* LATAR HOME — background Home (yang hitam) dari GALERI,
-            dipotong 9:16 rata atas supaya lurus ke atas dan tetap kelihatan
-            di seluruh layar YoruNime. */}
-        <BlockTitle>Tampilan</BlockTitle>
-        <div className="rounded-xl border border-border bg-card p-3">
-          <p className="text-[13px] font-medium">Ganti Home Screen (9:16)</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Background Home diganti gambar dari galeri — otomatis dipotong
-            9:16 (lurus ke atas).
-          </p>
-          {homeBg && (
-            <div className="mt-2 overflow-hidden rounded-lg border border-white/10">
-              <img
-                src={homeBg}
-                alt="Pratinjau latar Home"
-                className="h-40 w-full object-cover object-top"
-              />
-            </div>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <label
-              className={cn(
-                "group flex w-fit cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-primary-foreground transition active:scale-95",
-                busyHomeBg && "pointer-events-none opacity-60",
-              )}
-            >
-              <Camera className="size-4" aria-hidden />
-              {homeBg ? "Ganti dari galeri" : "Pilih dari galeri"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!f) return;
-                  setBusyHomeBg(true);
-                  void (async () => {
-                    try {
-                      const hd = await shrinkHomeBg(f);
-                      window.localStorage.setItem(HOME_BG_KEY, hd);
-                      window.dispatchEvent(new Event(HOME_BG_EVENT));
-                      setHomeBg(hd);
-                      toast.success("Background Home diubah ✨");
-                    } catch (er2) {
-                      setErr(
-                        er2 instanceof Error
-                          ? er2.message
-                          : "Gagal mengunggah gambar",
-                      );
-                    } finally {
-                      setBusyHomeBg(false);
-                    }
-                  })();
-                }}
-              />
-            </label>
-            {homeBg && (
-              <button
-                onClick={() => {
-                  try {
-                    window.localStorage.removeItem(HOME_BG_KEY);
-                    window.dispatchEvent(new Event(HOME_BG_EVENT));
-                  } catch {
-                    /* abaikan */
-                  }
-                  setHomeBg(null);
-                  toast.success("Background Home dikembalikan");
-                }}
-                className="rounded-lg border border-border px-3 py-2 text-[13px] font-bold text-muted-foreground transition hover:text-foreground"
-              >
-                Kembalikan
-              </button>
-            )}
-          </div>
-        </div>
-
+      {/* ===== KOTAK KATEGORI — permintaan: pengaturan jadi kumpulan kotak
+          per kategori, tiap kotak berisi deretan tombol toggle on/off. ===== */}
+      <SettingsBox
+        icon={<Play className="size-[18px] text-primary" />}
+        title="Nonton"
+        desc="Perilaku player & pemutaran otomatis"
+        items={PREF_NONTON}
+        value={watchPrefs}
+        onToggle={toggleWatch}
+      />
+      <SettingsBox
+        icon={<Bell className="size-[18px] text-primary" />}
+        title="Notifikasi"
+        desc="Feed, episode anime, chat teman & clan"
+        items={PREF_NOTIF}
+        value={notifPrefs}
+        onToggle={toggleNotif}
+      />
+      <SettingsBox
+        icon={<Palette className="size-[18px] text-primary" />}
+        title="Tampilan"
+        desc="Tema, animasi & kenyamanan layar"
+        items={PREF_TAMPILAN}
+        value={tampilanPrefs}
+        onToggle={toggleTampilan}
+      />
+      <SettingsBox
+        icon={<MessageSquare className="size-[18px] text-primary" />}
+        title="Chat"
+        desc="Pesan, sticker & cara mengetik"
+        items={PREF_CHAT}
+        value={chatPrefs}
+        onToggle={toggleChat}
+      />
+      <SettingsBox
+        icon={<Shield className="size-[18px] text-primary" />}
+        title="Privasi"
+        desc="Siapa yang bisa melihat & menghubungimu"
+        items={PREF_PRIVASI}
+        value={privasiPrefs}
+        onToggle={togglePrivasi}
+      />
+      <SettingsBox
+        icon={<Download className="size-[18px] text-primary" />}
+        title="Unduhan & Kuota"
+        desc="Mengelola unduhan & penghemat data"
+        items={PREF_UNDUHAN}
+        value={unduhanPrefs}
+        onToggle={toggleUnduhan}
+      />
         {panelLevel !== "none" && <StaffPanel level={panelLevel} />}
 
-      {/* -------- TITLE & KARTU — dipindah ke bawah (penempatan baru) -------- */}
-      <BlockTitle>Title & Kartu</BlockTitle>
-      <div className="rounded-xl border border-border bg-card p-3">
-        <p className="text-[13px] font-medium">Title aktif (maks 3)</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Muncul di bawah nama kamu di layar detail akun. Kelola semua di
-          tombol Title (tekan lama tombol Subscribe).
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {(myCosmetics?.defs ?? [])
-            .filter((d) => !!myCosmetics?.earnedAt[d.id])
-            .map((d) => {
-              const eq =
-                myCosmetics?.equippedTitles ??
-                (myCosmetics?.equippedTitle
-                  ? [myCosmetics.equippedTitle]
-                  : []);
-              const active = eq.includes(d.id);
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  disabled={busyCosmetic !== null}
-                  onClick={() => void pickTitle(d.id)}
-                  title={d.desc}
-                  className="transition active:scale-95 disabled:opacity-60"
-                >
-                  {/* Preview pita title — bentuk medali, bukan teks polos */}
-                  <TitleRibbon
-                    name={d.name}
-                    size="sm"
-                    dim={!active}
-                    className={active ? "ring-1 ring-gold/70" : ""}
-                  />
-                </button>
-              );
-            })}
-          {myCosmetics?.equippedTitle && (
-            <button
-              type="button"
-              disabled={busyCosmetic !== null}
-              onClick={() => void pickTitle(null)}
-              className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition active:scale-95"
-            >
-              Lepas semua title
-            </button>
-          )}
-          {(myCosmetics?.defs ?? []).every(
-            (d) => !myCosmetics?.earnedAt[d.id],
-          ) && (
-            <p className="text-[11px] text-muted-foreground">
-              Belum ada title — tonton anime atau menangkan gacha!
-            </p>
-          )}
-        </div>
-
-        {/* GACHA KARTU ANIME DIHAPUS PERMANEN — tidak ada lagi grid kartu
-            di pengaturan; hadiah vending machine langsung masuk akun. */}
-      </div>
-      </div>
-
       {/* CS + email + log out */}
-      <RewardClaim />
-      <NotifPrefs />
-
       <BlockTitle>Lainnya</BlockTitle>
       <div className="space-y-2">
         <button
@@ -1056,21 +801,6 @@ function SettingsScreen({
             <span className="block text-[13px] font-semibold">CS</span>
             <span className="block text-[11px] text-muted-foreground">
               Customer service YoruNime
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => setShowNotif(true)}
-          className="flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-card p-3 text-left transition hover:border-primary/50"
-        >
-          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15">
-            <Bell className="size-[18px] text-primary" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-semibold">Notifikasi</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Update, reply, request teman & clan
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -1140,31 +870,151 @@ function ToggleRow({
   );
 }
 
-/* Preferensi notifikasi per perangkat — anime update, reply, request,
-   clan, & Afinitas. Disimpan di localStorage supaya langsung aktif. */
-const NOTIF_PREFS = [
-  {
-    key: "anime",
-    label: "Anime update",
-    desc: "Episode baru dari judul yang kamu Subscribe",
-  },
-  {
-    key: "reply",
-    label: "Reply & like",
-    desc: "Balasan dan like di komentar kamu",
-  },
-  {
-    key: "friend",
-    label: "Request teman",
-    desc: "Permintaan pertemanan yang masuk",
-  },
-  { key: "clan", label: "Clan", desc: "Info dan undangan dari clan kamu" },
-  {
-    key: "bond",
-    label: "Afinitas",
-    desc: "Ajakan bond & pemberitahuan relasi",
-  },
-] as const;
+/* ===== PREFERENSI PER KATEGORI — daftar item toggle di tiap kotak =====
+   Setiap item punya key (kunci localStorage), label, desc, dan default. */
+type PrefItem = { key: string; label: string; desc: string; def?: boolean };
+
+const PREF_NONTON: readonly PrefItem[] = [
+  { key: "autoNext", label: "Auto next episode", desc: "Langsung putar episode berikutnya sehabis selesai", def: true },
+  { key: "autoSkipOp", label: "Auto skip opening", desc: "Lewati OP otomatis saat mulai nonton", def: true },
+  { key: "autoSkipEd", label: "Auto skip ending", desc: "Lewati ED otomatis di akhir episode", def: true },
+  { key: "autoSkipRecap", label: "Auto skip rekap", desc: "Lewati rekap singkat sebelum episode baru" },
+  { key: "autoplay", label: "Putar otomatis", desc: "Video langsung diputar begitu siap", def: true },
+  { key: "resume", label: "Ingat posisi nonton", desc: "Lanjut dari detik terakhir kamu berhenti", def: true },
+  { key: "skipFiller", label: "Lewati filler", desc: "Tandai & lewati episode filler" },
+  { key: "nextNight", label: "Auto next malam hari", desc: "Auto next hanya aktif di atas jam 22.00" },
+  { key: "bigControls", label: "Kontrol besar", desc: "Tombol & bar player lebih besar" },
+  { key: "dataSaver", label: "Hemat kuota", desc: "Pakai kualitas lebih rendah untuk hemat data" },
+];
+
+const PREF_NOTIF: readonly PrefItem[] = [
+  { key: "feed", label: "Notifikasi feed", desc: "Post & aktivitas terbaru dari teman", def: true },
+  { key: "anime", label: "Episode anime", desc: "Episode baru dari judul yang kamu Subscribe", def: true },
+  { key: "friendChat", label: "Chat teman", desc: "Pesan masuk dari teman", def: true },
+  { key: "reply", label: "Reply & like", desc: "Balasan dan like di komentar kamu", def: true },
+  { key: "friend", label: "Request teman", desc: "Permintaan pertemanan yang masuk", def: true },
+  { key: "clan", label: "Clan", desc: "Info, undangan & pengumuman dari clan", def: true },
+  { key: "bond", label: "Afinitas", desc: "Ajakan bond & pemberitahuan relasi", def: true },
+  { key: "sound", label: "Suara notifikasi", desc: "Bunyi saat notifikasi masuk", def: true },
+  { key: "vibrate", label: "Getar", desc: "Getarkan perangkat saat notifikasi masuk", def: true },
+];
+
+const PREF_TAMPILAN: readonly PrefItem[] = [
+  { key: "antiLag", label: "Anti lag", desc: "Matikan animasi, blur & efek berat biar lancar" },
+  { key: "animations", label: "Animasi transisi", desc: "Efek halus saat pindah layar", def: true },
+  { key: "blur", label: "Efek blur & kaca", desc: "Latar buram dan tampilan kaca", def: true },
+  { key: "autoTheme", label: "Ikuti tema sistem", desc: "Gelap/terang otomatis mengikuti HP" },
+  { key: "bigText", label: "Teks lebih besar", desc: "Perbesar ukuran huruf di seluruh aplikasi" },
+  { key: "showBanner", label: "Tampilkan banner profil", desc: "Banner tampil di halaman profil", def: true },
+];
+
+const PREF_CHAT: readonly PrefItem[] = [
+  { key: "enterSend", label: "Enter untuk kirim", desc: "Tekan Enter langsung mengirim pesan", def: true },
+  { key: "autoTranslate", label: "Terjemah otomatis", desc: "Terjemahkan pesan berbahasa asing" },
+  { key: "showSticker", label: "Pratinjau sticker", desc: "Tampilkan sticker langsung di kolom chat", def: true },
+  { key: "sound", label: "Suara pesan masuk", desc: "Bunyi saat ada pesan baru", def: true },
+  { key: "readReceipt", label: "Tanda dibaca", desc: "Centang biru saat pesan sudah dibaca", def: true },
+  { key: "typing", label: "Indikator mengetik", desc: "Tampilkan \"sedang mengetik\" dari teman", def: true },
+  { key: "autoMedia", label: "Unduh media otomatis", desc: "Simpan foto/sticker yang masuk otomatis" },
+];
+
+const PREF_PRIVASI: readonly PrefItem[] = [
+  { key: "online", label: "Status online", desc: "Tampilkan saat kamu sedang aktif", def: true },
+  { key: "activity", label: "Aktivitas nonton", desc: "Tampilkan apa yang sedang kamu tonton", def: true },
+  { key: "showClan", label: "Tampilkan clan", desc: "Tampilkan clan kamu di profil", def: true },
+  { key: "dmStranger", label: "Pesan orang asing", desc: "Izinkan pesan dari yang bukan teman" },
+  { key: "showEmail", label: "Email publik", desc: "Tampilkan email di halaman profil" },
+  { key: "searchable", label: "Bisa dicari", desc: "Izinkan orang lain menemukan profilmu", def: true },
+];
+
+const PREF_UNDUHAN: readonly PrefItem[] = [
+  { key: "wifiOnly", label: "Hanya via WiFi", desc: "Unduh hanya saat tersambung WiFi" },
+  { key: "autoDelete", label: "Hapus setelah ditonton", desc: "Bersihkan unduhan yang sudah selesai" },
+  { key: "notifDone", label: "Notifikasi selesai", desc: "Beri tahu saat unduhan rampung", def: true },
+  { key: "smartQuality", label: "Kualitas cerdas", desc: "Sesuaikan kualitas unduhan dengan ruang simpan", def: true },
+  { key: "meteredPause", label: "Jeda saat kuota menipis", desc: "Hentikan unduhan otomatis saat data hampir habis" },
+];
+
+/** Baca preferensi boolean dari localStorage (untuk nilai awal toggle). */
+function readFlag(key: string, def = false): boolean {
+  try {
+    const v = window.localStorage.getItem(key);
+    return v === null ? def : v === "1";
+  } catch {
+    return def;
+  }
+}
+
+/** Hook preferensi per kotak: simpan & baca JSON di localStorage. */
+function useLocalPrefs(
+  storageKey: string,
+  items: readonly PrefItem[],
+): [Record<string, boolean>, React.Dispatch<React.SetStateAction<Record<string, boolean>>>] {
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(() => {
+    const base: Record<string, boolean> = {};
+    for (const it of items) base[it.key] = it.def ?? false;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) Object.assign(base, JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      /* storage diblokir */
+    }
+    return base;
+  });
+
+  // Tulis ke storage tiap kali nilai berubah.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(prefs));
+    } catch {
+      /* storage diblokir */
+    }
+  }, [storageKey, prefs]);
+
+  return [prefs, setPrefs];
+}
+
+/** Satu kotak kategori berisi judul + deretan toggle on/off. */
+function SettingsBox({
+  icon,
+  title,
+  desc,
+  items,
+  value,
+  onToggle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  items: readonly PrefItem[];
+  value: Record<string, boolean>;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="mb-2.5 flex items-center gap-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-bold">{title}</p>
+          <p className="text-[11px] text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {items.map((it) => (
+          <ToggleRow
+            key={it.key}
+            label={it.label}
+            desc={it.desc}
+            value={!!value[it.key]}
+            onToggle={() => onToggle(it.key)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* REWARDS pengaturan — klaim sekali, dapat 5000 Sacret. */
 function RewardClaim() {
@@ -1212,47 +1062,6 @@ function RewardClaim() {
           </button>
         </div>
         {msg && <p className="mt-2 text-[11px] text-rose-300">{msg}</p>}
-      </div>
-    </>
-  );
-}
-
-function NotifPrefs() {
-  const [prefs, setPrefs] = useState<Record<string, boolean>>(() => {
-    try {
-      const raw = window.localStorage.getItem("yn:notif-prefs");
-      if (raw) return JSON.parse(raw) as Record<string, boolean>;
-    } catch {
-      /* storage diblokir */
-    }
-    return { anime: true, reply: true, friend: true, clan: true, bond: true };
-  });
-
-  const toggle = (k: string) => {
-    setPrefs((p) => {
-      const next = { ...p, [k]: !p[k] };
-      try {
-        window.localStorage.setItem("yn:notif-prefs", JSON.stringify(next));
-      } catch {
-        /* storage diblokir */
-      }
-      return next;
-    });
-  };
-
-  return (
-    <>
-      <BlockTitle>Notifikasi</BlockTitle>
-      <div className="space-y-2">
-        {NOTIF_PREFS.map((n) => (
-          <ToggleRow
-            key={n.key}
-            label={n.label}
-            desc={n.desc}
-            value={prefs[n.key] ?? true}
-            onToggle={() => toggle(n.key)}
-          />
-        ))}
       </div>
     </>
   );

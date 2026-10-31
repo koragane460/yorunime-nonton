@@ -429,6 +429,25 @@ function WatchContent() {
       return false;
     }
   });
+  // Auto skip opening/ED — mengikuti Pengaturan (kotak "Nonton"): kunci
+  // yn:prefs-watch. Saat playback masuk rentang intro/outro, langsung lompat.
+  const watchPrefs = useMemo(() => {
+    try {
+      const raw = window.localStorage.getItem("yn:prefs-watch");
+      if (raw) return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      /* mode privat */
+    }
+    return {} as Record<string, boolean>;
+  }, []);
+  const autoSkipOp = watchPrefs.autoSkipOp ?? true;
+  const autoSkipEd = watchPrefs.autoSkipEd ?? true;
+  // Penanda: sudah pernah auto-skip untuk segmen intro/outro ini, supaya
+  // onTimeUpdate tidak melompati berulang-ulang di detik yang sama.
+  const skippedRef = useRef<{ intro: boolean; outro: boolean }>({
+    intro: false,
+    outro: false,
+  });
   const [speed, setSpeed] = useState(settings?.defaultSpeed ?? 1);
   // Default kualitas: selalu 720p, lalu disinkronkan dengan Pengaturan begitu
   // datanya arrive (dan sebaliknya saat user ganti di player).
@@ -524,6 +543,11 @@ function WatchContent() {
   // hilang — jadi overlay subtitle kita harus hidup lagi, dihitung per server
   // yang sedang diputar, bukan sekali per episode.
   const currentSrc = sources[sourceIdx] ?? sources[0];
+  // Reset penanda auto-skip tiap ganti URL video (ganti server/episode).
+  const srcKey = currentSrc?.url ?? "";
+  useEffect(() => {
+    skippedRef.current = { intro: false, outro: false };
+  }, [srcKey]);
   const bakedSubs = !!currentSrc?.baked;
   // Notifikasi kecepatan di dalam player (mis. "2x speed") seperti subtitle:
   // muncul sebentar di tengah atas lalu hilang sendiri.
@@ -2123,7 +2147,36 @@ function WatchContent() {
                 navigate(epUrl(nxt.id), { replace: true });
               }
             }}
-            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+            onTimeUpdate={(e) => {
+              const t = e.currentTarget.currentTime;
+              setCurrentTime(t);
+              // ===== AUTO SKIP OPENING / ED (Pengaturan › kotak Nonton) =====
+              const v = e.currentTarget;
+              const intro = direct?.intro;
+              const outro = direct?.outro;
+              if (
+                autoSkipOp &&
+                !skippedRef.current.intro &&
+                intro?.start !== undefined &&
+                t >= Number(intro.start) &&
+                t < Number(intro.end)
+              ) {
+                skippedRef.current.intro = true;
+                v.currentTime = Number(intro.end) + 0.5;
+                return;
+              }
+              if (
+                autoSkipEd &&
+                !skippedRef.current.outro &&
+                outro?.start !== undefined &&
+                t >= Number(outro.start) &&
+                t < Number(outro.end)
+              ) {
+                skippedRef.current.outro = true;
+                v.currentTime = Number(outro.end) + 0.5;
+                return;
+              }
+            }}
             onLoadedMetadata={(e) => {
               setDuration(e.currentTarget.duration);
               // Buka dari "Lanjutkan": loncat ke menit terakhir.

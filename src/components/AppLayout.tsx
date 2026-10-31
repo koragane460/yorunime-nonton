@@ -1001,21 +1001,22 @@ function BottomNav({
           full-width, dan tiap tombol aktif mendapat kotak rounded KEDUA
           (juga glassmorphism) yang berpindah HALUS antar tombol. */}
       <nav className="nav-bar fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto w-full max-w-2xl px-3 lg:max-w-4xl">
+        <div className="w-full">
           <div
             className={cn(
-              "relative grid grid-cols-5 border-t-0 border-white/12 p-1.5",
+              "relative grid grid-cols-5 rounded-t-2xl border-t-0 border-white/12 p-1.5",
               "bg-[oklch(0.135_0.016_266_/_0.92)] shadow-[0_18px_40px_-28px_rgba(0,0,0,1)]",
               "backdrop-blur-2xl backdrop-saturate-150",
             )}
           >
-            {/* Indikator posisi aktif — kotak datar (tanpa rounded, permintaan
-                navigasi tidak lagi berbentuk rounded). */}
+            {/* Indikator posisi aktif — kotak rounded PENUH (isi penuh, bukan
+                setengah kosong), permintaan navigasi. */}
             <span
               aria-hidden
               className={cn(
-                "pointer-events-none absolute bottom-1 top-1 border border-gold-strong/40",
-                "bg-gradient-to-b from-gold-strong/22 via-gold-strong/8 to-transparent",
+                "pointer-events-none absolute bottom-1 top-1 rounded-xl border border-gold-strong/50",
+                "bg-gradient-to-b from-gold-strong/40 via-gold-strong/25 to-gold-strong/15",
+                "shadow-[0_6px_18px_-10px_rgba(212,175,55,0.7)]",
                 "backdrop-blur-xl transition-all duration-300 ease-out",
                 activeIdx < 0 && "opacity-0",
               )}
