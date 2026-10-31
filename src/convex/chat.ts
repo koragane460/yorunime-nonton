@@ -182,6 +182,7 @@ export const listMessages = query({
         staffRole: u?.staffRole,
         seqId: u?.seqId,
         text: r.text,
+        sticker: r.sticker,
         imageUrl: r.imageStorageId
           ? (photoByUrl.get(r._id) ?? r.imageUrl)
           : r.imageUrl,
@@ -215,24 +216,22 @@ export const sendMessage = mutation({
     text: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     imageStorageId: v.optional(v.string()),
+    /** Emoji sticker dari toko sticker (dikirim sebagai sticker besar). */
+    sticker: v.optional(v.string()),
     replyToId: v.optional(v.id("chatMessages")),
   },
-  handler: async (ctx, { kind, clanId, roomId, peerId, channel, text, imageUrl, imageStorageId, replyToId }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, channel, text, imageUrl, imageStorageId, sticker, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     await requireActive(me);
-    if (!text?.trim() && !imageUrl && !imageStorageId) throw new Error("Pesan kosong");
+    const stickerClean = sticker?.trim().slice(0, 16) || undefined;
+    if (!text?.trim() && !imageUrl && !imageStorageId && !stickerClean)
+      throw new Error("Pesan kosong");
     // Data-URL/base64 ditolak: batas dokumen Convex cuma 1MB. Foto harus lewat storage.
     if (imageUrl && imageUrl.startsWith("data:")) {
       throw new Error("Kirim foto lewat tombol foto (bukan teks gambar)");
-    }
-    // Kirim foto dikunci Premium — dicek di server juga, bukan cuma tombol
-    // yang disembunyikan di UI. User non-premium tidak bisa mengirim foto
-    // dengan cara apa pun.
-    if ((imageStorageId || imageUrl) && (me.premiumUntil ?? 0) < Date.now()) {
-      throw new Error("Kirim foto hanya untuk akun Premium");
     }
     if (text && text.length > TEXT_MAX) throw new Error("Pesan terlalu panjang");
 
@@ -285,6 +284,7 @@ export const sendMessage = mutation({
       text: text?.trim() || undefined,
       imageUrl,
       imageStorageId,
+      sticker: stickerClean,
       replyToId,
       createdAt: Date.now(),
     });
@@ -299,7 +299,7 @@ export const sendMessage = mutation({
         userId: peerId,
         type: "friend_chat",
         title: "Chat teman",
-        body: `${me.username ?? "Seseorang"}: ${(text ?? "[foto]").slice(0, 80)}`,
+        body: `${me.username ?? "Seseorang"}: ${(text ?? (stickerClean ? "[sticker]" : "[foto]")).slice(0, 80)}`,
         refUserId: userId,
         refMessageId: messageId,
         createdAt: Date.now(),

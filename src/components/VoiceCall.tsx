@@ -6,6 +6,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { Avatar } from "@/components/lstream-ui";
 import { VoiceGamesOverlay } from "@/components/VoiceGames";
 import { VoiceChatSheet } from "@/components/VoiceChatSheet";
+import {
+  VoiceNobarPicker,
+  VoiceNobarStage,
+  type VoiceNobar,
+} from "@/components/VoiceNobar";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -13,6 +18,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   ChevronLeft,
+  Clapperboard,
   Coffee,
   Copy,
   Gamepad2,
@@ -664,7 +670,11 @@ function RoomScreen({
   useHideNavOnMount();
   const room = useQuery(api.voice.roomDetail, { roomId });
   const leaveMut = useMutation(api.voice.leaveRoom);
+  const clearNobar = useMutation(api.voice.clearNobar);
   const [showInvite, setShowInvite] = useState(false);
+  // NOBAR di voice room — hanya host yang bisa memasang / mengganti judul.
+  const [nobarPick, setNobarPick] = useState(false);
+  const [nobarErr, setNobarErr] = useState<string | null>(null);
   // Minimize: perkecil room jadi pil kecil (mic & music tetap jalan).
   const [minimized, setMinimized] = useState(false);
   const call = useVoiceCall(roomId, myId);
@@ -749,6 +759,7 @@ function RoomScreen({
 
   const mine = myId ? room.members.find((m) => m.userId === myId) : undefined;
   const host = room.ownerId === myId;
+  const nobar = (room.nobar ?? null) as VoiceNobar | null;
   const ordered = [
     ...(mine ? [mine] : []),
     ...room.members.filter((m) => m.userId !== myId),
@@ -870,6 +881,18 @@ function RoomScreen({
           </button>
           {host && (
             <button
+              onClick={() => setNobarPick(true)}
+              aria-label="Nobar di voice room"
+              className={cn(
+                "flex size-10 shrink-0 items-center justify-center transition hover:text-white active:scale-95",
+                nobar ? "text-rose-300" : "text-white/85",
+              )}
+            >
+              <Clapperboard className="size-5" />
+            </button>
+          )}
+          {host && (
+            <button
               onClick={() => setShowInvite(true)}
               aria-label="Invite user"
               className="flex size-10 shrink-0 items-center justify-center text-white/85 transition hover:text-white active:scale-95"
@@ -882,6 +905,30 @@ function RoomScreen({
           )}
         </div>
       </div>
+
+      {/* NOBAR — player di PALING ATAS, info "Di-host oleh …"; pengaturan
+          (ganti/tutup) hanya muncul untuk host. */}
+      {nobar && (
+        <VoiceNobarStage
+          nobar={nobar}
+          hostName={room.ownerName}
+          isHost={host}
+          onChange={() => setNobarPick(true)}
+          onClose={() => {
+            setNobarErr(null);
+            void clearNobar({ roomId }).catch((e) =>
+              setNobarErr(
+                e instanceof Error ? e.message : "Gagal menutup nobar",
+              ),
+            );
+          }}
+        />
+      )}
+      {nobarErr && (
+        <p className="mx-4 mb-1 rounded-lg border border-red-400/40 bg-red-500/10 px-2.5 py-1.5 text-[10px] font-semibold text-red-200">
+          {nobarErr}
+        </p>
+      )}
 
       {/* Undangan GAME dari host — foto profile, nama, jenis game, Gabung. */}
       {myInvite && !gameSession && (
@@ -950,9 +997,9 @@ function RoomScreen({
         <div
           className={cn(
             "grid w-full gap-3",
-            // Sendiri: kotak MEMUAT LEBAR layar (dulu dibatasi 17rem jadi
-            // terasa kecil) — aspect tetap supaya tinggi ikut membesar.
-            alone ? "grid-cols-1" : "grid-cols-2",
+            // Saat NOBAR aktif, peserta dibuat ringkas supaya player yang
+            // paling atas tetap dominan.
+            nobar ? "grid-cols-4 gap-2" : alone ? "grid-cols-1" : "grid-cols-2",
           )}
         >
           {ordered.map((p) => {
@@ -968,8 +1015,12 @@ function RoomScreen({
               >
                 <div
                   className={cn(
-                    "relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border py-6 transition",
-                    alone ? "aspect-[3/5]" : "aspect-[3/4]",
+                    "relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border transition",
+                    nobar
+                      ? "aspect-square gap-1 py-3"
+                      : alone
+                        ? "aspect-[3/5] py-6"
+                        : "aspect-[3/4] py-6",
                   )}
                   style={{ backgroundColor: participantTint(p.username) }}
                 >
@@ -992,7 +1043,7 @@ function RoomScreen({
                         talking
                           ? "ring-emerald-400 animate-pulse"
                           : "ring-white/25",
-                        alone ? "size-32" : "size-20",
+                        nobar ? "size-10" : alone ? "size-32" : "size-20",
                       )}
                     />
                     {!micOn && (
@@ -1004,21 +1055,23 @@ function RoomScreen({
                   <p
                     className={cn(
                       "w-full truncate px-2 text-center font-bold",
-                      alone ? "text-base" : "text-[11px]",
+                      nobar ? "text-[9px]" : alone ? "text-base" : "text-[11px]",
                     )}
                   >
                     {p.username}
                     {isMe && <span className="text-white/40"> (kamu)</span>}
                   </p>
-                  <span
-                    className={cn(
-                      "-mt-1 flex items-center gap-1 text-[10px] font-bold",
-                      micOn ? "text-emerald-300" : "text-rose-300",
-                    )}
-                  >
-                    {micOn ? <Mic className="size-3" /> : <MicOff className="size-3" />}
-                    {micOn ? "On mic" : "Mute"}
-                  </span>
+                  {!nobar && (
+                    <span
+                      className={cn(
+                        "-mt-1 flex items-center gap-1 text-[10px] font-bold",
+                        micOn ? "text-emerald-300" : "text-rose-300",
+                      )}
+                    >
+                      {micOn ? <Mic className="size-3" /> : <MicOff className="size-3" />}
+                      {micOn ? "On mic" : "Mute"}
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -1105,6 +1158,14 @@ function RoomScreen({
             ))}
           </AnimatePresence>
         </div>
+      )}
+
+      {nobarPick && (
+        <VoiceNobarPicker
+          roomId={roomId}
+          current={nobar}
+          onClose={() => setNobarPick(false)}
+        />
       )}
 
       {(gameOpen || gameSession) && (

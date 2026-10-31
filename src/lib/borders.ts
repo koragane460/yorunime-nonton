@@ -29,4 +29,16 @@ export const BORDERS: BorderDef[] = [
   { id: "nova", name: "Nova", price: 3000, blurb: "Galaksi bintang" },
   { id: "magma", name: "Magma", price: 4000, blurb: "Lahar menyala" },
   { id: "holo", name: "Holo", price: 5000, blurb: "Holografik bergerak" },
+  {
+    id: "wings",
+    name: "Sayap Merah",
+    price: 6500,
+    blurb: "Sayap merah-hitam membuka",
+  },
+  {
+    id: "cloud",
+    name: "Awan Salju",
+    price: 7500,
+    blurb: "Awan berarak + hujan salju",
+  },
 ];

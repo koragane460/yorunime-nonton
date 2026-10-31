@@ -10,6 +10,8 @@ export type SendPayload = {
   imageStorageId?: string;
   /** URL hasil resolusi storageId, hanya untuk echo lokal. */
   imageUrl?: string;
+  /** Emoji sticker besar dari toko sticker. */
+  sticker?: string;
   replyToId?: Id<"chatMessages">;
   /** Kutipan reply untuk echo lokal, supaya balasan langsung kelihatan. */
   _replyTo?: {
@@ -44,6 +46,7 @@ function isSameMessage(r: ChatMsg, p: ChatMsg): boolean {
     r.userId === p.userId &&
     (r.text ?? "") === (p.text ?? "") &&
     (r.imageUrl ?? "") === (p.imageUrl ?? "") &&
+    (r.sticker ?? "") === (p.sticker ?? "") &&
     r.createdAt >= p.createdAt - 3000
   );
 }
@@ -159,6 +162,7 @@ export function useFastChat(
       text: p.text,
       imageUrl: p.imageUrl,
       imageStorageId: p.imageStorageId,
+      sticker: p.sticker,
       replyTo: p._replyTo as ChatMsg["replyTo"],
       createdAt: Date.now(),
     };
@@ -169,6 +173,7 @@ export function useFastChat(
       ...sendArgs,
       text: p.text,
       imageStorageId: p.imageStorageId,
+      sticker: p.sticker,
       replyToId: replyId,
     } as never).then((res) => {
       const mid = (res as { messageId?: string } | null)?.messageId;

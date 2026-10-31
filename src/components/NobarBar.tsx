@@ -123,14 +123,17 @@ export function RoomSheet({
   const join = useMutation(api.watchroom.joinRoom);
   const leave = useMutation(api.watchroom.leaveRoom);
   const [busy, setBusy] = useState<string | null>(null);
+  // Error tampil INLINE di atas daftar room (toaster dimatikan permanen).
+  const [err, setErr] = useState<string | null>(null);
 
   const doJoin = async (r: Room) => {
+    setErr(null);
     setBusy(r._id);
     try {
       await join({ roomId: r._id });
       onJoined(r._id);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal join");
+      setErr(e instanceof Error ? e.message : "Gagal join room");
     } finally {
       setBusy(null);
     }
@@ -171,6 +174,11 @@ export function RoomSheet({
         </header>
 
       <div className="thin-scroll min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
+        {err && (
+          <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-200">
+            {err}
+          </p>
+        )}
         {rooms.length === 0 && (
           <p className="py-8 text-center text-xs text-muted-foreground">
             Belum ada room aktif. Kamu bisa jadi host pertama.
@@ -244,11 +252,11 @@ export function RoomSheet({
               {r.joined && (
                 <button
                   onClick={async () => {
+                    setErr(null);
                     try {
                       await leave({ roomId: r._id });
-                      toast.success("Keluar dari room");
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Gagal");
+                      setErr(e instanceof Error ? e.message : "Gagal keluar room");
                     }
                   }}
                   className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground"
@@ -333,6 +341,8 @@ export function CreateRoomSheet({
   const [pickedUsers, setPickedUsers] = useState<any[]>([]);
   const [uQ, setUQ] = useState("");
   const [busy, setBusy] = useState(false);
+  // Semua validasi/error tampil inline — toaster dimatikan permanen.
+  const [err, setErr] = useState<string | null>(null);
 
   const userList = useQuery(
     api.watchroom.searchUsers,
@@ -385,21 +395,22 @@ export function CreateRoomSheet({
   };
 
   const submit = async () => {
+    setErr(null);
     if (!picked) {
-      toast.error("Pilih anime dulu");
+      setErr("Pilih anime dulu");
       return;
     }
     const animeId = animeIdOf(picked);
     if (!animeId) {
-      toast.error("Anime tidak valid");
+      setErr("Anime tidak valid");
       return;
     }
     if (name.trim().length < 2) {
-      toast.error("Nama room minimal 2 karakter");
+      setErr("Nama room minimal 2 karakter");
       return;
     }
     if (visibility === "selected" && pickedUsers.length === 0) {
-      toast.error("Pilih minimal 1 orang");
+      setErr("Pilih minimal 1 orang");
       return;
     }
     setBusy(true);
@@ -413,10 +424,9 @@ export function CreateRoomSheet({
         visibility,
         allowedUserIds: pickedUsers.map((u) => u._id),
       });
-      toast.success("Room dibuat — kamu jadi host");
       onCreated(r.roomId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal membuat room");
+      setErr(e instanceof Error ? e.message : "Gagal membuat room");
     } finally {
       setBusy(false);
     }
@@ -639,6 +649,11 @@ export function CreateRoomSheet({
           )}
         </div>
 
+        {err && (
+          <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-200">
+            {err}
+          </p>
+        )}
         <div className="flex gap-2 pt-1">
           <button
             onClick={onClose}

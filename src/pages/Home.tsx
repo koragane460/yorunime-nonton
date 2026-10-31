@@ -65,6 +65,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
+import { StickerStore } from "@/components/StickerStore";
 import { AccountHeader, AnnouncementBox, Spotlight } from "@/components/HomeTop";
 import { LeaderCards } from "@/components/LeaderCards";
 import { GenreScreen } from "@/components/GenreScreen";
@@ -341,6 +342,50 @@ function HeroSlides({
             />
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * CAROUSEL PROMO (Afinitas + Feed) — geser snap dengan TITIK yang mengikuti
+ * slide yang sedang tampil (bukan statis), permintaan.
+ */
+function PromoCarousel({ slides }: { slides: ReactNode[] }) {
+  const [idx, setIdx] = useState(0);
+  return (
+    <div className="mt-4">
+      <div
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const child = el.children[0] as HTMLElement | undefined;
+          if (!child) return;
+          const step = child.offsetWidth + 12; // + gap-3
+          const i = Math.round(el.scrollLeft / step);
+          const next = Math.max(0, Math.min(slides.length - 1, i));
+          if (next !== idx) setIdx(next);
+        }}
+        className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4"
+      >
+        {slides.map((s, i) => (
+          <div
+            key={i}
+            className="h-[176px] w-[92%] shrink-0 snap-center"
+          >
+            {s}
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center justify-center gap-1.5">
+        {slides.map((_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              i === idx ? "w-5 bg-gold-strong" : "w-1.5 bg-white/25",
+            )}
+          />
+        ))}
       </div>
     </div>
   );
@@ -1194,7 +1239,25 @@ function HomeContent() {
           diatur lewat panel developer, jadi tidak perlu deploy. */}
       <AnnouncementBox />
 
-      {/* 3) SPOTLIGHT — 3 judul besar, geser snap: views · rating · status. */}
+      {/* 3) GENRE CEPAT — kotak rounded berisi nama genre, DI ATAS Spotlight
+          (permintaan). Ditekan → layar fullscreen GENRE. */}
+      {!loading && genreList.length > 0 && (
+        <div className="fade-enter mt-4">
+          <div className="thin-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+            {genreList.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGenreScreen(g.id)}
+                className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-sm font-bold text-white/90 transition hover:border-gold-strong/50 hover:bg-white/[0.1] active:scale-95"
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4) SPOTLIGHT — 3 judul besar, geser snap: views · rating · status. */}
       <Spotlight
         items={topList}
         viewsOf={viewCountFor}
@@ -1237,23 +1300,16 @@ function HomeContent() {
 
       {/* PROMO — Afinitas + Feed digabung jadi SATU carousel yang bisa
           digeser ke kiri/kanan (permintaan), lengkap dengan titik pagination. */}
-      <div className="mt-4">
-        <div className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4">
-          <div className="h-[176px] w-[92%] shrink-0 snap-center">
-            <AfinitasPromo
-              onOpen={() => (user ? setAfinitas(true) : toast.info("Login dulu ya"))}
-              images={heroItems.slice(0, 2).map((h) => h.image).filter(Boolean)}
-            />
-          </div>
-          <div className="h-[176px] w-[92%] shrink-0 snap-center">
-            <FeedPromo onOpen={() => navigate("/feed")} />
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-center gap-1.5">
-          <span className="h-1.5 w-5 rounded-full bg-gold-strong" />
-          <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
-        </div>
-      </div>
+      <PromoCarousel
+        slides={[
+          <AfinitasPromo
+            key="afinitas"
+            onOpen={() => (user ? setAfinitas(true) : toast.info("Login dulu ya"))}
+            images={heroItems.slice(0, 2).map((h) => h.image).filter(Boolean)}
+          />,
+          <FeedPromo key="feed" onOpen={() => navigate("/feed")} />,
+        ]}
+      />
 
       {/* 5) CARI ANIME — hanya tombol pemicu; pencarian tampil di layar
           FULL SCREEN (SearchScreen), bukan nempel di Home.
@@ -1293,23 +1349,6 @@ function HomeContent() {
           kanan. Menekan chip membuka layar SearchScreen dengan genre itu
           terpilih (panel multi-select genre ikut terbuka). */}
       <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
-      {/* KOTAK GENRE (quick genre) — hanya kotak rounded + tulisan genre,
-          tanpa judul seksi. Ditekan → layar fullscreen GENRE. */}
-      {!loading && genreList.length > 0 && (
-        <div className="fade-enter mt-4">
-          <div className="thin-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-            {genreList.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => setGenreScreen(g.id)}
-                className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-sm font-bold text-white/90 transition hover:border-gold-strong/50 hover:bg-white/[0.1] active:scale-95"
-              >
-                {g.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
 
 
@@ -2919,7 +2958,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   useHideNavOnMount();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
+  const [tab, setTab] = useState<"chat" | "clan" | "teman" | "sticker">("chat");
   const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
   const [clanTutorial, setClanTutorial] = useState(false);
@@ -2977,18 +3016,24 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         {/* Tab dikecualikan dari px-4: KOTAK PESAN (chat/clan/teman) harus
             full ke samping — hanya baris tab yang tetap punya jarak. */}
         <div className="w-full">
-          {/* Tab: Chat · Clan · Teman — clan digabung kembali ke chat bareng */}
+          {/* Tab: Chat · Clan · Teman · Sticker. */}
           <div className="flex gap-1.5 px-4 py-2.5">
-            {(["chat", "clan", "teman"] as const).map((t) => (
+            {(["chat", "clan", "teman", "sticker"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={cn(
-                  "yn-chip flex-1 justify-center py-2",
+                  "yn-chip flex-1 justify-center px-1 py-2 text-[11px]",
                   tab === t && "yn-chip-on",
                 )}
               >
-                {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
+                {t === "chat"
+                  ? "Chat"
+                  : t === "clan"
+                    ? "Clan"
+                    : t === "teman"
+                      ? "Teman"
+                      : "Sticker"}
               </button>
             ))}
           </div>
@@ -3086,6 +3131,12 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
               {/* (Tutorial Clan dihapus atas permintaan — sudah join clan,
                   tombol panduan tidak diperlukan lagi.) */}
+            </div>
+          )}
+
+          {tab === "sticker" && (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/50 bg-black/35">
+              <StickerStore />
             </div>
           )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
@@ -53,6 +53,48 @@ import {
 } from "@/components/FeedScreen";
 
 type Tab = "komen" | "history" | "favorite";
+
+/**
+ * PERCIKAN API — animasi CSS di layar detail akun (fullscreen). Partikel
+ * kecil bergradasi merah-oranye-kuning naik dari bawah, dengan bayangan
+ * warna tipis supaya terasa neon tapi tetap gelap sinematik.
+ */
+function FireSparks() {
+  const colors = [
+    ["#ffd166", "#ff7a18"],
+    ["#ff9f1c", "#ff2d55"],
+    ["#ffe066", "#ff4d00"],
+    ["#ffb703", "#ff006e"],
+  ];
+  return (
+    <div className="profile-fire" aria-hidden>
+      {Array.from({ length: 26 }).map((_, i) => {
+        const [c1, c2] = colors[i % colors.length];
+        const x = (i * 37 + 11) % 100;
+        const size = 3 + ((i * 7) % 5);
+        const dur = 3 + ((i * 13) % 24) / 10;
+        const delay = ((i * 17) % 36) / 10;
+        const dx = (i % 2 === 0 ? 1 : -1) * (6 + ((i * 11) % 30));
+        return (
+          <span
+            key={i}
+            style={
+              {
+                "--x": `${x}%`,
+                "--s": `${size}px`,
+                "--dur": `${dur}s`,
+                "--delay": `${delay}s`,
+                "--dx": `${dx}px`,
+                "--c1": c1,
+                "--c2": c2,
+              } as CSSProperties
+            }
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * Detail akun (diri sendiri / orang lain) — muncul saat avatar diklik:
@@ -183,6 +225,8 @@ export function ProfileSheet({
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
+      {/* Percikan api khas detail akun — CSS murni. */}
+      <FireSparks />
       {!profile ? (
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (

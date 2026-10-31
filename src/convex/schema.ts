@@ -134,6 +134,8 @@ const schema = defineSchema(
       premiumGiveId: v.optional(v.id("premiumGives")),
       createdAt: v.number(),
       deleted: v.optional(v.boolean()),
+      /** Emoji sticker yang dikirim (besar di bubble, bukan teks biasa). */
+      sticker: v.optional(v.string()),
       /** Pesan dari bot resmi (Luna Bot musik) — tampil seperti user lain
           tapi dengan avatar & centang ungu bot official. */
       bot: v.optional(v.boolean()),
@@ -144,6 +146,28 @@ const schema = defineSchema(
       .index("roomId_created", ["roomId", "createdAt"])
       .index("dmKey_created", ["dmKey", "createdAt"])
       .index("premiumGiveId", ["premiumGiveId"]),
+
+    /** Toko sticker: pack yang diunggah developer (builtin ada di kode). */
+    stickerPacks: defineTable({
+      title: v.string(),
+      /** "pack" (Sticker Pack) · "anime" · "random". */
+      category: v.string(),
+      price: v.number(),
+      stickers: v.array(v.string()),
+      createdBy: v.id("users"),
+      createdAt: v.number(),
+    }).index("createdAt", ["createdAt"]),
+
+    /** Sticker yang sudah dibeli per user — isi sticker disalin supaya pack
+        bawaan kode tetap bisa dipakai walau daftarnya berubah. */
+    stickerPurchases: defineTable({
+      userId: v.id("users"),
+      packKey: v.string(),
+      title: v.string(),
+      price: v.number(),
+      stickers: v.array(v.string()),
+      createdAt: v.number(),
+    }).index("userId", ["userId"]),
 
     premiumGives: defineTable({
       chatMessageId: v.optional(v.id("chatMessages")),
@@ -920,6 +944,21 @@ const schema = defineSchema(
             joinedAt: v.number(),
           }),
         ),
+      ),
+      /** Opsi NOBAR di voice room: anime / film / donghua yang diputar host. */
+      nobar: v.optional(
+        v.object({
+          /** anime | film | donghua */
+          kind: v.string(),
+          id: v.string(),
+          /** Slug episode donghua (kalau ada) untuk resolve streaming. */
+          slug: v.optional(v.string()),
+          title: v.string(),
+          image: v.optional(v.string()),
+          episode: v.optional(v.number()),
+          startedBy: v.optional(v.id("users")),
+          startedAt: v.number(),
+        }),
       ),
       createdAt: v.number(),
       updatedAt: v.number(),

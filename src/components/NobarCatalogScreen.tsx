@@ -26,6 +26,8 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
   const [joinOpen, setJoinOpen] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  // Error inline (toaster dimatikan permanen).
+  const [err, setErr] = useState<string | null>(null);
 
   // Cari room lewat kode undangan.
   const found = useQuery(
@@ -35,16 +37,16 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
 
   const joinFound = async () => {
     if (!found) return;
+    setErr(null);
     setBusy(true);
     try {
       await join({ roomId: found._id });
-      toast.success(`Masuk room "${found.name}"`);
       // WAJIB bawa ?room=<id> — tanpa ini halaman nonton tidak pernah
       // tahu sedang masuk room dan macet di layar "Memuat…".
       onClose();
       navigate(`/nonton?room=${found._id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal join");
+      setErr(e instanceof Error ? e.message : "Gagal join room");
     } finally {
       setBusy(false);
     }
@@ -60,6 +62,11 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-4">
+      {err && (
+        <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-200">
+          {err}
+        </p>
+      )}
       {/* ------- SATU KOTAK: judul Nobar + Buat/Join digabung ---------- */}
       <div className="overflow-hidden rounded-3xl border border-indigo-400/25 bg-gradient-to-b from-indigo-950/90 via-slate-900 to-zinc-950 shadow-[0_16px_40px_-18px_rgba(99,102,241,0.75)]">
         {/* Hero — ikon teman + judul, MENYATU dengan kotak aksi di bawah. */}
@@ -201,13 +208,13 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
   );
 
   async function doJoin(roomId: Room["_id"]) {
+    setErr(null);
     setBusy(true);
     try {
       await join({ roomId });
-      toast.success("Masuk room");
       onJoined(roomId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal join");
+      setErr(e instanceof Error ? e.message : "Gagal join room");
     } finally {
       setBusy(false);
     }

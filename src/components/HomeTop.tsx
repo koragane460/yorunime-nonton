@@ -37,50 +37,50 @@ export function AccountHeader() {
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
 
   return (
-    <header className="fade-enter flex w-full items-center gap-2.5 pt-1">
+    <header className="fade-enter flex w-full items-center gap-3 pt-2">
       {/* KIRI: foto profile (pakai SHOP BORDER) + nama + level + ID. */}
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl text-left transition active:scale-[0.98]"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition active:scale-[0.98]"
         aria-label="Buka akun"
       >
         <FramedAvatar
           border={(user as any)?.avatarBorder}
           src={user?.image}
           seed={user?.username}
-          className="mt-1.5 size-12 shrink-0"
+          className="size-16 shrink-0"
         />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[11px] font-bold uppercase tracking-[0.14em] text-white/90">
+          <span className="block truncate text-xs font-bold uppercase tracking-[0.14em] text-white/90">
             {greetingOf()}
           </span>
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[15px] font-black leading-tight tracking-tight">
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span className="truncate text-lg font-black leading-tight tracking-tight">
               {user?.username ?? "user"}
             </span>
-            {premium && <BlueCheck className="size-3.5 shrink-0" />}
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/40 bg-white/[0.07] px-1.5 py-0.5 text-[9px] font-bold text-white/95">
-              <TierIcon tier={badgeForLevel(level).name} className="size-3" />
+            {premium && <BlueCheck className="size-4 shrink-0" />}
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/40 bg-white/[0.07] px-2 py-0.5 text-[10px] font-bold text-white/95">
+              <TierIcon tier={badgeForLevel(level).name} className="size-3.5" />
               Lv.{level}
             </span>
           </span>
-          <span className="mt-0.5 block font-mono text-[10px] leading-none text-white/45">
+          <span className="mt-1 block font-mono text-[11px] leading-none text-white/45">
             ID {displayId((user as any)?.seqId)}
           </span>
         </span>
       </button>
 
-      {/* KANAN: notif + pengaturan. */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        <NotifButton />
+      {/* KANAN: notif + pengaturan — kotak rounded besar biar mudah ditekan. */}
+      <div className="flex shrink-0 items-center gap-2">
+        <NotifButton className="size-12 rounded-2xl border border-white/12 bg-white/[0.06] hover:border-gold-strong/40 hover:bg-white/[0.1]" />
         <button
           type="button"
           onClick={() => navigate("/akun")}
           aria-label="Pengaturan"
-          className="flex size-10 items-center justify-center text-white/75 transition hover:text-white active:scale-95"
+          className="flex size-12 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white/80 transition hover:border-gold-strong/40 hover:bg-white/[0.1] hover:text-white active:scale-95"
         >
-          <Settings className="size-[18px]" />
+          <Settings className="size-[22px]" />
         </button>
       </div>
     </header>

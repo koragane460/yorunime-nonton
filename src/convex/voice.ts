@@ -65,6 +65,8 @@ async function view(ctx: QueryCtx | MutationCtx, r: Doc<"voiceRooms">) {
     members,
     /** Dua foto pertama untuk daftar room. */
     previews: members.slice(0, 2),
+    /** Judul nobar yang sedang diputar host (null = tidak ada). */
+    nobar: r.nobar ?? null,
     createdAt: r.createdAt,
   };
 }
@@ -291,6 +293,60 @@ export const setMaxUsers = mutation({
       maxUsers: Math.max(next, floor),
       updatedAt: Date.now(),
     });
+  },
+});
+
+/** HOST saja: pasang judul nobar (anime / film / donghua) di room. */
+export const setNobar = mutation({
+  args: {
+    roomId: v.id("voiceRooms"),
+    kind: v.string(),
+    id: v.string(),
+    slug: v.optional(v.string()),
+    title: v.string(),
+    image: v.optional(v.string()),
+    episode: v.optional(v.number()),
+  },
+  handler: async (ctx, { roomId, kind, id, slug, title, image, episode }) => {
+    const userId = await me(ctx);
+    if (userId === null) throw new Error("Belum login");
+    const r = await ctx.db.get(roomId);
+    if (!r) throw new Error("Room tidak ditemukan");
+    if (r.ownerId !== userId)
+      throw new Error("Hanya host yang bisa mengatur nobar");
+    const k = ["anime", "film", "donghua"].includes(kind) ? kind : "anime";
+    await ctx.db.patch(roomId, {
+      nobar: {
+        kind: k,
+        id: id.slice(0, 200),
+        slug: slug ? slug.slice(0, 200) : undefined,
+        title: title.slice(0, 200),
+        image: image ? image.slice(0, 900) : undefined,
+        episode:
+          episode && Number.isFinite(episode)
+            ? Math.max(1, Math.floor(episode))
+            : undefined,
+        startedBy: userId,
+        startedAt: Date.now(),
+      },
+      updatedAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
+/** HOST saja: matikan nobar, room kembali seperti biasa. */
+export const clearNobar = mutation({
+  args: { roomId: v.id("voiceRooms") },
+  handler: async (ctx, { roomId }) => {
+    const userId = await me(ctx);
+    if (userId === null) throw new Error("Belum login");
+    const r = await ctx.db.get(roomId);
+    if (!r) throw new Error("Room tidak ditemukan");
+    if (r.ownerId !== userId)
+      throw new Error("Hanya host yang bisa mengatur nobar");
+    await ctx.db.patch(roomId, { nobar: undefined, updatedAt: Date.now() });
+    return { ok: true };
   },
 });
 

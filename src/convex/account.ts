@@ -451,6 +451,8 @@ const BORDER_PRICES: Record<string, number> = {
   nova: 3000,
   magma: 4000,
   holo: 5000,
+  wings: 6500,
+  cloud: 7500,
 };
 
 /** Beli border foto profile pakai Sacret — begitu dibeli langsung dipakai. */

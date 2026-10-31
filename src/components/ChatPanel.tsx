@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { avatarFallback, usernameColor } from "@/lib/lstream";
 import { ClanTag, TitleBadge } from "@/components/lstream-ui";
@@ -22,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Check, Crown, ImagePlus, Lock, MoreVertical, Plus, Reply, Send, Trash2, VolumeX, X } from "lucide-react";
+import { Check, Crown, ImagePlus, MoreVertical, Reply, Send, Sticker, Trash2, VolumeX, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -45,6 +44,8 @@ export type ChatMsg = {
   text?: string;
   imageUrl?: string;
   imageStorageId?: string;
+  /** Emoji sticker besar dari toko sticker. */
+  sticker?: string;
   premiumGive?: {
     _id: Id<"premiumGives">;
     days: number;
@@ -93,21 +94,28 @@ function GivePremiumDialog({
   clanId?: Id<"clans">;
   peerId?: Id<"users">;
 }) {
+  const { user } = useAuth();
   const [days, setDays] = useState(1);
   const [receivers, setReceivers] = useState(5);
   const [message, setMessage] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const give = useMutation(api.chat.givePremium);
   const cost = (GIVE_COST[days] ?? days + 1) + receiverCost(receivers);
   const xp = (GIVE_XP[days] ?? days * 200) + Math.max(0, receivers - 5) * 100;
   const msgLen = message.trim().length;
   const msgOk = msgLen === 0 || msgLen >= 50;
+  const unlimited = !!(user as any)?.unlimitedPremium;
+  const remaining = Math.max(
+    0,
+    Math.floor(((user?.premiumUntil ?? 0) - Date.now()) / 86400000),
+  );
+  const notEnough = !unlimited && remaining < cost;
 
   const submit = async () => {
-    // Dialog ditutup duluan supaya cepat, tapi status baru success setelah
-    // server benar-benar menerima (kalau gagal, user jadi tahu).
-    onOpenChange(false);
-    setMessage("");
-    const t = toast.loading("Mengirim premium…");
+    if (busy) return;
+    setErr(null);
+    setBusy(true);
     try {
       await give({
         kind,
@@ -117,11 +125,13 @@ function GivePremiumDialog({
         receivers,
         message: message.trim() || undefined,
       });
-      toast.success("Premium terkirim!");
+      onOpenChange(false);
+      setMessage("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal kirim premium");
+      // Tetap buka dialog + tampilkan alasannya inline (toaster dimatikan).
+      setErr(e instanceof Error ? e.message : "Gagal kirim premium");
     } finally {
-      toast.dismiss(t);
+      setBusy(false);
     }
   };
 
@@ -243,7 +253,19 @@ function GivePremiumDialog({
             <p className="mt-2 border-t border-amber-400/15 pt-2 text-xs font-semibold text-amber-300/90">
               +{xp} XP untuk kamu
             </p>
+            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+              Sisa premium kamu:{" "}
+              <span className="font-bold text-white/85">
+                {unlimited ? "Tanpa batas" : `${remaining} hari`}
+              </span>
+            </p>
           </div>
+          {(err || notEnough) && (
+            <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold leading-snug text-red-200">
+              {err ??
+                `Premium kamu cuma ${remaining} hari, butuh ${cost} hari buat give ini.`}
+            </p>
+          )}
           <div className="flex gap-2 pb-1">
             <Button
               variant="outline"
@@ -253,11 +275,11 @@ function GivePremiumDialog({
               Batal
             </Button>
             <Button
-              disabled={!msgOk}
+              disabled={!msgOk || notEnough || busy}
               className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 font-bold text-black shadow-[0_2px_10px_-4px_rgba(251,191,36,.6)] hover:brightness-105"
               onClick={submit}
             >
-              <Crown className="size-4" /> Kirim
+              <Crown className="size-4" /> {busy ? "Mengirim…" : "Kirim"}
             </Button>
           </div>
         </div>
@@ -276,14 +298,6 @@ const NSFW_STEPS = [
   "Check konten sensitif",
 ];
 
-function analyzeImageLocal(file: File): { ok: boolean; reason?: string } {
-  const name = file.name.toLowerCase();
-  const bad = ["nsfw", "hentai", "18+", "porn", "xxx", "gore"];
-  if (bad.some((w) => name.includes(w)))
-    return { ok: false, reason: "Konten terindikasi 18+" };
-  return { ok: true };
-}
-
 /**
  * Perkecil foto sebelum dikirim. Base64 mentah dari HP bisaUkuran 5-10 MB
  * sehingga ditolak server ("Server Error") tanpa pesan apa pun. Diperkecil ke
@@ -293,6 +307,80 @@ function analyzeImageLocal(file: File): { ok: boolean; reason?: string } {
  * Perkecil foto sebelum dikirim. Hasilnya Blob (bukan base64) supaya bisa
  * diunggah ke Convex storage - dokumen cuma boleh 1MB.
  */
+/**
+ * ANALISIS GAMBAR KETAT — bukan cuma nama file. Gambar benar-benar dibaca
+ * pikselnya: rasio warna kulit + area merah/kegelapan dihitung untuk menolak
+ * konten 18+ dan gambar berdarah. Ambang sengaja tinggi supaya foto anime
+ * biasa (wajah + tangan) tidak ikut tertolak.
+ */
+async function analyzeImageStrict(file: File): Promise<{ ok: boolean; reason?: string }> {
+  if (!file.type.startsWith("image/"))
+    return { ok: false, reason: "File bukan gambar" };
+  if (file.size > 12 * 1024 * 1024)
+    return { ok: false, reason: "Gambar lebih dari 12 MB" };
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Gambar tidak bisa dibaca"));
+      el.src = url;
+    });
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return { ok: true };
+    ctx.drawImage(img, 0, 0, size, size);
+    const data = ctx.getImageData(0, 0, size, size).data;
+    let skin = 0;
+    let red = 0;
+    let darkRed = 0;
+    let colorful = 0;
+    let total = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+      if (a < 32) continue;
+      total++;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const sat = max === 0 ? 0 : (max - min) / max;
+      if (sat > 0.18) colorful++;
+      // Kulit: merah dominan, hijau sedang, biru lebih rendah.
+      if (r > 90 && r > g + 12 && g > b - 6 && r < 250 && sat > 0.15 && sat < 0.62) {
+        skin++;
+      }
+      if (r > 90 && r > g * 1.6 && r > b * 1.6) red++;
+      if (r > 60 && r > g * 1.8 && r > b * 1.8 && g < 70) darkRed++;
+    }
+    if (total === 0) return { ok: false, reason: "Gambar kosong" };
+    const skinRatio = skin / total;
+    const redRatio = red / total;
+    const darkRedRatio = darkRed / total;
+    const colorfulRatio = colorful / total;
+    // Konten 18+: mayoritas bidang warna kulit DAN foto berwarna penuh.
+    if (skinRatio > 0.52 && colorfulRatio > 0.6)
+      return { ok: false, reason: "Konten 18+ (kulit) terdeteksi" };
+    // Kekerasan/berdarah: area merah pekat yang luas.
+    if (darkRedRatio > 0.34 && redRatio > 0.46)
+      return { ok: false, reason: "Konten darah/kekerasan terdeteksi" };
+    if (redRatio > 0.72)
+      return { ok: false, reason: "Terlalu banyak area merah pekat" };
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: e instanceof Error ? e.message : "Gambar tidak bisa diperiksa",
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 async function compressImage(
   file: File,
   maxSide = 1280,
@@ -337,35 +425,51 @@ function NsfwScanDialog({
   file,
   onDone,
   onCancel,
+  onReject,
 }: {
   file: File;
   onDone: (blob: Blob) => void;
   onCancel: (banned: boolean) => void;
+  /** Analisis ketat menolak gambar — alasan ditampilkan di dialog. */
+  onReject: (reason: string) => void;
 }) {
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(6);
+  const [error, setError] = useState<string | null>(null);
   const previewUrl = useRef<string>("");
   if (!previewUrl.current) previewUrl.current = URL.createObjectURL(file);
 
   useEffect(() => {
     let s = 0;
+    let stopped = false;
     const t = setInterval(() => {
       s += 1;
       setProgress((p) => Math.min(100, p + 9));
-      if (s % 4 === 0) setStep((x) => Math.min(x + 1, NSFW_STEPS.length - 1));
+      if (s % 3 === 0) setStep((x) => Math.min(x + 1, NSFW_STEPS.length - 1));
       if (s >= 12) {
         clearInterval(t);
-        const verdict = analyzeImageLocal(file);
-        if (verdict.ok) {
-          void compressImage(file)
-            .then(onDone)
-            .catch(() => onCancel(false));
-        } else {
-          onCancel(false);
-        }
+        void (async () => {
+          const verdict = await analyzeImageStrict(file);
+          if (stopped) return;
+          if (verdict.ok) {
+            try {
+              const blob = await compressImage(file);
+              onDone(blob);
+            } catch {
+              onCancel(false);
+            }
+          } else {
+            setError(verdict.reason ?? "Gambar ditolak");
+            setProgress(100);
+            setTimeout(() => onReject(verdict.reason ?? "Gambar ditolak"), 1200);
+          }
+        })();
       }
     }, 160);
-    return () => clearInterval(t);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -374,10 +478,19 @@ function NsfwScanDialog({
       <DialogContent className="max-w-xs border-foreground/40">
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-2 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full bg-green-500/20 text-green-400">
-              <Check className="size-5" />
+            <span
+              className={cn(
+                "flex size-10 items-center justify-center rounded-full",
+                error
+                  ? "bg-red-500/20 text-red-400"
+                  : "bg-emerald-500/20 text-emerald-400",
+              )}
+            >
+              {error ? <X className="size-5" /> : <Check className="size-5" />}
             </span>
-            <span className="text-sm font-medium">{NSFW_STEPS[step]}…</span>
+            <span className="text-sm font-medium">
+              {error ? "Gambar ditolak" : `${NSFW_STEPS[step]}…`}
+            </span>
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
@@ -387,6 +500,11 @@ function NsfwScanDialog({
             className="max-h-40 w-full rounded-lg object-cover"
           />
           <Progress value={progress} className="h-2" />
+          {error && (
+            <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-2.5 py-2 text-center text-[11px] font-semibold leading-snug text-red-200">
+              {error}
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -413,6 +531,7 @@ function ReportDialog({
 }) {
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
+  const [err, setErr] = useState<string | null>(null);
   const report = useMutation(api.activities.reportChatMessage);
 
   return (
@@ -439,6 +558,11 @@ function ReportDialog({
               {r}
             </button>
           ))}
+          {err && (
+            <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-red-200">
+              {err}
+            </p>
+          )}
           {reason === "Lainnya" && (
             <input
               value={detail}
@@ -455,16 +579,16 @@ function ReportDialog({
               className="flex-1 bg-primary text-primary-foreground hover:brightness-110"
               disabled={!reason}
               onClick={async () => {
+                setErr(null);
                 try {
                   await report({
                     messageId: msg._id,
                     reason,
                     detail: detail.trim() || undefined,
                   });
-                  toast.success("Laporan terkirim ke developer");
                   onClose();
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Gagal");
+                  setErr(e instanceof Error ? e.message : "Gagal mengirim laporan");
                 }
               }}
             >
@@ -501,6 +625,8 @@ export function ChatPanel({
     text?: string;
     imageStorageId?: string;
     imageUrl?: string;
+    /** Emoji sticker besar dari toko sticker. */
+    sticker?: string;
     replyToId?: Id<"chatMessages">;
     /** Kutipan reply untuk echo lokal — hanya dipakai sebelum server balas. */
     _replyTo?: {
@@ -524,10 +650,16 @@ export function ChatPanel({
   const [replyTo, setReplyTo] = useState<ChatMsg | null>(null);
   const [blinkId, setBlinkId] = useState<string | null>(null);
   const [zoomImg, setZoomImg] = useState<string | null>(null);
-  const [plusOpen, setPlusOpen] = useState(false);
   const [giveOpen, setGiveOpen] = useState(false);
+  const [stickerOpen, setStickerOpen] = useState(false);
   const [scanFile, setScanFile] = useState<File | null>(null);
   const [reportMsg, setReportMsg] = useState<ChatMsg | null>(null);
+  // Error ditampilkan LANGSUNG di kolom chat (toaster dimatikan permanen).
+  const [sendError, setSendError] = useState<string | null>(null);
+  const stickerList = useQuery(
+    api.stickers.mine,
+    user ? {} : "skip",
+  ) as { key: string; sticker: string; title: string }[] | undefined;
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   // Cegah tap dobel (Enter lalu ketuk, atau ketuk dua kali) mengirim isi yang
@@ -538,9 +670,6 @@ export function ChatPanel({
   const nsfwReport = useMutation(api.chat.nsfwReport);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const { muted } = useModeration();
-  // Kirim foto = fitur Premium. User non-premium tidak bisa membuka picker
-  // foto sama sekali (server juga menolak, lihat convex/chat.ts).
-  const canPhoto = (user?.premiumUntil ?? 0) > Date.now();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -551,6 +680,7 @@ export function ChatPanel({
       text?: string;
       imageStorageId?: string;
       imageUrl?: string;
+      sticker?: string;
     }) => {
       // Kutipan reply ditampilkan langsung di bubble lokal, supaya pesan yang
       // barusan dikirim tidak pernah muncul tanpa konteks balasannya.
@@ -587,9 +717,10 @@ export function ChatPanel({
 
   const submit = async () => {
     if (muted) {
-      toast.error("Kamu sedang dimute, tidak bisa mengirim pesan");
+      setSendError("Kamu sedang dimute — tidak bisa mengirim pesan");
       return;
     }
+    setSendError(null);
     if (!text.trim()) return;
     const t = text;
     const now = Date.now();
@@ -597,7 +728,7 @@ export function ChatPanel({
     if (peerId && lastDmAt.current && now - lastDmAt.current < 10000) {
       const sisa = Math.ceil((10000 - (now - lastDmAt.current)) / 1000);
       setCdLeft(sisa);
-      toast.info(`Cooldown chat ${sisa}s lagi`);
+      setSendError(`Cooldown chat — tunggu ${sisa} detik lagi`);
       return;
     }
     // Kirim dua kali dalam <800ms dengan teks identik hampir pasti ketukan
@@ -616,7 +747,7 @@ export function ChatPanel({
       // supaya kirim ulang yang segera setelahnya tidak diblokir diam-diam.
       lastSent.current = { text: "", at: 0 };
       setText(t);
-      toast.error(e instanceof Error ? e.message : "Gagal kirim");
+      setSendError(e instanceof Error ? e.message : "Gagal kirim pesan");
     }
   };  return (
     <div className="flex min-h-0 flex-1 flex-col bg-transparent">
@@ -679,7 +810,7 @@ export function ChatPanel({
                     mine && "items-end",
                     // Pesan yang isinya cuma foto: bubble dibuat transparan
                     // supaya tidak ada kotak hitam di belakang fotonya.
-                      m.imageUrl && !m.text
+                      (m.imageUrl || m.sticker) && !m.text
                           ? "border-transparent bg-transparent px-1 pb-1 pt-0 shadow-none"
                           : give
                               ? "bubble-give"
@@ -777,6 +908,11 @@ export function ChatPanel({
                           )}
                         />
                       )}
+                      {m.sticker && (
+                        <span className="select-none text-[64px] leading-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)]">
+                          {m.sticker}
+                        </span>
+                      )}
                     </>
                   )}
                   {/* Meta pesan — waktu, reply, dan menu titik-tiga SEMUA di
@@ -847,64 +983,20 @@ export function ChatPanel({
             Cooldown chat · {cdLeft}
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 rounded-full"
-              disabled={muted}
-              onClick={() => {
-                if (muted) {
-                  toast.error("Kamu sedang dimute, tidak bisa kirim foto atau premium");
-                  return;
-                }
-                setPlusOpen((v) => !v);
-              }}
+        {sendError && (
+          <div className="mb-2 flex items-start gap-2 rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold leading-snug text-red-200">
+            <span className="min-w-0 flex-1">{sendError}</span>
+            <button
+              type="button"
+              onClick={() => setSendError(null)}
+              aria-label="Tutup pesan error"
+              className="shrink-0 text-red-200/70 transition hover:text-red-100"
             >
-              <Plus className="size-5" />
-            </Button>
-            {plusOpen && (
-              <div className="pop-enter absolute bottom-12 left-0 z-10 flex flex-col gap-2 rounded-2xl border border-border bg-popover p-2 shadow-xl">
-                <button
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent",
-                    !canPhoto && "cursor-not-allowed text-muted-foreground hover:bg-transparent",
-                  )}
-                  onClick={() => {
-                    // Fitur terkunci Premium: kalau bukan premium, file picker
-                    // tidak pernah terbuka — tidak bisa dipakai sama sekali.
-                    if (!canPhoto) {
-                      setPlusOpen(false);
-                      toast.error(
-                        "Kirim foto hanya untuk akun Premium — buka Premium dulu",
-                      );
-                      return;
-                    }
-                    fileRef.current?.click();
-                  }}
-                >
-                  {canPhoto ? (
-                    <ImagePlus className="size-4" />
-                  ) : (
-                    <Lock className="size-4" />
-                  )}
-                  Kirim foto{!canPhoto ? " (Premium)" : ""}
-                </button>
-                {!noPremium && (
-                <button
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary hover:bg-accent"
-                  onClick={() => {
-                    setPlusOpen(false);
-                    setGiveOpen(true);
-                  }}
-                >
-                  <Crown className="size-4" /> Give premium
-                </button>
-                )}
-              </div>
-            )}
+              <X className="size-3.5" />
+            </button>
           </div>
+        )}
+        <div className="flex items-center gap-2">
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -922,6 +1014,57 @@ export function ChatPanel({
             <Send className="size-5" />
           </Button>
         </div>
+        {/* 3 KOTAK ROUNDED di bawah kolom pesan: Foto · Give Prem · Sticker. */}
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            disabled={muted}
+            onClick={() => {
+              if (muted) {
+                setSendError("Kamu sedang dimute — tidak bisa kirim foto");
+                return;
+              }
+              setSendError(null);
+              fileRef.current?.click();
+            }}
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-[10px] font-bold text-white/75 transition hover:border-sky-300/45 hover:bg-sky-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
+          >
+            <ImagePlus className="size-4 text-sky-300" />
+            Foto
+          </button>
+          <button
+            type="button"
+            disabled={muted || !!noPremium}
+            onClick={() => {
+              if (muted) {
+                setSendError("Kamu sedang dimute — tidak bisa memberi premium");
+                return;
+              }
+              setSendError(null);
+              setGiveOpen(true);
+            }}
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-[10px] font-bold text-white/75 transition hover:border-amber-300/45 hover:bg-amber-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
+          >
+            <Crown className="size-4 text-amber-300" />
+            Give Prem
+          </button>
+          <button
+            type="button"
+            disabled={muted}
+            onClick={() => {
+              if (muted) {
+                setSendError("Kamu sedang dimute — tidak bisa kirim sticker");
+                return;
+              }
+              setSendError(null);
+              setStickerOpen(true);
+            }}
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-[10px] font-bold text-white/75 transition hover:border-violet-300/45 hover:bg-violet-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
+          >
+            <Sticker className="size-4 text-violet-300" />
+            Sticker
+          </button>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -934,6 +1077,74 @@ export function ChatPanel({
           }}
         />
       </div>
+
+      {/* SHEET STICKER — 40% layar, TANPA blur. Grid 4 per baris, judul di
+          bawah tiap sticker; sekali ketuk langsung terkirim. */}
+      {stickerOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/30"
+          onClick={() => setStickerOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="screen-enter h-[40dvh] w-full max-w-2xl overflow-hidden rounded-t-3xl border-t border-white/12 bg-[#0c0f16] pb-[env(safe-area-inset-bottom)]"
+          >
+            <div className="flex items-center gap-2 px-4 pb-2 pt-3">
+              <Sticker className="size-4 text-violet-300" />
+              <p className="min-w-0 flex-1 text-sm font-black text-white">
+                Sticker
+              </p>
+              <button
+                type="button"
+                onClick={() => setStickerOpen(false)}
+                aria-label="Tutup sticker"
+                className="flex size-7 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/70 transition hover:text-white"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            <div
+              className="thin-scroll overflow-y-auto px-3 pb-4"
+              style={{ maxHeight: "calc(40dvh - 52px)" }}
+            >
+              {stickerList && stickerList.length > 0 ? (
+                <div className="grid grid-cols-4 gap-2">
+                  {stickerList.map((s) => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() => {
+                        setStickerOpen(false);
+                        void send({ sticker: s.sticker }).catch((e) =>
+                          setSendError(
+                            e instanceof Error ? e.message : "Sticker gagal terkirim",
+                          ),
+                        );
+                      }}
+                      className="flex min-w-0 flex-col items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-1 pb-1.5 pt-2 transition hover:border-violet-300/40 hover:bg-violet-400/10 active:scale-95"
+                    >
+                      <span className="text-3xl leading-none">{s.sticker}</span>
+                      <span className="w-full truncate text-center text-[9px] font-semibold leading-tight text-white/45">
+                        {s.title}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-8 text-center">
+                  <p className="text-xs font-semibold text-white/70">
+                    Belum punya sticker
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+                    Buka Chat → tab Sticker untuk membeli pack. Sticker yang
+                    sudah dibeli otomatis muncul di sini.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {scanFile && (
         <NsfwScanDialog
@@ -956,29 +1167,30 @@ export function ChatPanel({
                   imageStorageId: storageId,
                   imageUrl: URL.createObjectURL(blob),
                 });
-                toast.success("Foto terkirim");
+                setSendError(null);
               } catch (e) {
-                toast.error(
+                setSendError(
                   e instanceof Error
                     ? `Foto gagal terkirim: ${e.message}`
-                    : "Foto gagal terkirim, coba foto yang lebih kecil",
+                    : "Foto gagal terkirim — coba foto yang lebih kecil",
                 );
               }
             })();
           }}
-          onCancel={() => {
+          onCancel={() => setScanFile(null)}
+          onReject={(reason) => {
             setScanFile(null);
             void (async () => {
               try {
                 const res = await nsfwReport({ passed: false });
                 const strikes = (res as any)?.strikes ?? 0;
-                if (strikes >= 3) toast.error("3x pelanggaran — akun dibanned permanen!");
-                else
-                  toast.error(
-                    `Gambar ditolak (18+). Teguran ${strikes}/3 — 3x = banned permanen`,
-                  );
+                setSendError(
+                  strikes >= 3
+                    ? `Gambar ditolak: ${reason}. 3x pelanggaran — akun dibanned permanen!`
+                    : `Gambar ditolak: ${reason}. Teguran ${strikes}/3 — 3x = banned permanen`,
+                );
               } catch {
-                toast.error("Gambar ditolak (18+)");
+                setSendError(`Gambar ditolak: ${reason}`);
               }
             })();
           }}
@@ -1030,6 +1242,7 @@ function ClaimButton({
   // Optimistik: begitu diklik, tulisannya langsung berubah tanpa menunggu server.
   const [mine, setMine] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const claimed = mine || give.claimedBy.some((c) => c === (meId as unknown));
   const full = give.claimedBy.length >= give.slots;
   const taken = Math.min(give.claimedBy.length, give.slots);
@@ -1060,14 +1273,14 @@ function ClaimButton({
         )}
         onClick={async () => {
           // Tutan: klik sekali langsung berubah jadi "Kamu sudah claim".
+          setErr(null);
           setBusy(true);
           setMine(true);
           try {
             await claim({ giveId: give._id });
-            toast.success(`Berhasil claim ${give.days} hari premium`);
           } catch (e) {
             setMine(false);
-            toast.error(e instanceof Error ? e.message : "Gagal claim");
+            setErr(e instanceof Error ? e.message : "Gagal claim");
           } finally {
             setBusy(false);
           }
@@ -1079,6 +1292,9 @@ function ClaimButton({
             ? "Slot habis"
             : `Claim ${give.days} hari`}
       </Button>
+      )}
+      {err && (
+        <p className="mt-1 text-[10px] font-semibold text-red-300">{err}</p>
       )}
     </div>
   );
@@ -1093,10 +1309,11 @@ function DeleteButton({
 }) {
   const del = useMutation(api.chat.deleteMessage);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   return (
-    <button
-      aria-label="Hapus pesan"
-      title="Hapus"
+    <>        <button
+          aria-label="Hapus pesan"
+          title={err ?? "Hapus"}
       disabled={busy}
       className="hover:text-red-400 disabled:opacity-40"
       onClick={async () => {
@@ -1107,9 +1324,8 @@ function DeleteButton({
           setBusy(true);
           try {
             await onDeleteLocal(id);
-            toast.success("Pesan dihapus");
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Gagal menghapus pesan");
+            setErr(e instanceof Error ? e.message : "Gagal menghapus pesan");
           } finally {
             setBusy(false);
           }
@@ -1120,7 +1336,7 @@ function DeleteButton({
           await del({ messageId });
         } catch (e) {
           // Dulu errornya ditelan, jadi tombol terasa tidak berfungsi.
-          toast.error(e instanceof Error ? e.message : "Gagal menghapus pesan");
+          setErr(e instanceof Error ? e.message : "Gagal menghapus pesan");
         } finally {
           setBusy(false);
         }
@@ -1128,6 +1344,10 @@ function DeleteButton({
     >
       <Trash2 className="size-3.5" />
     </button>
+    {err && (
+      <span className="text-[9px] font-semibold text-red-300">Gagal</span>
+    )}
+    </>
   );
 }
 
