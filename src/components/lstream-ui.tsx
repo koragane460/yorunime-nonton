@@ -249,10 +249,10 @@ export function AnimeGrid({
   newIds?: Set<string>;
   views?: number[];
 }) {
-  /* 2 kolom BESAR di layar kecil (permintaan: jangan grid kecil-kecil),
-     melebar bertahap di tablet/desktop supaya kartu tetap proporsional. */
+  /* 3 kartu per baris di layar kecil (permintaan terbaru), melebar
+     bertahap di tablet/desktop supaya kartu tetap proporsional. */
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {items.map((a, i) => (
         <AnimeCard
           key={a.id + i}

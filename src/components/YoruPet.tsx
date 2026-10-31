@@ -104,7 +104,13 @@ export function YoruPetScreen({
 
   const scene = sceneById(state?.scene ?? "hutan");
   const equipped = state?.equipped ?? null;
-  const claimReady = !!equipped && !!state?.claimReady;
+  /** SEMUA pet yang dipasang — boleh 1 sampai 10 sekaligus (permintaan). */
+  const equippedList =
+    state?.equippedList ?? (equipped ? [equipped] : []);
+  /** Total klaim 24 jam semua pet terpasang + boost scene aktif. */
+  const claimTotal = state?.claimTotal ?? (equipped?.claim ?? 0);
+  const boost = state?.boost ?? 0;
+  const claimReady = equippedList.length > 0 && !!state?.claimReady;
   const claimIn = state?.claimIn ?? 0;
 
   const run = async (fn: () => Promise<unknown>) => {
@@ -127,25 +133,25 @@ export function YoruPetScreen({
       toast.success(count === 1 ? "Dapat 1 Telur Misteri!" : "Dapat 10 Telur Misteri!");
     });
 
-  /** Auto equip pet terbaik (rarity tertinggi, lalu klaim terbesar). */
+  /** Auto equip pet TERBAIK — bukan cuma satu: pasang semua pet terbaik
+      (urut rarity, lalu klaim), maksimal 10 (permintaan "equip best"). */
   const autoEquipBest = () => {
     const owned = state?.owned ?? [];
     if (owned.length === 0) {
       toast.error("Belum punya pet — gacha dulu ya");
       return;
     }
-    const best = [...owned].sort(
-      (a, b) =>
-        (RARITY_RANK[b.rarity] ?? 0) - (RARITY_RANK[a.rarity] ?? 0) ||
-        (b.claim ?? 0) - (a.claim ?? 0),
-    )[0];
-    if (equipped?.uid === best.uid) {
-      toast.info(`${best.name} sudah jadi pet terbaik kamu`);
-      return;
-    }
+    const sorted = [...owned]
+      .sort(
+        (a, b) =>
+          (RARITY_RANK[b.rarity] ?? 0) - (RARITY_RANK[a.rarity] ?? 0) ||
+          (b.claim ?? 0) - (a.claim ?? 0),
+      )
+      .slice(0, 10);
+    const already = equippedList.length;
     void run(async () => {
-      await equipM({ uid: best.uid });
-      toast.success(`Auto equip: ${best.name} (${best.rarity})`);
+      for (const p of sorted) await equipM({ uid: p.uid });
+      toast.success(`Auto equip ${sorted.length} pet terbaik (${already}/${sorted.length} sebelumnya)`);
     });
   };
 
@@ -473,7 +479,7 @@ export function YoruPetScreen({
                       className="flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-[10px] font-black text-black shadow-[0_0_16px_-4px_rgba(255,207,64,.9)] transition active:scale-95"
                     >
                       <Gift className="size-3" aria-hidden />
-                      Klaim {equipped.claim} Sacret
+                      Klaim {claimTotal.toLocaleString("id-ID")} Sacret
                     </button>
                   ) : (
                     <div className="rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-center text-[10px] font-bold text-zinc-200 backdrop-blur-sm">
@@ -659,19 +665,35 @@ export function YoruPetScreen({
 
                     {/* Pet yang dipakai + Auto equip best */}
                     <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-                      <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                        Pet yang dipakai
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                          Pet yang dipakai
+                        </p>
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black text-white">
+                          {equippedList.length}/10
+                        </span>
+                      </div>
                       <div className="mt-2 flex items-center gap-2.5">
                         {equipped ? (
                           <>
-                            <span
-                              className={cn(
-                                "flex size-11 shrink-0 items-center justify-center rounded-full bg-white/10 p-0.5",
-                                RARITY_STYLE[equipped.rarity as PetRarity]?.glow,
+                            {/* Foto pet pertama + tumpukan pet lain (max 10). */}
+                            <span className="flex shrink-0 -space-x-2">
+                              {equippedList.slice(0, 5).map((p) => (
+                                <span
+                                  key={p.uid}
+                                  className={cn(
+                                    "flex size-11 items-center justify-center rounded-full bg-white/10 p-0.5 ring-2 ring-black/40",
+                                    RARITY_STYLE[p.rarity as PetRarity]?.glow,
+                                  )}
+                                >
+                                  <PetArt petId={p.petId} />
+                                </span>
+                              ))}
+                              {equippedList.length > 5 && (
+                                <span className="flex size-11 items-center justify-center rounded-full bg-black/70 text-[10px] font-black ring-2 ring-black/40">
+                                  +{equippedList.length - 5}
+                                </span>
                               )}
-                            >
-                              <PetArt petId={equipped.petId} />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-black">
@@ -701,6 +723,12 @@ export function YoruPetScreen({
                           Auto equip best
                         </button>
                       </div>
+                      {boost > 0 && (
+                        <p className="mt-2 text-[10px] font-bold text-emerald-300">
+                          Scene {scene.name}: +{boost} Sacret per pet
+                          {claimTotal > 0 && ` · total klaim ${claimTotal.toLocaleString("id-ID")} Sacret`}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -715,7 +743,7 @@ export function YoruPetScreen({
                     <div className="grid grid-cols-2 gap-2">
                       {state.owned.map((o) => {
                         const st = RARITY_STYLE[o.rarity as PetRarity];
-                        const on = equipped?.uid === o.uid;
+                        const on = equippedList.some((p) => p.uid === o.uid);
                         return (
                           <div
                             key={o.uid}
@@ -744,10 +772,12 @@ export function YoruPetScreen({
                               <button
                                 onClick={() =>
                                   void run(async () => {
-                                    if (on) await unequipM({});
+                                    // Toggle per pet — boleh pasang banyak
+                                    // sekaligus (maks 10), tidak terkunci 1.
+                                    if (on) await unequipM({ uid: o.uid });
                                     else {
                                       await equipM({ uid: o.uid });
-                                      toast.success(`${o.name} equip!`);
+                                      toast.success(`${o.name} equip! (${equippedList.length + 1}/10)`);
                                     }
                                   })
                                 }
@@ -833,6 +863,15 @@ export function YoruPetScreen({
                           </div>
                           <div className="p-2">
                             <p className="text-[11px] font-black">{sc.name}</p>
+                            {/* BOOST scene — nambah ke klaim TIAP pet. */}
+                            <p
+                              className={cn(
+                                "mt-0.5 text-[9px] font-black",
+                                sc.boost > 0 ? "text-emerald-300" : "text-zinc-400",
+                              )}
+                            >
+                              {sc.boost > 0 ? `+${sc.boost} Sacret/pet` : "Tanpa boost"}
+                            </p>
                             {owned ? (
                               <button
                                 onClick={() => void run(() => setSceneM({ sceneId: sc.id }))}

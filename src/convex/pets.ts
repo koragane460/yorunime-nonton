@@ -9,7 +9,27 @@ import {
   petById,
   rollPet,
   SCENES,
+  sceneBoost,
 } from "../lib/pets";
+
+/** Maksimal pet yang boleh dipasang bersamaan (permintaan: 1-10). */
+const MAX_EQUIP = 10;
+
+/** uid pet yang sedang dipasang — field baru dulu, jatuh ke field lama. */
+function equippedUidsOf(s: {
+  equippedUids?: string[];
+  equippedUid?: string;
+  owned: { uid: string }[];
+}): string[] {
+  const list = (s.equippedUids ?? []).filter((uid) =>
+    s.owned.some((o) => o.uid === uid),
+  );
+  if (list.length > 0) return list;
+  // Data lama (baru satu pet) tetap terbaca.
+  return s.equippedUid && s.owned.some((o) => o.uid === s.equippedUid)
+    ? [s.equippedUid]
+    : [];
+}
 
 async function loadOrCreate(ctx: MutationCtx, userId: Id<"users">) {
   const existing = await ctx.db
@@ -55,7 +75,10 @@ export const state = query({
         rate: def?.rate ?? 0,
       };
     });
-    const equipped = owned.find((o) => o.uid === s?.equippedUid) ?? null;
+    const equippedIds = equippedUidsOf(s ?? { owned: [] });
+    const equippedList = owned.filter((o) => equippedIds.includes(o.uid));
+    const equipped = equippedList[0] ?? null;
+    const boost = sceneBoost(s?.scene ?? "hutan");
     const claimAt = s?.claimAt ?? now;
     return {
       username: u?.username ?? "Pet",
@@ -63,6 +86,12 @@ export const state = query({
       eggs: s?.eggs ?? 0,
       owned,
       equipped,
+      /** Semua pet yang sedang dipasang (maks 10) — klaim dihitung gabungan. */
+      equippedList,
+      /** Boost Sacret per pet dari scene yang sedang aktif. */
+      boost,
+      /** Total klaim 24 jam = Σ(pet.claim + boost) semua pet terpasang. */
+      claimTotal: equippedList.reduce((t, o) => t + (o.claim ?? 0) + boost, 0),
       crystals: s?.crystals ?? 0,
       scenes: s?.scenes ?? ["hutan"],
       scene: s?.scene ?? "hutan",
@@ -101,12 +130,18 @@ export const view = query({
         rate: def?.rate ?? 0,
       };
     });
-    const equipped = owned.find((o) => o.uid === s?.equippedUid) ?? null;
+    const equippedIds = equippedUidsOf(s ?? { owned: [] });
+    const equippedList = owned.filter((o) => equippedIds.includes(o.uid));
+    const equipped = equippedList[0] ?? null;
+    const boost = sceneBoost(s?.scene ?? "hutan");
     return {
       username: u.username ?? "Pet",
       image: u.image,
       owned,
       equipped,
+      equippedList,
+      boost,
+      claimTotal: equippedList.reduce((t, o) => t + (o.claim ?? 0) + boost, 0),
       crystals: s?.crystals ?? 0,
       scenes: s?.scenes ?? ["hutan"],
       scene: s?.scene ?? "hutan",
@@ -188,6 +223,8 @@ export const hatchAll = mutation({
 });
 
 /** Pasang pet -> berjalan di panggung kebun. */
+/** Pasang pet — BISA LEBIH DARI SATU (maks 10). Menekan pet yang sudah
+    terpasang tetap menambah (UI mengurus toggle lewat unequip). */
 export const equip = mutation({
   args: { uid: v.string() },
   handler: async (ctx, { uid }) => {
@@ -195,18 +232,34 @@ export const equip = mutation({
     if (userId === null) throw new Error("Belum masuk");
     const s = await loadOrCreate(ctx, userId);
     if (!s.owned.some((o) => o.uid === uid)) throw new Error("Pet tidak ada");
-    await ctx.db.patch(s._id, { equippedUid: uid });
+    const list = equippedUidsOf(s);
+    if (list.includes(uid)) return { equipped: list };
+    if (list.length >= MAX_EQUIP)
+      throw new Error(`Maksimal ${MAX_EQUIP} pet dipasang sekaligus`);
+    const next = [...list, uid];
+    await ctx.db.patch(s._id, {
+      equippedUids: next,
+      equippedUid: next[0],
+    });
+    return { equipped: next };
   },
 });
 
-/** Lepas pet dari panggung. */
+/** Lepas pet dari panggung. `uid` opsional: tanpa argumen = lepas SEMUA
+    (kompatibel dengan tombol lama). */
 export const unequip = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { uid: v.optional(v.string()) },
+  handler: async (ctx, { uid }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Belum masuk");
     const s = await loadOrCreate(ctx, userId);
-    await ctx.db.patch(s._id, { equippedUid: undefined });
+    const list = equippedUidsOf(s);
+    const next = uid ? list.filter((x) => x !== uid) : [];
+    await ctx.db.patch(s._id, {
+      equippedUids: next,
+      equippedUid: next[0],
+    });
+    return { equipped: next };
   },
 });
 
@@ -219,7 +272,7 @@ export const sell = mutation({
     const s = await loadOrCreate(ctx, userId);
     const pet = s.owned.find((o) => o.uid === uid);
     if (!pet) throw new Error("Pet tidak ada");
-    if (s.equippedUid === uid) throw new Error("Lepas dulu pet yang dipakai");
+    if (equippedUidsOf(s).includes(uid)) throw new Error("Lepas dulu pet yang dipakai");
     const def = petById(pet.petId);
     await ctx.db.patch(s._id, {
       owned: s.owned.filter((o) => o.uid !== uid),
@@ -239,14 +292,20 @@ export const claim = mutation({
     const now = Date.now();
     if (now - s.claimAt < CLAIM_MS)
       throw new Error("Belum 24 jam - tunggu dulu");
-    const equipped = s.owned.find((o) => o.uid === s.equippedUid);
-    if (!equipped) throw new Error("Pasang pet dulu (equip)");
-    const def = petById(equipped.petId);
-    const amount = def?.claim ?? 0;
-    const u = await ctx.db.get(userId);
-    await ctx.db.patch(userId, { diamonds: (u?.diamonds ?? 0) + amount });
+    const uids = equippedUidsOf(s);
+    const list = s.owned.filter((o) => uids.includes(o.uid));
+    if (list.length === 0) throw new Error("Pasang pet dulu (equip)");
+    // Klaim = total pet terpasang + BOOST scene aktif per pet
+    // (scene yang lebih mahal memberi boost lebih besar — permintaan).
+    const boost = sceneBoost(s.scene);
+    const amount = list.reduce(
+      (t, o) => t + (petById(o.petId)?.claim ?? 0) + boost,
+      0,
+    );
+    const ur = await ctx.db.get(userId);
+    await ctx.db.patch(userId, { diamonds: (ur?.diamonds ?? 0) + amount });
     await ctx.db.patch(s._id, { claimAt: now });
-    return { amount };
+    return { amount, boost, pets: list.length };
   },
 });
 

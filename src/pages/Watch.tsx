@@ -1521,6 +1521,11 @@ function WatchContent() {
       animeImage: detailData.image,
       episode: currentEp.number,
       minutes: 1,
+      // Mode history (Single/Multi) dipilih user di layar History —
+      // disimpan per device, lalu dikirim tiap kali mencatat nonton.
+      multi:
+        typeof localStorage !== "undefined" &&
+        localStorage.getItem("yn:history-mode") === "multi",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, detailData, currentEp]);

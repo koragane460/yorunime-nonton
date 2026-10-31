@@ -144,6 +144,11 @@ export const createPost = mutation({
         italic: v.boolean(),
         outline: v.boolean(),
         size: v.number(),
+        /** Posisi teks (%) hasil drag di editor — opsional, data lama aman. */
+        x: v.optional(v.number()),
+        y: v.optional(v.number()),
+        /** Warna teks (hex) dari panel warna baru. */
+        color: v.optional(v.string()),
       }),
     ),
     audio: v.optional(

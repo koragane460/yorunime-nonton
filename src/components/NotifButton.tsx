@@ -49,7 +49,7 @@ export function NotifButton({
         }
         onClick={() => setOpen(true)}
         className={cn(
-          "relative flex size-11 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground",
+          "relative flex size-10 items-center justify-center text-white/75 transition hover:text-white active:scale-95",
           className,
         )}
       >

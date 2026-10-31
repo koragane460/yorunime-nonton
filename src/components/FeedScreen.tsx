@@ -59,6 +59,11 @@ type Post = {
     italic: boolean;
     outline: boolean;
     size: number;
+    /** Posisi teks (% dari kiri & atas) hasil drag di editor. */
+    x?: number;
+    y?: number;
+    /** Warna teks (hex) — pilihan warna baru di panel teks. */
+    color?: string;
   } | null;
   audio?: { musicVol: number; videoVol: number } | null;
   privacy: "all" | "teman";
@@ -162,6 +167,33 @@ function RightRail({
         <Share2 className="size-8 text-white drop-shadow" />
         <span className="text-xs font-black text-white drop-shadow">Bagikan</span>
       </button>
+
+      {/* KASET LAGU — di bawah Bagikan. Sampulnya foto lagu yang dipakai;
+          kalau suara asli (tanpa backsound) pakai foto profile user. */}
+      {(p.music || p.kind === "video") && (
+        <div className="flex flex-col items-center gap-1">
+          <span className="relative flex h-12 w-14 items-center justify-center overflow-hidden rounded-md border border-white/45 bg-black/80 shadow-[0_8px_18px_-10px_rgba(0,0,0,.95)]">
+            <img
+              src={
+                p.music
+                  ? p.music.cover || p.imageUrl || p.image || undefined
+                  : p.image || p.imageUrl || undefined
+              }
+              alt=""
+              className="absolute inset-1.5 h-[calc(100%-12px)] w-[calc(100%-12px)] rounded-sm object-cover opacity-85"
+            />
+            {/* Dua rol kaset. */}
+            <span className="absolute bottom-1 left-1.5 flex gap-1.5">
+              <span className="size-2 rounded-full border border-white/75 bg-black/75" />
+              <span className="size-2 rounded-full border border-white/75 bg-black/75" />
+            </span>
+            <Music className="absolute right-1 top-1 size-3 text-white/85 drop-shadow" />
+          </span>
+          <span className="max-w-[64px] truncate text-[9px] font-black text-white drop-shadow">
+            {p.music?.title ?? "Suara asli"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -273,13 +305,23 @@ function PostView({
       {/* Teks overlay hasil editor post — font, miring, outline, ukuran. */}
       {p.overlay?.text && (p.imageUrl || p.kind === "video") && (
         <p
-          className="pointer-events-none absolute inset-x-5 top-1/2 z-10 -translate-y-1/2 whitespace-pre-wrap text-center"
+          className={cn(
+            "pointer-events-none absolute z-10 max-w-[80%] whitespace-pre-wrap text-center",
+            p.overlay.x === undefined && "inset-x-5 top-1/2 -translate-y-1/2",
+          )}
           style={{
+            ...(p.overlay.x !== undefined
+              ? {
+                  left: `${p.overlay.x}%`,
+                  top: `${p.overlay.y ?? 50}%`,
+                  transform: "translate(-50%, -50%)",
+                }
+              : {}),
             fontFamily: `var(--font-${p.overlay.font === "display" ? "display" : p.overlay.font === "mono" ? "mono" : "sans"})`,
             fontStyle: p.overlay.italic ? "italic" : "normal",
             fontSize: `${p.overlay.size * 4}px`,
             lineHeight: 1.15,
-            color: "#fff",
+            color: p.overlay.color ?? "#fff",
             textShadow: p.overlay.outline
               ? "0 0 3px #000, 0 0 6px rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.9)"
               : "0 2px 8px rgba(0,0,0,.55)",
@@ -322,6 +364,13 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
   const add = useMutation(api.feed.addComment);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  /** Jaga posisi scroll halaman saat kolom komentar difokus — keyboard
+      membuka dan browser suka menarik halaman ke atas sedikit (permintaan). */
+  const keepScroll = () => {
+    const y = window.scrollY;
+    requestAnimationFrame(() => window.scrollTo({ top: y }));
+  };
 
   const submit = async () => {
     if (!text.trim() || busy) return;
@@ -330,7 +379,7 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
       await add({ postId, text });
       setText("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal mengirim komentar");
+      setErr(e instanceof Error ? e.message : "Gagal mengirim komentar");
     } finally {
       setBusy(false);
     }
@@ -405,17 +454,33 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onFocus={keepScroll}
             onKeyDown={(e) => e.key === "Enter" && void submit()}
-            placeholder="Tulis komentar…"
-            className="h-10 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
+            placeholder={err ?? "Tulis komentar…"}
+            className={cn(
+              "h-10 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40 focus-visible:ring-0",
+              err && "placeholder:text-red-300",
+            )}
           />
+          {/* Tombol kirim HIDUP — gradien emas + kilau berjalan. */}
           <button
             onClick={() => void submit()}
             disabled={busy || !text.trim()}
             aria-label="Kirim komentar"
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition active:scale-95 disabled:opacity-40"
+            className={cn(
+              "group relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300 active:scale-90",
+              text.trim()
+                ? "bg-gradient-to-br from-amber-300 via-gold-strong to-orange-500 text-black shadow-[0_0_20px_-5px_rgba(251,191,36,1)]"
+                : "bg-primary text-primary-foreground",
+            )}
           >
-            <Send className="size-5" />
+            <Send className="size-5 transition-transform group-hover:translate-x-0.5" />
+            {text.trim() && (
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-[linear-gradient(115deg,transparent_38%,rgba(255,255,255,.65)_50%,transparent_62%)] bg-[length:250%_100%] bg-no-repeat [background-position:200%_0] animate-[yn-shine-sweep_2.4s_ease-in-out_infinite]"
+              />
+            )}
           </button>
         </div>
       </motion.div>
@@ -559,6 +624,9 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // PESAN ERROR INLINE — Toaster sonner dimatikan di app ini, jadi kegagalan
+  // upload harus terlihat langsung di layar (bukan hilang diam-diam).
+  const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Alur 3 langkah: PILIH (foto/video) → EDIT (teks/audio/privasi) → CAPTION.
@@ -571,6 +639,10 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     italic: false,
     outline: true,
     size: 4,
+    // Posisi (% dari kiri/atas) — bisa DIGERAKKAN dengan jari di pratinjau.
+    x: 50,
+    y: 50,
+    color: "#ffffff",
   });
   // Campuran audio: backsound musik vs suara asli video (0-100).
   const [musicVol, setMusicVol] = useState(100);
@@ -637,8 +709,9 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
 
   const submit = async () => {
     if (busy) return;
+    setErr(null);
     if (!file && !caption.trim()) {
-      toast.error("Pilih foto/video atau tulis caption dulu");
+      setErr("Pilih foto/video atau tulis caption dulu");
       return;
     }
     const postKind = file ? (kind === "video" ? "video" : "image") : "text";
@@ -695,6 +768,9 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
               italic: overlay.italic,
               outline: overlay.outline,
               size: overlay.size,
+              x: Math.round(overlay.x),
+              y: Math.round(overlay.y),
+              color: overlay.color,
             }
           : undefined,
         audio: file ? { musicVol, videoVol } : undefined,
@@ -703,7 +779,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
       toast.success("Konten sudah diposting ke profilmu");
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal memposting");
+      setErr(e instanceof Error ? e.message : "Gagal memposting");
     } finally {
       setBusy(false);
     }
@@ -745,7 +821,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     fontStyle: overlay.italic ? "italic" : "normal",
     fontSize: `${overlay.size * 4}px`,
     lineHeight: 1.15,
-    color: "#fff",
+    color: overlay.color,
     textShadow: overlay.outline
       ? "0 0 3px #000, 0 0 6px rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.9)"
       : "0 2px 8px rgba(0,0,0,.55)",
@@ -931,6 +1007,13 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* Status GAGAL — tampil langsung di layar komposer. */}
+        {err && (
+          <div className="mb-2 rounded-xl border border-red-400/45 bg-red-500/15 px-3 py-2 text-[12px] font-bold leading-snug text-red-200">
+            {err}
+          </div>
+        )}
+
         {/* ============ LANGKAH 1 — PILIH: tombol Foto / Video ============ */}
         {step === "pick" && (
           <>
@@ -1039,10 +1122,68 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
               ) : null}
               {overlay.text.trim() && (
                 <p
-                  style={overlayStyle}
-                  className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 whitespace-pre-wrap text-center"
+                  style={{
+                    ...overlayStyle,
+                    left: `${overlay.x}%`,
+                    top: `${overlay.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    touchAction: "none",
+                  }}
+                  className="absolute z-10 max-w-[86%] cursor-move select-none whitespace-pre-wrap text-center"
+                  /* Teks bisa DIGERAKKAN dengan jari: seret ke mana saja
+                     di dalam pratinjau (permintaan). */
+                  onPointerDown={(e) => {
+                    const box = e.currentTarget.parentElement?.getBoundingClientRect();
+                    if (!box) return;
+                    e.currentTarget.setPointerCapture?.(e.pointerId);
+                    const sx = e.clientX;
+                    const sy = e.clientY;
+                    const ox = overlay.x;
+                    const oy = overlay.y;
+                    const move = (ev: PointerEvent) => {
+                      const nx = Math.max(
+                        8,
+                        Math.min(92, ox + ((ev.clientX - sx) / box.width) * 100),
+                      );
+                      const ny = Math.max(
+                        6,
+                        Math.min(94, oy + ((ev.clientY - sy) / box.height) * 100),
+                      );
+                      setOverlay((o) => ({ ...o, x: nx, y: ny }));
+                    };
+                    const up = () => {
+                      window.removeEventListener("pointermove", move);
+                      window.removeEventListener("pointerup", up);
+                    };
+                    window.addEventListener("pointermove", move);
+                    window.addEventListener("pointerup", up);
+                  }}
                 >
                   {overlay.text}
+                  {/* Pegangan RESIZE — tarik ke kanan-bawah buat membesar,
+                      ke kiri-atas buat mengecilkan. */}
+                  <span
+                    aria-hidden
+                    className="absolute -bottom-2.5 -right-2.5 size-5 cursor-nwse-resize rounded-full border border-black/50 bg-white/85 shadow"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      const sx = e.clientX;
+                      const os = overlay.size;
+                      const move = (ev: PointerEvent) => {
+                        const ns = Math.max(
+                          2,
+                          Math.min(14, os + (ev.clientX - sx) / 16),
+                        );
+                        setOverlay((o) => ({ ...o, size: Math.round(ns) }));
+                      };
+                      const up = () => {
+                        window.removeEventListener("pointermove", move);
+                        window.removeEventListener("pointerup", up);
+                      };
+                      window.addEventListener("pointermove", move);
+                      window.addEventListener("pointerup", up);
+                    }}
+                  />
                 </p>
               )}
               <input
@@ -1121,7 +1262,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
                   <input
                     type="range"
                     min={2}
-                    max={12}
+                    max={14}
                     value={overlay.size}
                     onChange={(e) =>
                       setOverlay((o) => ({ ...o, size: Number(e.target.value) }))
@@ -1129,6 +1270,39 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
                     className="mt-1.5 w-full accent-primary"
                   />
                 </label>
+                {/* Pilihan WARNA teks (pengaturan baru). */}
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/45">
+                    Warna teks
+                  </span>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {[
+                      "#ffffff",
+                      "#facc15",
+                      "#38bdf8",
+                      "#f472b6",
+                      "#34d399",
+                      "#000000",
+                    ].map((col) => (
+                      <button
+                        key={col}
+                        onClick={() => setOverlay((o) => ({ ...o, color: col }))}
+                        aria-label={`Warna ${col}`}
+                        className={cn(
+                          "size-7 rounded-full border-2 transition active:scale-90",
+                          overlay.color === col
+                            ? "border-white scale-110"
+                            : "border-white/25",
+                        )}
+                        style={{ backgroundColor: col }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[10px] font-semibold leading-snug text-white/45">
+                  Seret teks di pratinjau buat memindahkan — tarik bulatan di
+                  pojoknya buat memperbesar / mengecilkan.
+                </p>
               </div>
             )}
 

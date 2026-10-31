@@ -49,11 +49,11 @@ export function AccountHeader() {
           border={(user as any)?.avatarBorder}
           src={user?.image}
           seed={user?.username}
-          className="size-12 shrink-0"
+          className="mt-1.5 size-12 shrink-0"
         />
         <span className="min-w-0 flex-1">
-          <span className="yn-eyebrow block truncate text-[9px]">
-            {greetingOf()}, {user?.username ?? "YoruNime"} Disini!
+          <span className="block truncate text-[11px] font-bold uppercase tracking-[0.14em] text-white/90">
+            {greetingOf()}
           </span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
             <span className="truncate text-[15px] font-black leading-tight tracking-tight">
@@ -78,7 +78,7 @@ export function AccountHeader() {
           type="button"
           onClick={() => navigate("/akun")}
           aria-label="Pengaturan"
-          className="flex size-10 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/75 transition hover:border-white/35 hover:text-white active:scale-95"
+          className="flex size-10 items-center justify-center text-white/75 transition hover:text-white active:scale-95"
         >
           <Settings className="size-[18px]" />
         </button>
@@ -126,84 +126,54 @@ export function AnnouncementBox() {
   const tone =
     kind === "error"
       ? {
-          border: "border-red-400/45",
-          bg: "bg-[linear-gradient(160deg,rgba(244,63,94,.18),rgba(244,63,94,.04)_48%,transparent_78%)]",
+          border: "border-red-400/35",
           icon: "text-red-300",
-          rule: "bg-red-400",
-          label: "Masalah",
+          rule: "bg-red-400/80",
         }
       : kind === "update"
         ? {
-            border: "border-gold-strong/45",
-            bg: "bg-[linear-gradient(160deg,rgba(246,200,53,.18),rgba(246,200,53,.04)_48%,transparent_78%)]",
+            border: "border-gold-strong/40",
             icon: "text-gold-strong",
-            rule: "bg-gold-strong",
-            label: "Update",
+            rule: "bg-gold-strong/80",
           }
         : {
-            border: "border-white/14",
-            bg: "bg-[linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02)_48%,transparent_78%)]",
+            border: "border-white/12",
             icon: "text-white/75",
-            rule: "bg-white/70",
-            label: "Info",
+            rule: "bg-white/60",
           };
 
   return (
     <section
       className={cn(
-        "fade-enter relative mt-3 flex min-h-[210px] flex-col overflow-hidden rounded-[26px] border p-5 shadow-[0_30px_60px_-42px_rgba(0,0,0,.95)]",
+        "fade-enter relative mt-3 flex min-h-[160px] flex-col overflow-hidden rounded-2xl border p-4 backdrop-blur-md",
         tone.border,
-        tone.bg,
+        "bg-white/[0.055] shadow-[0_18px_40px_-34px_rgba(0,0,0,.9)]",
       )}
     >
-      {/* Pita emas vertikal di kiri — penanda kotak pengumuman. */}
+      {/* Garis tipis di kiri — kecil saja, hanya penanda. */}
       <span
         aria-hidden
-        className={cn("absolute inset-y-5 left-0 w-[5px] rounded-r-full", tone.rule)}
-      />
-      {/* Titik bintik halus biar bidang besar tidak datar. */}
-      <span
-        aria-hidden
-        className="absolute inset-0 opacity-40 [background-size:26px_26px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]"
+        className={cn("absolute left-2.5 top-6 bottom-6 w-[3px] rounded-full", tone.rule)}
       />
 
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative flex items-center justify-between gap-3 pl-3.5">
         <span className="flex items-center gap-2">
-          <span
-            className={cn(
-              "flex size-9 items-center justify-center rounded-xl border border-white/15 bg-black/35",
-              tone.icon,
-            )}
-          >
-            <Megaphone className="size-[18px]" />
+          <Megaphone className={cn("size-4 shrink-0", tone.icon)} />
+          <span className="text-[11px] font-black uppercase tracking-[0.16em] text-white">
+            Pengumuman
           </span>
-          <span className="min-w-0">
-            <span className="yn-eyebrow block">Pengumuman</span>
-            <span className="block text-[10px] font-bold uppercase tracking-widest text-white/55">
-              {tone.label}
-            </span>
-          </span>
-        </span>
-        <span className="shrink-0 rounded-full border border-white/15 bg-black/40 px-2.5 py-1 text-[10px] font-bold text-white/65">
-          {ago(item.createdAt)}
         </span>
       </div>
 
-      <p className="relative mt-4 flex-1 whitespace-pre-wrap font-display text-[19px] font-black leading-[1.28] tracking-tight text-white">
+      <p className="relative mt-3 flex-1 whitespace-pre-wrap pl-3.5 font-display text-[17px] font-black leading-[1.3] tracking-tight text-white">
         {text}
       </p>
 
-      <div className="relative mt-4 flex items-center justify-between gap-2 border-t border-white/10 pt-3">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/55">
-          <Sparkles className="size-3.5 text-gold-strong" />
-          Dari tim YoruNime
+      {more > 0 && (
+        <span className="relative mt-3 self-start rounded-full bg-white/10 px-2 py-0.5 pl-3.5 text-[10px] font-black text-white/75">
+          +{more} lainnya
         </span>
-        {more > 0 && (
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black text-white/75">
-            +{more} lainnya
-          </span>
-        )}
-      </div>
+      )}
     </section>
   );
 }
@@ -230,7 +200,7 @@ export function Spotlight({
 
   /** Posisi scroll untuk slide ke-i — pakai posisi ELEMENNYA (bukan
    *  perkiraan lebar layar), supaya titik pagination & auto-geser pas
-   *  walaupun tiap kartu cuma 84% lebar + jarak antar kartu. */
+   *  walaupun tiap kartu cuma 88% lebar + jarak antar kartu. */
   const slideLeft = (i: number): number => {
     const el = trackRef.current;
     const child = el?.children[i] as HTMLElement | undefined;
@@ -267,7 +237,9 @@ export function Spotlight({
     <section className="fade-enter mt-3">
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h2 className="yn-sec text-lg">Spotlight</h2>
-        <span className="yn-eyebrow text-[9px]">Geser untuk lihat</span>
+        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gold-strong">
+          Geser untuk lihat
+        </span>
       </div>
 
       <div
@@ -303,7 +275,7 @@ export function Spotlight({
             <button
               key={a.id}
               onClick={() => onPick(a.id, a.title, (a.source as any) ?? "anilist")}
-              className="group relative h-[330px] w-[84%] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/12 bg-black text-left shadow-[0_30px_60px_-40px_rgba(0,0,0,1)] transition hover:border-white/30 active:scale-[0.99] sm:w-[62%] lg:w-[44%]"
+              className="group relative h-[330px] w-[92%] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/12 bg-black text-left shadow-[0_30px_60px_-40px_rgba(0,0,0,1)] transition hover:border-white/30 active:scale-[0.99] sm:w-[70%] lg:w-[52%]"
             >
               <img
                 src={a.image}

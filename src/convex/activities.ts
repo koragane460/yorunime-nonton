@@ -15,18 +15,33 @@ export const recordWatch = mutation({
     animeImage: v.optional(v.string()),
     episode: v.number(),
     minutes: v.number(),
+    /** MODE HISTORY (permintaan):
+     *  - SINGLE (default): satu baris per anime — nonton ep 2 menimpa ep 1.
+     *  - MULTI: satu baris per anime+episode — ep 1 tetap tersimpan saat
+     *    nonton ep 2. */
+    multi: v.optional(v.boolean()),
   },
-  handler: async (ctx, { animeId, animeTitle, animeImage, episode, minutes }) => {
+  handler: async (ctx, { animeId, animeTitle, animeImage, episode, minutes, multi = false }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
-    const existing = await ctx.db
-      .query("watchHistory")
-      .withIndex("userId_anime", (q) =>
-        q.eq("userId", userId).eq("animeId", animeId),
-      )
-      .first();
+    const existing = multi
+      ? await ctx.db
+          .query("watchHistory")
+          .withIndex("userId_anime_ep", (q) =>
+            q
+              .eq("userId", userId)
+              .eq("animeId", animeId)
+              .eq("episode", episode),
+          )
+          .first()
+      : await ctx.db
+          .query("watchHistory")
+          .withIndex("userId_anime", (q) =>
+            q.eq("userId", userId).eq("animeId", animeId),
+          )
+          .first();
     if (existing) {
       await ctx.db.patch(existing._id, {
         episode,
@@ -45,7 +60,7 @@ export const recordWatch = mutation({
       });
     }
     await addXpInternal(ctx, userId, 10, "watch");
-    return { ok: true };
+    return { ok: true, multi };
   },
 });
 

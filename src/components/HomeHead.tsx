@@ -176,25 +176,10 @@ export function ProfileBar() {
             <CrownIcon className="size-3.5 text-amber-300" />
             {premiumDays} hari
           </button>
-          <button
-            type="button"
-            onClick={() => setYv(true)}
-            className="flex items-center gap-1 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[10px] font-black text-white transition active:scale-95"
-          >
-            <SaturnIcon className="size-3.5 text-violet-300" />
-            YoruVerse
-          </button>
         </div>
       </div>
-      {/* Layar YoruVerse di-PORTAL ke <body>: header profil memakai
-          backdrop-blur yang menjadikan dirinya "containing block" untuk
-          position:fixed — akibatnya layarnya mengecil ikut kotak header.
-          Dipindah ke body → kembali FULLSCREEN (permintaan user). */}
-      {yv &&
-        createPortal(
-          <YoruVerseScreen onClose={() => setYv(false)} />,
-          document.body,
-        )}
+      {/* Tombol & layar MENU YoruVerse DIHAPUS permanen (permintaan):
+          Shop / YoruPet / Music sekarang dibuka lewat sheet PANEL. */}
     </div>
   );
 }

@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
-import { Heart, Reply, Send, Trash2, X } from "lucide-react";
+import { ChevronDown, Heart, Reply, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/lstream";
@@ -53,6 +53,8 @@ export function CommentsSection({
   const [sort, setSort] = useState<"terbaru" | "populer">("terbaru");
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<CommentT | null>(null);
+  /** Berapa reply yang sedang dibuka per komentar induk (kelipatan 5). */
+  const [openReplies, setOpenReplies] = useState<Record<string, number>>({});
   const { muted } = useModeration();
   void animeId;
 
@@ -77,6 +79,36 @@ export function CommentsSection({
       : (b.likeCount ?? 0) - (a.likeCount ?? 0),
   );
 
+  // Komentar induk = yang TIDAK membalas siapa pun; sisanya jadi reply
+  // yang menempel di bawah induknya (digeser sedikit ke kanan, permintaan).
+  const all = comments ?? [];
+  const roots = useMemo(
+    () =>
+      list.filter(
+        (c) => !c.replyToId || !all.some((p) => p._id === c.replyToId),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sort, comments],
+  );
+  /** Semua balasan milik satu komentar induk — termasuk balasan dari balasan
+      (dijelajahi berjenjang), supaya tidak ada reply yang hilang. */
+  const repliesOf = (id: string): CommentT[] => {
+    const out: CommentT[] = [];
+    const seen = new Set<string>([id]);
+    let frontier = [id];
+    while (frontier.length > 0) {
+      const kids = all.filter((r) => r.replyToId && frontier.includes(r.replyToId));
+      frontier = [];
+      for (const k of kids) {
+        if (seen.has(k._id)) continue;
+        seen.add(k._id);
+        out.push(k);
+        frontier.push(k._id);
+      }
+    }
+    return out.sort((a, b) => a.createdAt - b.createdAt);
+  };
+
   return (
     <div>
       {/* Kolom komentar utama: KOTAK LURUS (tanpa rounded) yang melebar
@@ -90,13 +122,26 @@ export function CommentsSection({
           disabled={muted}
           className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none disabled:opacity-50"
         />
+        {/* Tombol kirim HIDUP: gradien emas + kilau berjalan + membesar
+            saat ada teks (permintaan: jangan membosankan). */}
         <button
           onClick={() => void send()}
           disabled={muted || !text.trim()}
-          className="yn-btn-warm flex size-8 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40"
+          className={cn(
+            "group relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300 active:scale-90",
+            text.trim()
+              ? "bg-gradient-to-br from-amber-300 via-gold-strong to-orange-500 text-black shadow-[0_0_18px_-4px_rgba(251,191,36,.95)]"
+              : "bg-white/10 text-white/40",
+          )}
           aria-label="Kirim komentar"
         >
-          <Send className="size-4" />
+          <Send className={cn("size-4 transition-transform", text.trim() && "group-hover:translate-x-0.5")} />
+          {text.trim() && (
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-[linear-gradient(115deg,transparent_38%,rgba(255,255,255,.65)_50%,transparent_62%)] bg-[length:250%_100%] bg-no-repeat [background-position:200%_0] animate-[yn-shine-sweep_2.4s_ease-in-out_infinite]"
+            />
+          )}
         </button>
       </div>
 
@@ -128,15 +173,59 @@ export function CommentsSection({
             Belum ada komentar — jadilah yang pertama!
           </p>
         )}
-        {list.map((c) => (
-          <CommentRow
-            key={c._id}
-            c={c}
-            meId={meId}
-            onDeleted={onDeleted}
-            onReply={() => setReplyTo(c)}
-          />
-        ))}
+        {list.map((c) => {
+          if (roots.length > 0 && !roots.some((r) => r._id === c._id)) return null;
+          const replies = repliesOf(c._id);
+          const shown = openReplies[c._id] ?? 0;
+          return (
+            <div key={c._id}>
+              <CommentRow
+                c={c}
+                meId={meId}
+                onDeleted={onDeleted}
+                onReply={() => setReplyTo(c)}
+                replyCount={replies.length}
+                repliesOpen={shown > 0}
+                onToggleReplies={() =>
+                  setOpenReplies((s) => ({
+                    ...s,
+                    [c._id]: (s[c._id] ?? 0) > 0 ? 0 : Math.min(5, replies.length),
+                  }))
+                }
+              />
+
+              {/* Balasan — posisi agak ke kanan dari komentar induk. */}
+              {shown > 0 && (
+                <div className="ml-7 space-y-2 border-l border-white/10 pl-3">
+                  {replies.slice(0, shown).map((r) => (
+                    <CommentRow
+                      key={r._id}
+                      c={r}
+                      meId={meId}
+                      onDeleted={onDeleted}
+                      onReply={() => setReplyTo(c)}
+                      isReply
+                    />
+                  ))}
+                  {shown < replies.length && (
+                    <button
+                      onClick={() =>
+                        setOpenReplies((s) => ({
+                          ...s,
+                          [c._id]: Math.min(replies.length, (s[c._id] ?? 0) + 5),
+                        }))
+                      }
+                      className="flex items-center gap-1 pl-9 text-[11px] font-bold text-gold-strong transition hover:text-white"
+                    >
+                      <ChevronDown className="size-3.5" aria-hidden />
+                      Lihat {replies.length - shown} reply lagi
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Panel balas komentar — kutipan + kolom + kirim, semuanya di sini */}
@@ -223,9 +312,20 @@ function ReplySheet({
             onClick={onSend}
             disabled={muted || !text.trim()}
             aria-label="Kirim balasan"
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-white disabled:opacity-40"
+            className={cn(
+              "group relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300 active:scale-90",
+              text.trim()
+                ? "bg-gradient-to-br from-amber-300 via-gold-strong to-orange-500 text-black shadow-[0_0_22px_-5px_rgba(251,191,36,1)]"
+                : "bg-white/10 text-white/40",
+            )}
           >
-            <Send className="size-4" />
+            <Send className="size-4 transition-transform group-hover:translate-x-0.5" />
+            {text.trim() && (
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-[linear-gradient(115deg,transparent_38%,rgba(255,255,255,.65)_50%,transparent_62%)] bg-[length:250%_100%] bg-no-repeat [background-position:200%_0] animate-[yn-shine-sweep_2.4s_ease-in-out_infinite]"
+              />
+            )}
           </button>
         </div>
       </div>
@@ -238,17 +338,32 @@ function CommentRow({
   meId,
   onReply,
   onDeleted,
+  replyCount = 0,
+  repliesOpen = false,
+  onToggleReplies,
+  isReply = false,
 }: {
   c: CommentT;
   meId?: string;
   onReply: () => void;
   onDeleted?: (id: string) => void;
+  /** Jumlah balasan — tampil sebagai tombol "Lihat N reply". */
+  replyCount?: number;
+  repliesOpen?: boolean;
+  onToggleReplies?: () => void;
+  /** True untuk komentar balasan (tampil lebih ringkas). */
+  isReply?: boolean;
 }) {
   const del = useMutation(api.activities.deleteComment);
   const like = useMutation(api.activities.toggleCommentLike);
   const [busy, setBusy] = useState(false);
+  // LIKE optimistik: hati langsung terisi tanpa menunggu server.
+  const [localLiked, setLocalLiked] = useState<boolean | null>(null);
   const mine = c.userId === meId;
-  const liked = (c.likes ?? []).includes(meId as string);
+  const liked = localLiked ?? (c.likes ?? []).includes(meId as string);
+  const likeCount =
+    (c.likeCount ?? (c.likes ?? []).length) + (localLiked === true && !((c.likes ?? []).includes(meId as string)) ? 1 : 0) -
+    (localLiked === false && (c.likes ?? []).includes(meId as string) ? 1 : 0);
 
   const remove = async () => {
     if (busy) return;
@@ -296,34 +411,51 @@ function CommentRow({
         {c.text}
       </p>
       <div className="flex items-center gap-4 px-3 pb-1 pl-[42px] pt-0.5 text-[11px] text-muted-foreground">
+        {/* REPLAY dulu (kiri), baru LIKE — urutan sesuai permintaan. */}
+        <button
+          aria-label="Reply"
+          title="Reply"
+          className="flex items-center gap-1 transition hover:text-gold-strong active:scale-95"
+          onClick={onReply}
+        >
+          <Reply className="size-3.5" />
+          Reply
+        </button>
         <button
           title="Suka"
-          className={cn("flex items-center gap-1", liked && "text-primary")}
+          className={cn(
+            "flex items-center gap-1 transition active:scale-95",
+            liked && "text-rose-400",
+          )}
           onClick={async () => {
+            // Optimistik — hati & jumlah like berubah langsung.
+            const prev = liked;
+            setLocalLiked(!prev);
             try {
               await like({ commentId: c._id as never });
             } catch (e) {
+              setLocalLiked(prev);
               toast.error(e instanceof Error ? e.message : "Gagal");
             }
           }}
         >
-          <Heart className={cn("size-3.5", liked && "fill-foreground")} />
-          {c.likeCount ?? 0}
+          <Heart className={cn("size-3.5 transition", liked && "fill-rose-400 text-rose-400")} />
+          {likeCount}
         </button>
-        <button
-          aria-label="Reply"
-          title="Reply"
-          className="hover:text-primary"
-          onClick={onReply}
-        >
-          <Reply className="size-3.5" />
-        </button>
+        {replyCount > 0 && onToggleReplies && (
+          <button
+            onClick={onToggleReplies}
+            className="flex items-center gap-1 font-bold text-gold-strong transition hover:text-white active:scale-95"
+          >
+            {repliesOpen ? "Sembunyikan reply" : `Lihat ${replyCount} reply`}
+          </button>
+        )}
         {mine && (
           <button
             aria-label="Hapus komentar"
             title="Hapus"
             disabled={busy}
-            className="hover:text-red-400 disabled:opacity-40"
+            className="ml-auto hover:text-red-400 disabled:opacity-40"
             onClick={() => void remove()}
           >
             <Trash2 className="size-3.5" />

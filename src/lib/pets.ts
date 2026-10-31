@@ -99,6 +99,12 @@ export type SceneDef = {
   emoji: string;
   /** Harga beli (Sacret). Scene pertama gratis. */
   cost: number;
+  /**
+   * BOOST Sacret per pet — tiap scene yang dibeli menambah jumlah ini ke
+   * hasil klaim SETIAP pet yang sedang dipasang. Makin mahal scene-nya,
+   * makin besar boost-nya (cost / 200, dibulatkan; sakura 30.000 → 150).
+   */
+  boost: number;
   /** Kelas gradien latar langit. */
   sky: string;
   /** GAMBAR latar asli (raster) — dipakai kalau ada, menggantikan gradien. */
@@ -116,6 +122,7 @@ export const SCENES: SceneDef[] = [
     name: "Hutan",
     emoji: "🌲",
     cost: 0,
+    boost: 0,
     sky: "from-emerald-950 via-emerald-800/50 to-lime-950",
     image: "/scenes/hutan.jpg",
     floor: "from-emerald-900 to-green-950",
@@ -126,6 +133,7 @@ export const SCENES: SceneDef[] = [
     name: "Galaxy",
     emoji: "🌌",
     cost: 25000,
+    boost: 125,
     sky: "from-indigo-950 via-purple-900/60 to-black",
     floor: "from-indigo-950 to-black",
     particle: "⭐",
@@ -135,6 +143,7 @@ export const SCENES: SceneDef[] = [
     name: "Bawah Laut",
     emoji: "🌊",
     cost: 20000,
+    boost: 100,
     sky: "from-cyan-900 via-blue-900/50 to-blue-950",
     floor: "from-cyan-950 to-blue-950",
     particle: "🫧",
@@ -144,6 +153,7 @@ export const SCENES: SceneDef[] = [
     name: "Kebun Sakura",
     emoji: "🌸",
     cost: 30000,
+    boost: 150,
     sky: "from-rose-300/90 via-pink-200/60 to-fuchsia-300",
     floor: "from-rose-400/60 to-pink-500/40",
     particle: "🌸",
@@ -153,6 +163,7 @@ export const SCENES: SceneDef[] = [
     name: "Senja",
     emoji: "🌇",
     cost: 15000,
+    boost: 75,
     sky: "from-orange-500/70 via-rose-500/40 to-indigo-950",
     floor: "from-orange-900 to-indigo-950",
     particle: "☁️",
@@ -162,6 +173,7 @@ export const SCENES: SceneDef[] = [
     name: "Abyss",
     emoji: "🕳️",
     cost: 35000,
+    boost: 175,
     sky: "from-black via-violet-950/80 to-black",
     floor: "from-violet-950 to-black",
     particle: "✦",
@@ -190,4 +202,9 @@ export function petById(id: string): PetDef | undefined {
 
 export function sceneById(id: string): SceneDef {
   return SCENES.find((s) => s.id === id) ?? SCENES[0];
+}
+
+/** Boost Sacret per pet dari scene aktif (0 kalau scene tidak dikenal). */
+export function sceneBoost(id: string): number {
+  return SCENES.find((s) => s.id === id)?.boost ?? 0;
 }

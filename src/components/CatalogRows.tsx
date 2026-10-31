@@ -282,7 +282,7 @@ export function CatalogScreen({
             {loading ? "Memuat katalog…" : "Katalog kosong."}
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {list.map((c) => (
               <button
                 key={c.id}

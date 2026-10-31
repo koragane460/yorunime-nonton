@@ -17,7 +17,9 @@ import {
 import {
   AlertCircle,
   Clock,
+  Filter,
   HardDriveDownload,
+  List,
   Loader2,
   PlayCircle,
   RotateCw,
@@ -879,7 +881,7 @@ export function ForYouPanel({
       inline={inline}
     >
       {loading ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i}>
               <div className="skeleton aspect-[2/3] w-full rounded-xl" />
@@ -902,7 +904,7 @@ export function ForYouPanel({
               <HeroPick key={c.id} card={c} rank={i} onClose={onClose} />
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {grid.slice(2).map((c) => (
               <MiniPick key={c.id} card={c} onClose={onClose} />
             ))}
@@ -1016,6 +1018,55 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
   const items = ((rows ?? []) as unknown as ContRow[])
     .slice()
     .sort((a, b) => b.updatedAt - a.updatedAt);
+  // MODE HISTORY — tombol SINGLE / MULTI (gaya sama seperti di Subscribe).
+  // SINGLE: nonton ep 2 menimpa ep 1. MULTI: tiap episode jadi baris baru.
+  const [mode, setMode] = useState<"single" | "multi">(() => {
+    try {
+      return localStorage.getItem("yn:history-mode") === "multi"
+        ? "multi"
+        : "single";
+    } catch {
+      return "single";
+    }
+  });
+  const pickMode = (m: "single" | "multi") => {
+    setMode(m);
+    try {
+      localStorage.setItem("yn:history-mode", m);
+    } catch {
+      /* storage diblokir — mode hanya berlaku selama sesi ini */
+    }
+  };
+
+  // STRUKTUR HISTORY (permintaan): Hari ini → Kemarin → dd/mm/yyyy, tiap
+  // kelompok ada label kotak + garis penyambung antar kartu.
+  const groups = useMemo(() => {
+    const now = new Date();
+    const startToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+    const startYesterday = startToday - 86400000;
+    const byKey = new Map<number, { label: string; items: ContRow[] }>();
+    for (const it of items) {
+      const d = new Date(it.updatedAt ?? 0);
+      const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      let label: string;
+      if (key >= startToday) label = "Hari ini";
+      else if (key >= startYesterday) label = "Kemarin";
+      else
+        label = `${String(d.getDate()).padStart(2, "0")}/${String(
+          d.getMonth() + 1,
+        ).padStart(2, "0")}/${d.getFullYear()}`;
+      const g = byKey.get(key);
+      if (g) g.items.push(it);
+      else byKey.set(key, { label, items: [it] });
+    }
+    return [...byKey.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([, g]) => g);
+  }, [items]);
 
   // Download tidak lagi jadi tombol navigasi sendiri supaya baris nav tidak
   // terlalu padat; ia dijangkau lewat tombol di header layar ini.
@@ -1029,11 +1080,11 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
 
   return (
     <PanelShell
-      title="Lanjutkan nonton"
+      title="History"
       subtitle={
         items.length
-          ? `${items.length} judul belum selesai`
-          : "Anime & donghua yang kamu tinggalkan"
+          ? `${items.length} tontonan — Hari ini, Kemarin & sebelumnya`
+          : "Tontonanmu dikelompokkan per hari"
       }
       onClose={onClose}
       footer={
@@ -1052,64 +1103,136 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
         </button>
       }
     >
+      {/* Saklar SINGLE / MULTI — gaya tombol yang sama dengan Subscribe. */}
+      <div className="mb-1 flex w-fit items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.9)]">
+        <button
+          type="button"
+          onClick={() => pickMode("single")}
+          aria-pressed={mode === "single"}
+          className={cn(
+            "flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-black transition active:scale-95",
+            mode === "single"
+              ? "bg-white text-sky-700"
+              : "text-sky-950/75 hover:bg-white/30",
+          )}
+        >
+          <List className="size-3.5" aria-hidden />
+          Single
+        </button>
+        <span className="w-px shrink-0 bg-sky-950/25" aria-hidden />
+        <button
+          type="button"
+          onClick={() => pickMode("multi")}
+          aria-pressed={mode === "multi"}
+          className={cn(
+            "flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-black transition active:scale-95",
+            mode === "multi"
+              ? "bg-white text-sky-700"
+              : "text-sky-950/75 hover:bg-white/30",
+          )}
+        >
+          <Filter className="size-3.5" aria-hidden />
+          Multi
+        </button>
+      </div>
+      <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
+        {mode === "single"
+          ? "Single — satu baris per judul: nonton episode baru menimpa yang lama."
+          : "Multi — tiap episode punya baris sendiri, yang lama tetap tersimpan."}
+      </p>
+
       {items.length === 0 ? (
         <EmptyState
           icon={<PlayCircle className="size-6" />}
-          title="Tidak ada yang lagi jalan"
-          body="Mulai nonton apa pun, lalu judulnya akan muncul di sini lengkap dengan posisi tontonan terakhir."
+          title="Belum ada riwayat"
+          body="Mulai nonton apa pun, lalu judulnya muncul di sini dikelompokkan per hari."
         />
       ) : (
-        <div className="space-y-2">
-          {items.map((c) => {
-            const pct =
-              c.durationSec && c.durationSec > 0
-                ? Math.min(100, Math.round((c.progressSec / c.durationSec) * 100))
-                : 0;
-            return (
-              <button
-                key={c._id}
-                onClick={() =>
-                  navigate(
-                    `/nonton?anime=${encodeURIComponent(c.animeId)}&ep=${encodeURIComponent(`${c.animeId}__ep${c.episode}`)}&judul=${encodeURIComponent(c.animeTitle)}`,
-                  )
-                }
-                className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card/50 p-2.5 text-left transition hover:border-primary/50"
-              >
-                <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
-                  {c.animeImage && (
-                    <img
-                      src={c.animeImage}
-                      alt=""
-                      className="h-full w-full object-cover"
+        <div>
+          {groups.map((g) => (
+            <div key={g.label} className="mb-4">
+              {/* Label hari — kotak rounded biru seperti struktur history lama. */}
+              <h3 className="mb-2 inline-flex rounded-lg bg-sky-600/70 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-white">
+                {g.label}
+              </h3>
+              <div className="space-y-3">
+                {g.items.map((c, idx) => {
+                  const pct =
+                    c.durationSec && c.durationSec > 0
+                      ? Math.min(
+                          100,
+                          Math.round((c.progressSec / c.durationSec) * 100),
+                        )
+                      : 0;
+                  // Garis putih penghubung antar kartu (tegak, di tengah).
+                  const link = (
+                    <span
+                      aria-hidden
+                      className="absolute -top-3 left-1/2 z-10 h-3 w-0.5 -translate-x-1/2 rounded-full bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.5)]"
                     />
-                  )}
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/35">
-                    <PlayCircle className="size-6 text-white/90" />
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold leading-tight">
-                    {c.animeTitle}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Episode {c.episode}
-                    {pct > 0 ? ` · ${pct}% selesai` : ""}
-                  </p>
-                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/15">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </button>
-            );
-          })}
+                  );
+                  return (
+                    <div key={c._id} className="relative">
+                      {idx > 0 && link}
+                      <button
+                        onClick={() =>
+                          navigate(
+                            `/nonton?anime=${encodeURIComponent(c.animeId)}&ep=${encodeURIComponent(`${c.animeId}__ep${c.episode}`)}&judul=${encodeURIComponent(c.animeTitle)}`,
+                          )
+                        }
+                        className="relative flex w-full items-center gap-3 rounded-2xl border border-border bg-card/50 p-2.5 pr-12 text-left transition hover:border-primary/50"
+                      >
+                        {/* Jam kapan terakhir ditonton — pojok kanan atas. */}
+                        <span className="absolute right-2.5 top-2 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                          <Clock className="size-3" aria-hidden />
+                          {fmtClock(c.updatedAt ?? 0)}
+                        </span>
+                        <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
+                          {c.animeImage && (
+                            <img
+                              src={c.animeImage}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                            <PlayCircle className="size-6 text-white/90" />
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-semibold leading-tight">
+                            {c.animeTitle}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            Episode {c.episode}
+                            {pct > 0 ? ` · ${pct}% selesai` : ""}
+                          </p>
+                          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/15">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </PanelShell>
   );
+}
+
+/** Jam "07.05" dari stempel waktu — dipakai label history per kartu. */
+function fmtClock(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, "0")}.${String(
+    d.getMinutes(),
+  ).padStart(2, "0")}`;
 }
 
 function EmptyState({

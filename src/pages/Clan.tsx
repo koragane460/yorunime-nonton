@@ -1290,7 +1290,9 @@ async function shrinkClanAvatar(file: File, maxSide = 480): Promise<Blob> {
 function CreateClan({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   useHideNavOnMount();
+  const { user } = useAuth();
   const createClan = useMutation(api.clans.createClan);
+  const sacret = (user as any)?.diamonds ?? 0;
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [tagIcon, setTagIcon] = useState(DEFAULT_CLAN_ICON);
@@ -1309,13 +1311,32 @@ function CreateClan({ onDone }: { onDone: () => void }) {
     if (avatarPubUrl) setAvatarUrl(avatarPubUrl);
   }, [avatarPubUrl]);
   const [busy, setBusy] = useState(false);
+  // PESAN INLINE (bukan toast) — Toaster sonner sengaja dimatikan di app ini,
+  // jadi kegagalan "Buat Clan" harus terlihat langsung di layar ini.
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  // Tag yang lolos filter backend: 3-4 huruf/angka (cosmetics dibuang).
+  const cleanTag = tag.toUpperCase().replace(/[^A-Z0-9]/g, "");
   // Ikon tag dipakai di PREVIEW — warnanya mengikuti warna tag yang dipilih
   // (fallback ke warna bawaan ikonnya).
   const { Icon: TagIc, tone: tagTone } = resolveClanIcon(tagIcon);
 
   const submit = async () => {
-    if (!name.trim() || tag.trim().length < 2) {
-      toast.error("Nama wajib dan tag minimal 2 karakter");
+    setErr(null);
+    setOk(null);
+    // Validasi SAMA PERSIS dengan backend supaya tidak gagal diam-diam.
+    if (name.trim().length < 3) {
+      setErr("Nama clan minimal 3 karakter");
+      return;
+    }
+    if (cleanTag.length < 3 || cleanTag.length > 4) {
+      setErr("Tag clan harus 3-4 huruf atau angka");
+      return;
+    }
+    if (sacret < 1000) {
+      setErr(
+        `Sacret kamu ${sacret.toLocaleString("id-ID")} — bikin clan butuh 1.000 Sacret (donasi ke clan / beli premium buat nambah)`,
+      );
       return;
     }
     setBusy(true);
@@ -1327,11 +1348,13 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         tagBg: tagBg ?? undefined,
         avatarUrl: avatarUrl.trim(),
       });
-      toast.success("Clan dibuat — level 1, kumpulkan Sacret bareng!");
-      onDone();
-      navigate("/clan");
+      setOk("Clan dibuat — level 1, kumpulkan Sacret bareng!");
+      setTimeout(() => {
+        onDone();
+        navigate("/clan");
+      }, 900);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal membuat clan");
+      setErr(e instanceof Error ? e.message : "Gagal membuat clan");
     } finally {
       setBusy(false);
     }
@@ -1597,6 +1620,20 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
 
           {/* ===== TOMBOL BUAT & BATAL ===== */}
+          {/* Status INLINE — sukses maupun gagal tampil di sini (app ini
+              sengaja tanpa toast, jadi kegagalan tidak boleh diam-diam). */}
+          {(err || ok) && (
+            <div
+              className={cn(
+                "rounded-xl px-3 py-2.5 text-[12px] font-bold leading-snug",
+                ok
+                  ? "border border-emerald-400/45 bg-emerald-500/15 text-emerald-200"
+                  : "border border-red-400/45 bg-red-500/15 text-red-200",
+              )}
+            >
+              {ok ?? err}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2.5">
             <button
               onClick={() => void submit()}
@@ -1615,7 +1652,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           {/* Syarat "level 10+" DIHAPUS — satu-satunya biaya adalah
               1.000 Sacret, ditulis jelas di paling bawah layar. */}
           <p className="pb-6 pt-1 text-center text-[12px] font-bold text-gold/90">
-            Dengan 1.000 Sacret
+            Dengan 1.000 Sacret — kamu punya {sacret.toLocaleString("id-ID")}
           </p>
         </div>
       </div>

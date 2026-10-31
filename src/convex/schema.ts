@@ -496,7 +496,10 @@ const schema = defineSchema(
       updatedAt: v.number(),
     })
       .index("userId_updated", ["userId", "updatedAt"])
-      .index("userId_anime", ["userId", "animeId"]),
+      .index("userId_anime", ["userId", "animeId"])
+      /** MODE MULTI — satu baris per anime+episode (mode SINGLE tetap
+          memakai index userId_anime, jadi data lama tidak berubah). */
+      .index("userId_anime_ep", ["userId", "animeId", "episode"]),
 
     animeComments: defineTable({
       animeId: v.string(),
@@ -870,6 +873,10 @@ const schema = defineSchema(
       ),
       /** uid pet yang sedang dipasang (berjalan di panggung). */
       equippedUid: v.optional(v.string()),
+      /** MULTI-EQUIP — daftar uid pet yang dipasang sekaligus (maks 10).
+          Field lama `equippedUid` tetap dijaga sebagai pet pertama supaya
+          data lama tetap terbaca. */
+      equippedUids: v.optional(v.array(v.string())),
       /** Waktu klaim Sacret terakhir — klaim berikutnya 24 jam kemudian. */
       claimAt: v.number(),
       /** Crystal hasil menjual pet (nilai = harga pet). */

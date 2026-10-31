@@ -79,6 +79,11 @@ export function YoruVerseScreen({
     view === "music" ? <MusicScreen onClose={() => setView(null)} /> :
     null;
 
+  /* MENU YORUVERSE DIHAPUS PERMANEN (permintaan). Layar ini sekarang
+     hanya "isi" — Shop / YoruPet / Music dibuka langsung dari sheet
+     PANEL. Tanpa tujuan awal → tidak ada yang dirender. */
+  if (!view) return null;
+
   // ---- ukur garis penghubung: dari TITIK SISAN KANAN kotak kiri ke TITIK
   // SISAN KIRI kotak kanan berikutnya (dan sebaliknya) — garis jadi berada
   // DI SAMPING kotak (kiri/kanan), bukan menyeberang DI ATASnya. ----

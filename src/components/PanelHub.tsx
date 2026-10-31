@@ -8,7 +8,9 @@ import {
   Award,
   Bone,
   BookOpen,
+  Crown,
   Download,
+  Gem,
   History,
   Music,
   Newspaper,
@@ -60,6 +62,11 @@ export function PanelHub({
   const { user } = useAuth();
   const level = user?.level ?? 1;
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
+  const premiumDays = Math.max(
+    0,
+    Math.floor((((user as any)?.premiumUntil ?? 0) - Date.now()) / 86400000),
+  );
+  const sacret = (user as any)?.diamonds ?? 0;
 
   return (
     <div className="fixed inset-0 z-[85]">
@@ -69,8 +76,8 @@ export function PanelHub({
         onClick={onClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-[3px]"
       />
-      {/* Sheet 55% tinggi layar. */}
-      <div className="screen-enter absolute inset-x-0 bottom-0 flex h-[55dvh] flex-col overflow-hidden rounded-t-[28px] border-t border-white/15 bg-[#0d1017] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
+      {/* Sheet 55% tinggi layar — TANPA outline (permintaan: NO OUTLINE). */}
+      <div className="screen-enter absolute inset-x-0 bottom-0 flex h-[55dvh] flex-col overflow-hidden rounded-t-[28px] bg-[#0d1017] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
         {/* Pegangan tarik */}
         <div className="flex justify-center pt-2.5">
           <span className="h-1 w-11 rounded-full bg-white/25" />
@@ -102,6 +109,36 @@ export function PanelHub({
           <span className="yn-eyebrow shrink-0 text-[9px]">Panel</span>
         </div>
 
+        {/* KOTAK SALDO — di bawah header akun. Bentuk & ukuran BEDA dari
+            9 kotak panel di bawahnya (baris lebar dua sisi, tanpa outline). */}
+        <div className="mx-4 mb-3 grid grid-cols-2 gap-2 rounded-[24px] bg-gradient-to-r from-sky-400/18 via-white/[0.07] to-amber-400/18 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,.14)]">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sky-400/15 text-sky-300">
+              <Gem className="size-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">
+                Sacret
+              </span>
+              <span className="block truncate text-[17px] font-black leading-tight text-white">
+                {sacret.toLocaleString("id-ID")}
+              </span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-300">
+              <Crown className="size-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">
+                Mahkota
+              </span>
+              <span className="block truncate text-[17px] font-black leading-tight text-white">                {premium ? `${premiumDays} hari` : "-"}
+              </span>
+            </span>
+          </div>
+        </div>
+
         {/* 9 kotak */}
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5">
           <div className="grid grid-cols-3 gap-2.5">
@@ -110,11 +147,11 @@ export function PanelHub({
                 key={key}
                 onClick={() => onPick(key)}
                 className={cn(
-                  "group flex flex-col items-start justify-between gap-2 rounded-2xl border border-white/12 bg-white/[0.05] p-3 text-left",
-                  "transition hover:border-gold-strong/45 hover:bg-white/[0.08] active:scale-[0.97]",
+                  "group flex flex-col items-start justify-between gap-2 rounded-2xl border border-transparent bg-white/[0.06] p-3 text-left",
+                  "transition hover:border-gold-strong/45 hover:bg-white/[0.1] active:scale-[0.97]",
                 )}
               >
-                <span className="flex size-9 items-center justify-center rounded-xl border border-white/12 bg-black/35 text-gold-strong transition group-hover:border-gold-strong/45">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-black/35 text-gold-strong transition group-hover:text-white">
                   <Icon className="size-[17px]" />
                 </span>
                 <span className="min-w-0">

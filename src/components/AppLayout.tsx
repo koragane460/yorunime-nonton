@@ -223,7 +223,6 @@ export function AppLayout({
               Math.floor(((user.premiumUntil ?? 0) - Date.now()) / 86400000),
             )}
             diamonds={user.diamonds ?? 0}
-            onOpenYoruVerse={() => setYvOpen(true)}
           />
         </div>
       )}
@@ -301,7 +300,6 @@ function AccountPanel({
   premium,
   premiumDays,
   diamonds,
-  onOpenYoruVerse,
 }: {
   onOpen: () => void;
   name: string;
@@ -320,15 +318,13 @@ function AccountPanel({
   premium: boolean;
   premiumDays: number;
   diamonds: number;
-  /** Tombol masuk YORUVERSE (pojok kanan bawah). */
-  onOpenYoruVerse: () => void;
 }) {
   const cost = xpForLevel(level);
   const inLevel = Math.max(0, Math.min(xp, cost));
   const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
   const goto = useNavigate();
   return (
-    <div className="pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-2xl border border-white/12 bg-black/55 shadow-[0_18px_40px_-30px_rgba(0,0,0,1)] backdrop-blur-xl">
+    <div className="pop-enter relative -mx-1 mt-3 w-[calc(100%+0.5rem)] overflow-hidden rounded-2xl bg-black/55 shadow-[0_18px_40px_-30px_rgba(0,0,0,1)] backdrop-blur-xl">
       {/* Dua tombol aksi di pojok kanan: Pengaturan lalu Notifikasi.
           Keduanya di luar area teks supaya tidak saling nimpa. */}
       <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-2">
@@ -413,28 +409,18 @@ function AccountPanel({
         </div>
       </button>
 
-      {/* Footer panel: Sacret + premium di kiri, tombol YoruVerse di
-          kanan — SEBARIS sehingga panel tidak memanjang ke bawah dan
-          tombol YoruVerse dibatasi ruangnya sendiri tanpa menimpa baris
-          mana pun (permintaan user). */}
-      <div className="relative flex items-center justify-between gap-2 px-3 pb-3.5 pt-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 text-sm">
-          <span className="flex items-center gap-1.5 font-bold text-sky-300">
-            <GemIcon className="size-5" /> {diamonds.toLocaleString("id-ID")} Sacret
+      {/* Footer panel: Sacret + premium. TOMBOL YORUVERSE DIHAPUS permanen
+          (menu YoruVerse tidak lagi ada — isi Shop/Pet/Music sekarang dibuka
+          lewat sheet PANEL). */}
+      <div className="relative flex flex-wrap items-center gap-x-4 gap-y-0.5 px-3 pb-3.5 pt-1 text-sm">
+        <span className="flex items-center gap-1.5 font-bold text-sky-300">
+          <GemIcon className="size-5" /> {diamonds.toLocaleString("id-ID")} Sacret
+        </span>
+        {premium && (
+          <span className="flex items-center gap-1.5 font-bold text-gold">
+            <CrownIcon className="size-5" /> {premiumDays} hari
           </span>
-          {premium && (
-            <span className="flex items-center gap-1.5 font-bold text-gold">
-              <CrownIcon className="size-5" /> {premiumDays} hari
-            </span>
-          )}
-        </div>
-        <button
-          onClick={onOpenYoruVerse}
-          className="flex shrink-0 items-center gap-1.5 rounded-full bg-yellow-900/60 px-4 py-1.5 text-xs font-black tracking-wide text-amber-300 backdrop-blur-sm transition hover:bg-yellow-800/70 active:scale-95"
-        >
-          <GemIcon className="size-4" aria-hidden />
-          YoruVerse
-        </button>
+        )}
       </div>
     </div>
   );
@@ -1018,19 +1004,19 @@ function BottomNav({
         <div className="mx-auto w-full max-w-2xl px-3 lg:max-w-4xl">
           <div
             className={cn(
-              "relative grid grid-cols-5 rounded-[24px] border border-white/12 p-1.5",
-              "bg-[oklch(0.135_0.016_266_/_0.9)] shadow-[0_18px_40px_-28px_rgba(0,0,0,1)]",
+              "relative grid grid-cols-5 border-t-0 border-white/12 p-1.5",
+              "bg-[oklch(0.135_0.016_266_/_0.92)] shadow-[0_18px_40px_-28px_rgba(0,0,0,1)]",
               "backdrop-blur-2xl backdrop-saturate-150",
             )}
           >
-            {/* Indikator: kotak rounded ke-2 — kaca beraksen emas tipis
-                (bukan kilau putih), supaya posisi aktif terbaca elegan. */}
+            {/* Indikator posisi aktif — kotak datar (tanpa rounded, permintaan
+                navigasi tidak lagi berbentuk rounded). */}
             <span
               aria-hidden
               className={cn(
-                "pointer-events-none absolute bottom-1.5 top-1.5 rounded-[19px] border border-gold-strong/40",
+                "pointer-events-none absolute bottom-1 top-1 border border-gold-strong/40",
                 "bg-gradient-to-b from-gold-strong/22 via-gold-strong/8 to-transparent",
-                "shadow-[inset_0_1px_0_rgba(255,255,255,.22)] backdrop-blur-xl transition-all duration-300 ease-out",
+                "backdrop-blur-xl transition-all duration-300 ease-out",
                 activeIdx < 0 && "opacity-0",
               )}
               style={{
@@ -1088,8 +1074,11 @@ function BottomNav({
                     : it.label
                 }
                 className={cn(
-                  "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-2xl pb-2 pt-2.5 transition-colors duration-200",
+                  "nav-item relative z-10 flex select-none flex-col items-center justify-center pb-2 pt-2.5 transition-colors duration-200",
                   active && "text-gold-strong",
+                  // Tombol PANEL: jendol KE ATAS bar (knob emas), permintaan.
+                  it.hub &&
+                    "z-20 -translate-y-5 rounded-2xl border border-gold-strong/55 bg-[oklch(0.16_0.03_88_/_0.98)] px-3 pb-3 pt-2.5 shadow-[0_12px_24px_-14px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.25)]",
                 )}
               >
                 {/* Isi tombol (ikon + label). */}

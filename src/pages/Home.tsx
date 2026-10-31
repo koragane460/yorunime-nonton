@@ -67,6 +67,7 @@ import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import { AccountHeader, AnnouncementBox, Spotlight } from "@/components/HomeTop";
 import { LeaderCards } from "@/components/LeaderCards";
+import { GenreScreen } from "@/components/GenreScreen";
 import { NobarCatalogScreen } from "@/components/NobarCatalogScreen";
 import {
   AfinitasPromo,
@@ -347,8 +348,8 @@ function HeroSlides({
 
 function GridSkeleton({ count = 10 }: { count?: number }) {
   return (
-    /* Siluet mengikuti grid utama Home: 2 kolom besar dulu, lalu melebar. */
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    /* Siluet mengikuti grid utama Home: 3 kolom, lalu melebar. */
+    <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i}>
           <div className="skeleton aspect-[2/3] w-full rounded-xl" />
@@ -855,6 +856,9 @@ function HomeContent() {
   // panel pilihan genre multi-select langsung terbuka. Tombol Cari biasa
   // tidak menyalakan flag ini.
   const [searchOpenGenres, setSearchOpenGenres] = useState(false);
+  // LAYAR GENRE fullscreen — dibuka dari kotak genre di Home (permintaan:
+  // Home hanya menampilkan kotak rounded berisi nama genre saja).
+  const [genreScreen, setGenreScreen] = useState<string | null>(null);
   // Layar penuh katalog (dibuka dari "Lihat selengkapnya").
   const [catalog, setCatalog] = useState<{
     kind: CatalogKind;
@@ -1231,21 +1235,23 @@ function HomeContent() {
       {/* 6b) DAILY QUEST — 3 misi ringan per hari, reset jam 00.00. */}
       <DailyQuestRow />
 
-      {/* PROMO — Afinitas + Feed, kartu seukuran di samping (dulu 2 slide hero). */}
-      <div className="mt-4 grid grid-cols-1 gap-3 overflow-hidden rounded-3xl border border-white/10 sm:grid-cols-2">
-        <div className="h-[176px]">
-          <AfinitasPromo
-            onOpen={() =>
-              user ? setAfinitas(true) : toast.info("Login dulu ya")
-            }
-            images={heroItems
-              .slice(0, 2)
-              .map((h) => h.image)
-              .filter(Boolean)}
-          />
+      {/* PROMO — Afinitas + Feed digabung jadi SATU carousel yang bisa
+          digeser ke kiri/kanan (permintaan), lengkap dengan titik pagination. */}
+      <div className="mt-4">
+        <div className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4">
+          <div className="h-[176px] w-[92%] shrink-0 snap-center">
+            <AfinitasPromo
+              onOpen={() => (user ? setAfinitas(true) : toast.info("Login dulu ya"))}
+              images={heroItems.slice(0, 2).map((h) => h.image).filter(Boolean)}
+            />
+          </div>
+          <div className="h-[176px] w-[92%] shrink-0 snap-center">
+            <FeedPromo onOpen={() => navigate("/feed")} />
+          </div>
         </div>
-        <div className="h-[176px]">
-          <FeedPromo onOpen={() => navigate("/feed")} />
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          <span className="h-1.5 w-5 rounded-full bg-gold-strong" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
         </div>
       </div>
 
@@ -1287,33 +1293,16 @@ function HomeContent() {
           kanan. Menekan chip membuka layar SearchScreen dengan genre itu
           terpilih (panel multi-select genre ikut terbuka). */}
       <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      {/* KOTAK GENRE (quick genre) — hanya kotak rounded + tulisan genre,
+          tanpa judul seksi. Ditekan → layar fullscreen GENRE. */}
       {!loading && genreList.length > 0 && (
         <div className="fade-enter mt-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="yn-sec text-lg">Genre</h2>
-            <button
-              onClick={() => {
-                setSearchGenre(null);
-                setSearchOpenGenres(true);
-                setShowSearch(true);
-              }}
-              className="text-xs font-bold text-gold-strong"
-            >
-              Lihat semua ›
-            </button>
-          </div>
-          {/* Chip WRAP ke beberapa baris — BERWARNA lembut per genre
-              (bukan satu warna doang, juga bukan neon). */}
-          <div className="flex flex-wrap gap-2">
-            {genreList.map((g, gi) => (
+          <div className="thin-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+            {genreList.map((g) => (
               <button
                 key={g.id}
-                onClick={() => {
-                  setSearchGenre(g.id);
-                  setSearchOpenGenres(false);
-                  setShowSearch(true);
-                }}
-                className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition hover:border-white/35 active:scale-95"
+                onClick={() => setGenreScreen(g.id)}
+                className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-sm font-bold text-white/90 transition hover:border-gold-strong/50 hover:bg-white/[0.1] active:scale-95"
               >
                 {g.name}
               </button>
@@ -1491,6 +1480,17 @@ function HomeContent() {
           onOpenMusic={() => {
             setShowSearch(false);
             setShowMusic(true);
+          }}
+        />
+      )}
+      {genreScreen && (
+        <GenreScreen
+          genres={genreList}
+          initialId={genreScreen}
+          onClose={() => setGenreScreen(null)}
+          onPick={(id, title, source) => {
+            setGenreScreen(null);
+            openAnime(id, title, (source as any) ?? "anilist");
           }}
         />
       )}
@@ -3401,6 +3401,14 @@ function synopsisPreview(text: string, open: boolean) {
 /** Kotak metadata kecil layar detail — ikon di tengah atas, nilai, label.
  *  Dipakai di GRID metadata biar semuanya rapi & rata, bukan menumpuk
  *  ke kiri satu per satu. */
+/** Format menit tonton → "07.00" (menit.detik), dipakai kartu Lanjutkan. */
+function fmtMenit(sec: number): string {
+  const s = Math.max(0, Math.floor(sec));
+  const m = Math.floor(s / 60);
+  const d = s % 60;
+  return `${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`;
+}
+
 function MetaTile({
   icon: Icon,
   value,
@@ -3416,9 +3424,8 @@ function MetaTile({
 }) {
   const inner = (
     <>
-      {/* Ikon di dalam bulatan halus — bukan kotak kartu lagi.
-          Grid meta tidak lagi memakai kotak (permintaan: "jangan dibuat
-          kotak, dibuat apa gitu tapi tetep bagus"). */}
+      {/* KOTAK ROUNDED (permintaan terbaru) — tiap data tampil di kotak
+          sendiri; kalau tidak muat, sisanya turun ke baris berikutnya. */}
       <span className="flex size-8 items-center justify-center rounded-full bg-white/[0.07] ring-1 ring-white/10">
         <Icon className={cn("size-4", accent ?? "text-white/85")} aria-hidden />
       </span>
@@ -3431,7 +3438,7 @@ function MetaTile({
     </>
   );
   const cls =
-    "flex min-w-0 flex-col items-center justify-center gap-0 rounded-none border-0 bg-transparent px-1 py-1 text-center";
+    "flex min-w-0 flex-col items-center justify-center gap-0 rounded-xl border border-white/10 bg-white/[0.05] px-1.5 py-2 text-center transition hover:border-white/25";
   return onClick ? (
     <button
       type="button"
@@ -3489,7 +3496,7 @@ function AnimeDetailScreen({
   const [similar, setSimilar] = useState<AnimeCardT[]>([]);
   // Tab Info / Nonton / Character / Vote — tombol tanpa background rounded,
   // hanya garis bawah pada teks yang aktif.
-  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "vote">("info");
+  const [detailTab, setDetailTab] = useState<"info" | "nonton" | "character" | "lanjutkan" | "vote">("info");
   // Cuplix (pengganti Like): overlay FULLSCREEN klip TikTok judul ini.
   const [cuplixFs, setCuplixFs] = useState(false);
   // Tab Cuplikan (dulu): karakter terpilih + daftar klip TikTok-nya — kini
@@ -3553,6 +3560,25 @@ function AnimeDetailScreen({
     );
 
   const eps: any[] = [...(detail.episodeList ?? [])];
+  /** Sumber cerita → label "manga / novel / game / original". */
+  const sourceLabel = (() => {
+    const s = String(detail.source ?? "").toUpperCase();
+    if (s.includes("MANGA")) return "manga";
+    if (s.includes("NOVEL")) return "novel";
+    if (s.includes("GAME")) return "game";
+    if (s.includes("ORIGINAL")) return "kisah asli YoruNime";
+    if (s.includes("WEB")) return "web novel";
+    return s ? s.toLowerCase() : "sumber aslinya";
+  })();
+  /** Judul SEJILID (sekuel/prekuel/petualangan yang sama) — dipakai di
+      bagian Adaptasi supaya daftarnya bukan sekadar hiasan. */
+  const baseTitle = String(detail.title ?? "").slice(0, 8).toLowerCase();
+  const franchise =
+    baseTitle.length >= 4
+      ? similar.filter(
+          (s) => s.id !== animeId && String(s.title ?? "").toLowerCase().startsWith(baseTitle),
+        )
+      : [];
   // Hari update mingguan — tanggal tayang episode pertama (serial mingguan
   // selalu tayang di hari yang sama). Hanya judul ONGOING yang menampilkan
   // tag "Update setiap …".
@@ -3618,20 +3644,29 @@ function AnimeDetailScreen({
               jadi tombol di baris yang sama dengan "Lanjut episode". */}
           <div className="absolute inset-x-0 top-0 z-10">
             <DetailHeader title="Detail Anime" onClose={onClose} />
-          </div>          {/* Info: judul + chip di bawah banner — lurus ke bawah (bukan
-              poster di samping judul), tapi gambarnya tetap tampil penuh
-              sebagai banner di atas. */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
-            <h2 className="yn-title text-2xl leading-tight text-white yn-outline">
+          </div>        </div>
+
+        <div className="px-3">
+          {/* POSTER DI TENGAH ATAS — di bawahnya judul anime, lalu judul
+              English berwarna abu pudar yang lebih kecil (permintaan). */}
+          <div className="-mt-24 flex flex-col items-center text-center">
+            {detail.image && (
+              <img
+                src={detail.image}
+                alt=""
+                className="w-40 rounded-2xl object-cover shadow-[0_28px_56px_-26px_rgba(0,0,0,1)] ring-1 ring-white/20"
+              />
+            )}
+            <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">
               {detail.title}
             </h2>
-            {/* Judul terjemahan Inggris — teks kecil di bawah judul asli. */}
+            {/* Judul terjemahan Inggris — kecil, abu pudar. */}
             {detail.titleEnglish && (
-              <p className="mt-0.5 line-clamp-1 text-[11px] text-white/70">
+              <p className="mt-1 line-clamp-2 text-[11px] text-white/45">
                 {detail.titleEnglish}
               </p>
             )}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
               <span
                 className={cn(
                   "inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
@@ -3666,9 +3701,6 @@ function AnimeDetailScreen({
               )}
             </div>
           </div>
-        </div>
-
-        <div className="px-3">
           {/* GRID metadata — tersusun rapi 2 kolom (rata TENGAH, bukan
               menumpuk di kiri): Rating · Studio · Tahun · Tipe · Durasi ·
               Favorite · tombol BERI RATING. */}
@@ -3709,7 +3741,7 @@ function AnimeDetailScreen({
             <button
               type="button"
               onClick={() => setRateOpen(true)}
-              className="flex min-w-0 flex-col items-center justify-center rounded-none border-0 bg-transparent px-1 py-1 text-center transition active:scale-[0.97]"
+              className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] px-1.5 py-2 text-center transition hover:border-white/25 active:scale-[0.97]"
             >
               <span className="flex size-8 items-center justify-center rounded-full bg-yellow-400/15 ring-1 ring-yellow-400/25">
                 <Star
@@ -3803,12 +3835,13 @@ function AnimeDetailScreen({
 
 
           {/* Tab tanpa background rounded: hanya garis bawah pada teks aktif.
-              Info · Nonton · Character · Vote (dulunya Cuplikan) */}
-          <div className="mt-3 flex gap-1">
+              Geser ke kanan → Info · Nonton · Character · Lanjutkan · Cuplix */}
+          <div className="thin-scroll mt-3 flex gap-1 overflow-x-auto pb-0.5">
             {([
               ["info", "Info"],
-              ["nonton", "Nonton"],
+              ["nonton", "Episode"],
               ["character", "Character"],
+              ["lanjutkan", "Lanjutkan"],
               ["vote", "Cuplix"],
             ] as const).map(([id, label]) => (
               <button
@@ -3823,7 +3856,7 @@ function AnimeDetailScreen({
                   setDetailTab(id);
                 }}
                 className={cn(
-                  "relative flex-1 px-1 pb-2 pt-1 text-sm font-semibold transition",
+                  "relative shrink-0 px-3 pb-2 pt-1 text-sm font-semibold transition",
                   detailTab === id
                     ? "text-white"
                     : "text-white/55 hover:text-white/80",
@@ -3898,6 +3931,81 @@ function AnimeDetailScreen({
             <CharacterRow idMal={String(animeId)} title={animeTitle} />
           )}
 
+          {/* LANJUTKAN NONTON — kartu kecil memanjang di kiri (clip gambar
+              episode + overlay abu-abu + ikon play); di kanan: judul episode,
+              nomor episode (kecil), bar progress, dan menit 07.00/24.00. */}
+          {detailTab === "lanjutkan" && (
+            <div className="mt-4">
+              <h2 className="yn-sec mb-2 text-lg text-white">Lanjutkan nonton</h2>
+              {progress && progress.progressSec > 0 ? (
+                <button
+                  onClick={() =>
+                    navigate(
+                      `/nonton?anime=${animeId}${
+                        animeTitle ? `&judul=${encodeURIComponent(animeTitle)}` : ""
+                      }`,
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-left transition hover:border-white/25 active:scale-[0.99]"
+                >
+                  <span className="relative h-20 w-32 shrink-0 overflow-hidden rounded-xl bg-black/60">
+                    {detail.image && (
+                      <img
+                        src={detail.image}
+                        alt=""
+                        className="h-full w-full object-cover opacity-70"
+                      />
+                    )}
+                    {/* Timpa abu-abu + ikon play di tengah. */}
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-gray-500/40 backdrop-grayscale"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <span className="flex size-8 items-center justify-center rounded-full bg-black/55">
+                        <Play className="size-4 fill-white text-white" aria-hidden />
+                      </span>
+                    </span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] font-black leading-tight text-white">
+                          {String(
+                            eps.find(
+                              (e) => Number(e?.number) === Number(progress.episode),
+                            )?.title ?? detail.title ?? "",
+                          )}
+                        </span>
+                        <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wider text-white/45">
+                          Episode {progress.episode}
+                        </span>
+                      </span>
+                      <span className="shrink-0 rounded-md bg-black/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-gold-strong">
+                        {fmtMenit(progress.progressSec)} / {fmtMenit(progress.durationSec)}
+                      </span>
+                    </span>
+                    <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-black/60">
+                      <span
+                        className="block h-full rounded-full bg-gold-strong transition-[width]"
+                        style={{
+                          width: `${Math.min(100, (progress.progressSec / Math.max(1, progress.durationSec)) * 100)}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="mt-1 block text-[10px] text-white/45">
+                      Tersimpan di menit {fmtMenit(progress.progressSec)}
+                    </span>
+                  </span>
+                </button>
+              ) : (
+                <p className="rounded-2xl border border-dashed border-white/15 px-3 py-8 text-center text-[12px] text-white/50">
+                  Belum ada tontonan yang dilanjutkan — mulai dari episode 1.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* POPUP BERI RATING — 5 bintang neon emas, tersimpan lokal. */}
           {rateOpen && (
             <div
@@ -3969,28 +4077,29 @@ function AnimeDetailScreen({
             />
           )}
 
-          {/* Sinopsis — tampil di tab Info */}
+          {/* Sinopsis — TANPA kotak background; "Lihat selengkapnya" ada di
+              paling kanan baris judul Sinopsis (permintaan). */}
           {detailTab === "info" && (
           <>
-          <SectionTitle>Sinopsis</SectionTitle>
-          <div
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <h2 className="yn-sec text-lg text-white">Sinopsis</h2>
+            {canExpandSynopsis && (
+              <button
+                onClick={() => setSynopsisOpen((v) => !v)}
+                className="shrink-0 text-[13px] font-bold text-gold-strong transition hover:text-white"
+              >
+                {synopsisOpen ? "Lebih sedikit" : "Lihat selengkapnya"}
+              </button>
+            )}
+          </div>
+          <p
             className={cn(
-              "thin-scroll rounded-xl border border-border bg-secondary/40 p-3",
-              synopsisOpen ? "" : "max-h-64 overflow-y-auto",
+              "mt-2 whitespace-pre-line text-sm leading-6 text-white/85",
+              !synopsisOpen && canExpandSynopsis && "line-clamp-6",
             )}
           >
-            <p className="whitespace-pre-line text-sm leading-6 text-white">
-              {synopsisBody}
-            </p>
-          </div>
-          {canExpandSynopsis && (
-            <button
-              onClick={() => setSynopsisOpen((v) => !v)}
-              className="mt-2 inline-flex h-8 items-center text-[13px] font-medium text-white/70 transition hover:text-white"
-            >
-              {synopsisOpen ? "Tutup (balik ke kotak)" : "Baca selengkapnya"}
-            </button>
-          )}
+            {synopsisBody}
+          </p>
           </>
           )}
 
@@ -4176,10 +4285,10 @@ function AnimeDetailScreen({
           </div>
           )}
 
-          {/* Yang serupa — tampil di tab Info, geser ke kanan */}
+          {/* RELATED ANIME — geser ke kanan (dulu "Yang serupa"). */}
           {detailTab === "info" && similar.length > 0 && (
             <div className="mt-6">
-              <h2 className="yn-sec mb-2 text-lg text-white">Yang serupa</h2>
+              <h2 className="yn-sec mb-2 text-lg text-white">Related Anime</h2>
               <div className="thin-scroll -mx-1 grid auto-cols-[104px] grid-flow-col grid-rows-2 gap-x-2.5 gap-y-3 overflow-x-auto px-1 pb-1">
                 {similar.map((s) => (
                   <button
@@ -4215,6 +4324,56 @@ function AnimeDetailScreen({
                         <span>· {s.episodes} episode</span>
                       ) : null}
                     </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ADAPTASI — daftar judul yang lahir dari sumber yang sama
+              (manga / novel), lengkap dengan poster kecilnya. */}
+          {detailTab === "info" && (
+            <div className="mt-6">
+              <h2 className="yn-sec mb-2 text-lg text-white">Adaptasi</h2>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-2">
+                  {detail.image && (
+                    <img
+                      src={detail.image}
+                      alt=""
+                      className="h-12 w-9 shrink-0 rounded-md object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-black leading-tight text-white">
+                      {detail.title}
+                    </p>
+                    <p className="truncate text-[11px] leading-tight text-white/50">
+                      Adaptasi dari {sourceLabel}
+                    </p>
+                  </div>
+                </div>
+                {franchise.map((s) => (
+                  <button
+                    key={`adapt-${s.id}`}
+                    onClick={() => onPick(s.id, s.title)}
+                    className="flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-2 text-left transition hover:border-white/25"
+                  >
+                    <img
+                      src={s.image}
+                      alt=""
+                      className="h-12 w-9 shrink-0 rounded-md object-cover"
+                      loading="lazy"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-black leading-tight text-white">
+                        {s.title}
+                      </p>
+                      <p className="truncate text-[11px] leading-tight text-white/50">
+                        Adaptasi {sourceLabel} yang sama
+                      </p>
+                    </div>
                   </button>
                 ))}
               </div>
