@@ -1172,10 +1172,22 @@ export const animeGenres = action({
       } catch {
         /* fallback statis */
       }
-      return [
+      // Fallback statis — daftar LENGKAP genre AniList (permintaan: genre
+      // kurang lengkap, tambahin lagi). Dikombinasikan dengan hasil API di
+      // bawah supaya tidak pernah kosong dan tidak ada dobel.
+      const STATIC_GENRES = [
         "Action","Adventure","Comedy","Drama","Fantasy","Horror","Mecha","Music","Mystery",
         "Psychological","Romance","Sci-Fi","Slice of Life","Sports","Supernatural","Thriller",
-      ].map((n, i) => ({ id: String(i + 1), name: n }));
+        "Cars","Avant Garde","Children","Dementia","Demons","Ecchi","Family","Game",
+        "Harem","Historical","Isekai","Josei","Kids","Military","Parody","Police",
+        "Seinen","Shoujo","Shoujo Ai","Shounen","Shounen Ai","Space","Super Power",
+        "Samurai","Vampire","Yaoi","Yuri","Detective","Dining","Medical",
+        "Organized Crime","Pet","Philosophy","Survival","Theatre","Crossdressing",
+      ]
+        .map((n) => n.trim())
+        .filter(Boolean)
+        .map((n, i) => ({ id: String(i + 1), name: n }));
+      return STATIC_GENRES;
     }),
 });
 

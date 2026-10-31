@@ -11,6 +11,9 @@ type GenreCard = {
   image: string;
   score?: number;
   type?: string;
+  /** Status tayang — tampil sebagai chip di kiri atas poster (spt Home). */
+  status?: string;
+  episodes?: number;
 };
 
 type GenreOption = { id: string; name: string };
@@ -130,8 +133,9 @@ export function GenreScreen({
       </header>
 
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-24">
-        {/* Judul + nama genre terpilih (agak ke kanan). */}
-        <div className="mt-2 pl-5">
+        {/* Judul + nama genre terpilih — rata KIRI (permintaan: kurang
+            kiri dikit, jadi tanpa pl-5 lagi). */}
+        <div className="mt-2">
           <h1 className="yn-title text-[34px] leading-none">GENRE</h1>
           <p className="mt-1.5 text-sm font-bold text-white/60">
             Genre {name || "..."}
@@ -140,7 +144,7 @@ export function GenreScreen({
 
         {/* Kolom pencarian — muncul di bawah tulisan genre. */}
         {showSearch && (
-          <div className="mt-3 pl-5">
+          <div className="mt-3">
             <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-3.5 py-2.5">
               <Search className="size-4 shrink-0 text-gold-strong" />
               <input
@@ -211,8 +215,21 @@ export function GenreScreen({
                   loading="lazy"
                   className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
                 />
+                {/* Chip STATUS di kiri atas — sama seperti kartu Home. */}
+                <span
+                  className={cn(
+                    "absolute left-1 top-1 rounded-md px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white",
+                    (c.status ?? "").toLowerCase() === "completed"
+                      ? "bg-sky-700"
+                      : "bg-emerald-600",
+                  )}
+                >
+                  {(c.status ?? "Ongoing").toLowerCase() === "completed"
+                    ? "Completed"
+                    : "Ongoing"}
+                </span>
                 {typeof c.score === "number" && c.score > 0 && (
-                  <span className="absolute left-1 top-1 flex items-center gap-0.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[9px] font-black text-amber-300 backdrop-blur">
+                  <span className="absolute right-1 top-1 flex items-center gap-0.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[9px] font-black text-amber-300 backdrop-blur">
                     <Star className="size-2.5 fill-amber-300" />
                     {c.score.toFixed(1)}
                   </span>
@@ -221,7 +238,9 @@ export function GenreScreen({
               <p className="mt-1.5 line-clamp-2 text-[11px] font-bold leading-tight text-white/90">
                 {c.title}
               </p>
-              <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/45">
+              {/* Rating + views — SELALU tampil (0.0 kalau datanya kosong,
+                  biar tidak ada kartu yang kosong angkanya). */}
+              <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/55">
                 <Star className="size-2.5 fill-amber-300 text-amber-300" />
                 {(c.score ?? 0).toFixed(1)}
                 <span className="mx-0.5 opacity-40">·</span>

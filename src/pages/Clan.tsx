@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { StripBackIcon } from "@/components/StripBack";
@@ -314,13 +314,33 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
         {ownClan && (
           <button
             onClick={() => setPick({ id: ownClan._id, tab: "member" })}
-            className="mx-auto flex w-full flex-col items-center gap-2 rounded-3xl border border-gold/35 bg-gradient-to-b from-gold/[0.14] via-white/[0.05] to-transparent px-4 py-5 text-center transition hover:border-gold/60 active:scale-[0.99]"
+            className="mx-auto relative flex w-full flex-col items-center gap-2 rounded-3xl border border-white/12 bg-white/[0.04] px-4 py-5 text-center transition hover:border-white/30 active:scale-[0.99]"
           >
+            {/* STATUS CLAN — dibungkus kotak, di KANAN ATAS. */}
+            <span className="absolute right-3 top-3 flex max-w-[52%] flex-col items-end gap-1.5 rounded-xl border border-white/12 bg-black/40 p-2 text-left">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/55">
+                Status clan
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-400/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">
+                  <span className="size-1.5 rounded-full bg-emerald-300" /> Aktif
+                </span>
+                <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-white/80">
+                  Lv.{ownClan.level}
+                </span>
+              </span>
+              {ownClan.verified && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-black text-sky-200">
+                  <BlueCheck className="size-3" /> Verified
+                </span>
+              )}
+            </span>
+
             {ownClan.avatarUrl ? (
               <img
                 src={ownClan.avatarUrl}
                 alt=""
-                className="size-16 shrink-0 rounded-2xl object-cover ring-2 ring-gold/60"
+                className="size-16 shrink-0 rounded-2xl object-cover ring-2 ring-white/30"
               />
             ) : (
               <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
@@ -337,6 +357,15 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
             <p className={cn("text-lg font-black", clanNameClass(ownClan.level))}>
               {ownClan.name}
             </p>
+
+            {/* DESKRIPSI CLAN — kotak kecil (kalau diisi), sama seperti
+                yang di detail clan. */}
+            {ownClan.description ? (
+              <span className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-left text-[11px] leading-relaxed text-zinc-300/90">
+                {ownClan.description}
+              </span>
+            ) : null}
+
             {/* Stats clan: member · Sacret · umur */}
             <div className="flex items-center justify-center gap-3 text-[11px] font-bold text-white/75">
               <span className="inline-flex items-center gap-1">
@@ -368,8 +397,10 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
                 {(ownClan.levelCost ?? 100000).toLocaleString("id-ID")}
               </span>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-gold/70">
-              Ketuk untuk buka clan ▾
+            {/* Judul — putih, TANPA outline kuning tapi tetap beda dari
+                background utama (permintaan). */}
+            <span className="mt-1 rounded-xl bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-none ring-1 ring-white/15">
+              CLAN MU ADA DISINI!
             </span>
           </button>
         )}
@@ -737,8 +768,16 @@ function ClanDetailScreen({
   // Panel PENGATURAN CLAN (khusus leader/officer): request masuk + role +
   // deskripsi. Terbuka lewat tombol gerigi di header.
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"request" | "role">("request");
+  const [settingsTab, setSettingsTab] = useState<
+    "request" | "role" | "announce" | "more"
+  >("request");
   const [descDraft, setDescDraft] = useState<string | null>(null);
+  const [annDraft, setAnnDraft] = useState<string | null>(null);
+  const [bgBusy, setBgBusy] = useState(false);
+  const bgRef = useRef<HTMLInputElement>(null);
+  const setAnnouncement = useMutation(api.clans.setAnnouncement);
+  const setBackground = useMutation(api.clans.setBackground);
+  const uploadUrlMut = useMutation(api.storage.getUploadUrl);
   // Tombol REQUEST JOIN di bawah kotak clan — jalan walau layar dibuka
   // langsung lewat ?clan=<id> (tanpa onJoin dari daftar).
   const requestJoinMut = useMutation(api.clans.requestJoin);
@@ -1109,18 +1148,25 @@ function ClanDetailScreen({
               </button>
             </div>
 
-            {/* Sub-tab: Request masuk | Role & deskripsi */}
-            <div className="flex gap-6 border-b border-white/10 px-4">
-              {(["request", "role"] as const).map((t) => (
+            {/* Sub-tab: Request | Role & Info | Pengumuman | Lainnya */}
+            <div className="flex gap-5 overflow-x-auto border-b border-white/10 px-4">
+              {(["request", "role", "announce", "more"] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => setSettingsTab(t)}
+                  onClick={() => setSettingsTab(t as any)}
                   className={cn(
-                    "relative flex items-center gap-1.5 py-2.5 text-[13px] font-bold transition",
+                    "relative shrink-0 items-center gap-1.5 py-2.5 text-[13px] font-bold transition",
+                    "flex",
                     settingsTab === t ? "text-white" : "text-muted-foreground",
                   )}
                 >
-                  {t === "request" ? "Request Masuk" : "Role & Deskripsi"}
+                  {t === "request"
+                    ? "Request"
+                    : t === "role"
+                      ? "Role"
+                      : t === "announce"
+                        ? "Pengumuman"
+                        : "Lainnya"}
                   {t === "request" && pending.length > 0 && (
                     <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
                       {pending.length}
@@ -1257,6 +1303,170 @@ function ClanDetailScreen({
                   </div>
                 </div>
               )}
+
+              {/* ===== Sub-tab PENGUMUMAN — isi/hapus pengumuman clan. ===== */}
+              {settingsTab === "announce" && (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Pengumuman dari leader / officer
+                    </Label>
+                    <textarea
+                      value={annDraft ?? (c as any).announcement ?? ""}
+                      onChange={(e) => setAnnDraft(e.target.value)}
+                      rows={4}
+                      maxLength={400}
+                      placeholder="Tulis pengumuman… (kosongkan kalau mau dihapus)"
+                      className="mt-1.5 w-full rounded-xl border border-white/12 bg-black/30 p-3 text-sm outline-none focus:border-gold/60"
+                    />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Muncul di kotak besar bawah bar level clan. Kalau dikosongin,
+                      tampil “Tidak ada announcement dari leader ataupun officer”.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await setAnnouncement({ text: annDraft ?? "" });
+                          toast.success("Pengumuman disimpan");
+                        } catch (e) {
+                          toast.error(
+                            e instanceof Error ? e.message : "Gagal menyimpan",
+                          );
+                        }
+                      }}
+                      className="yn-btn-warm mt-2 w-full rounded-xl py-2.5 text-xs font-bold"
+                    >
+                      Simpan pengumuman
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== Sub-tab LAINNYA — background, info, aksi berbahaya. ===== */}
+              {settingsTab === "more" && (
+                <div className="space-y-4">
+                  {/* Background clan */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Background clan
+                    </Label>
+                    <input
+                      ref={bgRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!f) return;
+                        setBgBusy(true);
+                        try {
+                          const up = await uploadUrlMut({});
+                          const res = await fetch(up, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": f.type || "image/jpeg",
+                            },
+                            body: f,
+                          });
+                          if (!res.ok) throw new Error("Upload gagal");
+                          const { storageId } = (await res.json()) as {
+                            storageId: string;
+                          };
+                          await setBackground({ url: storageId });
+                          toast.success("Background clan diganti");
+                        } catch (err) {
+                          toast.error(
+                            err instanceof Error ? err.message : "Gagal upload",
+                          );
+                        } finally {
+                          setBgBusy(false);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => bgRef.current?.click()}
+                      disabled={bgBusy}
+                      className="mt-1.5 w-full rounded-xl border border-white/15 py-2.5 text-xs font-bold text-white/80 transition active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {bgBusy ? "Mengunggah…" : "Pilih gambar background"}
+                    </button>
+                  </div>
+
+                  {/* Info clan */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                      Info clan
+                    </p>
+                    <div className="mt-2 space-y-1.5 text-[12px]">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Nama</span>
+                        <span className="min-w-0 truncate font-semibold">{c.name}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Tag</span>
+                        <span className="font-mono font-semibold">[{c.tag}]</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Member</span>
+                        <span className="font-semibold">
+                          {c.memberCount}/{c.memberCap}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Level</span>
+                        <span className="font-semibold">Lv.{c.level}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Sacret clan</span>
+                        <span className="font-semibold">
+                          {Number(c.diamonds ?? 0).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Centang biru</span>
+                        <span className="font-semibold">
+                          {c.verified ? "Aktif ✓" : "Belum"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Aksi cepat */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        setTab("shop");
+                      }}
+                      className="rounded-xl border border-gold/35 bg-gold/10 py-2.5 text-xs font-bold text-gold transition active:scale-[0.98]"
+                    >
+                      Buka Shop clan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        setSettingsTab("announce");
+                        setTimeout(() => setSettingsOpen(true), 60);
+                      }}
+                      className="rounded-xl border border-white/15 py-2.5 text-xs font-bold text-white/80 transition active:scale-[0.98]"
+                    >
+                      Atur pengumuman
+                    </button>
+                  </div>
+
+                  {/* Kelola member cepat — copot / cari */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Kelola member ({(detail.members as any[]).length})
+                    </Label>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      Untuk mengganti role, buka sub-tab <b>Role</b>. Untuk menerima
+                      atau menolak permintaan masuk, buka sub-tab <b>Request</b>.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1279,10 +1489,10 @@ function ClanShop({ clan, detail }: { clan: any; detail: any }) {
   const buyVerified = useMutation(api.clans.buyVerified);
   const upgradeSlots = useMutation(api.clans.upgradeSlots);
   const buyTagTier = useMutation(api.clans.buyTagTier);
-  const me = useQuery(api.clans.mySacret, {}) as
-    | { diamonds?: number }
+  const me = useQuery(api.gacha.myState, {}) as
+    | { sacret?: number }
     | undefined;
-  const bal = me?.diamonds ?? 0;
+  const bal = me?.sacret ?? 0;
   const [busy, setBusy] = useState<string | null>(null);
   const canManage = detail.myRole === "leader" || detail.myRole === "officer";
 
