@@ -394,7 +394,9 @@ export const topGive = query({
         // Profil pendukung biar kartu/grid papan peringkat bisa ikut
         // menampilkan ID, tag clan, bingkai, dan total XP sekaligus.
         seqId: u?.seqId,
+        level: u?.level ?? 1,
         clanTag: u?.clanTag,
+        clanTagIcon: u?.clanTagIcon,
         avatarBorder: u?.avatarBorder,
         xp: u?.xp ?? 0,
       };

@@ -1014,6 +1014,7 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
   const stats = useQuery(api.downloads.downloadStats, "skip");
+  const collapse = useMutation(api.activities.collapseHistory);
   const [showDownloads, setShowDownloads] = useState(false);
   const items = ((rows ?? []) as unknown as ContRow[])
     .slice()
@@ -1036,6 +1037,10 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
     } catch {
       /* storage diblokir — mode hanya berlaku selama sesi ini */
     }
+    // SINGLE: riwayat lama (satu episode per baris) langsung dirapatkan
+    // jadi satu baris per judul — kalau tidak, history tetap kelihatan
+    // seperti Multi walaupun tombol Single sudah menyala.
+    if (m === "single") void collapse();
   };
 
   // STRUKTUR HISTORY (permintaan): Hari ini → Kemarin → dd/mm/yyyy, tiap
@@ -1088,54 +1093,56 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
       }
       onClose={onClose}
       footer={
-        <button
-          onClick={() => setShowDownloads(true)}
-          aria-label="Download"
-          title="Download"
-          className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/60 hover:text-primary"
-        >
-          <Download className="size-4" />
-          {stats && stats.done > 0 && (
-            <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
-              {stats.done > 99 ? "99+" : stats.done}
-            </span>
-          )}
-        </button>
+        <div className="flex w-full items-center justify-end gap-2">
+          {/* Saklar SINGLE / MULTI — di POJOK KANAN BAWAH (permintaan). */}
+          <div className="flex items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.8)]">
+            <button
+              type="button"
+              onClick={() => pickMode("single")}
+              aria-pressed={mode === "single"}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black transition active:scale-95",
+                mode === "single"
+                  ? "bg-white text-sky-700"
+                  : "text-sky-950/75 hover:bg-white/30",
+              )}
+            >
+              <List className="size-3" aria-hidden />
+              Single
+            </button>
+            <button
+              type="button"
+              onClick={() => pickMode("multi")}
+              aria-pressed={mode === "multi"}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black transition active:scale-95",
+                mode === "multi"
+                  ? "bg-white text-sky-700"
+                  : "text-sky-950/75 hover:bg-white/30",
+              )}
+            >
+              <Filter className="size-3" aria-hidden />
+              Multi
+            </button>
+          </div>
+          <button
+            onClick={() => setShowDownloads(true)}
+            aria-label="Download"
+            title="Download"
+            className="relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/60 hover:text-primary"
+          >
+            <Download className="size-4" />
+            {stats && stats.done > 0 && (
+              <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
+                {stats.done > 99 ? "99+" : stats.done}
+              </span>
+            )}
+          </button>
+        </div>
       }
     >
-      {/* Saklar SINGLE / MULTI — gaya tombol yang sama dengan Subscribe. */}
-      <div className="mb-1 flex w-fit items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.9)]">
-        <button
-          type="button"
-          onClick={() => pickMode("single")}
-          aria-pressed={mode === "single"}
-          className={cn(
-            "flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-black transition active:scale-95",
-            mode === "single"
-              ? "bg-white text-sky-700"
-              : "text-sky-950/75 hover:bg-white/30",
-          )}
-        >
-          <List className="size-3.5" aria-hidden />
-          Single
-        </button>
-        <span className="w-px shrink-0 bg-sky-950/25" aria-hidden />
-        <button
-          type="button"
-          onClick={() => pickMode("multi")}
-          aria-pressed={mode === "multi"}
-          className={cn(
-            "flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-black transition active:scale-95",
-            mode === "multi"
-              ? "bg-white text-sky-700"
-              : "text-sky-950/75 hover:bg-white/30",
-          )}
-        >
-          <Filter className="size-3.5" aria-hidden />
-          Multi
-        </button>
-      </div>
-      <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
+      {/* Keterangan mode — tombolnya ada di footer kanan bawah. */}
+      <p className="mb-2 text-[11px] leading-snug text-muted-foreground">
         {mode === "single"
           ? "Single — satu baris per judul: nonton episode baru menimpa yang lama."
           : "Multi — tiap episode punya baris sendiri, yang lama tetap tersimpan."}

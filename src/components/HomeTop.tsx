@@ -275,7 +275,7 @@ export function Spotlight({
             <button
               key={a.id}
               onClick={() => onPick(a.id, a.title, (a.source as any) ?? "anilist")}
-              className="group relative h-[330px] w-[92%] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/12 bg-black text-left shadow-[0_30px_60px_-40px_rgba(0,0,0,1)] transition hover:border-white/30 active:scale-[0.99] sm:w-[70%] lg:w-[52%]"
+              className="group relative h-[298px] w-[97%] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/12 bg-black text-left shadow-[0_30px_60px_-40px_rgba(0,0,0,1)] transition hover:border-white/30 active:scale-[0.99] sm:w-[76%] lg:w-[58%]"
             >
               <img
                 src={a.image}

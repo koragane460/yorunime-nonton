@@ -568,6 +568,148 @@ export function ClanRow({
 /*  LAYAR DETAIL CLAN (dipakai buat clan sendiri & clan yang dilihat)      */
 /* ====================================================================== */
 
+/* ------------------------------------------------------------------ *
+ *  KOTAK PENGUMUMAN CLAN
+ *  Seukuran kotak claim. Kiri atas foto profile pembuat pengumuman,
+ *  di kanannya username, di kanan lagi tag clan, dan title (leader/
+ *  officer). Di bawah itu GARIS yang panjangnya menyesuaikan title
+ *  dengan gradien menghilang di ujungnya. Lalu teks pengumuman. Kalau
+ *  tidak ada: "Tidak ada announcement dari leader ataupun officer".
+ * ------------------------------------------------------------------ */
+function AnnouncementBox({
+  clan,
+  detail,
+  canManage,
+}: {
+  clan: any;
+  detail: any;
+  canManage: boolean;
+}) {
+  const setAnnouncement = useMutation(api.clans.setAnnouncement);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(clan.announcement ?? "");
+  const [busy, setBusy] = useState(false);
+
+  // Penulis pengumuman — kalau belum ada (data lama), pakai leader.
+  const authorId = clan.announcementBy ?? detail.leaderId;
+  const author = (detail.members ?? []).find(
+    (m: any) => String(m.userId) === String(authorId),
+  );
+  const authorName = author?.username ?? "Leader";
+  const authorImage = author?.image;
+  const authorRole = clan.announcementRole ?? author?.role ?? "leader";
+  const roleTitle = ROLE_TITLE[authorRole]?.name ?? "Leader";
+
+  const save = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await setAnnouncement({ text: draft });
+      toast.success("Pengumuman disimpan");
+      setEditing(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-2xl border border-gold/25 bg-white/[0.03] p-3.5">
+      {/* Baris atas: foto profile + nama + tag + title. */}
+      <div className="flex items-center gap-2">
+        <Avatar src={authorImage} seed={authorName} className="size-8 shrink-0" />
+        <span className="truncate text-[13px] font-black text-white">
+          {authorName}
+        </span>
+        <ClanTag
+          icon={clan.tagIcon ?? DEFAULT_CLAN_ICON}
+          tag={clan.tag}
+          color={clan.color}
+          level={clan.level}
+          className="shrink-0 px-1.5 py-0 text-[9px]"
+        />
+        <span
+          className={cn(
+            "ml-auto shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-black",
+            ROLE_TITLE[authorRole]?.cls ?? ROLE_TITLE.leader.cls,
+          )}
+        >
+          {roleTitle}
+        </span>
+      </div>
+
+      {/* GARIS yang panjangnya menyesuaikan title + gradien menghilang. */}
+      <div className="mt-2 flex items-center">
+        <span
+          className="h-0.5 rounded-full"
+          style={{
+            width: `${Math.min(100, 24 + roleTitle.length * 8)}%`,
+            background:
+              "linear-gradient(90deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.3) 45%, rgba(255,255,255,0) 100%)",
+          }}
+          aria-hidden
+        />
+      </div>
+
+      {/* Isi pengumuman / kolom edit. */}
+      {editing ? (
+        <div className="mt-2.5 space-y-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            maxLength={400}
+            placeholder="Tulis pengumuman clan… (kosongkan untuk menghapus)"
+            className="w-full resize-none rounded-xl border border-white/12 bg-black/40 px-3 py-2 text-[12px] text-white outline-none placeholder:text-white/40 focus-visible:ring-0"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => void save()}
+              disabled={busy}
+              className="yn-btn-warm flex-1 rounded-xl py-2 text-xs font-bold active:scale-[0.98] disabled:opacity-50"
+            >
+              {busy ? "…" : "Simpan"}
+            </button>
+            <button
+              onClick={() => {
+                setDraft(clan.announcement ?? "");
+                setEditing(false);
+              }}
+              className="rounded-xl border border-white/15 px-3 py-2 text-xs font-bold text-muted-foreground"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2.5">
+          {clan.announcement ? (
+            <p className="text-[12px] leading-relaxed text-zinc-200">
+              {clan.announcement}
+            </p>
+          ) : (
+            <p className="text-[12px] leading-relaxed text-zinc-500">
+              Tidak ada announcement dari leader ataupun officer.
+            </p>
+          )}
+          {canManage && (
+            <button
+              onClick={() => {
+                setDraft(clan.announcement ?? "");
+                setEditing(true);
+              }}
+              className="mt-2 rounded-lg border border-white/15 px-2.5 py-1 text-[10px] font-black text-white/70 transition active:scale-95"
+            >
+              {clan.announcement ? "Ubah pengumuman" : "Buat pengumuman"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ClanDetailScreen({
   clanId,
   onClose,
@@ -587,7 +729,7 @@ function ClanDetailScreen({
   const respondReq = useMutation(api.clans.respondRequest);
   const setRoleMut = useMutation(api.clans.setRole);
   const setDescription = useMutation(api.clans.setDescription);
-  const [tab, setTab] = useState<"member" | "donate">(initialTab ?? "member");
+  const [tab, setTab] = useState<"member" | "donate" | "shop">(initialTab ?? "member");
   const [donateOpen, setDonateOpen] = useState(false);
   const [amount, setAmount] = useState<number>(100);
   const [custom, setCustom] = useState("");
@@ -736,12 +878,19 @@ function ClanDetailScreen({
             </div>
           </div>
 
-          {/* DESKRIPSI CLAN — berada DI ATAS bar level (sesuai permintaan) */}
-          {(c as any).description ? (
-            <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-400">
-              {(c as any).description}
-            </p>
-          ) : null}
+          {/* DESKRIPSI CLAN — kotak persegi PANJANG, opacity ~45%, di ATAS
+              bar level (sesuai permintaan). */}
+          <div className="mt-2.5 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2.5">
+            {(c as any).description ? (
+              <p className="text-[11px] leading-relaxed text-zinc-300/90">
+                {(c as any).description}
+              </p>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-zinc-500">
+                Belum ada deskripsi clan.
+              </p>
+            )}
+          </div>
 
           {/* Bar level dalam kotak satu baris, level di kiri */}
           <div className="mt-2.5 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
@@ -757,6 +906,18 @@ function ClanDetailScreen({
             </span>
           </div>
         </div>
+
+        {/* KOTAK PENGUMUMAN — seukuran kotak claim, foto profile kiri atas,
+            username, tag clan, title (leader/officer) di kanan, lalu GARIS
+            yang panjangnya menyesuaikan title + gradien menghilang di ujung,
+            lalu teks pengumuman. Kalau kosong: "Tidak ada announcement…". */}
+        {isMember && (
+          <AnnouncementBox
+            clan={c}
+            detail={detail}
+            canManage={canManage}
+          />
+        )}
 
         {/* Bukan member: tombol REQUEST JOIN / Batalkan Request (hijau) —
             selalu tampil di bawah kotak clan, walau dibuka tanpa onJoin. */}
@@ -854,9 +1015,9 @@ function ClanDetailScreen({
           </div>
         )}
 
-        {/* Tab Member | Donate — TANPA background, hanya tulisan putih
+        {/* Tab Member | Donate | Shop — TANPA background, hanya tulisan putih
             dengan GARIS PUTIH DI BAWAH tab aktif (permintaan user). */}
-        <div className="mt-5 flex items-stretch gap-6 border-b border-white/15">
+        <div className="mt-5 flex items-stretch gap-5 border-b border-white/15">
           <button
             onClick={() => setTab("member")}
             className={cn(
@@ -891,20 +1052,41 @@ function ClanDetailScreen({
               />
             )}
           </button>
+          <button
+            onClick={() => setTab("shop")}
+            className={cn(
+              "relative flex-1 pb-2.5 pt-1 text-center text-sm font-black transition",
+              tab === "shop"
+                ? "text-white"
+                : "text-muted-foreground hover:text-white/85",
+            )}
+          >
+            Shop
+            {tab === "shop" && (
+              <span
+                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,.6)]"
+                aria-hidden
+              />
+            )}
+          </button>
         </div>
 
         {/* Isi tab */}
-        <MemberDonateList
-          tab={tab}
-          members={detail.members as any[]}
-          todayTotal={detail.todayDonationsTotal ?? 0}
-          todayDonators={detail.todayDonators ?? 0}
-          myRole={detail.myRole}
-          leaderId={(detail as any).leaderId}
-          clanTag={c.tag}
-          clanTagIcon={c.tagIcon}
-          clanLevel={c.level}
-        />
+        {tab === "shop" ? (
+          <ClanShop clan={c} detail={detail} />
+        ) : (
+          <MemberDonateList
+            tab={tab}
+            members={detail.members as any[]}
+            todayTotal={detail.todayDonationsTotal ?? 0}
+            todayDonators={detail.todayDonators ?? 0}
+            myRole={detail.myRole}
+            leaderId={(detail as any).leaderId}
+            clanTag={c.tag}
+            clanTagIcon={c.tagIcon}
+            clanLevel={c.level}
+          />
+        )}
       </div>
 
       {/* ================= PENGATURAN CLAN (leader/officer) ================= */}
@@ -1086,6 +1268,160 @@ function ClanDetailScreen({
 /* ====================================================================== */
 /*  ISI TAB MEMBER / DONATE                                                */
 /* ====================================================================== */
+
+/* ------------------------------------------------------------------ *
+ *  SHOP CLAN — tambah slot member, beli tag clan (bentuk beda-beda),
+ *  centang biru, dll. (permintaan: "mana shop nya yang aku suruh
+ *  nambahin pas itu yang isinya nambah slot member, beli tag clan
+ *  (bentuk nya beda beda) terus centang biru dan lain lain")
+ * ------------------------------------------------------------------ */
+function ClanShop({ clan, detail }: { clan: any; detail: any }) {
+  const buyVerified = useMutation(api.clans.buyVerified);
+  const upgradeSlots = useMutation(api.clans.upgradeSlots);
+  const buyTagTier = useMutation(api.clans.buyTagTier);
+  const me = useQuery(api.clans.mySacret, {}) as
+    | { diamonds?: number }
+    | undefined;
+  const bal = me?.diamonds ?? 0;
+  const [busy, setBusy] = useState<string | null>(null);
+  const canManage = detail.myRole === "leader" || detail.myRole === "officer";
+
+  const run = async (key: string, fn: () => Promise<any>, okMsg: string) => {
+    if (busy) return;
+    setBusy(key);
+    try {
+      await fn();
+      toast.success(okMsg);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const SLOT_COST = 200;
+  const SLOT_STEP = 2;
+  const SLOT_MAX = 100;
+  const cap = clan.memberCap ?? 20;
+  const TAG_COST: Record<number, number> = {
+    1: 3000, 2: 6000, 3: 9000, 4: 12000, 5: 16000, 6: 19500,
+  };
+  const ownedTier = clan.tagTier ?? 0;
+  const BLUE_CHECK_COST = 5000;
+
+  return (
+    <div className="mt-3 space-y-3 pb-6">
+      {/* Saldo Sacret pemilik. */}
+      <div className="flex items-center justify-between rounded-xl border border-sky-400/25 bg-sky-400/10 px-3 py-2">
+        <span className="text-[11px] font-black uppercase tracking-wider text-sky-200">
+          Sacret kamu
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-sm font-black text-sky-100">
+          <SacretIcon className="size-4" /> {bal.toLocaleString("id-ID")}
+        </span>
+      </div>
+
+      {!canManage && (
+        <p className="text-[11px] text-muted-foreground">
+          Hanya leader/officer yang bisa membeli item clan.
+        </p>
+      )}
+
+      {/* 1. TAMBAH SLOT MEMBER */}
+      <div className="rounded-2xl border border-white/12 bg-white/[0.03] p-3.5">
+        <div className="flex items-center gap-2">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300">
+            <Users className="size-4.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-black text-white">Tambah slot member</p>
+            <p className="text-[10px] text-muted-foreground">
+              Kapasitas {cap}/{SLOT_MAX} — +{SLOT_STEP} per pembelian
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              run("slots", () => upgradeSlots({}), "Slot member bertambah ✓")
+            }
+            disabled={!canManage || busy !== null || cap >= SLOT_MAX}
+            className="shrink-0 rounded-xl border border-emerald-400/50 bg-emerald-400/12 px-3 py-2 text-[11px] font-black text-emerald-200 transition active:scale-95 disabled:opacity-40"
+          >
+            {cap >= SLOT_MAX ? "Maks" : `${SLOT_COST} Sacret`}
+          </button>
+        </div>
+      </div>
+
+      {/* 2. BELI TAG CLAN — bentuk beda-beda per tier. */}
+      <div className="rounded-2xl border border-white/12 bg-white/[0.03] p-3.5">
+        <p className="text-[13px] font-black text-white">Beli tag clan</p>
+        <p className="mb-2.5 text-[10px] text-muted-foreground">
+          Tiap tier punya bentuk tag beda — makin tinggi makin bagus.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3, 4, 5, 6].map((t) => {
+            const owned = t <= ownedTier;
+            const locked = t > ownedTier + 1;
+            return (
+              <button
+                key={t}
+                onClick={() =>
+                  !owned &&
+                  !locked &&
+                  run("tag" + t, () => buyTagTier({ tier: t }), `Tag tier ${t} dibeli ✓`)
+                }
+                disabled={!canManage || owned || locked || busy !== null}
+                className={cn(
+                  "flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 transition active:scale-95",
+                  owned
+                    ? "border-gold/60 bg-gold/15"
+                    : locked
+                      ? "border-white/8 bg-white/[0.02] opacity-45"
+                      : "border-white/15 bg-white/[0.05]",
+                )}
+              >
+                <ClanTag
+                  icon={clan.tagIcon ?? DEFAULT_CLAN_ICON}
+                  tag={clan.tag}
+                  level={t * 50}
+                  className="px-1.5 py-0 text-[9px]"
+                />
+                <span className="text-[9px] font-black text-white/70">
+                  {owned ? "DIMILIKI" : `${TAG_COST[t].toLocaleString("id-ID")}`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. CENTANG BIRU */}
+      <div className="rounded-2xl border border-white/12 bg-white/[0.03] p-3.5">
+        <div className="flex items-center gap-2">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/15 text-sky-300">
+            <Shield className="size-4.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[13px] font-black text-white">
+              Centang biru clan <BlueCheck className="size-4" />
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Tampil di semua member clan
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              run("verified", () => buyVerified({}), "Centang biru clan aktif ✓")
+            }
+            disabled={!canManage || clan.verified || busy !== null}
+            className="shrink-0 rounded-xl border border-sky-400/50 bg-sky-400/12 px-3 py-2 text-[11px] font-black text-sky-200 transition active:scale-95 disabled:opacity-40"
+          >
+            {clan.verified ? "Aktif" : `${BLUE_CHECK_COST} Sacret`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MemberDonateList({
   tab,

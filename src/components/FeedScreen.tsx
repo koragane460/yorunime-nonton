@@ -168,11 +168,15 @@ function RightRail({
         <span className="text-xs font-black text-white drop-shadow">Bagikan</span>
       </button>
 
-      {/* KASET LAGU — di bawah Bagikan. Sampulnya foto lagu yang dipakai;
-          kalau suara asli (tanpa backsound) pakai foto profile user. */}
+      {/* KASET LAGU — di bawah Bagikan. BENTUK KASET BULAT (asli kaset)
+          dengan sampul foto lagu; kalau suara asli pakai foto profile
+          user yang juga BULAT. */}
       {(p.music || p.kind === "video") && (
         <div className="flex flex-col items-center gap-1">
-          <span className="relative flex h-12 w-14 items-center justify-center overflow-hidden rounded-md border border-white/45 bg-black/80 shadow-[0_8px_18px_-10px_rgba(0,0,0,.95)]">
+          <span className="relative flex size-14 items-center justify-center">
+            {/* Badan kaset bundar. */}
+            <span className="absolute inset-0 rounded-full border border-white/45 bg-black/85 shadow-[0_8px_18px_-10px_rgba(0,0,0,.95)]" />
+            {/* Sampul foto — BULAT, di tengah. */}
             <img
               src={
                 p.music
@@ -180,14 +184,12 @@ function RightRail({
                   : p.image || p.imageUrl || undefined
               }
               alt=""
-              className="absolute inset-1.5 h-[calc(100%-12px)] w-[calc(100%-12px)] rounded-sm object-cover opacity-85"
+              className="relative z-10 size-9 rounded-full object-cover ring-2 ring-white/60"
             />
-            {/* Dua rol kaset. */}
-            <span className="absolute bottom-1 left-1.5 flex gap-1.5">
-              <span className="size-2 rounded-full border border-white/75 bg-black/75" />
-              <span className="size-2 rounded-full border border-white/75 bg-black/75" />
-            </span>
-            <Music className="absolute right-1 top-1 size-3 text-white/85 drop-shadow" />
+            {/* Dua rol kaset kecil kiri-kanan (beneran kaset). */}
+            <span className="absolute left-1.5 top-1/2 z-20 size-2.5 -translate-y-1/2 rounded-full border border-white/70 bg-black/85" />
+            <span className="absolute right-1.5 top-1/2 z-20 size-2.5 -translate-y-1/2 rounded-full border border-white/70 bg-black/85" />
+            <Music className="absolute -right-0.5 -top-0.5 z-20 size-3.5 text-white/85 drop-shadow" />
           </span>
           <span className="max-w-[64px] truncate text-[9px] font-black text-white drop-shadow">
             {p.music?.title ?? "Suara asli"}
@@ -657,6 +659,9 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
   const [mq, setMq] = useState("");
   const [mres, setMres] = useState<any[]>([]);
   const [mSearching, setMSearching] = useState(false);
+  // Pratinjau video BERSUARA — default senyap (biar autoPlay diizinkan
+  // browser), ada tombol kecil buat nyalain suara pas mengedit.
+  const [previewMuted, setPreviewMuted] = useState(true);
 
   const pick = (f: File | undefined) => {
     if (!f) return;
@@ -707,6 +712,44 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
       };
     });
 
+  /**
+   * Unggah SATU berkas ke storage Convex dengan PENANGKAL "failed to fetch":
+   * - Kalau type kosong, jangan kirim header Content-Type kosong (bikin
+   *   preflight CORS gagal → TypeError "Failed to fetch").
+   * - Coba sampai 3 kali (koneksi goyah), lalu lempar pesan yang jelas.
+   */
+  const uploadBlob = async (b: Blob, ct?: string): Promise<string> => {
+    const mime = ct || b.type || "application/octet-stream";
+    let lastErr = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const url = await upload({});
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": mime },
+          body: b,
+        });
+        if (!res.ok) {
+          lastErr = `server menolak (${res.status})`;
+          continue;
+        }
+        const data = (await res.json()) as { storageId?: string };
+        if (!data.storageId) {
+          lastErr = "respons server tidak lengkap";
+          continue;
+        }
+        return data.storageId;
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e);
+        // Tunggu sebentar sebelum coba lagi (koneksi pulih).
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      }
+    }
+    throw new Error(
+      `Gagal mengunggah media — ${lastErr || "jaringan bermasalah"}. Cek koneksi lalu coba lagi.`,
+    );
+  };
+
   const submit = async () => {
     if (busy) return;
     setErr(null);
@@ -720,30 +763,15 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
       let imageStorageId: string | undefined;
       let thumbStorageId: string | undefined;
       if ((kind === "image" || kind === "video") && file) {
-        const url = await upload({});
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        if (!res.ok) throw new Error("Unggahan gagal");
-        const { storageId } = (await res.json()) as { storageId: string };
-        imageStorageId = storageId;
+        imageStorageId = await uploadBlob(file);
         // Video: unggah 1 frame sebagai thumbnail grid konten.
         if (kind === "video") {
           const blob = await grabFrame(file);
           if (blob) {
-            const tUrl = await upload({});
-            const tRes = await fetch(tUrl, {
-              method: "POST",
-              headers: { "Content-Type": "image/jpeg" },
-              body: blob,
-            });
-            if (tRes.ok) {
-              const { storageId: tId } = (await tRes.json()) as {
-                storageId: string;
-              };
-              thumbStorageId = tId;
+            try {
+              thumbStorageId = await uploadBlob(blob, "image/jpeg");
+            } catch {
+              /* thumbnail gagal pun post tetap jalan */
             }
           }
         }
@@ -1112,14 +1140,28 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
                 <video
                   src={preview}
                   className="h-full w-full object-cover"
-                  muted
+                  muted={previewMuted}
                   loop
                   autoPlay
                   playsInline
+                  controls={false}
                 />
               ) : preview ? (
                 <img src={preview} alt="" className="h-full w-full object-cover" />
               ) : null}
+              {/* Suara pratinjau video — biar kelihatan & kedengaran saat edit. */}
+              {preview && kind === "video" && (
+                <button
+                  onClick={() => {
+                    const nv = !previewMuted;
+                    setPreviewMuted(nv);
+                  }}
+                  className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-2.5 py-1.5 text-[10px] font-black text-white backdrop-blur transition active:scale-95"
+                >
+                  <Volume2 className="size-3.5" />
+                  {previewMuted ? "Suara mati" : "Suara hidup"}
+                </button>
+              )}
               {overlay.text.trim() && (
                 <p
                   style={{

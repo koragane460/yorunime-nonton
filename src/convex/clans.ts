@@ -113,6 +113,10 @@ function clanPublic(clan: any, memberCount: number) {
     avatarUrl: clan.avatarUrl,
     backgroundUrl: clan.backgroundUrl,
     description: clan.description,
+    announcement: clan.announcement,
+    announcementBy: clan.announcementBy,
+    announcementRole: clan.announcementRole,
+    announcementAt: clan.announcementAt,
     diamonds: clan.diamonds,
     level,
     levelProgress: clan.levelProgress,
@@ -737,6 +741,27 @@ export const setBackground = mutation({
     const res = await leaderGuard(ctx, userId, ["leader", "officer"]);
     await ctx.db.patch(res.clan._id, { backgroundUrl: url.trim() || undefined });
     return { ok: true };
+  },
+});
+
+/**
+ * Atur PENGUMUMAN clan (leader/officer). Kosongkan untuk menghapus —
+ * lalu tampil "Tidak ada announcement dari leader ataupun officer".
+ */
+export const setAnnouncement = mutation({
+  args: { text: v.string() },
+  handler: async (ctx, { text }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const res = await leaderGuard(ctx, userId, ["leader", "officer"]);
+    const clean = text.replace(/\s+/g, " ").trim().slice(0, 400);
+    await ctx.db.patch(res.clan._id, {
+      announcement: clean || undefined,
+      announcementBy: clean ? userId : undefined,
+      announcementRole: clean ? res.member.role : undefined,
+      announcementAt: clean ? Date.now() : undefined,
+    });
+    return { ok: true, announcement: clean || null };
   },
 });
 

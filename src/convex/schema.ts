@@ -177,6 +177,12 @@ const schema = defineSchema(
       avatarUrl: v.string(),
       backgroundUrl: v.optional(v.string()),
       description: v.optional(v.string()),
+      /** Pengumuman leader/officer — tampil di kotak besar bawah deskripsi. */
+      announcement: v.optional(v.string()),
+      /** Author terakhir pengumuman (biar tampil foto+nama+title). */
+      announcementBy: v.optional(v.id("users")),
+      announcementRole: v.optional(v.string()),
+      announcementAt: v.optional(v.number()),
       leaderId: v.id("users"),
       diamonds: v.number(),
       level: v.number(),

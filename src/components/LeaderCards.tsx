@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { ClanTag } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { fmtShort } from "@/components/HomeHead";
-import { displayId } from "@/lib/lstream";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, Crown, Trophy, X } from "lucide-react";
 
@@ -23,6 +24,7 @@ type XpRow = {
   level?: number;
   seqId?: number;
   clanTag?: string;
+  clanTagIcon?: string;
   avatarBorder?: string;
 };
 type GiveRow = {
@@ -32,10 +34,25 @@ type GiveRow = {
   days?: number;
   slots?: number;
   seqId?: number;
+  level?: number;
   clanTag?: string;
+  clanTagIcon?: string;
   xp?: number;
   avatarBorder?: string;
 };
+
+/**
+ * Tag clan SAH — harus benar-benar tag asli dari clan (bukan teks kosong,
+ * bukan "[]", bukan "-"), di-normalize: hanya huruf/angka, panjang 2-6.
+ * Kalau tag tidak valid, TIDAK ditampilkan (lebih baik kosong daripada
+ * menampilkan "[]" yang jelek).
+ */
+function cleanTag(t?: string | null): string | null {
+  if (!t) return null;
+  const s = t.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (s.length < 2 || s.length > 6) return null;
+  return s;
+}
 
 export type Period = "7" | "30" | "all";
 
@@ -132,24 +149,34 @@ function TopCell({
       <span className="w-full truncate px-0.5 text-center text-[10px] font-black leading-tight text-white">
         {username ?? "-"}
       </span>
-      <span className="w-full truncate px-0.5 text-center text-[11px] font-black leading-none text-gold-strong">
-        {value}
-      </span>
-      <span className="w-full truncate px-0.5 text-center text-[8px] font-bold uppercase tracking-wider text-white/55">
-        {label}
+      {/* Angka total diposisikan RAPI di bawah nama (permintaan: posisi
+          angkanya dibenerin) — angka besar + label kecil di bawahnya. */}
+      <span className="mt-0.5 w-full rounded-lg bg-black/35 px-1 py-1 text-center leading-none">
+        <span className="block truncate font-display text-[13px] font-black tracking-tight text-white">
+          {value}
+        </span>
+        <span className="mt-0.5 block text-[8px] font-bold uppercase tracking-wider text-white/55">
+          {label}
+        </span>
       </span>
     </span>
   );
 }
 
-/** Baris grid 4-50: foto · username · ID · tag clan · total XP · total give. */
+/**
+ * Baris grid 4-50 (permintaan: AGAK GEDE). Isi: peringkat · foto ·
+ * username + tag clan (tag SAH) + level · total XP · total give.
+ * "ID" sudah diganti LEVEL, dan "Total XP" / "Total Give" dibungkus
+ * kotak rounded biar kelihatan rapi.
+ */
 function GridRow({
   rank,
   image,
   border,
   username,
-  id,
+  level,
   clanTag,
+  clanTagIcon,
   xp,
   days,
 }: {
@@ -157,38 +184,52 @@ function GridRow({
   image?: string;
   border?: string;
   username?: string;
-  id?: number;
+  level?: number;
   clanTag?: string;
+  clanTagIcon?: string;
   xp?: number;
   days?: number;
 }) {
+  const tag = cleanTag(clanTag);
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 transition hover:border-white/25">
-      <span className="w-5 shrink-0 text-center text-[11px] font-black text-white/50">
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-3 transition hover:border-white/25">
+      <span
+        className={cn(
+          "w-7 shrink-0 text-center font-display text-[15px] font-black leading-none",
+          rank <= 3 ? "text-gold-strong" : "text-white/45",
+        )}
+      >
         {rank}
       </span>
-      <FramedAvatar border={border} src={image} seed={username} className="size-9 shrink-0" />
+      <FramedAvatar border={border} src={image} seed={username} className="size-12 shrink-0" />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-[12px] font-black leading-tight text-white">
+          <span className="truncate text-[14px] font-black leading-tight text-white">
             {username ?? "user"}
           </span>
-          {clanTag && (
-            <span className="shrink-0 rounded border border-white/15 bg-white/[0.08] px-1 text-[9px] font-black text-gold-strong">
-              [{clanTag}]
-            </span>
+          {tag && (
+            <ClanTag
+              icon={clanTagIcon || DEFAULT_CLAN_ICON}
+              tag={tag}
+              className="shrink-0"
+            />
           )}
         </span>
-        <span className="block truncate font-mono text-[10px] leading-tight text-white/45">
-          {id ? `ID ${displayId(id)}` : "\u00a0"}
+        <span className="mt-1 flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-md bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-black leading-none text-sky-200">
+            <Crown className="size-2.5" aria-hidden />
+            Lv.{level ?? 1}
+          </span>
         </span>
       </span>
-      <span className="shrink-0 text-right">
-        <span className="block text-[11px] font-black leading-tight text-sky-200">
-          {(xp ?? 0).toLocaleString("id-ID")} XP
+      <span className="shrink-0 space-y-1 text-right">
+        <span className="block rounded-lg bg-sky-400/12 px-2 py-1 text-[12px] font-black leading-none text-sky-200">
+          {(xp ?? 0).toLocaleString("id-ID")}
+          <span className="ml-0.5 text-[9px] font-bold text-sky-200/70">XP</span>
         </span>
-        <span className="block text-[10px] font-bold leading-tight text-amber-200/90">
-          {(days ?? 0).toLocaleString("id-ID")} hari give
+        <span className="block rounded-lg bg-amber-400/12 px-2 py-1 text-[12px] font-black leading-none text-amber-200">
+          {(days ?? 0).toLocaleString("id-ID")}
+          <span className="ml-0.5 text-[9px] font-bold text-amber-200/70">give</span>
         </span>
       </span>
     </div>
@@ -226,8 +267,9 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
     image?: string;
     border?: string;
     username?: string;
-    id?: number;
+    level?: number;
     clanTag?: string;
+    clanTagIcon?: string;
     xp?: number;
     days?: number;
   };
@@ -239,8 +281,9 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
           image: r.image,
           border: r.avatarBorder,
           username: r.username,
-          id: r.seqId,
+          level: r.level,
           clanTag: r.clanTag,
+          clanTagIcon: r.clanTagIcon,
           xp: r.xp ?? 0,
           days: giveById.get(r.userId ?? "")?.days ?? 0,
         }))
@@ -251,8 +294,9 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
             image: g.image ?? p?.image,
             border: g.avatarBorder ?? p?.avatarBorder,
             username: g.username ?? p?.username,
-            id: g.seqId ?? p?.seqId,
+            level: g.level ?? p?.level,
             clanTag: g.clanTag ?? p?.clanTag,
+            clanTagIcon: g.clanTagIcon ?? p?.clanTagIcon,
             xp: g.xp ?? p?.xp ?? 0,
             days: g.days ?? 0,
           };
@@ -357,21 +401,26 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
                     <span className="mt-1 w-full truncate text-center text-[12px] font-black leading-tight text-white">
                       {r.username ?? "-"}
                     </span>
-                    <span className="w-full truncate text-center font-mono text-[9px] leading-none text-white/55">
-                      {r.id ? `ID ${displayId(r.id)}` : "\u00a0"}
+                    <span className="inline-flex items-center gap-1 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] font-black leading-none text-white/70">
+                      <Crown className="size-2.5" aria-hidden />
+                      Lv.{r.level ?? 1}
                     </span>
-                    <span className="mt-1 w-full space-y-0.5 text-center">
-                      <span className="block rounded-md bg-black/45 px-1 py-0.5 text-[11px] font-black leading-none text-sky-200">
-                        {(r.xp ?? 0).toLocaleString("id-ID")} XP
+                    <span className="mt-1 w-full space-y-1 text-center">
+                      <span className="block rounded-lg border border-sky-300/25 bg-sky-400/12 px-1.5 py-1 text-[11px] font-black leading-none text-sky-100">
+                        {(r.xp ?? 0).toLocaleString("id-ID")}
+                        <span className="ml-0.5 text-[8px] font-bold text-sky-200/70">XP</span>
                       </span>
-                      <span className="block rounded-md bg-black/45 px-1 py-0.5 text-[11px] font-black leading-none text-amber-200">
-                        {(r.days ?? 0).toLocaleString("id-ID")} hari Give
+                      <span className="block rounded-lg border border-amber-300/25 bg-amber-400/12 px-1.5 py-1 text-[11px] font-black leading-none text-amber-100">
+                        {(r.days ?? 0).toLocaleString("id-ID")}
+                        <span className="ml-0.5 text-[8px] font-bold text-amber-200/70">give</span>
                       </span>
                     </span>
-                    {r.clanTag && (
-                      <span className="rounded border border-white/20 bg-white/10 px-1 text-[9px] font-black text-gold-strong">
-                        [{r.clanTag}]
-                      </span>
+                    {cleanTag(r.clanTag) && (
+                      <ClanTag
+                        icon={r.clanTagIcon || DEFAULT_CLAN_ICON}
+                        tag={cleanTag(r.clanTag) as string}
+                        className="shrink-0"
+                      />
                     )}
                   </div>
                 );
@@ -401,8 +450,9 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
                   image={r.image}
                   border={r.border}
                   username={r.username}
-                  id={r.id}
+                  level={r.level}
                   clanTag={r.clanTag}
+                  clanTagIcon={r.clanTagIcon}
                   xp={r.xp}
                   days={r.days}
                 />

@@ -65,6 +65,44 @@ export const recordWatch = mutation({
 });
 
 /**
+ * MODE SINGLE — saat user memilih Single, riwayat lama (banyak episode per
+ * judul) dirapatkan jadi SATU baris per anime (yang terbaru dipertahankan).
+ * Tanpa ini, history lama tetap kelihatan seperti Multi.
+ */
+export const collapseHistory = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const rows = await ctx.db
+      .query("watchHistory")
+      .withIndex("userId_updated", (q) => q.eq("userId", userId))
+      .collect();
+    const byAnime = new Map<string, typeof rows>();
+    for (const r of rows) {
+      const list = byAnime.get(r.animeId);
+      if (list) list.push(r);
+      else byAnime.set(r.animeId, [r]);
+    }
+    let merged = 0;
+    for (const list of byAnime.values()) {
+      if (list.length < 2) continue;
+      list.sort((a, b) => b.updatedAt - a.updatedAt);
+      const [keep, ...rest] = list;
+      for (const r of rest) {
+        await ctx.db.patch(keep._id, {
+          episode: Math.max(keep.episode, r.episode),
+          minutesWatched: keep.minutesWatched + r.minutesWatched,
+        });
+        await ctx.db.delete(r._id);
+        merged++;
+      }
+    }
+    return { ok: true, merged };
+  },
+});
+
+/**
  * Simpan posisi playback terakhir (untuk tombol "Lanjutkan" di halaman Info).
  * Tidak menambah XP dan tidak menambah menit nonton — cuma posisi.
  */
