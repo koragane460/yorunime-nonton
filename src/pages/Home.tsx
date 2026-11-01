@@ -73,6 +73,7 @@ import { NobarCatalogScreen } from "@/components/NobarCatalogScreen";
 import {
   AfinitasPromo,
   FeedPromo,
+  DonatePromo,
   ChatVoiceRow,
   ContinueWatchingRow,
   DailyQuestRow,
@@ -80,7 +81,6 @@ import {
   LeaderPodium,
   PillButton,
   ProfileBar,
-  TopAiringRow,
   bumpQuestLocal,
   pushRecentSearch,
   readRecentSearch,
@@ -877,6 +877,7 @@ function HomeContent() {
   // Layar Top anime (dibuka dari badge TOP di hero banner).
   const [showTopAnime, setShowTopAnime] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showSticker, setShowSticker] = useState(false);
   // Layar NOBAR — dibuka dari kotak "Nobar" di baris Chat/Voice Home.
   const [showNobar, setShowNobar] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -1235,27 +1236,28 @@ function HomeContent() {
           + ID, kanan = tombol notif + pengaturan. */}
       <AccountHeader />
 
-      {/* 2) KOTAK PENGUMUMAN — besar & memanjang ke bawah. Isi (update/error)
-          diatur lewat panel developer, jadi tidak perlu deploy. */}
-      <AnnouncementBox />
-
-      {/* 3) GENRE CEPAT — kotak rounded berisi nama genre, DI ATAS Spotlight
-          (permintaan). Ditekan → layar fullscreen GENRE. */}
+      {/* 2) GENRE CEPAT — DI ATAS kotak pengumuman (permintaan), chip
+          pendek tanpa glow, ditekan → layar fullscreen GENRE. */}
       {!loading && genreList.length > 0 && (
-        <div className="fade-enter mt-4">
-          <div className="thin-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div className="fade-enter mt-3">
+          <div className="thin-scroll -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
             {genreList.map((g) => (
               <button
                 key={g.id}
                 onClick={() => setGenreScreen(g.id)}
-                className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-sm font-bold text-white/90 transition hover:border-gold-strong/50 hover:bg-white/[0.1] active:scale-95"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold text-white/80 transition hover:bg-white/[0.12] hover:text-white active:scale-95"
               >
+                <span aria-hidden className="size-1 rounded-full bg-gold-strong/70" />
                 {g.name}
               </button>
             ))}
           </div>
         </div>
       )}
+
+      {/* 3) KOTAK PENGUMUMAN — besar & memanjang ke bawah. Isi (update/error)
+          diatur lewat panel developer, jadi tidak perlu deploy. */}
+      <AnnouncementBox />
 
       {/* 4) SPOTLIGHT — 3 judul besar, geser snap: views · rating · status. */}
       <Spotlight
@@ -1281,18 +1283,12 @@ function HomeContent() {
           untuk periode 7 hari / 30 hari / sepanjang masa + podium + grid 4-50. */}
       <LeaderCards />
 
-      {/* 6) GLOBAL CHAT · NOBAR · VOICE — tiap kotak dikasih warna. */}
+      {/* 6) STICKER SHOP · NOBAR · VOICE — tiap kotak dikasih warna. */}
       <ChatVoiceRow
         onOpenChat={() => setShowChat(true)}
+        onOpenSticker={() => setShowSticker(true)}
         onOpenNobar={() => setShowNobar(true)}
         onOpenVoice={() => setShowVoice(true)}
-      />
-
-      {/* 6a) TOP AIRING — anime populer & trending saat ini, geser ke kanan. */}
-      <TopAiringRow
-        items={(todayList.length ? todayList : topList).slice(0, 12)}
-        viewsOf={viewCountFor}
-        onPick={(id, title) => openAnime(id, title, "anilist")}
       />
 
       {/* 6b) DAILY QUEST — 3 misi ringan per hari, reset jam 00.00. */}
@@ -1308,6 +1304,7 @@ function HomeContent() {
             images={heroItems.slice(0, 2).map((h) => h.image).filter(Boolean)}
           />,
           <FeedPromo key="feed" onOpen={() => navigate("/feed")} />,
+          <DonatePromo key="donate" />,
         ]}
       />
 
@@ -1547,6 +1544,26 @@ function HomeContent() {
         </Suspense>
       )}
       {showChat && <GlobalChatScreen onClose={() => setShowChat(false)} />}
+      {showSticker && (
+        <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
+          <div className="yn-bar flex items-center gap-3 border-b border-white/10 px-4 py-3">
+            <button
+              onClick={() => setShowSticker(false)}
+              aria-label="Kembali"
+              className="flex size-10 items-center justify-center rounded-xl bg-white/[0.06] transition active:scale-95"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <span className="yn-eyebrow text-[9px]">Toko</span>
+              <h1 className="yn-title truncate text-lg">Sticker Shop</h1>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto bg-black/35">
+            <StickerStore />
+          </div>
+        </div>
+      )}
       {showNobar && <NobarCatalogScreen onClose={() => setShowNobar(false)} />}
       {showVoice && <VoiceCallScreen onClose={() => setShowVoice(false)} />}
       {afinitas && user && (
@@ -2402,6 +2419,12 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   // Klik hasil film → buka halaman film (/film?film=...&t=...), bukan detail
   // anime. Hasil film memakai id ber-prefix "film:" dan kind lewat filmKind.
   const pick = (a: AnimeCardT) => {
+    const comic = (a as any).comicKind as string | undefined;
+    if (comic) {
+      const slug = String((a as any).slug ?? a.id).replace(/^comic:/, "");
+      navigate(`/${comic === "manhwa" ? "manhwa" : "manga"}?komik=${encodeURIComponent(slug)}`);
+      return;
+    }
     if (a.source === "film") {
       const raw = String(a.id).replace(/^film:/, "");
       const kind = (a as any).filmKind === "tv" ? "tv" : "movie";
@@ -2423,6 +2446,9 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const searchFilms = useAction(api.films.search);
+  const searchComics = useAction(api.manga.search);
+  // Media yang sedang dicari — hasil manga/manhwa memakai kartu & route beda.
+  const [media, setMedia] = useState<"anime" | "donghua" | "manga" | "manhwa">("anime");
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadGenres = useAction(api.anime.animeByGenres);
   const loadAll = useAction(api.anime.animeTop);
@@ -2611,7 +2637,11 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           merged.push({ ...c, type: c.type, source: src });
         }
       }
-      setResults(merged);
+      const filtered =
+        media === "donghua"
+          ? merged.filter((m) => m.source === "sanka")
+          : merged.filter((m) => m.source !== "sanka");
+      setResults(filtered);
     } catch {
       setResults([]);
     }
@@ -2636,11 +2666,38 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       setSearching(false);
       return;
     }
+    if (media === "manga" || media === "manhwa") {
+      setSearching(true);
+      try {
+        const rows = (await searchComics({
+          q: term,
+          kind: media,
+          limit: 20,
+        })) as any[];
+        setResults(
+          (rows ?? []).map((r) => ({
+            id: `comic:${r.slug}`,
+            slug: r.slug,
+            title: r.title,
+            image: r.cover ?? r.image,
+            type: r.kind === "manhwa" ? "Manhwa" : "Manga",
+            synopsis: r.synopsis ?? r.description ?? "",
+            comicKind: r.kind ?? media,
+            ongoing: r.ongoing,
+            views: r.views,
+          })) as unknown as AnimeCardT[],
+        );
+      } catch {
+        setResults([]);
+      }
+      setSearching(false);
+      return;
+    }
     if (isMusicSecret(term)) return;
     const t = setTimeout(() => void doSearch(), 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, media]);
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -2658,8 +2715,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           </button>
           <div className="min-w-0 flex-1">
             <p className="yn-eyebrow text-[10px]">YoruNime Search</p>
-            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-[1.6rem] leading-tight text-transparent">
-              Cari anime &amp; donghua
+            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-[1.5rem] leading-tight text-transparent">
+              Cari semua konten
             </h1>
           </div>
           <span
@@ -2679,7 +2736,15 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doSearch()}
-            placeholder="Cari disini"
+            placeholder={
+              media === "manga"
+                ? "Cari judul manga…"
+                : media === "manhwa"
+                  ? "Cari judul manhwa…"
+                  : media === "donghua"
+                    ? "Cari judul donghua…"
+                    : "Cari anime, film, atau donghua…"
+            }
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {query && (
@@ -2698,6 +2763,29 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           >
             Cari
           </button>
+        </div>
+
+        {/* TAB MEDIA — Anime · Donghua · Manga · Manhwa. */}
+        <div className="mt-3 grid grid-cols-4 gap-1.5">
+          {([
+            ["anime", "Anime"],
+            ["donghua", "Donghua"],
+            ["manga", "Manga"],
+            ["manhwa", "Manhwa"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setMedia(key)}
+              className={cn(
+                "rounded-xl py-2 text-[11px] font-black transition",
+                media === key
+                  ? "bg-white text-black"
+                  : "bg-white/[0.06] text-white/60 hover:text-white",
+              )}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* BARU SAJA — pencarian terakhir, geser ke kanan. */}
@@ -2958,8 +3046,8 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   useHideNavOnMount();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"chat" | "clan" | "teman" | "sticker">("chat");
-  const [friendTab, setFriendTab] = useState<"teman" | "request">("teman");
+  const [tab, setTab] = useState<"chat" | "clan" | "teman">("chat");
+  const friendTab = "teman" as const;
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
   const [clanTutorial, setClanTutorial] = useState(false);
   const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
@@ -3016,9 +3104,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
         {/* Tab dikecualikan dari px-4: KOTAK PESAN (chat/clan/teman) harus
             full ke samping — hanya baris tab yang tetap punya jarak. */}
         <div className="w-full">
-          {/* Tab: Chat · Clan · Teman · Sticker. */}
+          {/* Tab: Chat · Clan · Teman. Sticker sekarang punya toko sendiri. */}
           <div className="flex gap-1.5 px-4 py-2.5">
-            {(["chat", "clan", "teman", "sticker"] as const).map((t) => (
+            {(["chat", "clan", "teman"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -3027,13 +3115,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   tab === t && "yn-chip-on",
                 )}
               >
-                {t === "chat"
-                  ? "Chat"
-                  : t === "clan"
-                    ? "Clan"
-                    : t === "teman"
-                      ? "Teman"
-                      : "Sticker"}
+                {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
               </button>
             ))}
           </div>
@@ -3134,32 +3216,12 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {tab === "sticker" && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-border/50 bg-black/35">
-              <StickerStore />
-            </div>
-          )}
-
           {tab === "teman" && (
             <div className="flex min-h-0 flex-1 flex-col">
               {/* Tombol Teman & Request sejajar — garis bawah saat aktif */}
-              <div className="mb-3 flex border-b border-border/60">
-                {(["teman", "request"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setFriendTab(t)}
-                    className={cn(
-                      "relative flex-1 pb-2 pt-1 text-sm font-semibold capitalize transition",
-                      friendTab === t ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {t === "teman" ? "Teman" : "Request"}
-                    {friendTab === t && (
-                      <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-gradient-to-r from-gold via-amber-300 to-gold shadow-[0_0_10px_2px_oklch(0.86_0.18_88/0.45)]" />
-                    )}
-                  </button>
-                ))}
-              </div>
+              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
+                Daftar teman
+              </p>
 
               {friendTab === "teman" && (
                 <div className="thin-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto">
@@ -3191,37 +3253,6 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
-              {friendTab === "request" && (
-                <div className="thin-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto">
-                  {requests && requests.length > 0 ? (
-                    requests.map((r: any) => (
-                      <div
-                        key={r.requestId}
-                        className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
-                      >
-                        <Avatar src={r.image} seed={r.username} className="size-10" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">{r.username}</p>
-                          <p className="text-xs text-muted-foreground">Meminta request</p>
-                        </div>
-                        <RequestButtons
-                          requestId={r.requestId}
-                          onDone={(accepted) =>
-                            accepted
-                              ? toast.success(`${r.username} sekarang temanmu!`)
-                              : toast.success("Request ditolak")
-                          }
-                          onError={(m) => toast.error(m)}
-                        />
-                      </div>
-                    ))
-                  ) : (
-                    <p className="py-10 text-center text-xs text-muted-foreground">
-                      Tidak ada request
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -3700,7 +3731,7 @@ function AnimeDetailScreen({
               <img
                 src={detail.image}
                 alt=""
-                className="w-40 rounded-2xl object-cover shadow-[0_28px_56px_-20px_rgba(0,0,0,1)] ring-2 ring-white/25"
+                className="aspect-[2/3] h-60 w-40 rounded-2xl object-cover shadow-[0_28px_56px_-20px_rgba(0,0,0,1)]"
               />
             )}
             <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">
@@ -4002,9 +4033,9 @@ function AnimeDetailScreen({
               Daftar episode menempati satu kotak zona; geser ke KANAN →
               muncul "Lanjutkan nonton", geser lagi → Character. Tidak ada
               teks tab (permintaan). */}
-          <div className="thin-scroll -mx-3 mt-5 flex snap-x snap-mandatory overflow-x-auto px-3">
+          <div className="no-scrollbar mt-5 flex snap-x snap-mandatory items-start overflow-x-auto">
             {/* Panel 1 — DAFTAR EPISODE */}
-            <div className="w-full shrink-0 snap-start pr-1">
+            <div className="w-full shrink-0 snap-start">
           <div>
             {/* Baris judul + kontrol: Grid dan Urut */}
             <div className="flex items-center gap-2">
@@ -4185,7 +4216,7 @@ function AnimeDetailScreen({
 
             {/* Panel 2 — LANJUTKAN NONTON (muncul saat digeser ke kanan,
                 tanpa label teks). */}
-            <div className="w-full shrink-0 snap-start px-1">
+            <div className="max-h-[540px] w-full shrink-0 snap-start overflow-y-auto">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                 <p className="mb-2 text-[13px] font-black text-white">
                   Lanjutkan nonton
@@ -4259,7 +4290,7 @@ function AnimeDetailScreen({
             </div>
 
             {/* Panel 3 — CHARACTER (geser lagi ke kanan, tanpa label). */}
-            <div className="w-full shrink-0 snap-start pl-1">
+            <div className="max-h-[540px] w-full shrink-0 snap-start overflow-y-auto">
               <CharacterRow idMal={String(animeId)} title={animeTitle} />
             </div>
           </div>

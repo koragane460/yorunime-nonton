@@ -183,6 +183,7 @@ export const listMessages = query({
         seqId: u?.seqId,
         text: r.text,
         sticker: r.sticker,
+        feedPostId: r.feedPostId,
         imageUrl: r.imageStorageId
           ? (photoByUrl.get(r._id) ?? r.imageUrl)
           : r.imageUrl,
@@ -218,17 +219,21 @@ export const sendMessage = mutation({
     imageStorageId: v.optional(v.string()),
     /** Emoji sticker dari toko sticker (dikirim sebagai sticker besar). */
     sticker: v.optional(v.string()),
+    /** Konten Feed yang dibagikan (kartu preview + bisa dibuka fullscreen). */
+    feedPostId: v.optional(v.id("feedPosts")),
     replyToId: v.optional(v.id("chatMessages")),
   },
-  handler: async (ctx, { kind, clanId, roomId, peerId, channel, text, imageUrl, imageStorageId, sticker, replyToId }) => {
+  handler: async (ctx, { kind, clanId, roomId, peerId, channel, text, imageUrl, imageStorageId, sticker, feedPostId, replyToId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     await requireActive(me);
     const stickerClean = sticker?.trim().slice(0, 16) || undefined;
-    if (!text?.trim() && !imageUrl && !imageStorageId && !stickerClean)
+    if (!text?.trim() && !imageUrl && !imageStorageId && !stickerClean && !feedPostId)
       throw new Error("Pesan kosong");
+    if (feedPostId && !(await ctx.db.get(feedPostId)))
+      throw new Error("Konten Feed tidak ditemukan");
     // Data-URL/base64 ditolak: batas dokumen Convex cuma 1MB. Foto harus lewat storage.
     if (imageUrl && imageUrl.startsWith("data:")) {
       throw new Error("Kirim foto lewat tombol foto (bukan teks gambar)");
@@ -285,6 +290,7 @@ export const sendMessage = mutation({
       imageUrl,
       imageStorageId,
       sticker: stickerClean,
+      feedPostId,
       replyToId,
       createdAt: Date.now(),
     });

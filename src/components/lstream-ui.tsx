@@ -565,6 +565,7 @@ export function ClanTag({
   tag,
   color,
   level,
+  tier,
   bg,
   className,
 }: {
@@ -573,6 +574,8 @@ export function ClanTag({
   color?: string;
   /** Level clan — menentukan warna nama clan & BENTUK tag per tier. */
   level?: number;
+  /** TIER TAG YANG DIBELI (1-6) — bentuk & background beda per tier. */
+  tier?: number;
   /** Warna latar tag (hex) yang dipilih saat bikin clan. Tanpa ini pakai
    *  latar galaxy bawaan. Diterapkan sebagai overlay translusen di atas
    *  animasi `.clan-tag` supaya tetap kelihatan hidup. */
@@ -602,6 +605,43 @@ export function ClanTag({
       </span>
     </>
   );
+
+  // TIER hasil pembelian di Clan Shop: bentuk + background khusus, bukan
+  // sekadar level clan. Ini yang membuat tiap harga terasa berbeda.
+  const tierN = Math.max(0, Math.min(6, Math.floor(Number(tier ?? 0))));
+  if (tierN > 0) {
+    return (
+      <span
+        className={cn(
+          "clan-tag badge-shine inline-flex select-none items-center whitespace-nowrap",
+          className,
+        )}
+      >
+        <span
+          className={cn(
+            "inline-flex p-[2px] clan-tag-tier-" + tierN,
+            "bg-gradient-to-r from-white/80 via-white/35 to-white/10",
+          )}
+        >
+          <span
+            className={cn(
+              "clan-tag-tier-" + tierN,
+              "inline-flex items-center gap-1 rounded-none px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_0_0_1px_rgba(0,0,0,0.18)]",
+            )}
+            style={
+              bg
+                ? {
+                    backgroundImage: `linear-gradient(115deg, ${bg} 0%, ${bg} 58%, rgba(0,0,0,0.55) 100%)`,
+                  }
+                : undefined
+            }
+          >
+            {inner}
+          </span>
+        </span>
+      </span>
+    );
+  }
 
   const bodyStyle = bg
     ? {

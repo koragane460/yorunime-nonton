@@ -1911,6 +1911,548 @@ a {
 /* ==================================================================
  * BORDER BARU — SAYAP MERAH-HITAM & AWAN BERSALJU
  * ================================================================== */
+
+/* ------------------------------------------------------------------
+ * SAYAP MERAH — gambar sayap bertekstur (SVG), DI BELAKANG foto profile.
+ * Dua sayap, jarak cukup lebar, membuka lalu menutup dengan animasi.
+ * ------------------------------------------------------------------ */
+.yn-frame-wings {
+  isolation: isolate;
+  background: radial-gradient(120% 120% at 50% 0%, #7f1d1d 0%, #230606 46%, #050505 100%);
+  box-shadow:
+    0 0 0 1px rgba(248, 113, 113, 0.55),
+    0 0 18px -4px rgba(239, 68, 68, 0.9),
+    0 0 46px -18px rgba(185, 28, 28, 0.85);
+}
+.yn-frame-wings::before,
+.yn-frame-wings::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 118%;
+  height: 156%;
+  z-index: 0;
+  background: url("/yn-wings.svg") center / contain no-repeat;
+  filter: drop-shadow(0 6px 9px rgba(0, 0, 0, 0.7));
+  animation: yn-wing-open 5.4s cubic-bezier(0.4, 0.05, 0.2, 1) infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.yn-frame-wings::before {
+  transform-origin: 72% 45%;
+  transform: translate(-94%, -50%) scaleX(-0.78) scaleY(0.8);
+}
+.yn-frame-wings::after {
+  transform-origin: 28% 45%;
+  transform: translate(-6%, -50%) scaleX(0.78) scaleY(0.8);
+  animation-name: yn-wing-open-right;
+}
+.yn-frame-wings .yn-frame-in {
+  z-index: 2;
+  box-shadow:
+    inset 0 0 0 2px rgba(248, 113, 113, 0.55),
+    inset 0 0 22px rgba(0, 0, 0, 0.55);
+}
+@keyframes yn-wing-open {
+  0%, 8% {
+    transform: translate(-94%, -50%) scaleX(-0.78) scaleY(0.8) rotate(0deg);
+    opacity: 0.9;
+  }
+  34%, 62% {
+    transform: translate(-150%, -52%) scaleX(-1.04) scaleY(1.02) rotate(-7deg);
+    opacity: 1;
+  }
+  90%, 100% {
+    transform: translate(-94%, -50%) scaleX(-0.78) scaleY(0.8) rotate(0deg);
+    opacity: 0.9;
+  }
+}
+@keyframes yn-wing-open-right {
+  0%, 8% {
+    transform: translate(-6%, -50%) scaleX(0.78) scaleY(0.8) rotate(0deg);
+    opacity: 0.9;
+  }
+  34%, 62% {
+    transform: translate(50%, -52%) scaleX(1.04) scaleY(1.02) rotate(7deg);
+    opacity: 1;
+  }
+  90%, 100% {
+    transform: translate(-6%, -50%) scaleX(0.78) scaleY(0.8) rotate(0deg);
+    opacity: 0.9;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * AWAN SALJU — SELALU BULAT. Awan asli (SVG bertekstur) + salju.
+ * ------------------------------------------------------------------ */
+.yn-frame-cloud {
+  border-radius: 50%;
+  padding: 5px;
+  background:
+    radial-gradient(100% 100% at 50% 50%, rgba(255,255,255,0) 52%, rgba(255,255,255,.28) 72%, rgba(255,255,255,.65) 100%),
+    url("/yn-clouds.svg") center / cover no-repeat,
+    linear-gradient(160deg, #9bdcff, #2694cf 60%, #0b3c5d);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 0 18px -4px rgba(125, 211, 252, 0.85),
+    0 0 40px -16px rgba(14, 165, 233, 0.7);
+  animation: yn-cloud-drift 7s ease-in-out infinite;
+}
+.yn-frame-cloud::before {
+  content: "";
+  position: absolute;
+  inset: -9%;
+  border-radius: 50%;
+  background-image:
+    radial-gradient(circle, #ffffff 0 1.7px, transparent 2.1px),
+    radial-gradient(circle, #e0f2fe 0 1.2px, transparent 1.7px),
+    radial-gradient(circle, #bae6fd 0 1px, transparent 1.5px);
+  background-size: 17px 23px, 12px 18px, 9px 14px;
+  animation: yn-snow-fall 5.5s linear infinite;
+  z-index: 4;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(circle, #000 58%, transparent 76%);
+  mask-image: radial-gradient(circle, #000 58%, transparent 76%);
+}
+.yn-frame-cloud::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 22% 6%, rgba(255, 255, 255, 0.95) 0 5px, transparent 6px),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.9) 0 4px, transparent 5px),
+    radial-gradient(circle at 90% 56%, rgba(255, 255, 255, 0.85) 0 5px, transparent 6px),
+    radial-gradient(circle at 10% 62%, rgba(255, 255, 255, 0.9) 0 4px, transparent 5px),
+    radial-gradient(circle at 34% 94%, rgba(255, 255, 255, 0.85) 0 5px, transparent 6px),
+    radial-gradient(circle at 68% 90%, rgba(255, 255, 255, 0.8) 0 4px, transparent 5px);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.95));
+  animation: yn-border-pulse 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.yn-frame-cloud .yn-frame-in {
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.65),
+    inset 0 0 18px rgba(186, 230, 253, 0.45);
+}
+.yn-frame-cloud .yn-frame-in > * {
+  border-radius: 50%;
+}
+@keyframes yn-cloud-drift {
+  0%, 100% { background-position: 0 0, center, 0 0; }
+  50% { background-position: 0 0, 52% 46%, 0 0; }
+}
+
+/* ==================================================================
+ * HIASAN DETAIL AKUN — CSS frame animation, tanpa gambar tempelan.
+ * ================================================================== */
+.profile-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+.profile-decor-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  contain: paint;
+}
+.decor-edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.decor-edge-fire {
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgba(255, 122, 24, 0.17), transparent 55%),
+    radial-gradient(80% 60% at 100% 100%, rgba(255, 45, 85, 0.14), transparent 60%);
+  box-shadow: inset 0 0 90px rgba(255, 77, 0, 0.12);
+}
+.decor-edge-sakura {
+  background:
+    radial-gradient(75% 55% at 0% 0%, rgba(251, 207, 232, 0.5), transparent 62%),
+    radial-gradient(70% 50% at 100% 4%, rgba(244, 114, 182, 0.42), transparent 60%),
+    radial-gradient(90% 60% at 50% 112%, rgba(190, 24, 93, 0.35), transparent 62%);
+  box-shadow: inset 0 0 80px rgba(244, 114, 182, 0.25);
+}
+.decor-edge-pistol {
+  background:
+    radial-gradient(60% 45% at 100% 100%, rgba(148, 163, 184, 0.18), transparent 65%),
+    radial-gradient(40% 30% at 100% 62%, rgba(255, 237, 213, 0.2), transparent 70%);
+  box-shadow: inset 0 0 100px rgba(15, 23, 42, 0.5);
+  animation: decor-screen-flash 4.8s linear infinite;
+}
+.decor-edge-stardust {
+  background:
+    radial-gradient(60% 50% at 12% 0%, rgba(191, 219, 254, 0.25), transparent 60%),
+    radial-gradient(50% 45% at 92% 100%, rgba(196, 181, 253, 0.22), transparent 60%);
+  box-shadow: inset 0 0 70px rgba(129, 140, 248, 0.2);
+}
+.decor-edge-newyear {
+  background:
+    radial-gradient(55% 40% at 22% 26%, rgba(251, 191, 36, 0.16), transparent 60%),
+    radial-gradient(50% 40% at 76% 22%, rgba(244, 63, 94, 0.14), transparent 60%),
+    radial-gradient(60% 40% at 50% 48%, rgba(56, 189, 248, 0.14), transparent 60%);
+  animation: decor-ny-flash 8s linear infinite;
+}
+.decor-edge-aurora {
+  background:
+    conic-gradient(from 180deg at 0% 0%, rgba(52, 211, 153, 0.2), transparent 25%, rgba(56, 189, 248, 0.18) 45%, transparent 65%),
+    conic-gradient(from 0deg at 100% 100%, rgba(244, 114, 182, 0.18), transparent 30%, rgba(167, 139, 250, 0.2) 55%, transparent 78%);
+  filter: blur(18px);
+  animation: decor-aurora 9s ease-in-out infinite alternate;
+}
+
+/* Percikan api: GARIS lurus diagonal kiri-atas → kanan-bawah. */
+.decor-streak {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 2px;
+  height: var(--len);
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent 0%, #ffe066 35%, #ff7a18 68%, rgba(255, 45, 0, 0) 100%);
+  box-shadow: 0 0 6px rgba(255, 122, 24, 0.9), 0 0 14px rgba(255, 77, 0, 0.5);
+  opacity: 0;
+  transform: translate3d(-24vw, -24vh, 0) rotate(45deg) scaleY(0.35);
+  animation: decor-streak-fly var(--dur) linear infinite;
+  animation-delay: var(--delay);
+  will-change: transform, opacity;
+}
+@keyframes decor-streak-fly {
+  0% { transform: translate3d(-24vw, -24vh, 0) rotate(45deg) scaleY(0.3); opacity: 0; }
+  9% { opacity: 1; }
+  60% { transform: translate3d(calc(var(--drift) * 0.4), calc(var(--drift) * 0.4), 0) rotate(45deg) scaleY(1); opacity: 0.95; }
+  100% { transform: translate3d(calc(52vw + var(--drift)), calc(52vw + var(--drift)), 0) rotate(45deg) scaleY(0.35); opacity: 0; }
+}
+
+/* Bintang jatuh */
+.decor-star {
+  position: absolute;
+  left: var(--x);
+  top: -6%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  box-shadow: 0 0 6px #bae6fd, 0 0 14px rgba(147, 197, 253, 0.8);
+  opacity: 0;
+  animation: decor-star-fall var(--dur) linear infinite;
+  animation-delay: var(--delay);
+}
+.decor-star::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 1.5px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, rgba(224, 242, 254, 0.9), transparent);
+  transform: translateX(-50%);
+}
+@keyframes decor-star-fall {
+  0% { transform: translate3d(0, -8vh, 0) rotate(18deg); opacity: 0; }
+  8% { opacity: 1; }
+  75% { opacity: 0.9; }
+  100% { transform: translate3d(26vw, 112vh, 0) rotate(18deg); opacity: 0; }
+}
+
+/* Sakura */
+.decor-sakura-tree {
+  position: absolute;
+  top: -7%;
+  right: -10%;
+  width: min(66vw, 430px);
+  height: auto;
+  opacity: 0.95;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.45));
+  transform-origin: 82% 8%;
+  animation: decor-tree-sway 9s ease-in-out infinite;
+}
+.decor-petal {
+  position: absolute;
+  left: var(--x);
+  top: -6%;
+  width: var(--size);
+  height: calc(var(--size) * 0.78);
+  border-radius: 82% 0 82% 0;
+  background: linear-gradient(145deg, #fff0f7 0%, #fbcfe8 38%, #f472b6 78%, #be185d 100%);
+  box-shadow: 0 0 6px rgba(244, 114, 182, 0.65);
+  opacity: 0;
+  animation: decor-petal-fall var(--dur) linear infinite;
+  animation-delay: var(--delay);
+  will-change: transform, opacity;
+}
+@keyframes decor-petal-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(var(--rot)); opacity: 0; }
+  8% { opacity: 0.95; }
+  45% { transform: translate3d(calc(var(--drift) * 0.5), 45vh, 0) rotate(calc(var(--rot) + 180deg)); }
+  80% { opacity: 0.85; }
+  100% { transform: translate3d(var(--drift), 112vh, 0) rotate(calc(var(--rot) + 420deg)); opacity: 0; }
+}
+@keyframes decor-tree-sway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  50% { transform: rotate(1.6deg) translateY(-6px); }
+}
+
+/* Pistol */
+.decor-gun-wrap {
+  position: absolute;
+  right: -4%;
+  bottom: 6%;
+  width: min(46vw, 230px);
+  aspect-ratio: 260 / 200;
+  transform: rotate(-6deg);
+  animation: decor-gun-recoil 4.8s cubic-bezier(0.3, 0, 0.2, 1) infinite;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
+}
+.decor-gun { width: 100%; height: 100%; display: block; }
+.decor-muzzle {
+  position: absolute;
+  left: 0.5%;
+  top: 27%;
+  width: 74px;
+  height: 74px;
+  transform: translate(-58%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fffbe6 0 12%, #ffd166 26%, rgba(255, 122, 24, 0.85) 46%, rgba(255, 45, 0, 0) 70%);
+  filter: blur(1px);
+  opacity: 0;
+  animation: decor-muzzle-flash 4.8s steps(1, end) infinite;
+}
+.decor-tracer {
+  position: absolute;
+  left: 2%;
+  top: 28%;
+  width: 62vw;
+  max-width: 520px;
+  height: 2px;
+  transform-origin: left center;
+  transform: rotate(-28deg) scaleX(0.2);
+  background: linear-gradient(90deg, rgba(255, 251, 230, 0.95), rgba(255, 209, 102, 0.65) 20%, rgba(255, 122, 24, 0.25) 55%, transparent 92%);
+  filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.8));
+  opacity: 0;
+  animation: decor-tracer-shot 4.8s ease-out infinite;
+}
+.decor-tracer-b { top: 31%; transform: rotate(-23deg) scaleX(0.2); animation-delay: 0.12s; }
+.decor-tracer-c { top: 25%; transform: rotate(-33deg) scaleX(0.2); animation-delay: 0.24s; }
+@keyframes decor-gun-recoil {
+  0%, 30%, 100% { transform: rotate(-6deg) translate3d(0, 0, 0); }
+  5% { transform: rotate(-15deg) translate3d(-14px, 8px, 0); }
+  11% { transform: rotate(-6deg) translate3d(0, 0, 0); }
+  14% { transform: rotate(-14deg) translate3d(-11px, 7px, 0); }
+  20% { transform: rotate(-6deg) translate3d(0, 0, 0); }
+  23% { transform: rotate(-16deg) translate3d(-16px, 9px, 0); }
+  30% { transform: rotate(-6deg) translate3d(0, 0, 0); }
+}
+@keyframes decor-muzzle-flash {
+  0%, 4% { opacity: 0; transform: translate(-58%, -50%) scale(0.4); }
+  5% { opacity: 1; transform: translate(-58%, -50%) scale(1.2); }
+  10% { opacity: 0; transform: translate(-58%, -50%) scale(1.5); }
+  13% { opacity: 1; transform: translate(-58%, -50%) scale(1); }
+  18% { opacity: 0; }
+  22% { opacity: 1; transform: translate(-58%, -50%) scale(1.3); }
+  28%, 100% { opacity: 0; transform: translate(-58%, -50%) scale(0.4); }
+}
+@keyframes decor-tracer-shot {
+  0% { opacity: 0; transform: rotate(-28deg) scaleX(0.1); }
+  5% { opacity: 0.95; transform: rotate(-28deg) scaleX(1); }
+  15% { opacity: 0; transform: rotate(-28deg) scaleX(1.05); }
+  100% { opacity: 0; transform: rotate(-28deg) scaleX(0.1); }
+}
+@keyframes decor-screen-flash {
+  0%, 4% { background-color: transparent; }
+  5% { background-color: rgba(255, 237, 213, 0.1); }
+  8%, 100% { background-color: transparent; }
+}
+
+/* Kembang api + teks 2027 */
+.decor-fw { position: absolute; width: 0; height: 0; opacity: 0; animation: decor-fw-burst 8s linear infinite; animation-delay: var(--delay); }
+.decor-fw-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 16px;
+  border-radius: 999px;
+  transform-origin: 50% 100%;
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scaleY(0.2);
+  background: linear-gradient(180deg, #fff 0%, #ffe066 40%, rgba(255, 122, 24, 0.1) 100%);
+  filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.9));
+  opacity: 0;
+  animation: decor-fw-spark 8s linear infinite;
+  animation-delay: var(--delay);
+}
+.decor-fw-rose .decor-fw-spark { background: linear-gradient(180deg, #fff 0%, #fda4af 40%, rgba(244, 63, 94, 0.1) 100%); filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.9)); }
+.decor-fw-sky .decor-fw-spark { background: linear-gradient(180deg, #fff 0%, #7dd3fc 40%, rgba(56, 189, 248, 0.1) 100%); filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.9)); }
+@keyframes decor-fw-burst {
+  0% { opacity: 0; }
+  3% { opacity: 1; }
+  8% { opacity: 1; }
+  16% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes decor-fw-spark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d) * 0.25)) scaleY(0.2); }
+  3% { opacity: 1; }
+  12% { opacity: 1; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scaleY(1); }
+  22%, 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d) * 1.15)) scaleY(0.6); }
+}
+.decor-ny-text {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, 8px) scale(0.94);
+  font-family: var(--font-display, inherit);
+  font-size: clamp(17px, 5.4vw, 34px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: #fff7d6;
+  text-shadow: 0 0 8px #fbbf24, 0 0 22px rgba(251, 191, 36, 0.85), 0 0 46px rgba(244, 63, 94, 0.55);
+  background: linear-gradient(180deg, #fffbe6 0%, #fde68a 38%, #f59e0b 74%, #fb7185 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0;
+  animation: decor-ny-text 8s ease-out infinite;
+}
+@keyframes decor-ny-text {
+  0%, 4% { opacity: 0; transform: translate(-50%, 14px) scale(0.9); }
+  10% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  26% { opacity: 1; }
+  34%, 100% { opacity: 0; transform: translate(-50%, -8px) scale(1.02); }
+}
+@keyframes decor-ny-flash {
+  0%, 2% { opacity: 0.3; }
+  4% { opacity: 0.9; }
+  7% { opacity: 0.4; }
+  10%, 100% { opacity: 0.65; }
+}
+@keyframes decor-aurora {
+  0% { opacity: 0.75; filter: blur(18px) hue-rotate(0deg); }
+  100% { opacity: 1; filter: blur(26px) hue-rotate(38deg); }
+}
+
+/* Preview kartu toko */
+.decor-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 14px;
+  background: radial-gradient(110% 100% at 50% 0%, #232a38 0%, #0d1017 70%, #08090d 100%);
+  contain: paint;
+}
+.decor-preview-bg {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1.2px);
+  background-size: 16px 16px;
+  opacity: 0.5;
+}
+.decor-preview-avatar {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  display: flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(160deg, #334155, #0f172a);
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.7);
+  z-index: 3;
+}
+.profile-decor-preview .decor-sakura-tree { width: 46%; right: -6%; }
+.profile-decor-preview .decor-gun-wrap { width: 40%; bottom: 0; }
+.profile-decor-preview .decor-ny-text { font-size: 10px; top: 62%; letter-spacing: 0.04em; }
+.profile-decor-preview .decor-fw { transform: scale(0.45); }
+.profile-decor-preview .decor-fw-spark { animation-duration: 8s; }
+.profile-decor-preview .decor-streak { animation-duration: 2.4s; }
+.profile-decor-preview .decor-petal { animation-duration: 4s; }
+.profile-decor-preview .decor-star { animation-duration: 4.4s; }
+
+/* ------------------------------------------------------------------
+ * TAG CLAN — 6 tier dengan BENTUK dan BACKGROUND yang benar-benar beda.
+ * ------------------------------------------------------------------ */
+.clan-tag-tier-1 {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 50%, 100% 100%, 0 100%, 9px 50%);
+  background-image:
+    repeating-linear-gradient(115deg, rgba(255,255,255,.16) 0 2px, transparent 2px 7px),
+    linear-gradient(120deg, #94a3b8, #475569 45%, #1e293b);
+}
+.clan-tag-tier-2 {
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.35), transparent 35%),
+    repeating-linear-gradient(135deg, rgba(0,0,0,.22) 0 3px, transparent 3px 8px),
+    linear-gradient(120deg, #fbbf24, #b45309 55%, #451a03);
+}
+.clan-tag-tier-3 {
+  clip-path: polygon(0 0, 100% 0, 100% 68%, 50% 100%, 0 68%);
+  background-image:
+    radial-gradient(circle at 78% 26%, rgba(255,255,255,.28), transparent 42%),
+    radial-gradient(rgba(255,255,255,.14) 1px, transparent 1.2px),
+    linear-gradient(140deg, #ef4444, #991b1b 55%, #450a0a);
+  background-size: auto, 9px 9px, auto;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.5));
+}
+.clan-tag-tier-4 {
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 9px),
+    linear-gradient(120deg, #22d3ee, #1d4ed8 52%, #172554);
+  filter: drop-shadow(0 0 7px rgba(56,189,248,.55));
+}
+.clan-tag-tier-5 {
+  clip-path: polygon(6% 0, 94% 0, 100% 22%, 92% 50%, 100% 78%, 94% 100%, 6% 100%, 0 78%, 8% 50%, 0 22%);
+  background-image:
+    radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.55), transparent 55%),
+    linear-gradient(120deg, #fde68a, #f59e0b 46%, #7c2d12);
+  filter: drop-shadow(0 0 9px rgba(245,158,11,.6));
+}
+.clan-tag-tier-6 {
+  clip-path: polygon(0 18%, 12% 0, 26% 16%, 38% 2%, 50% 14%, 62% 2%, 74% 16%, 88% 0, 100% 18%, 94% 100%, 6% 100%);
+  background-image:
+    linear-gradient(115deg, transparent 30%, rgba(255,255,255,.55) 48%, transparent 62%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 2px, transparent 2px 6px),
+    linear-gradient(120deg, #f472b6, #a855f7 40%, #2563eb 75%, #22d3ee);
+  background-size: 220% 100%, auto, auto;
+  animation: yn-tag-sheen 3.4s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(168,85,247,.65));
+}
+@keyframes yn-tag-sheen {
+  from { background-position: 180% 0, 0 0, 0 0; }
+  to { background-position: -80% 0, 0 0, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decor-streak, .decor-star, .decor-petal, .decor-fw, .decor-fw-spark,
+  .decor-ny-text, .decor-gun-wrap, .decor-muzzle, .decor-tracer,
+  .decor-sakura-tree, .decor-edge-pistol, .decor-edge-aurora,
+  .yn-frame-wings::before, .yn-frame-wings::after, .yn-frame-cloud,
+  .yn-frame-cloud::before, .yn-frame-cloud::after, .clan-tag-tier-6 {
+    animation: none !important;
+  }
+}
+
+/* (bagian lama sayap/awan di bawah sudah diganti di atas — tetap aman jika
+   ada aturan yang sama, yang terakhir menang.) */
 @keyframes yn-wing-left {
   0%, 9% {
     transform: translateX(0) rotate(0deg) scaleX(0.86) scaleY(0.95);
@@ -2124,5 +2666,82 @@ a {
     animation: none !important;
     opacity: 0;
   }
+}
+
+/* ==================================================================
+ * FINAL OVERRIDE — memastikan sayap & awan versi baru menang atas
+ * definisi lama (yang berada lebih bawah di berkas ini).
+ * ================================================================== */
+.yn-frame-wings::before,
+.yn-frame-wings::after {
+  top: 50%;
+  left: 50%;
+  bottom: auto;
+  width: 118%;
+  height: 156%;
+  margin-left: 0;
+  z-index: 0;
+  clip-path: none;
+  background: url("/yn-wings.svg") center / contain no-repeat !important;
+  background-blend-mode: normal;
+  filter: drop-shadow(0 6px 9px rgba(0, 0, 0, 0.7));
+  animation: yn-wing-open 5.4s cubic-bezier(0.4, 0.05, 0.2, 1) infinite;
+}
+.yn-frame-wings::before {
+  transform-origin: 72% 45%;
+  transform: translate(-94%, -50%) scaleX(-0.78) scaleY(0.8);
+}
+.yn-frame-wings::after {
+  transform-origin: 28% 45%;
+  transform: translate(-6%, -50%) scaleX(0.78) scaleY(0.8);
+  animation-name: yn-wing-open-right;
+}
+
+.yn-frame-cloud {
+  border-radius: 50%;
+  padding: 5px;
+  background:
+    radial-gradient(100% 100% at 50% 50%, rgba(255,255,255,0) 52%, rgba(255,255,255,.28) 72%, rgba(255,255,255,.65) 100%),
+    url("/yn-clouds.svg") center / cover no-repeat,
+    linear-gradient(160deg, #9bdcff, #2694cf 60%, #0b3c5d);
+  animation: yn-cloud-drift 7s ease-in-out infinite;
+}
+.yn-frame-cloud::before {
+  inset: -9%;
+  border-radius: 50%;
+  background-image:
+    radial-gradient(circle, #ffffff 0 1.7px, transparent 2.1px),
+    radial-gradient(circle, #e0f2fe 0 1.2px, transparent 1.7px),
+    radial-gradient(circle, #bae6fd 0 1px, transparent 1.5px);
+  background-size: 17px 23px, 12px 18px, 9px 14px;
+  -webkit-mask-image: radial-gradient(circle, #000 58%, transparent 76%);
+  mask-image: radial-gradient(circle, #000 58%, transparent 76%);
+}
+.yn-frame-cloud::after {
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 22% 6%, rgba(255, 255, 255, 0.95) 0 5px, transparent 6px),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.9) 0 4px, transparent 5px),
+    radial-gradient(circle at 90% 56%, rgba(255, 255, 255, 0.85) 0 5px, transparent 6px),
+    radial-gradient(circle at 10% 62%, rgba(255, 255, 255, 0.9) 0 4px, transparent 5px),
+    radial-gradient(circle at 34% 94%, rgba(255, 255, 255, 0.85) 0 5px, transparent 6px),
+    radial-gradient(circle at 68% 90%, rgba(255, 255, 255, 0.8) 0 4px, transparent 5px);
+}
+.yn-frame-cloud .yn-frame-in,
+.yn-frame-cloud .yn-frame-in > * {
+  border-radius: 50%;
+}
+
+/* Semua scrollbar abu-abu dihapus — permintaan pemilik. Scroll tetap
+   berfungsi (wheel/sentuh), hanya batangnya yang tidak digambar. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 

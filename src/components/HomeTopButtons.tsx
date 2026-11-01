@@ -321,6 +321,10 @@ export function DownloadsPanel({
         onClose={onClose}
         inline={inline}
       >
+        <StorageCard
+          bytes={stats?.bytes ?? 0}
+          premium={(user?.premiumUntil ?? 0) > Date.now()}
+        />
         {minimalEmpty ? (
           <div className="flex flex-col items-center justify-center py-16">
             <span className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
@@ -366,6 +370,12 @@ export function DownloadsPanel({
         </button>
       }
     >
+      {/* Kotak kuota penyimpanan: maksimal 1 GB, Premium tanpa batas. */}
+      <StorageCard
+        bytes={stats?.bytes ?? 0}
+        premium={(user?.premiumUntil ?? 0) > Date.now()}
+      />
+
       {/* Ringkasan: file, status berjalan, gagal */}
       <div className="mb-4 grid grid-cols-3 gap-2">
         <StatTile label="File" value={String(items.length)} />
@@ -448,6 +458,53 @@ export function DownloadsPanel({
         server YoruNime. Membersihkan data browser akan menghapusnya.
       </p>
     </PanelShell>
+  );
+}
+
+/** Kotak kuota download — 1 GB untuk akun biasa, unlimited untuk Premium. */
+function StorageCard({ bytes, premium }: { bytes: number; premium: boolean }) {
+  const LIMIT = 1024 * 1024 * 1024; // 1 GB
+  const pct = premium ? 12 : Math.min(100, (bytes / LIMIT) * 100);
+  return (
+    <div className="mb-4 overflow-hidden rounded-2xl bg-[linear-gradient(130deg,rgba(56,189,248,.13),rgba(255,255,255,.03)_55%,rgba(8,12,16,.5))] p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-xl bg-sky-300/15 text-sky-200">
+            <HardDriveDownload className="size-4" />
+          </span>
+          <div>
+            <p className="text-[11px] font-black text-white">Kuota download</p>
+            <p className="text-[9px] text-white/45">
+              {premium ? "Premium — tanpa batas" : "Akun biasa — maksimal 1 GB"}
+            </p>
+          </div>
+        </div>
+        <span className="text-right text-[10px] font-bold text-white/70">
+          {fmtBytes(bytes)}
+          <span className="block text-[9px] font-normal text-white/35">
+            {premium ? "unlimited" : "dari 1 GB"}
+          </span>
+        </span>
+      </div>
+      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-black/40">
+        <span
+          className={cn(
+            "block h-full rounded-full",
+            premium
+              ? "bg-gradient-to-r from-sky-300 to-emerald-300"
+              : pct > 85
+                ? "bg-gradient-to-r from-amber-300 to-red-400"
+                : "bg-gradient-to-r from-sky-300 to-sky-500",
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {!premium && (
+        <p className="mt-1.5 text-[9px] leading-snug text-white/35">
+          Premium membuka unduhan tanpa batas + kualitas 1080p.
+        </p>
+      )}
+    </div>
   );
 }
 

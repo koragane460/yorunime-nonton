@@ -793,12 +793,14 @@ export const buyVerified = mutation({
     const res = await leaderGuard(ctx, userId, ["leader", "officer"]);
     const clan = res.clan;
     if (clan.verified) return { ok: true, already: true };
-    const me = await ctx.db.get(userId);
-    const bal = me?.diamonds ?? 0;
+    // BELI PAKAI SACRET CLAN (bukan saldo pribadi) — sesuai permintaan.
+    const bal = clan.diamonds ?? 0;
     if (bal < BLUE_CHECK_COST)
-      throw new Error(`Sacret tidak cukup (butuh ${BLUE_CHECK_COST})`);
-    await ctx.db.patch(userId, { diamonds: bal - BLUE_CHECK_COST });
-    await ctx.db.patch(clan._id, { verified: true });
+      throw new Error(`Sacret clan tidak cukup (butuh ${BLUE_CHECK_COST})`);
+    await ctx.db.patch(clan._id, {
+      diamonds: bal - BLUE_CHECK_COST,
+      verified: true,
+    });
     return { ok: true };
   },
 });
@@ -813,12 +815,13 @@ export const upgradeSlots = mutation({
     const clan = res.clan;
     const cap = clan.memberCap ?? SLOT_START;
     if (cap >= SLOT_MAX) throw new Error("Slot member sudah maksimal (100)");
-    const me = await ctx.db.get(userId);
-    const bal = me?.diamonds ?? 0;
+    const bal = clan.diamonds ?? 0;
     if (bal < SLOT_COST)
-      throw new Error(`Sacret tidak cukup (butuh ${SLOT_COST})`);
-    await ctx.db.patch(userId, { diamonds: bal - SLOT_COST });
-    await ctx.db.patch(clan._id, { memberCap: Math.min(SLOT_MAX, cap + SLOT_STEP) });
+      throw new Error(`Sacret clan tidak cukup (butuh ${SLOT_COST})`);
+    await ctx.db.patch(clan._id, {
+      diamonds: bal - SLOT_COST,
+      memberCap: Math.min(SLOT_MAX, cap + SLOT_STEP),
+    });
     return { ok: true, memberCap: Math.min(SLOT_MAX, cap + SLOT_STEP) };
   },
 });
@@ -841,11 +844,10 @@ export const buyTagTier = mutation({
       throw new Error(`Beli tag tier ${owned + 1} dulu sebelum tier ${tier}`);
     if (tier <= owned) return { ok: true, already: true };
     const cost = TAG_TIER_COST[tier];
-    const me = await ctx.db.get(userId);
-    const bal = me?.diamonds ?? 0;
-    if (bal < cost) throw new Error(`Sacret tidak cukup (butuh ${cost})`);
-    await ctx.db.patch(userId, { diamonds: bal - cost });
-    await ctx.db.patch(clan._id, { tagTier: tier });
+    const bal = clan.diamonds ?? 0;
+    if (bal < cost)
+      throw new Error(`Sacret clan tidak cukup (butuh ${cost})`);
+    await ctx.db.patch(clan._id, { diamonds: bal - cost, tagTier: tier });
     return { ok: true, tagTier: tier };
   },
 });

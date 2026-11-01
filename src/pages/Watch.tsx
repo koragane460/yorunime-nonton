@@ -31,6 +31,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Heart,
+  Coffee,
   Flag,
   Check,
   X,
@@ -980,12 +981,16 @@ function WatchContent() {
       return;
     }
     const t = currentTime;
+    // Cari cue yang BENAR-BENAR mencakup waktu ini. Dulu kode mengambil cue
+    // terakhir yang sudah dimulai (`c.s <= t`) lalu mengecek akhirnya; kalau
+    // ada dua baris yang tumpang tindih, cue terakhir yang sudah lewat bisa
+    // membuat teks kosong walau baris sebelumnya masih berbunyi. Itu sebabnya
+    // subtitle hanya muncul di sebagian dialog.
     let hit: Cue | null = null;
     for (const c of cues) {
-      if (c.s <= t) hit = c;
-      else break;
+      if (c.s <= t && t <= c.e && (!hit || c.s >= hit.s)) hit = c;
     }
-    const text = hit && t <= hit.e ? hit.t : "";
+    const text = hit ? hit.t : "";
     setActiveCue(text);
     // CC diteruskan ke mini player supaya teks subtitle ikut kelihatan.
     setMiniCue(text);
@@ -1562,10 +1567,9 @@ function WatchContent() {
   // bisa membuka video dari menit terakhir.
   useEffect(() => {
     if (!user || !epParam || !detailData || !currentEp) return;
-    if (currentTime < 5) return;
-    const t = window.setInterval(() => {
+    const save = () => {
       const v = videoRef.current;
-      if (!v || v.paused || !v.currentTime) return;
+      if (!v || !v.currentTime || v.currentTime < 5) return;
       void saveProgress({
         animeId,
         animeTitle: detailData.title ?? "Anime",
@@ -1575,8 +1579,19 @@ function WatchContent() {
         minutesWatched: 0,
         durationSec: Number.isFinite(v.duration) ? v.duration : undefined,
       }).catch(() => {});
-    }, 10_000);
-    return () => clearInterval(t);
+    };
+    // Simpan berkala TANPA bergantung pada `currentTime` — dulu effect ini
+    // di-reset tiap detik sehingga interval 10 detik tidak pernah tercapai
+    // dan tombol "Lanjutkan" tidak pernah tahu posisi terakhir.
+    const t = window.setInterval(save, 10_000);
+    const v = videoRef.current;
+    const onPause = () => save();
+    v?.addEventListener("pause", onPause);
+    return () => {
+      clearInterval(t);
+      v?.removeEventListener("pause", onPause);
+      save();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, epParam, currentEp, detailData]);
 
@@ -2896,8 +2911,8 @@ function WatchContent() {
           (2px, tidak berlebihan) dan state tekan yang CLEAN — tanpa ring /
           glow mencolok di pinggir. */}
       <div className="w-full px-3 pt-2">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="flex items-stretch overflow-hidden rounded-xl border-2 border-white/15 bg-white/[0.04]">
+        <div className="flex items-stretch gap-2">
+          <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-xl border-2 border-white/15 bg-white/[0.04]">
             <button
               onClick={() => {
                 // Tombol Like menyatu: menekan lagi membatalkan, menekan saat
@@ -2968,11 +2983,21 @@ function WatchContent() {
           </button>
           <button
             onClick={() => setReportOpen(true)}
-            className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/5"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/5"
           >
             <Flag className="size-4" aria-hidden />
             <span>Laporkan</span>
           </button>
+          {/* DONATE — kotak di kanan Laporkan, gaya sama, ikon kopi. */}
+          <a
+            href="https://sociabuzz.com/yorunime/donate"
+            target="_blank"
+            rel="noreferrer"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/5"
+          >
+            <Coffee className="size-4" aria-hidden />
+            <span>Donate</span>
+          </a>
         </div>
       </div>
 
@@ -3134,6 +3159,8 @@ function WatchContent() {
         {/* Kotak Premium di bawah toolbar — gaya & teks SAMA persis dengan
             kartu Premium di Home. Selalu tampil (termasuk untuk akun
             Premium), sama seperti kotak Premium di Home. */}
+        {/* Garis pembatas DI ATAS kotak Premium (permintaan). */}
+        <div className="mt-4 h-px w-full bg-white/15" />
         {(
           <button
             onClick={() => navigate("/premium")}

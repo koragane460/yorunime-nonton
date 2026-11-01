@@ -48,6 +48,9 @@ const schema = defineSchema(
       avatarBorder: v.optional(v.string()),
       /** Daftar border yang sudah dimiliki (hasil beli di Shop). */
       ownedBorders: v.optional(v.array(v.string())),
+      /** HIASAN DETAIL AKUN — id dari DECORATIONS (sakura, kembang api, api…). */
+      profileDecor: v.optional(v.string()),
+      ownedDecor: v.optional(v.array(v.string())),
       /** TITLE yang sedang dipasang (key dari TITLE_DEFS di titles.ts).
           Field lama (single) — tetap dipakai sebagai "title utama". */
       equippedTitle: v.optional(v.string()),
@@ -136,6 +139,8 @@ const schema = defineSchema(
       deleted: v.optional(v.boolean()),
       /** Emoji sticker yang dikirim (besar di bubble, bukan teks biasa). */
       sticker: v.optional(v.string()),
+      /** Konten Feed yang dibagikan ke chat/DM — tampil sebagai kartu. */
+      feedPostId: v.optional(v.id("feedPosts")),
       /** Pesan dari bot resmi (Luna Bot musik) — tampil seperti user lain
           tapi dengan avatar & centang ungu bot official. */
       bot: v.optional(v.boolean()),
@@ -549,6 +554,8 @@ const schema = defineSchema(
     announcements: defineTable({
       message: v.string(),
       active: v.boolean(),
+      /** Developer yang mengirim — foto, nama, dan title tampil di kiri atas. */
+      createdBy: v.optional(v.id("users")),
       createdAt: v.number(),
       updatedAt: v.number(),
     }),

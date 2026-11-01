@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Check, Crown, ImagePlus, MoreVertical, Reply, Send, Sticker, Trash2, VolumeX, X } from "lucide-react";
+import { Check, ChevronLeft, Crown, ImagePlus, MoreVertical, Play, Reply, Send, Sticker, Trash2, VolumeX, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -46,6 +46,8 @@ export type ChatMsg = {
   imageStorageId?: string;
   /** Emoji sticker besar dari toko sticker. */
   sticker?: string;
+  /** Konten Feed yang dibagikan — tampil sebagai kartu. */
+  feedPostId?: string;
   premiumGive?: {
     _id: Id<"premiumGives">;
     days: number;
@@ -810,7 +812,7 @@ export function ChatPanel({
                     mine && "items-end",
                     // Pesan yang isinya cuma foto: bubble dibuat transparan
                     // supaya tidak ada kotak hitam di belakang fotonya.
-                      (m.imageUrl || m.sticker) && !m.text
+                      (m.imageUrl || m.sticker || m.feedPostId) && !m.text
                           ? "border-transparent bg-transparent px-1 pb-1 pt-0 shadow-none"
                           : give
                               ? "bubble-give"
@@ -908,6 +910,7 @@ export function ChatPanel({
                           )}
                         />
                       )}
+                      {m.feedPostId && <FeedShareCard postId={m.feedPostId} />}
                       {m.sticker && (
                         <span className="select-none text-[64px] leading-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)]">
                           {m.sticker}
@@ -1224,6 +1227,117 @@ export function ChatPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * KARTU KONTEN FEED yang dibagikan ke chat — persegi panjang ke atas,
+ * foto profile + username kecil di kiri bawah, ikon play di tengah.
+ * Ketuk → tampil fullscreen; tombol kembali mengembalikan ke chat.
+ */
+function FeedShareCard({ postId }: { postId: string }) {
+  const p = useQuery(api.feed.postById, {
+    postId: postId as Id<"feedPosts">,
+  }) as any;
+  const [open, setOpen] = useState(false);
+
+  if (p === undefined) {
+    return (
+      <div className="mt-1 flex h-44 w-36 items-center justify-center rounded-xl bg-black/40 text-[10px] text-white/45">
+        Memuat konten…
+      </div>
+    );
+  }
+  if (p === null) {
+    return (
+      <div className="mt-1 flex h-24 w-44 flex-col items-center justify-center gap-1 rounded-xl bg-black/40 px-3 text-center text-[10px] text-white/50">
+        <span className="font-bold text-white/70">Konten tidak tersedia</span>
+        Mungkin sudah dihapus atau privat.
+      </div>
+    );
+  }
+
+  const thumb = p.thumbUrl ?? (p.kind === "video" ? null : p.imageUrl) ?? p.cover ?? p.music?.cover ?? null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="relative mt-1 block h-48 w-36 overflow-hidden rounded-xl bg-[#141922] text-left transition active:scale-[0.98]"
+      >
+        {thumb ? (
+          <img src={thumb} alt="" className="size-full object-cover" />
+        ) : p.imageUrl ? (
+          <video src={p.imageUrl} muted playsInline className="size-full object-cover" />
+        ) : (
+          <span className="flex size-full items-center justify-center bg-[linear-gradient(160deg,#1d2634,#0c1017)] px-2 text-center text-[11px] font-bold text-white/55">
+            {p.caption || "Konten Feed"}
+          </span>
+        )}
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/25" />
+        <span className="absolute left-1/2 top-1/2 flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-black/45 text-white backdrop-blur-sm">
+          <Play className="size-4 fill-current" />
+        </span>
+        <span className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-1.5">
+          <Avatar src={p.image} seed={p.username} className="size-5 shrink-0" />
+          <span className="truncate text-[9px] font-black text-white/90">
+            {p.username}
+          </span>
+        </span>
+        {p.kind === "video" && (
+          <span className="absolute right-2 top-2 rounded-md bg-black/55 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white/80">
+            Video
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-[120] flex flex-col bg-black">
+          <div className="flex items-center gap-2 px-3 pb-2 pt-3">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Kembali ke chat"
+              className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+            <Avatar src={p.image} seed={p.username} className="size-8" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-black text-white">{p.username}</p>
+              <p className="text-[9px] text-white/45">Konten Feed</p>
+            </div>
+          </div>
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            {p.kind === "video" && p.imageUrl ? (
+              <video
+                src={p.imageUrl}
+                poster={p.thumbUrl ?? undefined}
+                controls
+                autoPlay
+                playsInline
+                className="max-h-full w-full object-contain"
+              />
+            ) : p.imageUrl ? (
+              <img src={p.imageUrl} alt="" className="max-h-full w-full object-contain" />
+            ) : (
+              <p className="px-8 text-center text-sm text-white/60">
+                {p.caption || "Media tidak tersedia"}
+              </p>
+            )}
+          </div>
+          <div className="px-4 pb-6 pt-3">
+            {p.caption && (
+              <p className="text-[13px] leading-relaxed text-white/85">{p.caption}</p>
+            )}
+            <p className="mt-2 text-[10px] text-white/35">
+              {p.likeCount ?? 0} suka · {p.commentCount ?? 0} komentar
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

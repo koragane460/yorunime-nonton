@@ -588,6 +588,8 @@ function SettingsScreen({
   const [savingName, setSavingName] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
+  const [busyBanner, setBusyBanner] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
   // LATAR HOME — gambar 9:16 dari galeri, disimpan di perangkat ini.
   const [homeBg, setHomeBg] = useState<string | null>(() => {
     try {
@@ -761,6 +763,88 @@ function SettingsScreen({
         value={tampilanPrefs}
         onToggle={toggleTampilan}
       />
+      {/* BANNER PROFIL — dikembalikan ke Pengaturan, menyatu di kotak
+          kategori Tampilan (bukan lagi terpisah dari ganti photo profil). */}
+      <div className="rounded-2xl border border-border bg-card p-3">
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+            <Palette className="size-[18px] text-primary" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold">Banner Profil</p>
+            <p className="text-[11px] text-muted-foreground">
+              Tampil di detail akun fullscreen · khusus Premium
+            </p>
+          </div>
+          {isPremium && (
+            <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-black text-gold">
+              PREMIUM
+            </span>
+          )}
+        </div>
+        <div className="relative mb-2 h-24 overflow-hidden rounded-xl bg-black/30">
+          {banner ? (
+            <img src={banner} alt="" className="size-full object-cover" />
+          ) : (
+            <span className="flex size-full items-center justify-center text-[10px] text-white/35">
+              Belum ada banner
+            </span>
+          )}
+          <span className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/60 to-transparent" />
+        </div>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (!f) return;
+            if (!isPremium) {
+              setErr("Banner profil khusus akun Premium");
+              return;
+            }
+            setBusyBanner(true);
+            void (async () => {
+              try {
+                const small = await shrinkBanner(f);
+                await updateProfile({ bannerUrl: small });
+                setBanner(small);
+                setErr("");
+              } catch (e2) {
+                setErr(e2 instanceof Error ? e2.message : "Gagal mengganti banner");
+              } finally {
+                setBusyBanner(false);
+              }
+            })();
+          }}
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => bannerInputRef.current?.click()}
+            disabled={busyBanner}
+            className="flex-1 rounded-xl bg-sky-300 py-2 text-[11px] font-black text-sky-950 transition active:scale-[0.98] disabled:opacity-50"
+          >
+            {busyBanner ? "Memproses…" : "Ganti banner"}
+          </button>
+          {banner && (
+            <button
+              onClick={() => {
+                setBanner("");
+                setErr("");
+                void updateProfile({ bannerUrl: "" }).catch((e2) =>
+                  setErr(e2 instanceof Error ? e2.message : "Gagal melepas banner"),
+                );
+              }}
+              className="rounded-xl border border-white/15 px-3 py-2 text-[11px] font-bold text-white/60"
+            >
+              Lepas
+            </button>
+          )}
+        </div>
+      </div>
+
       <SettingsBox
         icon={<MessageSquare className="size-[18px] text-primary" />}
         title="Chat"

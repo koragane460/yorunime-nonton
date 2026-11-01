@@ -566,9 +566,28 @@ export const activeAnnouncements = query({
       .query("announcements")
       .order("desc")
       .take(20);
-    return rows
-      .filter((r) => r.active)
-      .map((r) => ({ _id: r._id, message: r.message, createdAt: r.createdAt }));
+    const out = [];
+    for (const r of rows.filter((x) => x.active)) {
+      const u = r.createdBy ? await ctx.db.get(r.createdBy) : null;
+      out.push({
+        _id: r._id,
+        message: r.message,
+        createdAt: r.createdAt,
+        authorName: u?.username ?? "YoruNime",
+        authorImage: u?.image ?? null,
+        authorTitle:
+          u?.staffRole === "creator"
+            ? "Creator"
+            : u?.staffRole === "dev"
+              ? "Developer"
+              : u?.staffRole === "mod"
+                ? "Moderator"
+                : u?.role === "admin"
+                  ? "Admin"
+                  : "Developer",
+      });
+    }
+    return out;
   },
 });
 
@@ -587,9 +606,13 @@ export const createAnnouncement = mutation({
     await staffGuard(ctx, "dev");
     const text = message.trim();
     if (!text) throw new Error("Pesan kosong");
+    const me = await ctx.auth.getUserIdentity();
+    void me;
+    const userId = await getAuthUserId(ctx);
     await ctx.db.insert("announcements", {
       message: text,
       active: true,
+      createdBy: userId ?? undefined,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });

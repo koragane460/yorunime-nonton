@@ -16,10 +16,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
   ChevronRight,
+  Coffee,
   Crown,
   Heart,
   MessageSquare,
   Mic,
+  Sticker,
   Play,
   Sparkles,
   Star,
@@ -677,23 +679,23 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
 
 export function ChatVoiceRow({
   onOpenChat,
+  onOpenSticker,
   onOpenNobar,
   onOpenVoice,
 }: {
   onOpenChat: () => void;
+  onOpenSticker: () => void;
   onOpenNobar: () => void;
   onOpenVoice: () => void;
 }) {
-  // Angka ONLINE beneran (presence tiap 30 detik), bukan tebakan dari chat.
-  const online = useQuery(api.presence.onlineCount, {});
+  void onOpenChat;
 
-  // Tiap kotak DIKASIH WARNA (permintaan): chat = hijau, nobar = merah muda,
-  // voice = biru. Warna diambil dari tint solid, bukan gradasi pelangi.
+  // STICKER SHOP = kotak besar menggantikan Chat Global (dipisah dari chat).
   return (
     <div className="mt-5 grid grid-cols-2 gap-3">
-      {/* CHAT GLOBAL — panel paling tinggi (2 baris), status live di bawah. */}
+      {/* STICKER SHOP — panel paling tinggi (2 baris). */}
       <button
-        onClick={onOpenChat}
+        onClick={onOpenSticker}
         className="group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(165deg,rgba(16,185,129,.24)_0%,rgba(11,20,18,.92)_55%,rgba(8,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-emerald-300/60 active:scale-[0.98]"
       >
         <span
@@ -701,19 +703,18 @@ export function ChatVoiceRow({
           className="absolute inset-0 opacity-40 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]"
         />
         <span className="relative flex items-start justify-between gap-2">
-          <span className="yn-eyebrow">Obrolan</span>
+          <span className="yn-eyebrow">Toko</span>
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/40 bg-emerald-400/15">
-            <MessageSquare className="size-4 text-emerald-100" />
+            <Sticker className="size-4 text-emerald-100" />
           </span>
         </span>
         <span className="relative flex flex-col gap-1">
           <span className="font-display text-xl font-black leading-none tracking-tight">
-            Chat Global
+            Sticker Shop
           </span>
-          <span className="yn-meta">Ngobrol santai bareng penonton lain</span>
+          <span className="yn-meta">Pack lucu, anime & random — langsung ke chat</span>
           <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/45 bg-emerald-400/20 px-2.5 py-1 text-[10px] font-bold text-emerald-100">
-            <span className="size-1.5 animate-pulse rounded-full bg-emerald-300" />
-            {online ?? 0} online
+            <Sparkles className="size-3" /> Buka toko
           </span>
         </span>
       </button>
@@ -964,6 +965,44 @@ export function FeedPromo({ onOpen }: { onOpen: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * PROMO DONATE — slide ketiga carousel. Nuansa hangat kopi, beda dari
+ * Afinitas (ungu) & Feed (amber), langsung membuka halaman donasi.
+ */
+export function DonatePromo() {
+  return (
+    <a
+      href="https://sociabuzz.com/yorunime/donate"
+      target="_blank"
+      rel="noreferrer"
+      className="relative block h-full w-full overflow-hidden bg-[linear-gradient(145deg,#1b2a24_0%,#141a17_55%,#0b0d0c_100%)]"
+    >
+      <span aria-hidden className="absolute -right-10 -top-12 size-44 rounded-full bg-emerald-300/15 blur-3xl" />
+      <span aria-hidden className="absolute -bottom-16 -left-8 size-40 rounded-full bg-amber-300/10 blur-3xl" />
+      <div className="absolute right-4 top-1/2 flex size-24 -translate-y-1/2 items-center justify-center rounded-[28px] bg-[radial-gradient(circle_at_35%_25%,#fef3c7,#d97706_55%,#451a03)] shadow-[0_18px_34px_-18px_rgba(0,0,0,.9)]">
+        <span className="flex size-14 items-center justify-center rounded-full bg-black/25 text-amber-50 backdrop-blur-sm">
+          <Coffee className="size-7" />
+        </span>
+        <span className="absolute -bottom-2 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-black/40 blur-md" />
+      </div>
+      <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-1 px-4">
+        <span className="w-fit rounded-full border border-emerald-300/40 bg-emerald-400/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-100">
+          Donate
+        </span>
+        <p className="text-[15px] font-black leading-tight text-white">
+          Traktir kopi buat developer
+        </p>
+        <p className="text-[10px] leading-snug text-white/60">
+          Biar YoruNime tetap hidup dan server makin kencang.
+        </p>
+        <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-emerald-300 to-teal-400 px-3 py-1.5 text-[11px] font-black text-emerald-950">
+          Donate sekarang <ChevronRight className="size-3.5" />
+        </span>
+      </div>
+    </a>
   );
 }
 

@@ -51,6 +51,7 @@ const PERKS = [
   "Dapatkan centang biru di samping namamu",
   "XP nonton 2× lebih banyak dibandingkan non-premium",
   "Bonus Sacret setiap kali membeli paket",
+  "Download episode TANPA BATAS (akun biasa maksimal 1 GB)",
   "Bisa kasih premium ke orang lain dan kumpulkan XP",
 ];
 

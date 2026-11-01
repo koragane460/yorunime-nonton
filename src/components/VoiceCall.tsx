@@ -999,7 +999,9 @@ function RoomScreen({
             "grid w-full gap-3",
             // Saat NOBAR aktif, peserta dibuat ringkas supaya player yang
             // paling atas tetap dominan.
-            nobar ? "grid-cols-4 gap-2" : alone ? "grid-cols-1" : "grid-cols-2",
+            // Saat nobar, peserta tetap 2 per baris dengan kotak besar —
+            // bukan kotak mungil 4 kolom.
+            nobar ? "grid-cols-2 gap-2.5" : alone ? "grid-cols-1" : "grid-cols-2",
           )}
         >
           {ordered.map((p) => {
@@ -1015,9 +1017,8 @@ function RoomScreen({
               >
                 <div
                   className={cn(
-                    "relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border transition",
-                    nobar
-                      ? "aspect-square gap-1 py-3"
+                    "relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl border transition",                      nobar
+                      ? "aspect-[4/3] gap-1.5 py-4"
                       : alone
                         ? "aspect-[3/5] py-6"
                         : "aspect-[3/4] py-6",
@@ -1043,7 +1044,7 @@ function RoomScreen({
                         talking
                           ? "ring-emerald-400 animate-pulse"
                           : "ring-white/25",
-                        nobar ? "size-10" : alone ? "size-32" : "size-20",
+                        nobar ? "size-16" : alone ? "size-32" : "size-20",
                       )}
                     />
                     {!micOn && (
@@ -1055,7 +1056,7 @@ function RoomScreen({
                   <p
                     className={cn(
                       "w-full truncate px-2 text-center font-bold",
-                      nobar ? "text-[9px]" : alone ? "text-base" : "text-[11px]",
+                      nobar ? "text-[11px]" : alone ? "text-base" : "text-[11px]",
                     )}
                   >
                     {p.username}

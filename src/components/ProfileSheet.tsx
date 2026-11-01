@@ -13,7 +13,10 @@ import {
   Award,
   Camera,
   ChevronLeft,
+  Crown,
   Gift,
+  MessageCircle,
+  Play,
   HeartHandshake,
   MessageSquare,
   History as HistoryIcon,
@@ -26,6 +29,7 @@ import {
   Tv,
   UserPlus,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { YoruPetScreen } from "@/components/YoruPet";
@@ -51,6 +55,7 @@ import {
   FeedPostOverlay,
   FollowButton,
 } from "@/components/FeedScreen";
+import { ProfileDecor } from "@/components/ProfileDecor";
 
 type Tab = "komen" | "history" | "favorite";
 
@@ -148,6 +153,7 @@ export function ProfileSheet({
   // plus popup daftar tier tag level.
   const [viewPet, setViewPet] = useState(false);
   const [affinity, setAffinity] = useState(false);
+  const [giveOpen, setGiveOpen] = useState(false);
   const [tierPopup, setTierPopup] = useState(false);
   // Intro sinematik (awan/gagak) DIHAPUS sesuai permintaan — layar langsung
   // menampilkan detail akun dengan banner foto yang bisa diatur di
@@ -225,8 +231,8 @@ export function ProfileSheet({
 
   return (
     <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-background">
-      {/* Percikan api khas detail akun — CSS murni. */}
-      <FireSparks />
+      {/* HIASAN detail akun — dibeli di Shop, bisa dipasang/dipreview. */}
+      {profile && <ProfileDecor decor={(profile as any).profileDecor} />}
       {!profile ? (
         <p className="py-24 text-center text-sm text-muted-foreground">Memuat profil…</p>
       ) : (
@@ -314,7 +320,7 @@ export function ProfileSheet({
                     type="button"
                     onClick={() => setPhotoSheet(true)}
                     aria-label="Ganti photo profile"
-                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-gold-strong text-black shadow-[0_4px_12px_-4px_rgba(0,0,0,0.6)] transition active:scale-90"
+                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-sky-400 text-sky-950 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.6)] transition active:scale-90"
                   >
                     <Camera className="size-3.5" aria-hidden />
                   </button>
@@ -380,7 +386,7 @@ export function ProfileSheet({
                 </span>
               ) : null}
               {profile.clanTag && profile.clanName ? (
-                <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-white/20 bg-white/[0.06] px-2 py-1">
+                <span className="inline-flex max-w-full items-center gap-1.5 py-1">
                   <ClanTag
                     icon={profile.clanTagIcon ?? DEFAULT_CLAN_ICON}
                     tag={profile.clanTag}
@@ -482,57 +488,77 @@ export function ProfileSheet({
               );
             })()}
 
-            {/* 3 tombol DIGABUNG (Add Friend · YoruPet · Afinitas) —
-                DISIMPAN di mode Detail Konten (diminta tak terlihat di sana). */}
+            {/* BARIS AKSI — Add Friend · Chat · Give Prem (terpisah, outline),
+                lalu YoruPet & Afinitas sebagai kotak sendiri. */}
             {!detailKonten && (
-            <div
-              className={cn(
-                "mt-4 grid divide-x divide-white/15 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05]",
-                isMe ? "grid-cols-2" : "grid-cols-3",
-              )}
-            >
-              {!isMe && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-stretch gap-2">
+                {!isMe && (
+                  <button
+                    type="button"
+                    onClick={requestFriend}
+                    disabled={
+                      sending || friendStatus === "friend" || friendStatus === "pending"
+                    }
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border bg-transparent px-2 py-3 text-[12px] font-bold transition active:scale-[0.98]",
+                      friendStatus === "friend" || friendStatus === "pending"
+                        ? "border-white/12 text-white/45"
+                        : "border-white/30 text-white",
+                    )}
+                  >
+                    {sending ? <Send className="size-4" /> : <UserPlus className="size-4" />}
+                    {friendStatus === "friend"
+                      ? "Teman"
+                      : friendStatus === "pending"
+                        ? "Terkirim"
+                        : "Add Friend"}
+                  </button>
+                )}
+                {!isMe && onChat && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChat({
+                        id: userId as Id<"users">,
+                        name: profile.username ?? "user",
+                      })
+                    }
+                    aria-label="Chat"
+                    title="Chat"
+                    className="flex w-12 shrink-0 items-center justify-center rounded-xl bg-sky-300 text-sky-950 transition active:scale-95"
+                  >
+                    <MessageCircle className="size-5" />
+                  </button>
+                )}
+                {!isMe && (
+                  <button
+                    type="button"
+                    onClick={() => setGiveOpen(true)}
+                    aria-label="Give Premium"
+                    title="Give Premium"
+                    className="flex w-12 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-amber-950 transition active:scale-95"
+                  >
+                    <Crown className="size-5" />
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={requestFriend}
-                  disabled={
-                    sending || friendStatus === "friend" || friendStatus === "pending"
-                  }
-                  className={cn(
-                    "flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[12px] font-bold transition active:scale-[0.98]",
-                    friendStatus === "friend" || friendStatus === "pending"
-                      ? "text-white/45"
-                      : "text-white",
-                  )}
+                  onClick={() => setViewPet(true)}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/25 py-2.5 text-[12px] font-bold text-amber-200 transition active:scale-[0.98]"
                 >
-                  {sending ? (
-                    <Send className="size-4" />
-                  ) : (
-                    <UserPlus className="size-4" />
-                  )}
-                  {friendStatus === "friend"
-                    ? "Teman"
-                    : friendStatus === "pending"
-                      ? "Terkirim"
-                      : "Add Friend"}
+                  <PawPrint className="size-4" /> YoruPet
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setViewPet(true)}
-                className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[12px] font-bold text-amber-200 transition active:scale-[0.98]"
-              >
-                <PawPrint className="size-4" />
-                YoruPet
-              </button>
-              <button
-                type="button"
-                onClick={() => setAffinity(true)}
-                className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-3 text-[12px] font-bold text-pink-100 transition active:scale-[0.98]"
-              >
-                <HeartHandshake className="size-4" />
-                Afinitas
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setAffinity(true)}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/25 py-2.5 text-[12px] font-bold text-pink-100 transition active:scale-[0.98]"
+                >
+                  <HeartHandshake className="size-4" /> Afinitas
+                </button>
+              </div>
             </div>
             )}
             </div>
@@ -620,22 +646,62 @@ export function ProfileSheet({
                         `/nonton?anime=${h.animeId}&ep=&judul=${encodeURIComponent(h.animeTitle ?? "")}`,
                       );
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+                    className="w-full rounded-2xl bg-white/[0.045] p-2.5 text-left"
                   >
-                    <img
-                      src={h.animeImage ?? ""}
-                      className="h-14 w-10 rounded object-cover"
-                      alt=""
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{h.animeTitle}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Episode {h.episode}
-                      </p>
+                    {/* Baris atas: foto profile + username + waktu. */}
+                    <div className="flex items-center gap-1.5">
+                      <Avatar
+                        src={profile.image}
+                        seed={profile.username}
+                        className="size-6 shrink-0"
+                      />
+                      <span className="truncate text-[11px] font-black text-white/85">
+                        {profile.username ?? "user"}
+                      </span>
+                      {profile.premium && <BlueCheck className="size-3 shrink-0" />}
+                      <span className="ml-auto shrink-0 text-[9px] text-muted-foreground">
+                        {timeAgo(h.updatedAt)}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">
-                      {timeAgo(h.updatedAt)}
-                    </span>
+                    {/* Poster + judul + episode. */}
+                    <div className="mt-2 flex items-start gap-2.5">
+                      <img
+                        src={h.animeImage ?? ""}
+                        className="h-[68px] w-[48px] shrink-0 rounded-lg object-cover"
+                        alt=""
+                      />
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <p className="line-clamp-2 text-[12.5px] font-bold leading-snug text-white">
+                          {h.animeTitle}
+                        </p>
+                        <p className="mt-1 text-[10px] font-semibold text-white/45">
+                          Episode {h.episode}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Play + bar progres merah. */}
+                    {(() => {
+                      const pct =
+                        (h.durationSec ?? 0) > 0
+                          ? Math.min(100, Math.round(((h.progressSec ?? 0) / h.durationSec) * 100))
+                          : 0;
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-white/10 text-white/80">
+                            <Play className="size-2.5 fill-current" />
+                          </span>
+                          <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/12">
+                            <span
+                              className="block h-full rounded-full bg-gradient-to-r from-rose-500 to-red-400"
+                              style={{ width: `${Math.max(pct, 4)}%` }}
+                            />
+                          </span>
+                          <span className="shrink-0 text-[9px] font-bold text-white/45">
+                            {pct}%
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </button>
                 ))}
               {tab === "history" &&
@@ -807,16 +873,16 @@ export function ProfileSheet({
                       </div>
 
                       {/* Di bawahnya: poster kecil + judul & episode */}
-                      <div className="mt-1.5 flex items-center gap-2 pl-1">
+                      <div className="mt-2 flex items-center gap-2.5 pl-1">
                         {c.animeImage ? (
                           <img
                             src={c.animeImage}
                             alt=""
-                            className="h-10 w-7 shrink-0 rounded object-cover"
+                            className="h-16 w-11 shrink-0 rounded-lg object-cover"
                           />
                         ) : (
-                          <span className="flex h-10 w-7 shrink-0 items-center justify-center rounded bg-white/5">
-                            <Tv className="size-3.5 text-muted-foreground" />
+                          <span className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                            <Tv className="size-5 text-muted-foreground" />
                           </span>
                         )}
                         <div className="min-w-0 flex-1">
@@ -889,17 +955,17 @@ export function ProfileSheet({
                 type="button"
                 onClick={() => photoFileRef.current?.click()}
                 disabled={busyPhoto || busyRefresh}
-                className="flex w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3.5 py-3 text-left transition hover:border-gold-strong/40 hover:bg-gold-strong/10 active:scale-[0.99] disabled:opacity-50"
+                className="flex w-full items-center gap-3 rounded-2xl bg-sky-300 px-3.5 py-3 text-left text-sky-950 transition hover:bg-sky-200 active:scale-[0.99] disabled:opacity-50"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gold-strong/15">
-                  <Camera className="size-4 text-gold-strong" aria-hidden />
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-950/10">
+                  <Camera className="size-4 text-sky-950" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-bold text-foreground">
+                  <span className="block text-sm font-bold text-sky-950">
                     {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
                   </span>
-                  <span className="block text-[11px] text-muted-foreground">
-                    Pilih foto baru dari galeri
+                  <span className="block text-[11px] text-sky-900/70">
+                    Pilih foto baru dari galeri (banner terpisah di Pengaturan)
                   </span>
                 </span>
               </button>
@@ -1034,6 +1100,15 @@ export function ProfileSheet({
         />
       )}
 
+      {/* GIVE PREMIUM — pop up tanpa blur, bisa dipakai dari profil siapa pun. */}
+      {giveOpen && (
+        <GivePremiumDialog
+          peerId={userId}
+          name={profile?.username ?? "user"}
+          onClose={() => setGiveOpen(false)}
+        />
+      )}
+
       {/* YORUPET — kebun binatang milik user ini (mode lihat) */}
       {viewPet && (
         <div className="screen-enter fixed inset-0 z-[93] overflow-y-auto bg-background">
@@ -1051,6 +1126,133 @@ export function ProfileSheet({
           onClose={() => setAffinity(false)}
         />
       )}
+    </div>
+  );
+}
+
+/** Popup GIVE PREMIUM — tanpa blur, pilihan hari, dan error inline. */
+function GivePremiumDialog({
+  peerId,
+  name,
+  onClose,
+}: {
+  peerId: Id<"users">;
+  name: string;
+  onClose: () => void;
+}) {
+  const give = useMutation(api.chat.givePremium);
+  const { user: me } = useAuth();
+  const [days, setDays] = useState(7);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const COST: Record<number, number> = { 1: 2, 3: 4, 5: 6, 7: 9, 15: 17, 20: 23, 25: 30, 30: 32 };
+  const remaining = Math.max(
+    0,
+    Math.floor(((me?.premiumUntil ?? 0) - Date.now()) / 86400000),
+  );
+
+  const submit = async () => {
+    if (busy) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await give({
+        kind: "dm",
+        peerId,
+        days,
+        receivers: 5,
+        message: note.trim().length >= 50 ? note.trim() : undefined,
+      });
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal mengirim premium");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 p-3 pb-5"
+      onClick={() => !busy && onClose()}
+      role="dialog"
+      aria-modal
+    >
+      <div
+        className="pop-enter w-full max-w-sm overflow-hidden rounded-3xl bg-[#0e1219] shadow-[0_-12px_40px_-18px_rgba(0,0,0,.9)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-amber-300/15 text-amber-200">
+            <Crown className="size-4.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-white">Give Premium</p>
+            <p className="truncate text-[10px] text-white/45">
+              untuk {name} · sisa {remaining} hari premiummu
+            </p>
+          </div>
+          <button
+            onClick={() => !busy && onClose()}
+            aria-label="Tutup"
+            className="flex size-8 items-center justify-center rounded-full bg-white/8 text-white/70"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
+            Lama premium
+          </p>
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
+            {[1, 3, 7, 15].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={cn(
+                  "rounded-xl py-2.5 text-center transition",
+                  days === d
+                    ? "bg-amber-300 text-amber-950"
+                    : "bg-white/[0.06] text-white/75",
+                )}
+              >
+                <span className="block text-[13px] font-black leading-none">{d} hari</span>
+                <span className={cn("mt-1 block text-[9px] font-bold", days === d ? "text-amber-900/70" : "text-white/35")}>
+                  {COST[d]} hari premium
+                </span>
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            maxLength={200}
+            placeholder="Pesan (opsional, minimal 50 karakter kalau diisi)…"
+            className="mt-3 w-full resize-none rounded-xl bg-white/[0.05] px-3 py-2 text-[12px] text-white outline-none placeholder:text-white/30"
+          />
+          {err && (
+            <p className="mt-2 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-red-200">
+              {err}
+            </p>
+          )}
+          <p className="mt-2 text-[10px] leading-snug text-white/35">
+            Biaya diambil dari durasi premiummu. 5 slot bisa di-claim orang lain.
+          </p>
+          <button
+            onClick={() => void submit()}
+            disabled={busy || remaining < COST[days]}
+            className="mt-3 w-full rounded-xl bg-gradient-to-b from-amber-200 to-amber-400 py-3 text-sm font-black text-amber-950 transition active:scale-[0.99] disabled:from-white/10 disabled:to-white/10 disabled:text-white/40"
+          >
+            {busy
+              ? "Mengirim…"
+              : remaining < COST[days]
+                ? `Premium kurang ${COST[days] - remaining} hari`
+                : `Kirim ${days} hari premium`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -83,6 +83,19 @@ export const listFeed = query({
   },
 });
 
+/** Satu post — dipakai kartu Feed yang dibagikan di chat/DM. */
+export const postById = query({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const p = await ctx.db.get(postId);
+    if (!p) return null;
+    const viewer = await meOr(ctx);
+    if (p.privacy === "teman" && p.userId !== viewer) return null;
+    const d = await decorate(ctx, p, viewer);
+    return { ...d, cover: d.thumbUrl ?? d.music?.cover ?? null };
+  },
+});
+
 /** Post milik satu user (untuk grid Konten di detail akun). */
 export const userPosts = query({
   args: { userId: v.id("users") },

@@ -145,6 +145,7 @@ export const getPublicProfile = query({
       username: u.username,
       image: u.image,
       bannerUrl: u.bannerUrl,
+      profileDecor: u.profileDecor ?? null,
       introStyle: u.introStyle ?? null,
       level: u.level ?? 1,
       xp: u.xp ?? 0,
@@ -479,6 +480,60 @@ export const buyBorder = mutation({
       avatarBorder: borderId,
     });
     return { borderId, price };
+  },
+});
+
+/** HARGA HIASAN DETAIL AKUN (dipakai juga di src/lib/decorations.ts). */
+const DECOR_PRICES: Record<string, number> = {
+  fire: 1200,
+  sakura: 1800,
+  pistol: 2200,
+  newyear: 3000,
+  aurora: 900,
+  stardust: 1400,
+};
+
+/** Beli hiasan fullscreen detail akun — langsung dipasang setelah dibeli. */
+export const buyDecor = mutation({
+  args: { decorId: v.string() },
+  handler: async (ctx, { decorId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const price = DECOR_PRICES[decorId];
+    if (price === undefined) throw new Error("Hiasan tidak dikenal");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
+    const owned = me.ownedDecor ?? [];
+    if (owned.includes(decorId)) throw new Error("Kamu sudah punya hiasan ini");
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < price)
+      throw new Error(
+        `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} — butuh ${price.toLocaleString("id-ID")} buat beli hiasan ini`,
+      );
+    await ctx.db.patch(userId, {
+      diamonds: me.unlimitedSacret
+        ? (me.diamonds ?? 0)
+        : (me.diamonds ?? 0) - price,
+      ownedDecor: [...owned, decorId],
+      profileDecor: decorId,
+    });
+    return { decorId, price };
+  },
+});
+
+/** Pakai hiasan yang sudah dimiliki — "none" berarti tanpa hiasan. */
+export const equipDecor = mutation({
+  args: { decorId: v.string() },
+  handler: async (ctx, { decorId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
+    if (decorId !== "none" && DECOR_PRICES[decorId] === undefined)
+      throw new Error("Hiasan tidak dikenal");
+    if (decorId !== "none" && !(me.ownedDecor ?? []).includes(decorId))
+      throw new Error("Belum punya hiasan itu — beli dulu di Shop");
+    await ctx.db.patch(userId, { profileDecor: decorId });
+    return { decorId };
   },
 });
 

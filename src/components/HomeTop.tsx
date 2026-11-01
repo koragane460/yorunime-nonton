@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { BlueCheck } from "@/components/lstream-ui";
+import { Avatar, BlueCheck } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { NotifButton } from "@/components/NotifButton";
 import { greetingOf, fmtShort } from "@/components/HomeHead";
@@ -113,6 +113,11 @@ export function AnnouncementBox() {
 
   const item = rows[0];
   const raw = item.message ?? "";
+  const author = item as unknown as {
+    authorName?: string;
+    authorImage?: string | null;
+    authorTitle?: string;
+  };
   const tag = (raw.match(/^\[(error|eror|update|info)\]/i)?.[1] ?? "").toLowerCase();
   const text = raw.replace(/^\[[a-z]+\]\s*/i, "");
   const kind: "error" | "update" | "info" =
@@ -156,16 +161,28 @@ export function AnnouncementBox() {
         className={cn("absolute left-2.5 top-6 bottom-6 w-[3px] rounded-full", tone.rule)}
       />
 
-      <div className="relative flex items-center justify-between gap-3 pl-3.5">
-        <span className="flex items-center gap-2">
-          <Megaphone className={cn("size-4 shrink-0", tone.icon)} />
-          <span className="text-[11px] font-black uppercase tracking-[0.16em] text-white">
-            Pengumuman
+      <div className="relative flex items-center gap-2 pl-3.5">
+        {/* Pengirim: foto + nama + title, langsung di kiri atas. */}
+        <Avatar
+          src={author.authorImage ?? undefined}
+          seed={author.authorName ?? "YoruNime"}
+          className="size-8 shrink-0"
+        />
+        <span className="min-w-0">
+          <span className="block truncate text-[12px] font-black leading-tight text-white">
+            {author.authorName ?? "YoruNime"}
           </span>
+          <span className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
+            <Megaphone className={cn("size-2.5", tone.icon)} />
+            {author.authorTitle ?? "Developer"}
+          </span>
+        </span>
+        <span className="ml-auto shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/50">
+          {ago(item.createdAt)}
         </span>
       </div>
 
-      <p className="relative mt-3 flex-1 whitespace-pre-wrap pl-3.5 font-display text-[17px] font-black leading-[1.3] tracking-tight text-white">
+      <p className="relative mt-2.5 flex-1 whitespace-pre-wrap pl-3.5 font-display text-[16px] font-bold leading-[1.35] tracking-tight text-white">
         {text}
       </p>
 

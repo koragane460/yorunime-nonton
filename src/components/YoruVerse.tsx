@@ -38,6 +38,7 @@ import { YoruPetScreen } from "@/components/YoruPet";
 import MusicScreen from "@/pages/Music";
 import { ClanRow } from "@/pages/Clan";
 import { BORDERS } from "@/lib/borders";
+import { DECORATIONS, DecorPreview } from "@/components/ProfileDecor";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 
@@ -636,14 +637,20 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
   const { user } = useAuth();
   const buyBorder = useMutation(api.account.buyBorder);
   const equipBorder = useMutation(api.account.equipBorder);
-  const [tab, setTab] = useState<"profile" | "gacha">("profile");
+  const buyDecor = useMutation(api.account.buyDecor);
+  const equipDecor = useMutation(api.account.equipDecor);
+  const [tab, setTab] = useState<"profile" | "decor" | "gacha">("profile");
   const [busyBorder, setBusyBorder] = useState<string | null>(null);
+  const [shopErr, setShopErr] = useState<string | null>(null);
 
   const ownedBorders = user?.ownedBorders ?? [];
   const equippedBorder = user?.avatarBorder ?? "none";
+  const ownedDecor = user?.ownedDecor ?? [];
+  const equippedDecor = user?.profileDecor ?? "none";
 
   const pickBorder = async (b: (typeof BORDERS)[number]) => {
     if (busyBorder) return;
+    setShopErr(null);
     setBusyBorder(b.id);
     try {
       if (equippedBorder === b.id) {
@@ -652,10 +659,28 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
         await equipBorder({ borderId: b.id });
       } else {
         await buyBorder({ borderId: b.id });
-        toast.success(`Border ${b.name} dibeli & terpasang!`);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      setShopErr(e instanceof Error ? e.message : "Gagal");
+    } finally {
+      setBusyBorder(null);
+    }
+  };
+
+  const pickDecor = async (d: (typeof DECORATIONS)[number]) => {
+    if (busyBorder) return;
+    setShopErr(null);
+    setBusyBorder(d.id);
+    try {
+      if (equippedDecor === d.id) {
+        await equipDecor({ decorId: "none" });
+      } else if (ownedDecor.includes(d.id)) {
+        await equipDecor({ decorId: d.id });
+      } else {
+        await buyDecor({ decorId: d.id });
+      }
+    } catch (e) {
+      setShopErr(e instanceof Error ? e.message : "Gagal");
     } finally {
       setBusyBorder(null);
     }
@@ -666,7 +691,7 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
       <div className="mx-auto w-full max-w-2xl px-4 pt-4">
         <ScreenHead title="Shop" onBack={onBack} />
         {/* Tab PROFILE / GACHA — teks + garis bawah saja, tanpa background */}
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           <button
             onClick={() => setTab("profile")}
             className={cn(
@@ -677,6 +702,17 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
             )}
           >
             👤 Profile
+          </button>
+          <button
+            onClick={() => setTab("decor")}
+            className={cn(
+              "border-b-2 pb-1.5 pt-1 text-[12px] font-black transition",
+              tab === "decor"
+                ? "border-gold text-gold"
+                : "border-transparent text-zinc-400 hover:text-zinc-200",
+            )}
+          >
+            ✨ Hiasan
           </button>
           <button
             onClick={() => setTab("gacha")}
@@ -692,7 +728,75 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      {tab === "profile" ? (
+      {shopErr && (
+        <p className="mx-auto mt-2 w-full max-w-2xl px-4 text-[11px] font-semibold text-red-300">
+          {shopErr}
+        </p>
+      )}
+
+      {tab === "decor" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
+          <div className="mx-auto w-full max-w-2xl px-4 pt-4">
+            <div className="rounded-2xl bg-white/[0.035] px-3.5 py-3">
+              <p className="text-[12px] font-black text-white">Hiasan detail akun</p>
+              <p className="mt-0.5 text-[10.5px] leading-snug text-white/50">
+                Setiap kartu adalah preview asli. Tekan untuk beli & pasang;
+                tekan lagi untuk melepas.
+              </p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              {DECORATIONS.map((d) => {
+                const owned = d.id === "none" || ownedDecor.includes(d.id);
+                const active = equippedDecor === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => void pickDecor(d)}
+                    disabled={busyBorder !== null}
+                    className={cn(
+                      "overflow-hidden rounded-2xl p-2 text-left transition active:scale-[0.98] disabled:opacity-60",
+                      active ? "bg-gold/15" : "bg-white/[0.04]",
+                    )}
+                  >
+                    <DecorPreview id={d.id} />
+                    <p className="mt-2 text-[11.5px] font-black text-white">{d.name}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[9.5px] leading-snug text-white/45">
+                      {d.blurb}
+                    </p>
+                    <div className="mt-1.5 flex items-center justify-between gap-1">
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[9px] font-black",
+                          d.price === 0
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : "bg-gold/15 text-gold",
+                        )}
+                      >
+                        {d.price === 0
+                          ? "Gratis"
+                          : `${d.price.toLocaleString("id-ID")} 💰`}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[8.5px] font-black uppercase tracking-wide",
+                          active
+                            ? "text-gold"
+                            : owned
+                              ? "text-white/45"
+                              : "text-white/30",
+                        )}
+                      >
+                        {active ? "Terpasang" : owned ? "Dimiliki" : "Preview"}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : tab === "profile" ? (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
           <div className="mx-auto w-full max-w-2xl px-4 pt-8">
             {/* Semua kotak border dibungkus SATU kotak lagi, dan di paling

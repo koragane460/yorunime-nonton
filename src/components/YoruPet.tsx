@@ -545,7 +545,45 @@ export function YoruPetScreen({
                   />
                 </div>
               </motion.div>
-            ) : (
+            ) : null}
+
+            {/* SEMUA PET YANG DI-EQUIP ikut tampil di kebun — bukan cuma
+                yang pertama. Posisi tersebar supaya tidak menumpuk. */}
+            {equippedList.slice(1).map((p, i) => {
+              const slots = [
+                { left: 16, top: 56 },
+                { left: 70, top: 50 },
+                { left: 30, top: 34 },
+                { left: 60, top: 70 },
+                { left: 12, top: 30 },
+                { left: 82, top: 32 },
+                { left: 44, top: 22 },
+                { left: 26, top: 74 },
+                { left: 74, top: 74 },
+              ];
+              const slot = slots[i % slots.length];
+              return (
+                <motion.div
+                  key={p.uid}
+                  className="absolute z-[9]"
+                  style={{ left: `${slot.left}%`, top: `${slot.top}%` }}
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{
+                    duration: 2.6 + (i % 3) * 0.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: i * 0.2,
+                  }}
+                >
+                  <div className={cn("relative size-12 sm:size-14", RARITY_STYLE[p.rarity as PetRarity]?.glow)}>
+                    <PetArt petId={p.petId} />
+                  </div>
+                  <span className="mx-auto mt-0.5 block h-1.5 w-8 rounded-[50%] bg-black/45 blur-[2px]" />
+                </motion.div>
+              );
+            })}
+
+            {equippedList.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <p className="rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-zinc-300 backdrop-blur-sm">
                   Pasang (equip) pet supaya bermain di kebun 🐾

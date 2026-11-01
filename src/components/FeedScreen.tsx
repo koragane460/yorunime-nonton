@@ -504,10 +504,14 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
     if (!picked || busy) return;
     setBusy(true);
     try {
-      const line = `📦 ${p.username} membagikan konten Feed${
-        p.caption ? `: "${p.caption.slice(0, 120)}"` : ""
-      }${note.trim() ? `\n\n${note.trim()}` : ""}`;
-      await send({ kind: "dm", peerId: picked.userId as Id<"users">, text: line });
+      // Kirim sebagai KARTU KONTEN FEED (bisa dibuka & kembali), bukan
+      // tempelan teks — persis kartu yang terlihat di feed.
+      await send({
+        kind: "dm",
+        peerId: picked.userId as Id<"users">,
+        text: note.trim() || undefined,
+        feedPostId: p.postId,
+      });
       toast.success(`Terkirim ke ${picked.username}`);
       onClose();
     } catch (e) {
