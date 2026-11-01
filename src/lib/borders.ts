@@ -41,4 +41,28 @@ export const BORDERS: BorderDef[] = [
     price: 7500,
     blurb: "Awan berarak + hujan salju",
   },
+  {
+    id: "sakura",
+    name: "Sakura Ring",
+    price: 2800,
+    blurb: "Cincin kelopak sakura berputar",
+  },
+  {
+    id: "bubble",
+    name: "Bubble Sea",
+    price: 3200,
+    blurb: "Gelembung laut naik berkilau",
+  },
+  {
+    id: "starlight",
+    name: "Starlight",
+    price: 3800,
+    blurb: "Langit malam + bintang berkedip",
+  },
+  {
+    id: "cyber",
+    name: "Cyber Grid",
+    price: 5200,
+    blurb: "Grid neon berjalan di sekeliling foto",
+  },
 ];

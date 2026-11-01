@@ -146,7 +146,17 @@ export function VoiceNobarStage({
   }, [source]);
 
   return (
-    <div className="mx-3 mb-2 overflow-hidden rounded-2xl border border-white/12 bg-black">
+    <div className="mx-3 mb-2 overflow-hidden rounded-2xl border border-white/15 bg-[#090d14]">
+      {/* Strip penanda nobar — beda dari kartu peserta, tanpa glow. */}
+      <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.04] px-2.5 py-1.5">
+        <span className="size-1.5 rounded-full bg-rose-400" />
+        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-rose-200/90">
+          Nobar
+        </span>
+        <span className="ml-auto truncate text-[9px] font-semibold text-white/35">
+          {hostName} · layar bersama
+        </span>
+      </div>
       {/* Player PALING ATAS — kontrolnya kontrol player itu sendiri. */}
       <div className="relative aspect-video w-full bg-black">
         {loading && (

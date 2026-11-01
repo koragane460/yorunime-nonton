@@ -454,6 +454,10 @@ const BORDER_PRICES: Record<string, number> = {
   holo: 5000,
   wings: 6500,
   cloud: 7500,
+  sakura: 2800,
+  bubble: 3200,
+  starlight: 3800,
+  cyber: 5200,
 };
 
 /** Beli border foto profile pakai Sacret — begitu dibeli langsung dipakai. */

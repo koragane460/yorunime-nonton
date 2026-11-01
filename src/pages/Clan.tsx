@@ -1523,7 +1523,7 @@ function ClanDetailScreen({
                     <button
                       onClick={() => {
                         setSettingsOpen(false);
-                        setTab("shop");
+                        setShopOpen(true);
                       }}
                       className="rounded-xl border border-gold/35 bg-gold/10 py-2.5 text-xs font-bold text-gold transition active:scale-[0.98]"
                     >

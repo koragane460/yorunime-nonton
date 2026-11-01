@@ -2668,30 +2668,37 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
     }
     if (media === "manga" || media === "manhwa") {
       setSearching(true);
-      try {
-        const rows = (await searchComics({
-          q: term,
-          kind: media,
-          limit: 20,
-        })) as any[];
-        setResults(
-          (rows ?? []).map((r) => ({
-            id: `comic:${r.slug}`,
-            slug: r.slug,
-            title: r.title,
-            image: r.cover ?? r.image,
-            type: r.kind === "manhwa" ? "Manhwa" : "Manga",
-            synopsis: r.synopsis ?? r.description ?? "",
-            comicKind: r.kind ?? media,
-            ongoing: r.ongoing,
-            views: r.views,
-          })) as unknown as AnimeCardT[],
-        );
-      } catch {
-        setResults([]);
-      }
-      setSearching(false);
-      return;
+      let alive = true;
+      void (async () => {
+        try {
+          const rows = (await searchComics({
+            q: term,
+            kind: media,
+            limit: 20,
+          })) as any[];
+          if (!alive) return;
+          setResults(
+            (rows ?? []).map((r) => ({
+              id: `comic:${r.slug}`,
+              slug: r.slug,
+              title: r.title,
+              image: r.cover ?? r.image,
+              type: r.kind === "manhwa" ? "Manhwa" : "Manga",
+              synopsis: r.synopsis ?? r.description ?? "",
+              comicKind: r.kind ?? media,
+              ongoing: r.ongoing,
+              views: r.views,
+            })) as unknown as AnimeCardT[],
+          );
+        } catch {
+          if (alive) setResults([]);
+        } finally {
+          if (alive) setSearching(false);
+        }
+      })();
+      return () => {
+        alive = false;
+      };
     }
     if (isMusicSecret(term)) return;
     const t = setTimeout(() => void doSearch(), 250);
