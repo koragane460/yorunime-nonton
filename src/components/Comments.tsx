@@ -389,7 +389,9 @@ function CommentRow({
        avatar bulat, nama + waktu, lalu pesan tanpa bubble. */
     <div className="border-0 bg-transparent px-0.5 py-1.5">
       <div className="flex items-start gap-2.5 px-2.5 pt-1">
-        <Avatar src={c.image} seed={c.username} className="size-8 ring-1 ring-white/15" />
+        {/* Avatar komentar DIPERBESAR (permintaan) — size-10, teks ikut
+            menyesuaikan biar sejajar. */}
+        <Avatar src={c.image} seed={c.username} className="size-10 ring-1 ring-white/15" />
         <div className="min-w-0 flex-1 pl-2">
           <div className="flex items-center gap-1">
             <p className="truncate text-[13px] font-black">{c.username}</p>
@@ -407,10 +409,10 @@ function CommentRow({
           <p className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</p>
         </div>
       </div>
-      <p className="break-words px-3 pb-0.5 pl-[42px] pt-1.5 text-[14.5px] leading-relaxed text-foreground/90">
+      <p className="break-words px-3 pb-0.5 pl-[48px] pt-1.5 text-[14.5px] leading-relaxed text-foreground/90">
         {c.text}
       </p>
-      <div className="flex items-center gap-4 px-3 pb-1 pl-[42px] pt-0.5 text-[11px] text-muted-foreground">
+      <div className="flex items-center gap-4 px-3 pb-1 pl-[48px] pt-0.5 text-[11px] text-muted-foreground">
         {/* REPLAY dulu (kiri), baru LIKE — urutan sesuai permintaan. */}
         <button
           aria-label="Reply"

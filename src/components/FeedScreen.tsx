@@ -670,9 +670,21 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
   const pick = (f: File | undefined) => {
     if (!f) return;
     if (!f.type.startsWith("image/") && !f.type.startsWith("video/")) {
-      toast.error("Pilih gambar atau video dari galeri");
+      setErr("Pilih gambar atau video dari galeri");
       return;
     }
+    // BATAS UKURAN — file yang kebesaran bikin unggahan gagal dengan pesan
+    // "Failed to fetch" yang membingungkan. Dicek di sini supaya user langsung
+    // tahu sebelum proses unggah dimulai.
+    const mb = f.size / (1024 * 1024);
+    const limitMb = f.type.startsWith("video/") ? 60 : 12;
+    if (mb > limitMb) {
+      setErr(
+        `File terlalu besar (${mb.toFixed(1)} MB). Maksimal ${limitMb} MB untuk ${f.type.startsWith("video/") ? "video" : "foto"} — compress dulu sebelum unggah.`,
+      );
+      return;
+    }
+    setErr(null);
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setKind(f.type.startsWith("video/") ? "video" : "image");

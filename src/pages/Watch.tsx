@@ -2725,22 +2725,48 @@ function WatchContent() {
               </div>
             )}
             {speedOpen && (
-              <div className="flex flex-wrap gap-1.5 rounded-lg bg-black/80 p-2">
-                {SPEEDS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      setSpeed(s);
-                      setSpeedOpen(false);
-                    }}
-                    className={cn(
-                      "rounded px-2.5 py-1 text-xs",
-                      speed === s ? "bg-primary text-white" : "bg-white/10 text-white",
-                    )}
-                  >
-                    {s}x
-                  </button>
-                ))}
+              <div
+                className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 px-6 backdrop-blur-[2px]"
+                onClick={() => setSpeedOpen(false)}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-xs rounded-3xl border border-white/15 bg-black/92 px-3 pb-3 pt-2.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-200"
+                >
+                  <div
+                    aria-hidden
+                    className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-white/45"
+                  />
+                  <p className="mb-2 px-1 text-center text-[11px] font-semibold text-white/55">
+                    Kecepatan pemutaran
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {SPEEDS.map((s, si) => {
+                      const active = speed === s;
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            setSpeed(s);
+                            setSpeedOpen(false);
+                          }}
+                          style={{ animationDelay: `${si * 40}ms` }}
+                          className={cn(
+                            "animate-in fade-in-0 slide-in-from-top-1 rounded-2xl border px-2 py-2.5 text-[13px] font-black transition duration-300 active:scale-95",
+                            active
+                              ? "border-primary/60 bg-primary/15 text-primary"
+                              : "border-white/12 bg-white/[0.04] text-white/85",
+                          )}
+                        >
+                          {s}x
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2.5 px-1 text-center text-[10px] text-white/40">
+                    1× = kecepatan normal. Lebih cepat untuk lewati jeda.
+                  </p>
+                </div>
               </div>
             )}
             {/* Pemilih subtitle (Indonesia dll) */}
@@ -3458,74 +3484,95 @@ function WatchContent() {
         </Popup>
       )}
       {downloadOpen && (
-        <Popup onClose={() => setDownloadOpen(false)} title="Unduh">
-          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-            {downloadUrl
-              ? "Pilih kualitas. Episode ini langsung masuk ke daftar Download di Home dan unduhannya langsung berjalan. 1080p hanya untuk akun Premium."
-              : "Episode ini belum punya server MP4 yang bisa disimpan offline. Coba putar server lain dulu."}
-          </p>
-          {downloadUrl && realQualities.length > 0 && (
-            <p className="mb-3 rounded-lg border border-border bg-card/60 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
-              Resolusi asli episode ini di server yang tersedia:{" "}
-              <span className="font-bold text-foreground">
-                {realQualities.map((h) => `${h}p`).join(", ")}
-              </span>
-              . Kalau kamu memilih angka yang tidak ada di daftar itu, yang
-              diunduh adalah resolusi terdekat yang benar-benar ada, bukan file
-              1080p yang isinya 480p.
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 px-6 backdrop-blur-[2px]"
+          onClick={() => setDownloadOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="thin-scroll max-h-[62vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/15 bg-black/92 px-3 pb-3 pt-2.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-200"
+          >
+            <div
+              aria-hidden
+              className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-white/45"
+            />
+            <p className="yn-title mb-1 text-center text-sm">Unduh episode</p>
+            <p className="mb-3 px-1 text-center text-[11px] leading-relaxed text-white/50">
+              {downloadUrl
+                ? "Masuk ke daftar Download di Home, unduhan langsung jalan. 1080p khusus Premium."
+                : "Belum ada server MP4 untuk disimpan offline. Coba putar server lain dulu."}
             </p>
-          )}
-          <div className="space-y-1.5">
-            {QUALITIES.slice(2).map((q) => {
-              const height = parseInt(q, 10);
-              const locked = q === PREMIUM_QUALITY && !isPremiumNow;
-              // Server yang benar-benar dipakai kalau kualitas ini dipilih.
-              const pick = downloadUrlFor(q);
-              // Resolusi nyata file itu, dibaca dari metadata file. Kalau 0,
-              // belum sempat dicek dan pilihan tetap dibiarkan.
-              const realH = pick.height;
-              const missing = realH > 0 && realH < height;
-              const usable = !!pick.url && !locked;
-              const busy = pendingQuality === q;
-              return (
-                <div key={q}>
+            {downloadUrl && realQualities.length > 0 && (
+              <p className="mb-3 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[10px] leading-relaxed text-white/55">
+                Resolusi asli episode ini:{" "}
+                <span className="font-bold text-white/90">
+                  {realQualities.map((h) => `${h}p`).join(", ")}
+                </span>
+                . Pilihan yang tidak ada tetap mengunduh resolusi terdekat yang
+                benar-benar ada — bukan file 1080p isinya 480p.
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-1.5">
+              {QUALITIES.slice(2).map((q, qi) => {
+                const height = parseInt(q, 10);
+                const locked = q === PREMIUM_QUALITY && !isPremiumNow;
+                // Server yang benar-benar dipakai kalau kualitas ini dipilih.
+                const pick = downloadUrlFor(q);
+                // Resolusi nyata file itu, dibaca dari metadata file. Kalau 0,
+                // belum sempat dicek dan pilihan tetap dibiarkan.
+                const realH = pick.height;
+                const missing = realH > 0 && realH < height;
+                const usable = !!pick.url && !locked;
+                const busy = pendingQuality === q;
+                return (
                   <button
+                    key={q}
                     disabled={!usable || busy}
                     onClick={() => startDownload(q)}
+                    style={{ animationDelay: `${qi * 45}ms` }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
+                      "animate-in fade-in-0 slide-in-from-top-1 rounded-2xl border px-2.5 py-2 text-left transition duration-300",
                       !usable || busy
                         ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
-                        : "border-border hover:border-foreground/40",
+                        : "border-white/12 bg-white/[0.04] active:scale-[0.98]",
                     )}
                   >
-                    <span className="w-14 text-sm font-bold">{q}</span>
-                    {q === PREMIUM_QUALITY && (
-                      <span className="rounded-full border border-amber-400/60 bg-amber-400/15 px-2 py-0.5 text-[9px] font-bold text-amber-300">
-                        Premium
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "text-[15px] font-black leading-none",
+                          usable ? QUALITY_COLOR[q] : "text-zinc-600",
+                        )}
+                      >
+                        {q}
                       </span>
-                    )}
-                    {missing && (
-                      <span className="text-[9px] text-amber-300/90">
-                        yang tersedia {realH}p
-                      </span>
-                    )}
-                    {usable && (
-                      <span className="ml-auto text-[10px] font-bold text-primary">
-                        {busy ? "Menyiapkan..." : "Unduh"}
-                      </span>
-                    )}
-                    {locked && <Lock className="ml-auto inline size-3" />}
+                      {q === PREMIUM_QUALITY && (
+                        <span className="rounded-full border border-amber-400/60 bg-amber-400/15 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+                          Premium
+                        </span>
+                      )}
+                      {missing && (
+                        <span className="text-[9px] font-semibold text-amber-300/90">
+                          tersedia {realH}p
+                        </span>
+                      )}
+                      {usable && (
+                        <span className="ml-auto text-[10px] font-bold text-primary">
+                          {busy ? "Menyiapkan…" : "Unduh"}
+                        </span>
+                      )}
+                      {locked && <Lock className="ml-auto inline size-3.5 text-amber-300" />}
+                    </span>
+                    <span className="mt-1.5 block text-[11px] font-semibold leading-tight text-white/55">
+                      {QUALITY_INFO[q]}
+                      {missing && <> File {realH}p.</>}
+                    </span>
                   </button>
-                  <p className="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
-                    {QUALITY_INFO[q]}
-                    {missing && <> File untuk pilihan ini {realH}p.</>}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </Popup>
+        </div>
       )}
     </div>
   );

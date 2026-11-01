@@ -1458,6 +1458,9 @@ function HomeContent() {
         )}
       </SectionRow>
 
+      {/* 8) FOOTER — paling bawah halaman, sebelum layar overlay. */}
+      <HomeFooter />
+
       {catalog && (
         <CatalogScreen
           kind={catalog.kind}
@@ -1695,7 +1698,54 @@ function ClanBox({ onOpen }: { onOpen: () => void }) {
       )}
     </button>
   );
-}// ------------------------------------------------------ chat preview ----
+}// ------------------------------------------------------ footer ----
+
+/**
+ * Footer paling bawah Home: link relasi (media sosial & kontak) + catatan
+ * kecil. Sengaja ringkas — tidak menumpuk di atas konten utama.
+ */
+function HomeFooter() {
+  const navigate = useNavigate();
+  // Hanya rute yang benar-benar ada di router + link donate resmi.
+  const routes = [
+    { label: "Feed", to: "/feed" },
+    { label: "Baca Komik", to: "/baca" },
+    { label: "Film", to: "/film" },
+    { label: "Clan", to: "/clan" },
+    { label: "Premium", to: "/premium" },
+    { label: "Pengaturan", to: "/akun" },
+  ];
+  return (
+    <footer className="mt-8 border-t border-white/10 bg-black/30 px-4 pb-10 pt-6 text-center">
+      <p className="yn-eyebrow mb-3">YoruNime</p>
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        {routes.map((r) => (
+          <button
+            key={r.label}
+            onClick={() => navigate(r.to)}
+            className="text-[11px] font-semibold text-zinc-500 transition hover:text-gold-strong"
+          >
+            {r.label}
+          </button>
+        ))}
+        <a
+          href="https://sociabuzz.com/yorunime/donate"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-[11px] font-semibold text-zinc-500 transition hover:text-gold-strong"
+        >
+          Donate
+        </a>
+      </div>
+      <p className="mt-4 text-[10px] leading-relaxed text-zinc-600">
+        © 2026 YoruNime · nonton tanpa batas · dibuat untuk komunitas wibu
+        Indonesia.
+      </p>
+    </footer>
+  );
+}
+
+// ------------------------------------------------------ chat preview ----
 
 
 // ------------------------------------------------------ leaderboard ----
@@ -3687,6 +3737,27 @@ function AnimeDetailScreen({
   const PAGE = 60;
   const shownEps = allEpisodes ? eps : eps.slice(0, PAGE);
   const releasedCount = eps.filter((e: any) => e.released !== false).length;
+
+  /**
+   * Target LANJUT NONTON — episode tersimpan + url-nya.
+   *
+   * Dulu tombol "Lanjut episode" & "Lanjutkan nonton" cuma membuka
+   * `/nonton?anime=…` tanpa `ep=`, jadi player selalu mulai dari episode
+   * pertama dan posisi menit yang tersimpan tidak pernah kepakai.
+   * Sekarang episode tersimpan dicari di daftar lalu id-nya dipakai.
+   */
+  const resumeEp = progress?.episode
+    ? eps.find((e: any) => Number(e?.number) === Number(progress.episode))
+    : undefined;
+  const resumeUrl = `/nonton?anime=${animeId}${
+    resumeEp?.id ? `&ep=${encodeURIComponent(String(resumeEp.id))}` : ""
+  }${
+    animeTitle
+      ? `&judul=${encodeURIComponent(animeTitle)}`
+      : detail.title
+        ? `&judul=${encodeURIComponent(detail.title)}`
+        : ""
+  }`;
   // Nomor episode terawal yang benar-benar ada di sumber (untuk catatan
   // "episode 1–X tidak tersedia" pada judul yang episodenya bolong).
   const epNums = eps
@@ -3854,15 +3925,7 @@ function AnimeDetailScreen({
             <div className="flex items-stretch gap-2.5">
               <button
                 className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 text-sm font-bold text-white transition hover:bg-sky-600 active:scale-[0.98]"
-                onClick={() =>
-                  navigate(
-                    `/nonton?anime=${animeId}${
-                      animeTitle
-                        ? `&judul=${encodeURIComponent(animeTitle)}`
-                        : ""
-                    }`,
-                  )
-                }
+                onClick={() => navigate(resumeUrl)}
               >
                 <Play className="size-4 fill-current" aria-hidden />
                 {progress && !progress.finished && progress.progressSec > 30
@@ -4230,13 +4293,7 @@ function AnimeDetailScreen({
                 </p>
                 {progress && progress.progressSec > 0 ? (
                   <button
-                    onClick={() =>
-                      navigate(
-                        `/nonton?anime=${animeId}${
-                          animeTitle ? `&judul=${encodeURIComponent(animeTitle)}` : ""
-                        }`,
-                      )
-                    }
+                    onClick={() => navigate(resumeUrl)}
                     className="flex w-full items-center gap-3 rounded-xl p-1 text-left transition active:scale-[0.99]"
                   >
                     <span className="relative h-20 w-32 shrink-0 overflow-hidden rounded-xl bg-black/60">
