@@ -1806,91 +1806,12 @@ a {
 }
 
 /* ==================================================================
- * JARING PENGAMAN — menurunkan sisa gaya lama ke sistem yang sama.
- * Berlaku untuk kelas utilitas lama yang tersebar di ratusan tempat
- * (gradasi ungu/pink/cyan, dan shadow berpendar) supaya seluruh app
- * berhenti terlihat seperti template generik TANPA harus menyentuh
- * satu per satu file-nya.
+ * (DIHAPUS) JARING PENGAMAN — blok ini dulu memaksa SEMUA elemen
+ * berwarna (sky/pink/violet/cyan/blue/rose) menjadi burgundy seragam
+ * lewat selector substring + !important. Akibatnya setiap perubahan
+ * desain di file TSX tertimpa dan tampilannya tidak pernah berubah.
+ * Dihapus agar warna tiap fitur benar-benar tampil sesuai desain.
  * ================================================================== */
-
-/* 1) NEON → elevasi sinematik (bayangan jatuh panjang, tanpa kilau). */
-[class*="shadow-[0_0_"],
-[class*="shadow-[0_0px"] {
-  box-shadow: 0 18px 40px -30px rgb(0 0 0 / 0.95) !important;
-}
-
-/* 2) GRADASI DI LUAR PALET (ungu, pink, biru, cyan, indigo, fuchsia)
-      → gradasi brand burgundy tunggal. Emas & amber dibiarkan sebagai
-      aksen. Ini yang membuat tombol, progress, dan ring seragam lagi. */
-[class*="bg-gradient-to-"][class*="violet"],
-[class*="bg-gradient-to-"][class*="fuchsia"],
-[class*="bg-gradient-to-"][class*="purple"],
-[class*="bg-gradient-to-"][class*="pink-"],
-[class*="bg-gradient-to-"][class*="rose-"],
-[class*="bg-gradient-to-"][class*="sky-"],
-[class*="bg-gradient-to-"][class*="blue-"],
-[class*="bg-gradient-to-"][class*="indigo"],
-[class*="bg-gradient-to-"][class*="cyan-"] {
-  background-image: linear-gradient(
-    100deg,
-    oklch(0.66 0.14 20 / 0.95) 0%,
-    oklch(0.5 0.15 14 / 0.98) 100%
-  ) !important;
-}
-
-/* 3) GELAP UNGU/PIRANG bawaan lama → tinta netral sistem. */
-[class*="linear-gradient"][class*="#241033"],
-[class*="linear-gradient"][class*="#2a1608"],
-[class*="linear-gradient"][class*="#241a3d"],
-[class*="linear-gradient"][class*="#2b1033"],
-[class*="radial-gradient"][class*="#2a1330"],
-[class*="linear-gradient"][class*="#171126"],
-[class*="linear-gradient"][class*="#17111e"] {
-  background-image: linear-gradient(168deg, oklch(0.2 0.02 266) 0%, oklch(0.14 0.015 266) 55%, oklch(0.11 0.012 266) 100%) !important;
-}
-
-/* 4) Ring/outline ungu-sambar lama → hairline netral. */
-[class*="border-violet-"][class*="shadow-"],
-[class*="border-pink-"][class*="shadow-"] {
-  border-color: rgb(255 255 255 / 0.16) !important;
-}
-
-/* 5) LATAR BERWARNA ungu/pink/fuchsia/cyan → kaca netral sistem.
-      Ini sisa terakhir dari gaya lama; ditekan di sini supaya tidak ada
-      layar yang mendadak tampil ungu lagi. */
-[class*="bg-violet-"],
-[class*="bg-fuchsia-"],
-[class*="bg-purple-"],
-[class*="bg-pink-"] {
-  background-color: rgb(246 200 53 / 0.13) !important;
-}
-[class*="bg-cyan-"] {
-  background-color: rgb(255 255 255 / 0.09) !important;
-}
-[class*="border-violet-"],
-[class*="border-fuchsia-"],
-[class*="border-purple-"],
-[class*="border-pink-"],
-[class*="border-cyan-"] {
-  border-color: rgb(255 255 255 / 0.16) !important;
-}
-[class*="text-violet-"],
-[class*="text-fuchsia-"],
-[class*="text-purple-"],
-[class*="text-cyan-"] {
-  color: oklch(0.9 0.015 255) !important;
-}
-[class*="text-pink-"] {
-  color: oklch(0.86 0.16 92) !important;
-}
-/* 6) Bayangan berwarna pink/ungu/cyan → bayangan netral. */
-[class*="shadow-pink-"],
-[class*="shadow-violet-"],
-[class*="shadow-fuchsia-"],
-[class*="shadow-cyan-"],
-[class*="shadow-rose-"] {
-  box-shadow: 0 18px 40px -30px rgb(0 0 0 / 0.95) !important;
-}
 
 
 /* ==================================================================
