@@ -1017,7 +1017,9 @@ export function ChatPanel({
             <Send className="size-5" />
           </Button>
         </div>
-        {/* 3 KOTAK ROUNDED di bawah kolom pesan: Foto · Give Prem · Sticker. */}
+        {/* 3 KOTAK HORIZONTAL + AGAK MIRING di bawah kolom pesan:
+            ikon di KIRI, teks di KANAN (bukan bertumpuk), dan tiap kotak
+            sedikit dimiringkan supaya tidak kaku (permintaan). */}
         <div className="mt-2 grid grid-cols-3 gap-2">
           <button
             type="button"
@@ -1030,10 +1032,10 @@ export function ChatPanel({
               setSendError(null);
               fileRef.current?.click();
             }}
-            className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-[10px] font-bold text-white/75 transition hover:border-sky-300/45 hover:bg-sky-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
+            className="flex -rotate-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-[10px] font-bold text-white/75 transition hover:border-sky-300/45 hover:bg-sky-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
           >
-            <ImagePlus className="size-4 text-sky-300" />
-            Foto
+            <ImagePlus className="size-4 shrink-0 text-sky-300" />
+            <span className="truncate">Foto</span>
           </button>
           <button
             type="button"
@@ -1046,10 +1048,10 @@ export function ChatPanel({
               setSendError(null);
               setGiveOpen(true);
             }}
-            className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-[10px] font-bold text-white/75 transition hover:border-amber-300/45 hover:bg-amber-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
+            className="flex rotate-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-[10px] font-bold text-white/75 transition hover:border-amber-300/45 hover:bg-amber-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
           >
-            <Crown className="size-4 text-amber-300" />
-            Give Prem
+            <Crown className="size-4 shrink-0 text-amber-300" />
+            <span className="truncate">Give Prem</span>
           </button>
           <button
             type="button"
@@ -1062,10 +1064,10 @@ export function ChatPanel({
               setSendError(null);
               setStickerOpen(true);
             }}
-            className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-[10px] font-bold text-white/75 transition hover:border-violet-300/45 hover:bg-violet-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
+            className="flex -rotate-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-[10px] font-bold text-white/75 transition hover:border-violet-300/45 hover:bg-violet-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
           >
-            <Sticker className="size-4 text-violet-300" />
-            Sticker
+            <Sticker className="size-4 shrink-0 text-violet-300" />
+            <span className="truncate">Sticker</span>
           </button>
         </div>
         <input
