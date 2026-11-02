@@ -1981,7 +1981,15 @@ function WatchContent() {
   );
 
   return (
-    <div className={cn("min-h-screen", room ? "pb-4" : "pb-24")}>
+    <div
+      className={cn(
+        // Responsif: di HP konten full-bleed; di tablet/laptop/komputer
+        // (md+) dikotak-dagi max-w & dipusatkan biar player tidak membentang
+        // selebar layar monitor (permintaan: sesuaikan hp/tab/laptop/komputer).
+        "mx-auto min-h-screen w-full max-w-6xl",
+        room ? "pb-4" : "pb-24",
+      )}
+    >
       {/* Tombol kembali — selalu terlihat di kiri atas */}
       {!isFs && (
         <button
