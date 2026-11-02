@@ -177,10 +177,10 @@ export function GenreScreen({
                 type="button"
                 onClick={() => setSel(g.id)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold transition active:scale-95",
+                  "shrink-0 rounded-full border border-red-500/45 px-3.5 py-2 text-xs font-bold transition active:scale-95",
                   g.id === sel
-                    ? "border-gold-strong/70 bg-gold-strong text-black"
-                    : "border-white/14 bg-white/[0.06] text-white/80 hover:border-white/35",
+                    ? "border-red-400/80 bg-red-500/20 text-white"
+                    : "bg-white/[0.06] text-white/80 hover:border-red-400/70 hover:bg-white/[0.1]",
                 )}
               >
                 {g.name}

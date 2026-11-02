@@ -487,7 +487,7 @@ export function LeaderCards() {
     rank: r.rank,
     image: r.image,
     border: r.avatarBorder,
-    username: r.username,
+    username: r.username || (r.seqId ? `user#${r.seqId}` : undefined),
     value: fmtShort(r.xp ?? 0),
     label: "XP",
   }));
@@ -495,7 +495,7 @@ export function LeaderCards() {
     rank: i + 1,
     image: g.image,
     border: g.avatarBorder,
-    username: g.username,
+    username: g.username || (g.seqId ? `user#${g.seqId}` : undefined),
     value: `${fmtShort(g.days ?? 0)} hr`,
     label: "Give",
   }));

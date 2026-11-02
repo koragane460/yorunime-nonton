@@ -910,6 +910,7 @@ function RoomScreen({
           (ganti/tutup) hanya muncul untuk host. */}
       {nobar && (
         <VoiceNobarStage
+          roomId={roomId}
           nobar={nobar}
           hostName={room.ownerName}
           isHost={host}

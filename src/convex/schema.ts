@@ -965,6 +965,10 @@ const schema = defineSchema(
           episode: v.optional(v.number()),
           startedBy: v.optional(v.id("users")),
           startedAt: v.number(),
+          /** Status sinkron playback nobar — host yang mengatur. */
+          playing: v.optional(v.boolean()),
+          /** Posisi detik saat host terakhir mengubah playback. */
+          positionSec: v.optional(v.number()),
         }),
       ),
       createdAt: v.number(),

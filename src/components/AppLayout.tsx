@@ -1009,25 +1009,6 @@ function BottomNav({
               "backdrop-blur-2xl backdrop-saturate-150",
             )}
           >
-            {/* Indikator posisi aktif — kotak rounded PENUH (isi penuh, bukan
-                setengah kosong), permintaan navigasi. */}
-            <span
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute bottom-1 top-1 rounded-xl border border-gold-strong/50",
-                "bg-gradient-to-b from-gold-strong/40 via-gold-strong/25 to-gold-strong/15",
-                "shadow-[0_6px_18px_-10px_rgba(212,175,55,0.7)]",
-                "backdrop-blur-xl transition-all duration-300 ease-out",
-                activeIdx < 0 && "opacity-0",
-              )}
-              style={{
-                width: "calc((100% - 12px) / 5)",
-                left:
-                  activeIdx < 0
-                    ? "6px"
-                    : `calc(6px + ${activeIdx} * (100% - 12px) / 5)`,
-              }}
-            />
             {items.map((it) => {
             const base = it.path.split("?")[0];
             // Panel "favorites" tidak punya rute: aktif selama layarnya
@@ -1082,6 +1063,14 @@ function BottomNav({
                     "z-20 -translate-y-5 rounded-2xl border border-gold-strong/55 bg-[oklch(0.16_0.03_88_/_0.98)] px-3 pb-3 pt-2.5 shadow-[0_12px_24px_-14px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.25)]",
                 )}
               >
+                {/* GARIS penanda aktif di ATAS ikon — menggantikan kotak
+                    rounded lama (permintaan). */}
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-3 top-0 h-[3px] rounded-full bg-gold-strong"
+                  />
+                )}
                 {/* Isi tombol (ikon + label). */}
                 <span className="flex flex-col items-center">
                 <Icon
@@ -1095,7 +1084,7 @@ function BottomNav({
                     it.hub &&
                       "size-[30px] text-gold-strong md:size-[32px]",
                     active
-                      ? "text-white"
+                      ? "text-gold-strong"
                       : it.dim
                         ? "text-zinc-700"
                         : "text-zinc-500",
@@ -1108,7 +1097,7 @@ function BottomNav({
                     "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none transition-colors duration-200",
                     it.hub && "font-black tracking-wide text-white",
                     active
-                      ? "font-semibold text-white"
+                      ? "font-semibold text-gold-strong"
                       : it.dim
                         ? "font-medium text-zinc-700"
                         : "font-medium text-zinc-500",

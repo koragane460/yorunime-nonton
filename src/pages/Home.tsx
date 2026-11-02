@@ -370,7 +370,7 @@ function PromoCarousel({ slides }: { slides: ReactNode[] }) {
         {slides.map((s, i) => (
           <div
             key={i}
-            className="h-[176px] w-[92%] shrink-0 snap-center"
+            className="h-[176px] w-[92%] shrink-0 snap-center overflow-hidden rounded-3xl"
           >
             {s}
           </div>
@@ -1245,9 +1245,8 @@ function HomeContent() {
               <button
                 key={g.id}
                 onClick={() => setGenreScreen(g.id)}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold text-white/80 transition hover:bg-white/[0.12] hover:text-white active:scale-95"
+                className="flex shrink-0 items-center rounded-2xl border border-red-500/45 bg-white/[0.07] px-4 py-2.5 text-[13px] font-bold text-white/85 transition hover:border-red-400/70 hover:bg-white/[0.12] hover:text-white active:scale-95"
               >
-                <span aria-hidden className="size-1 rounded-full bg-gold-strong/70" />
                 {g.name}
               </button>
             ))}
@@ -1296,6 +1295,9 @@ function HomeContent() {
 
       {/* PROMO — Afinitas + Feed digabung jadi SATU carousel yang bisa
           digeser ke kiri/kanan (permintaan), lengkap dengan titik pagination. */}
+      <div className="mt-5 flex items-baseline justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Promosi &amp; Dukungan</h2>
+      </div>
       <PromoCarousel
         slides={[
           <AfinitasPromo
@@ -1567,7 +1569,26 @@ function HomeContent() {
           </div>
         </div>
       )}
-      {showNobar && <NobarCatalogScreen onClose={() => setShowNobar(false)} />}
+      {showNobar && (
+        <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
+          <div className="yn-bar flex items-center gap-3 border-b border-white/10 px-4 py-3">
+            <button
+              onClick={() => setShowNobar(false)}
+              aria-label="Kembali"
+              className="flex size-10 items-center justify-center rounded-xl bg-white/[0.06] transition active:scale-95"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <span className="yn-eyebrow text-[9px]">Nonton</span>
+              <h1 className="yn-title truncate text-lg">Nobar</h1>
+            </div>
+          </div>
+          <div className="thin-scroll min-h-0 flex-1 overflow-y-auto bg-black/35 p-4">
+            <NobarCatalogScreen onClose={() => setShowNobar(false)} />
+          </div>
+        </div>
+      )}
       {showVoice && <VoiceCallScreen onClose={() => setShowVoice(false)} />}
       {afinitas && user && (
         <AfinitasScreen
@@ -4973,7 +4994,7 @@ function DonghuaDetailScreen({
               {detail.genres.map((g) => (
                 <span
                   key={g}
-                  className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-white"
+                  className="rounded-full border border-red-500/45 px-3 py-1 text-[11px] font-semibold text-white"
                 >
                   {g}
                 </span>

@@ -335,6 +335,37 @@ export const setNobar = mutation({
   },
 });
 
+/**
+ * HOST saja: sinkronkan playback nobar (jeda / lanjut / geser) untuk semua
+ * peserta. Peserta non-host hanya membaca `nobar.playing` & `nobar.positionSec`.
+ */
+export const syncNobar = mutation({
+  args: {
+    roomId: v.id("voiceRooms"),
+    playing: v.optional(v.boolean()),
+    positionSec: v.optional(v.number()),
+  },
+  handler: async (ctx, { roomId, playing, positionSec }) => {
+    const userId = await me(ctx);
+    if (userId === null) throw new Error("Belum login");
+    const r = await ctx.db.get(roomId);
+    if (!r) throw new Error("Room tidak ditemukan");
+    if (r.ownerId !== userId)
+      throw new Error("Hanya host yang bisa mengatur nobar");
+    if (!r.nobar) return { ok: true };
+    const patch: Record<string, unknown> = {};
+    if (typeof playing === "boolean") patch.playing = playing;
+    if (typeof positionSec === "number" && Number.isFinite(positionSec))
+      patch.positionSec = Math.max(0, positionSec);
+    if (Object.keys(patch).length === 0) return { ok: true };
+    await ctx.db.patch(roomId, {
+      nobar: { ...r.nobar, ...patch } as any,
+      updatedAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
 /** HOST saja: matikan nobar, room kembali seperti biasa. */
 export const clearNobar = mutation({
   args: { roomId: v.id("voiceRooms") },

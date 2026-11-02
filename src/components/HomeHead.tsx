@@ -692,11 +692,16 @@ export function ChatVoiceRow({
 
   // STICKER SHOP = kotak besar menggantikan Chat Global (dipisah dari chat).
   return (
-    <div className="mt-5 grid grid-cols-2 gap-3">
-      {/* STICKER SHOP — panel paling tinggi (2 baris). */}
+    <div className="mt-5">
+      {/* Judul seksi — kiri atas. */}
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Hiburan &amp; Voice</h2>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-3">
+      {/* STICKER SHOP — panel paling tinggi (2 baris). Tanpa outline. */}
       <button
         onClick={onOpenSticker}
-        className="group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl border border-emerald-400/35 bg-[linear-gradient(165deg,rgba(16,185,129,.24)_0%,rgba(11,20,18,.92)_55%,rgba(8,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-emerald-300/60 active:scale-[0.98]"
+        className="group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl bg-[linear-gradient(155deg,rgba(52,211,153,.30)_0%,rgba(16,185,129,.16)_38%,rgba(45,212,191,.10)_66%,rgba(8,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition active:scale-[0.98]"
       >
         <span
           aria-hidden
@@ -704,7 +709,7 @@ export function ChatVoiceRow({
         />
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Toko</span>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/40 bg-emerald-400/15">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/20">
             <Sticker className="size-4 text-emerald-100" />
           </span>
         </span>
@@ -713,20 +718,20 @@ export function ChatVoiceRow({
             Sticker Shop
           </span>
           <span className="yn-meta">Pack lucu, anime & random — langsung ke chat</span>
-          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/45 bg-emerald-400/20 px-2.5 py-1 text-[10px] font-bold text-emerald-100">
+          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-400/25 px-2.5 py-1 text-[10px] font-bold text-emerald-50">
             <Sparkles className="size-3" /> Buka toko
           </span>
         </span>
       </button>
 
-      {/* NOBAR — nonton bareng, kotak warna merah muda. */}
+      {/* NOBAR — nonton bareng. Gradasi campur warna ikon (rose + amber). */}
       <button
         onClick={onOpenNobar}
-        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-rose-400/35 bg-[linear-gradient(165deg,rgba(244,63,94,.22)_0%,rgba(26,12,18,.92)_60%,rgba(12,9,13,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-rose-300/60 active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl bg-[linear-gradient(155deg,rgba(251,113,133,.28)_0%,rgba(244,63,94,.16)_45%,rgba(251,146,60,.10)_78%,rgba(12,9,13,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
-          <span className="yn-eyebrow">Nobar</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-rose-300/40 bg-rose-400/15">
+          <span className="yn-eyebrow">Nonton</span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-400/20">
             <Tv className="size-4 text-rose-100" />
           </span>
         </span>
@@ -736,14 +741,14 @@ export function ChatVoiceRow({
         </span>
       </button>
 
-      {/* VOICE — ngobrol suara, kotak warna biru langit. */}
+      {/* VOICE — ngobrol suara. Gradasi campur warna ikon (sky + violet). */}
       <button
         onClick={onOpenVoice}
-        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-sky-400/35 bg-[linear-gradient(165deg,rgba(56,189,248,.22)_0%,rgba(10,18,28,.92)_60%,rgba(9,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition hover:border-sky-300/60 active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl bg-[linear-gradient(155deg,rgba(56,189,248,.28)_0%,rgba(34,211,238,.16)_45%,rgba(129,140,248,.10)_80%,rgba(9,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Suara</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/40 bg-sky-400/15">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-400/20">
             <Mic className="size-4 text-sky-100" />
           </span>
         </span>
@@ -752,6 +757,7 @@ export function ChatVoiceRow({
           <span className="yn-meta">Nobaron &amp; ngobrol</span>
         </span>
       </button>
+      </div>
     </div>
   );
 }
@@ -978,27 +984,28 @@ export function DonatePromo() {
       href="https://sociabuzz.com/yorunime/donate"
       target="_blank"
       rel="noreferrer"
-      className="relative block h-full w-full overflow-hidden bg-[linear-gradient(145deg,#1b2a24_0%,#141a17_55%,#0b0d0c_100%)]"
+      className="relative block h-full w-full overflow-hidden bg-[#101418]"
     >
-      <span aria-hidden className="absolute -right-10 -top-12 size-44 rounded-full bg-emerald-300/15 blur-3xl" />
-      <span aria-hidden className="absolute -bottom-16 -left-8 size-40 rounded-full bg-amber-300/10 blur-3xl" />
-      <div className="absolute right-4 top-1/2 flex size-24 -translate-y-1/2 items-center justify-center rounded-[28px] bg-[radial-gradient(circle_at_35%_25%,#fef3c7,#d97706_55%,#451a03)] shadow-[0_18px_34px_-18px_rgba(0,0,0,.9)]">
-        <span className="flex size-14 items-center justify-center rounded-full bg-black/25 text-amber-50 backdrop-blur-sm">
-          <Coffee className="size-7" />
-        </span>
-        <span className="absolute -bottom-2 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-black/40 blur-md" />
+      {/* Garis emas tipis di atas — aksen halus, bukan blur menyilaukan. */}
+      <span
+        aria-hidden
+        className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/60 to-transparent"
+      />
+      {/* Ikon kopi — kartu kecil solid di kanan, bukan bola gradasi besar. */}
+      <div className="absolute right-4 top-1/2 flex size-20 -translate-y-1/2 items-center justify-center rounded-3xl border border-amber-300/25 bg-[#1b1710] shadow-[0_16px_30px_-20px_rgba(0,0,0,.9)]">
+        <Coffee className="size-9 text-amber-300" aria-hidden />
       </div>
       <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-1 px-4">
-        <span className="w-fit rounded-full border border-emerald-300/40 bg-emerald-400/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-100">
+        <span className="w-fit rounded-full border border-emerald-300/35 bg-emerald-400/12 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-100">
           Donate
         </span>
         <p className="text-[15px] font-black leading-tight text-white">
           Traktir kopi buat developer
         </p>
-        <p className="text-[10px] leading-snug text-white/60">
+        <p className="text-[10px] leading-snug text-white/55">
           Biar YoruNime tetap hidup dan server makin kencang.
         </p>
-        <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-emerald-300 to-teal-400 px-3 py-1.5 text-[11px] font-black text-emerald-950">
+        <span className="mt-1.5 flex w-fit items-center gap-1 rounded-full border border-emerald-300/40 bg-emerald-400/18 px-3 py-1.5 text-[11px] font-black text-emerald-50">
           Donate sekarang <ChevronRight className="size-3.5" />
         </span>
       </div>

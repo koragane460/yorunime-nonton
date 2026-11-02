@@ -113,11 +113,6 @@ export function AnnouncementBox() {
 
   const item = rows[0];
   const raw = item.message ?? "";
-  const author = item as unknown as {
-    authorName?: string;
-    authorImage?: string | null;
-    authorTitle?: string;
-  };
   const tag = (raw.match(/^\[(error|eror|update|info)\]/i)?.[1] ?? "").toLowerCase();
   const text = raw.replace(/^\[[a-z]+\]\s*/i, "");
   const kind: "error" | "update" | "info" =
@@ -150,47 +145,43 @@ export function AnnouncementBox() {
   return (
     <section
       className={cn(
-        "fade-enter relative mt-3 flex min-h-[160px] flex-col overflow-hidden rounded-2xl border p-4 backdrop-blur-md",
+        "fade-enter relative mt-3 flex min-h-[160px] flex-col overflow-hidden rounded-3xl border p-3.5 backdrop-blur-xl",
         tone.border,
-        "bg-white/[0.055] shadow-[0_18px_40px_-34px_rgba(0,0,0,.9)]",
+        "bg-gradient-to-b from-white/[0.07] to-white/[0.03] shadow-[0_18px_40px_-34px_rgba(0,0,0,.9)]",
       )}
     >
-      {/* Garis tipis di kiri — kecil saja, hanya penanda. */}
-      <span
-        aria-hidden
-        className={cn("absolute left-2.5 top-6 bottom-6 w-[3px] rounded-full", tone.rule)}
-      />
-
-      <div className="relative flex items-center gap-2 pl-3.5">
-        {/* Pengirim: foto + nama + title, langsung di kiri atas. */}
-        <Avatar
-          src={author.authorImage ?? undefined}
-          seed={author.authorName ?? "YoruNime"}
-          className="size-8 shrink-0"
-        />
-        <span className="min-w-0">
-          <span className="block truncate text-[12px] font-black leading-tight text-white">
-            {author.authorName ?? "YoruNime"}
-          </span>
-          <span className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
-            <Megaphone className={cn("size-2.5", tone.icon)} />
-            {author.authorTitle ?? "Developer"}
-          </span>
+      {/* KIRI ATAS — ikon + judul (tanpa nama pengirim). */}
+      <div className="relative flex items-center gap-2">
+        <span
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08]",
+            tone.icon,
+          )}
+        >
+          <Megaphone className="size-4" />
         </span>
-        <span className="ml-auto shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/50">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-black tracking-tight text-white">
+          Pengumuman
+        </span>
+        <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/50">
           {ago(item.createdAt)}
         </span>
       </div>
 
-      <p className="relative mt-2.5 flex-1 whitespace-pre-wrap pl-3.5 font-display text-[16px] font-bold leading-[1.35] tracking-tight text-white">
-        {text}
-      </p>
+      {/* GARIS PEMBATAS di bawah judul. */}
+      <span aria-hidden className="relative mt-2.5 h-px w-full bg-white/15" />
 
-      {more > 0 && (
-        <span className="relative mt-3 self-start rounded-full bg-white/10 px-2 py-0.5 pl-3.5 text-[10px] font-black text-white/75">
-          +{more} lainnya
-        </span>
-      )}
+      {/* PESAN — panel glassmorphism di bawah garis. */}
+      <div className="relative mt-2.5 flex-1 rounded-2xl border border-white/12 bg-white/[0.06] p-3 backdrop-blur-md">
+        <p className="whitespace-pre-wrap font-display text-[15px] font-bold leading-[1.4] tracking-tight text-white">
+          {text}
+        </p>
+        {more > 0 && (
+          <span className="mt-2.5 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black text-white/75">
+            +{more} lainnya
+          </span>
+        )}
+      </div>
     </section>
   );
 }

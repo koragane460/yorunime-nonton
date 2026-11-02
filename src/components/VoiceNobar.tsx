@@ -8,10 +8,15 @@ import {
   Clapperboard,
   Film,
   Loader2,
+  Maximize2,
+  Pause,
+  Play,
   Search,
   SkipBack,
   SkipForward,
   Tv,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 
@@ -23,9 +28,19 @@ export type VoiceNobar = {
   image?: string;
   episode?: number;
   startedAt: number;
+  /** Sinkron playback dari host — peserta non-host mengikuti ini. */
+  playing?: boolean;
+  positionSec?: number;
 };
 
 type Source = { url: string; type?: string };
+
+function fmtTime(s: number): string {
+  if (!Number.isFinite(s) || s < 0) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
 
 /**
  * PLAYER NOBAR di voice room — ditaruh PALING ATAS saat host memasang judul.
@@ -33,12 +48,14 @@ type Source = { url: string; type?: string };
  * Info "Di-host oleh …" ada di bawah judul.
  */
 export function VoiceNobarStage({
+  roomId,
   nobar,
   hostName,
   isHost,
   onChange,
   onClose,
 }: {
+  roomId: Id<"voiceRooms">;
   nobar: VoiceNobar;
   hostName: string;
   isHost: boolean;
@@ -49,11 +66,22 @@ export function VoiceNobarStage({
   const resolveDonghua = useAction(api.sanka.resolveEpisode);
   const resolveFilm = useAction(api.films.resolveStream);
 
+  const syncNobar = useMutation(api.voice.syncNobar);
+
   const [source, setSource] = useState<Source | null>(null);
   const [embed, setEmbed] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Status playback lokal (ikut host untuk peserta, dikendalikan host).
+  const [playing, setPlaying] = useState<boolean>(nobar.playing ?? true);
+  const [cur, setCur] = useState(0);
+  const [dur, setDur] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const hlsRef = useRef<Hls | null>(null);
+  // Penanda waktu supaya seek host tidak dibalik oleh efek sync peserta.
+  const lastHostPos = useRef<number>(nobar.positionSec ?? 0);
 
   const ep = nobar.episode ?? 1;
 
@@ -139,26 +167,100 @@ export function VoiceNobarStage({
       el.src = source.url;
       return;
     }
+    // Nobar selalu 720 — pilih level terdekat 720, tanpa menu kualitas.
     const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
     hls.loadSource(source.url);
     hls.attachMedia(el);
-    return () => hls.destroy();
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      const levels = hls.levels ?? [];
+      if (!levels.length) return;
+      let best = 0;
+      let bestDiff = Infinity;
+      levels.forEach((lv, i) => {
+        const h = lv.height ?? 0;
+        const diff = Math.abs(h - 720);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          best = i;
+        }
+      });
+      hls.currentLevel = best;
+    });
+    hlsRef.current = hls;
+    return () => {
+      hlsRef.current = null;
+      hls.destroy();
+    };
   }, [source]);
 
+  // PESERTA NON-HOST — ikuti status host (play / jeda / posisi).
+  useEffect(() => {
+    if (isHost) return;
+    const el = videoRef.current;
+    if (!el || embed) return;
+    const want = nobar.playing ?? true;
+    if (want && el.paused) void el.play().catch(() => {});
+    if (!want && !el.paused) el.pause();
+    const hostPos = nobar.positionSec;
+    if (
+      typeof hostPos === "number" &&
+      Number.isFinite(hostPos) &&
+      Math.abs(el.currentTime - hostPos) > 1.5
+    ) {
+      lastHostPos.current = hostPos;
+      el.currentTime = hostPos;
+    }
+  }, [nobar.playing, nobar.positionSec, isHost, embed]);
+
+  // HANYA HOST yang boleh kontrol. Non-host tombolnya disembunyikan.
+  const togglePlay = () => {
+    if (!isHost) return;
+    const el = videoRef.current;
+    if (!el || embed) return;
+    const next = el.paused;
+    if (next) void el.play().catch(() => {});
+    else el.pause();
+    setPlaying(next);
+    void syncNobar({
+      roomId,
+      playing: next,
+      positionSec: el.currentTime,
+    }).catch(() => {});
+  };
+
+  const seekBy = (delta: number) => {
+    if (!isHost) return;
+    const el = videoRef.current;
+    if (!el || embed) return;
+    const next = Math.max(0, Math.min(el.duration || 0, el.currentTime + delta));
+    el.currentTime = next;
+    setCur(next);
+    void syncNobar({ roomId, positionSec: next }).catch(() => {});
+  };
+
+  const onScrub = (value: number) => {
+    if (!isHost) return;
+    const el = videoRef.current;
+    if (!el || embed) return;
+    el.currentTime = value;
+    setCur(value);
+    void syncNobar({ roomId, positionSec: value }).catch(() => {});
+  };
+
   return (
-    <div className="mx-3 mb-2 overflow-hidden rounded-2xl border border-white/15 bg-[#090d14]">
+    <div className="mx-3 mb-2 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#161b28] to-[#0e1119] shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)]">
       {/* Strip penanda nobar — beda dari kartu peserta, tanpa glow. */}
-      <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.04] px-2.5 py-1.5">
+      <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.05] px-2.5 py-1.5">
         <span className="size-1.5 rounded-full bg-rose-400" />
         <span className="text-[9px] font-black uppercase tracking-[0.18em] text-rose-200/90">
           Nobar
         </span>
-        <span className="ml-auto truncate text-[9px] font-semibold text-white/35">
+        <span className="ml-auto truncate text-[9px] font-semibold text-white/40">
           {hostName} · layar bersama
         </span>
       </div>
-      {/* Player PALING ATAS — kontrolnya kontrol player itu sendiri. */}
-      <div className="relative aspect-video w-full bg-black">
+      {/* Player PALING ATAS — UI player sendiri, kontrol hanya host. */}
+      <div className="relative aspect-video w-full bg-[#05070c]">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
             <Loader2 className="size-5 animate-spin text-white/60" />
@@ -194,10 +296,110 @@ export function VoiceNobarStage({
         {!loading && !err && !embed && (
           <video
             ref={videoRef}
-            controls
             playsInline
+            muted={muted}
             className="absolute inset-0 size-full bg-black object-contain"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onTimeUpdate={(e) => setCur(e.currentTarget.currentTime)}
+            onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 0)}
           />
+        )}
+
+        {/* Kontrol custom — hanya HOST yang bisa pakai. Non-host cuma lihat. */}
+        {!loading && !err && !embed && (
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2.5 pb-2 pt-6",
+              isHost ? "" : "pointer-events-none opacity-90",
+            )}
+          >
+            {/* Bar seek */}
+            <input
+              type="range"
+              min={0}
+              max={dur || 0}
+              step={0.1}
+              value={Math.min(cur, dur || 0)}
+              disabled={!isHost}
+              onChange={(e) => onScrub(Number(e.target.value))}
+              aria-label="Geser posisi"
+              className="h-1 w-full cursor-pointer appearance-none rounded-full accent-rose-400"
+            />
+            <div className="mt-1 flex items-center gap-2">
+              {isHost ? (
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  aria-label={playing ? "Jeda" : "Putar"}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-black transition active:scale-95"
+                >
+                  {playing ? (
+                    <Pause className="size-4" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
+                </button>
+              ) : (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-white/80">
+                  {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+                </span>
+              )}
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => seekBy(-10)}
+                  aria-label="Mundur 10 detik"
+                  className="shrink-0 text-[10px] font-black text-white/80"
+                >
+                  −10s
+                </button>
+              )}
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => seekBy(10)}
+                  aria-label="Maju 10 detik"
+                  className="shrink-0 text-[10px] font-black text-white/80"
+                >
+                  +10s
+                </button>
+              )}
+              <span className="ml-auto font-mono text-[10px] font-semibold text-white/80">
+                {fmtTime(cur)} / {fmtTime(dur)}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = videoRef.current;
+                  if (!el) return;
+                  el.muted = !el.muted;
+                  setMuted(el.muted);
+                }}
+                aria-label={muted ? "Nyalakan suara" : "Matikan suara"}
+                className="shrink-0 text-white/80"
+              >
+                {muted ? (
+                  <VolumeX className="size-4" />
+                ) : (
+                  <Volume2 className="size-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const box = videoRef.current?.parentElement;
+                  if (!box) return;
+                  if (document.fullscreenElement) void document.exitFullscreen();
+                  else void box.requestFullscreen?.();
+                }}
+                aria-label="Layar penuh"
+                className="shrink-0 text-white/80"
+              >
+                <Maximize2 className="size-4" />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
