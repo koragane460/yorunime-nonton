@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 640" width="620" height="640">
+  <defs>
+    <!-- Bunga 5 kelopak, satu bentuk dipakai ulang (bukan gumpalan lingkaran). -->
+    <g id="yn-bloom">
+      <g fill="#f9a8d4">
+        <ellipse cx="0" cy="-11" rx="6.2" ry="8.4"/>
+        <ellipse cx="10.5" cy="-3.4" rx="6.2" ry="8.4" transform="rotate(72 10.5 -3.4)"/>
+        <ellipse cx="6.5" cy="9" rx="6.2" ry="8.4" transform="rotate(144 6.5 9)"/>
+        <ellipse cx="-6.5" cy="9" rx="6.2" ry="8.4" transform="rotate(216 -6.5 9)"/>
+        <ellipse cx="-10.5" cy="-3.4" rx="6.2" ry="8.4" transform="rotate(288 -10.5 -3.4)"/>
+      </g>
+      <circle r="2.6" fill="#be123c" opacity=".7"/>
+    </g>
+    <g id="yn-bloom-pale">
+      <g fill="#fbcfe8">
+        <ellipse cx="0" cy="-11" rx="6.2" ry="8.4"/>
+        <ellipse cx="10.5" cy="-3.4" rx="6.2" ry="8.4" transform="rotate(72 10.5 -3.4)"/>
+        <ellipse cx="6.5" cy="9" rx="6.2" ry="8.4" transform="rotate(144 6.5 9)"/>
+        <ellipse cx="-6.5" cy="9" rx="6.2" ry="8.4" transform="rotate(216 -6.5 9)"/>
+        <ellipse cx="-10.5" cy="-3.4" rx="6.2" ry="8.4" transform="rotate(288 -10.5 -3.4)"/>
+      </g>
+      <circle r="2.4" fill="#e11d48" opacity=".55"/>
+    </g>
+  </defs>
+
+  <!-- BATANG: satu pohon dengan arah tumbuh jelas, menyempit ke atas. -->
+  <path d="M604 646 C 566 556 566 470 522 396 C 496 352 456 314 410 282 L 430 254 C 486 288 536 332 570 386 C 620 468 620 556 646 646 Z"
+        fill="#3b262a"/>
+  <!-- Alur kulit kayu: garis sejajar arah batang, bukan coretan acak. -->
+  <g stroke="#5a3a3f" stroke-width="3" stroke-linecap="round" fill="none" opacity=".55">
+    <path d="M612 640 C 584 556 586 474 546 404"/>
+    <path d="M596 640 C 570 560 574 486 538 420"/>
+  </g>
+
+  <!-- CABANG UTAMA: tumbuh ke kiri-atas, makin pendek makin tinggi (rapi). -->
+  <g fill="none" stroke="#3b262a" stroke-linecap="round">
+    <path d="M552 452 C 496 428 442 410 386 402" stroke-width="15"/>
+    <path d="M514 380 C 462 350 410 330 352 322" stroke-width="12"/>
+    <path d="M452 300 C 408 270 364 250 314 240" stroke-width="9"/>
+    <path d="M428 268 C 400 230 372 202 336 180" stroke-width="6.5"/>
+    <path d="M386 402 C 358 424 332 450 310 480" stroke-width="6"/>
+    <path d="M352 322 C 330 296 306 276 278 262" stroke-width="5"/>
+  </g>
+
+  <!-- Ranting halus di ujung cabang. -->
+  <g stroke="#4a3033" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M386 402 C 372 388 360 378 344 372"/>
+    <path d="M352 322 C 342 306 334 294 322 286"/>
+    <path d="M336 180 C 322 172 310 168 296 166"/>
+    <path d="M310 480 C 300 492 292 506 288 520"/>
+  </g>
+
+  <!-- RUMPUN BUNGA di ujung cabang (mengikuti ujung ranting, bukan acak). -->
+  <g>
+    <use href="#yn-bloom" transform="translate(344 368) scale(1.5)"/>
+    <use href="#yn-bloom-pale" transform="translate(322 284) scale(1.3)"/>
+    <use href="#yn-bloom" transform="translate(296 164) scale(1.2)"/>
+    <use href="#yn-bloom-pale" transform="translate(386 400) scale(1.35)"/>
+    <use href="#yn-bloom" transform="translate(352 320) scale(1.25)"/>
+    <use href="#yn-bloom-pale" transform="translate(428 266) scale(1.15)"/>
+    <use href="#yn-bloom" transform="translate(310 478) scale(1.1)"/>
+    <use href="#yn-bloom-pale" transform="translate(452 298) scale(1.05)"/>
+    <use href="#yn-bloom" transform="translate(514 378) scale(.95)"/>
+    <use href="#yn-bloom-pale" transform="translate(552 450) scale(.9)"/>
+    <use href="#yn-bloom" transform="translate(268 258) scale(.85)"/>
+    <use href="#yn-bloom-pale" transform="translate(284 516) scale(.8)"/>
+  </g>
+
+  <!-- Kelopak lepas: bentuk sama seperti .decor-petal di CSS. -->
+  <g fill="#f9a8d4" opacity=".9">
+    <path d="M470 340c6 0 10 4 10 10 0 7-5 12-10 16-5-4-10-9-10-16 0-6 4-10 10-10Z"/>
+    <path d="M540 250c5 0 9 4 9 9 0 6-5 11-9 14-4-3-9-8-9-14 0-5 4-9 9-9Z" opacity=".8"/>
+    <path d="M410 470c5 0 8 3 8 8 0 5-4 10-8 13-4-3-8-8-8-13 0-5 3-8 8-8Z" opacity=".75"/>
+  </g>
+</svg>

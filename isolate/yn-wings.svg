@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 380" width="320" height="380" fill="none">
+  <defs>
+    <linearGradient id="wing" x1="30" y1="40" x2="300" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff8a8a"/>
+      <stop offset=".16" stop-color="#ef4444"/>
+      <stop offset=".38" stop-color="#b91c1c"/>
+      <stop offset=".62" stop-color="#7f1d1d"/>
+      <stop offset=".84" stop-color="#2a0707"/>
+      <stop offset="1" stop-color="#090202"/>
+    </linearGradient>
+    <linearGradient id="feather" x1="60" y1="80" x2="280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb4b4" stop-opacity=".95"/>
+      <stop offset=".35" stop-color="#ef4444" stop-opacity=".9"/>
+      <stop offset=".75" stop-color="#991b1b" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#1a0404" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="bone" x1="60" y1="30" x2="210" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe4e4"/>
+      <stop offset=".55" stop-color="#fca5a5"/>
+      <stop offset="1" stop-color="#7f1d1d"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0" cy="0" r="1" gradientTransform="translate(120 90) rotate(52) scale(190 150)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity=".55"/>
+      <stop offset=".55" stop-color="#fff" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+      <feComponentTransfer in="g" result="g2"><feFuncA type="linear" slope=".22"/></feComponentTransfer>
+      <feComposite in="g2" in2="SourceAlpha" operator="in"/>
+    </filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#soft)" opacity=".55">
+    <ellipse cx="170" cy="220" rx="120" ry="130" fill="#dc2626" opacity=".45"/>
+  </g>
+
+  <g>
+    <!-- Lapisan bulu belakang -->
+    <path d="M64 300C74 208 123 118 232 61c-26 55-30 106-16 155 12 43 45 75 83 88-69 12-122 2-166-34-22-19-34-41-45-70Z" fill="url(#wing)" opacity=".75"/>
+    <path d="M52 286C73 198 135 118 246 74c-38 44-54 91-48 141 5 43 27 78 60 98-55-6-96-25-128-58-18-18-31-39-42-69Z" fill="url(#wing)" opacity=".85"/>
+    <!-- Bulu utama, dari pangkal ke ujung -->
+    <g filter="drop-shadow(0 3px 3px rgba(0,0,0,.55))">
+      <path d="M88 128c-4 66 24 118 82 156-37-8-64-30-79-59-13-26-14-63-3-97Z" fill="url(#feather)"/>
+      <path d="M96 111c11 67 45 111 108 142-38-2-68-19-88-45-17-23-25-59-20-97Z" fill="url(#feather)"/>
+      <path d="M111 92c22 65 59 105 129 129-39 4-72-7-96-29-21-19-35-56-33-100Z" fill="url(#feather)"/>
+      <path d="M131 75c30 61 70 95 140 113-38 9-73 3-98-15-23-17-38-51-42-98Z" fill="url(#feather)"/>
+      <path d="M154 61c36 55 79 84 148 97-37 13-72 12-98-3-24-13-42-45-50-94Z" fill="url(#feather)"/>
+      <path d="M180 51c40 49 84 73 150 84-35 16-70 18-97 6-24-11-43-39-53-90Z" fill="url(#feather)"/>
+      <path d="M210 45c37 42 78 64 137 76-30 15-62 19-89 10-23-8-40-32-48-86Z" fill="url(#feather)"/>
+    </g>
+    <!-- Tulang sayap -->
+    <path d="M74 249C101 172 159 104 253 55c-28 32-48 68-58 105-13 47-6 90 20 124" stroke="url(#bone)" stroke-width="9" stroke-linecap="round" opacity=".85"/>
+    <path d="M82 238C116 177 169 120 247 72" stroke="#fecaca" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+    <!-- Ujung bulu tajam -->
+    <path d="M258 49c14 1 24 8 29 20-13-3-24-8-33-15l4-5Z" fill="#ffdada" opacity=".85"/>
+    <!-- Bayangan lekuk dan tekstur -->
+    <g stroke="#4c0a0a" stroke-width="1.2" opacity=".5">
+      <path d="M100 138c8 52 32 92 74 120"/>
+      <path d="M114 113c15 52 43 87 91 107"/>
+      <path d="M132 92c19 48 48 78 100 94"/>
+      <path d="M156 74c23 42 52 67 98 80"/>
+      <path d="M184 60c22 35 50 56 90 68"/>
+    </g>
+    <!-- Highlight sayap -->
+    <path d="M109 92c22 65 59 105 129 129" stroke="#fecaca" stroke-width="1.4" opacity=".45"/>
+    <path d="M154 61c36 55 79 84 148 97" stroke="#fecaca" stroke-width="1" opacity=".35"/>
+    <path d="M52 286C73 198 135 118 246 74c-38 44-54 91-48 141 5 43 27 78 60 98-55-6-96-25-128-58-18-18-31-39-42-69Z" fill="url(#sheen)" opacity=".7"/>
+    <rect x="40" y="40" width="280" height="320" filter="url(#grain)" opacity=".5"/>
+  </g>
+</svg>
