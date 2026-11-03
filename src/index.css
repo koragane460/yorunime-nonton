@@ -126,59 +126,64 @@
 }
 
 /*
- * Palet YoruNime: tiga warna inti.
+ * PALET RESMI YORUNIME — HANYA 4 WARNA KONSISTEN (permintaan pemilik):
  *
- * Navy    : tinta dasar layar gelap & kartu (bukan hitam netral — sedikit
- *           nuansa biru supaya terasa "premium", bukan template).
- * Burgundy: aksen utama (tombol, XP, indikator aktif). L 0.56 supaya AMAN
- *           dua arah: putih di atasnya ~4.6:1, dan warnanya di atas navy
- *           ~4.3:1 — jadi tetap terbaca sebagai teks kecil maupun latar.
- * Soft blue: aksen sekunder (halus, untuk permukaan & sorotan), tidak pernah
- *           dipakai sebagai tombol utama supaya hierarki tetap jelas.
- * Tidak ada ungu, tidak ada oren, tidak ada gradient pelangi di tombol.
+ *   Sky Blue      #1CA7EC  — warna UI utama (tombol, link, status aktif)
+ *   Harvest Yellow #FFD23F — aksen emas (premium, gold, sorotan)
+ *   Ember Red     #E84855  — bahaya & outline tegas
+ *   Warm White    #FFFAF0  — teks utama & garis terang
+ *
+ * Latar gelap netral (bukan navy/burgundy) supaya hanya 4 warna di atas
+ * yang tampil sebagai warna UI/UX. Tanpa gradien baru & tanpa glow —
+ * semua permukaan memakai token ini.
  */
 :root {
   --radius: 0.75rem;
-  /* Burgundy — aksen merek. */
-  --brand: oklch(0.56 0.155 14);
-  --brand-foreground: oklch(0.98 0.01 20);
-  --gold: oklch(0.86 0.16 92);
-  --gold-foreground: oklch(0.2 0.05 70);
-  --gold-strong: oklch(0.86 0.18 88);
-  --gold-strong-foreground: oklch(0.2 0.05 70);
-  --background: oklch(0.155 0.032 262);
-  --foreground: oklch(0.96 0.012 250);
-  --card: oklch(0.2 0.04 262);
-  --card-foreground: oklch(0.96 0.012 250);
-  --popover: oklch(0.19 0.04 262);
-  --popover-foreground: oklch(0.96 0.012 250);
-  --primary: oklch(0.56 0.155 14);
-  --primary-foreground: oklch(0.98 0.01 20);
-  --secondary: oklch(0.26 0.045 262);
-  --secondary-foreground: oklch(0.93 0.015 250);
-  --muted: oklch(0.25 0.04 262);
-  --muted-foreground: oklch(0.73 0.035 250);
-  --accent: oklch(0.3 0.055 255);
-  --accent-foreground: oklch(0.96 0.012 250);
-  --destructive: oklch(0.55 0.16 25);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(0.32 0.05 260 / 60%);
-  --ring: oklch(0.72 0.02 260 / 50%);
-  --chart-1: oklch(0.56 0.155 14);
-  --chart-2: oklch(0.72 0.1 240);
-  --chart-3: oklch(0.86 0.17 90);
-  --chart-4: oklch(0.65 0.11 245);
-  --chart-5: oklch(0.7 0.14 150);
-  --sidebar: oklch(0.175 0.038 262);
-  --sidebar-foreground: oklch(0.96 0.012 250);
-  --sidebar-primary: oklch(0.56 0.155 14);
-  --sidebar-primary-foreground: oklch(0.98 0.01 20);
-  --sidebar-accent: oklch(0.26 0.05 262);
-  --sidebar-accent-foreground: oklch(0.93 0.015 250);
-  --sidebar-border: oklch(0.4 0.05 260 / 50%);
-  --sidebar-ring: oklch(0.56 0.155 14 / 55%);
-  --highlight: oklch(0.86 0.17 90 / 92%);
-  --highlight-soft: oklch(0.86 0.15 92 / 22%);
+  /* Sky Blue — aksen merek / tombol utama. */
+  --brand: #1ca7ec;
+  --brand-foreground: #fffaf0;
+  /* Harvest Yellow — emas. Teks di atasnya gelap biar kontras. */
+  --gold: #ffd23f;
+  --gold-foreground: #241c02;
+  --gold-strong: #ffd23f;
+  --gold-strong-foreground: #241c02;
+  /* Latar gelap NETRAL (tanpa nuansa navy) + teks Warm White. */
+  --background: oklch(0.15 0.005 260);
+  --foreground: #fffaf0;
+  --card: oklch(0.195 0.007 260);
+  --card-foreground: #fffaf0;
+  --popover: oklch(0.185 0.007 260);
+  --popover-foreground: #fffaf0;
+  --primary: #1ca7ec;
+  --primary-foreground: #fffaf0;
+  --secondary: oklch(0.255 0.008 260);
+  --secondary-foreground: #fffaf0;
+  --muted: oklch(0.245 0.006 260);
+  --muted-foreground: oklch(0.74 0.012 85);
+  /* Permukaan biru Sky Redup — aksen sekunder, bukan tombol utama. */
+  --accent: oklch(0.3 0.045 236);
+  --accent-foreground: #fffaf0;
+  /* Ember Red — bahaya. */
+  --destructive: #e84855;
+  --border: rgb(255 250 240 / 10%);
+  --input: oklch(0.32 0.02 240 / 60%);
+  --ring: rgb(28 167 236 / 55%);
+  --chart-1: #1ca7ec;
+  --chart-2: #ffd23f;
+  --chart-3: #e84855;
+  --chart-4: #fffaf0;
+  --chart-5: #1ca7ec;
+  --sidebar: oklch(0.17 0.006 260);
+  --sidebar-foreground: #fffaf0;
+  --sidebar-primary: #1ca7ec;
+  --sidebar-primary-foreground: #fffaf0;
+  --sidebar-accent: oklch(0.26 0.01 260);
+  --sidebar-accent-foreground: #fffaf0;
+  --sidebar-border: rgb(255 250 240 / 18%);
+  --sidebar-ring: rgb(28 167 236 / 55%);
+  /* Sorotan teks — Harvest Yellow, datar (tanpa gradasi). */
+  --highlight: rgb(255 210 63 / 92%);
+  --highlight-soft: rgb(255 210 63 / 22%);
 }
 
 /* ------------------------------------------------------------------
@@ -316,45 +321,47 @@
   color: var(--primary-foreground);
 }
 
+/* Tema terang — ikut palet 4 warna yang sama. */
 .theme-light {
-  --background: oklch(0.975 0.006 250);
-  --foreground: oklch(0.2 0.035 262);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.035 262);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.035 262);
-  --primary: oklch(0.5 0.16 14);
-  --primary-foreground: oklch(0.99 0.005 20);
-  --secondary: oklch(0.95 0.012 250);
-  --secondary-foreground: oklch(0.26 0.04 262);
-  --muted: oklch(0.94 0.012 250);
-  --muted-foreground: oklch(0.47 0.03 255);
-  --accent: oklch(0.92 0.03 245);
-  --accent-foreground: oklch(0.26 0.04 262);
-  --border: oklch(0.87 0.015 255);
-  --input: oklch(0.87 0.015 255);
-  --ring: oklch(0.72 0.02 260 / 50%);
+  --background: #fffaf0;
+  --foreground: oklch(0.24 0.015 80);
+  --card: #fffdf7;
+  --card-foreground: oklch(0.24 0.015 80);
+  --popover: #fffdf7;
+  --popover-foreground: oklch(0.24 0.015 80);
+  --primary: #1ca7ec;
+  --primary-foreground: #fffaf0;
+  --secondary: oklch(0.95 0.006 85);
+  --secondary-foreground: oklch(0.26 0.012 80);
+  --muted: oklch(0.94 0.006 85);
+  --muted-foreground: oklch(0.48 0.012 80);
+  --accent: rgb(28 167 236 / 12%);
+  --accent-foreground: oklch(0.26 0.012 80);
+  --destructive: #e84855;
+  --border: rgb(60 50 30 / 14%);
+  --input: rgb(60 50 30 / 16%);
+  --ring: rgb(28 167 236 / 55%);
 }
 
 .dark {
-  --background: oklch(0.155 0.032 262);
-  --foreground: oklch(0.96 0.012 250);
-  --card: oklch(0.2 0.04 262);
-  --card-foreground: oklch(0.96 0.012 250);
-  --popover: oklch(0.19 0.04 262);
-  --popover-foreground: oklch(0.96 0.012 250);
-  --primary: oklch(0.56 0.155 14);
-  --primary-foreground: oklch(0.98 0.01 20);
-  --secondary: oklch(0.26 0.045 262);
-  --secondary-foreground: oklch(0.93 0.015 250);
-  --muted: oklch(0.25 0.04 262);
-  --muted-foreground: oklch(0.73 0.035 250);
-  --accent: oklch(0.3 0.055 255);
-  --accent-foreground: oklch(0.96 0.012 250);
-  --destructive: oklch(0.55 0.16 25);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(0.32 0.05 260 / 60%);
-  --ring: oklch(0.72 0.02 260 / 50%);
+  --background: oklch(0.15 0.005 260);
+  --foreground: #fffaf0;
+  --card: oklch(0.195 0.007 260);
+  --card-foreground: #fffaf0;
+  --popover: oklch(0.185 0.007 260);
+  --popover-foreground: #fffaf0;
+  --primary: #1ca7ec;
+  --primary-foreground: #fffaf0;
+  --secondary: oklch(0.255 0.008 260);
+  --secondary-foreground: #fffaf0;
+  --muted: oklch(0.245 0.006 260);
+  --muted-foreground: oklch(0.74 0.012 85);
+  --accent: oklch(0.3 0.045 236);
+  --accent-foreground: #fffaf0;
+  --destructive: #e84855;
+  --border: rgb(255 250 240 / 10%);
+  --input: oklch(0.32 0.02 240 / 60%);
+  --ring: rgb(28 167 236 / 55%);
 }
 
 @layer base {

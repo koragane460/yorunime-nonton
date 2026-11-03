@@ -177,10 +177,12 @@ export function GenreScreen({
                 type="button"
                 onClick={() => setSel(g.id)}
                 className={cn(
-                  "shrink-0 rounded-full border border-red-500/45 px-3.5 py-2 text-xs font-bold transition active:scale-95",
+                  // Outline memakai Ember Red palet YoruNime (#E84855),
+                  // sama persis dengan chip genre di Home & detail anime.
+                  "shrink-0 rounded-full border border-[#E84855]/55 px-3.5 py-2 text-xs font-bold transition active:scale-95",
                   g.id === sel
-                    ? "border-red-400/80 bg-red-500/20 text-white"
-                    : "bg-white/[0.06] text-white/80 hover:border-red-400/70 hover:bg-white/[0.1]",
+                    ? "border-[#E84855] bg-[#E84855]/25 text-white"
+                    : "bg-white/[0.06] text-white/80 hover:border-[#E84855] hover:bg-white/[0.1]",
                 )}
               >
                 {g.name}

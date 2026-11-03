@@ -1003,13 +1003,19 @@ function WatchContent() {
   // (embed atau MegaPlay), subtitle Indonesia kita dimuat ulang untuk menimpa
   // subtitle English milik server tersebut.
   useEffect(() => {
-    if (!epParam || !direct?.ok || bakedSubs) {
+    // Muat subtitle SEBELUM episode selesai dimuat (permintaan): dulu gate
+    // `!direct?.ok` menunggu resolve server dulu, jadi subtitle selalu
+    // datang belakangan. Sekarang cukup episode diketahui — kecuali sumber
+    // yang sudah membawa subtitle bawaan (baked), memang tidak perlu unduh.
+    if (!epParam || bakedSubs) {
       setAutoSubLoading(false);
       return;
     }
     // Donghua: slug-nya bukan MAL id, jadi jalurnya terpisah.
     if (isDonghua) {
-      const key = `yorunime-sub-donghua:${epParam}`;
+      // v2 — cache lama bisa berisi terjemahan parsial (bagian bahasa asli),
+      // jadi versi cache dinaikkan supaya tidak ketahuan terus.
+      const key = `yorunime-sub-donghua:v2:${epParam}`;
       const cachedDonghua = (() => {
         try {
           return localStorage.getItem(key);
@@ -1035,15 +1041,22 @@ function WatchContent() {
             );
             return;
           }
-          try {
-            localStorage.setItem(key, r.vtt);
-          } catch {
-            /* storage penuh */
+          // Hasil PARSIAL (sebagian dialog belum terjemah) tidak disimpan ke
+          // cache lokal supaya kunjungan berikutnya mencoba ulang, bukan
+          // menyimpan terjemahan yang belum lengkap selamanya.
+          if (r.source !== "partial") {
+            try {
+              localStorage.setItem(key, r.vtt);
+            } catch {
+              /* storage penuh */
+            }
           }
           setAutoVtt(r.vtt);
           setAutoSubSource(String(r.source ?? "auto"));
           if (r.source === "raw")
             setAutoSubError("Terjemahan subtitle gagal, dipakai subtitle asli");
+          else if (r.source === "partial")
+            setAutoSubError("Sebagian dialog belum terjemah — tekan Coba lagi");
         })
         .catch(() => {
           if (aliveDh) setAutoSubError("Subtitle Indonesia gagal dimuat");
@@ -1063,12 +1076,21 @@ function WatchContent() {
       setAutoSubLoading(false);
       return;
     }
+    // Bentuk id TANPA pola `__ep` butuh daftar episode untuk tahu nomor
+    // episodenya — tunggu detail dulu supaya subtitle tidak salah episode.
+    // (Format `__ep` sudah membawa nomornya, jadi jalan duluan.)
+    if (!mm && !detailData) {
+      setAutoSubLoading(false);
+      return;
+    }
     const epNo =
       mm
         ? Number(mm[2]) || 1
         : (detailData?.episodeList ?? []).find((e: any) => e.id === epParam)
             ?.number ?? 1;
-    const key = `yorunime-sub-indo:${malId}:${epNo}`;
+    // v2 — cache lama bisa berisi terjemahan parsial, jadi versi cache
+    // dinaikkan supaya hasil lama tidak dipakai terus.
+    const key = `yorunime-sub-indo:v2:${malId}:${epNo}`;
     const cached = (() => {
       try {
         return localStorage.getItem(key);
@@ -1108,10 +1130,14 @@ function WatchContent() {
             );
             return;
           }
-          try {
-            localStorage.setItem(key, r.vtt);
-          } catch {
-            /* storage penuh — subtitle tetap dipakai di session ini */
+          // Hasil PARSIAL tidak disimpan ke cache lokal (bisa dicoba ulang),
+          // hasil lengkap ya disimpan seperti biasa.
+          if (r.source !== "partial") {
+            try {
+              localStorage.setItem(key, r.vtt);
+            } catch {
+              /* storage penuh — subtitle tetap dipakai di session ini */
+            }
           }
           setAutoVtt(r.vtt);
           setAutoSubSource(String(r.source ?? "auto"));
@@ -1119,6 +1145,8 @@ function WatchContent() {
           // tidak ada layar tanpa subtitle, tapi user diberi tahu + jalan coba lagi.
           if (r.source === "raw")
             setAutoSubError("Terjemahan subtitle gagal, dipakai subtitle asli");
+          else if (r.source === "partial")
+            setAutoSubError("Sebagian dialog belum terjemah — tekan Coba lagi");
         })
         .catch(() => {
           if (!alive) return;
@@ -1138,8 +1166,11 @@ function WatchContent() {
       alive = false;
       if (retryTimer !== null) window.clearTimeout(retryTimer);
     };
+    // `detailData` ikut di-deps: format id tanpa `__ep` baru tahu nomor
+    // episode setelah daftar episode dimuat. `!!direct?.ok` DIHAPUS —
+    // subtitle tidak lagi menunggu server video selesai di-resolve.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epParam, animeId, isDonghua, bakedSubs, !!direct?.ok, subRetry]);
+  }, [epParam, animeId, isDonghua, bakedSubs, detailData, subRetry]);
 
   const [detailData, setDetailData] = useState<any>(null);
   // Episode yang langsung tampil di grid; sisanya lewat "Lihat semua".
@@ -3048,11 +3079,21 @@ function WatchContent() {
       {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
       <div className="w-full p-3">
         <div className="flex items-start gap-3">
-          <img
-            src={D.image}
-            alt=""
-            className="aspect-[2/3] w-16 shrink-0 self-start rounded-lg object-cover"
-          />
+          {/* Poster info: object-contain supaya poster tampil FULL
+              (bukan kepotong setengah) + latar solid; gagal muat →
+              gambar disembunyikan, kotak gelap tetap ada. */}
+          <div className="relative aspect-[2/3] w-16 shrink-0 self-start overflow-hidden rounded-lg bg-black/50">
+            {D.image && (
+              <img
+                src={D.image}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.style.visibility = "hidden";
+                }}
+                className="size-full object-contain"
+              />
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <h1 className="yn-title line-clamp-2 text-base">{D.title}</h1>
             <p className={cn("mt-1 text-xs leading-5 text-zinc-400", !synopsisOpen && "line-clamp-3")}>

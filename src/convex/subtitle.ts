@@ -10,7 +10,7 @@ import { action } from "./_generated/server";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const REF = "https://megaplay.buzz/";
-const MAX_CUES = 900;
+const MAX_CUES = 1500;
 
 type Cue = { start: string; end: string; text: string };
 
@@ -108,8 +108,16 @@ const toVtt = (cues: Cue[]) =>
 /**
  * Terjemahkan banyak baris sekaligus; separator dipakai agar urut terjaga.
  * `from` = "en" untuk track English, "auto" kalau bahasanya tidak diketahui.
+ *
+ * Mengembalikan `null` kalau jumlah hasil TIDAK sama dengan jumlah baris —
+ * Google kadang menggabungkan/membuang separator, dan hasil yang dipaksa
+ * cocok akan membuat sebagian dialog diam-diam tetap bahasa asli (persis
+ * keluhan "subtitle tidak diterjemahkan di beberapa bagian").
  */
-async function translateBatch(lines: string[], from: string): Promise<string[]> {
+async function translateBatch(
+  lines: string[],
+  from: string,
+): Promise<string[] | null> {
   if (lines.length === 0) return [];
   const SEP = "\u241F";
   const payload = lines.join(SEP);
@@ -124,53 +132,89 @@ async function translateBatch(lines: string[], from: string): Promise<string[]> 
     .map((seg: any) => (Array.isArray(seg) ? String(seg?.[0] ?? "") : ""))
     .join("");
   const parts = out.split(/\s*\u241F\s*/).map((s) => s.trim());
-  if (parts.length === lines.length) return parts;
-  // Jumlah baris tidak sama → pakai hasil yang bisa dicocokkan, sisanya biarkan
-  // bahasa asli supaya tidak ada baris yang hilang.
-  return lines.map((_, i) => parts[i] ?? lines[i]);
+  if (parts.length !== lines.length) return null;
+  return parts;
 }
 
 async function translateCues(
   cues: Cue[],
   from: string,
-): Promise<{ cues: Cue[]; translated: boolean }> {
+): Promise<{ cues: Cue[]; translated: boolean; partial: boolean }> {
   const CHUNK = 20;
   const out: Cue[] = [];
   let okCount = 0;
+  let failCount = 0;
   // Batas waktu total: kalau translator lambat, sisa cue dipakai apa adanya
   // supaya player tetap punya subtitle (daripada gagal sama sekali).
-  const deadline = Date.now() + 40_000;
+  // 75 detik — dulu 40 detik, dan karena itu bagian AKHIR episode sering
+  // diam-diam tampil bahasa asli (tidak diterjemahkan).
+  const deadline = Date.now() + 75_000;
+
+  /** Satu batch penuh; null = hasil tidak bisa dicocokkan → coba lagi. */
+  const tryBatch = async (lines: string[]): Promise<string[] | null> => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const parts = await translateBatch(lines, from);
+        if (parts && parts.length === lines.length) return parts;
+      } catch {
+        /* rate-limit sesaat — coba lagi */
+      }
+      if (Date.now() > deadline) break;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+    return null;
+  };
+
   for (let i = 0; i < cues.length; i += CHUNK) {
     const slice = cues.slice(i, i + CHUNK);
     if (Date.now() > deadline) {
-      slice.forEach((c) => out.push(c));
+      // Waktu habis — baris mentah dipakai supaya subtitle tidak hilang,
+      // dan ditandai gagal supaya hasilnya dilabeli "partial".
+      slice.forEach((c) => {
+        out.push(c);
+        failCount += 1;
+      });
       continue;
     }
-    let done: string[] | null = null;
-    // Dua percobaan: Google Translate kadang rate-limit sesaat.
-    for (let attempt = 0; attempt < 2 && !done; attempt++) {
-      try {
-        done = await translateBatch(slice.map((c) => c.text), from);
-      } catch {
-        done = null;
-        await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+    let done = await tryBatch(slice.map((c) => c.text));
+    if (!done) {
+      // Batch gagal/rusak → terjemahkan PER BARIS. Lebih lambat, tapi
+      // dijamin tiap dialog dapat terjemahan — inilah perbaikan untuk
+      // "ada dialog yang subtitle-nya tidak diterjemahkan".
+      done = [];
+      for (const c of slice) {
+        if (Date.now() > deadline) {
+          done.push(c.text);
+          failCount += 1;
+          continue;
+        }
+        const one = await tryBatch([c.text]);
+        if (one && one[0] && one[0].trim()) {
+          done.push(one[0]);
+          okCount += 1;
+        } else {
+          done.push(c.text);
+          failCount += 1;
+        }
+        // Jeda kecil supaya Google Translate tidak rate-limit.
+        await new Promise((r) => setTimeout(r, 120));
       }
-      if (Date.now() > deadline) break;
-    }
-    if (done) {
-      okCount += slice.length;
-      slice.forEach((c, k) =>
-        out.push({ ...c, text: done![k]?.trim() || c.text }),
-      );
     } else {
-      slice.forEach((c) => out.push(c));
+      okCount += slice.length;
     }
+    const translatedTexts = done;
+    slice.forEach((c, k) =>
+      out.push({ ...c, text: translatedTexts[k]?.trim() || c.text }),
+    );
     // Jeda kecil supaya Google Translate tidak rate-limit.
-    await new Promise((r) => setTimeout(r, 350));
+    await new Promise((r) => setTimeout(r, 150));
   }
-  // Kalau tak ada satu pun chunk yang berhasil, tetap kirim subtitle aslinya
-  // supaya player tidak kehilangan subtitle sama sekali.
-  return { cues: out, translated: okCount > 0 };
+  // `translated` = minimal satu chunk berhasil (dulu: sisa cue bebas bahasa
+  // asli tanpa peringatan). `partial` = masih ada baris yang gagal, jadi UI
+  // memberi tahu user dan hasilnya TIDAK disimpan ke cache lokal.
+  const translated = okCount > 0;
+  const partial = failCount > 0;
+  return { cues: out, translated, partial };
 }
 
 /**
@@ -249,9 +293,17 @@ export const subtitleIndo = action({
       // Track English → sumber terjemahan "en". Track lain (mis. Spanish)
       // biarkan dideteksi otomatis oleh Google.
       const result = isIndo
-        ? { cues, translated: true }
+        ? { cues, translated: true, partial: false }
         : await translateCues(cues, /^en\b|english/i.test(label) ? "en" : "auto");
-      const source = isIndo ? "indo" : result.translated ? "auto" : "raw";
+      // "partial" = sebagian baris gagal diterjemahkan (UI memberi tahu user
+      // dan tidak menyimpannya ke cache lokal supaya bisa dicoba lagi).
+      const source = isIndo
+        ? "indo"
+        : !result.translated
+          ? "raw"
+          : result.partial
+            ? "partial"
+            : "auto";
       const vtt = toVtt(result.cues);
       if (cache.size > 120) cache.clear();
       cache.set(cacheKey, { vtt, source, at: Date.now() });
@@ -439,9 +491,15 @@ export const donghuaSubtitle = action({
 
     const isIndo = /indonesia|indonesian|\bids?\b/i.test(pick.label);
     const result = isIndo
-      ? { cues, translated: true }
+      ? { cues, translated: true, partial: false }
       : await translateCues(cues, /english|\ben\b/i.test(pick.label) ? "en" : "auto");
-    const source = isIndo ? "indo" : result.translated ? "auto" : "raw";
+    const source = isIndo
+      ? "indo"
+      : !result.translated
+        ? "raw"
+        : result.partial
+          ? "partial"
+          : "auto";
     const vtt = toVtt(result.cues);
     if (cache.size > 120) cache.clear();
     cache.set(cacheKey, { vtt, source, at: Date.now() });

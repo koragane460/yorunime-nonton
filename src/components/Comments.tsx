@@ -55,6 +55,10 @@ export function CommentsSection({
   const [replyTo, setReplyTo] = useState<CommentT | null>(null);
   /** Berapa reply yang sedang dibuka per komentar induk (kelipatan 5). */
   const [openReplies, setOpenReplies] = useState<Record<string, number>>({});
+  /** KIRI SEDANG BERJALAN — mencegah komentar/balasan terkirim DOUBLE
+      (Enter ketahan / tap dua kali). Tanpa guard ini, `text` masih terisi
+      selama request berjalan, jadi key repeat mengirim isi yang sama lagi. */
+  const [sending, setSending] = useState(false);
   const { muted } = useModeration();
   void animeId;
 
@@ -63,13 +67,16 @@ export function CommentsSection({
       toast.error("Kamu sedang dimute, tidak bisa komentar");
       return;
     }
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
+    setSending(true);
     try {
       await onSend(text, replyTo?._id);
       setText("");
       setReplyTo(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal kirim");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -126,22 +133,17 @@ export function CommentsSection({
             saat ada teks (permintaan: jangan membosankan). */}
         <button
           onClick={() => void send()}
-          disabled={muted || !text.trim()}
+          disabled={muted || sending || !text.trim()}
           className={cn(
             "group relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300 active:scale-90",
             text.trim()
-              ? "bg-gradient-to-br from-amber-300 via-gold-strong to-orange-500 text-black shadow-[0_0_18px_-4px_rgba(251,191,36,.95)]"
+              // Warna DATAR palet YoruNime (Sky Blue) — tanpa gradien & glow.
+              ? "bg-[#1CA7EC] text-white disabled:opacity-60"
               : "bg-white/10 text-white/40",
           )}
           aria-label="Kirim komentar"
         >
           <Send className={cn("size-4 transition-transform", text.trim() && "group-hover:translate-x-0.5")} />
-          {text.trim() && (
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-[linear-gradient(115deg,transparent_38%,rgba(255,255,255,.65)_50%,transparent_62%)] bg-[length:250%_100%] bg-no-repeat [background-position:200%_0] animate-[yn-shine-sweep_2.4s_ease-in-out_infinite]"
-            />
-          )}
         </button>
       </div>
 
@@ -233,6 +235,7 @@ export function CommentsSection({
         <ReplySheet
           target={replyTo}
           muted={muted}
+          sending={sending}
           text={text}
           onText={setText}
           onSend={() => void send()}
@@ -247,6 +250,7 @@ export function CommentsSection({
 function ReplySheet({
   target,
   muted,
+  sending,
   text,
   onText,
   onSend,
@@ -254,6 +258,9 @@ function ReplySheet({
 }: {
   target: CommentT;
   muted: boolean;
+  /** True selama request berjalan — input & tombol dikunci supaya balasan
+      tidak terkirim dua kali. */
+  sending: boolean;
   text: string;
   onText: (v: string) => void;
   onSend: () => void;
@@ -303,29 +310,28 @@ function ReplySheet({
             value={text}
             autoFocus
             onChange={(e) => onText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onSend()}
+            onKeyDown={(e) => {
+              // Enter kirim — `send()` di induk sudah mengunci saat berjalan,
+              // jadi key repeat tidak pernah mengirim balasan dua kali.
+              if (e.key === "Enter" && !sending) onSend();
+            }}
             placeholder={muted ? "Kamu sedang dimute…" : `Balas ${target.username}…`}
-            disabled={muted}
+            disabled={muted || sending}
             className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-black/40 px-4 text-sm outline-none focus:border-white/45 disabled:opacity-50"
           />
           <button
             onClick={onSend}
-            disabled={muted || !text.trim()}
+            disabled={muted || sending || !text.trim()}
             aria-label="Kirim balasan"
             className={cn(
               "group relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300 active:scale-90",
+              // Warna DATAR Sky Blue — tanpa gradien emas & glow (palet 4 warna).
               text.trim()
-                ? "bg-gradient-to-br from-amber-300 via-gold-strong to-orange-500 text-black shadow-[0_0_22px_-5px_rgba(251,191,36,1)]"
+                ? "bg-[#1CA7EC] text-white disabled:opacity-60"
                 : "bg-white/10 text-white/40",
             )}
           >
             <Send className="size-4 transition-transform group-hover:translate-x-0.5" />
-            {text.trim() && (
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-[linear-gradient(115deg,transparent_38%,rgba(255,255,255,.65)_50%,transparent_62%)] bg-[length:250%_100%] bg-no-repeat [background-position:200%_0] animate-[yn-shine-sweep_2.4s_ease-in-out_infinite]"
-              />
-            )}
           </button>
         </div>
       </div>
@@ -385,8 +391,8 @@ function CommentRow({
   };
 
   return (
-    /* Komentar TANPA kotak/latar — polos seperti feed premium:
-       avatar bulat, nama + waktu, lalu pesan tanpa bubble. */
+    /* Komentar: avatar bulat + nama/waktu, lalu PESAN DIBUNGKUS KOTAK
+       (permintaan: "pesan komen itu dibungkus kotak"). */
     <div className="border-0 bg-transparent px-0.5 py-1.5">
       <div className="flex items-start gap-2.5 px-2.5 pt-1">
         {/* Avatar komentar DIPERBESAR (permintaan) — size-10, teks ikut
@@ -409,9 +415,12 @@ function CommentRow({
           <p className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</p>
         </div>
       </div>
-      <p className="break-words px-3 pb-0.5 pl-[48px] pt-1.5 text-[14.5px] leading-relaxed text-foreground/90">
-        {c.text}
-      </p>
+      {/* PESAN — kotak rounded kalem, kontras dengan latar transparan. */}
+      <div className="mx-3 mb-1 mt-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
+        <p className="break-words text-[14.5px] leading-relaxed text-foreground/90">
+          {c.text}
+        </p>
+      </div>
       <div className="flex items-center gap-4 px-3 pb-1 pl-[48px] pt-0.5 text-[11px] text-muted-foreground">
         {/* REPLAY dulu (kiri), baru LIKE — urutan sesuai permintaan. */}
         <button

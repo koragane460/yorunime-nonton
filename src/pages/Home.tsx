@@ -1240,16 +1240,23 @@ function HomeContent() {
           pendek tanpa glow, ditekan → layar fullscreen GENRE. */}
       {!loading && genreList.length > 0 && (
         <div className="fade-enter mt-3">
-          <div className="thin-scroll -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+          {/* `md:-mx-6 md:px-6` — padding konten AppLayout jadi 24px di md+,
+              jadi bleed ikut 24px supaya tepi kanan baris GENRE persis
+              sejajar dengan kotak pengumuman di bawahnya (rounded PAS).
+              Spacer kanan menjamin sudut chip terakhir tidak pernah
+              menempel di tepi layar saat scroll mentok. */}
+          <div className="thin-scroll -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:-mx-6 md:px-6">
             {genreList.map((g) => (
               <button
                 key={g.id}
                 onClick={() => setGenreScreen(g.id)}
-                className="flex shrink-0 items-center rounded-2xl border border-red-500/45 bg-white/[0.07] px-4 py-2.5 text-[13px] font-bold text-white/85 transition hover:border-red-400/70 hover:bg-white/[0.12] hover:text-white active:scale-95"
+                className="flex shrink-0 items-center rounded-2xl border border-[#E84855]/55 bg-white/[0.07] px-4 py-2.5 text-[13px] font-bold text-white/85 transition hover:border-[#E84855] hover:bg-white/[0.12] hover:text-white active:scale-95"
               >
                 {g.name}
               </button>
             ))}
+            {/* Jarak akhir — sudut rounded chip terakhir selalu lega. */}
+            <span aria-hidden className="w-1 shrink-0" />
           </div>
         </div>
       )}
@@ -3880,18 +3887,34 @@ function AnimeDetailScreen({
 
         <div className="px-3">
           {/* POSTER DI TENGAH ATAS — duduk DI BAWAH banner (tidak ketimpa),
-              di bawahnya judul anime, lalu judul English abu pudar. */}
+              di bawahnya judul anime, lalu judul English abu pudar.
+              `relative z-10` WAJIB: banner ber-`relative` (elemen terposisi)
+              jadi menimpa konten statis — tanpa z-index poster masuk ke
+dalam banner dan tampak KEpotong/setengah. `onError` mengganti
+              poster gagal muat (403 dsb.) dengan kotak judul, jadi tidak
+              pernah ada area kosong tanpa render. */}
           <div className="-mt-14 flex flex-col items-center text-center">
-            {detail.image && (
-              <img
-                src={detail.image}
-                alt=""
-                // Poster tampil FULL (tidak kepotong setengah): object-contain
-                // + kotak 2:3 dengan latar gelap, jadi seluruh poster terlihat
-                // walau rasio gambarnya sedikit berbeda.
-                className="aspect-[2/3] h-72 w-48 rounded-2xl bg-black/40 object-contain p-0.5 shadow-[0_28px_56px_-20px_rgba(0,0,0,1)]"
-              />
-            )}
+            <div className="relative z-10 flex h-72 w-48 items-center justify-center overflow-hidden rounded-2xl bg-black/60 shadow-[0_28px_56px_-20px_rgba(0,0,0,1)]">
+              {/* Fallback — tampil hanya kalau <img> gagal dimuat. */}
+              <span className="line-clamp-5 px-3 text-center text-[11px] font-bold leading-snug text-white/45">
+                {detail.title}
+              </span>
+              {detail.image && (
+                <img
+                  src={detail.image}
+                  alt=""
+                  onError={(e) => {
+                    // Poster gagal dimuat → sembunyikan gambar, kotak judul
+                    // di belakangnya yang tampil (tetap ada "render").
+                    e.currentTarget.style.visibility = "hidden";
+                  }}
+                  // Poster tampil FULL (tidak kepotong setengah): object-contain
+                  // + kotak 2:3 dengan latar gelap solid, jadi seluruh poster
+                  // terlihat walau rasio gambarnya sedikit berbeda.
+                  className="absolute inset-0 size-full rounded-2xl bg-[#0b0d12] object-contain p-0.5"
+                />
+              )}
+            </div>
             <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">
               {detail.title}
             </h2>
@@ -5053,7 +5076,7 @@ function DonghuaDetailScreen({
               {detail.genres.map((g) => (
                 <span
                   key={g}
-                  className="rounded-full border border-red-500/45 px-3 py-1 text-[11px] font-semibold text-white"
+                  className="rounded-full border border-[#E84855]/55 px-3 py-1 text-[11px] font-semibold text-white"
                 >
                   {g}
                 </span>
