@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,14 +48,14 @@ export const DECORATIONS: DecorDef[] = [
     id: "sakura",
     name: "Sakura Jatuh",
     price: 1800,
-    blurb: "Kelopak jatuh, tepi layar pink, pohon sakura bertekstur.",
+    blurb: "Kelopak jatuh, tepi layar pink, pohon sakura bergaris tegas.",
     tone: "from-pink-200 via-rose-400 to-pink-700",
   },
   {
     id: "pistol",
     name: "Kilat Pistol",
     price: 2200,
-    blurb: "Pistol menembak dengan muzzle flash & garis tembakan.",
+    blurb: "Pistol membidik foto profil, tembakannya meledak di foto.",
     tone: "from-zinc-200 via-slate-400 to-zinc-800",
   },
   {
@@ -194,17 +194,77 @@ function SakuraDecor() {
 }
 
 function PistolDecor() {
+  const root = useRef<HTMLDivElement | null>(null);
+
+  // Pistol HARUS mengarah tepat ke foto profil (permintaan), bukan menembak
+  // ke ruang kosong. Posisi foto diukur langsung dari DOM (`.yn-avatar-ring`),
+  // lalu dipakai sebagai target tembakan + titik ledakan.
+  useEffect(() => {
+    const aim = () => {
+      const host = root.current;
+      if (!host) return;
+      const photo = document.querySelector<HTMLElement>(".yn-avatar-ring");
+      const gun = host.querySelector<HTMLElement>(".decor-gun-aim");
+      if (!photo || !gun) return;
+      const p = photo.getBoundingClientRect();
+      const g = gun.getBoundingClientRect();
+      if (!p.width || !g.width) return;
+      const tx = p.left + p.width / 2;
+      const ty = p.top + p.height / 2;
+      const gx = g.left + g.width / 2;
+      const gy = g.top + g.height * 0.45;
+      host.style.setProperty("--yn-photo-x", `${tx}px`);
+      host.style.setProperty("--yn-photo-y", `${ty}px`);
+      // Laras SVG menghadap ke kiri (−X), jadi putar sebesar sudut vektor
+      // bidik dikurangi 180°.
+      const deg = (Math.atan2(ty - gy, tx - gx) * 180) / Math.PI + 360;
+      host.style.setProperty("--yn-gun-rot", `${deg - 180}deg`);
+      host.style.setProperty(
+        "--yn-shot-len",
+        `${Math.hypot(tx - gx, ty - gy)}px`,
+      );
+    };
+    // Ukur setelah sheet selesai di-layout (dan sekali lagi setelah animasi).
+    aim();
+    const t1 = window.setTimeout(aim, 80);
+    const t2 = window.setTimeout(aim, 320);
+    window.addEventListener("resize", aim);
+    window.addEventListener("scroll", aim, true);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.removeEventListener("resize", aim);
+      window.removeEventListener("scroll", aim, true);
+    };
+  }, []);
+
   return (
-    <>
+    <div ref={root} className="decor-pistol-root">
       <EdgeGlow className="decor-edge-pistol" />
-      <div className="decor-gun-wrap">
-        <img src="/yn-pistol.svg" alt="" className="decor-gun" />
-        <span className="decor-muzzle" />
-        <span className="decor-tracer decor-tracer-a" />
-        <span className="decor-tracer decor-tracer-b" />
-        <span className="decor-tracer decor-tracer-c" />
+      <div className="decor-gun-aim">
+        <div className="decor-gun-wrap">
+          <img src="/yn-pistol.svg" alt="" className="decor-gun" />
+          <span className="decor-muzzle" />
+          <span className="decor-tracer decor-tracer-a" />
+          <span className="decor-tracer decor-tracer-b" />
+          <span className="decor-tracer decor-tracer-c" />
+        </div>
       </div>
-    </>
+      {/* Ledakan di FOTO PROFIL — melingkar + serpihan, gaya "nge-door" ala
+          kartu UNO. Sinkron dengan tembakan (4.8s). */}
+      <div className="decor-impact">
+        <span className="decor-impact-core" />
+        <span className="decor-impact-ring" />
+        <span className="decor-impact-ring decor-impact-ring-b" />
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span
+            key={i}
+            className="decor-impact-shard"
+            style={{ "--a": `${i * 30}deg` } as React.CSSProperties}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -251,7 +311,9 @@ export function DecorPreview({ id }: { id: string }) {
   return (
     <div className="decor-preview">
       <span className="decor-preview-bg" />
-      <span className="decor-preview-avatar">Y</span>
+      {/* Tanpa bulatan berisi huruf "Y" di tengah (permintaan) — cukup
+          lingkaran foto kosong supaya hiasan terlihat di sekitarnya. */}
+      <span className="decor-preview-avatar" aria-hidden />
       <ProfileDecor decor={id} className="profile-decor-preview" />
     </div>
   );

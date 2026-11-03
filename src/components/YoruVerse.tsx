@@ -215,7 +215,7 @@ export function YoruVerseScreen({
                   kecil — elegan, TANPA neon (tema YoruNime tidak neon). */}
               <div className="mt-6 flex items-center justify-center gap-3">
                 <span aria-hidden className="h-px w-16 bg-gradient-to-r from-transparent to-gold/70" />
-                <h1 className="bg-gradient-to-b from-amber-100 via-gold to-amber-600 bg-clip-text text-center text-[1.55rem] font-black tracking-[0.24em] text-transparent drop-shadow-[0_2px_3px_rgba(0,0,0,.85)]">
+                <h1 className="text-center text-[1.55rem] font-black tracking-[0.24em] text-gold">
                   YORUVERSE
                 </h1>
                 <span aria-hidden className="h-px w-16 bg-gradient-to-l from-transparent to-gold/70" />
@@ -491,8 +491,8 @@ function DmScreen({
 
 /** Warna angka peringkat: emas 1-3, perak 4-10, zinc sisanya. */
 function rankChipCls(i: number) {
-  if (i < 3) return "bg-gradient-to-b from-amber-300 to-amber-500 text-black";
-  if (i < 10) return "bg-gradient-to-b from-zinc-200 to-zinc-400 text-black";
+  if (i < 3) return "bg-gold text-[#241c02]";
+  if (i < 10) return "bg-[#FFFAF0] text-[#241c02]";
   return "bg-white/10 text-zinc-300";
 }
 

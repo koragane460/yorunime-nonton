@@ -19,32 +19,37 @@ import { resolveClanIcon } from "@/lib/clanIcons";
 /** Gaya title staff: dev merah, moderator biru, tester emas, sepuh kuning. */
 const TITLE_STYLE: Record<
   string,
-  { label: string; Icon: LucideIcon; cls: string }
+  { label: string; Icon: LucideIcon; cls: string; fg: string }
 > = {
   dev: {
     label: "Developer",
     Icon: Flame,
-    cls: "bg-gradient-to-r from-red-700 via-red-500 to-rose-600",
+    cls: "bg-[#E84855]",
+    fg: "text-[#FFFAF0]",
   },
   creator: {
     label: "Creator",
     Icon: Palette,
-    cls: "bg-gradient-to-r from-red-700 via-red-500 to-rose-600",
+    cls: "bg-[#E84855]",
+    fg: "text-[#FFFAF0]",
   },
   mod: {
     label: "Moderator",
     Icon: Shield,
-    cls: "bg-gradient-to-r from-blue-700 via-blue-500 to-sky-600",
+    cls: "bg-[#1CA7EC]",
+    fg: "text-[#FFFAF0]",
   },
   tester: {
     label: "Tester",
     Icon: FlaskConical,
-    cls: "bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-500",
+    cls: "bg-[#FFD23F]",
+    fg: "text-[#241c02]",
   },
   sepuh: {
     label: "Sepuh",
     Icon: Crown,
-    cls: "bg-gradient-to-r from-yellow-600 via-yellow-400 to-amber-500",
+    cls: "bg-[#FFD23F]",
+    fg: "text-[#241c02]",
   },
 };
 
@@ -318,9 +323,10 @@ export function TitleBadge({
   return (
     <span
       className={cn(
-        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 rounded-md font-bold text-white shadow",
+        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 rounded-full font-bold shadow",
         compact ? "px-1.5 py-0 text-[9px]" : "px-2 py-0.5 text-[10px]",
         def.cls,
+        def.fg,
         className,
       )}
     >

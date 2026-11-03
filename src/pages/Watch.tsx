@@ -996,6 +996,10 @@ function WatchContent() {
     setMiniCue(text);
   }, [currentTime, cues]);
 
+  // Detail anime (daftar episode) — dideklarasikan SEBELUM efek subtitle
+  // karena efek itu memakai `detailData` untuk tahu nomor episode.
+  const [detailData, setDetailData] = useState<any>(null);
+
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
   // localStorage jadi tidak perlu diterjemahkan ulang.
   // Kalau server yang sedang diputar sudah membawa subtitle Indonesia sendiri
@@ -1172,7 +1176,6 @@ function WatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epParam, animeId, isDonghua, bakedSubs, detailData, subRetry]);
 
-  const [detailData, setDetailData] = useState<any>(null);
   // Episode yang langsung tampil di grid; sisanya lewat "Lihat semua".
   const [epAllOpen, setEpAllOpen] = useState(false);
 

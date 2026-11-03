@@ -459,7 +459,7 @@ export function ProfileSheet({
               </div>
               <div className="h-3.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/25">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-700"
+                  className="h-full rounded-full bg-gold transition-[width] duration-700"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -501,10 +501,10 @@ export function ProfileSheet({
                       sending || friendStatus === "friend" || friendStatus === "pending"
                     }
                     className={cn(
-                      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border bg-transparent px-2 py-3 text-[12px] font-bold transition active:scale-[0.98]",
+                      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border bg-transparent px-3 py-3 text-[12px] font-bold transition active:scale-[0.98]",
                       friendStatus === "friend" || friendStatus === "pending"
                         ? "border-white/12 text-white/45"
-                        : "border-white/30 text-white",
+                        : "border-[#1CA7EC] text-[#FFFAF0]",
                     )}
                   >
                     {sending ? <Send className="size-4" /> : <UserPlus className="size-4" />}
@@ -526,7 +526,7 @@ export function ProfileSheet({
                     }
                     aria-label="Chat"
                     title="Chat"
-                    className="flex w-12 shrink-0 items-center justify-center rounded-xl bg-sky-300 text-sky-950 transition active:scale-95"
+                    className="flex w-12 shrink-0 items-center justify-center rounded-full bg-[#1CA7EC] text-[#FFFAF0] transition active:scale-95"
                   >
                     <MessageCircle className="size-5" />
                   </button>
@@ -537,7 +537,7 @@ export function ProfileSheet({
                     onClick={() => setGiveOpen(true)}
                     aria-label="Give Premium"
                     title="Give Premium"
-                    className="flex w-12 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-amber-950 transition active:scale-95"
+                    className="flex w-12 shrink-0 items-center justify-center rounded-full bg-[#FFD23F] text-[#241c02] transition active:scale-95"
                   >
                     <Crown className="size-5" />
                   </button>
@@ -547,14 +547,14 @@ export function ProfileSheet({
                 <button
                   type="button"
                   onClick={() => setViewPet(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/25 py-2.5 text-[12px] font-bold text-amber-200 transition active:scale-[0.98]"
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-[#FFD23F]/60 py-2.5 text-[12px] font-bold text-[#FFD23F] transition active:scale-[0.98]"
                 >
                   <PawPrint className="size-4" /> YoruPet
                 </button>
                 <button
                   type="button"
                   onClick={() => setAffinity(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/25 py-2.5 text-[12px] font-bold text-pink-100 transition active:scale-[0.98]"
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-[#E84855]/60 py-2.5 text-[12px] font-bold text-[#FFFAF0] transition active:scale-[0.98]"
                 >
                   <HeartHandshake className="size-4" /> Afinitas
                 </button>

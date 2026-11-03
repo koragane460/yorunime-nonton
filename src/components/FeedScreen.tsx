@@ -464,25 +464,19 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
               err && "placeholder:text-red-300",
             )}
           />
-          {/* Tombol kirim HIDUP — gradien emas + kilau berjalan. */}
+          {/* Tombol kirim — WARNA FLAT (tanpa gradien & kilau berjalan). */}
           <button
             onClick={() => void submit()}
             disabled={busy || !text.trim()}
             aria-label="Kirim komentar"
             className={cn(
-              "group relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300 active:scale-90",
+              "group relative flex size-11 shrink-0 items-center justify-center rounded-full transition-all duration-300 active:scale-90",
               text.trim()
-                ? "bg-gradient-to-br from-amber-300 via-gold-strong to-orange-500 text-black shadow-[0_0_20px_-5px_rgba(251,191,36,1)]"
+                ? "bg-gold text-[#241c02]"
                 : "bg-primary text-primary-foreground",
             )}
           >
             <Send className="size-5 transition-transform group-hover:translate-x-0.5" />
-            {text.trim() && (
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-[linear-gradient(115deg,transparent_38%,rgba(255,255,255,.65)_50%,transparent_62%)] bg-[length:250%_100%] bg-no-repeat [background-position:200%_0] animate-[yn-shine-sweep_2.4s_ease-in-out_infinite]"
-              />
-            )}
           </button>
         </div>
       </motion.div>
@@ -606,7 +600,7 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
             <button
               onClick={() => void share()}
               disabled={busy}
-              className="mt-3 w-full rounded-xl bg-gradient-to-b from-primary to-primary/85 py-3 text-sm font-black text-primary-foreground transition active:scale-[0.99] disabled:opacity-60"
+              className="mt-3 w-full rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground transition active:scale-[0.99] disabled:opacity-60"
             >
               {busy ? "Mengirim…" : "Kirim"}
             </button>
@@ -1412,7 +1406,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
 
             <button
               onClick={() => setStep("caption")}
-              className="mt-4 w-full rounded-2xl bg-gradient-to-b from-primary to-primary/85 py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98]"
+              className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98]"
             >
               Lanjut ke caption
             </button>
@@ -1446,7 +1440,7 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => void submit()}
               disabled={busy}
-              className="mt-4 w-full rounded-2xl bg-gradient-to-b from-primary to-primary/85 py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
+              className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-sm font-black text-primary-foreground transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
             >
               {busy ? "Mengunggah… memposting…" : "Post"}
             </button>

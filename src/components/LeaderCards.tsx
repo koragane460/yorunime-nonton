@@ -71,12 +71,12 @@ const xpKeyOf = (p: Period) =>
 /** Latar berwarna per jenis papan (permintaan: background-nya dikasih warna). */
 const TONE = {
   xp: {
-    box: "border-sky-400/35 bg-[linear-gradient(155deg,rgba(56,189,248,.20),rgba(14,16,26,.92)_58%,rgba(10,11,18,.96)_100%)]",
+    box: "border-[#1CA7EC]/35 bg-card",
     chip: "border-sky-300/40 bg-sky-400/15 text-sky-100",
     icon: "text-sky-200",
   },
   give: {
-    box: "border-amber-300/40 bg-[linear-gradient(155deg,rgba(251,191,36,.22),rgba(26,19,8,.92)_58%,rgba(16,13,9,.96)_100%)]",
+    box: "border-[#FFD23F]/40 bg-card",
     chip: "border-amber-300/45 bg-amber-400/15 text-amber-100",
     icon: "text-amber-200",
   },
@@ -85,25 +85,25 @@ const TONE = {
 /** Hiasan/EFEK per peringkat — warnanya menempel DI KOTAK orangnya. */
 const RANK = {
   1: {
-    card: "border-gold-strong/70 bg-[linear-gradient(165deg,rgba(245,158,11,.42),rgba(59,42,4,.85)_55%,rgba(20,16,8,.92)_100%)]",
+    card: "border-gold-strong/70 bg-card",
     ring: "ring-2 ring-gold-strong/80",
-    text: "text-amber-50",
-    badge: "bg-gold-strong text-black",
-    glow: "shadow-[0_0_22px_-6px_rgba(251,191,36,.9)]",
+    text: "text-[#FFFAF0]",
+    badge: "bg-gold-strong text-[#241c02]",
+    glow: "",
   },
   2: {
-    card: "border-slate-200/55 bg-[linear-gradient(165deg,rgba(203,213,225,.34),rgba(71,85,105,.72)_55%,rgba(15,18,26,.92)_100%)]",
-    ring: "ring-2 ring-slate-200/80",
-    text: "text-slate-50",
-    badge: "bg-slate-200 text-black",
-    glow: "shadow-[0_0_18px_-8px_rgba(226,232,240,.85)]",
+    card: "border-[#FFFAF0]/40 bg-card",
+    ring: "ring-2 ring-[#FFFAF0]/70",
+    text: "text-[#FFFAF0]",
+    badge: "bg-[#FFFAF0] text-[#241c02]",
+    glow: "",
   },
   3: {
-    card: "border-orange-500/60 bg-[linear-gradient(165deg,rgba(194,110,42,.4),rgba(124,45,18,.82)_55%,rgba(22,14,10,.92)_100%)]",
-    ring: "ring-2 ring-orange-400/75",
-    text: "text-orange-50",
-    badge: "bg-orange-500 text-black",
-    glow: "shadow-[0_0_18px_-8px_rgba(249,115,22,.85)]",
+    card: "border-[#E84855]/55 bg-card",
+    ring: "ring-2 ring-[#E84855]/70",
+    text: "text-[#FFFAF0]",
+    badge: "bg-[#E84855] text-[#FFFAF0]",
+    glow: "",
   },
 } as const;
 

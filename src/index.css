@@ -2095,14 +2095,14 @@ a {
 /* Sakura */
 .decor-sakura-tree {
   position: absolute;
-  top: -7%;
-  right: -10%;
-  width: min(66vw, 430px);
+  top: -4%;
+  right: -8%;
+  width: min(62vw, 400px);
   height: auto;
-  opacity: 0.95;
-  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.45));
-  transform-origin: 82% 8%;
-  animation: decor-tree-sway 9s ease-in-out infinite;
+  opacity: 0.97;
+  /* Tanpa drop-shadow tebal: garis pohon dibiarkan tajam, bukan "soft". */
+  transform-origin: 88% 4%;
+  animation: decor-tree-sway 12s ease-in-out infinite;
 }
 .decor-petal {
   position: absolute;
@@ -2127,79 +2127,159 @@ a {
 }
 @keyframes decor-tree-sway {
   0%, 100% { transform: rotate(0deg) translateY(0); }
-  50% { transform: rotate(1.6deg) translateY(-6px); }
+  50% { transform: rotate(0.9deg) translateY(-4px); }
 }
 
-/* Pistol */
-.decor-gun-wrap {
+/* Pistol — laras DIPUTAR otomatis oleh JS supaya bidik tepat ke foto
+   profil, dan tembakannya berakhir dengan ledakan di foto tersebut. */
+.decor-pistol-root {
   position: absolute;
-  right: -4%;
-  bottom: 6%;
-  width: min(46vw, 230px);
+  inset: 0;
+  pointer-events: none;
+  --yn-photo-x: 50%;
+  --yn-photo-y: 32%;
+  --yn-gun-rot: 0deg;
+  --yn-shot-len: 60vw;
+}
+.decor-gun-aim {
+  position: absolute;
+  right: 1%;
+  bottom: 4%;
+  width: min(42vw, 200px);
   aspect-ratio: 260 / 200;
-  transform: rotate(-6deg);
+  transform: rotate(var(--yn-gun-rot));
+  transform-origin: 72% 58%;
+}
+.decor-gun-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
   animation: decor-gun-recoil 4.8s cubic-bezier(0.3, 0, 0.2, 1) infinite;
-  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.55));
 }
 .decor-gun { width: 100%; height: 100%; display: block; }
 .decor-muzzle {
   position: absolute;
   left: 0.5%;
-  top: 27%;
-  width: 74px;
-  height: 74px;
+  top: 30%;
+  width: 64px;
+  height: 64px;
   transform: translate(-58%, -50%);
   border-radius: 50%;
-  background:
-    radial-gradient(circle, #fffbe6 0 12%, #ffd166 26%, rgba(255, 122, 24, 0.85) 46%, rgba(255, 45, 0, 0) 70%);
-  filter: blur(1px);
+  background: radial-gradient(circle, #fffaef 0 14%, #ffd23f 32%, rgba(232, 72, 85, 0.75) 52%, rgba(232, 72, 85, 0) 72%);
   opacity: 0;
   animation: decor-muzzle-flash 4.8s steps(1, end) infinite;
 }
+/* Garis tembakan: mulai dari laras, panjangnya = jarak ke foto, jadi ujungnya
+   berhenti TEPAT di foto profil. */
 .decor-tracer {
   position: absolute;
-  left: 2%;
-  top: 28%;
-  width: 62vw;
-  max-width: 520px;
+  left: 0;
+  top: 31%;
+  width: var(--yn-shot-len);
   height: 2px;
   transform-origin: left center;
-  transform: rotate(-28deg) scaleX(0.2);
-  background: linear-gradient(90deg, rgba(255, 251, 230, 0.95), rgba(255, 209, 102, 0.65) 20%, rgba(255, 122, 24, 0.25) 55%, transparent 92%);
-  filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.8));
+  transform: scaleX(0.04);
+  background: linear-gradient(90deg, rgba(255, 250, 240, 0.95), rgba(255, 210, 63, 0.7) 22%, rgba(232, 72, 85, 0.3) 60%, transparent 96%);
   opacity: 0;
   animation: decor-tracer-shot 4.8s ease-out infinite;
 }
-.decor-tracer-b { top: 31%; transform: rotate(-23deg) scaleX(0.2); animation-delay: 0.12s; }
-.decor-tracer-c { top: 25%; transform: rotate(-33deg) scaleX(0.2); animation-delay: 0.24s; }
+.decor-tracer-b { top: 29%; animation-delay: 0.1s; }
+.decor-tracer-c { top: 33%; animation-delay: 0.2s; }
 @keyframes decor-gun-recoil {
-  0%, 30%, 100% { transform: rotate(-6deg) translate3d(0, 0, 0); }
-  5% { transform: rotate(-15deg) translate3d(-14px, 8px, 0); }
-  11% { transform: rotate(-6deg) translate3d(0, 0, 0); }
-  14% { transform: rotate(-14deg) translate3d(-11px, 7px, 0); }
-  20% { transform: rotate(-6deg) translate3d(0, 0, 0); }
-  23% { transform: rotate(-16deg) translate3d(-16px, 9px, 0); }
-  30% { transform: rotate(-6deg) translate3d(0, 0, 0); }
+  0%, 34%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  5% { transform: translate3d(10px, -6px, 0) rotate(7deg); }
+  11% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  15% { transform: translate3d(8px, -5px, 0) rotate(6deg); }
+  21%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
 }
 @keyframes decor-muzzle-flash {
   0%, 4% { opacity: 0; transform: translate(-58%, -50%) scale(0.4); }
   5% { opacity: 1; transform: translate(-58%, -50%) scale(1.2); }
-  10% { opacity: 0; transform: translate(-58%, -50%) scale(1.5); }
+  9% { opacity: 0; transform: translate(-58%, -50%) scale(1.5); }
   13% { opacity: 1; transform: translate(-58%, -50%) scale(1); }
-  18% { opacity: 0; }
-  22% { opacity: 1; transform: translate(-58%, -50%) scale(1.3); }
-  28%, 100% { opacity: 0; transform: translate(-58%, -50%) scale(0.4); }
+  17%, 100% { opacity: 0; transform: translate(-58%, -50%) scale(0.4); }
 }
 @keyframes decor-tracer-shot {
-  0% { opacity: 0; transform: rotate(-28deg) scaleX(0.1); }
-  5% { opacity: 0.95; transform: rotate(-28deg) scaleX(1); }
-  15% { opacity: 0; transform: rotate(-28deg) scaleX(1.05); }
-  100% { opacity: 0; transform: rotate(-28deg) scaleX(0.1); }
+  0% { opacity: 0; transform: scaleX(0.04); }
+  5% { opacity: 0.95; transform: scaleX(1); }
+  11% { opacity: 0; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(0.04); }
 }
 @keyframes decor-screen-flash {
-  0%, 4% { background-color: transparent; }
-  5% { background-color: rgba(255, 237, 213, 0.1); }
-  8%, 100% { background-color: transparent; }
+  0%, 9% { background-color: transparent; }
+  10% { background-color: rgba(255, 210, 63, 0.08); }
+  13%, 100% { background-color: transparent; }
+}
+
+/* Ledakan di foto profil (gaya kartu UNO nge-door): inti putih menyala,
+   dua cincin melebar, lalu serpihan menyebar. */
+.decor-impact {
+  position: absolute;
+  left: var(--yn-photo-x);
+  top: var(--yn-photo-y);
+  width: 0;
+  height: 0;
+  opacity: 0;
+  animation: decor-impact-show 4.8s linear infinite;
+}
+.decor-impact-core {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 84px;
+  height: 84px;
+  transform: translate(-50%, -50%) scale(0.2);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffaf0 0 22%, #ffd23f 46%, rgba(232, 72, 85, 0.55) 68%, transparent 78%);
+  animation: decor-impact-core 4.8s ease-out infinite;
+}
+.decor-impact-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 64px;
+  transform: translate(-50%, -50%) scale(0.3);
+  border-radius: 50%;
+  border: 3px solid rgba(255, 210, 63, 0.9);
+  animation: decor-impact-ring 4.8s ease-out infinite;
+}
+.decor-impact-ring-b { border-color: rgba(255, 250, 240, 0.75); border-width: 2px; animation-delay: 0.12s; }
+.decor-impact-shard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 20px;
+  margin: -10px 0 0 -1.5px;
+  border-radius: 999px;
+  transform-origin: 50% 50%;
+  transform: rotate(var(--a)) translateY(-8px) scaleY(0.3);
+  background: linear-gradient(180deg, #fffaf0, #ffd23f 55%, rgba(232, 72, 85, 0.2));
+  opacity: 0;
+  animation: decor-impact-shard 4.8s ease-out infinite;
+}
+@keyframes decor-impact-show {
+  0%, 9% { opacity: 0; }
+  10%, 22% { opacity: 1; }
+  30%, 100% { opacity: 0; }
+}
+@keyframes decor-impact-core {
+  0%, 9% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  11% { transform: translate(-50%, -50%) scale(1.35); opacity: 1; }
+  18% { transform: translate(-50%, -50%) scale(1); opacity: 0.85; }
+  26%, 100% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+}
+@keyframes decor-impact-ring {
+  0%, 9% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  11% { opacity: 0.95; }
+  30%, 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+@keyframes decor-impact-shard {
+  0%, 9% { opacity: 0; transform: rotate(var(--a)) translateY(-6px) scaleY(0.2); }
+  11% { opacity: 1; }
+  28%, 100% { opacity: 0; transform: rotate(var(--a)) translateY(-52px) scaleY(0.7); }
 }
 
 /* Kembang api + teks 2027 */
@@ -2287,26 +2367,23 @@ a {
   background-size: 16px 16px;
   opacity: 0.5;
 }
+/* Lingkaran foto kosong (tanpa huruf) — hanya penanda area foto. */
 .decor-preview-avatar {
   position: absolute;
   left: 50%;
   top: 46%;
-  display: flex;
-  width: 46px;
-  height: 46px;
-  align-items: center;
-  justify-content: center;
+  width: 44px;
+  height: 44px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  background: linear-gradient(160deg, #334155, #0f172a);
-  font-size: 20px;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.7);
+  border: 2px solid rgb(255 250 240 / 28%);
+  background: rgb(255 250 240 / 6%);
   z-index: 3;
 }
 .profile-decor-preview .decor-sakura-tree { width: 46%; right: -6%; }
-.profile-decor-preview .decor-gun-wrap { width: 40%; bottom: 0; }
+.profile-decor-preview .decor-gun-aim { width: 40%; bottom: 0; }
+.profile-decor-preview .decor-pistol-root { --yn-photo-x: 50%; --yn-photo-y: 46%; }
+.profile-decor-preview .decor-impact-shard { animation-duration: 8s; }
 .profile-decor-preview .decor-ny-text { font-size: 10px; top: 62%; letter-spacing: 0.04em; }
 .profile-decor-preview .decor-fw { transform: scale(0.45); }
 .profile-decor-preview .decor-fw-spark { animation-duration: 8s; }

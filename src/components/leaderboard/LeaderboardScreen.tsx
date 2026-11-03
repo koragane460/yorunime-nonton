@@ -73,12 +73,13 @@ function DashedNum({ rank }: { rank: number }) {
 function Podium({
   rank, username, image, xp,
 }: { rank: number; username?: string; image?: string; xp: number }) {
+  // Blok podium: warna FLAT (emas / warm white / ember), tanpa gradasi.
   const grad =
     rank === 1
-      ? "border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.45)_45%,rgba(251,191,36,.12)_100%)]"
+      ? "border-gold/60 bg-gold/85"
       : rank === 2
-        ? "border-zinc-300/45 bg-[linear-gradient(to_top,#cbd5e1_0%,rgba(203,213,225,.35)_50%,rgba(255,255,255,.08)_100%)]"
-        : "border-amber-600/50 bg-[linear-gradient(to_top,#b45309_0%,rgba(180,83,9,.4)_50%,rgba(251,146,60,.1)_100%)]";
+        ? "border-[#FFFAF0]/45 bg-[#FFFAF0]/15"
+        : "border-[#E84855]/55 bg-[#E84855]/25";
   const ring =
     rank === 1 ? "ring-amber-300" : rank === 2 ? "ring-zinc-300" : "ring-amber-600";
   const h = rank === 1 ? "h-24" : rank === 2 ? "h-16" : "h-14";
@@ -163,7 +164,7 @@ function XpView() {
             className={cn(
               "rounded-xl py-2 text-[11px] font-black capitalize transition",
               period === p
-                ? "bg-gradient-to-b from-yellow-300 to-amber-500 text-black shadow-md shadow-amber-500/25"
+                ? "bg-gold text-[#241c02]"
                 : "text-white/55 hover:bg-white/10 hover:text-white",
             )}>
             {p}
@@ -173,7 +174,7 @@ function XpView() {
       {!data && <p className="py-8 text-center text-sm text-white/50">Memuat…</p>}
       {data?.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada data XP periode ini</p>}
       {data && data.length > 0 && (
-        <div className="mb-3 rounded-3xl border border-amber-300/30 bg-[radial-gradient(120%_85%_at_50%_-25%,rgba(251,191,36,.20),transparent_60%),linear-gradient(165deg,#191306_0%,#111019_60%,#0a0a10_100%)] p-3 shadow-[0_24px_54px_-30px_rgba(251,191,36,.55)]">
+        <div className="mb-3 rounded-3xl border border-gold/30 bg-card p-3">
           <span aria-hidden className="absolute" />
           <div className="relative grid grid-cols-3 items-end gap-2">
             {t2 && <Podium {...t2} rank={2} />}
@@ -214,8 +215,8 @@ function GiveView() {
 
 /* ------------------------------------------------------ Clan view ---- */
 function rankChipCls(i: number) {
-  if (i < 3) return "bg-gradient-to-b from-amber-300 to-amber-500 text-black";
-  if (i < 10) return "bg-gradient-to-b from-zinc-200 to-zinc-400 text-black";
+  if (i < 3) return "bg-gold text-[#241c02]";
+  if (i < 10) return "bg-[#FFFAF0] text-[#241c02]";
   return "bg-white/10 text-zinc-300";
 }
 
@@ -291,7 +292,7 @@ export function LeaderboardScreen({
               className={cn(
                 "flex items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-black transition",
                 view === t.key
-                  ? "bg-gradient-to-b from-white/95 to-white/80 text-black shadow-lg shadow-black/30"
+                  ? "bg-[#FFFAF0] text-[#241c02]"
                   : "text-white/55 hover:bg-white/10 hover:text-white/90",
               )}
             >

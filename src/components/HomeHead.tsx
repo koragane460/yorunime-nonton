@@ -86,9 +86,7 @@ export function GreetingBar() {
     <div className="fade-enter flex w-full items-center justify-center px-1 py-1.5">
       <p className="text-center text-base font-black tracking-tight">
         {greetingOf()},{" "}
-        <span className="bg-gradient-to-r from-white via-gold to-gold-strong bg-clip-text text-transparent">
-          {name} Disini!
-        </span>
+        <span className="text-gold">{name} Disini!</span>
       </p>
     </div>
   );
@@ -155,7 +153,7 @@ export function ProfileBar() {
         </div>
         <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/15">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-700"
+            className="h-full rounded-full bg-gold transition-[width] duration-700"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -230,12 +228,12 @@ export function TopAiringRow({
   return (
     <section className="fade-enter mt-5">
       <div className="flex items-center gap-2">
-        <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-amber-300 to-orange-500 shadow-[0_6px_16px_-8px_rgba(251,146,60,.9)]">
-          <Play className="size-3.5 text-black" />
+        <span className="flex size-6 items-center justify-center rounded-full bg-gold">
+          <Play className="size-3.5 text-[#241c02]" />
         </span>
         <h2 className="text-lg font-bold tracking-tight">Top Airing</h2>
-        <span className="ml-auto flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-200">
-          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" /> On air
+        <span className="ml-auto flex items-center gap-1 rounded-full border border-[#1CA7EC]/40 bg-[#1CA7EC]/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#1CA7EC]">
+          <span className="size-1.5 rounded-full bg-[#1CA7EC]" /> On air
         </span>
       </div>
       <div className="thin-scroll -mx-1 mt-2.5 flex gap-3 overflow-x-auto px-1 pb-1">
@@ -588,14 +586,10 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
         </button>
       </div>
 
-      {/* Kotak podium PREMIUM — latar gradasi gelap keemasan + glow,
-          border neon tipis, bukan abu-abu polos. */}
-      <div className="relative mt-2 overflow-hidden rounded-3xl border border-amber-300/30 bg-[radial-gradient(120%_85%_at_50%_-25%,rgba(251,191,36,.20),transparent_60%),linear-gradient(165deg,#191306_0%,#111019_60%,#0a0a10_100%)] p-3 shadow-[0_24px_54px_-30px_rgba(251,191,36,.55)] yn-cut-alt">
-        {/* Titik bintik halus + ornamen sudut emas (bukan blur menyilaukan) */}
-        <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.3px)] [background-size:22px_22px] opacity-60" />
-        <span aria-hidden className="absolute left-2.5 top-2.5 size-3.5 border-l-2 border-t-2 border-amber-300/60 rounded-tl-md" />
-        <span aria-hidden className="absolute right-2.5 top-2.5 size-3.5 border-r-2 border-t-2 border-amber-300/60 rounded-tr-md" />
-        <span aria-hidden className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+      {/* Kotak podium — permukaan DATAR (tanpa gradasi & glow), border emas. */}
+      <div className="relative mt-2 overflow-hidden rounded-3xl border border-gold/35 bg-card p-3 yn-cut-alt">
+        <span aria-hidden className="absolute left-2.5 top-2.5 size-3.5 rounded-tl-md border-l-2 border-t-2 border-gold/60" />
+        <span aria-hidden className="absolute right-2.5 top-2.5 size-3.5 rounded-tr-md border-r-2 border-t-2 border-gold/60" />
         <div className="relative grid grid-cols-3 items-end">
           {byRank.map((e, i) => {
             const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
@@ -701,7 +695,10 @@ export function ChatVoiceRow({
       {/* STICKER SHOP — panel paling tinggi (2 baris). Tanpa outline. */}
       <button
         onClick={onOpenSticker}
-        className="group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl bg-[linear-gradient(155deg,rgba(52,211,153,.30)_0%,rgba(16,185,129,.16)_38%,rgba(45,212,191,.10)_66%,rgba(8,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition active:scale-[0.98]"
+        className={cn(
+          "group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl bg-card p-4 text-left transition active:scale-[0.98]",
+          "border border-[#FFFAF0]/10",
+        )}
       >
         <span
           aria-hidden
@@ -709,8 +706,8 @@ export function ChatVoiceRow({
         />
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Toko</span>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/20">
-            <Sticker className="size-4 text-emerald-100" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#FFD23F]/18">
+            <Sticker className="size-4 text-[#FFD23F]" />
           </span>
         </span>
         <span className="relative flex flex-col gap-1">
@@ -718,7 +715,7 @@ export function ChatVoiceRow({
             Sticker Shop
           </span>
           <span className="yn-meta">Pack lucu, anime & random — langsung ke chat</span>
-          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-400/25 px-2.5 py-1 text-[10px] font-bold text-emerald-50">
+          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-[#1CA7EC] px-2.5 py-1 text-[10px] font-bold text-[#FFFAF0]">
             <Sparkles className="size-3" /> Buka toko
           </span>
         </span>
@@ -727,12 +724,12 @@ export function ChatVoiceRow({
       {/* NOBAR — nonton bareng. Gradasi campur warna ikon (rose + amber). */}
       <button
         onClick={onOpenNobar}
-        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl bg-[linear-gradient(155deg,rgba(251,113,133,.28)_0%,rgba(244,63,94,.16)_45%,rgba(251,146,60,.10)_78%,rgba(12,9,13,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-[#E84855]/35 bg-card p-4 text-left transition active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Nonton</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-400/20">
-            <Tv className="size-4 text-rose-100" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#E84855]/18">
+            <Tv className="size-4 text-[#E84855]" />
           </span>
         </span>
         <span className="relative flex flex-col">
@@ -744,12 +741,12 @@ export function ChatVoiceRow({
       {/* VOICE — ngobrol suara. Gradasi campur warna ikon (sky + violet). */}
       <button
         onClick={onOpenVoice}
-        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl bg-[linear-gradient(155deg,rgba(56,189,248,.28)_0%,rgba(34,211,238,.16)_45%,rgba(129,140,248,.10)_80%,rgba(9,10,14,.96)_100%)] p-4 text-left shadow-[0_26px_54px_-38px_rgba(0,0,0,1)] transition active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-[#1CA7EC]/35 bg-card p-4 text-left transition active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
           <span className="yn-eyebrow">Suara</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-400/20">
-            <Mic className="size-4 text-sky-100" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1CA7EC]/18">
+            <Mic className="size-4 text-[#1CA7EC]" />
           </span>
         </span>
         <span className="relative flex flex-col">
@@ -965,7 +962,7 @@ export function FeedPromo({ onOpen }: { onOpen: () => void }) {
         </p>
         <button
           onClick={onOpen}
-          className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-3 py-1.5 text-[11px] font-black text-black transition active:scale-95"
+          className="mt-1.5 flex w-fit items-center gap-1 rounded-full bg-gold px-3 py-1.5 text-[11px] font-black text-[#241c02] transition active:scale-95"
         >
           Buka Feed <ChevronRight className="size-3.5" />
         </button>
