@@ -83,12 +83,20 @@ export const leaderboard = query({
         sums.set(e.userId, (sums.get(e.userId) ?? 0) + Math.max(0, e.xp));
       entries = [...sums.entries()].map(([userId, xp]) => {
         const u = byId.get(userId as any);
-        return { userId, username: u?.username, image: u?.image, level: u?.level, xp };
+        // `username` opsional — akun Convex Auth baru sering hanya punya
+        // `name`, jadi pakai itu sebagai nama tampilan (jangan biarkan kosong).
+        return {
+          userId,
+          username: u?.username || u?.name,
+          image: u?.image,
+          level: u?.level,
+          xp,
+        };
       });
     } else {
       entries = users.map((u) => ({
         userId: u._id,
-        username: u.username,
+        username: u.username || u.name,
         image: u.image,
         level: u.level,
         xp: u.xp ?? 0,
@@ -108,6 +116,7 @@ export const leaderboard = query({
       return {
         rank: i + 1,
         ...e,
+        username: e.username || u?.username || u?.name,
         level: u?.level ?? e.level,
         seqId: u?.seqId,
         staffRole: u?.staffRole,

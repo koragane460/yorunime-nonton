@@ -387,7 +387,9 @@ export const topGive = query({
       const u = userMap.get(r.userId) as any;
       return {
         userId: r.userId,
-        username: u?.username,
+        // Akun Convex Auth kadang belum punya `username` (hanya `name`),
+        // jadi nama tampilan dicari berurutan supaya tidak muncul "-".
+        username: u?.username || u?.name,
         image: u?.image,
         days: r.totalDays,
         slots: r.totalSlots,
