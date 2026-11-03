@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { BlueCheck } from "@/components/lstream-ui";
@@ -14,6 +15,7 @@ import {
   History,
   Music,
   Newspaper,
+  LayoutGrid,
   Shield,
   ShoppingBag,
   type LucideIcon,
@@ -60,6 +62,7 @@ export function PanelHub({
   onPick: (key: PanelKey) => void;
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const level = user?.level ?? 1;
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
   const premiumDays = Math.max(
@@ -141,6 +144,26 @@ export function PanelHub({
 
         {/* 9 kotak */}
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5">
+          {/* Pintasan ke layar MENU (semua tujuan + tombol cepat user). */}
+          <button
+            onClick={() => {
+              onClose();
+              navigate("/menu");
+            }}
+            className="mb-2.5 flex w-full items-center gap-2.5 rounded-2xl border border-[#1CA7EC]/35 bg-[#1CA7EC]/10 px-3 py-2.5 text-left transition active:scale-[0.99]"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1CA7EC] text-[#FFFAF0]">
+              <LayoutGrid className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[12.5px] font-black leading-tight text-white">
+                Menu &amp; Pintasan
+              </span>
+              <span className="block truncate text-[10px] leading-tight text-white/45">
+                Semua layar + tombol cepat buatan kamu
+              </span>
+            </span>
+          </button>
           <div className="grid grid-cols-3 gap-2.5">
             {BOXES.map(({ key, label, hint, Icon }) => (
               <button

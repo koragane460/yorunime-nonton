@@ -642,6 +642,23 @@ function SettingsScreen({
     );
   };
 
+  /** Simpan username baru dari kartu Setting Profil. Server yang mengurus
+   *  validasi (minimal 3 karakter, hanya A-Z/a-z/0-9/_ , tidak bentrok). */
+  const saveName = async () => {
+    if (savingName) return;
+    const clean = name.trim();
+    if (clean === (user?.username ?? "")) return;
+    setErr("");
+    setSavingName(true);
+    try {
+      await updateProfile({ username: clean });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menyimpan username");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const applyTheme = (t: string, color?: string) => {
     document.documentElement.classList.toggle("theme-light", t === "light");
     if (color) document.documentElement.style.setProperty("--primary", color);
@@ -737,6 +754,49 @@ function SettingsScreen({
 
   return (
     <FullScreen title="Pengaturan" onClose={onClose}>
+      {/* ===== SETTING PROFIL — ganti username (dipakai di komentar, chat,
+          clan, dan leaderboard). Validasi ada di server: 3-20 karakter,
+          hanya A-Z a-z 0-9 _, dan tidak boleh bentrok. ===== */}
+      <div className="rounded-2xl border border-border bg-card p-3">
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+            <User className="size-[18px] text-primary" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold">Setting Profil</p>
+            <p className="text-[11px] text-muted-foreground">
+              Username tampil di komentar, chat &amp; clan
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="username"
+            maxLength={20}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            className="min-w-0 flex-1 rounded-xl bg-black/35 px-3 py-2.5 text-[13px] font-bold outline-none placeholder:text-white/30"
+          />
+          <button
+            onClick={() => void saveName()}
+            disabled={
+              savingName ||
+              name.trim() === (user?.username ?? "") ||
+              name.trim().length < 3
+            }
+            className="shrink-0 rounded-full bg-primary px-4 py-2.5 text-[12px] font-black text-primary-foreground transition active:scale-[0.97] disabled:opacity-45"
+          >
+            {savingName ? "Menyimpan…" : "Simpan"}
+          </button>
+        </div>
+        <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
+          3–20 karakter, hanya huruf, angka, dan garis bawah (_).
+        </p>
+      </div>
+
       {/* ===== KOTAK KATEGORI — permintaan: pengaturan jadi kumpulan kotak
           per kategori, tiap kotak berisi deretan tombol toggle on/off. ===== */}
       <SettingsBox

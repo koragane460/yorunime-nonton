@@ -1146,6 +1146,44 @@ const schema = defineSchema(
     })
       .index("by_post", ["postId", "createdAt"])
       .index("by_user", ["userId"]),
+
+    /**
+     * PINTASAN MILIK USER — tombol cepat pribadi di layar Menu.
+     * `target` adalah path internal aplikasi (mis. "/nonton?id=21") atau
+     * URL luar (http/https). Dibatasi 8 tombol per user.
+     */
+    shortcuts: defineTable({
+      userId: v.id("users"),
+      label: v.string(),
+      target: v.string(),
+      /** Nama ikon lucide (mis. "Play", "Bookmark"); "link" = default. */
+      icon: v.optional(v.string()),
+      createdAt: v.number(),
+    }).index("by_user", ["userId", "createdAt"]),
+
+    /**
+     * CLAN ROOM — JADWAL & UNDANGAN NOBAR.
+     * Dibuat leader/officer, member bisa RSVP "ikut". Tampil di tab Nobar
+     * halaman detail clan.
+     */
+    clanNobar: defineTable({
+      clanId: v.id("clans"),
+      title: v.string(),
+      /** Mulai nonton (epoch ms). */
+      startsAt: v.number(),
+      /** anime | film | donghua | lain */
+      kind: v.string(),
+      /** id judul di katalog (opsional, biar bisa langsung dibuka). */
+      animeId: v.optional(v.string()),
+      image: v.optional(v.string()),
+      note: v.optional(v.string()),
+      createdBy: v.id("users"),
+      /** Daftar user yang menyatakan ikut. */
+      attendees: v.array(v.id("users")),
+      createdAt: v.number(),
+    })
+      .index("by_clan", ["clanId", "startsAt"])
+      .index("by_start", ["startsAt"]),
   },
   {
     schemaValidation: false,

@@ -35,6 +35,8 @@ const Baca = lazy(() => import("./pages/Baca.tsx"));
 const Film = lazy(() => import("./pages/Film.tsx"));
 const Gacha = lazy(() => import("./pages/Gacha.tsx"));
 const Title = lazy(() => import("./pages/Title.tsx"));
+// MENU — layar gabungan pintasan milik user + semua tujuan aplikasi.
+const MenuPage = lazy(() => import("./pages/Menu.tsx"));
 
 const ReadComic = lazy(() => import("./pages/ReadComic.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -268,6 +270,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Jadwal />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/menu"
+                element={
+                  <RequireAuth>
+                    <MenuPage />
                   </RequireAuth>
                 }
               />

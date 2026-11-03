@@ -783,7 +783,7 @@ function ClanDetailScreen({
   onClose: () => void;
   onJoin?: () => void;
   busy?: boolean;
-  initialTab?: "member" | "donate";
+  initialTab?: "member" | "donate" | "nobar";
 }) {
   const detail = useQuery(api.clans.clanDetail, { clanId: clanId as never });
   const claimDaily = useMutation(api.clans.claimDaily);
@@ -791,7 +791,9 @@ function ClanDetailScreen({
   const respondReq = useMutation(api.clans.respondRequest);
   const setRoleMut = useMutation(api.clans.setRole);
   const setDescription = useMutation(api.clans.setDescription);
-  const [tab, setTab] = useState<"member" | "donate">(initialTab ?? "member");
+  const [tab, setTab] = useState<"member" | "donate" | "nobar">(
+    initialTab ?? "member",
+  );
   const [donateOpen, setDonateOpen] = useState(false);
   const [amount, setAmount] = useState<number>(100);
   const [custom, setCustom] = useState("");
@@ -1180,20 +1182,42 @@ function ClanDetailScreen({
               />
             )}
           </button>
+          {/* CLAN ROOM — jadwal & undangan nobar bareng. */}
+          <button
+            onClick={() => setTab("nobar")}
+            className={cn(
+              "relative flex-1 pb-2.5 pt-1 text-center text-sm font-black transition",
+              tab === "nobar"
+                ? "text-white"
+                : "text-muted-foreground hover:text-white/85",
+            )}
+          >
+            Nobar
+            {tab === "nobar" && (
+              <span
+                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,.6)]"
+                aria-hidden
+              />
+            )}
+          </button>
         </div>
 
         {/* Isi tab */}
-        <MemberDonateList
-          tab={tab}
-          members={detail.members as any[]}
-          todayTotal={detail.todayDonationsTotal ?? 0}
-          todayDonators={detail.todayDonators ?? 0}
-          myRole={detail.myRole}
-          leaderId={(detail as any).leaderId}
-          clanTag={c.tag}
-          clanTagIcon={c.tagIcon}
-          clanLevel={c.level}
-        />
+        {tab === "nobar" ? (
+          <ClanNobarTab clanId={clanId} myRole={detail.myRole} />
+        ) : (
+          <MemberDonateList
+            tab={tab}
+            members={detail.members as any[]}
+            todayTotal={detail.todayDonationsTotal ?? 0}
+            todayDonators={detail.todayDonators ?? 0}
+            myRole={detail.myRole}
+            leaderId={(detail as any).leaderId}
+            clanTag={c.tag}
+            clanTagIcon={c.tagIcon}
+            clanLevel={c.level}
+          />
+        )}
       </div>
 
       {/* ================= CLAN SHOP — LAYAR PENUH ================= */}
@@ -2360,6 +2384,266 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             Dengan 1.000 Sacret — kamu punya {sacret.toLocaleString("id-ID")}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================== */
+/*  CLAN ROOM — JADWAL & UNDANGAN NOBAR                                    */
+/*  Leader/officer membuat jadwal; semua member bisa menekan "Ikut".       */
+/* ====================================================================== */
+
+const NOBAR_KINDS: { key: string; label: string }[] = [
+  { key: "anime", label: "Anime" },
+  { key: "film", label: "Film" },
+  { key: "donghua", label: "Donghua" },
+  { key: "lain", label: "Lainnya" },
+];
+
+/** Nilai awal input datetime-local: 1 jam dari sekarang (waktu lokal). */
+function defaultWhenValue() {
+  const d = new Date(Date.now() + 3600_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmtWhen(ts: number) {
+  return new Date(ts).toLocaleString("id-ID", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function ClanNobarTab({
+  clanId,
+  myRole,
+}: {
+  clanId: string;
+  myRole?: string;
+}) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const myId = (user as any)?._id as string | undefined;
+  const rows = useQuery(api.clanNobar.listByClan, { clanId: clanId as never });
+  const createNobar = useMutation(api.clanNobar.create);
+  const toggleAttend = useMutation(api.clanNobar.toggleAttend);
+  const removeNobar = useMutation(api.clanNobar.remove);
+
+  const canManage = myRole === "leader" || myRole === "officer";
+  const [formOpen, setFormOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [when, setWhen] = useState(defaultWhenValue);
+  const [kind, setKind] = useState("anime");
+  const [refId, setRefId] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const submit = async () => {
+    if (busy) return;
+    setErr("");
+    const startsAt = new Date(when).getTime();
+    if (!Number.isFinite(startsAt)) {
+      setErr("Waktu jadwal tidak valid");
+      return;
+    }
+    setBusy(true);
+    try {
+      await createNobar({
+        clanId: clanId as never,
+        title,
+        startsAt,
+        kind,
+        animeId: refId.trim() || undefined,
+        note: note.trim() || undefined,
+      });
+      setTitle("");
+      setRefId("");
+      setNote("");
+      setWhen(defaultWhenValue());
+      setFormOpen(false);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal membuat jadwal");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const act = async (fn: () => Promise<unknown>) => {
+    setErr("");
+    try {
+      await fn();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal memproses");
+    }
+  };
+
+  const list = rows ?? [];
+
+  return (
+    <div className="mt-3 pb-6">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Jadwal & undangan nobar bareng clan.
+        </p>
+        {canManage && (
+          <button
+            onClick={() => setFormOpen((v) => !v)}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-gold px-3 py-1.5 text-[11px] font-black text-[#241c02] transition active:scale-95"
+          >
+            {formOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+            {formOpen ? "Tutup" : "Buat jadwal"}
+          </button>
+        )}
+      </div>
+
+      {err && (
+        <p className="mt-2 rounded-xl bg-destructive/15 px-3 py-2 text-[11px] font-bold text-destructive">
+          {err}
+        </p>
+      )}
+
+      {formOpen && (
+        <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Judul — mis. Nobar Episode 12"
+            maxLength={80}
+            className="w-full rounded-xl bg-black/35 px-3 py-2 text-[13px] text-white outline-none placeholder:text-white/30"
+          />
+          <div className="mt-2 flex gap-2">
+            <input
+              type="datetime-local"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl bg-black/35 px-3 py-2 text-[12px] text-white outline-none"
+            />
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              className="shrink-0 rounded-xl bg-black/35 px-2 py-2 text-[12px] font-bold text-white outline-none"
+            >
+              {NOBAR_KINDS.map((k) => (
+                <option key={k.key} value={k.key} className="bg-[#0d1017]">
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input
+            value={refId}
+            onChange={(e) => setRefId(e.target.value)}
+            placeholder="ID judul di katalog (opsional)"
+            className="mt-2 w-full rounded-xl bg-black/35 px-3 py-2 text-[12px] text-white outline-none placeholder:text-white/30"
+          />
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Catatan (opsional) — mis. kumpul di voice room"
+            maxLength={200}
+            className="mt-2 w-full rounded-xl bg-black/35 px-3 py-2 text-[12px] text-white outline-none placeholder:text-white/30"
+          />
+          <button
+            onClick={() => void submit()}
+            disabled={busy || title.trim().length < 3}
+            className="mt-2.5 w-full rounded-full bg-[#1CA7EC] py-2.5 text-[12px] font-black text-[#FFFAF0] transition active:scale-[0.99] disabled:opacity-50"
+          >
+            {busy ? "Menyimpan…" : "Simpan jadwal"}
+          </button>
+        </div>
+      )}
+
+      {!rows && (
+        <p className="py-6 text-center text-[12px] text-muted-foreground">
+          Memuat…
+        </p>
+      )}
+
+      {rows && list.length === 0 && (
+        <p className="mt-2 rounded-2xl border border-dashed border-white/15 px-3 py-6 text-center text-[11px] leading-snug text-white/45">
+          Belum ada jadwal nobar.
+          {canManage
+            ? " Tekan “Buat jadwal” untuk mengundang member."
+            : " Nanti muncul di sini kalau leader/officer bikin jadwal."}
+        </p>
+      )}
+
+      <div className="mt-2 space-y-2">
+        {list.map((r) => {
+          const joined = !!myId && r.attendees.includes(myId as never);
+          return (
+            <div
+              key={r._id}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"
+            >
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-[#FFD23F]/18 text-[#FFD23F]">
+                  <Timer className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-black leading-tight text-white">
+                    {r.title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-bold text-[#1CA7EC]">
+                    {fmtWhen(r.startsAt)}
+                  </p>
+                  <p className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-white/40">
+                    {NOBAR_KINDS.find((k) => k.key === r.kind)?.label ?? r.kind}
+                  </p>
+                  {r.note && (
+                    <p className="mt-1 text-[11px] leading-snug text-white/55">
+                      {r.note}
+                    </p>
+                  )}
+                </div>
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/[0.06] px-2 py-1 text-[10px] font-black text-white/65">
+                  <Users className="size-3" />
+                  {r.attendees.length}
+                </span>
+              </div>
+
+              <div className="mt-2 flex items-center gap-1.5">
+                <button
+                  onClick={() => void act(() => toggleAttend({ id: r._id }))}
+                  className={cn(
+                    "flex-1 rounded-full py-2 text-[11px] font-black transition active:scale-[0.99]",
+                    joined
+                      ? "bg-[#E84855] text-[#FFFAF0]"
+                      : "bg-[#1CA7EC] text-[#FFFAF0]",
+                  )}
+                >
+                  {joined ? "Batal ikut" : "Ikut"}
+                </button>
+                {r.animeId && (
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/nonton?id=${encodeURIComponent(r.animeId as string)}`,
+                      )
+                    }
+                    className="rounded-full border border-white/20 px-3 py-2 text-[11px] font-black text-white transition active:scale-95"
+                  >
+                    Buka
+                  </button>
+                )}
+                {(canManage || r.createdBy === myId) && (
+                  <button
+                    onClick={() => void act(() => removeNobar({ id: r._id }))}
+                    aria-label="Hapus jadwal"
+                    className="flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-white/60 transition active:scale-90"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
