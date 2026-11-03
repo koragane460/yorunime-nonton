@@ -399,7 +399,7 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
                       className={cn("size-16 shrink-0", rk.ring)}
                     />
                     <span className="mt-1 w-full truncate text-center text-[12px] font-black leading-tight text-white">
-                      {r.username ?? "-"}
+                      {r.username?.trim() || "user"}
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] font-black leading-none text-white/70">
                       <Crown className="size-2.5" aria-hidden />
@@ -487,7 +487,9 @@ export function LeaderCards() {
     rank: r.rank,
     image: r.image,
     border: r.avatarBorder,
-    username: r.username || (r.seqId ? `user#${r.seqId}` : undefined),
+    // TANPA fallback "user#<id>" — permintaan: kotak Top 1/2/3 di Home
+    // tidak menampilkan ID. Nama kosong tampil netral sebagai "user".
+    username: r.username?.trim() || "user",
     value: fmtShort(r.xp ?? 0),
     label: "XP",
   }));
@@ -495,7 +497,7 @@ export function LeaderCards() {
     rank: i + 1,
     image: g.image,
     border: g.avatarBorder,
-    username: g.username || (g.seqId ? `user#${g.seqId}` : undefined),
+    username: g.username?.trim() || "user",
     value: `${fmtShort(g.days ?? 0)} hr`,
     label: "Give",
   }));
