@@ -416,7 +416,7 @@ function CommentRow({
         </div>
       </div>
       {/* PESAN — kotak rounded kalem, kontras dengan latar transparan. */}
-      <div className="mx-3 mb-1 mt-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
+      <div className="yn-tail-l mx-3 mb-1 mt-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
         <p className="break-words text-[14.5px] leading-relaxed text-foreground/90">
           {c.text}
         </p>

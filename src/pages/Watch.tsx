@@ -1019,7 +1019,7 @@ function WatchContent() {
     if (isDonghua) {
       // v2 — cache lama bisa berisi terjemahan parsial (bagian bahasa asli),
       // jadi versi cache dinaikkan supaya tidak ketahuan terus.
-      const key = `yorunime-sub-donghua:v2:${epParam}`;
+      const key = `yorunime-sub-donghua:v3:${epParam}`;
       const cachedDonghua = (() => {
         try {
           return localStorage.getItem(key);
@@ -1094,7 +1094,7 @@ function WatchContent() {
             ?.number ?? 1;
     // v2 — cache lama bisa berisi terjemahan parsial, jadi versi cache
     // dinaikkan supaya hasil lama tidak dipakai terus.
-    const key = `yorunime-sub-indo:v2:${malId}:${epNo}`;
+    const key = `yorunime-sub-indo:v3:${malId}:${epNo}`;
     const cached = (() => {
       try {
         return localStorage.getItem(key);

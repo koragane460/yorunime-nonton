@@ -16,40 +16,47 @@ import { cn } from "@/lib/utils";
 import { badgeForLevel, avatarFallback } from "@/lib/lstream";
 import { resolveClanIcon } from "@/lib/clanIcons";
 
-/** Gaya title staff: dev merah, moderator biru, tester emas, sepuh kuning. */
+/** Gaya title staff: dev merah, moderator biru, tester emas, sepuh kuning.
+ *  `shape` = bentuk kotak tiap title — tiap title punya siluet berbeda
+ *  (pelat, pil, tag, potong sudut) supaya tidak semua terlihat sama. */
 const TITLE_STYLE: Record<
   string,
-  { label: string; Icon: LucideIcon; cls: string; fg: string }
+  { label: string; Icon: LucideIcon; cls: string; fg: string; shape: string }
 > = {
   dev: {
     label: "Developer",
     Icon: Flame,
     cls: "bg-[#E84855]",
     fg: "text-[#FFFAF0]",
+    shape: "rounded-[3px] shadow-[inset_0_0_0_1px_rgba(255,250,240,.35)]",
   },
   creator: {
     label: "Creator",
     Icon: Palette,
     cls: "bg-[#E84855]",
     fg: "text-[#FFFAF0]",
+    shape: "rounded-full",
   },
   mod: {
     label: "Moderator",
     Icon: Shield,
     cls: "bg-[#1CA7EC]",
     fg: "text-[#FFFAF0]",
+    shape: "rounded-[10px_10px_10px_2px]",
   },
   tester: {
     label: "Tester",
     Icon: FlaskConical,
     cls: "bg-[#FFD23F]",
     fg: "text-[#241c02]",
+    shape: "rounded-[2px_10px_2px_10px]",
   },
   sepuh: {
     label: "Sepuh",
     Icon: Crown,
     cls: "bg-[#FFD23F]",
     fg: "text-[#241c02]",
+    shape: "rounded-[999px_6px_999px_6px]",
   },
 };
 
@@ -323,7 +330,8 @@ export function TitleBadge({
   return (
     <span
       className={cn(
-        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 rounded-full font-bold shadow",
+        "badge-shine title-shine inline-flex shrink-0 items-center gap-1 font-bold shadow",
+        def.shape,
         compact ? "px-1.5 py-0 text-[9px]" : "px-2 py-0.5 text-[10px]",
         def.cls,
         def.fg,

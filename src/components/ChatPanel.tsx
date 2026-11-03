@@ -808,8 +808,10 @@ export function ChatPanel({
                   className={cn(
                     // Semua bubble panjangnya SAMA (w-full di kolom w-3/4):
                     // pesan pendek maupun panjang tetap satu ukuran kotak.
+                    // Ekor gelembung: pesan sendiri ke kanan bawah, pesan
+                    // orang lain ke kiri bawah (bentuk ikon Collection).
                     "flex w-full flex-col rounded-md px-3 py-2",
-                    mine && "items-end",
+                    mine ? "yn-tail-r" : "yn-tail-l",
                     // Pesan yang isinya cuma foto: bubble dibuat transparan
                     // supaya tidak ada kotak hitam di belakang fotonya.
                       (m.imageUrl || m.sticker || m.feedPostId) && !m.text

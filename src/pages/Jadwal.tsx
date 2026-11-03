@@ -364,8 +364,10 @@ function JadwalContent() {
               onClick={() => setDay(i)}
               aria-current={active ? "date" : undefined}
               aria-label={`${DAYS_ID[i]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`}
+              /* Kotak tinggi & lurus (persegi panjang ke atas) — angka
+                 tanggal dibuat besar supaya langsung kebaca. */
               className={cn(
-                "flex flex-col items-center rounded-xl border px-1 py-1.5 transition",
+                "flex h-[74px] flex-col items-center justify-center gap-1.5 rounded-lg border pb-2 pt-1.5 transition",
                 active
                   ? "border-primary bg-primary/15"
                   : "border-white/10 hover:border-white/30",
@@ -373,7 +375,7 @@ function JadwalContent() {
             >
               <span
                 className={cn(
-                  "text-[9px] font-semibold leading-none",
+                  "text-[10px] font-bold leading-none",
                   active ? "text-primary" : "text-zinc-500",
                 )}
               >
@@ -381,7 +383,7 @@ function JadwalContent() {
               </span>
               <span
                 className={cn(
-                  "mt-1 text-[13px] font-black leading-none tabular-nums",
+                  "text-[24px] font-black leading-none tabular-nums tracking-tight",
                   active ? "text-foreground" : "text-zinc-400",
                 )}
               >

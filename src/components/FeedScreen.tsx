@@ -367,6 +367,13 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /** Komentar yang sedang dibalas (balasan juga ada di Feed, bukan cuma di
+   *  komentar halaman Nonton). */
+  const [replyTo, setReplyTo] = useState<{
+    id: Id<"feedComments">;
+    username: string;
+  } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   /** Jaga posisi scroll halaman saat kolom komentar difokus — keyboard
       membuka dan browser suka menarik halaman ke atas sedikit (permintaan). */
   const keepScroll = () => {
@@ -378,8 +385,15 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
     if (!text.trim() || busy) return;
     setBusy(true);
     try {
-      await add({ postId, text });
+      await add({
+        postId,
+        text,
+        ...(replyTo
+          ? { parentId: replyTo.id, replyTo: replyTo.username }
+          : {}),
+      });
       setText("");
+      setReplyTo(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal mengirim komentar");
     } finally {
@@ -401,7 +415,7 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
           exit={{ y: 60 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
-          className="flex h-[50vh] flex-col rounded-t-3xl border-t border-white/15 bg-[#10131a] p-4 pb-6"
+          className="flex h-[42vh] max-h-[68vh] flex-col rounded-t-3xl border-t border-white/15 bg-[#141821] p-4 pb-6"
         >
           <div className="mb-2 flex items-center gap-2">
             <span aria-hidden className="mx-auto block h-1 w-10 rounded-full bg-white/25" />
@@ -444,21 +458,56 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
                       {timeAgo(c.createdAt)}
                     </span>
                   </div>
-                  {/* Pesan TANPA kotak bubble — teks polos lembut. */}
-                  <p className="mt-0.5 text-[14.5px] leading-relaxed text-white/85">
-                    {c.text}
-                  </p>
+                  {/* Pesan dibungkus kotak dengan ekor kiri bawah, sama
+                      bentuknya seperti ikon Collection. */}
+                  <div className="yn-tail-l mt-1 rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-2">
+                    {c.replyTo && (
+                      <p className="mb-0.5 text-[10px] font-bold text-gold">
+                        @{c.replyTo}
+                      </p>
+                    )}
+                    <p className="break-words text-[14px] leading-relaxed text-white/90">
+                      {c.text}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setReplyTo({ id: c.commentId, username: c.username });
+                      inputRef.current?.focus();
+                    }}
+                    className="mt-1 flex items-center gap-1 text-[11px] font-bold text-white/45 transition active:scale-95"
+                  >
+                    Balas
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+          {replyTo && (
+            <div className="mb-1 flex shrink-0 items-center gap-2 rounded-xl bg-gold/12 px-3 py-1.5">
+              <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-gold">
+                Membalas @{replyTo.username}
+              </span>
+              <button
+                onClick={() => setReplyTo(null)}
+                aria-label="Batal balas"
+                className="text-[11px] font-black text-white/50"
+              >
+                Batal
+              </button>
+            </div>
+          )}
           <div className="mt-2 flex shrink-0 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-4 py-1">
           <input
+            ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onFocus={keepScroll}
             onKeyDown={(e) => e.key === "Enter" && void submit()}
-            placeholder={err ?? "Tulis komentar…"}
+            placeholder={
+              err ??
+              (replyTo ? `Balas @${replyTo.username}…` : "Tulis komentar…")
+            }
             className={cn(
               "h-10 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40 focus-visible:ring-0",
               err && "placeholder:text-red-300",
@@ -671,7 +720,8 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     // "Failed to fetch" yang membingungkan. Dicek di sini supaya user langsung
     // tahu sebelum proses unggah dimulai.
     const mb = f.size / (1024 * 1024);
-    const limitMb = f.type.startsWith("video/") ? 60 : 12;
+    // Video boleh sampai 100 MB, foto 12 MB.
+    const limitMb = f.type.startsWith("video/") ? 100 : 12;
     if (mb > limitMb) {
       setErr(
         `File terlalu besar (${mb.toFixed(1)} MB). Maksimal ${limitMb} MB untuk ${f.type.startsWith("video/") ? "video" : "foto"} — compress dulu sebelum unggah.`,

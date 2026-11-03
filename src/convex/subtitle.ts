@@ -136,85 +136,98 @@ async function translateBatch(
   return parts;
 }
 
+/**
+ * Terjemahkan SELURUH cue — tidak ada lagi batas waktu yang memotong
+ * pekerjaan di tengah jalan.
+ *
+ * Kenapa dulu cuma ~10% episode yang ke-translate: pekerjaannya dijalankan
+ * berurutan dengan deadline 75 detik. Satu chunk yang gagal lalu jatuh ke
+ * mode "satu baris satu request" (≈0,5 dtk per baris) sehingga deadline
+ * habis saat episode baru seperempat jalan, dan sisanya dikembalikan apa
+ * adanya (bahasa Inggris). Di episode 24 menit itu terlihat seperti subtitle
+ * yang berhenti diterjemahkan setelah beberapa menit pertama.
+ *
+ * Sekarang: chunk kecil (maks 12 baris / ~900 karakter) dijalankan PARALEL
+ * (8 sekaligus), tanpa deadline. Chunk yang gagal dipecah dua, lalu per
+ * baris, jadi baris yang benar-benar gagal cuma sedikit dan tetap ditandai
+ * "partial" — bukan seluruh sisa episode.
+ */
 async function translateCues(
   cues: Cue[],
   from: string,
 ): Promise<{ cues: Cue[]; translated: boolean; partial: boolean }> {
-  const CHUNK = 20;
-  const out: Cue[] = [];
-  let okCount = 0;
+  const texts = cues.map((c) => c.text);
+  const out = texts.slice();
+  const done = new Array<boolean>(texts.length).fill(false);
   let failCount = 0;
-  // Batas waktu total: kalau translator lambat, sisa cue dipakai apa adanya
-  // supaya player tetap punya subtitle (daripada gagal sama sekali).
-  // 75 detik — dulu 40 detik, dan karena itu bagian AKHIR episode sering
-  // diam-diam tampil bahasa asli (tidak diterjemahkan).
-  const deadline = Date.now() + 75_000;
 
-  /** Satu batch penuh; null = hasil tidak bisa dicocokkan → coba lagi. */
-  const tryBatch = async (lines: string[]): Promise<string[] | null> => {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const parts = await translateBatch(lines, from);
-        if (parts && parts.length === lines.length) return parts;
-      } catch {
-        /* rate-limit sesaat — coba lagi */
-      }
-      if (Date.now() > deadline) break;
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+  // Bagi cue jadi chunk kecil. Batas karakter penting: URL GET Google
+  // Translate (client=gtx) mulai terpotong di sekitar 2.000 karakter, dan
+  // payload terpotong = separator hilang = seluruh chunk gagal.
+  const MAX_LINES = 12;
+  const MAX_CHARS = 900;
+  const chunks: number[][] = [];
+  let cur: number[] = [];
+  let chars = 0;
+  texts.forEach((t, i) => {
+    const len = t.length + 1;
+    if (cur.length >= MAX_LINES || (chars + len > MAX_CHARS && cur.length > 0)) {
+      chunks.push(cur);
+      cur = [];
+      chars = 0;
     }
-    return null;
+    cur.push(i);
+    chars += len;
+  });
+  if (cur.length > 0) chunks.push(cur);
+
+  /** Satu daftar indeks; gagal → belah dua; satu baris → tandai gagal. */
+  const doChunk = async (idx: number[]): Promise<void> => {
+    const lines = idx.map((i) => texts[i]!);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const parts = await translateBatch(lines, from).catch(() => null);
+      if (parts && parts.length === lines.length) {
+        idx.forEach((ci, k) => {
+          const v = parts[k]?.trim();
+          if (v) {
+            out[ci] = v;
+            done[ci] = true;
+          }
+        });
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+    }
+    if (idx.length > 1) {
+      const mid = Math.ceil(idx.length / 2);
+      await doChunk(idx.slice(0, mid));
+      await doChunk(idx.slice(mid));
+      return;
+    }
+    failCount += 1;
   };
 
-  for (let i = 0; i < cues.length; i += CHUNK) {
-    const slice = cues.slice(i, i + CHUNK);
-    if (Date.now() > deadline) {
-      // Waktu habis — baris mentah dipakai supaya subtitle tidak hilang,
-      // dan ditandai gagal supaya hasilnya dilabeli "partial".
-      slice.forEach((c) => {
-        out.push(c);
-        failCount += 1;
-      });
-      continue;
+  const CONCURRENCY = 8;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < chunks.length) {
+      const my = chunks[cursor++]!;
+      await doChunk(my);
+      // Jeda tipis per worker supaya tidak dianggap flood oleh Google.
+      await new Promise((r) => setTimeout(r, 40));
     }
-    let done = await tryBatch(slice.map((c) => c.text));
-    if (!done) {
-      // Batch gagal/rusak → terjemahkan PER BARIS. Lebih lambat, tapi
-      // dijamin tiap dialog dapat terjemahan — inilah perbaikan untuk
-      // "ada dialog yang subtitle-nya tidak diterjemahkan".
-      done = [];
-      for (const c of slice) {
-        if (Date.now() > deadline) {
-          done.push(c.text);
-          failCount += 1;
-          continue;
-        }
-        const one = await tryBatch([c.text]);
-        if (one && one[0] && one[0].trim()) {
-          done.push(one[0]);
-          okCount += 1;
-        } else {
-          done.push(c.text);
-          failCount += 1;
-        }
-        // Jeda kecil supaya Google Translate tidak rate-limit.
-        await new Promise((r) => setTimeout(r, 120));
-      }
-    } else {
-      okCount += slice.length;
-    }
-    const translatedTexts = done;
-    slice.forEach((c, k) =>
-      out.push({ ...c, text: translatedTexts[k]?.trim() || c.text }),
-    );
-    // Jeda kecil supaya Google Translate tidak rate-limit.
-    await new Promise((r) => setTimeout(r, 150));
-  }
-  // `translated` = minimal satu chunk berhasil (dulu: sisa cue bebas bahasa
-  // asli tanpa peringatan). `partial` = masih ada baris yang gagal, jadi UI
-  // memberi tahu user dan hasilnya TIDAK disimpan ke cache lokal.
-  const translated = okCount > 0;
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, worker),
+  );
+
+  const translated = done.some(Boolean);
   const partial = failCount > 0;
-  return { cues: out, translated, partial };
+  return {
+    cues: cues.map((c, i) => ({ ...c, text: out[i] ?? c.text })),
+    translated,
+    partial,
+  };
 }
 
 /**
@@ -240,6 +253,9 @@ function rankTracks(tracks: any[]) {
  */
 const cache = new Map<string, { vtt: string; source: string; at: number }>();
 const CACHE_TTL = 60 * 60_000;
+// Naikkan versi cache setiap kali cara penerjemahan berubah, supaya hasil
+// lama yang hanya sebagian tidak terus disajikan.
+const CACHE_VERSION = "v3";
 
 export const subtitleIndo = action({
   args: { malId: v.string(), ep: v.number() },
@@ -251,7 +267,7 @@ export const subtitleIndo = action({
     if (!/^\d+$/.test(String(malId ?? "")) || !(ep > 0)) {
       return { ok: false as const, reason: "Subtitle tidak tersedia" };
     }
-    const cacheKey = `${malId}:${ep}`;
+    const cacheKey = `${CACHE_VERSION}:${malId}:${ep}`;
     const hit = cache.get(cacheKey);
     if (hit && Date.now() - hit.at < CACHE_TTL) {
       return { ok: true as const, vtt: hit.vtt, source: hit.source, lang: "id" };
@@ -421,7 +437,7 @@ export const donghuaSubtitle = action({
     const epSlug = String(slug ?? "").trim();
     if (!epSlug) return { ok: false as const, reason: "Episode belum tersedia" };
 
-    const cacheKey = `donghua:${epSlug}`;
+    const cacheKey = `${CACHE_VERSION}:donghua:${epSlug}`;
     const hit = cache.get(cacheKey);
     if (hit && Date.now() - hit.at < CACHE_TTL) {
       return { ok: true as const, vtt: hit.vtt, source: hit.source, lang: "id" };

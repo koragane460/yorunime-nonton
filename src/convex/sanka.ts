@@ -817,8 +817,11 @@ async function dailymotionHlsForEpisode(
         continue;
       }
       if (!qualities || typeof qualities !== "object") continue;
-      // 4K dulu sesuai permintaan: 2160 → 1440 → 1080 → dst.
-      const wanted = ["2160", "1440", "1080", "720", "480", "380", "240", "auto"];
+      // "auto" = MASTER playlist DailyMotion: berisi SEMUA level kualitas,
+      // jadi pemilih kualitas di player bisa menampilkan 240p sampai 4K
+      // (sebelumnya cuma satu file resolusi terpilih). Kalau master tidak
+      // ada, jatuh ke resolusi tertinggi seperti sebelumnya.
+      const wanted = ["auto", "2160", "1440", "1080", "720", "480", "380", "240"];
       for (const w of wanted) {
         const list = (qualities as Record<string, any>)[w];
         const m3u8 = Array.isArray(list) ? String(list[0]?.url ?? "") : "";
@@ -895,7 +898,8 @@ async function dailymotionEpisodeHls(
       const j: any = await meta.json().catch(() => null);
       if (j?.error) continue;
       const qualities: any = j?.qualities;
-      for (const w of ["2160", "1440", "1080", "720", "480", "380", "240", "auto"]) {
+      // Master playlist dulu → semua level kualitas ikut terbawa.
+      for (const w of ["auto", "2160", "1440", "1080", "720", "480", "380", "240"]) {
         const q = Array.isArray(qualities?.[w])
           ? String(qualities[w][0]?.url ?? "")
           : "";

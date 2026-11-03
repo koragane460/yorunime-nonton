@@ -357,27 +357,41 @@ export const listComments = query({
         clanNameColor: u?.clanNameColor,
         clanLevel: u?.clanLevel,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
+        parentId: c.parentId ?? null,
+        replyTo: c.replyTo ?? null,
       });
     }
     return out;
   },
 });
 
-/** Tulis komentar pada post Feed. */
+/** Tulis komentar pada post Feed — boleh balasan (`parentId` + `replyTo`). */
 export const addComment = mutation({
-  args: { postId: v.id("feedPosts"), text: v.string() },
-  handler: async (ctx, { postId, text }) => {
+  args: {
+    postId: v.id("feedPosts"),
+    text: v.string(),
+    parentId: v.optional(v.id("feedComments")),
+    replyTo: v.optional(v.string()),
+  },
+  handler: async (ctx, { postId, text, parentId, replyTo }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Belum masuk akun");
     const t = text.trim();
     if (!t) throw new Error("Komentar kosong");
     const p = await ctx.db.get(postId);
     if (!p) throw new Error("Post tidak ada");
+    if (parentId) {
+      const parent = await ctx.db.get(parentId);
+      if (!parent || parent.postId !== postId)
+        throw new Error("Komentar yang dibalas tidak ada");
+    }
     await ctx.db.insert("feedComments", {
       postId,
       userId,
       text: t.slice(0, 400),
       createdAt: Date.now(),
+      ...(parentId ? { parentId } : {}),
+      ...(replyTo ? { replyTo: String(replyTo).slice(0, 40) } : {}),
     });
     return { ok: true };
   },

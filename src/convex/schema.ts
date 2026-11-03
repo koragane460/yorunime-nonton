@@ -1143,6 +1143,9 @@ const schema = defineSchema(
       userId: v.id("users"),
       text: v.string(),
       createdAt: v.number(),
+      /** Balasan: id komentar induk + nama yang dibalas (untuk "@nama"). */
+      parentId: v.optional(v.id("feedComments")),
+      replyTo: v.optional(v.string()),
     })
       .index("by_post", ["postId", "createdAt"])
       .index("by_user", ["userId"]),
@@ -1161,29 +1164,8 @@ const schema = defineSchema(
       createdAt: v.number(),
     }).index("by_user", ["userId", "createdAt"]),
 
-    /**
-     * CLAN ROOM — JADWAL & UNDANGAN NOBAR.
-     * Dibuat leader/officer, member bisa RSVP "ikut". Tampil di tab Nobar
-     * halaman detail clan.
-     */
-    clanNobar: defineTable({
-      clanId: v.id("clans"),
-      title: v.string(),
-      /** Mulai nonton (epoch ms). */
-      startsAt: v.number(),
-      /** anime | film | donghua | lain */
-      kind: v.string(),
-      /** id judul di katalog (opsional, biar bisa langsung dibuka). */
-      animeId: v.optional(v.string()),
-      image: v.optional(v.string()),
-      note: v.optional(v.string()),
-      createdBy: v.id("users"),
-      /** Daftar user yang menyatakan ikut. */
-      attendees: v.array(v.id("users")),
-      createdAt: v.number(),
-    })
-      .index("by_clan", ["clanId", "startsAt"])
-      .index("by_start", ["startsAt"]),
+    // Jadwal nobar per clan dihapus — Nobar sekarang punya pemilih
+    // Publik / Clan sendiri di layar Nobar Home.
   },
   {
     schemaValidation: false,

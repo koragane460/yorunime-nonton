@@ -943,6 +943,16 @@ export const resolveStream = action({
         : `https://www.2embed.cc/embed/${extId}`;
     sources.push({ label: "2Embed", url: twoEmbed, type: "embed" });
 
+    // SuperEmbed — sumber tambahan dari daftar provider yang diminta.
+    // Menerima id TMDB (tmdb=1) atau IMDb (tanpa tmdb), punya subtitle
+    // multi-bahasa termasuk Indonesia kalau tersedia di server globalnya.
+    const tmdbLike = /^\d+$/.test(extId);
+    const superEmbed =
+      k === "tv"
+        ? `https://multiembed.mov/?video_id=${extId}${tmdbLike ? "&tmdb=1" : ""}&s=${season ?? 1}&e=${episode ?? 1}`
+        : `https://multiembed.mov/?video_id=${extId}${tmdbLike ? "&tmdb=1" : ""}`;
+    sources.push({ label: "SuperEmbed", url: superEmbed, type: "embed" });
+
     // Coba resolve link langsung hanya untuk id TMDB numerik.
     if (!appleMode && /^\d+$/.test(extId)) {
       const direct = await tryDirect(extId, k, season, episode);

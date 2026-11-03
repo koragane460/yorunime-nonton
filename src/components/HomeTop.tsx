@@ -10,14 +10,7 @@ import { greetingOf, fmtShort } from "@/components/HomeHead";
 import { TierIcon } from "@/components/ProfileSheet";
 import { badgeForLevel, displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
-import {
-  Megaphone,
-  Settings,
-  Play,
-  Star,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react";
+import { Megaphone, Play, Search, Star, ChevronRight } from "lucide-react";
 import type { CardT } from "@/components/CatalogRows";
 
 /* ====================================================================== *
@@ -30,7 +23,7 @@ import type { CardT } from "@/components/CatalogRows";
  * kiri = foto profile + username + level + ID, kanan = tombol notif +
  * pengaturan. Sapaan waktu tetap ada sebagai eyebrow kecil di atas nama.
  */
-export function AccountHeader() {
+export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const level = user?.level ?? 1;
@@ -71,17 +64,18 @@ export function AccountHeader() {
         </span>
       </button>
 
-      {/* KANAN: notif + pengaturan — kotak rounded besar biar mudah ditekan. */}
+      {/* KANAN: cari + notif. Tombol pengaturan DIHAPUS dari sini (pindah ke
+          Akun), tempatnya dipakai notifikasi dan tombol cari di kirinya. */}
       <div className="flex shrink-0 items-center gap-2">
-        <NotifButton className="size-12 rounded-2xl border border-white/12 bg-white/[0.06] hover:border-gold-strong/40 hover:bg-white/[0.1]" />
         <button
           type="button"
-          onClick={() => navigate("/akun")}
-          aria-label="Pengaturan"
+          onClick={onSearch}
+          aria-label="Cari anime"
           className="flex size-12 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white/80 transition hover:border-gold-strong/40 hover:bg-white/[0.1] hover:text-white active:scale-95"
         >
-          <Settings className="size-[22px]" />
+          <Search className="size-[21px]" />
         </button>
+        <NotifButton className="size-12 rounded-2xl border border-white/12 bg-white/[0.06] hover:border-gold-strong/40 hover:bg-white/[0.1]" />
       </div>
     </header>
   );
@@ -145,34 +139,27 @@ export function AnnouncementBox() {
   return (
     <section
       className={cn(
-        "fade-enter relative mt-3 flex min-h-[160px] flex-col overflow-hidden rounded-3xl border p-3.5 backdrop-blur-xl",
+        "fade-enter relative mt-3 flex min-h-[160px] flex-col overflow-hidden rounded-3xl border p-3.5",
         tone.border,
-        "bg-gradient-to-b from-white/[0.07] to-white/[0.03] shadow-[0_18px_40px_-34px_rgba(0,0,0,.9)]",
+        // Kotak PENGUMUMAN: krem keemasan (bukan hitam), jadi beda jelas
+        // dari kotak deskripsi clan (biru) & claim berlian (kuning).
+        "bg-[#FFD23F]/[0.08] backdrop-blur-sm",
       )}
     >
       {/* KIRI ATAS — ikon + judul (tanpa nama pengirim). */}
-      <div className="relative flex items-center gap-2">
-        <span
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08]",
-            tone.icon,
-          )}
-        >
+      <div className="relative flex items-center gap-2">          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#FFD23F]/35 bg-[#FFD23F]/15 text-[#FFD23F]">
           <Megaphone className="size-4" />
         </span>
         <span className="min-w-0 flex-1 truncate text-[13px] font-black tracking-tight text-white">
           Pengumuman
-        </span>
-        <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[9px] font-bold text-white/50">
-          {ago(item.createdAt)}
         </span>
       </div>
 
       {/* GARIS PEMBATAS di bawah judul. */}
       <span aria-hidden className="relative mt-2.5 h-px w-full bg-white/15" />
 
-      {/* PESAN — panel glassmorphism di bawah garis. */}
-      <div className="relative mt-2.5 flex-1 rounded-2xl border border-white/12 bg-white/[0.06] p-3 backdrop-blur-md">
+      {/* PESAN — panel krem lembut di bawah garis. */}
+      <div className="relative mt-2.5 flex-1 rounded-2xl border border-[#FFD23F]/25 bg-[#FFFAF0]/[0.07] p-3">
         <p className="whitespace-pre-wrap font-display text-[15px] font-bold leading-[1.4] tracking-tight text-white">
           {text}
         </p>
@@ -245,9 +232,6 @@ export function Spotlight({
     <section className="fade-enter mt-3">
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h2 className="yn-sec text-lg">Spotlight</h2>
-        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gold-strong">
-          Geser untuk lihat
-        </span>
       </div>
 
       <div

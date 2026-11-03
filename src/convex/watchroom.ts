@@ -129,6 +129,8 @@ export const listRooms = query({
         positionSec: room.positionSec,
         playing: room.playing,
         visibility: room.visibility,
+        /** Ada clanId = room khusus clan (hanya anggota clan yang lihat). */
+        clanId: room.clanId ?? null,
         hostId: room.hostId,
         hostName: host?.username ?? "user",
         hostImage: host?.image,
@@ -188,6 +190,8 @@ export const roomDetail = query({
         positionSec: room.positionSec,
         playing: room.playing,
         visibility: room.visibility,
+        /** Ada clanId = room khusus clan (hanya anggota clan yang lihat). */
+        clanId: room.clanId ?? null,
         hostId: room.hostId,
         hostName: host?.username ?? "user",
         hostImage: host?.image,

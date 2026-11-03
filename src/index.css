@@ -248,6 +248,41 @@
   color: inherit !important;
 }
 
+/* ------------------------------------------------------------------
+ * EKOR GELEMBUNG — mengikuti bentuk ikon Collection (kotak rounded dengan
+ * ekor kecil di sudut bawah). Dipakai bubble chat & komentar.
+ *   .yn-tail-l  ekor kiri bawah  (pesan orang lain / komentar)
+ *   .yn-tail-r  ekor kanan bawah (pesan sendiri)
+ * ------------------------------------------------------------------ */
+.yn-tail-l,
+.yn-tail-r {
+  position: relative;
+}
+.yn-tail-l {
+  border-bottom-left-radius: 4px;
+}
+.yn-tail-r {
+  border-bottom-right-radius: 4px;
+}
+.yn-tail-l::after,
+.yn-tail-r::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 7px;
+  height: 9px;
+  background: inherit;
+  pointer-events: none;
+}
+.yn-tail-l::after {
+  left: -6px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.yn-tail-r::after {
+  right: -6px;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
 /* Kutipan reply di dalam bubble: lebih abu dari bubble biasa. */
 .bubble-reply {
   background-color: oklch(0.32 0.02 260);

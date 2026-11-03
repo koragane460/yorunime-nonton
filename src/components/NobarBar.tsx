@@ -32,6 +32,8 @@ export type Room = {
   positionSec: number;
   playing: boolean;
   visibility: "all" | "selected";
+  /** Ada isinya = room khusus clan. */
+  clanId?: string | null;
   hostId: string;
   hostName: string;
   hostImage?: string;
@@ -214,13 +216,17 @@ export function RoomSheet({
                   <p className="min-w-0 flex-1 truncate text-sm font-bold">
                     {r.name}
                   </p>
-                  {r.visibility === "selected" ? (
+                  {r.clanId ? (
+                    <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#1CA7EC]/50 bg-[#1CA7EC]/12 px-2 py-0.5 text-[9px] font-bold text-[#7fd3f7]">
+                      <Users className="size-2.5" /> Clan
+                    </span>
+                  ) : r.visibility === "selected" ? (
                     <span className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 text-[9px] font-bold text-amber-300">
                       <ShieldCheck className="size-2.5" /> Hanya orang tertentu
                     </span>
                   ) : (
                     <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                      <Globe className="size-2.5" /> Semua orang
+                      <Globe className="size-2.5" /> Publik
                     </span>
                   )}
                 </div>
@@ -337,7 +343,11 @@ export function CreateRoomSheet({
   const [picked, setPicked] = useState<any>(null);
   const [episodes, setEpisodes] = useState<any[] | null>(null);
   const [epInput, setEpInput] = useState("1");
-  const [visibility, setVisibility] = useState<"all" | "selected">("all");
+  // Ruang lingkup room: publik, khusus clan, atau orang tertentu.
+  // (Clan pakai `clanId`; backend memfilter listRooms jadi hanya anggota
+  // clan yang melihat room ini.)
+  const [scope, setScope] = useState<"public" | "clan" | "selected">("public");
+  const myMembership = useQuery(api.clans.myMembership, {});
   const [pickedUsers, setPickedUsers] = useState<any[]>([]);
   const [uQ, setUQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -409,8 +419,12 @@ export function CreateRoomSheet({
       setErr("Nama room minimal 2 karakter");
       return;
     }
-    if (visibility === "selected" && pickedUsers.length === 0) {
+    if (scope === "selected" && pickedUsers.length === 0) {
       setErr("Pilih minimal 1 orang");
+      return;
+    }
+    if (scope === "clan" && !myMembership?.clanId) {
+      setErr("Kamu belum ikut clan — pilih Publik atau Orang tertentu");
       return;
     }
     setBusy(true);
@@ -421,8 +435,11 @@ export function CreateRoomSheet({
         animeTitle: picked.title,
         animeImage: picked.image,
         episode: Math.max(1, Math.floor(Number(epInput) || 1)),
-        visibility,
+        visibility: scope === "selected" ? "selected" : "all",
         allowedUserIds: pickedUsers.map((u) => u._id),
+        ...(scope === "clan" && myMembership?.clanId
+          ? { clanId: myMembership.clanId as any }
+          : {}),
       });
       onCreated(r.roomId);
     } catch (e) {
@@ -569,20 +586,23 @@ export function CreateRoomSheet({
           <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Siapa yang boleh masuk
           </label>
+          {/* Publik / Clan / Orang tertentu — pilihan ini yang dimaksud
+              "nobar ada pilihan public sama clan". */}
           <div className="mt-1 flex gap-1.5">
             {(
               [
-                ["all", "Semua orang"],
-                ["selected", "Orang tertentu"],
+                ["public", "Publik"],
+                ["clan", "Clan"],
+                ["selected", "Pilih orang"],
               ] as const
             ).map(([v, label]) => (
               <button
                 key={v}
-                onClick={() => setVisibility(v)}
+                onClick={() => setScope(v)}
                 className={cn(
-                  "min-w-0 flex-1 truncate rounded-xl border py-2 text-xs font-bold transition",
-                  visibility === v
-                    ? "border-foreground/40 bg-primary/15 text-primary"
+                  "min-w-0 flex-1 truncate rounded-full border py-2 text-xs font-bold transition",
+                  scope === v
+                    ? "border-[#1CA7EC] bg-[#1CA7EC]/15 text-[#7fd3f7]"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -590,8 +610,15 @@ export function CreateRoomSheet({
               </button>
             ))}
           </div>
+          {scope === "clan" && (
+            <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
+              {myMembership?.clanId
+                ? `Hanya member clan ${myMembership.clan?.tag ?? ""} yang bisa masuk — semuanya otomatis terdaftar.`
+                : "Kamu belum ikut clan, jadi room clan belum bisa dipakai."}
+            </p>
+          )}
 
-          {visibility === "selected" && (
+          {scope === "selected" && (
             <div className="fade-enter mt-2 space-y-1.5">
               {pickedUsers.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
