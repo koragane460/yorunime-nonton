@@ -626,7 +626,7 @@ export function ClanTag({
           <span
             className={cn(
               "clan-tag-tier-" + tierN,
-              "inline-flex items-center gap-1 rounded-none px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_0_0_1px_rgba(0,0,0,0.18)]",
+              "inline-flex items-center gap-1 rounded-md px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_0_0_1px_rgba(0,0,0,0.18)]",
             )}
             style={
               bg
@@ -666,8 +666,8 @@ export function ClanTag({
       >
         <span
           className={cn(
-            // KOTAK (siku) — bukan rounded, biar seragam dengan tag lainnya.
-            "clan-tag-ribbon inline-flex items-center gap-1 rounded-none px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),inset_0_0_0_1px_rgba(255,255,255,0.18)]",
+            // KOTAK (siku) — dihaluskan jadi rounded-md biar lebih enak dilihat.
+            "clan-tag-ribbon inline-flex items-center gap-1 rounded-md px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),inset_0_0_0_1px_rgba(255,255,255,0.18)]",
             !bg && "bg-gradient-to-b from-zinc-500/90 via-zinc-700 to-zinc-900",
           )}
           style={bodyStyle}
@@ -696,7 +696,7 @@ export function ClanTag({
       >
         <span
           className={cn(
-            "inline-flex items-center gap-1 rounded-none px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]",
+            "inline-flex items-center gap-1 rounded-md px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]",
             shapeCls,
             !bg && CLAN_TAG_BODY_CLS[shape],
           )}

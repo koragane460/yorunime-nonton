@@ -474,6 +474,20 @@ export const respondRequest = mutation({
           });
       }
     }
+    // Permintaan join clan LAIN otomatis batal begitu user sudah masuk clan
+    // ini (permintaan: request clan lain otomatis batal saat sudah masuk clan).
+    if (accept) {
+      const others = await ctx.db
+        .query("clanRequests")
+        .withIndex("userId_status", (q) =>
+          q.eq("userId", req.userId).eq("status", "pending"),
+        )
+        .take(50);
+      for (const r of others) {
+        if (String(r.clanId) !== String(req.clanId))
+          await ctx.db.delete(r._id);
+      }
+    }
     await ctx.db.patch(requestId, {
       status: accept ? "accepted" : "rejected",
     });

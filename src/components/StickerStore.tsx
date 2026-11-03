@@ -51,9 +51,11 @@ export function StickerStore() {
         unlimited: boolean;
         canUpload: boolean;
         packs: Pack[];
+        ownedStickers: string[];
       }
     | undefined;
   const buy = useMutation(api.stickers.buy);
+  const buySticker = useMutation(api.stickers.buySticker);
   const createPack = useMutation(api.stickers.createPack);
 
   const [cat, setCat] = useState<Category>("pack");
@@ -81,6 +83,32 @@ export function StickerStore() {
     );
   }, [shop?.packs, cat, q]);
 
+  // Sticker INDIVIDU yang sudah dibeli (untuk status "sudah punya").
+  const ownedStickers = useMemo(
+    () => new Set(shop?.ownedStickers ?? []),
+    [shop?.ownedStickers],
+  );
+
+  // Kategori anime/random dijual SATUAN (bukan pack): semua sticker dari
+  // seluruh pack di kategori ini diflatten jadi item per sticker, nanti
+  // ditampilkan 5 per baris.
+  const individual = useMemo(() => {
+    if (cat === "pack") return [];
+    return packs.flatMap((p) =>
+      p.stickers.map((s) => ({
+        id: `${p.key}:${s}`,
+        sticker: s,
+        packKey: p.key,
+        packTitle: p.title,
+        price: Math.max(
+          100,
+          Math.round(p.price / Math.max(1, p.stickers.length)),
+        ),
+        owned: ownedStickers.has(s),
+      })),
+    );
+  }, [packs, cat, ownedStickers]);
+
   const doBuy = async (p: Pack) => {
     setErr(null);
     setOkMsg(null);
@@ -90,6 +118,24 @@ export function StickerStore() {
       setOkMsg(
         `${p.title} dibeli — ${res?.count ?? p.stickers.length} sticker masuk ke sheet chat`,
       );
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal membeli sticker");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const doBuySticker = async (it: {
+    id: string;
+    sticker: string;
+    packKey: string;
+  }) => {
+    setErr(null);
+    setOkMsg(null);
+    setBusyKey(it.id);
+    try {
+      await buySticker({ packKey: it.packKey, sticker: it.sticker });
+      setOkMsg(`Sticker ${it.sticker} dibeli — masuk ke sheet chat`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal membeli sticker");
     } finally {
@@ -319,60 +365,33 @@ export function StickerStore() {
             ))}
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {packs.map((p) => (
+          /* Anime & Random: sticker dijual SATUAN — 5 per baris, grid ke
+              bawah. Tiap sel berisi emoji + harga/beli (atau tanda sudah
+              punya). Tanpa kotak pack. */
+          <div className="grid grid-cols-5 gap-2">
+            {individual.map((it) => (
               <div
-                key={p.key}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+                key={it.id}
+                className="flex flex-col items-center rounded-xl border border-white/10 bg-white/[0.03] p-1.5 transition hover:border-white/25"
               >
-                <button
-                  type="button"
-                  onClick={() => setPreview(p)}
-                  className="grid w-full grid-cols-5 gap-1 p-2"
-                  aria-label={`Preview ${p.title}`}
-                >
-                  {p.stickers.map((s, i) => (
-                    <span
-                      key={`${s}-${i}`}
-                      className="flex aspect-square items-center justify-center rounded-lg bg-black/35 text-xl leading-none"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </button>
-                <div className="flex items-center gap-2 border-t border-white/10 bg-black px-2.5 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-black text-white">
-                      {p.title}
-                    </p>
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40">
-                      {CAT_LABEL[p.category]} · {p.stickers.length} sticker
-                    </p>
-                  </div>
-                  <span className="flex shrink-0 items-center gap-1 text-[11px] font-black text-amber-200">
-                    <Gem className="size-3" />
-                    {rupiah(p.price)}
+                <span className="flex aspect-square w-full items-center justify-center rounded-lg bg-black/35 text-2xl leading-none">
+                  {it.sticker}
+                </span>
+                {it.owned ? (
+                  <span className="mt-1.5 flex items-center gap-0.5 text-[9px] font-black text-emerald-300">
+                    <Check className="size-3" aria-hidden />
+                    Punya
                   </span>
+                ) : (
                   <button
                     type="button"
-                    disabled={p.owned || busyKey === p.key}
-                    onClick={() => void doBuy(p)}
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black transition",
-                      p.owned
-                        ? "bg-white/10 text-white/40"
-                        : "bg-amber-400 text-black hover:brightness-105 active:scale-95",
-                    )}
+                    disabled={busyKey === it.id}
+                    onClick={() => void doBuySticker(it)}
+                    className="mt-1.5 w-full rounded-full bg-amber-400 px-1 py-0.5 text-[9px] font-black text-black transition hover:brightness-105 active:scale-95 disabled:opacity-50"
+                    aria-label={`Beli sticker ${it.sticker}`}
                   >
-                    {p.owned ? "Dibeli" : busyKey === p.key ? "…" : "Beli"}
+                    {busyKey === it.id ? "…" : rupiah(it.price)}
                   </button>
-                </div>
-                {p.owned && (
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <span className="-rotate-[18deg] rounded-md border-2 border-emerald-300/80 bg-black/20 px-3 py-1 text-sm font-black uppercase tracking-widest text-emerald-200">
-                      DIBELI
-                    </span>
-                  </span>
                 )}
               </div>
             ))}

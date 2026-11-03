@@ -423,25 +423,29 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
         </div>
         )}
 
-        {/* DUA TOMBOL — lurus ke samping, tidak tinggi. */}
-        <div className="mt-3 grid grid-cols-2 gap-2.5">
-          <button
-            onClick={() =>
-              user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1")
-            }
-            className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
-          >
-            <Plus className="size-4 text-emerald-300" aria-hidden />
-            Buat clan
-          </button>
-          <button
-            onClick={() => setSearchOpen((v) => !v)}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
-          >
-            <LogIn className="size-4 text-sky-300" aria-hidden />
-            Join clan
-          </button>
-        </div>
+        {/* DUA TOMBOL — lurus ke samping, tidak tinggi.
+            Sembunyikan kalau SUDAH punya clan (permintaan: di bawah kotak
+            clan ku tidak ada "cari clan" & "buat clan"). */}
+        {!ownClan && (
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            <button
+              onClick={() =>
+                user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1")
+              }
+              className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
+            >
+              <Plus className="size-4 text-emerald-300" aria-hidden />
+              Buat clan
+            </button>
+            <button
+              onClick={() => setSearchOpen((v) => !v)}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
+            >
+              <LogIn className="size-4 text-sky-300" aria-hidden />
+              Join clan
+            </button>
+          </div>
+        )}
 
         {/* Kolom cari — MUNCUL setelah tombol Join clan dipencet. */}
         {searchOpen && (
@@ -669,7 +673,7 @@ function AnnouncementBox({
   const shownRoleTitle = ROLE_TITLE[shownRole]?.name ?? "Leader";
 
   return (
-    <div className="mt-2.5 overflow-hidden rounded-xl bg-white/[0.035] px-3 py-2.5">
+    <div className="mt-2.5 overflow-hidden rounded-xl border border-white/60 bg-white/[0.035] px-3 py-2.5">
       {/* Baris atas: foto profile + nama + tag + title. */}
       <div className="flex items-center gap-2">
         <Avatar src={shownImage} seed={shownName} className="size-7 shrink-0" />
@@ -924,7 +928,14 @@ function ClanDetailScreen({
             {/* STATS di KANAN ATAS — label jelas: SLOT MEMBER · SACRET · HARI */}
             <div className="grid shrink-0 grid-cols-1 gap-1.5 rounded-xl bg-black/25 px-2.5 py-2 text-right">
               {([
-                ["SLOT MEMBER", String(c.memberCount ?? 0), Users, "text-white/85"],
+                [
+                  "SLOT MEMBER",
+                  `${c.memberCount ?? 0}/${c.memberCap ?? 20}`,
+                  Users,
+                  (c.memberCount ?? 0) >= (c.memberCap ?? 20)
+                    ? "text-red-400"
+                    : "text-white/85",
+                ],
                 ["SACRET", Number(c.diamonds ?? 0).toLocaleString("id-ID"), SacretIcon, "text-sky-300"],
                 ["HARI", String(c.ageDays ?? 0), Timer, "text-white/70"],
               ] as const).map(([label, value, Icon, tone]) => (
@@ -940,9 +951,8 @@ function ClanDetailScreen({
             </div>
           </div>
 
-          {/* DESKRIPSI CLAN — sengaja BEDA dari kotak stats: latar miring,
-              garis aksen emas di kiri, dan teks lebih nyaman dibaca. */}
-          <div className="relative mt-2.5 overflow-hidden rounded-xl bg-[linear-gradient(115deg,rgba(255,255,255,.09),rgba(255,255,255,.025)_58%,rgba(246,200,53,.05))] px-3.5 py-3 pl-4">
+          {/* DESKRIPSI CLAN — outline putih terang (tanpa glow). */}
+          <div className="relative mt-2.5 overflow-hidden rounded-xl border border-white/60 bg-[linear-gradient(115deg,rgba(255,255,255,.09),rgba(255,255,255,.025)_58%,rgba(246,200,53,.05))] px-3.5 py-3 pl-4">
             <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-gradient-to-b from-gold/80 via-gold/40 to-transparent" />
             {(c as any).description ? (
               <p className="text-[11.5px] leading-relaxed text-zinc-200/95">

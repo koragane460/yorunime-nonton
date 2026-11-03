@@ -3149,6 +3149,26 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   );
   const sendReq = useMutation(api.friends.sendFriendRequest);
   const [dmPeer, setDmPeer] = useState<{ id: Id<"users">; name: string } | null>(null);
+  // Teman non-friend yang pernah diajak chat — tetap muncul di tab "Teman"
+  // dengan label "Bukan teman" (permintaan).
+  const [nonFriendPeers, setNonFriendPeers] = useState<
+    { id: Id<"users">; name: string }[]
+  >([]);
+  const friendIds = useMemo(
+    () => new Set((friends ?? []).map((f: any) => String(f.userId))),
+    [friends],
+  );
+  const shownNonFriends = nonFriendPeers.filter(
+    (p) => !friendIds.has(String(p.id)),
+  );
+  const openDm = (peer: { id: Id<"users">; name: string }) => {
+    setDmPeer(peer);
+    if (!friendIds.has(String(peer.id))) {
+      setNonFriendPeers((prev) =>
+        prev.some((p) => p.id === peer.id) ? prev : [...prev, peer],
+      );
+    }
+  };
   // Chat pribadi juga pakai echo lokal supaya pesan langsung nempel di layar.
   const {
     messages: dmMsgs,
@@ -3324,10 +3344,35 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                       </div>
                     ))
                   ) : (
-                    <p className="py-10 text-center text-xs text-muted-foreground">
-                      Belum punya teman
-                    </p>
+                    (friends?.length ?? 0) === 0 &&
+                      shownNonFriends.length === 0 && (
+                        <p className="py-10 text-center text-xs text-muted-foreground">
+                          Belum punya teman
+                        </p>
+                      )
                   )}
+
+                  {/* Non-teman yang pernah diajak chat — label "Bukan teman". */}
+                  {shownNonFriends.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/40 p-2.5"
+                    >
+                      <Avatar seed={p.name} className="size-10" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{p.name}</p>
+                        <p className="text-[11px] font-bold text-amber-300/90">
+                          Bukan teman
+                        </p>
+                      </div>
+                      <button
+                        className="text-xs font-semibold text-primary"
+                        onClick={() => setDmPeer(p)}
+                      >
+                        Chat sekarang!
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -3348,6 +3393,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
             await sendDmFast(p);
           }}
           onDeleteLocal={dropDmLocal}
+          isFriend={friendIds.has(String(dmPeer.id))}
           onAddFriend={async () => {
             try {
               await sendReq({ toUserId: dmPeer.id });
@@ -3364,7 +3410,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           userId={profileId}
           onClose={() => setProfileId(null)}
           onChat={(peer) => {
-            setDmPeer(peer);
+            openDm(peer);
             setProfileId(null);
           }}
         />
@@ -3461,6 +3507,7 @@ function DMScreen({
   onOpenProfile,
   onDeleteLocal,
   loading,
+  isFriend,
 }: {
   peer: { id: Id<"users">; name: string };
   msgs: ChatMsg[];
@@ -3471,6 +3518,7 @@ function DMScreen({
   onAddFriend: () => void;
   onOpenProfile: (id: Id<"users">) => void;
   onDeleteLocal?: (id: string) => Promise<void> | void;
+  isFriend?: boolean;
 }) {
   useHideNavOnMount();
   return (
@@ -3481,13 +3529,21 @@ function DMScreen({
           <ChevronLeft className="size-4" />
         </button>
         <Avatar seed={peer.name} className="size-9" />
-        <p className="font-semibold">{peer.name}</p>
-        <button
-          onClick={onAddFriend}
-          className="ml-auto rounded-full border border-foreground/40 px-3 py-1 text-xs text-primary"
-        >
-          + Teman
-        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{peer.name}</p>
+          {!isFriend && (
+            <p className="text-[11px] font-bold text-amber-300/90">Bukan teman</p>
+          )}
+        </div>
+        {/* Tombol add-friend hanya untuk non-teman; hilang saat sudah berteman. */}
+        {!isFriend && (
+          <button
+            onClick={onAddFriend}
+            className="ml-auto shrink-0 rounded-full border border-foreground/40 px-3 py-1 text-xs text-primary"
+          >
+            + Teman
+          </button>
+        )}
       </div>
       <div className="flex min-h-0 flex-1 flex-col bg-secondary/40">
         {loading ? (
@@ -3830,7 +3886,10 @@ function AnimeDetailScreen({
               <img
                 src={detail.image}
                 alt=""
-                className="aspect-[2/3] h-60 w-40 rounded-2xl object-cover shadow-[0_28px_56px_-20px_rgba(0,0,0,1)]"
+                // Poster tampil FULL (tidak kepotong setengah): object-contain
+                // + kotak 2:3 dengan latar gelap, jadi seluruh poster terlihat
+                // walau rasio gambarnya sedikit berbeda.
+                className="aspect-[2/3] h-72 w-48 rounded-2xl bg-black/40 object-contain p-0.5 shadow-[0_28px_56px_-20px_rgba(0,0,0,1)]"
               />
             )}
             <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">

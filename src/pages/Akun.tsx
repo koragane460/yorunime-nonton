@@ -305,8 +305,8 @@ function AkunClanCard() {
           </div>
         </div>
         <button
-          onClick={() => navigate("/clan")}
-          aria-label="Buka layar Clan"
+          onClick={() => navigate(`/clan?clan=${c._id}`)}
+          aria-label="Buka detail Clan"
           className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold transition active:scale-90"
         >
           <ChevronRight className="size-5" aria-hidden />

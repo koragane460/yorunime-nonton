@@ -466,27 +466,30 @@ function StorageCard({ bytes, premium }: { bytes: number; premium: boolean }) {
   const LIMIT = 1024 * 1024 * 1024; // 1 GB
   const pct = premium ? 12 : Math.min(100, (bytes / LIMIT) * 100);
   return (
-    <div className="mb-4 overflow-hidden rounded-2xl bg-[linear-gradient(130deg,rgba(56,189,248,.13),rgba(255,255,255,.03)_55%,rgba(8,12,16,.5))] p-3.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-sky-300/15 text-sky-200">
-            <HardDriveDownload className="size-4" />
+    <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(130deg,rgba(56,189,248,.16),rgba(255,255,255,.04)_55%,rgba(8,12,16,.55))] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-sky-300/15 text-sky-200">
+            <HardDriveDownload className="size-5" />
           </span>
           <div>
-            <p className="text-[11px] font-black text-white">Kuota download</p>
-            <p className="text-[9px] text-white/45">
+            <p className="text-[12px] font-black text-white">Kuota download</p>
+            <p className="text-[10px] text-white/50">
               {premium ? "Premium — tanpa batas" : "Akun biasa — maksimal 1 GB"}
             </p>
           </div>
         </div>
-        <span className="text-right text-[10px] font-bold text-white/70">
-          {fmtBytes(bytes)}
-          <span className="block text-[9px] font-normal text-white/35">
+        {/* Angka GB DIPERBESAR supaya mudah terbaca. */}
+        <span className="text-right leading-none">
+          <span className="block font-[family-name:var(--font-display)] text-2xl font-black text-white">
+            {fmtBytes(bytes)}
+          </span>
+          <span className="mt-1 block text-[10px] font-semibold text-white/45">
             {premium ? "unlimited" : "dari 1 GB"}
           </span>
         </span>
       </div>
-      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-black/40">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/40">
         <span
           className={cn(
             "block h-full rounded-full",
@@ -500,7 +503,7 @@ function StorageCard({ bytes, premium }: { bytes: number; premium: boolean }) {
         />
       </div>
       {!premium && (
-        <p className="mt-1.5 text-[9px] leading-snug text-white/35">
+        <p className="mt-2 text-[10px] leading-snug text-white/40">
           Premium membuka unduhan tanpa batas + kualitas 1080p.
         </p>
       )}
@@ -518,16 +521,16 @@ function StatTile({
   tone?: "default" | "danger";
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card/60 px-3 py-2.5">
+    <div className="rounded-2xl border border-white/10 bg-[linear-gradient(150deg,rgba(255,255,255,.06),rgba(255,255,255,.02)_60%,rgba(8,12,16,.4))] px-3 py-3">
       <p
         className={cn(
-          "font-[family-name:var(--font-display)] text-xl leading-none",
-          tone === "danger" ? "text-red-400" : "text-foreground",
+          "font-[family-name:var(--font-display)] text-2xl font-black leading-none",
+          tone === "danger" ? "text-red-400" : "text-white",
         )}
       >
         {value}
       </p>
-      <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+      <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
     </div>

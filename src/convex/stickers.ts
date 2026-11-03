@@ -104,6 +104,9 @@ export const shop = query({
           .take(200)
       : [];
     const owned = new Set(purchases.map((p) => p.packKey));
+    // Sticker INDIVIDU yang sudah dibeli (kategori anime/random dijual satuan).
+    const ownedStickers = new Set<string>();
+    for (const p of purchases) for (const s of p.stickers) ownedStickers.add(s);
 
     const packs: (PackDef & { owned: boolean; mine: boolean; custom: boolean })[] = [
       ...BUILTIN.map((p) => ({
@@ -132,7 +135,69 @@ export const shop = query({
         me?.staffRole === "creator" ||
         me?.role === "admin",
       packs,
+      ownedStickers: [...ownedStickers],
     };
+  },
+});
+
+/** Harga SATU sticker — harga pack dibagi jumlah sticker, minimum 100. */
+function perStickerPrice(pack: PackDef): number {
+  return Math.max(100, Math.round(pack.price / Math.max(1, pack.stickers.length)));
+}
+
+/** Beli SATU sticker (kategori anime/random dijual terpisah, bukan pack). */
+export const buySticker = mutation({
+  args: { packKey: v.string(), sticker: v.string() },
+  handler: async (ctx, { packKey, sticker }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Login dulu untuk membeli sticker");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User tidak ditemukan");
+
+    let pack: PackDef | null =
+      BUILTIN.find((p) => p.key === packKey) ?? null;
+    if (!pack) {
+      const doc = await ctx.db.get(packKey as Id<"stickerPacks">);
+      if (!doc) throw new Error("Sticker tidak ditemukan");
+      pack = {
+        key: String(doc._id),
+        title: doc.title,
+        category: asCategory(doc.category),
+        price: doc.price,
+        stickers: doc.stickers,
+      };
+    }
+    if (!pack.stickers.includes(sticker))
+      throw new Error("Sticker tidak ada di pack ini");
+
+    const purchases = await ctx.db
+      .query("stickerPurchases")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .take(200);
+    if (purchases.some((p) => p.stickers.includes(sticker)))
+      throw new Error("Sticker ini sudah kamu beli");
+
+    const price = perStickerPrice(pack);
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < price)
+      throw new Error(
+        `Sacret kamu cuma ${(me.diamonds ?? 0).toLocaleString("id-ID")} — butuh ${price.toLocaleString("id-ID")}`,
+      );
+    const nextSacret = me.unlimitedSacret
+      ? (me.diamonds ?? 0)
+      : (me.diamonds ?? 0) - price;
+    await ctx.db.patch(userId, {
+      diamonds: nextSacret,
+      unlimitedSacret: !!me.unlimitedSacret,
+    });
+    await ctx.db.insert("stickerPurchases", {
+      userId,
+      packKey: `${pack.key}:${sticker}`,
+      title: pack.title,
+      price,
+      stickers: [sticker],
+      createdAt: Date.now(),
+    });
+    return { ok: true, sacret: nextSacret, price };
   },
 });
 
