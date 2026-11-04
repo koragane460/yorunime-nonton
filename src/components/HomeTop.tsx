@@ -287,7 +287,7 @@ export function Spotlight({
             <button
               key={a.id}
               onClick={() => onPick(a.id, a.title, (a.source as any) ?? "anilist")}
-              className="group flex h-[158px] w-[94%] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05] text-left transition hover:border-white/30 active:scale-[0.99] sm:w-[70%] lg:w-[54%]"
+              className="group flex h-[182px] w-[94%] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05] text-left transition hover:border-white/30 active:scale-[0.99] sm:w-[70%] lg:w-[54%]"
             >
               {/* Poster di kiri — ukurannya tetap supaya kartu rapi. */}
               <span className="relative h-full w-[104px] shrink-0 overflow-hidden bg-black/40">
@@ -329,6 +329,14 @@ export function Spotlight({
                 <span className="line-clamp-2 text-[15px] font-black leading-tight tracking-tight text-[#FFFAF0]">
                   {a.title}
                 </span>
+
+                {/* Sinopsis singkat di bawah judul — 2 baris, tidak memotong
+                    tombol Nonton di baris bawah. */}
+                {a.synopsis && (
+                  <span className="line-clamp-2 text-[10.5px] font-medium leading-snug text-white/45">
+                    {String(a.synopsis)}
+                  </span>
+                )}
 
                 <span className="flex items-center gap-2 text-[10px] font-semibold text-white/50">
                   {a.type && (

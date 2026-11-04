@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/lstream";
 import { useModeration } from "@/components/ModerationGuard";
+import { useAuth } from "@/hooks/use-auth";
 
 export type CommentT = {
   _id: string;
@@ -119,6 +120,7 @@ export function CommentsSection({
   onDeleted?: (id: string) => void;
   onOpenImage?: (url: string) => void;
 }) {
+  const { user } = useAuth();
   const [sort, setSort] = useState<"terbaru" | "populer">("terbaru");
   const [sortOpen, setSortOpen] = useState(false);
   const [text, setText] = useState("");
@@ -287,17 +289,26 @@ export function CommentsSection({
       </div>
 
       {/* ---------- KOLOM KOMENTAR ---------- */}
-      <div className="mt-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-2.5">
+      <div className="mt-2.5 rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-transparent p-2.5 shadow-[0_0_24px_-16px] shadow-[#1CA7EC]">
         <div className="flex items-start gap-2">
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08]">
-            <Smile className="size-4 text-white/40" aria-hidden />
-          </span>
+          {/* Foto profil user yang sedang menulis komentar. */}
+          <Avatar
+            src={user?.image}
+            seed={user?.username ?? "user"}
+            className="mt-0.5 size-8 shrink-0 ring-1 ring-white/15"
+          />
           <div className="min-w-0 flex-1">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void send()}
-              placeholder={muted ? "Kamu sedang dimute…" : "Tulis komentar…"}
+              placeholder={
+                muted
+                  ? "Kamu sedang dimute…"
+                  : replyTo
+                    ? `Balas @${replyTo.username}…`
+                    : "Tulis komentar…"
+              }
               disabled={muted}
               className="h-10 w-full rounded-full border border-white/10 bg-black/25 px-3.5 text-[13px] outline-none transition focus:border-[#1CA7EC]/50 disabled:opacity-50"
             />
@@ -326,7 +337,7 @@ export function CommentsSection({
                     onClick={() => setSticker(null)}
                     className="flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1"
                   >
-                    <span className="text-2xl leading-none">{sticker}</span>
+                    <span className="text-3xl leading-none">{sticker}</span>
                     <X className="size-3 text-white/50" />
                   </button>
                 )}
@@ -417,6 +428,23 @@ export function CommentsSection({
             )}
           </div>
         </div>
+
+        {/* Sedang membalas → penanda di bawah kolom komentar. */}
+        {replyTo && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-full border border-[#1CA7EC]/35 bg-[#1CA7EC]/12 px-3 py-1.5">
+            <Reply className="size-3.5 shrink-0 text-[#7fd3f7]" aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#7fd3f7]">
+              Balas komentar @{replyTo.username}
+            </span>
+            <button
+              onClick={() => setReplyTo(null)}
+              aria-label="Batalkan balasan"
+              className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/60"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        )}
         <input
           ref={fileRef}
           type="file"
@@ -503,29 +531,6 @@ export function CommentsSection({
         })}
       </div>
 
-      {/* ---------- SHEET REPLY (60% layar) ---------- */}
-      {replyTo && (
-        <ReplySheet
-          target={replyTo}
-          replies={replyList}
-          muted={muted}
-          sending={sending}
-          text={text}
-          sticker={sticker}
-          spoiler={spoiler}
-          image={image}
-          canSend={canSend}
-          uploading={uploading}
-          onText={setText}
-          onSticker={setSticker}
-          onSpoiler={() => setSpoiler((v) => !v)}
-          onPickImage={() => fileRef.current?.click()}
-          onRemoveImage={() => setImage(null)}
-          onSend={() => void send()}
-          onClose={() => setReplyTo(null)}
-          onOpenImage={onOpenImage}
-        />
-      )}
     </div>
   );
 }
@@ -681,7 +686,7 @@ function CommentCard({
         {c.sticker && (
           <span
             className={cn(
-              "mt-1 block select-none text-[28px] leading-none",
+              "mt-1 block select-none text-[44px] leading-none",
               hidden && "blur-[5px]",
             )}
           >
@@ -744,7 +749,11 @@ function CommentCard({
   );
 }
 
-/** Sheet balas komentar — 60% layar, daftar balasan ikut di dalamnya. */
+/**
+ * Sheet balas komentar — TIDAK DIPAKAI LAGI. Membalas sekarang dilakukan
+ * langsung di kolom komentar (penanda "Balas komentar @user" di bawahnya),
+ * jadi balasan tetap terlihat tanpa menutupi separuh layar.
+ */
 function ReplySheet({
   target,
   replies,

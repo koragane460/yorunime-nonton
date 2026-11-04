@@ -24,23 +24,60 @@ import { staffGuard } from "./moderation";
  */
 export const TIERS: Record<
   string,
-  { label: string; maxQuality: number; download: boolean; earlyAccess: boolean }
+  {
+    label: string;
+    /** Harga default per 30 hari (rupiah). */
+    monthly: number;
+    maxQuality: number;
+    download: boolean;
+    earlyAccess: boolean;
+  }
 > = {
-  basic: { label: "Yoru Basic", maxQuality: 720, download: false, earlyAccess: false },
-  plus: { label: "Yoru Plus", maxQuality: 1080, download: true, earlyAccess: true },
-  vip: { label: "Yoru VIP", maxQuality: 2160, download: true, earlyAccess: true },
+  basic: {
+    label: "Yoru Basic",
+    monthly: 8_000,
+    maxQuality: 720,
+    download: false,
+    earlyAccess: false,
+  },
+  plus: {
+    label: "Yoru Plus",
+    monthly: 50_000,
+    maxQuality: 1080,
+    download: true,
+    earlyAccess: true,
+  },
+  vip: {
+    label: "Yoru VIP",
+    monthly: 120_000,
+    maxQuality: 2160,
+    download: true,
+    earlyAccess: true,
+  },
 };
+
+/**
+ * Harga paket = harga default tingkatan × (durasi / 30 hari), dibulatkan ke
+ * ribuan terdekat. Semakin lama durasinya, semakin mahal — tidak ada harga
+ * flat untuk semua durasi.
+ */
+export function tierPrice(tier: string | undefined, days: number): number {
+  const monthly = (TIERS[tier ?? "basic"] ?? TIERS.basic!).monthly;
+  return Math.round((monthly * days) / 30 / 1000) * 1000;
+}
 
 /** Daftar paket premium — diekspor supaya bisa diuji di tests/payment.test.ts */
 export const PLANS: Record<
   string,
   { label: string; days: number; price: number; sacret: number }
 > = {
-  p1: { label: "Premium 1 Bulan", days: 30, price: 7000, sacret: 600 },
-  p2: { label: "Premium 4 Bulan", days: 120, price: 30000, sacret: 1350 },
-  p3: { label: "Premium 1 Tahun", days: 365, price: 100000, sacret: 6000 },
-  p4: { label: "Premium 3 Tahun", days: 1095, price: 165000, sacret: 11000 },
-  p5: { label: "Premium 7 Tahun", days: 2555, price: 210000, sacret: 21000 },
+  // Harga di sini adalah harga Yoru Basic (tingkatan terendah). Tingkatan
+  // Plus/VIP memakai harga default sendiri × durasi (lihat `tierPrice`).
+  p1: { label: "Premium 1 Bulan", days: 30, price: 8000, sacret: 600 },
+  p2: { label: "Premium 4 Bulan", days: 120, price: 32000, sacret: 1350 },
+  p3: { label: "Premium 1 Tahun", days: 365, price: 97000, sacret: 6000 },
+  p4: { label: "Premium 3 Tahun", days: 1095, price: 292000, sacret: 11000 },
+  p5: { label: "Premium 7 Tahun", days: 2555, price: 681000, sacret: 21000 },
 };
 
 /** Lama logo merah tampil setelah akun di-tag developer. */
@@ -237,6 +274,8 @@ export const createManualOrder = mutation({
     const plan = PLANS[planId];
     if (!plan) throw new Error("Paket tidak ada");
     const picked = tier && TIERS[tier] ? TIERS[tier]!.label : TIERS.basic!.label;
+    // Harga TIDAK diambil dari PLANS: dihitung dari tingkatan × durasi.
+    const price = tierPrice(tier, plan.days);
     const cfg = await ctx.db.query("paymentSettings").first();
     if (!cfg?.qrUrl && !cfg?.qrStorageId) {
       throw new Error("QRIS belum diatur. Hubungi developer.");
@@ -247,7 +286,7 @@ export const createManualOrder = mutation({
       planId,
       planLabel: `${picked} · ${plan.label}`,
       days: plan.days,
-      priceIdr: plan.price,
+      priceIdr: price,
       orderId,
       tier: tier ?? "basic",
       status: "manual_pending",
@@ -256,7 +295,7 @@ export const createManualOrder = mutation({
     });
     return {
       orderId,
-      priceIdr: plan.price,
+      priceIdr: price,
       days: plan.days,
       planLabel: `${picked} · ${plan.label}`,
     };

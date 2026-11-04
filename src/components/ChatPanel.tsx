@@ -672,26 +672,6 @@ export function ChatPanel({
   const nsfwReport = useMutation(api.chat.nsfwReport);
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const { muted } = useModeration();
-  /** Balasan yang sedang dibuka per pesan induk (gaya komentar tontonan). */
-  const [openThreads, setOpenThreads] = useState<Record<string, boolean>>({});
-  /** Peta id pesan induk → daftar balasannya (urut waktu). */
-  const repliesByParent = useMemo(() => {
-    const ids = new Set(messages.map((m) => String(m._id)));
-    const map = new Map<string, ChatMsg[]>();
-    for (const m of messages) {
-      const pid = m.replyTo?._id ? String(m.replyTo._id) : "";
-      if (!pid || !ids.has(pid)) continue;
-      const arr = map.get(pid) ?? [];
-      arr.push(m);
-      map.set(pid, arr);
-    }
-    return map;
-  }, [messages]);
-  const hasParentInList = useMemo(() => {
-    const ids = new Set(messages.map((m) => String(m._id)));
-    return (m: ChatMsg) =>
-      !!m.replyTo?._id && ids.has(String(m.replyTo._id));
-  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -723,8 +703,6 @@ export function ChatPanel({
       if (target) {
         setBlinkId(target._id);
         setTimeout(() => setBlinkId(null), 3400);
-        // Balasan baru langsung terlihat: thread induknya dibuka otomatis.
-        setOpenThreads((s) => ({ ...s, [String(target._id)]: true }));
         setReplyTo(null);
       }
     },
@@ -797,12 +775,6 @@ export function ChatPanel({
         )}
         {messages.map((m) => {
           const mine = m.userId === meId;          const give = m.premiumGive;
-          // Balasan tidak dirender di aliran utama: dia muncul di bawah
-          // pesan induknya lewat tombol "Lihat N balasan" (gaya komentar
-          // di halaman nonton, sesuai permintaan).
-          if (hasParentInList(m)) return null;
-          const kids = repliesByParent.get(String(m._id)) ?? [];
-          const threadOpen = !!openThreads[String(m._id)];
           return (
             <div key={m._id} className="w-full">
             <div
@@ -944,7 +916,7 @@ export function ChatPanel({
                       )}
                       {m.feedPostId && <FeedShareCard postId={m.feedPostId} />}
                       {m.sticker && (
-                        <span className="select-none text-[64px] leading-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)]">
+                        <span className="select-none text-[52px] leading-none">
                           {m.sticker}
                         </span>
                       )}
@@ -985,121 +957,6 @@ export function ChatPanel({
               </div>
             </div>
 
-            {/* Tombol balasan: agak ke kanan, di bawah pesan induk. */}
-            {kids.length > 0 && (
-              <div
-                className={cn(
-                  "mt-1 flex px-1",
-                  mine ? "justify-end" : "justify-start pl-11",
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenThreads((s) => ({
-                      ...s,
-                      [String(m._id)]: !s[String(m._id)],
-                    }))
-                  }
-                  className="flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-[#7fd3f7] transition hover:bg-white/10 active:scale-95"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "size-3.5 transition-transform",
-                      threadOpen && "rotate-180",
-                    )}
-                  />
-                  {threadOpen
-                    ? "Sembunyikan balasan"
-                    : `Lihat ${kids.length} balasan`}
-                </button>
-              </div>
-            )}
-
-            {/* Daftar balasan — grid ke bawah, menjorok ke dalam. */}
-            {threadOpen && kids.length > 0 && (
-              <div
-                className={cn(
-                  "mt-2 space-y-1.5 border-l border-white/10 pl-3",
-                  mine ? "mr-1 ml-auto" : "ml-11 mr-1",
-                )}
-              >
-                {kids.map((k) => (
-                  <div key={k._id} className="flex items-start gap-2">
-                    <img
-                      src={k.image ?? avatarFallback(k.username)}
-                      alt=""
-                      className={cn(
-                        "mt-0.5 size-6 shrink-0 rounded-full object-cover",
-                        !k.image && "bg-white/[0.08]",
-                      )}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "truncate text-[11px] font-bold",
-                            usernameColor(k.username),
-                          )}
-                        >
-                          {k.username}
-                        </span>
-                        {k.premium && <BlueCheck className="size-3 shrink-0" />}
-                        <span className="ml-auto shrink-0 text-[9px] text-muted-foreground">
-                          {new Date(k.createdAt).toLocaleTimeString("id-ID", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <div
-                        className={cn(
-                          "mt-1 rounded-xl border px-2.5 py-1.5",
-                          k.userId === meId
-                            ? "border-[#1CA7EC]/30 bg-[#1CA7EC]/12"
-                            : "border-white/10 bg-white/[0.05]",
-                        )}
-                      >
-                        {k.text && (
-                          <p className="break-words text-[13px] leading-snug">
-                            {k.text}
-                          </p>
-                        )}
-                        {k.imageUrl && (
-                          <img
-                            src={k.imageUrl}
-                            alt=""
-                            onClick={() => setZoomImg(k.imageUrl ?? null)}
-                            className="mt-1 max-h-40 cursor-zoom-in rounded-lg object-contain"
-                          />
-                        )}
-                        {k.sticker && (
-                          <span className="text-4xl leading-none">{k.sticker}</span>
-                        )}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-2 text-[9px] text-muted-foreground">
-                        <button
-                          type="button"
-                          onClick={() => setReplyTo(k)}
-                          className="hover:text-primary"
-                        >
-                          Balas
-                        </button>
-                        {k.userId === meId && onDeleteLocal && (
-                          <button
-                            type="button"
-                            onClick={() => void onDeleteLocal(String(k._id))}
-                            className="hover:text-red-400"
-                          >
-                            Hapus
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
             </div>
           );
         })}

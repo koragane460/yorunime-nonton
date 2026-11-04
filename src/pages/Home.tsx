@@ -3210,7 +3210,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </button>
           <div className="min-w-0 flex-1">
             <span className="yn-eyebrow text-[9px]">Obrolan</span>
-            <h1 className="yn-title truncate text-lg">Chat</h1>
+            <h1 className="yn-title truncate text-lg">
+              {tab === "chat" ? "Diskusi Bareng" : "Chat"}
+            </h1>
           </div>
         </div>
         {/* Tab dikecualikan dari px-4: KOTAK PESAN (chat/clan/teman) harus
@@ -3954,6 +3956,13 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                 <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 ring-1 ring-amber-300/35">
                   <CalendarDays className="size-3" aria-hidden />
                   Update setiap {updateDay}
+                </span>
+              )}
+              {/* Musim tayang (mis. "Fall 2026") — sama seperti di layar
+                  nonton, supaya info kapan tayangnya konsisten. */}
+              {(detail as any).seasonLabel && (
+                <span className="inline-flex items-center rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-sky-300 ring-1 ring-sky-300/35">
+                  {String((detail as any).seasonLabel)}
                 </span>
               )}
               {/* Tombol info khusus developer: MAL id + URL poster + id sumber,

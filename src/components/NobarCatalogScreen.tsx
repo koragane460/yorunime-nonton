@@ -106,34 +106,46 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* Publik / Clan — kotak rounded di kiri bawah kotak aksi. */}
-        <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
-            Lihat
+      </div>
+
+      {/* Filter room: DUA KOTAK TERPISAH di bawah kartu besar, gayanya juga
+          beda (Publik biru Sky, Clan kuning Harvest). Ketuk judul lagi untuk
+          kembali menampilkan semua room. */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <button
+          onClick={() => setScope((v) => (v === "publik" ? "all" : "publik"))}
+          aria-pressed={scope === "publik"}
+          className={
+            scope === "publik"
+              ? "flex flex-col items-start gap-1 rounded-2xl border border-[#1CA7EC] bg-[#1CA7EC]/18 p-3 text-left transition active:scale-[0.98]"
+              : "flex flex-col items-start gap-1 rounded-2xl border border-[#1CA7EC]/30 bg-white/[0.04] p-3 text-left transition hover:border-[#1CA7EC]/60 active:scale-[0.98]"
+          }
+        >
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[#1CA7EC]/20">
+            <Globe className="size-4 text-[#7fd3f7]" aria-hidden />
           </span>
-          <div className="flex rounded-full border border-white/10 bg-black/30 p-0.5">
-            {(
-              [
-                { key: "publik", label: "Publik", Icon: Globe },
-                { key: "clan", label: "Clan", Icon: Users },
-              ] as const
-            ).map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                onClick={() => setScope((v) => (v === key ? "all" : key))}
-                aria-pressed={scope === key}
-                className={
-                  scope === key
-                    ? "flex items-center gap-1 rounded-full bg-[#1CA7EC] px-2.5 py-1 text-[10px] font-black text-white transition"
-                    : "flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold text-white/50 transition hover:text-white/80"
-                }
-              >
-                <Icon className="size-3" aria-hidden />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+          <span className="text-[13px] font-black text-white">Publik</span>
+          <span className="text-[10px] leading-snug text-white/50">
+            Room terbuka untuk semua orang
+          </span>
+        </button>
+        <button
+          onClick={() => setScope((v) => (v === "clan" ? "all" : "clan"))}
+          aria-pressed={scope === "clan"}
+          className={
+            scope === "clan"
+              ? "flex flex-col items-start gap-1 rounded-2xl border border-[#FFD23F] bg-[#FFD23F]/15 p-3 text-left transition active:scale-[0.98]"
+              : "flex flex-col items-start gap-1 rounded-2xl border border-[#FFD23F]/30 bg-white/[0.04] p-3 text-left transition hover:border-[#FFD23F]/60 active:scale-[0.98]"
+          }
+        >
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[#FFD23F]/20">
+            <Users className="size-4 text-[#FFD23F]" aria-hidden />
+          </span>
+          <span className="text-[13px] font-black text-white">Clan</span>
+          <span className="text-[10px] leading-snug text-white/50">
+            Room khusus anggota clan
+          </span>
+        </button>
       </div>
 
       {/* ------- PANEL JOIN — muncul DI BAWAH kotak ------- */}

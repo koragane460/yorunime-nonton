@@ -37,6 +37,8 @@ const TIER_INFO: {
   id: TierId;
   label: string;
   tagline: string;
+  /** Harga default per 30 hari. */
+  monthly: number;
   features: string[];
   ring: string;
   accent: string;
@@ -45,6 +47,7 @@ const TIER_INFO: {
     id: "basic",
     label: "Yoru Basic",
     tagline: "Buat nonton harian, tanpa iklan",
+    monthly: 8_000,
     features: [
       "Tanpa iklan di semua halaman",
       "Kualitas sampai 720p",
@@ -58,6 +61,7 @@ const TIER_INFO: {
     id: "plus",
     label: "Yoru Plus",
     tagline: "Kualitas penuh + download",
+    monthly: 50_000,
     features: [
       "Semua fitur Yoru Basic",
       "Kualitas sampai 1080p",
@@ -72,6 +76,7 @@ const TIER_INFO: {
     id: "vip",
     label: "Yoru VIP",
     tagline: "Semua fitur, tanpa batas",
+    monthly: 120_000,
     features: [
       "Semua fitur Yoru Plus",
       "Kualitas sampai 4K",
@@ -321,6 +326,7 @@ function Plans() {
   const fileRef = useRef<HTMLInputElement>(null);
   /** Tingkatan premium yang dipilih sebelum menentukan durasi. */
   const [tier, setTier] = useState<TierId>("basic");
+  const tierInfo = TIER_INFO.find((t) => t.id === tier) ?? TIER_INFO[0]!;
 
   const ready = config?.ready === true;
   const image = config?.qrUrl || qrUrl || "";
@@ -443,6 +449,12 @@ function Plans() {
                 <span className="mt-0.5 block text-[11px] text-white/45">
                   {t.tagline}
                 </span>
+                <span className="mt-1 block font-mono text-[13px] font-black text-white">
+                  Rp{t.monthly.toLocaleString("id-ID")}
+                  <span className="ml-1 font-sans text-[10px] font-semibold text-white/45">
+                    / 30 hari
+                  </span>
+                </span>
                 <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
                   {t.features.map((f) => (
                     <span
@@ -460,23 +472,22 @@ function Plans() {
         })}
       </div>
 
-      <h2 className="mt-5 text-[13px] font-bold text-gold">Paket</h2>
-      {/* Kartu paket gaya 2 kolom: durasi, harga besar, catatan per bulan,
-          chip Sacret (biru), chip HD 1080P (hijau), dan tombol "Pilih paket".
-          Tanpa harga coretan. Paket paling hemat mendapat badge "Paling
-          hemat" + aksen emas. */}
+      <div className="mt-5 flex items-center justify-between gap-2">
+        <h2 className="text-[13px] font-bold text-gold">Paket</h2>
+        <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-white/60">
+          {tierInfo.label} · Rp{tierInfo.monthly.toLocaleString("id-ID")}/30 hari
+        </span>
+      </div>
+      {/* Kartu paket: durasi, harga (harga dasar tingkatan × durasi), chip
+          Sacret, chip kualitas sesuai tingkatan, dan tombol "Pilih paket". */}
       {(() => {
-        const sorted = [...(plans ?? [])].sort(
-          (a, b) => (a.price ?? 0) - (b.price ?? 0),
-        );
-        // Baseline harga per hari = paket paling mahal per hari (biasanya
-        // paket 1 bulan). Hemat% dihitung terhadap baseline itu.
-        const perDay = (p: Plan) => (p.days > 0 ? p.price / p.days : p.price);
-        const baseline = Math.max(...sorted.map(perDay), 0);
-        // Badge "Paling hemat" menempel di paket 1 BULAN (permintaan user),
-        // bukan lagi otomatis paket paling murah per hari. Kalau tidak ada
-        // paket 30 hari, jatuh ke paket yang durasinya paling mendekati 30
-        // hari, supaya labelnya tetap masuk akal.
+        // Harga SELALU dihitung dari tingkatan yang dipilih, bukan angka
+        // statis: makin lama durasinya, makin mahal.
+        const monthly = tierInfo.monthly;
+        const priceOf = (p: Plan) =>
+          Math.round(((monthly * p.days) / 30) / 1000) * 1000;
+        const sorted = [...(plans ?? [])].sort((a, b) => a.days - b.days);
+        // Badge "Paling hemat" menempel di paket 1 BULAN (permintaan user).
         const bestId =
           sorted.length === 0
             ? undefined
@@ -488,11 +499,8 @@ function Plans() {
         return (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             {sorted.map((p) => {
-              const hemat =
-                baseline > 0 && perDay(p) < baseline
-                  ? Math.round((1 - perDay(p) / baseline) * 100)
-                  : 0;
-              const perBulan = Math.round((p.price / Math.max(1, p.days)) * 30);
+              const price = priceOf(p);
+              const perBulan = Math.round((price / Math.max(1, p.days)) * 30);
               const best = p.id === bestId;
               return (
                 <div
@@ -514,10 +522,13 @@ function Plans() {
                     {p.label}
                   </p>
                   <p className="mt-0.5 font-mono text-2xl font-black leading-tight tracking-tight text-white">
-                    Rp{p.price.toLocaleString("id-ID")}
+                    Rp{price.toLocaleString("id-ID")}
                   </p>
                   <p className="mt-0.5 text-[10px] text-zinc-500">
-                    {p.days} hari{p.days >= 60 ? ` · ≈ Rp${perBulan.toLocaleString("id-ID")} / bulan` : ""}
+                    {p.days} hari
+                    {p.days >= 60
+                      ? ` · ≈ Rp${perBulan.toLocaleString("id-ID")} / bulan`
+                      : ""}
                   </p>
                   {/* Chip Sacret (berlian biru) */}
                   {typeof p.sacret === "number" && p.sacret > 0 && (
@@ -529,7 +540,11 @@ function Plans() {
                       Dulu hanya muncul untuk paket yang dianggap "hemat"
                       sehingga ada kartu yang kehilangan chip HD-nya. */}
                   <span className="mt-1.5 inline-flex w-fit items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                    HD 1080P
+                    {tier === "vip"
+                      ? "4K ULTRA"
+                      : tier === "plus"
+                        ? "FULL HD 1080P"
+                        : "HD 720P"}
                   </span>
                   <button
                     disabled={busy !== null}

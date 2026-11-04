@@ -521,6 +521,8 @@ function WatchContent() {
   const [direct, setDirect] = useState<any>(null);
   // Alasan stream tidak tersedia (mis. judul upcoming belum tayang)
   const [directErr, setDirectErr] = useState<string | null>(null);
+  /** Daftar server terakhir — dipakai tombol "Coba lagi" saat semua gagal. */
+  const retrySourcesRef = useRef<any[]>([]);
   const [autoSubLoading, setAutoSubLoading] = useState(false);
   // Pesan singkat kalau subtitle Indonesia gagal dibuat (server subtitles
   // aslinya yang dipakai, atau subtitledita lewat fallback).
@@ -1187,6 +1189,11 @@ function WatchContent() {
   const [epAsc, setEpAsc] = useState(true);
 
   const epList = detailData?.episodeList ?? [];
+  /** Hari update mingguan (judul Ongoing) — diambil dari tanggal episode 1. */
+  const updateDay =
+    detailData?.status === "Ongoing"
+      ? dayName((epList as any[]).find((e: any) => e.aired)?.aired)
+      : undefined;
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
   // Kalau episode yang diminta tidak ada di daftar, jangan diam-diam memakai
   // episode 1: itu bikin judul dan nomor episode di layar salah.
@@ -1207,7 +1214,10 @@ function WatchContent() {
     );
     if (next < 0) {
       // Semua server sudah dicoba: tampilkan pesan, jangan biarkan player
-      // diam-diam menampilkan server yang sudah jelas rusak.
+      // diam-diam menampilkan server yang sudah jelas rusak. Daftar server
+      // disimpan dulu supaya tombol "Coba lagi" bisa memakainya lagi tanpa
+      // memuat ulang halaman.
+      retrySourcesRef.current = list;
       setDirectErr("Semua server gagal memuat episode ini");
       setSources([]);
       return;
@@ -1567,15 +1577,27 @@ function WatchContent() {
     const t = window.setTimeout(() => {
       const v = videoRef.current;
       if (!v) return;
+      // HANYA saat video benar-benar sedang berusaha diputar. Kalau user
+      // belum menekan play (autoplay diblokir HP), video memang diam di 0:00
+      // dan itu BUKAN server rusak — dulu penjaga ini menandai semua server
+      // mati di HP sampai muncul "Semua server gagal".
+      if (v.paused) return;
       const noDuration = !Number.isFinite(v.duration) || v.duration <= 0;
       if (v.readyState >= 2 || !noDuration) return;
       if (stallGuard.current === url) return;
       stallGuard.current = url;
       failoverServer(sourceIdx);
-    }, 14_000);
+    }, 20_000);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamUrl, sourceType, sourceIdx]);
+
+  // Server yang berhasil memuat metadata dianggap sehat lagi: daftar server
+  // mati dikosongkan supaya gangguan jaringan sesaat tidak membuat server itu
+  // diblokir untuk sisa episode.
+  useEffect(() => {
+    if (duration > 0) deadServers.current = new Set();
+  }, [duration]);
 
   // Ganti kualitas saat nonton -> benar-benar diterapkan ke player, baik ke
   // level HLS maupun ke server MP4 yang resolusinya paling cocok. Di layar
@@ -2134,12 +2156,33 @@ function WatchContent() {
                       ? "Judul ini belum tayang, cek jadwal rilisnya"
                       : "Coba episode lain atau kembali ke halaman anime"}
                   </p>
-                  <button
-                    onClick={() => navigate("/home")}
-                    className="mt-3 rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white"
-                  >
-                    Kembali ke Home
-                  </button>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const list = retrySourcesRef.current;
+                        deadServers.current = new Set();
+                        stallGuard.current = "";
+                        setDirectErr(null);
+                        if (list.length > 0) {
+                          setSources(list);
+                          const t = list[0]?.type;
+                          setSourceType(
+                            t === "hls" ? "hls" : t === "mp4" ? "mp4" : "embed",
+                          );
+                          setSourceIdx(0);
+                        }
+                      }}
+                      className="rounded-full bg-[#1CA7EC] px-4 py-1.5 text-xs font-black text-white"
+                    >
+                      Coba lagi
+                    </button>
+                    <button
+                      onClick={() => navigate("/home")}
+                      className="rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white"
+                    >
+                      Kembali ke Home
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>
@@ -3154,17 +3197,18 @@ function WatchContent() {
                 />
               )}
             </div>
-            {typeof D.score === "number" && D.score > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex items-center gap-1 rounded-lg border border-[#FFD23F]/55 bg-[#0b0d12]/95 px-1.5 py-1 text-[10px] font-black text-[#FFD23F]">
-                <Star className="size-2.5 fill-[#FFD23F]" aria-hidden />
-                {Number(D.score).toFixed(1)}
-              </span>
-            )}
           </div>
 
-          <div className="min-w-0 flex-1">
-            {/* Tipe + musim tayang — kotak rounded berjejer di kanan atas. */}
+          <div className="min-w-0 flex-1 pl-1">
+            {/* Rating · tipe · musim · status tayang — semua kotak rounded
+                berjejer DI KANAN poster (tidak menimpa gambarnya). */}
             <div className="flex flex-wrap items-center gap-1.5">
+              {typeof D.score === "number" && D.score > 0 && (
+                <span className="flex items-center gap-1 rounded-md border border-[#FFD23F]/55 bg-[#FFD23F]/12 px-1.5 py-0.5 text-[9px] font-black text-[#FFD23F]">
+                  <Star className="size-2.5 fill-[#FFD23F]" aria-hidden />
+                  {Number(D.score).toFixed(1)}
+                </span>
+              )}
               {D.type && (
                 <span className="rounded-md border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/70">
                   {String(D.type)}
@@ -3173,6 +3217,16 @@ function WatchContent() {
               {D.seasonLabel && (
                 <span className="rounded-md border border-[#1CA7EC]/40 bg-[#1CA7EC]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#7fd3f7]">
                   {String(D.seasonLabel)}
+                </span>
+              )}
+              {D.status === "Ongoing" && (
+                <span className="rounded-md border border-[#1CA7EC]/45 bg-[#1CA7EC]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#7fd3f7]">
+                  Ongoing
+                </span>
+              )}
+              {updateDay && (
+                <span className="rounded-md border border-[#FFD23F]/40 bg-[#FFD23F]/10 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-[#FFD23F]">
+                  Update tiap {updateDay}
                 </span>
               )}
               {isDonghua && (
@@ -3262,7 +3316,7 @@ function WatchContent() {
             </span>
             <button
               onClick={() => setSynopsisOpen((v) => !v)}
-              className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-bold text-[#7fd3f7] transition hover:bg-white/10"
+              className="text-[10px] font-bold text-[#7fd3f7] transition hover:text-[#aee6ff]"
             >
               {synopsisOpen ? "Tutup" : "Lihat selengkapnya"}
             </button>
@@ -3316,9 +3370,10 @@ function WatchContent() {
                 </p>
               </div>
             )}
-            {/* Grid episode DIGESER KE SAMPING (bukan ke bawah) — seperti
-                baris episode di layar detail anime. */}
-            <div className="thin-scroll -mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1">
+            {/* Kartu episode DIGESER KE SAMPING — nomor, judul, tanggal
+                rilis, dan tombol play, seperti daftar episode di layar
+                detail anime. */}
+            <div className="thin-scroll -mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
               {(epList ?? [])
                 .filter(
                   (e: any) =>
@@ -3329,26 +3384,63 @@ function WatchContent() {
                 .sort((a: any, b: any) =>
                   epAsc ? a.number - b.number : b.number - a.number,
                 )
-                .map((e: any) => (
-                  <button
-                    key={e.id}
-                    onClick={() => {
-                      if (room) {
-                        void roomSetEpisode({ roomId: room._id, episode: e.number });
-                        return;
-                      }
-                      navigate(epUrl(e.id));
-                    }}
-                    className={cn(
-                      "relative flex size-11 shrink-0 items-center justify-center rounded-xl border text-xs font-bold transition active:scale-95",
-                      e.id === epParam
-                        ? "border-[#1CA7EC] bg-[#1CA7EC]/20 text-white"
-                        : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/30",
-                    )}
-                  >
-                    {e.number}
-                  </button>
-                ))}
+                .map((e: any) => {
+                  const active = e.id === epParam;
+                  const released = e.released !== false;
+                  return (
+                    <button
+                      key={e.id}
+                      disabled={!released}
+                      onClick={() => {
+                        if (room) {
+                          void roomSetEpisode({
+                            roomId: room._id,
+                            episode: e.number,
+                          });
+                          return;
+                        }
+                        navigate(epUrl(e.id));
+                      }}
+                      className={cn(
+                        "flex w-[152px] shrink-0 flex-col gap-1 rounded-2xl border p-2.5 text-left transition active:scale-[0.97] disabled:opacity-45",
+                        active
+                          ? "border-[#1CA7EC] bg-[#1CA7EC]/15"
+                          : "border-white/10 bg-white/[0.04] hover:border-white/30",
+                      )}
+                    >
+                      <span className="flex items-center justify-between gap-1">
+                        <span
+                          className={cn(
+                            "text-[10px] font-black uppercase tracking-wider",
+                            active ? "text-[#7fd3f7]" : "text-white/40",
+                          )}
+                        >
+                          Episode {e.number}
+                        </span>
+                        <span
+                          className={cn(
+                            "flex size-6 items-center justify-center rounded-full",
+                            active
+                              ? "bg-[#1CA7EC] text-white"
+                              : "bg-white/[0.08] text-white/70",
+                          )}
+                        >
+                          <Play className="size-3" fill="currentColor" />
+                        </span>
+                      </span>
+                      <span className="line-clamp-1 text-[12px] font-bold text-white/90">
+                        {e.title ? String(e.title) : `Episode ${e.number}`}
+                      </span>
+                      <span className="text-[10px] text-white/40">
+                        {e.aired
+                          ? `Rilis ${epAired(e.aired)}`
+                          : released
+                            ? "Sudah rilis"
+                            : "Belum rilis"}
+                      </span>
+                    </button>
+                  );
+                })}
               <span aria-hidden className="w-1 shrink-0" />
             </div>
           </>
@@ -4001,6 +4093,26 @@ function LevelSlider({
       </span>
     </div>
   );
+}
+
+/** Nama hari Indonesia dari tanggal rilis (untuk tag "Update tiap …"). */
+function dayName(aired?: string): string | undefined {
+  if (!aired) return undefined;
+  const at = Date.parse(aired);
+  if (!Number.isFinite(at)) return undefined;
+  return new Date(at).toLocaleDateString("id-ID", { weekday: "long" });
+}
+
+/** Tanggal rilis episode: "5 Jan 2026" (ISO penuh maupun YYYY-MM-DD). */
+function epAired(aired?: string): string {
+  if (!aired) return "";
+  const at = Date.parse(aired);
+  if (!Number.isFinite(at)) return aired;
+  return new Date(at).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function fmt(s: number) {
