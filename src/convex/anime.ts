@@ -147,6 +147,8 @@ export type AnimeDetail = AnimeCard & {
   studio?: string;
   rating?: string;
   year?: number;
+  /** Musim tayang, mis. "Winter 2024" (badge di layar nonton). */
+  seasonLabel?: string;
   synopsis: string;
   totalEpisodes: number;
   episodeList: EpisodeItem[];
@@ -518,6 +520,21 @@ async function anilistDetail(malId: string): Promise<AnimeDetail | null> {
       m.studios?.nodes?.map((n: any) => n?.name).filter(Boolean).join(", ") ??
       undefined,
     rating: m.isAdult ? "Rating 17+" : "Rating 13+",
+    // Musim tayang untuk badge di layar nonton: "Winter 2024", "Summer 2026".
+    seasonLabel: (() => {
+      const sd = m?.startDate;
+      if (!sd?.month) return undefined;
+      const season =
+        sd.month <= 3
+          ? "Winter"
+          : sd.month <= 6
+            ? "Spring"
+            : sd.month <= 9
+              ? "Summer"
+              : "Fall";
+      const year = sd.year ?? m?.seasonYear;
+      return year ? `${season} ${year}` : season;
+    })(),
     episodes: total,
     synopsis,
     synopsisId: synopsisId ?? undefined,

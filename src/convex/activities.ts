@@ -694,12 +694,17 @@ export const listComments = query({
         image: u?.image,
         bannerUrl: u?.bannerUrl,
         premium: (u?.premiumUntil ?? 0) > Date.now(),
+        premiumTier: u?.premiumTier,
+        level: u?.level,
         staffRole: u?.staffRole,
         clanTag: u?.clanTag,
         clanTagIcon: u?.clanTagIcon,
         clanNameColor: u?.clanNameColor,
         clanLevel: u?.clanLevel,
         text: r.text,
+        sticker: r.sticker,
+        imageUrl: r.imageUrl,
+        spoiler: r.spoiler,
         likes: r.likes ?? [],
         likeCount: (r.likes ?? []).length,
         replyToId: r.replyToId,
@@ -717,21 +722,37 @@ export const postComment = mutation({
     animeTitle: v.optional(v.string()),
     animeImage: v.optional(v.string()),
     text: v.string(),
+    sticker: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
+    spoiler: v.optional(v.boolean()),
     replyToId: v.optional(v.id("animeComments")),
   },
-  handler: async (ctx, { animeId, animeTitle, animeImage, text, replyToId }) => {
+  handler: async (
+    ctx,
+    { animeId, animeTitle, animeImage, text, sticker, imageStorageId, spoiler, replyToId },
+  ) => {
+    // Gambar disimpan di storage Convex; URL publiknya yang ditulis ke
+    // komentar supaya bisa langsung ditampilkan di feed mana pun.
+    const imageUrl = imageStorageId
+      ? ((await ctx.storage.getUrl(imageStorageId)) ?? undefined)
+      : undefined;
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
     if (!me) throw new Error("User not found");
     await requireActive(me);
-    if (text.trim().length === 0) throw new Error("Komentar kosong");
+    if (text.trim().length === 0 && !sticker && !imageUrl) {
+      throw new Error("Komentar kosong");
+    }
     const commentId = await ctx.db.insert("animeComments", {
       animeId,
       animeTitle,
       animeImage,
       userId,
       text: text.trim(),
+      sticker,
+      imageUrl,
+      spoiler,
       replyToId,
       likes: [],
       createdAt: Date.now(),

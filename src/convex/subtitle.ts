@@ -114,11 +114,11 @@ const toVtt = (cues: Cue[]) =>
  * cocok akan membuat sebagian dialog diam-diam tetap bahasa asli (persis
  * keluhan "subtitle tidak diterjemahkan di beberapa bagian").
  */
-async function translateBatch(
+/** Server penerjemah #1 — Google Translate (gtx), paling akurat. */
+async function translateViaGtx(
   lines: string[],
   from: string,
-): Promise<string[] | null> {
-  if (lines.length === 0) return [];
+): Promise<string[]> {
   const SEP = "\u241F";
   const payload = lines.join(SEP);
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=id&dt=t&q=${encodeURIComponent(payload)}`;
@@ -132,8 +132,114 @@ async function translateBatch(
     .map((seg: any) => (Array.isArray(seg) ? String(seg?.[0] ?? "") : ""))
     .join("");
   const parts = out.split(/\s*\u241F\s*/).map((s) => s.trim());
-  if (parts.length !== lines.length) return null;
+  if (parts.length !== lines.length || parts.some((p) => !p)) {
+    throw new Error("jumlah baris tidak cocok");
+  }
   return parts;
+}
+
+/**
+ * Server penerjemah #2 — endpoint dictionary Chrome (clients5). Menerima
+ * banyak `q` sekaligus dan membalas satu terjemahan per baris, jadi cocok
+ * untuk paragraf subtitle.
+ */
+async function translateViaDictChrome(
+  lines: string[],
+  from: string,
+): Promise<string[]> {
+  const qs = lines.map((l) => `q=${encodeURIComponent(l)}`).join("&");
+  const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${from}&tl=id&${qs}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`dict ${res.status}`);
+  const j: any = await res.json();
+  const rows: any[] = Array.isArray(j)
+    ? j
+    : Array.isArray(j?.sentences)
+      ? j.sentences
+      : [];
+  const out = rows.map((row: any) => {
+    if (Array.isArray(row)) return String(row[0] ?? "");
+    if (typeof row === "string") return row;
+    return String(row?.trans ?? row?.translation ?? "");
+  });
+  const trimmed = out.map((s) => s.trim());
+  if (trimmed.length !== lines.length || trimmed.some((p) => !p)) {
+    throw new Error("bentuk balasan tidak dikenal");
+  }
+  return trimmed;
+}
+
+/**
+ * Server penerjemah #3 — MyMemory. Hanya menerima satu baris per request,
+ * tapi dipakai sebagai jaring pengaman terakhir waktu dua server Google
+ * sedang menolak (rate limit / 5xx).
+ */
+async function translateViaMyMemory(
+  lines: string[],
+  from: string,
+): Promise<string[]> {
+  if (lines.length !== 1) throw new Error("satu baris per request");
+  const src = from === "auto" ? "en" : from;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+    lines[0]!,
+  )}&langpair=${encodeURIComponent(src)}|id`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (YoruNime/1.0)" },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`mymemory ${res.status}`);
+  const j: any = await res.json();
+  const text = String(j?.responseData?.translatedText ?? "").trim();
+  if (!text) throw new Error("kosong");
+  return [text];
+}
+
+/** Promise pertama yang berhasil; sisanya diabaikan (tidak membatalkan). */
+function firstOk<T>(tasks: Promise<T>[]): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let pending = tasks.length;
+    if (pending === 0) {
+      reject(new Error("tidak ada server"));
+      return;
+    }
+    let settled = false;
+    for (const t of tasks) {
+      t.then((v) => {
+        if (settled) return;
+        settled = true;
+        resolve(v);
+      }).catch(() => {
+        pending -= 1;
+        if (pending === 0 && !settled) reject(new Error("semua server gagal"));
+      });
+    }
+  });
+}
+
+/**
+ * Terjemahkan satu chunk dengan TIGA server yang dijalankan PARALEL: siapa
+ * yang paling cepat membalas dengan jumlah baris yang benar, dia yang dipakai
+ * — server yang error otomatis dilewati tanpa membuat subtitle kosong.
+ */
+async function translateBatch(
+  lines: string[],
+  from: string,
+): Promise<string[] | null> {
+  if (lines.length === 0) return [];
+  const servers: Promise<string[]>[] = [
+    translateViaGtx(lines, from),
+    translateViaDictChrome(lines, from),
+  ];
+  // MyMemory cuma bisa satu baris; ikutkan hanya kalau chunk-nya satu baris.
+  if (lines.length === 1) servers.push(translateViaMyMemory(lines, from));
+  try {
+    return await firstOk(servers);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -255,7 +361,7 @@ const cache = new Map<string, { vtt: string; source: string; at: number }>();
 const CACHE_TTL = 60 * 60_000;
 // Naikkan versi cache setiap kali cara penerjemahan berubah, supaya hasil
 // lama yang hanya sebagian tidak terus disajikan.
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 
 export const subtitleIndo = action({
   args: { malId: v.string(), ep: v.number() },
@@ -291,14 +397,21 @@ export const subtitleIndo = action({
       // Setiap track dicoba satu per satu. Track pertama kadang file-nya rusak
       // atau formatnya tidak terbaca. Daripada langsung menyerah, lanjut ke
       // track berikutnya supaya user tetap dapat subtitle.
+      // Semua kandidat track diunduh PARALEL: track yang servernya lambat
+      // atau rusak tidak lagi menahan yang lain, dan file yang paling lengkap
+      // (cue terbanyak) yang dipakai.
       let pick: any = null;
       let cues: Cue[] = [];
-      for (const cand of ranked.slice(0, 4)) {
-        const raw = await fetchText(String(cand.file)).catch(() => "");
-        cues = parseVtt(raw);
-        if (cues.length > 0) {
-          pick = cand;
-          break;
+      const loaded = await Promise.all(
+        ranked.slice(0, 4).map(async (cand) => {
+          const raw = await fetchText(String(cand.file)).catch(() => "");
+          return { cand, cues: parseVtt(raw) };
+        }),
+      );
+      for (const row of loaded) {
+        if (row.cues.length > cues.length) {
+          cues = row.cues;
+          pick = row.cand;
         }
       }
       if (!pick)

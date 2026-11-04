@@ -35,6 +35,22 @@ const MONTHS = [
   "Des",
 ];
 
+/** Nama bulan penuh untuk kepala kalender. */
+const MONTHS_FULL = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
 /**
  * Tanggal konkret untuk tiap hari di minggu berjalan (Minggu..Sabtu).
  * Dipakai strip hari di atas daftar: tiap pilihan menampilkan tulisan hari
@@ -310,6 +326,19 @@ function JadwalContent() {
 
   const loadingAll = loading || comicLoading || donghuaLoading;
 
+  /** Jumlah rilis tiap hari (anime + komik + judul custom + donghua) untuk
+   *  titik-titik di bawah angka tanggal pada kartu kalender. */
+  const countsByDay = useMemo(() => {
+    const custom = (customAnime ?? []) as any[];
+    return DAYS_ID.map(
+      (key) =>
+        (sched[key]?.length ?? 0) +
+        (comics[key]?.length ?? 0) +
+        custom.filter((c) => c.airingDay === key).length +
+        (donghuaByDay[key]?.length ?? 0),
+    );
+  }, [sched, comics, customAnime, donghuaByDay]);
+
   // deteksi duplikat hari ini (sama id+episode)
   const dupCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -355,43 +384,78 @@ function JadwalContent() {
       {/* Pilih hari: tulisan hari + angka tanggal sesuai tanggal berjalan.
           Semua tipe (anime, manga, manhwa, donghua) tampil dalam SATU
           daftar tanpa pilihan tipe lagi. */}
-      <div className="mb-3 grid grid-cols-7 gap-1.5">
-        {weekDates().map((d, i) => {
-          const active = i === day;
-          return (
-            <button
-              key={i}
-              onClick={() => setDay(i)}
-              aria-current={active ? "date" : undefined}
-              aria-label={`${DAYS_ID[i]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`}
-              /* Kotak tinggi & lurus (persegi panjang ke atas) — angka
-                 tanggal dibuat besar supaya langsung kebaca. */
-              className={cn(
-                "flex h-[74px] flex-col items-center justify-center gap-1.5 rounded-lg border pb-2 pt-1.5 transition",
-                active
-                  ? "border-primary bg-primary/15"
-                  : "border-white/10 hover:border-white/30",
-              )}
-            >
-              <span
+      {/* KALENDER MINGGUAN — tiap hari tampil seperti lembar kalender:
+          pita nama hari, angka tanggal besar, dan titik jumlah rilis. */}
+      <div className="mb-3">
+        <div className="mb-2 flex items-baseline justify-between px-0.5">
+          <span className="text-[11px] font-black uppercase tracking-[0.16em] text-foreground/70">
+            {MONTHS_FULL[weekDates()[0].getMonth()]}{" "}
+            {weekDates()[0].getFullYear()}
+          </span>
+          <span className="text-[10px] font-semibold text-muted-foreground">
+            Minggu ini
+          </span>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {weekDates().map((d, i) => {
+            const active = i === day;
+            const count = countsByDay[i] ?? 0;
+            return (
+              <button
+                key={i}
+                onClick={() => setDay(i)}
+                aria-current={active ? "date" : undefined}
+                aria-label={`${DAYS_ID[i]}, ${d.getDate()} ${MONTHS[d.getMonth()]} — ${count} rilis`}
+                title={`${count} rilis`}
                 className={cn(
-                  "text-[10px] font-bold leading-none",
-                  active ? "text-primary" : "text-zinc-500",
+                  "group relative flex h-[92px] flex-col overflow-hidden rounded-xl border transition active:scale-[0.97]",
+                  active
+                    ? "border-primary bg-primary/10 shadow-[0_6px_18px_-10px] shadow-primary/70"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/25",
                 )}
               >
-                {SHORT_DAYS[i]}
-              </span>
-              <span
-                className={cn(
-                  "text-[24px] font-black leading-none tabular-nums tracking-tight",
-                  active ? "text-foreground" : "text-zinc-400",
-                )}
-              >
-                {d.getDate()}
-              </span>
-            </button>
-          );
-        })}
+                {/* Pita hari di bagian atas, seperti kepala lembar kalender. */}
+                <span
+                  className={cn(
+                    "w-full py-1 text-center text-[9px] font-black uppercase leading-none tracking-[0.08em]",
+                    active
+                      ? "bg-primary text-white"
+                      : "bg-white/[0.06] text-zinc-400",
+                  )}
+                >
+                  {SHORT_DAYS[i]}
+                </span>
+                <span className="flex flex-1 flex-col items-center justify-center gap-1.5">
+                  <span
+                    className={cn(
+                      "text-[26px] font-black leading-none tabular-nums tracking-tight",
+                      active ? "text-foreground" : "text-zinc-300",
+                    )}
+                  >
+                    {d.getDate()}
+                  </span>
+                  {/* Titik rilis: maksimal 3, sisanya diwakili titik ketiga
+                      yang lebih tebal warnanya. */}
+                  <span className="flex h-1.5 items-center gap-0.5">
+                    {count === 0 ? (
+                      <span className="size-1 rounded-full bg-white/15" />
+                    ) : (
+                      Array.from({ length: Math.min(count, 3) }).map((_, k) => (
+                        <span
+                          key={k}
+                          className={cn(
+                            "size-1 rounded-full",
+                            active ? "bg-primary" : "bg-[#1CA7EC]/70",
+                          )}
+                        />
+                      ))
+                    )}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Info jumlah rilis hari terpilih */}

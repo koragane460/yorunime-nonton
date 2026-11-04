@@ -23,6 +23,8 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
 
   const [listOpen, setListOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  /** Filter daftar room: semua / publik / clan. */
+  const [scope, setScope] = useState<"all" | "publik" | "clan">("all");
   const [joinOpen, setJoinOpen] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -68,14 +70,16 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
         </p>
       )}
       {/* ------- SATU KOTAK: judul Nobar + Buat/Join digabung ---------- */}
-      <div className="overflow-hidden rounded-3xl border border-indigo-400/25 bg-gradient-to-b from-indigo-950/90 via-slate-900 to-zinc-950 shadow-[0_16px_40px_-18px_rgba(99,102,241,0.75)]">
+      {/* Tanpa glow/gradien ungu: hanya permukaan netral + aksen palet
+          (Sky untuk Buat Room, Harvest untuk Join Room). */}
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]">
         {/* Hero — ikon teman + judul, MENYATU dengan kotak aksi di bawah. */}
-        <div className="flex flex-col items-center border-b border-white/10 bg-gradient-to-b from-indigo-500/15 to-transparent px-4 py-6 text-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl border border-indigo-300/30 bg-indigo-500/20 shadow-[0_0_22px_-6px_rgba(129,140,248,0.8)]">
-            <Users className="size-7 text-indigo-200" aria-hidden />
+        <div className="flex flex-col items-center border-b border-white/10 px-4 py-6 text-center">
+          <span className="flex size-14 items-center justify-center rounded-2xl border border-[#1CA7EC]/30 bg-[#1CA7EC]/12">
+            <Users className="size-7 text-[#7fd3f7]" aria-hidden />
           </span>
-          <p className="mt-2.5 text-2xl font-black leading-none text-white">Nobar</p>
-          <p className="mt-1.5 text-xs text-indigo-200/70">
+          <p className="mt-2.5 text-xl font-black leading-none text-[#FFFAF0]">Nobar</p>
+          <p className="mt-1.5 text-xs text-white/55">
             nonton bareng temenmu agar makin asik
           </p>
         </div>
@@ -84,22 +88,51 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-2">
           <button
             onClick={() => setCreating(true)}
-            className="flex flex-col items-center gap-2 border-r border-white/10 py-5 transition hover:bg-white/10 active:scale-[0.98]"
+            className="flex flex-col items-center gap-2 border-r border-white/10 py-5 transition hover:bg-white/[0.06] active:scale-[0.98]"
           >
-            <span className="flex size-10 items-center justify-center rounded-xl border border-sky-300/25 bg-sky-500/15">
-              <Video className="size-5 text-sky-300" aria-hidden />
+            <span className="flex size-10 items-center justify-center rounded-xl border border-[#1CA7EC]/35 bg-[#1CA7EC]/15">
+              <Video className="size-5 text-[#1CA7EC]" aria-hidden />
             </span>
             <span className="text-sm font-extrabold text-white">Buat Room</span>
           </button>
           <button
             onClick={() => setJoinOpen((v) => !v)}
-            className="flex flex-col items-center gap-2 py-5 transition hover:bg-white/10 active:scale-[0.98]"
+            className="flex flex-col items-center gap-2 py-5 transition hover:bg-white/[0.06] active:scale-[0.98]"
           >
-            <span className="flex size-10 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-500/15">
-              <LogIn className="size-5 text-emerald-300" aria-hidden />
+            <span className="flex size-10 items-center justify-center rounded-xl border border-[#FFD23F]/35 bg-[#FFD23F]/12">
+              <LogIn className="size-5 text-[#FFD23F]" aria-hidden />
             </span>
             <span className="text-sm font-extrabold text-white">Join Room</span>
           </button>
+        </div>
+
+        {/* Publik / Clan — kotak rounded di kiri bawah kotak aksi. */}
+        <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+            Lihat
+          </span>
+          <div className="flex rounded-full border border-white/10 bg-black/30 p-0.5">
+            {(
+              [
+                { key: "publik", label: "Publik", Icon: Globe },
+                { key: "clan", label: "Clan", Icon: Users },
+              ] as const
+            ).map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                onClick={() => setScope((v) => (v === key ? "all" : key))}
+                aria-pressed={scope === key}
+                className={
+                  scope === key
+                    ? "flex items-center gap-1 rounded-full bg-[#1CA7EC] px-2.5 py-1 text-[10px] font-black text-white transition"
+                    : "flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold text-white/50 transition hover:text-white/80"
+                }
+              >
+                <Icon className="size-3" aria-hidden />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -187,9 +220,13 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
             Belum ada room aktif — jadilah host pertama.
           </p>
         )}
-        {(rooms ?? []).map((r) => (
-          <RoomCard key={r._id} room={r} busy={busy} onJoin={() => void doJoin(r._id)} />
-        ))}
+        {(rooms ?? [])
+          .filter((r) =>
+            scope === "all" ? true : scope === "clan" ? !!r.clanId : !r.clanId,
+          )
+          .map((r) => (
+            <RoomCard key={r._id} room={r} busy={busy} onJoin={() => void doJoin(r._id)} />
+          ))}
       </div>
 
       {listOpen && (
@@ -252,13 +289,17 @@ function RoomCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <p className="min-w-0 flex-1 truncate text-sm font-bold text-white">{room.name}</p>
-            {room.visibility === "selected" ? (
-              <span className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 text-[9px] font-bold text-amber-300">
+            {room.clanId ? (
+              <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#1CA7EC]/45 bg-[#1CA7EC]/12 px-2 py-0.5 text-[9px] font-bold text-[#7fd3f7]">
+                <Users className="size-2.5" /> Clan
+              </span>
+            ) : room.visibility === "selected" ? (
+              <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#FFD23F]/45 bg-[#FFD23F]/10 px-2 py-0.5 text-[9px] font-bold text-[#FFD23F]">
                 <ShieldCheck className="size-2.5" /> Orang tertentu
               </span>
             ) : (
-              <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                <Globe className="size-2.5" /> Semua orang
+              <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[9px] font-bold text-white/70">
+                <Globe className="size-2.5" /> Publik
               </span>
             )}
           </div>

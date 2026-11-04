@@ -34,6 +34,10 @@ const schema = defineSchema(
       level: v.optional(v.number()),
       diamonds: v.optional(v.number()),
       premiumUntil: v.optional(v.number()),
+      /** Tingkatan premium: Basic / Plus / VIP (beda fitur & batas). */
+      premiumTier: v.optional(
+        v.union(v.literal("basic"), v.literal("plus"), v.literal("vip")),
+      ),
       /** Panel dev: saldo Sacret & premium tanpa batas. */
       unlimitedSacret: v.optional(v.boolean()),
       unlimitedPremium: v.optional(v.boolean()),
@@ -544,6 +548,12 @@ const schema = defineSchema(
       animeImage: v.optional(v.string()),
       userId: v.id("users"),
       text: v.string(),
+      /** Sticker besar yang ikut dikirim (emoji dari toko sticker). */
+      sticker: v.optional(v.string()),
+      /** Gambar lampiran komentar (URL storage Convex). */
+      imageUrl: v.optional(v.string()),
+      /** Komentar bertanda spoiler — teks disembunyikan sampai ditekan. */
+      spoiler: v.optional(v.boolean()),
       replyToId: v.optional(v.id("animeComments")),
       likes: v.array(v.id("users")),
       createdAt: v.number(),
@@ -679,6 +689,10 @@ const schema = defineSchema(
       userId: v.id("users"),
       planId: v.string(),
       planLabel: v.string(),
+      /** Tingkatan premium yang dibeli (basic / plus / vip). */
+      tier: v.optional(
+        v.union(v.literal("basic"), v.literal("plus"), v.literal("vip")),
+      ),
       days: v.number(),
       priceIdr: v.number(),
       status: v.string(),

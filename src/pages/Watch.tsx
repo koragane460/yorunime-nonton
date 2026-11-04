@@ -24,7 +24,9 @@ import {
   Play,
   RotateCcw,
   RotateCw,
+  Search,
   Settings2,
+  Star,
   SkipBack,
   SkipForward,
   Sun,
@@ -916,6 +918,8 @@ function WatchContent() {
   const [pendingComments, setPendingComments] = useState<CommentT[]>([]);
   // Komentar yang baru saja dihapus user — dikeluarkan dari daftar seketika.
   const [removedComments, setRemovedComments] = useState<Set<string>>(new Set());
+  /** Pratinjau gambar komentar (ketuk gambar → layar penuh). */
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   // Ganti subtitle: textTrack yang dipilih = "showing", lainnya dimatikan.
   const pickSub = (label: string) => {
@@ -1019,7 +1023,7 @@ function WatchContent() {
     if (isDonghua) {
       // v2 — cache lama bisa berisi terjemahan parsial (bagian bahasa asli),
       // jadi versi cache dinaikkan supaya tidak ketahuan terus.
-      const key = `yorunime-sub-donghua:v3:${epParam}`;
+      const key = `yorunime-sub-donghua:v4:${epParam}`;
       const cachedDonghua = (() => {
         try {
           return localStorage.getItem(key);
@@ -1094,7 +1098,7 @@ function WatchContent() {
             ?.number ?? 1;
     // v2 — cache lama bisa berisi terjemahan parsial, jadi versi cache
     // dinaikkan supaya hasil lama tidak dipakai terus.
-    const key = `yorunime-sub-indo:v3:${malId}:${epNo}`;
+    const key = `yorunime-sub-indo:v4:${malId}:${epNo}`;
     const cached = (() => {
       try {
         return localStorage.getItem(key);
@@ -1178,6 +1182,9 @@ function WatchContent() {
 
   // Episode yang langsung tampil di grid; sisanya lewat "Lihat semua".
   const [epAllOpen, setEpAllOpen] = useState(false);
+  /** Pencarian + urutan daftar episode (baris geser ke samping). */
+  const [epSearch, setEpSearch] = useState("");
+  const [epAsc, setEpAsc] = useState(true);
 
   const epList = detailData?.episodeList ?? [];
   const epIndex = epList.findIndex((e: any) => e.id === epParam);
@@ -1470,7 +1477,10 @@ function WatchContent() {
     const v = videoRef.current;
     if (!v || sourceType !== "hls" || !streamUrl) return;
     const native = v.canPlayType("application/vnd.apple.mpegurl");
-    if (!Hls.isSupported() && !native) return;
+    // Smart TV (Tizen/webOS) kadang MELAPORKAN tidak mendukung HLS padahal
+    // pemutarnya bisa memutar m3u8 sendiri. Dulu di kasus itu fungsi ini
+    // berhenti tanpa memasang `src`, jadi layar tetap 0:00. Sekarang src
+    // tetap dipasang sebagai percobaan native terakhir.
     let hls: Hls | null = null;
     if (Hls.isSupported()) {
       hls = new Hls({
@@ -1532,6 +1542,7 @@ function WatchContent() {
       });
     } else {
       v.src = streamUrl;
+      v.load();
     }
     return () => {
       hlsRef.current = null;
@@ -1539,6 +1550,32 @@ function WatchContent() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceType, streamUrl]);
+
+  /**
+   * PENJAGA "0:00 TERUS".
+   *
+   * Di Smart TV / komputer lama, manifest kadang tidak pernah terbaca:
+   * durasi tetap 0, video tidak pernah mulai, dan tidak ada event error yang
+   * memicu failover. Setelah 14 detik tanpa metadata, server ini dianggap
+   * gagal lalu otomatis pindah ke server berikutnya (sekali per URL, supaya
+   * tidak berputar-putar).
+   */
+  const stallGuard = useRef<string>("");
+  useEffect(() => {
+    if (!streamUrl || sourceType === "embed") return;
+    const url = streamUrl;
+    const t = window.setTimeout(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      const noDuration = !Number.isFinite(v.duration) || v.duration <= 0;
+      if (v.readyState >= 2 || !noDuration) return;
+      if (stallGuard.current === url) return;
+      stallGuard.current = url;
+      failoverServer(sourceIdx);
+    }, 14_000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streamUrl, sourceType, sourceIdx]);
 
   // Ganti kualitas saat nonton -> benar-benar diterapkan ke player, baik ke
   // level HLS maupun ke server MP4 yang resolusinya paling cocok. Di layar
@@ -3069,6 +3106,26 @@ function WatchContent() {
         </div>
       </div>
 
+      {/* Pratinjau gambar komentar layar penuh. */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setZoomImage(null)}
+        >
+          <img
+            src={zoomImage}
+            alt=""
+            className="max-h-full max-w-full rounded-xl object-contain"
+          />
+          <button
+            aria-label="Tutup"
+            className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-white/10"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+
       {/* Layar laporan anime — laporannya masuk ke notifikasi developer. */}
       {reportOpen && (
         <ReportScreen
@@ -3079,132 +3136,103 @@ function WatchContent() {
         />
       )}
 
-      {/* Info — sinopsis langsung di bawah player, di ATAS episode */}
+      {/* Info — poster + judul + tag, lalu 4 kotak alat, lalu sinopsis. */}
       <div className="w-full p-3">
         <div className="flex items-start gap-3">
-          {/* Poster info: object-contain supaya poster tampil FULL
-              (bukan kepotong setengah) + latar solid; gagal muat →
-              gambar disembunyikan, kotak gelap tetap ada. */}
-          <div className="relative aspect-[2/3] w-16 shrink-0 self-start overflow-hidden rounded-lg bg-black/50">
-            {D.image && (
-              <img
-                src={D.image}
-                alt=""
-                onError={(e) => {
-                  e.currentTarget.style.visibility = "hidden";
-                }}
-                className="size-full object-contain"
-              />
+          {/* Poster LEBIH BESAR (w-[108px]) dengan badge rating di sudut kanan
+              atas, jadi tidak ada ruang hitam kosong di sekelilingnya. */}
+          <div className="relative w-[108px] shrink-0 self-start">
+            <div className="aspect-[2/3] w-full overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
+              {D.image && (
+                <img
+                  src={D.image}
+                  alt=""
+                  onError={(e) => {
+                    e.currentTarget.style.visibility = "hidden";
+                  }}
+                  className="size-full object-cover"
+                />
+              )}
+            </div>
+            {typeof D.score === "number" && D.score > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex items-center gap-1 rounded-lg border border-[#FFD23F]/55 bg-[#0b0d12]/95 px-1.5 py-1 text-[10px] font-black text-[#FFD23F]">
+                <Star className="size-2.5 fill-[#FFD23F]" aria-hidden />
+                {Number(D.score).toFixed(1)}
+              </span>
             )}
           </div>
+
           <div className="min-w-0 flex-1">
-            <h1 className="yn-title line-clamp-2 text-base">{D.title}</h1>
-            <p className={cn("mt-1 text-xs leading-5 text-zinc-400", !synopsisOpen && "line-clamp-3")}>
-              {D.synopsisId ?? D.synopsis}
-            </p>
-            <button
-              onClick={() => setSynopsisOpen((v) => !v)}
-              className="text-[11px] font-semibold text-primary"
-            >
-              {synopsisOpen ? "Tutup" : "Baca selengkapnya"}
-            </button>
+            {/* Tipe + musim tayang — kotak rounded berjejer di kanan atas. */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {D.type && (
+                <span className="rounded-md border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/70">
+                  {String(D.type)}
+                </span>
+              )}
+              {D.seasonLabel && (
+                <span className="rounded-md border border-[#1CA7EC]/40 bg-[#1CA7EC]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#7fd3f7]">
+                  {String(D.seasonLabel)}
+                </span>
+              )}
+              {isDonghua && (
+                <span className="rounded-md border border-[#E84855]/45 bg-[#E84855]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#ff9aa3]">
+                  Donghua
+                </span>
+              )}
+            </div>
+
+            <h1 className="mt-2 line-clamp-2 text-[17px] font-black leading-tight tracking-tight">
+              {D.title}
+            </h1>
+            {/* Terjemahan judul asli — lebih kecil dan pudar. */}
+            {D.titleEnglish && D.titleEnglish !== D.title && (
+              <p className="mt-1 line-clamp-1 text-[11px] font-medium text-white/40">
+                {D.titleEnglish}
+              </p>
+            )}
+
+            {/* Genre + studio — tag rounded. */}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {(Array.isArray(D.genres) ? D.genres : [])
+                .slice(0, 3)
+                .map((g: string) => (
+                  <span
+                    key={g}
+                    className="rounded-full border border-white/12 bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-white/70"
+                  >
+                    {g}
+                  </span>
+                ))}
+              {D.studio && (
+                <span className="rounded-full border border-[#FFD23F]/35 bg-[#FFD23F]/10 px-2 py-0.5 text-[10px] font-bold text-[#FFD23F]">
+                  {String(D.studio)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Episode: grid + jumlah di kanan atas (host room nobar juga boleh) */}
-        {(isHost || !room) && (
-          <>
-            <div className="mb-2 mt-4 flex items-center justify-between">
-              <h2 className="yn-sec text-base">Episode</h2>
-              <span className="text-xs text-muted-foreground">{epList.length} episode</span>
-            </div>
-            {epList.length === 0 && (
-              // Jangan biarkan grid kosong diam-diam: jelaskan bahwa episode
-              // judul ini belum tersedia di sumber, supaya tidak terlihat seperti
-              // bug padahal memang belum ada yang bisa diputar.
-              <div className="rounded-xl border border-border bg-secondary/30 px-4 py-6 text-center">
-                <p className="text-sm font-semibold">Episode belum tersedia</p>
-                <p className="mx-auto mt-1 max-w-sm text-[11px] text-muted-foreground">
-                  Daftar episode untuk judul ini belum ada di sumber. Coba buka
-                  lagi nanti — sumber donghua/anime sering menambahkan episode
-                  belakangan.
-                </p>
-              </div>
-            )}
-            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
-              {(epList ?? [])
-                .slice(0, epAllOpen ? epList.length : EP_PREVIEW)
-                .map((e: any) => (
-                <button
-                  key={e.id}
-                  onClick={() => {
-                    if (room) {
-                      void roomSetEpisode({ roomId: room._id, episode: e.number });
-                      return;
-                    }
-                    navigate(epUrl(e.id));
-                  }}
-                  className={cn(
-                    "relative rounded-md border py-2 text-xs font-semibold transition",
-                    e.id === epParam
-                      ? // Aktif: TANPA warna merah — biru tua + outline putus
-                        // yang berjalan mengikuti kotak (lihat .yn-ep-outline).
-                        "border-blue-800/80 bg-blue-950/60 text-blue-100"
-                      : "border-border bg-secondary/40 text-foreground hover:border-foreground/40",
-                  )}
-                >
-                  {e.number}
-                  {e.id === epParam && (
-                    <svg
-                      className="pointer-events-none absolute inset-0 size-full overflow-visible"
-                      aria-hidden
-                    >
-                      <rect
-                        x="0"
-                        y="0"
-                        width="100%"
-                        height="100%"
-                        rx="6"
-                        fill="none"
-                        stroke="#1e40af"
-                        strokeWidth="2"
-                        pathLength={100}
-                        strokeDasharray="66 34"
-                        className="yn-ep-outline"
-                      />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-            {/* Episode panjang disembunyikan di balik tombol supaya grid tidak
-                jadiCombo panjang yang harus di-scroll jauh sebelum player. */}
-            {epList.length > EP_PREVIEW && (
-              <button
-                onClick={() => setEpAllOpen((v) => !v)}
-                className="mt-2 w-full rounded-lg border border-border py-2 text-xs font-medium text-foreground"
-              >
-                {epAllOpen
-                  ? "Tampilkan lebih sedikit"
-                  : `Lihat semua ${epList.length} episode`}
-              </button>
-            )}
-          </>
-        )}
-
-        {/* Toolbar 4 tombol polos — tanpa kotak pembungkus, sesuai permintaan
-            (background rounded di sekitar keempat tombol dihapus). */}
+        {/* 4 KOTAK ALAT — urutan: Kualitas · Download · Kecepatan · Mini. */}
         {(isHost || !room) && (
           <div className="mt-3 grid grid-cols-4 gap-2">
             <ToolButton
-              icon={<Gauge className="size-4" />}
-              label={`${speed}x`}
-              onClick={() => setSpeedOpen(true)}
+              icon={<Settings2 className="size-4" />}
+              label="Kualitas"
+              onClick={() => {
+                setQualityDraft(quality);
+                setQualityOpen(true);
+              }}
             />
             <ToolButton
               icon={<Download className="size-4" />}
               label="Download"
               onClick={() => setDownloadOpen(true)}
+            />
+            <ToolButton
+              icon={<Gauge className="size-4" />}
+              label={`${speed}x`}
+              onClick={() => setSpeedOpen(true)}
             />
             <ToolButton
               icon={<PictureInPicture2 className="size-4" />}
@@ -3223,15 +3251,107 @@ function WatchContent() {
                 navigate("/home");
               }}
             />
-            <ToolButton
-              icon={<Settings2 className="size-4" />}
-              label="Kualitas"
-              onClick={() => {
-                setQualityDraft(quality);
-                setQualityOpen(true);
-              }}
-            />
           </div>
+        )}
+
+        {/* KOTAK SINOPSIS — label di kiri atas, teks bisa dilipat. */}
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+              Sinopsis
+            </span>
+            <button
+              onClick={() => setSynopsisOpen((v) => !v)}
+              className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-bold text-[#7fd3f7] transition hover:bg-white/10"
+            >
+              {synopsisOpen ? "Tutup" : "Lihat selengkapnya"}
+            </button>
+          </div>
+          <p
+            className={cn(
+              "mt-2 text-[12.5px] leading-relaxed text-white/70",
+              !synopsisOpen && "line-clamp-3",
+            )}
+          >
+            {D.synopsisId ?? D.synopsis}
+          </p>
+        </div>
+
+        {/* Episode: grid + jumlah di kanan atas (host room nobar juga boleh) */}
+        {(isHost || !room) && (
+          <>
+            <div className="mb-2 mt-4 flex items-center justify-between gap-2">
+              <h2 className="yn-sec text-base">Daftar Episode</h2>
+              <button
+                onClick={() => setEpAsc((v) => !v)}
+                className="rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[10px] font-bold text-white/70 transition hover:bg-white/10"
+              >
+                {epAsc ? "Terlama" : "Terbaru"}
+              </button>
+            </div>
+            {/* Kolom cari episode + jumlah episode. */}
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+              <Search className="size-4 shrink-0 text-white/35" aria-hidden />
+              <input
+                value={epSearch}
+                onChange={(e) => setEpSearch(e.target.value)}
+                inputMode="numeric"
+                placeholder="Cari episode…"
+                className="h-5 w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-white/30"
+              />
+              <span className="shrink-0 text-[10px] font-semibold text-white/35">
+                {epList.length} eps
+              </span>
+            </div>
+            {epList.length === 0 && (
+              // Jangan biarkan grid kosong diam-diam: jelaskan bahwa episode
+              // judul ini belum tersedia di sumber, supaya tidak terlihat seperti
+              // bug padahal memang belum ada yang bisa diputar.
+              <div className="rounded-xl border border-border bg-secondary/30 px-4 py-6 text-center">
+                <p className="text-sm font-semibold">Episode belum tersedia</p>
+                <p className="mx-auto mt-1 max-w-sm text-[11px] text-muted-foreground">
+                  Daftar episode untuk judul ini belum ada di sumber. Coba buka
+                  lagi nanti — sumber donghua/anime sering menambahkan episode
+                  belakangan.
+                </p>
+              </div>
+            )}
+            {/* Grid episode DIGESER KE SAMPING (bukan ke bawah) — seperti
+                baris episode di layar detail anime. */}
+            <div className="thin-scroll -mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1">
+              {(epList ?? [])
+                .filter(
+                  (e: any) =>
+                    epSearch.trim() === "" ||
+                    String(e.number).includes(epSearch.trim()),
+                )
+                .slice()
+                .sort((a: any, b: any) =>
+                  epAsc ? a.number - b.number : b.number - a.number,
+                )
+                .map((e: any) => (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      if (room) {
+                        void roomSetEpisode({ roomId: room._id, episode: e.number });
+                        return;
+                      }
+                      navigate(epUrl(e.id));
+                    }}
+                    className={cn(
+                      "relative flex size-11 shrink-0 items-center justify-center rounded-xl border text-xs font-bold transition active:scale-95",
+                      e.id === epParam
+                        ? "border-[#1CA7EC] bg-[#1CA7EC]/20 text-white"
+                        : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/30",
+                    )}
+                  >
+                    {e.number}
+                  </button>
+                ))}
+              <span aria-hidden className="w-1 shrink-0" />
+            </div>
+          </>
         )}
 
         {/* Kotak Premium di bawah toolbar — gaya & teks SAMA persis dengan
@@ -3321,24 +3441,18 @@ function WatchContent() {
                 `p-3` kotak induk, jadi tidak ada satu piksel pun yang
                 terpotong di kiri/kanan (sebelumnya `-mx-7` kelebihan 16px). */}
             <div className="-mx-3">
-            <div className="flex items-baseline justify-between px-3">
-              <SectionTitle>
-                <span className="normal-case">
-                  {(shownComments?.length ?? 0).toLocaleString("id-ID")} Komentar
-                </span>
-              </SectionTitle>
-            </div>
             <CommentsSection
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
               comments={shownComments}
               meId={user?._id}
+              onOpenImage={(url) => setZoomImage(url)}
               onDeleted={(id) => {
                 // Komentar yang baru dihapus langsung dikeluarkan dari daftar
                 // supaya tidak perlu menunggu update query.
                 setPendingComments((s) => s.filter((x) => x._id !== id));
                 setRemovedComments((s) => new Set(s).add(id));
               }}
-              onSend={async (text, replyToId) => {
+              onSend={async (payload, replyToId) => {
                 if (!epParam || !user) {
                   toast.error("Pilih episode dulu");
                   return;
@@ -3350,11 +3464,15 @@ function WatchContent() {
                   username: user.username ?? "user",
                   image: user.image,
                   premium: (user.premiumUntil ?? 0) > Date.now(),
+                  premiumTier: (user as any).premiumTier,
+                  level: user.level,
                   staffRole: user.staffRole,
                   clanTag: user.clanTag,
                   clanTagIcon: user.clanTagIcon,
                   clanNameColor: user.clanNameColor,
-                  text,
+                  text: payload.text,
+                  sticker: payload.sticker,
+                  spoiler: payload.spoiler,
                   likes: [],
                   likeCount: 0,
                   replyToId,
@@ -3368,7 +3486,10 @@ function WatchContent() {
                     // Poster disimpan bersama komentar supaya feed komentar di
                     // halaman Akun bisa menampilkan gambarnya.
                     animeImage: D.image,
-                    text,
+                    text: payload.text,
+                    sticker: payload.sticker,
+                    imageStorageId: payload.imageStorageId as never,
+                    spoiler: payload.spoiler,
                     replyToId: replyToId as never,
                   });
                   // Echo lokal langsung dilepas begitu server sudah menerima,

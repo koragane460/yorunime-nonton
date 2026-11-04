@@ -27,6 +27,62 @@ import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId, usernameColor } from "@/lib/lstream";
 
 type Plan = { id: string; label: string; days: number; price: number; sacret?: number };
+type TierId = "basic" | "plus" | "vip";
+
+/**
+ * TIGA TINGKATAN PREMIUM — masing-masing punya batas fitur sendiri.
+ * Ditampilkan sebagai kartu pilihan sebelum daftar durasi.
+ */
+const TIER_INFO: {
+  id: TierId;
+  label: string;
+  tagline: string;
+  features: string[];
+  ring: string;
+  accent: string;
+}[] = [
+  {
+    id: "basic",
+    label: "Yoru Basic",
+    tagline: "Buat nonton harian, tanpa iklan",
+    features: [
+      "Tanpa iklan di semua halaman",
+      "Kualitas sampai 720p",
+      "Centang biru di samping nama",
+      "1 perangkat aktif",
+    ],
+    ring: "border-white/15",
+    accent: "text-white/75",
+  },
+  {
+    id: "plus",
+    label: "Yoru Plus",
+    tagline: "Kualitas penuh + download",
+    features: [
+      "Semua fitur Yoru Basic",
+      "Kualitas sampai 1080p",
+      "Download episode",
+      "Akses episode lebih awal",
+      "2 perangkat aktif",
+    ],
+    ring: "border-[#1CA7EC]/60",
+    accent: "text-[#7fd3f7]",
+  },
+  {
+    id: "vip",
+    label: "Yoru VIP",
+    tagline: "Semua fitur, tanpa batas",
+    features: [
+      "Semua fitur Yoru Plus",
+      "Kualitas sampai 4K",
+      "Download tanpa batas harian",
+      "Badge Yoru VIP emas di nama",
+      "4 perangkat + prioritas antrean",
+    ],
+    ring: "border-[#FFD23F]/70",
+    accent: "text-[#FFD23F]",
+  },
+];
 type Order = {
   orderId: string;
   priceIdr: number;
@@ -228,7 +284,8 @@ function Hero() {
       >
         {premium ? (
           <>
-            Premium
+            {TIER_INFO.find((t) => t.id === (user as any).premiumTier)?.label ??
+              "Premium"}
             <span className="block text-[13px]">{premiumDays} hari</span>
           </>
         ) : (
@@ -262,6 +319,8 @@ function Plans() {
   // Toast bawah sudah dihapus permanen, jadi galat pembayaran tampil inline.
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  /** Tingkatan premium yang dipilih sebelum menentukan durasi. */
+  const [tier, setTier] = useState<TierId>("basic");
 
   const ready = config?.ready === true;
   const image = config?.qrUrl || qrUrl || "";
@@ -278,7 +337,7 @@ function Plans() {
     setPreview(null);
     setNote("");
     try {
-      setOrder(await createOrder({ planId: plan.id }));
+      setOrder(await createOrder({ planId: plan.id, tier }));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal membuat pesanan");
     }
@@ -344,7 +403,64 @@ function Plans() {
 
   return (
     <section className="mt-6">
-      <h2 className="text-[13px] font-bold text-gold">Paket</h2>
+      {/* TINGKATAN PREMIUM — Basic / Plus / VIP, batas fiturnya beda. */}
+      <h2 className="text-[13px] font-bold text-gold">Tingkatan Premium</h2>
+      <div className="mt-2 space-y-2">
+        {TIER_INFO.map((t) => {
+          const active = tier === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTier(t.id)}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+                active
+                  ? `${t.ring} bg-white/[0.06]`
+                  : "border-white/10 bg-white/[0.02] hover:border-white/25",
+              )}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
+                  active
+                    ? "border-transparent bg-gold text-black"
+                    : "border-white/25 text-transparent",
+                )}
+              >
+                <Check className="size-3.5" strokeWidth={3} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <span className={cn("text-[13px] font-black", t.accent)}>
+                    {t.label}
+                  </span>
+                  {t.id === "vip" && (
+                    <span className="rounded-full bg-[#FFD23F]/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-[#FFD23F]">
+                      Teratas
+                    </span>
+                  )}
+                </span>
+                <span className="mt-0.5 block text-[11px] text-white/45">
+                  {t.tagline}
+                </span>
+                <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                  {t.features.map((f) => (
+                    <span
+                      key={f}
+                      className="flex items-center gap-1 text-[10.5px] text-white/60"
+                    >
+                      <Check className="size-3 text-emerald-400" aria-hidden />
+                      {f}
+                    </span>
+                  ))}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <h2 className="mt-5 text-[13px] font-bold text-gold">Paket</h2>
       {/* Kartu paket gaya 2 kolom: durasi, harga besar, catatan per bulan,
           chip Sacret (biru), chip HD 1080P (hijau), dan tombol "Pilih paket".
           Tanpa harga coretan. Paket paling hemat mendapat badge "Paling

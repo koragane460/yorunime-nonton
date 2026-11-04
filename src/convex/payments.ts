@@ -16,6 +16,21 @@ import { action, internalMutation, internalQuery, mutation, query } from "./_gen
 import { internal } from "./_generated/api";
 import { staffGuard } from "./moderation";
 
+/**
+ * TIGA TINGKATAN PREMIUM — fiturnya dibatasi berbeda-beda:
+ *  · BASIC — tanpa iklan, kualitas sampai 720p, tanpa download.
+ *  · PLUS  — 1080p, download episode, dan akses episode lebih awal.
+ *  · VIP   — 4K, semua fitur, badge emas di nama.
+ */
+export const TIERS: Record<
+  string,
+  { label: string; maxQuality: number; download: boolean; earlyAccess: boolean }
+> = {
+  basic: { label: "Yoru Basic", maxQuality: 720, download: false, earlyAccess: false },
+  plus: { label: "Yoru Plus", maxQuality: 1080, download: true, earlyAccess: true },
+  vip: { label: "Yoru VIP", maxQuality: 2160, download: true, earlyAccess: true },
+};
+
 /** Daftar paket premium — diekspor supaya bisa diuji di tests/payment.test.ts */
 export const PLANS: Record<
   string,
@@ -62,7 +77,11 @@ async function grantPremium(
   const base = Math.max(Date.now(), owner?.premiumUntil ?? 0);
   const until = base + row.days * 86400000;
   if (owner) {
-    await ctx.db.patch(row.userId, { premiumUntil: until });
+    // Tingkatan ikut tersimpan, jadi badge & batas fitur mengikuti pembelian.
+    await ctx.db.patch(row.userId, {
+      premiumUntil: until,
+      premiumTier: (row.tier ?? "basic") as "basic" | "plus" | "vip",
+    });
     // Bonus Sacret sesuai paket yang dibeli, langsung masuk ke saldo.
     const plan = PLANS[row.planId];
     const bonus = plan?.sacret ?? 0;
@@ -205,12 +224,19 @@ export const myPurchases = query({
 
 /** User menekan "Beli dan dapatkan premium": order dibuat, status menunggu. */
 export const createManualOrder = mutation({
-  args: { planId: v.string() },
-  handler: async (ctx, { planId }) => {
+  args: {
+    planId: v.string(),
+    /** Tingkatan premium yang dibeli (basic / plus / vip). */
+    tier: v.optional(
+      v.union(v.literal("basic"), v.literal("plus"), v.literal("vip")),
+    ),
+  },
+  handler: async (ctx, { planId, tier }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const plan = PLANS[planId];
     if (!plan) throw new Error("Paket tidak ada");
+    const picked = tier && TIERS[tier] ? TIERS[tier]!.label : TIERS.basic!.label;
     const cfg = await ctx.db.query("paymentSettings").first();
     if (!cfg?.qrUrl && !cfg?.qrStorageId) {
       throw new Error("QRIS belum diatur. Hubungi developer.");
@@ -219,10 +245,11 @@ export const createManualOrder = mutation({
     await ctx.db.insert("premiumPurchases", {
       userId,
       planId,
-      planLabel: plan.label,
+      planLabel: `${picked} · ${plan.label}`,
       days: plan.days,
       priceIdr: plan.price,
       orderId,
+      tier: tier ?? "basic",
       status: "manual_pending",
       method: "qris",
       createdAt: Date.now(),
@@ -231,7 +258,7 @@ export const createManualOrder = mutation({
       orderId,
       priceIdr: plan.price,
       days: plan.days,
-      planLabel: plan.label,
+      planLabel: `${picked} · ${plan.label}`,
     };
   },
 });

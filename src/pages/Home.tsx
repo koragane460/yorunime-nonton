@@ -1256,7 +1256,7 @@ function HomeContent() {
               <button
                 key={g.id}
                 onClick={() => setGenreScreen(g.id)}
-                className="flex min-w-[104px] shrink-0 items-center justify-center rounded-full border border-[#E84855]/55 bg-white/[0.07] px-5 py-2.5 text-[13px] font-bold text-white/85 transition hover:border-[#E84855] hover:bg-white/[0.12] hover:text-white active:scale-95"
+                className="flex min-w-[86px] shrink-0 items-center justify-center rounded-full border border-[#E84855]/55 bg-white/[0.07] px-4 py-2 text-[12px] font-bold text-white/85 transition hover:border-[#E84855] hover:bg-white/[0.12] hover:text-white active:scale-95"
               >
                 {g.name}
               </button>
@@ -1271,9 +1271,10 @@ function HomeContent() {
           diatur lewat panel developer, jadi tidak perlu deploy. */}
       <AnnouncementBox />
 
-      {/* 4) SPOTLIGHT — 3 judul besar, geser snap: views · rating · status. */}
+      {/* 4) SPOTLIGHT — HANYA judul yang sedang trending (bukan Top Anime),
+          kartu ringkas poster + info, bisa digeser snap. */}
       <Spotlight
-        items={topList}
+        items={todayList.length > 0 ? todayList : topList}
         viewsOf={viewCountFor}
         onPick={(id, title, source) => openAnime(id, title, (source as any) ?? "anilist")}
       />

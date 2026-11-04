@@ -45,7 +45,7 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
           className="size-16 shrink-0"
         />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-bold uppercase tracking-[0.14em] text-white/90">
+          <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
             {greetingOf()}
           </span>
           <span className="mt-1 flex min-w-0 items-center gap-2">
@@ -73,7 +73,7 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
           aria-label="Cari anime"
           className="flex size-12 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white/80 transition hover:border-gold-strong/40 hover:bg-white/[0.1] hover:text-white active:scale-95"
         >
-          <Search className="size-[21px]" />
+          <Search className="size-5" />
         </button>
         <NotifButton className="size-12 rounded-2xl border border-white/12 bg-white/[0.06] hover:border-gold-strong/40 hover:bg-white/[0.1]" />
       </div>
@@ -229,9 +229,29 @@ export function Spotlight({
   if (list.length === 0) return null;
 
   return (
-    <section className="fade-enter mt-3">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="yn-sec text-lg">Spotlight</h2>
+    <section className="fade-enter mt-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="yn-sec text-base">Spotlight</h2>
+          <p className="mt-0.5 text-[10px] font-semibold text-white/45">
+            Anime yang sedang trending
+          </p>
+        </div>
+        {/* Titik halaman pindah ke kanan judul — tidak lagi memakan
+            ruang di bawah kartu. */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {list.map((a, i) => (
+            <button
+              key={a.id}
+              onClick={() => go(i)}
+              aria-label={`Slide spotlight ${i + 1}`}
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-300",
+                i === idx ? "w-5 bg-[#FFD23F]" : "w-1.5 bg-white/25 hover:bg-white/45",
+              )}
+            />
+          ))}
+        </div>
       </div>
 
       <div
@@ -250,9 +270,9 @@ export function Spotlight({
           }
           if (best !== idx) setIdx(best);
         }}
-        className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1"
+        className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-smooth px-4 pb-1"
       >
-        {list.map((a) => {
+        {list.map((a, rank) => {
           const done = /tamat|completed|finished|selesai|ended/i.test(
             String(a.status ?? ""),
           );
@@ -267,64 +287,64 @@ export function Spotlight({
             <button
               key={a.id}
               onClick={() => onPick(a.id, a.title, (a.source as any) ?? "anilist")}
-              className="group relative h-[298px] w-[97%] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/12 bg-black text-left shadow-[0_30px_60px_-40px_rgba(0,0,0,1)] transition hover:border-white/30 active:scale-[0.99] sm:w-[76%] lg:w-[58%]"
+              className="group flex h-[158px] w-[94%] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05] text-left transition hover:border-white/30 active:scale-[0.99] sm:w-[70%] lg:w-[54%]"
             >
-              <img
-                src={a.image}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-              />
-              {/* Scrim: gelap di bawah supaya teks terbaca, jernih di atas. */}
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-[linear-gradient(to_top,rgba(5,6,10,.97)_16%,rgba(5,6,10,.72)_38%,rgba(5,6,10,.18)_66%,rgba(5,6,10,.42)_100%)]"
-              />
-
-              {/* Atas: status kiri, rating kanan. */}
-              <span className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-                <span
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider backdrop-blur-md",
-                    done
-                      ? "border-white/25 bg-black/55 text-white/85"
-                      : "border-emerald-300/45 bg-emerald-500/20 text-emerald-200",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      done ? "bg-white/70" : "animate-pulse bg-emerald-300",
-                    )}
-                  />
-                  {status}
-                </span>
-                <span className="flex items-center gap-1 rounded-full border border-amber-300/45 bg-black/60 px-2.5 py-1 text-[11px] font-black text-amber-200 backdrop-blur-md">
-                  <Star className="size-3 fill-amber-300 text-amber-300" />
-                  {(a.score ?? 0).toFixed(1)}
+              {/* Poster di kiri — ukurannya tetap supaya kartu rapi. */}
+              <span className="relative h-full w-[104px] shrink-0 overflow-hidden bg-black/40">
+                <img
+                  src={a.image}
+                  alt=""
+                  className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                />
+                <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-lg bg-black/75 font-mono text-[11px] font-black text-[#FFD23F]">
+                  {rank + 1}
                 </span>
               </span>
 
-              {/* Bawah: judul + meta + tombol. */}
-              <span className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 p-4">
-                <span className="yn-eyebrow text-[9px]">
-                  {a.type ? String(a.type) : "Spotlight"}
+              {/* Info di kanan: status+rating, judul, lalu meta & tombol. */}
+              <span className="flex min-w-0 flex-1 flex-col justify-between gap-1.5 p-3">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider",
+                      done
+                        ? "border-white/20 bg-white/[0.06] text-white/65"
+                        : "border-[#1CA7EC]/45 bg-[#1CA7EC]/12 text-[#7fd3f7]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        done ? "bg-white/50" : "animate-pulse bg-[#1CA7EC]",
+                      )}
+                    />
+                    {status}
+                  </span>
+                  <span className="ml-auto flex items-center gap-1 rounded-full border border-[#FFD23F]/40 bg-[#FFD23F]/10 px-2 py-0.5 text-[10px] font-black text-[#FFD23F]">
+                    <Star className="size-2.5 fill-[#FFD23F] text-[#FFD23F]" />
+                    {(a.score ?? 0).toFixed(1)}
+                  </span>
                 </span>
-                <span className="line-clamp-2 font-display text-[22px] font-black leading-[1.08] tracking-[-0.02em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,.75)]">
+
+                <span className="line-clamp-2 text-[15px] font-black leading-tight tracking-tight text-[#FFFAF0]">
                   {a.title}
                 </span>
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.09] px-2 py-1 text-[11px] font-bold text-white/90 backdrop-blur">
-                    <Play className="size-3 fill-white/90" />
-                    {fmtShort(viewsOf(a.id))}
-                    <span className="font-medium text-white/55">views</span>
-                  </span>
-                  {typeof a.episodes === "number" && a.episodes > 0 && (
-                    <span className="rounded-lg border border-white/12 bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-white/75">
-                      {a.episodes} eps
+
+                <span className="flex items-center gap-2 text-[10px] font-semibold text-white/50">
+                  {a.type && (
+                    <span className="rounded border border-white/12 bg-white/[0.05] px-1.5 py-0.5 uppercase text-white/65">
+                      {String(a.type)}
                     </span>
                   )}
-                  <span className="ml-auto flex items-center gap-1 rounded-full bg-gold-strong px-3 py-1.5 text-[11px] font-black text-black transition group-hover:brightness-105">
-                    Nonton <ChevronRight className="size-3.5" />
+                  {typeof a.episodes === "number" && a.episodes > 0 && (
+                    <span>{a.episodes} eps</span>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <Play className="size-2.5 fill-white/50" />
+                    {fmtShort(viewsOf(a.id))}
+                  </span>
+                  <span className="ml-auto flex items-center gap-0.5 rounded-lg bg-[#FFD23F] px-2.5 py-1 text-[10px] font-black text-black transition group-hover:brightness-105">
+                    Nonton <ChevronRight className="size-3" />
                   </span>
                 </span>
               </span>
@@ -333,20 +353,6 @@ export function Spotlight({
         })}
       </div>
 
-      {/* Titik pagination — aktif mengikuti posisi geser. */}
-      <div className="mt-2.5 flex items-center justify-center gap-1.5">
-        {list.map((a, i) => (
-          <button
-            key={a.id}
-            onClick={() => go(i)}
-            aria-label={`Slide spotlight ${i + 1}`}
-            className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
-              i === idx ? "w-6 bg-gold-strong" : "w-1.5 bg-white/25 hover:bg-white/45",
-            )}
-          />
-        ))}
-      </div>
     </section>
   );
 }

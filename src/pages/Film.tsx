@@ -925,16 +925,11 @@ function FilmWatch({
         {/* ============ KOMENTAR — kotak LURUS (tanpa rounded) yang
             MELEBAR penuh ke samping sampai mentok tepi layar ============ */}
         <div className="-mx-3 mt-5">
-          <div className="px-3">
-            <SectionTitle>
-              <span className="normal-case">{commentCount} Komentar</span>
-            </SectionTitle>
-          </div>
           <CommentsSection
             animeId={`film:${id}`}
             comments={comments}
             meId={user?._id}
-            onSend={async (text, replyToId) => {
+            onSend={async (payload, replyToId) => {
               if (!user) {
                 toast.error("Masuk akun dulu untuk komentar");
                 return;
@@ -943,7 +938,10 @@ function FilmWatch({
                 animeId: `film:${id}`,
                 animeTitle: d?.title ?? "Film",
                 animeImage: d?.image,
-                text,
+                text: payload.text,
+                sticker: payload.sticker,
+                imageStorageId: payload.imageStorageId as never,
+                spoiler: payload.spoiler,
                 replyToId: replyToId as never,
               });
             }}
