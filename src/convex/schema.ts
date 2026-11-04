@@ -558,7 +558,30 @@ const schema = defineSchema(
       likes: v.array(v.id("users")),
       createdAt: v.number(),
       deleted: v.optional(v.boolean()),
+      /** Disematkan developer ("Disemangatkan") — tampil paling atas. */
+      pinnedAt: v.optional(v.number()),
+      pinnedBy: v.optional(v.id("users")),
     }).index("animeId_created", ["animeId", "createdAt"]),
+
+    /** Pengguna yang diblokir per user (daftar hitam pribadi). */
+    userBlocks: defineTable({
+      blockerId: v.id("users"),
+      blockedId: v.id("users"),
+      /** Alasan singkat (opsional) saat memblokir. */
+      reason: v.optional(v.string()),
+      /** Sembunyikan komentar & riwayat interaksi user yang diblokir. */
+      hideHistory: v.optional(v.boolean()),
+      createdAt: v.number(),
+    })
+      .index("blockerId", ["blockerId"])
+      .index("blocker_blocked", ["blockerId", "blockedId"]),
+
+    /** Komentar yang disembunyikan untuk satu user (aksi "Sembunyikan"). */
+    commentHides: defineTable({
+      userId: v.id("users"),
+      commentId: v.id("animeComments"),
+      createdAt: v.number(),
+    }).index("userId_comment", ["userId", "commentId"]),
 
     /** Pengumuman yang muncul sebagai popup saat user masuk website. */
     announcements: defineTable({
@@ -805,6 +828,10 @@ const schema = defineSchema(
       /** Laporan judul anime (tombol Laporkan di layar nonton). */
       animeId: v.optional(v.string()),
       animeTitle: v.optional(v.string()),
+      /** Laporan komentar anime (tombol Laporkan di kartu komentar). */
+      commentId: v.optional(v.id("animeComments")),
+      /** Pemilik komentar/pesan yang dilaporkan (untuk tindak lanjut). */
+      targetUserId: v.optional(v.id("users")),
       reason: v.string(),
       detail: v.optional(v.string()),
       text: v.optional(v.string()),

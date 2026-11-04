@@ -46,6 +46,7 @@ import {
   StoryViewer,
 } from "@/components/StoriesUI";
 import {
+  Ban,
   Bell,
   CircleAlert,
   CornerUpRight,
@@ -624,6 +625,11 @@ function SettingsScreen({
   const [err, setErr] = useState("");
   // Panel hanya untuk developer (#1 / title dev) & moderator.
   const access = useQuery(api.moderation.myPanelAccess, {});
+  // Daftar hitam pribadi: siapa saja yang sudah diblokir dari komentar/chat.
+  const blockedUsers = useQuery(api.activities.listBlocked);
+  const unblockUser = useMutation(api.activities.unblockUser);
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [busyUnblock, setBusyUnblock] = useState<string | null>(null);
   const panelLevel: "dev" | "mod" | "none" =
     access?.level === "dev" ? "dev" : access?.level === "mod" ? "mod" : "none";
   useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
@@ -921,6 +927,26 @@ function SettingsScreen({
         value={privasiPrefs}
         onToggle={togglePrivasi}
       />
+      {/* DAFTAR HITAM — kelola user yang diblokir dari komentar & chat. */}
+      <button
+        onClick={() => setShowBlocked(true)}
+        className="w-full rounded-2xl border border-border bg-card p-3 text-left transition hover:border-foreground/40"
+      >
+        <span className="flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E84855]/15">
+            <Ban className="size-[18px] text-[#E84855]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold">Daftar Hitam</span>
+            <span className="block text-[11px] text-muted-foreground">
+              {blockedUsers?.length
+                ? `${blockedUsers.length} pengguna diblokir · ketuk untuk kelola`
+                : "Belum ada pengguna yang diblokir"}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </span>
+      </button>
       <SettingsBox
         icon={<Download className="size-[18px] text-primary" />}
         title="Unduhan & Kuota"
@@ -962,6 +988,75 @@ function SettingsScreen({
           <LogOut className="size-4 shrink-0" /> Log out dari akun
         </button>
       </div>
+
+      {/* DAFTAR HITAM (overlay dari Pengaturan). */}
+      {showBlocked && (
+        <div className="fixed inset-0 z-[140] flex flex-col bg-background">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
+            <button
+              onClick={() => setShowBlocked(false)}
+              aria-label="Tutup"
+              className="flex size-8 items-center justify-center rounded-full bg-white/[0.08] text-white/70"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <p className="text-sm font-black">Daftar Hitam</p>
+            <span className="ml-auto rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-bold text-white/60">
+              {blockedUsers?.length ?? 0}
+            </span>
+          </div>
+          <div className="thin-scroll min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
+            <p className="rounded-xl border border-border bg-card p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+              Komentar dan aktivitas pengguna di daftar ini disembunyikan
+              untukmu. Kamu bisa membuka blokir kapan saja.
+            </p>
+            {blockedUsers === undefined && (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                Memuat…
+              </p>
+            )}
+            {blockedUsers?.length === 0 && (
+              <p className="py-10 text-center text-[12px] text-muted-foreground">
+                Belum ada pengguna yang diblokir.
+              </p>
+            )}
+            {blockedUsers?.map((b) => (
+              <div
+                key={b.userId}
+                className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5"
+              >
+                <Avatar src={b.image} seed={b.username} className="size-9 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-bold">{b.username}</p>
+                  <p className="text-[10.5px] text-muted-foreground">
+                    Diblokir {timeAgo(b.createdAt)}
+                  </p>
+                </div>
+                <button
+                  disabled={busyUnblock === b.userId}
+                  onClick={async () => {
+                    setBusyUnblock(b.userId);
+                    try {
+                      await unblockUser({ userId: b.userId as never });
+                    } catch (e2) {
+                      setErr(
+                        e2 instanceof Error
+                          ? e2.message
+                          : "Gagal membuka blokir",
+                      );
+                    } finally {
+                      setBusyUnblock(null);
+                    }
+                  }}
+                  className="shrink-0 rounded-full border border-[#1CA7EC]/45 bg-[#1CA7EC]/10 px-3 py-1.5 text-[11px] font-black text-[#7fd3f7] transition active:scale-95 disabled:opacity-50"
+                >
+                  {busyUnblock === b.userId ? "…" : "Buka blokir"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pintasan layar Notifikasi (overlay dari Pengaturan). */}
       {showNotif && <NotifScreen onClose={() => setShowNotif(false)} />}

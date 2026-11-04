@@ -939,6 +939,13 @@ function WatchContent() {
   // Tidak ada fallback ke track bahasa lain server: nonton di YoruNime
   // selalu Indonesia, jadi menampilkan subtitle server asli (Inggris/Mandarin
   // dan seterusnya) tidak pernah diinginkan.
+  // Pindah episode / pindah server = pilihan subtitle diulang dari awal.
+  // Dengan begitu server yang TIDAK membawa subtitle langsung memakai
+  // subtitle Indonesia yang sudah termuat, tanpa setting manual.
+  useEffect(() => {
+    setSubTouched(false);
+  }, [epParam, sourceIdx]);
+
   useEffect(() => {
     if (subTouched) return;
     // Subtitle sudah menempel di video (HLS Sub Indo) → jangan tambah apa-apa.

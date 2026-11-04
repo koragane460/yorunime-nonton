@@ -1,16 +1,24 @@
 import { useMemo, useRef, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
+  Ban,
+  Check,
+  CheckCircle2,
   ChevronDown,
+  Copy,
   EyeOff,
+  Flag,
   Heart,
   ImagePlus,
   Loader2,
+  MoreVertical,
+  Pin,
   Reply,
   Send,
+  Share2,
   Smile,
   Trash2,
   X,
@@ -45,6 +53,11 @@ export type CommentT = {
   likeCount?: number;
   replyToId?: string;
   createdAt: number;
+  /** Disematkan developer ("Disemangatkan"). */
+  pinnedAt?: number;
+  /** Judul anime + nomor episode — dipakai di layar laporan. */
+  animeTitle?: string;
+  episode?: number;
 };
 
 /** Isi komentar yang dikirim: teks, sticker, gambar, dan tanda spoiler. */
@@ -142,6 +155,27 @@ export function CommentsSection({
   const getUploadUrl = useMutation(api.storage.getUploadUrl);
   void animeId;
 
+  // Akses developer: hanya developer yang boleh "Semangatkan komentar".
+  const panel = useQuery(api.moderation.myPanelAccess);
+  const isDev = panel?.level === "dev";
+  const pinM = useMutation(api.activities.pinComment);
+  const unpinM = useMutation(api.activities.unpinComment);
+  const reportM = useMutation(api.activities.reportComment);
+  const blockM = useMutation(api.activities.blockUser);
+
+  /** Sheet semangat, layar laporan, dan dialog blokir yang sedang dibuka. */
+  const [pinTarget, setPinTarget] = useState<CommentT | null>(null);
+  const [reportTarget, setReportTarget] = useState<CommentT | null>(null);
+  const [blockTarget, setBlockTarget] = useState<CommentT | null>(null);
+  /** Komentar disemangatkan yang sudah ditutup penonton (per sesi). */
+  const [pinDismissed, setPinDismissed] = useState<Set<string>>(new Set());
+
+  const jumpTo = (id: string) => {
+    document
+      .getElementById(`yn-comment-${id}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   const canSend =
     !muted && !sending && (text.trim().length > 0 || !!sticker || !!image);
 
@@ -211,11 +245,13 @@ export function CommentsSection({
   );
 
   const all = comments ?? [];
+  /** Komentar yang disemangatkan — selalu tampil paling atas. */
+  const pinned = all.find((c) => c.pinnedAt);
   const roots = useMemo(
     () =>
-      list.filter(
-        (c) => !c.replyToId || !all.some((p) => p._id === c.replyToId),
-      ),
+      list
+        .filter((c) => !c.replyToId || !all.some((p) => p._id === c.replyToId))
+        .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sort, comments],
   );
@@ -458,6 +494,55 @@ export function CommentsSection({
         />
       </div>
 
+      {/* ---------- KOMENTAR DISEMANGATKAN ----------
+          Kotak lurus (tanpa sudut membulat) tepat di bawah kolom komentar.
+          Ketuk isinya → langsung melompat ke komentar tersebut. */}
+      {pinned && !pinDismissed.has(pinned._id) && (
+        <div className="mt-2 border-y border-[#FFD23F]/35 bg-[#FFD23F]/[0.06]">
+          <div className="flex items-center gap-1.5 px-3 pt-2">
+            <Pin className="size-3 shrink-0 text-[#FFD23F]" aria-hidden />
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FFD23F]">
+              Komentar Disemangatkan
+            </span>
+            <button
+              onClick={() =>
+                setPinDismissed((s) => new Set(s).add(pinned._id))
+              }
+              aria-label="Sembunyikan komentar disemangatkan"
+              className="ml-auto flex size-5 items-center justify-center rounded-full text-white/45 transition hover:bg-white/10 hover:text-white"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <button
+            onClick={() => jumpTo(pinned._id)}
+            className="flex w-full items-start gap-2 px-3 pb-2.5 pt-1.5 text-left"
+          >
+            <Avatar
+              src={pinned.image}
+              seed={pinned.username}
+              className="mt-0.5 size-7 shrink-0 ring-1 ring-[#FFD23F]/40"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-1">
+                <span className="truncate text-[12px] font-black">
+                  {pinned.username}
+                </span>
+                {pinned.premium && <BlueCheck className="size-3 shrink-0" />}
+                {typeof pinned.level === "number" && (
+                  <span className="rounded-full border border-white/20 bg-white/[0.06] px-1.5 py-px text-[9px] font-bold text-white/70">
+                    Lv.{pinned.level}
+                  </span>
+                )}
+              </span>
+              <span className="mt-0.5 block truncate text-[12.5px] text-white/80">
+                {pinned.text || pinned.sticker || "[gambar]"}
+              </span>
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* ---------- DAFTAR KOMENTAR ---------- */}
       <div className="mt-3 space-y-2">
         {comments === undefined && (
@@ -470,13 +555,11 @@ export function CommentsSection({
             Belum ada komentar — jadilah yang pertama!
           </p>
         )}
-        {list.map((c) => {
-          if (roots.length > 0 && !roots.some((r) => r._id === c._id))
-            return null;
+        {roots.map((c) => {
           const replies = repliesOf(c._id);
           const shown = openReplies[c._id] ?? 0;
           return (
-            <div key={c._id}>
+            <div key={c._id} id={`yn-comment-${c._id}`}>
               <CommentCard
                 c={c}
                 meId={meId}
@@ -494,6 +577,11 @@ export function CommentsSection({
                   }))
                 }
                 onOpenImage={onOpenImage}
+                isDev={isDev}
+                onPin={() => setPinTarget(c)}
+                onUnpin={() => setPinTarget(c)}
+                onReport={() => setReportTarget(c)}
+                onBlock={() => setBlockTarget(c)}
               />
 
               {/* Balasan — menjorok ke kanan, mengalir ke bawah. */}
@@ -508,6 +596,11 @@ export function CommentsSection({
                       onReply={() => setReplyTo(c)}
                       isReply
                       onOpenImage={onOpenImage}
+                      isDev={isDev}
+                      onPin={() => setPinTarget(r)}
+                      onUnpin={() => setPinTarget(r)}
+                      onReport={() => setReportTarget(r)}
+                      onBlock={() => setBlockTarget(r)}
                     />
                   ))}
                   {shown < replies.length && (
@@ -531,6 +624,85 @@ export function CommentsSection({
         })}
       </div>
 
+      {/* ---------- SHEET SEMANGATKAN (45% LAYAR) ---------- */}
+      {pinTarget && (
+        <PinSheet
+          c={pinTarget}
+          onClose={() => setPinTarget(null)}
+          onConfirm={async () => {
+            try {
+              if (pinTarget.pinnedAt) {
+                await unpinM({ commentId: pinTarget._id as never });
+                toast.success("Semangat dilepas");
+              } else {
+                await pinM({ commentId: pinTarget._id as never });
+                setPinDismissed((s) => {
+                  const next = new Set(s);
+                  next.delete(pinTarget._id);
+                  return next;
+                });
+                toast.success("Komentar disemangatkan ✨");
+              }
+              setPinTarget(null);
+            } catch (e) {
+              toast.error(
+                e instanceof Error ? e.message : "Gagal menyemangatkan",
+              );
+            }
+          }}
+        />
+      )}
+
+      {/* ---------- LAYAR LAPORKAN (FULLSCREEN) ---------- */}
+      {reportTarget && (
+        <ReportScreen
+          c={reportTarget}
+          onClose={() => setReportTarget(null)}
+          onDone={() => setReportTarget(null)}
+          onSubmit={async ({ category, detail, hideComment, blockAuthor }) => {
+            await reportM({
+              commentId: reportTarget._id as never,
+              category,
+              detail,
+              hideComment,
+              blockAuthor,
+            });
+            if (hideComment) onDeleted?.(reportTarget._id);
+          }}
+        />
+      )}
+
+      {/* ---------- DIALOG BLOKIR ---------- */}
+      {blockTarget && (
+        <BlockDialog
+          c={blockTarget}
+          lastComment={[...all]
+            .filter((x) => x.userId === blockTarget.userId)
+            .sort((a, b) => b.createdAt - a.createdAt)[0]}
+          onClose={() => setBlockTarget(null)}
+          onDone={() => setBlockTarget(null)}
+          onConfirm={async ({
+            reason,
+            reportReason,
+            reportCommentId,
+            hideHistory,
+          }) => {
+            await blockM({
+              userId: blockTarget.userId as never,
+              reason: reason || reportReason,
+              hideHistory,
+            });
+            if (reportCommentId && reportReason) {
+              await reportM({
+                commentId: reportCommentId as never,
+                category: reportReason,
+                blockAuthor: true,
+              });
+              onDeleted?.(reportCommentId);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -546,6 +718,11 @@ function CommentCard({
   onToggleReplies,
   isReply = false,
   onOpenImage,
+  isDev = false,
+  onPin,
+  onUnpin,
+  onReport,
+  onBlock,
 }: {
   c: CommentT;
   meId?: string;
@@ -556,8 +733,15 @@ function CommentCard({
   onToggleReplies?: () => void;
   isReply?: boolean;
   onOpenImage?: (url: string) => void;
+  isDev?: boolean;
+  onPin?: () => void;
+  onUnpin?: () => void;
+  onReport?: () => void;
+  onBlock?: () => void;
 }) {
   const del = useMutation(api.activities.deleteComment);
+  /** Menu titik tiga (satu kotak berisi semua tindakan). */
+  const [menuOpen, setMenuOpen] = useState(false);
   const like = useMutation(api.activities.toggleCommentLike);
   const [busy, setBusy] = useState(false);
   const [localLiked, setLocalLiked] = useState<boolean | null>(null);
@@ -638,16 +822,116 @@ function CommentCard({
             {timeAgo(c.createdAt)}
           </p>
         </div>
-        {mine && (
+        {/* Kanan atas: label "Disemangatkan" (kalau ada) lalu titik tiga. */}
+        <div className="relative flex shrink-0 items-center gap-1">
+          {c.pinnedAt && (
+            <span className="flex items-center gap-1 rounded-full border border-[#FFD23F]/40 bg-[#FFD23F]/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#FFD23F]">
+              <Pin className="size-2.5" aria-hidden />
+              Disemangatkan
+            </span>
+          )}
           <button
-            aria-label="Hapus komentar"
-            disabled={busy}
-            onClick={() => void remove()}
-            className="shrink-0 text-white/30 transition hover:text-[#E84855] disabled:opacity-40"
+            aria-label="Menu komentar"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex size-7 items-center justify-center rounded-full text-white/45 transition hover:bg-white/10 hover:text-white"
           >
-            <Trash2 className="size-3.5" />
+            <MoreVertical className="size-4" />
           </button>
-        )}
+
+          {menuOpen && (
+            <>
+              <span
+                className="fixed inset-0 z-20"
+                onClick={() => setMenuOpen(false)}
+                aria-hidden
+              />
+              <div className="absolute right-0 top-8 z-30 w-56 overflow-hidden rounded-xl border border-white/12 bg-[#151a23] py-1 shadow-2xl shadow-black/60">
+                {isDev && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (c.pinnedAt) onUnpin?.();
+                      else onPin?.();
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-bold text-[#FFD23F] transition hover:bg-white/[0.06]"
+                  >
+                    <Pin className="size-4 shrink-0" />
+                    {c.pinnedAt
+                      ? "Lepas Semangatkan"
+                      : "Semangatkan komentar"}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void navigator.clipboard
+                      ?.writeText(c.text)
+                      .then(() => toast.success("Komentar disalin"))
+                      .catch(() => toast.error("Gagal menyalin komentar"));
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-semibold text-white/85 transition hover:bg-white/[0.06]"
+                >
+                  <Copy className="size-4 shrink-0 text-white/55" />
+                  Copy komentar
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    const link = `${window.location.origin}${window.location.pathname}#yn-comment-${c._id}`;
+                    const nav = navigator as Navigator & {
+                      share?: (d: ShareData) => Promise<void>;
+                    };
+                    if (nav.share) {
+                      void nav
+                        .share({
+                          title: `Komentar @${c.username}`,
+                          text: c.text,
+                          url: link,
+                        })
+                        .catch(() => undefined);
+                    } else {
+                      void navigator.clipboard
+                        ?.writeText(link)
+                        .then(() => toast.success("Tautan komentar disalin"))
+                        .catch(() => toast.error("Gagal membagikan"));
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-semibold text-white/85 transition hover:bg-white/[0.06]"
+                >
+                  <Share2 className="size-4 shrink-0 text-white/55" />
+                  Bagikan komentar
+                </button>
+                {!mine && (
+                  <>
+                    {/* Garis pemisah dengan opacity hanya 20%. */}
+                    <div className="my-1 h-px bg-white/20" />
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onReport?.();
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-semibold text-amber-300 transition hover:bg-white/[0.06]"
+                    >
+                      <Flag className="size-4 shrink-0" />
+                      Laporkan pengguna
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onBlock?.();
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-semibold text-[#E84855] transition hover:bg-white/[0.06]"
+                    >
+                      <Ban className="size-4 shrink-0" />
+                      Blokir pengguna
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Isi komentar — disembunyikan kalau ditandai spoiler. */}
@@ -730,6 +1014,18 @@ function CommentCard({
           <Reply className="size-4" />
           {replyCount > 0 ? replyCount : ""}
         </button>
+        {/* Hapus komentar — tepat di kanan tombol reply, merah kuat. */}
+        {mine && (
+          <button
+            aria-label="Hapus komentar"
+            disabled={busy}
+            onClick={() => void remove()}
+            className="flex items-center gap-1 font-bold text-[#FF3B47] transition hover:text-[#ff6b74] active:scale-95 disabled:opacity-40"
+          >
+            <Trash2 className="size-4" />
+            Hapus
+          </button>
+        )}
         {replyCount > 0 && onToggleReplies && (
           <button
             onClick={onToggleReplies}
@@ -1002,6 +1298,503 @@ function ReplySheet({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==================== SHEET "SEMANGATKAN KOMENTAR" ====================
+   Menutupi 45% layar dari bawah: ikon pin + judul di kiri atas, tombol X di
+   paling kanan, penjelasan, kotak pratinjau komentar, lalu 2 tombol. */
+function PinSheet({
+  c,
+  onClose,
+  onConfirm,
+}: {
+  c: CommentT;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end" role="dialog" aria-modal>
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative flex h-[45vh] w-full flex-col overflow-y-auto rounded-t-3xl border-t border-[#FFD23F]/30 bg-[#12161f] px-4 pb-4 pt-3">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#FFD23F]/15 text-[#FFD23F]">
+            <Pin className="size-4" />
+          </span>
+          <p className="min-w-0 flex-1 truncate text-sm font-black">
+            {c.pinnedAt ? "Lepas Semangatkan?" : "Semangatkan Komentar?"}
+          </p>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/70"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <p className="mt-2 text-[12px] leading-relaxed text-white/60">
+          Komentar ini akan disematkan di bagian paling atas kolom komentar
+          penggemar dan terlihat pertama kali oleh seluruh penonton.
+        </p>
+
+        {/* Kotak pratinjau — agak ke kanan dan lebih kecil. */}
+        <div className="ml-4 mt-3 rounded-xl border border-white/12 bg-white/[0.04] p-2.5">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
+            Preview Komentar Disemangatkan
+          </p>
+          <p className="mt-1.5 line-clamp-3 break-words text-[12.5px] leading-relaxed text-white/85">
+            {c.text || c.sticker || "[gambar]"}
+          </p>
+          <p className="mt-1 text-[10px] font-bold text-white/40">
+            -Oleh @{c.username}
+          </p>
+        </div>
+
+        <div className="mt-auto flex gap-2 pt-3">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 rounded-xl border border-white/15 py-2.5 text-[12px] font-black text-white/70 transition active:scale-[0.98] disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onConfirm();
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#FFD23F] py-2.5 text-[12px] font-black text-[#1a1200] transition active:scale-[0.98] disabled:opacity-60"
+          >
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Pin className="size-4" />
+            )}
+            {c.pinnedAt ? "Lepas" : "Semangatkan"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 5 kategori pelanggaran pada layar laporan. */
+const REPORT_CATEGORIES = [
+  "Spam / promosi",
+  "Ujaran kebencian",
+  "Konten dewasa",
+  "Spoiler tanpa peringatan",
+  "Perundungan / pelecehan",
+];
+
+/** Layar laporan komentar — fullscreen, anonim. */
+function ReportScreen({
+  c,
+  onClose,
+  onDone,
+  onSubmit,
+}: {
+  c: CommentT;
+  onClose: () => void;
+  onDone: () => void;
+  onSubmit: (v: {
+    category: string;
+    detail?: string;
+    hideComment?: boolean;
+    blockAuthor?: boolean;
+  }) => Promise<void>;
+}) {
+  const [category, setCategory] = useState(REPORT_CATEGORIES[0]);
+  const [detail, setDetail] = useState("");
+  const [hideComment, setHideComment] = useState(true);
+  const [blockAuthor, setBlockAuthor] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const where = `${c.animeTitle ?? "judul ini"}${
+    c.episode ? ` Episode ${c.episode}` : ""
+  }`;
+
+  return (
+    <div className="fixed inset-0 z-[130] flex flex-col bg-[#0b0e14]" role="dialog" aria-modal>
+      <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
+        <button
+          onClick={onClose}
+          aria-label="Tutup"
+          className="flex size-8 items-center justify-center rounded-full bg-white/[0.08] text-white/70"
+        >
+          <X className="size-4" />
+        </button>
+        <p className="text-sm font-black">Laporkan Komentar</p>
+      </div>
+
+      {sent ? (
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <span className="flex size-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+            <CheckCircle2 className="size-9" />
+          </span>
+          <p className="mt-4 text-base font-black">Laporanmu sudah terkirim</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-white/55">
+            Terima kasih atas laporanmu! Kurator akan memverifikasi komentar ini.
+          </p>
+          <button
+            onClick={onDone}
+            className="mt-5 rounded-xl bg-[#1CA7EC] px-6 py-2.5 text-[12px] font-black text-white"
+          >
+            Tutup
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3">
+            {/* Kutipan komentar yang dilaporkan. */}
+            <div className="rounded-xl border border-white/12 bg-white/[0.04] p-2.5">
+              <p className="break-words text-[13px] leading-relaxed text-white/85">
+                {c.text || c.sticker || "[gambar]"}
+              </p>
+              <p className="mt-1.5 text-[10px] text-white/40">
+                Diposting {timeAgo(c.createdAt)} di {where}
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                Kategori Pelanggaran
+              </p>
+              <div className="space-y-1.5">
+                {REPORT_CATEGORIES.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setCategory(r)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-[12.5px] font-semibold transition",
+                      category === r
+                        ? "border-[#1CA7EC]/60 bg-[#1CA7EC]/12 text-white"
+                        : "border-white/10 bg-white/[0.03] text-white/70",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-4 shrink-0 items-center justify-center rounded-full border",
+                        category === r
+                          ? "border-[#1CA7EC] bg-[#1CA7EC] text-white"
+                          : "border-white/25",
+                      )}
+                    >
+                      {category === r && <Check className="size-3" />}
+                    </span>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                Tindakan Lanjutan
+              </p>
+              <div className="space-y-1.5">
+                <ActionToggle
+                  icon={<EyeOff className="size-4" />}
+                  label={`Sembunyikan komentar @${c.username}`}
+                  on={hideComment}
+                  onToggle={() => setHideComment((v) => !v)}
+                />
+                <ActionToggle
+                  icon={<Flag className="size-4" />}
+                  label="Laporkan ke kurator"
+                  on
+                  onToggle={() => undefined}
+                />
+                <ActionToggle
+                  icon={<Ban className="size-4" />}
+                  label={`Blokir @${c.username}`}
+                  on={blockAuthor}
+                  onToggle={() => setBlockAuthor((v) => !v)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                Penjelasan (opsional)
+              </p>
+              <textarea
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+                rows={3}
+                maxLength={400}
+                placeholder="Jelaskan kenapa komentar ini melanggar…"
+                className="w-full resize-none rounded-xl border border-white/12 bg-black/30 px-3 py-2 text-[12.5px] outline-none transition focus:border-[#1CA7EC]/50"
+              />
+            </div>
+
+            <div className="rounded-xl border border-white/15 bg-white/[0.04] p-2.5 text-[11px] leading-relaxed text-white/55">
+              Laporan Anda bersifat anonim. Tim kurator akan memverifikasi dan
+              menandai komentar dalam waktu maks 10 menit.
+            </div>
+          </div>
+
+          <div className="flex gap-2 border-t border-white/10 px-3 py-2.5">
+            <button
+              onClick={onClose}
+              disabled={busy}
+              className="flex-1 rounded-xl border border-white/15 py-2.5 text-[12px] font-black text-white/70 disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await onSubmit({
+                    category,
+                    detail: detail.trim() || undefined,
+                    hideComment,
+                    blockAuthor,
+                  });
+                  setSent(true);
+                } catch (e) {
+                  toast.error(
+                    e instanceof Error ? e.message : "Gagal mengirim laporan",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#E84855] py-2.5 text-[12px] font-black text-white transition active:scale-[0.98] disabled:opacity-60"
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Flag className="size-4" />
+              )}
+              Laporkan
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Baris tindakan dengan sakelar on/off di layar laporan. */
+function ActionToggle({
+  icon,
+  label,
+  on,
+  onToggle,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-[12.5px] font-semibold transition",
+        on
+          ? "border-[#1CA7EC]/50 bg-[#1CA7EC]/10 text-white"
+          : "border-white/10 bg-white/[0.03] text-white/60",
+      )}
+    >
+      <span className={on ? "text-[#7fd3f7]" : "text-white/45"}>{icon}</span>
+      <span className="min-w-0 flex-1">{label}</span>
+      <span
+        className={cn(
+          "relative h-5 w-9 shrink-0 rounded-full transition",
+          on ? "bg-[#1CA7EC]" : "bg-white/20",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 size-4 rounded-full bg-white transition-all",
+            on ? "left-[18px]" : "left-0.5",
+          )}
+        />
+      </span>
+    </button>
+  );
+}
+
+/** 4 alasan cepat untuk melaporkan komentar terakhir saat memblokir. */
+const BLOCK_REASONS = [
+  "Spam / promosi",
+  "Kata kasar / hinaan",
+  "Spoiler tanpa tanda",
+  "Tidak relevan",
+];
+
+/** Dialog blokir user: konsekuensi, laporan opsional, hapus riwayat. */
+function BlockDialog({
+  c,
+  lastComment,
+  onClose,
+  onDone,
+  onConfirm,
+}: {
+  c: CommentT;
+  lastComment?: CommentT;
+  onClose: () => void;
+  onDone: () => void;
+  onConfirm: (v: {
+    reason?: string;
+    reportReason?: string;
+    reportCommentId?: string;
+    hideHistory: boolean;
+  }) => Promise<void>;
+}) {
+  const [reportReason, setReportReason] = useState<string | null>(null);
+  const [hideHistory, setHideHistory] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-[130] flex items-center justify-center px-4" role="dialog" aria-modal>
+      <div className="absolute inset-0 bg-black/75" onClick={onClose} />
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/12 bg-[#12161f] p-4">
+        {done ? (
+          <div className="flex flex-col items-center py-4 text-center">
+            <span className="flex size-14 items-center justify-center rounded-full bg-[#E84855]/15 text-[#ff6b74]">
+              <CheckCircle2 className="size-8" />
+            </span>
+            <p className="mt-3 text-sm font-black">@{c.username} telah diblokir</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-white/55">
+              Komentarnya tidak akan muncul lagi untukmu. Kamu bisa membuka
+              blokir kapan saja di Pengaturan › Privasi.
+            </p>
+            <button
+              onClick={onDone}
+              className="mt-4 w-full rounded-xl bg-white/10 py-2.5 text-[12px] font-black text-white"
+            >
+              Selesai
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <Avatar src={c.image} seed={c.username} className="size-10 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-black">{c.username}</p>
+                <p className="text-[10.5px] text-white/45">Blokir pengguna ini?</p>
+              </div>
+              <button
+                onClick={onClose}
+                aria-label="Tutup"
+                className="flex size-7 items-center justify-center rounded-full bg-white/[0.08] text-white/60"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+              {[
+                "Komentar & balasan pengguna ini tidak tampil lagi untukmu.",
+                "Pengguna ini tidak bisa melihat profil, aktivitas, dan komentarmu.",
+                "Kamu tidak menerima pesan atau permintaan pertemanan darinya.",
+              ].map((t) => (
+                <div key={t} className="flex items-start gap-2">
+                  <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-[#E84855]/20 text-[#ff6b74]">
+                    <Check className="size-2.5" />
+                  </span>
+                  <p className="text-[11.5px] leading-snug text-white/65">{t}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
+              Laporkan komentar terakhir (opsional)
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {BLOCK_REASONS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setReportReason(reportReason === r ? null : r)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition",
+                    reportReason === r
+                      ? "border-amber-300/60 bg-amber-300/15 text-amber-200"
+                      : "border-white/12 bg-white/[0.04] text-white/60",
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setHideHistory((v) => !v)}
+              className="mt-3 flex w-full items-start gap-2 text-left"
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
+                  hideHistory
+                    ? "border-[#1CA7EC] bg-[#1CA7EC] text-white"
+                    : "border-white/25",
+                )}
+              >
+                {hideHistory && <Check className="size-2.5" />}
+              </span>
+              <span className="text-[11.5px] leading-snug text-white/70">
+                Hapus semua riwayat interaksi dengan @{c.username}
+              </span>
+            </button>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={onClose}
+                disabled={busy}
+                className="flex-1 rounded-xl border border-white/15 py-2.5 text-[12px] font-black text-white/70 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await onConfirm({
+                      reason: reportReason ?? undefined,
+                      reportReason: reportReason ?? undefined,
+                      reportCommentId: reportReason
+                        ? lastComment?._id
+                        : undefined,
+                      hideHistory,
+                    });
+                    setDone(true);
+                  } catch (e) {
+                    toast.error(
+                      e instanceof Error ? e.message : "Gagal memblokir",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#E84855] py-2.5 text-[12px] font-black text-white transition active:scale-[0.98] disabled:opacity-60"
+              >
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Ban className="size-4" />
+                )}
+                Blokir
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

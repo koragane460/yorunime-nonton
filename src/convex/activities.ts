@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { addXpInternal } from "./xp";
-import { requireActive } from "./moderation";
+import { requireActive, staffGuard } from "./moderation";
 
 // ------------------------------------------------------------ komentar ----
 
@@ -678,7 +678,34 @@ export const listComments = query({
       .withIndex("animeId_created", (q) => q.eq("animeId", animeId))
       .order("desc")
       .take(120);
-    const alive = rows.filter((r) => !r.deleted);
+    // Komentar dari user yang DIBLOKIR dan komentar yang DISEMBUNYIKAN untuk
+    // penonton ini tidak ikut ditampilkan — inilah efek "hapus semua riwayat
+    // interaksi" saat memblokir seseorang.
+    const viewer = await getAuthUserId(ctx);
+    const blockedIds = new Set<string>();
+    const hiddenIds = new Set<string>();
+    if (viewer) {
+      const blocks = await ctx.db
+        .query("userBlocks")
+        .withIndex("blockerId", (q) => q.eq("blockerId", viewer))
+        .collect();
+      for (const b of blocks) {
+        // Cek "Hapus semua riwayat interaksi" — kalau dimatikan, komentar
+        // lama tetap terlihat (hanya blokir baru yang berlaku).
+        if (b.hideHistory !== false) blockedIds.add(String(b.blockedId));
+      }
+      const hides = await ctx.db
+        .query("commentHides")
+        .withIndex("userId_comment", (q) => q.eq("userId", viewer))
+        .collect();
+      for (const h of hides) hiddenIds.add(String(h.commentId));
+    }
+    const alive = rows.filter(
+      (r) =>
+        !r.deleted &&
+        !blockedIds.has(String(r.userId)) &&
+        !hiddenIds.has(String(r._id)),
+    );
     const users = new Map<string, any>();
     const out = [];
     for (const r of alive) {
@@ -709,6 +736,13 @@ export const listComments = query({
         likeCount: (r.likes ?? []).length,
         replyToId: r.replyToId,
         createdAt: r.createdAt,
+        /** "Disemangatkan" — sematan developer di paling atas komentar. */
+        pinnedAt: r.pinnedAt,
+        animeTitle: r.animeTitle,
+        episode: (() => {
+          const m = /__ep(\d+)$/.exec(String(r.animeId));
+          return m ? Number(m[1]) : undefined;
+        })(),
       });
     }
     if (sort === "populer") out.sort((a, b) => b.likeCount - a.likeCount);
@@ -989,6 +1023,221 @@ export const deleteComment = mutation({
     const c = await ctx.db.get(commentId);
     if (!c || c.userId !== userId) throw new Error("Bukan komentar kamu");
     await ctx.db.patch(commentId, { deleted: true });
+    return { ok: true };
+  },
+});
+
+/**
+ * "Semangatkan komentar" — menyematkan satu komentar di paling atas kolom
+ * komentar episode. Hanya developer yang boleh melakukannya.
+ */
+export const pinComment = mutation({
+  args: { commentId: v.id("animeComments") },
+  handler: async (ctx, { commentId }) => {
+    const { me } = await staffGuard(ctx, "dev");
+    const c = await ctx.db.get(commentId);
+    if (!c || c.deleted) throw new Error("Komentar tidak ada");
+    // Satu episode hanya punya satu komentar yang disemangatkan.
+    const siblings = await ctx.db
+      .query("animeComments")
+      .withIndex("animeId_created", (q) => q.eq("animeId", c.animeId))
+      .collect();
+    for (const s of siblings) {
+      if (s.pinnedAt && String(s._id) !== String(commentId)) {
+        await ctx.db.patch(s._id, { pinnedAt: undefined, pinnedBy: undefined });
+      }
+    }
+    await ctx.db.patch(commentId, { pinnedAt: Date.now(), pinnedBy: me._id });
+    if (String(c.userId) !== String(me._id)) {
+      await ctx.db.insert("notifications", {
+        userId: c.userId,
+        type: "pin",
+        title: "Komentarmu disemangatkan developer ✨",
+        body: c.text.slice(0, 100),
+        createdAt: Date.now(),
+      });
+    }
+    return { ok: true };
+  },
+});
+
+/** Lepas sematan "Disemangatkan" — developer. */
+export const unpinComment = mutation({
+  args: { commentId: v.id("animeComments") },
+  handler: async (ctx, { commentId }) => {
+    await staffGuard(ctx, "dev");
+    await ctx.db.patch(commentId, { pinnedAt: undefined, pinnedBy: undefined });
+    return { ok: true };
+  },
+});
+
+/** Blokir user → komentar & riwayat interaksinya disembunyikan dari kita. */
+export const blockUser = mutation({
+  args: {
+    userId: v.id("users"),
+    reason: v.optional(v.string()),
+    hideHistory: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { userId, reason, hideHistory }) => {
+    const me = await getAuthUserId(ctx);
+    if (me === null) throw new Error("Not signed in");
+    if (String(me) === String(userId))
+      throw new Error("Tidak bisa memblokir diri sendiri");
+    const existing = await ctx.db
+      .query("userBlocks")
+      .withIndex("blocker_blocked", (q) =>
+        q.eq("blockerId", me).eq("blockedId", userId),
+      )
+      .first();
+    if (!existing) {
+      await ctx.db.insert("userBlocks", {
+        blockerId: me,
+        blockedId: userId,
+        reason,
+        hideHistory: hideHistory !== false,
+        createdAt: Date.now(),
+      });
+    }
+    // "Hapus semua riwayat interaksi": daftar teman dua arah ikut diputus.
+    const asA = await ctx.db
+      .query("friendships")
+      .withIndex("userA", (q) => q.eq("userA", me))
+      .collect();
+    const asB = await ctx.db
+      .query("friendships")
+      .withIndex("userB", (q) => q.eq("userB", me))
+      .collect();
+    for (const f of [...asA, ...asB]) {
+      const other = String(f.userA === me ? f.userB : f.userA);
+      if (other === String(userId)) await ctx.db.delete(f._id);
+    }
+    return { ok: true };
+  },
+});
+
+/** Buka blokir user (dari daftar hitam di Pengaturan). */
+export const unblockUser = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const me = await getAuthUserId(ctx);
+    if (me === null) throw new Error("Not signed in");
+    const rows = await ctx.db
+      .query("userBlocks")
+      .withIndex("blocker_blocked", (q) =>
+        q.eq("blockerId", me).eq("blockedId", userId),
+      )
+      .collect();
+    for (const r of rows) await ctx.db.delete(r._id);
+    return { ok: true };
+  },
+});
+
+/** Daftar hitam saya — ditampilkan di Pengaturan. */
+export const listBlocked = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthUserId(ctx);
+    if (me === null) return [];
+    const rows = await ctx.db
+      .query("userBlocks")
+      .withIndex("blockerId", (q) => q.eq("blockerId", me))
+      .order("desc")
+      .collect();
+    const out = [];
+    for (const r of rows) {
+      const u = await ctx.db.get(r.blockedId);
+      out.push({
+        userId: r.blockedId,
+        username: u?.username ?? "user",
+        image: u?.image,
+        reason: r.reason,
+        createdAt: r.createdAt,
+      });
+    }
+    return out;
+  },
+});
+
+/**
+ * Laporan komentar: anonim bagi pelapor, masuk ke notifikasi kurator.
+ * Sekaligus bisa menyembunyikan komentar untuk pelapor dan memblokir
+ * pemiliknya (sesuai pilihan di layar laporan).
+ */
+export const reportComment = mutation({
+  args: {
+    commentId: v.id("animeComments"),
+    category: v.string(),
+    detail: v.optional(v.string()),
+    hideComment: v.optional(v.boolean()),
+    blockAuthor: v.optional(v.boolean()),
+  },
+  handler: async (
+    ctx,
+    { commentId, category, detail, hideComment, blockAuthor },
+  ) => {
+    const me = await getAuthUserId(ctx);
+    if (me === null) throw new Error("Not signed in");
+    const c = await ctx.db.get(commentId);
+    if (!c) throw new Error("Komentar tidak ada");
+    await ctx.db.insert("contentReports", {
+      reporterId: me,
+      commentId,
+      targetUserId: c.userId,
+      reason: category,
+      detail,
+      text: c.text.slice(0, 300),
+      createdAt: Date.now(),
+    });
+    if (hideComment) {
+      const exists = await ctx.db
+        .query("commentHides")
+        .withIndex("userId_comment", (q) =>
+          q.eq("userId", me).eq("commentId", commentId),
+        )
+        .first();
+      if (!exists) {
+        await ctx.db.insert("commentHides", {
+          userId: me,
+          commentId,
+          createdAt: Date.now(),
+        });
+      }
+    }
+    if (blockAuthor && String(c.userId) !== String(me)) {
+      const existing = await ctx.db
+        .query("userBlocks")
+        .withIndex("blocker_blocked", (q) =>
+          q.eq("blockerId", me).eq("blockedId", c.userId),
+        )
+        .first();
+      if (!existing) {
+        await ctx.db.insert("userBlocks", {
+          blockerId: me,
+          blockedId: c.userId,
+          reason: category,
+          hideHistory: true,
+          createdAt: Date.now(),
+        });
+      }
+    }
+    // Notifikasi ke kurator (developer & moderator).
+    const staff = await ctx.db.query("users").collect();
+    for (const s of staff) {
+      const role = String(s.role ?? "").toLowerCase();
+      const isDev =
+        role === "dev" || role === "creator" || Number(s.seqId ?? 0) === 1;
+      const isMod =
+        isDev || role === "mod" || String(s.staffRole ?? "") === "mod";
+      if (!isMod) continue;
+      await ctx.db.insert("notifications", {
+        userId: s._id,
+        type: "report",
+        title: `Laporan komentar: ${category}`,
+        body: `"${c.text.slice(0, 80)}"`,
+        refUserId: c.userId,
+        createdAt: Date.now(),
+      });
+    }
     return { ok: true };
   },
 });
