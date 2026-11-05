@@ -1,0 +1,1 @@
+import{c}from"./index-DhQsXxUl.js";const e=[["path",{d:"M4.929 4.929 19.07 19.071",key:"196cmz"}],["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}]],r=c("ban",e);const o=[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["path",{d:"m9 12 2 2 4-4",key:"dzmm74"}]],n=c("circle-check",o);export{r as B,n as C};
