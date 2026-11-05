@@ -506,6 +506,63 @@ async function imdbIdFor(title: string, year?: string, tv = false): Promise<stri
 //  Actions
 // ==========================================================================
 
+/* ------------------------------------------------------------------
+ * LK21 / FILMAPIK (OPSIONAL, self-host)
+ *
+ * Repo sumber: github.com/febriadj/lk21-api (Express) atau
+ * github.com/devnazir/api-lk21. Keduanya tidak butuh API key, tapi TIDAK
+ * punya instance publik yang hidup — jadi kita hanya memakainya kalau
+ * `LK21_API_BASE` diisi di Keys (contoh: https://lk21-api.up.railway.app).
+ * Tanpa env itu, seluruh blok di bawah tidak pernah dipanggil dan halaman
+ * Film tetap memakai TMDb / iTunes / TVmaze seperti biasa.
+ * ------------------------------------------------------------------ */
+const LK21_BASE = (process.env.LK21_API_BASE ?? "").replace(/\/+$/, "");
+
+async function lk21Get(path: string): Promise<any | null> {
+  if (!LK21_BASE) return null;
+  try {
+    const r = await fetch(`${LK21_BASE}${path}`, {
+      headers: { "User-Agent": UA, Accept: "application/json" },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+function lk21Card(m: any): FilmCard {
+  const raw = String(m?._id ?? m?.id ?? m?.movieId ?? "");
+  const yearRaw = String(m?.releaseDate ?? m?.year ?? "");
+  const year = /(19|20)\d{2}/.exec(yearRaw)?.[0];
+  const rating = Number.parseFloat(String(m?.rating ?? ""));
+  return {
+    id: `lk21-${raw}`,
+    title: String(m?.title ?? "Tanpa judul"),
+    image: m?.posterImg ?? m?.thumbnailPotrait ?? m?.poster ?? undefined,
+    year,
+    rating: Number.isFinite(rating) ? rating : undefined,
+    synopsis: m?.synopsis ?? m?.detail?.description ?? undefined,
+    kind: m?.type === "series" || m?.type === "tv" ? "tv" : "movie",
+  };
+}
+
+/** Daftar film LK21 (terbaru atau hasil pencarian). Kosong kalau belum diset. */
+async function lk21List(term: string): Promise<FilmCard[]> {
+  if (!LK21_BASE) return [];
+  const path = term
+    ? `/search/${encodeURIComponent(term)}`
+    : "/recent-release/movies";
+  const raw = await lk21Get(path);
+  const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.result ?? []);
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map(lk21Card)
+    .filter((c) => c.title && c.id !== "lk21-")
+    .slice(0, 24);
+}
+
 /** Pencarian film/series. TMDb kalau ada key; kalau tidak: IMDb + lokal. */
 export const search = action({
   args: {
@@ -515,6 +572,8 @@ export const search = action({
   handler: async (ctx, { q, kind }) => {
     const k = kind ?? "movie";
     const term = (q ?? "").trim();
+    // LK21 hanya untuk film; series LK21 tidak punya katalog per musim.
+    const lk = k === "movie" ? await lk21List(term) : [];
 
     // ---- Jalur TMDb (utama) ----
     if (process.env.TMDB_API_KEY) {
@@ -522,7 +581,7 @@ export const search = action({
       const data = await tmdb(path, term ? { query: term, include_adult: "false" } : {});
       const results = (data?.results ?? []) as any[];
       const cards = results.filter((r) => r.poster_path).map((r) => toCard(r, k));
-      if (cards.length) return cards;
+      if (cards.length || lk.length) return [...lk, ...cards];
       if (term) return [];
       return FALLBACK;
     }
@@ -571,12 +630,12 @@ export const search = action({
           kind: "movie" as const,
         }));
       const seen = new Set<string>();
-      const merged = [...local, ...sug].filter((c) =>
+      const merged = [...lk, ...local, ...sug].filter((c) =>
         seen.has(c.id) ? false : (seen.add(c.id), true),
       );
       return merged.slice(0, 30);
     }
-    if (feedCards.length) return feedCards.slice(0, 60);
+    if (lk.length || feedCards.length) return [...lk, ...feedCards].slice(0, 60);
     return FALLBACK;
   },
 });
@@ -659,6 +718,39 @@ export const detail = action({
   args: { id: v.string(), kind: v.optional(v.union(v.literal("movie"), v.literal("tv"))) },
   handler: async (ctx, { id, kind }) => {
     const k = kind ?? "movie";
+
+    // ---- LK21 (kalau LK21_API_BASE diisi) ----
+    if (id.startsWith("lk21-")) {
+      const d = await lk21Get(`/movies/${encodeURIComponent(id.slice(5))}`);
+      if (d) {
+        const meta = (d?.detail ?? d) as any;
+        return {
+          id,
+          title: d.title ?? "Tanpa judul",
+          image: d.posterImg ?? d.thumbnailPotrait ?? undefined,
+          backdrop: d.posterImg ?? d.thumbnailLandscape ?? undefined,
+          year: /(19|20)\d{2}/.exec(String(d.releaseDate ?? meta.release ?? ""))?.[0],
+          rating: Number.parseFloat(String(d.rating ?? "")) || undefined,
+          kind: d.type === "series" ? "tv" : "movie",
+          synopsis: stripHtml(d.synopsis ?? meta.description ?? ""),
+          genres: ((d.genres ?? meta.genre ?? []) as any[]).map((g, i) => ({
+            id: `lk21g:${i}:${String(g)}`,
+            name: String(g),
+          })),
+          runtime: meta.duration ? String(meta.duration) : undefined,
+          tagline: undefined,
+          director: ((d.directors ?? []) as any[])[0]?.name ?? undefined,
+          cast: ((d.casts ?? []) as any[]).map((c) => String(c?.name ?? c)),
+          castFull: ((d.casts ?? []) as any[]).slice(0, 12).map((c) => ({
+            name: String(c?.name ?? c),
+            character: undefined,
+            image: undefined,
+          })),
+          trailer: d.trailerUrl || undefined,
+          similar: [],
+        };
+      }
+    }
 
     // ---- Jalur TMDb (utama) ----
     if (process.env.TMDB_API_KEY) {
@@ -888,6 +980,20 @@ export const resolveStream = action({
     const k = kind ?? "movie";
     let extId = id;
     let appleMode = false;
+
+    // LK21 punya daftar server sendiri (embed) — pakai itu dulu kalau ada.
+    if (id.startsWith("lk21-")) {
+      const raw = await lk21Get(`/movies/${encodeURIComponent(id.slice(5))}/streams`);
+      const arr = Array.isArray(raw) ? raw : (raw?.data ?? raw?.streams ?? []);
+      const sources = (Array.isArray(arr) ? arr : [])
+        .map((s: any, i: number) => ({
+          label: String(s?.provider ?? s?.server ?? s?.quality ?? `Server ${i + 1}`),
+          url: String(s?.url ?? s?.link ?? s?.embed ?? ""),
+          type: "embed" as const,
+        }))
+        .filter((s) => s.url);
+      if (sources.length) return { sources, resolvedId: id };
+    }
 
     if (id.startsWith("it")) {
       appleMode = true;

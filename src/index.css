@@ -1579,6 +1579,7 @@ a {
   background:
     repeating-linear-gradient(118deg, rgb(255 255 255 / 0.16) 0 1px, transparent 1px 4px),
     linear-gradient(145deg, #f7d6c4, #c98a72 38%, #8e5344 62%, #f3c8b4);
+  animation: yn-frame-drift 15s ease-in-out infinite alternate;
   box-shadow:
     inset 0 0 0 1.5px rgb(255 236 226 / 0.55),
     0 0 0 1px rgb(201 138 114 / 0.55),
@@ -1587,6 +1588,7 @@ a {
 .yn-frame-sapphire {
   background:
     conic-gradient(from 20deg, #0b2a55, #1f6bb8 18%, #7bc6ff 30%, #123a72 44%, #0a1f3f 60%, #2b7fd4 78%, #0b2a55);
+  animation: yn-ring-spin 34s linear infinite;
   box-shadow:
     inset 0 0 0 1.5px rgb(190 226 255 / 0.5),
     0 0 0 1px rgb(43 127 212 / 0.6),
@@ -1595,6 +1597,7 @@ a {
 .yn-frame-imperial {
   background:
     repeating-conic-gradient(from 0deg, #fff2b8 0deg 6deg, #b8860b 6deg 10deg, #f6c435 10deg 16deg, #7a5a06 16deg 22deg);
+  animation: yn-ring-spin 48s linear infinite;
   box-shadow:
     inset 0 0 0 2px rgb(0 0 0 / 0.35),
     0 0 0 2px rgb(246 196 53 / 0.45),
@@ -1614,6 +1617,7 @@ a {
   background:
     repeating-conic-gradient(from 8deg, #2a2d33 0deg 9deg, #111318 9deg 18deg, #3a3f47 18deg 22deg),
     #111318;
+  animation: yn-ring-spin 60s linear infinite;
   box-shadow:
     inset 0 0 0 1.5px rgb(226 232 240 / 0.55),
     0 0 0 1px rgb(203 213 225 / 0.35),
@@ -1630,7 +1634,81 @@ a {
   background: linear-gradient(135deg, #e0f2fe, #38bdf8 55%, #1d4ed8);
   box-shadow: 0 0 8px rgb(56 189 248 / 0.9);
   transform: rotate(45deg);
+  animation: yn-gem-pulse 3.6s ease-in-out infinite;
   pointer-events: none;
+}
+
+/* ---- BORDER TEMA MUSIMAN: gerak halus, bukan partikel berulang ---- */
+@keyframes yn-frame-drift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 42px 0, 0 0; }
+}
+@keyframes yn-gem-pulse {
+  0%, 100% { opacity: 0.75; box-shadow: 0 0 5px rgb(56 189 248 / 0.7); }
+  50% { opacity: 1; box-shadow: 0 0 12px rgb(125 211 252 / 1); }
+}
+@keyframes yn-snow-fall {
+  from { background-position: 0 -12px, 0 0, 0 0; }
+  to { background-position: 0 24px, 0 0, 0 0; }
+}
+@keyframes yn-lantern-glow {
+  0%, 100% { background-position: 0 0, 0 0, 0 0; }
+  50% { background-position: 0 0, 12px 0, 0 0; }
+}
+.yn-frame-halloween {
+  background:
+    repeating-linear-gradient(125deg, #f97316 0 7px, #1c1024 7px 14px),
+    radial-gradient(circle at 72% 24%, rgba(251, 191, 36, 0.55), transparent 42%);
+  animation: yn-frame-drift 12s ease-in-out infinite alternate;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(251 146 60 / 0.7),
+    0 0 0 1px rgb(124 58 237 / 0.55),
+    0 0 20px -7px rgb(249 115 22 / 0.85);
+}
+.yn-frame-natal {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.9) 1px, transparent 1.4px),
+    repeating-linear-gradient(115deg, transparent 0 9px, rgba(250, 204, 21, 0.5) 9px 12px, transparent 12px 21px),
+    linear-gradient(145deg, #14532d, #166534 46%, #052e16);
+  background-size: 12px 12px, auto, auto;
+  animation: yn-snow-fall 9s linear infinite;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(250 204 21 / 0.55),
+    0 0 18px -6px rgb(34 197 94 / 0.7);
+}
+.yn-frame-imlek {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 236, 170, 0.85) 2.5px, transparent 3px),
+    repeating-linear-gradient(90deg, transparent 0 10px, rgba(253, 224, 71, 0.38) 10px 12px),
+    linear-gradient(150deg, #b91c1c, #7f1d1d 55%, #450a0a);
+  animation: yn-lantern-glow 7s ease-in-out infinite;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(253 224 71 / 0.6),
+    0 0 20px -7px rgb(239 68 68 / 0.9);
+}
+.yn-frame-lebaran {
+  background:
+    radial-gradient(circle at 78% 22%, rgba(253, 230, 138, 0.9) 3px, transparent 3.6px),
+    repeating-conic-gradient(from 0deg, #065f46 0deg 12deg, #047857 12deg 24deg),
+    #064e3b;
+  animation: yn-ring-spin 50s linear infinite;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(253 230 138 / 0.55),
+    0 0 18px -7px rgb(16 185 129 / 0.8);
+}
+/* Harus SETELAH kelas di atas: kalau tidak, animation-nya menang. */
+@media (prefers-reduced-motion: reduce) {
+  .yn-frame-rosegold,
+  .yn-frame-sapphire,
+  .yn-frame-imperial,
+  .yn-frame-obsidian,
+  .yn-frame-halloween,
+  .yn-frame-natal,
+  .yn-frame-imlek,
+  .yn-frame-lebaran,
+  .yn-frame-obsidian::after {
+    animation: none !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .yn-frame-aurora,
@@ -1638,7 +1716,15 @@ a {
   .yn-frame-nova,
   .yn-frame-volt,
   .yn-frame-magma,
-  .yn-frame-holo {
+  .yn-frame-holo,
+  .yn-frame-rosegold,
+  .yn-frame-sapphire,
+  .yn-frame-imperial,
+  .yn-frame-obsidian,
+  .yn-frame-halloween,
+  .yn-frame-natal,
+  .yn-frame-imlek,
+  .yn-frame-lebaran {
     animation: none !important;
   }
 }

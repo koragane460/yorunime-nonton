@@ -89,4 +89,28 @@ export const BORDERS: BorderDef[] = [
     price: 9000,
     blurb: "Batu hitam bertepi perak dengan satu permata",
   },
+  {
+    id: "halloween",
+    name: "Halloween",
+    price: 4500,
+    blurb: "Garis permen oranye-ungu dengan cahaya labu",
+  },
+  {
+    id: "natal",
+    name: "Natal",
+    price: 4800,
+    blurb: "Pita emas di atas hijau cemara dan salju turun",
+  },
+  {
+    id: "imlek",
+    name: "Imlek",
+    price: 5200,
+    blurb: "Merah lampion dengan kilau emas bergeser",
+  },
+  {
+    id: "lebaran",
+    name: "Lebaran",
+    price: 5000,
+    blurb: "Hijau zamrud dengan bulan sabit emas berdenyut",
+  },
 ];

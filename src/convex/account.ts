@@ -518,6 +518,10 @@ const BORDER_PRICES: Record<string, number> = {
   sapphire: 4200,
   imperial: 8500,
   obsidian: 9000,
+  halloween: 4500,
+  natal: 4800,
+  imlek: 5200,
+  lebaran: 5000,
 };
 
 /** Beli border foto profile pakai Sacret — begitu dibeli langsung dipakai. */
