@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
@@ -124,6 +125,7 @@ export function CommentsSection({
   onSend,
   onDeleted,
   onOpenImage,
+  onSeek,
 }: {
   animeId: string;
   comments: CommentT[] | undefined;
@@ -132,6 +134,8 @@ export function CommentsSection({
   /** Dipanggil setelah server menghapus komentar, supaya daftar langsung bersih. */
   onDeleted?: (id: string) => void;
   onOpenImage?: (url: string) => void;
+  /** Menit di komentar (mis. "14.45") → lompat ke detik itu di pemutar. */
+  onSeek?: (seconds: number) => void;
 }) {
   const { user } = useAuth();
   const [sort, setSort] = useState<"terbaru" | "populer">("terbaru");
@@ -582,6 +586,7 @@ export function CommentsSection({
                 onUnpin={() => setPinTarget(c)}
                 onReport={() => setReportTarget(c)}
                 onBlock={() => setBlockTarget(c)}
+                onSeek={onSeek}
               />
 
               {/* Balasan — menjorok ke kanan, mengalir ke bawah. */}
@@ -601,6 +606,7 @@ export function CommentsSection({
                       onUnpin={() => setPinTarget(r)}
                       onReport={() => setReportTarget(r)}
                       onBlock={() => setBlockTarget(r)}
+                      onSeek={onSeek}
                     />
                   ))}
                   {shown < replies.length && (
@@ -691,6 +697,9 @@ export function CommentsSection({
               userId: blockTarget.userId as never,
               reason: reason || reportReason,
               hideHistory,
+              animeTitle: blockTarget.animeTitle,
+              episode: blockTarget.episode,
+              evidence: blockTarget.text,
             });
             if (reportCommentId && reportReason) {
               await reportM({
@@ -707,6 +716,50 @@ export function CommentsSection({
   );
 }
 
+/**
+ * Isi komentar dengan penanda waktu (mis. "14.45" atau "1:14:45").
+ * Penanda waktu diberi warna biru dan bisa ditekan untuk melompat ke detik
+ * tersebut di pemutar video.
+ */
+const TIME_TOKEN = /(?<!\d)(\d{1,2})[.:]([0-5]\d)(?::([0-5]\d))?(?!\d)/g;
+function CommentText({
+  text,
+  onSeek,
+}: {
+  text: string;
+  onSeek?: (seconds: number) => void;
+}) {
+  if (!onSeek) return <>{text}</>;
+  const out: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let i = 0;
+  TIME_TOKEN.lastIndex = 0;
+  while ((m = TIME_TOKEN.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const secs = m[3]
+      ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])
+      : Number(m[1]) * 60 + Number(m[2]);
+    out.push(
+      <button
+        key={`ts-${i++}`}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSeek(secs);
+        }}
+        className="mx-0.5 inline rounded bg-[#1CA7EC]/15 px-1 font-bold text-[#7fd3f7] underline decoration-[#1CA7EC]/50 underline-offset-2"
+        title={`Lompat ke ${m[0]}`}
+      >
+        {m[0]}
+      </button>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return <>{out}</>;
+}
+
 /** Satu kartu komentar (dipakai untuk induk maupun balasan). */
 function CommentCard({
   c,
@@ -718,6 +771,7 @@ function CommentCard({
   onToggleReplies,
   isReply = false,
   onOpenImage,
+  onSeek,
   isDev = false,
   onPin,
   onUnpin,
@@ -734,6 +788,7 @@ function CommentCard({
   isReply?: boolean;
   onOpenImage?: (url: string) => void;
   isDev?: boolean;
+  onSeek?: (seconds: number) => void;
   onPin?: () => void;
   onUnpin?: () => void;
   onReport?: () => void;
@@ -944,7 +999,7 @@ function CommentCard({
                 hidden && "select-none blur-[5px]",
               )}
             >
-              {c.text}
+              <CommentText text={c.text} onSeek={onSeek} />
             </p>
             {hidden && (
               <button

@@ -147,6 +147,7 @@ export const getPublicProfile = query({
       bannerUrl: u.bannerUrl,
       profileDecor: u.profileDecor ?? null,
       introStyle: u.introStyle ?? null,
+      socials: u.socials ?? {},
       level: u.level ?? 1,
       xp: u.xp ?? 0,
       xpInLevel: xpIn,
@@ -192,6 +193,59 @@ export const getPublicProfile = query({
           })(),
         })),
     };
+  },
+});
+
+/** Tautan media sosial saya (ringan, untuk Pengaturan & detail akun). */
+export const mySocials = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return {};
+    const u = await ctx.db.get(userId);
+    return u?.socials ?? {};
+  },
+});
+
+/**
+ * TAUTAN MEDIA SOSIAL — simpan handle TikTok / Instagram / Discord /
+ * Facebook. Menerima @handle atau URL penuh, disimpan sebagai handle bersih.
+ */
+export const updateSocials = mutation({
+  args: {
+    tiktok: v.optional(v.string()),
+    instagram: v.optional(v.string()),
+    discord: v.optional(v.string()),
+    facebook: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const u = await ctx.db.get(userId);
+    if (!u) throw new Error("Akun tidak ditemukan");
+    const clean = (raw?: string) => {
+      if (raw === undefined) return undefined;
+      let s = raw.trim();
+      if (!s) return "";
+      // Buang URL lengkap → ambil bagian handle-nya saja.
+      s = s.replace(/^https?:\/\/(www\.)?/i, "");
+      s = s.replace(/^(tiktok\.com|instagram\.com|discord\.(gg|com)|facebook\.com)\//i, "");
+      s = s.replace(/^@/, "").replace(/\/$/, "");
+      s = s.replace(/[<>\s]/g, "");
+      if (s.length > 40) throw new Error("Tautan terlalu panjang (maks 40)");
+      return s;
+    };
+    const next = { ...(u.socials ?? {}) };
+    const t = clean(args.tiktok);
+    const i = clean(args.instagram);
+    const d = clean(args.discord);
+    const f = clean(args.facebook);
+    if (t !== undefined) next.tiktok = t;
+    if (i !== undefined) next.instagram = i;
+    if (d !== undefined) next.discord = d;
+    if (f !== undefined) next.facebook = f;
+    await ctx.db.patch(userId, { socials: next });
+    return next;
   },
 });
 
@@ -460,6 +514,10 @@ const BORDER_PRICES: Record<string, number> = {
   bubble: 3200,
   starlight: 3800,
   cyber: 5200,
+  rosegold: 3600,
+  sapphire: 4200,
+  imperial: 8500,
+  obsidian: 9000,
 };
 
 /** Beli border foto profile pakai Sacret — begitu dibeli langsung dipakai. */

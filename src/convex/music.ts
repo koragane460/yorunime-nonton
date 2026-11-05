@@ -62,6 +62,9 @@ export function relevant(list: MusicTrack[], q: string): MusicTrack[] {
 
 /** Peta section katalog layar Musik → kueri iTunes. */
 const SECTION_QUERIES: Record<string, string> = {
+  trending: "top hits 2026",
+  rekomendasi: "rekomendasi lagu populer",
+  hits: "global top 50 songs",
   anime: "anime opening theme song",
   ost: "anime opening",
   ostpenuh: "anime ending full",
@@ -73,6 +76,9 @@ const SECTION_QUERIES: Record<string, string> = {
 };
 
 const SECTION_LIST: { id: string; label: string }[] = [
+  { id: "trending", label: "Trending Sekarang" },
+  { id: "rekomendasi", label: "Rekomendasi Untukmu" },
+  { id: "hits", label: "Populer Global" },
   { id: "anime", label: "Anime & OST" },
   { id: "ost", label: "Opening & Ending" },
   { id: "ostpenuh", label: "OST Penuh" },
@@ -113,7 +119,10 @@ export const musicSearch = action({
   args: { q: v.string(), limit: v.optional(v.number()) },
   handler: async (_ctx, { q, limit = 24 }): Promise<MusicTrack[]> => {
     const list = await itunesSearch(q, limit);
-    return relevant(list, q);
+    // Cocokkan judul/artis; kalau tidak ada yang cocok persis, tetap tampilkan
+    // hasil terdekat dari iTunes supaya lagu yang "hampir mirip" muncul.
+    const hit = relevant(list, q);
+    return hit.length > 0 ? hit : list;
   },
 });
 

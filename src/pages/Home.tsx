@@ -1256,7 +1256,7 @@ function HomeContent() {
               <button
                 key={g.id}
                 onClick={() => setGenreScreen(g.id)}
-                className="flex min-w-[86px] shrink-0 items-center justify-center rounded-full border border-[#E84855]/55 bg-white/[0.07] px-4 py-2 text-[12px] font-bold text-white/85 transition hover:border-[#E84855] hover:bg-white/[0.12] hover:text-white active:scale-95"
+                className="flex min-w-[86px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-[12px] font-bold text-white/85 transition hover:border-white/35 hover:bg-white/[0.12] hover:text-white active:scale-95"
               >
                 {g.name}
               </button>
@@ -2406,14 +2406,12 @@ function SearchResultRow({
   const isDonghua = source === "sanka";
   const synopsis =
     (item.synopsis as string | undefined) ?? "";
-  // Jumlah nonton — angka stabil per judul (hash dari id), bukan random
-  // tiap render supaya tidak berkedip saat state berubah.
-  const views = (() => {
-    const s = `nonton:${source}:${item.id}`;
-    let h = 7;
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    return 400 + (h % 120000);
-  })();
+  // Jumlah nonton HANYA dari data nyata. Judul yang belum tayang tidak
+  // punya views — jangan menampilkan angka karangan.
+  const rawViews = (item as any).views;
+  const upcoming = /not yet|upcoming|belum/i.test(String(item.status ?? ""));
+  const views =
+    !upcoming && typeof rawViews === "number" && rawViews > 0 ? rawViews : null;
 
   return (
     <button
@@ -2460,6 +2458,7 @@ function SearchResultRow({
             {synopsis}
           </p>
         )}
+        {/* Baris 1 — skor & status. */}
         <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
           {typeof item.score === "number" && item.score > 0 && (
             <span className="flex items-center gap-1">
@@ -2473,16 +2472,26 @@ function SearchResultRow({
               {item.status}
             </span>
           )}
-          {typeof item.episodes === "number" && item.episodes > 0 && (
-            <span className="flex items-center gap-1">
-              <Tv className="size-3.5" aria-hidden />
-              {item.episodes} Episode
+        </div>
+        {/* Baris 2 — tipe & jumlah nonton, lurus dalam dua kolom. */}
+        <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-1">
+            <Tv className="size-3.5 shrink-0" aria-hidden />
+            <span className="truncate">
+              {item.type ?? (source === "film" ? "Film" : "Anime")}
+              {typeof item.episodes === "number" && item.episodes > 0
+                ? ` · ${item.episodes} eps`
+                : ""}
+            </span>
+          </span>
+          {views !== null && (
+            <span className="flex min-w-0 items-center gap-1">
+              <Eye className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">
+                {views.toLocaleString("id-ID")} nonton
+              </span>
             </span>
           )}
-          <span className="flex items-center gap-1">
-            <Eye className="size-3.5" aria-hidden />
-            {views.toLocaleString("id-ID")} nonton
-          </span>
         </div>
       </div>
     </button>
@@ -2531,9 +2540,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const searchFilms = useAction(api.films.search);
-  const searchComics = useAction(api.manga.search);
-  // Media yang sedang dicari — hasil manga/manhwa memakai kartu & route beda.
-  const [media, setMedia] = useState<"anime" | "donghua" | "manga" | "manhwa">("anime");
+  // Media yang sedang dicari: anime, donghua, atau film.
+  const [media, setMedia] = useState<"anime" | "donghua" | "film">("anime");
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadGenres = useAction(api.anime.animeByGenres);
   const loadAll = useAction(api.anime.animeTop);
@@ -2722,10 +2730,16 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           merged.push({ ...c, type: c.type, source: src });
         }
       }
+      // Tab menentukan jenis hasil — Anime hanya anime, Donghua hanya
+      // donghua, Film hanya film.
       const filtered =
         media === "donghua"
           ? merged.filter((m) => m.source === "sanka")
-          : merged.filter((m) => m.source !== "sanka");
+          : media === "film"
+            ? merged.filter((m) => m.source === "film")
+            : merged.filter(
+                (m) => m.source !== "sanka" && m.source !== "film",
+              );
       setResults(filtered);
     } catch {
       setResults([]);
@@ -2751,40 +2765,6 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       setSearching(false);
       return;
     }
-    if (media === "manga" || media === "manhwa") {
-      setSearching(true);
-      let alive = true;
-      void (async () => {
-        try {
-          const rows = (await searchComics({
-            q: term,
-            kind: media,
-            limit: 20,
-          })) as any[];
-          if (!alive) return;
-          setResults(
-            (rows ?? []).map((r) => ({
-              id: `comic:${r.slug}`,
-              slug: r.slug,
-              title: r.title,
-              image: r.cover ?? r.image,
-              type: r.kind === "manhwa" ? "Manhwa" : "Manga",
-              synopsis: r.synopsis ?? r.description ?? "",
-              comicKind: r.kind ?? media,
-              ongoing: r.ongoing,
-              views: r.views,
-            })) as unknown as AnimeCardT[],
-          );
-        } catch {
-          if (alive) setResults([]);
-        } finally {
-          if (alive) setSearching(false);
-        }
-      })();
-      return () => {
-        alive = false;
-      };
-    }
     if (isMusicSecret(term)) return;
     const t = setTimeout(() => void doSearch(), 250);
     return () => clearTimeout(t);
@@ -2807,8 +2787,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           </button>
           <div className="min-w-0 flex-1">
             <p className="yn-eyebrow text-[10px]">YoruNime Search</p>
-            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-[1.5rem] leading-tight text-transparent">
-              Cari semua konten
+            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-[1.35rem] leading-tight text-transparent">
+              Cari Anime, Donghua, Film
             </h1>
           </div>
           <span
@@ -2829,15 +2809,13 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doSearch()}
             placeholder={
-              media === "manga"
-                ? "Cari judul manga…"
-                : media === "manhwa"
-                  ? "Cari judul manhwa…"
-                  : media === "donghua"
-                    ? "Cari judul donghua…"
-                    : "Cari anime, film, atau donghua…"
+              media === "film"
+                ? "Cari judul film…"
+                : media === "donghua"
+                  ? "Cari judul donghua…"
+                  : "Cari judul anime…"
             }
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="yn-search-input w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {query && (
             <button
@@ -2857,13 +2835,12 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           </button>
         </div>
 
-        {/* TAB MEDIA — Anime · Donghua · Manga · Manhwa. */}
-        <div className="mt-3 grid grid-cols-4 gap-1.5">
+        {/* TAB MEDIA — Anime · Donghua · Film (manga/manhwa dihapus). */}
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
           {([
             ["anime", "Anime"],
             ["donghua", "Donghua"],
-            ["manga", "Manga"],
-            ["manhwa", "Manhwa"],
+            ["film", "Film"],
           ] as const).map(([key, label]) => (
             <button
               key={key}
@@ -5094,7 +5071,7 @@ function DonghuaDetailScreen({
               {detail.genres.map((g) => (
                 <span
                   key={g}
-                  className="rounded-full border border-[#E84855]/55 px-3 py-1 text-[11px] font-semibold text-white"
+                  className="rounded-full border border-white/15 bg-white/[0.05] px-3 py-1 text-[11px] font-semibold text-white/85"
                 >
                   {g}
                 </span>

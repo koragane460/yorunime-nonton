@@ -639,7 +639,8 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
   const equipBorder = useMutation(api.account.equipBorder);
   const buyDecor = useMutation(api.account.buyDecor);
   const equipDecor = useMutation(api.account.equipDecor);
-  const [tab, setTab] = useState<"profile" | "decor" | "gacha">("profile");
+  // Gacha dihapus dari Shop (permintaan) — tinggal Profile & Hiasan.
+  const [tab, setTab] = useState<"profile" | "decor">("profile");
   const [busyBorder, setBusyBorder] = useState<string | null>(null);
   const [shopErr, setShopErr] = useState<string | null>(null);
 
@@ -690,8 +691,8 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="mx-auto w-full max-w-2xl px-4 pt-4">
         <ScreenHead title="Shop" onBack={onBack} />
-        {/* Tab PROFILE / GACHA — teks + garis bawah saja, tanpa background */}
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        {/* Tab PROFILE / HIASAN — teks + garis bawah saja, tanpa background */}
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             onClick={() => setTab("profile")}
             className={cn(
@@ -713,17 +714,6 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
             )}
           >
             ✨ Hiasan
-          </button>
-          <button
-            onClick={() => setTab("gacha")}
-            className={cn(
-              "border-b-2 pb-1.5 pt-1 text-[12px] font-black transition",
-              tab === "gacha"
-                ? "border-gold text-gold"
-                : "border-transparent text-zinc-400 hover:text-zinc-200",
-            )}
-          >
-            🎰 Gacha
           </button>
         </div>
       </div>
@@ -796,7 +786,7 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
             </div>
           </div>
         </div>
-      ) : tab === "profile" ? (
+      ) : (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
           <div className="mx-auto w-full max-w-2xl px-4 pt-8">
             {/* Semua kotak border dibungkus SATU kotak lagi, dan di paling
@@ -829,12 +819,16 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
                           : "border-white/10 bg-white/[0.03] hover:border-white/35 hover:bg-white/[0.07]",
                       )}
                     >
-                      <FramedAvatar
-                        border={b.id === "none" ? undefined : b.id}
-                        src={user?.image}
-                        seed={user?.username ?? "user"}
-                        className="size-12"
-                      />
+                      {/* Preview DIAM (tanpa muter) supaya rapi & mudah
+                          dibandingkan antar border. */}
+                      <span className="yn-frame-still flex items-center justify-center">
+                        <FramedAvatar
+                          border={b.id === "none" ? undefined : b.id}
+                          src={user?.image}
+                          seed={user?.username ?? "user"}
+                          className="size-16"
+                        />
+                      </span>
                       <span className="text-[10px] font-black">{b.name}</span>
                       <span
                         className={cn(
@@ -859,12 +853,6 @@ function ShopScreen({ onBack }: { onBack: () => void }) {
                 })}
               </div>
             </div>
-          </div>
-        </div>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-hidden pt-2">
-          <div className="h-full overflow-y-auto overscroll-contain pb-24">
-            <GachaScreen onBack={onBack} />
           </div>
         </div>
       )}

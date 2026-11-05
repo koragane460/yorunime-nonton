@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck } from "@/components/lstream-ui";
@@ -10,7 +11,17 @@ import { greetingOf, fmtShort } from "@/components/HomeHead";
 import { TierIcon } from "@/components/ProfileSheet";
 import { badgeForLevel, displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
-import { Megaphone, Play, Search, Star, ChevronRight } from "lucide-react";
+import {
+  Clapperboard,
+  Heart,
+  Megaphone,
+  Play,
+  Search,
+  Share2,
+  Star,
+  Tv,
+  ChevronRight,
+} from "lucide-react";
 import type { CardT } from "@/components/CatalogRows";
 
 /* ====================================================================== *
@@ -108,67 +119,85 @@ export function AnnouncementBox() {
   const item = rows[0];
   const raw = item.message ?? "";
   const tag = (raw.match(/^\[(error|eror|update|info)\]/i)?.[1] ?? "").toLowerCase();
-  const text = raw.replace(/^\[[a-z]+\]\s*/i, "");
+  const body = raw.replace(/^\[[a-z]+\]\s*/i, "");
   const kind: "error" | "update" | "info" =
     tag === "error" || tag === "eror"
       ? "error"
       : tag === "update"
         ? "update"
         : "info";
-  const more = rows.length - 1;
 
-  const tone =
-    kind === "error"
-      ? {
-          border: "border-red-400/35",
-          icon: "text-red-300",
-          rule: "bg-red-400/80",
-        }
-      : kind === "update"
-        ? {
-            border: "border-gold-strong/40",
-            icon: "text-gold-strong",
-            rule: "bg-gold-strong/80",
-          }
-        : {
-            border: "border-white/12",
-            icon: "text-white/75",
-            rule: "bg-white/60",
-          };
+  // Format bebas dari panel dev:
+  //   v1.0.0 | Judul pengumuman
+  //   - poin update pertama
+  //   - poin kedua
+  // Baris pertama tanpa "| " tetap dipakai sebagai judul.
+  const lines = body
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const first = lines[0] ?? "";
+  const headMatch = first.match(/^(v?\d+(?:\.\d+){0,3})\s*[|\-–:]\s*(.+)$/i);
+  const version = headMatch ? headMatch[1] : "";
+  const heading = headMatch ? headMatch[2] : first;
+  const updates = (headMatch ? lines.slice(1) : lines.slice(1))
+    .map((l) => l.replace(/^[-*•]\s*/, ""))
+    .filter(Boolean);
+  const updatedAt = item.createdAt;
+  const updatedLabel = new Date(updatedAt).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  // Warna titik update — bervariasi, konsisten per indeks.
+  const DOTS = ["#FFD23F", "#1CA7EC", "#E84855", "#7bd88f", "#c084fc"];
 
   return (
-    <section
-      className={cn(
-        "fade-enter relative mt-3 flex min-h-[160px] flex-col overflow-hidden rounded-3xl border p-3.5",
-        tone.border,
-        // Kotak PENGUMUMAN: krem keemasan (bukan hitam), jadi beda jelas
-        // dari kotak deskripsi clan (biru) & claim berlian (kuning).
-        "bg-[#FFD23F]/[0.08] backdrop-blur-sm",
-      )}
-    >
-      {/* KIRI ATAS — ikon + judul (tanpa nama pengirim). */}
-      <div className="relative flex items-center gap-2">          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#FFD23F]/35 bg-[#FFD23F]/15 text-[#FFD23F]">
+    <section className="fade-enter relative mt-3 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-3.5">
+      {/* Kepala: kotak ikon · Pengumuman · chip versi. */}
+      <div className="flex items-center gap-2">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#FFD23F]/15 text-[#FFD23F]">
           <Megaphone className="size-4" />
         </span>
         <span className="min-w-0 flex-1 truncate text-[13px] font-black tracking-tight text-white">
           Pengumuman
         </span>
-      </div>
-
-      {/* GARIS PEMBATAS di bawah judul. */}
-      <span aria-hidden className="relative mt-2.5 h-px w-full bg-white/15" />
-
-      {/* PESAN — panel krem lembut di bawah garis. */}
-      <div className="relative mt-2.5 flex-1 rounded-2xl border border-[#FFD23F]/25 bg-[#FFFAF0]/[0.07] p-3">
-        <p className="whitespace-pre-wrap font-display text-[15px] font-bold leading-[1.4] tracking-tight text-white">
-          {text}
-        </p>
-        {more > 0 && (
-          <span className="mt-2.5 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black text-white/75">
-            +{more} lainnya
+        {version && (
+          <span className="shrink-0 rounded-md bg-white/[0.08] px-2 py-1 text-[9.5px] font-black uppercase tracking-wide text-white/60">
+            {version} rilis
           </span>
         )}
       </div>
+
+      {heading && (
+        <h3 className="mt-2.5 text-[16px] font-black leading-snug tracking-tight text-white">
+          {heading}
+        </h3>
+      )}
+
+      {updates.length > 0 && (
+        <ul className="mt-2 grid gap-1.5">
+          {updates.map((u, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span
+                aria-hidden
+                className="mt-1.5 size-1.5 shrink-0 rounded-full"
+                style={{ background: DOTS[i % DOTS.length] }}
+              />
+              <span className="min-w-0 text-[12px] font-medium leading-relaxed text-white/75">
+                {u}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Garis pembatas 30%, tidak full ke samping. */}
+      <span aria-hidden className="mt-3 block h-px w-full bg-white/30 opacity-30" />
+      <p className="mt-2 text-[10.5px] font-medium text-white/40">
+        Diperbarui {updatedLabel}
+      </p>
     </section>
   );
 }
@@ -192,6 +221,8 @@ export function Spotlight({
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [idx, setIdx] = useState(0);
   const list = items.slice(0, 3);
+  const toggleFav = useMutation(api.activities.toggleFavorite);
+  const { user } = useAuth();
 
   /** Posisi scroll untuk slide ke-i — pakai posisi ELEMENNYA (bukan
    *  perkiraan lebar layar), supaya titik pagination & auto-geser pas
@@ -284,79 +315,136 @@ export function Spotlight({
                 : String(a.status)
             : "Ongoing";
           return (
-            <button
+            <div
               key={a.id}
-              onClick={() => onPick(a.id, a.title, (a.source as any) ?? "anilist")}
-              className="group flex h-[182px] w-[94%] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05] text-left transition hover:border-white/30 active:scale-[0.99] sm:w-[70%] lg:w-[54%]"
+              className="group relative h-[210px] w-[92%] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/12 bg-black text-left transition hover:border-white/30 sm:w-[70%] lg:w-[54%]"
             >
-              {/* Poster di kiri — ukurannya tetap supaya kartu rapi. */}
-              <span className="relative h-full w-[104px] shrink-0 overflow-hidden bg-black/40">
-                <img
-                  src={a.image}
-                  alt=""
-                  className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+              {/* Banner anime sebagai latar penuh. */}
+              <img
+                src={a.image}
+                alt=""
+                className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.03]"
+              />
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-transparent"
+              />
+
+              {/* Badge status — menempel flush di pojok kiri atas. */}
+              <span
+                className={cn(
+                  "absolute left-0 top-0 flex items-center gap-1 rounded-br-xl px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white",
+                  done ? "bg-zinc-700" : "bg-[#1CA7EC]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    done ? "bg-white/70" : "animate-pulse bg-white",
+                  )}
                 />
-                <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-lg bg-black/75 font-mono text-[11px] font-black text-[#FFD23F]">
-                  {rank + 1}
-                </span>
+                {status}
               </span>
 
-              {/* Info di kanan: status+rating, judul, lalu meta & tombol. */}
-              <span className="flex min-w-0 flex-1 flex-col justify-between gap-1.5 p-3">
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider",
-                      done
-                        ? "border-white/20 bg-white/[0.06] text-white/65"
-                        : "border-[#1CA7EC]/45 bg-[#1CA7EC]/12 text-[#7fd3f7]",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        done ? "bg-white/50" : "animate-pulse bg-[#1CA7EC]",
-                      )}
-                    />
-                    {status}
-                  </span>
-                  <span className="ml-auto flex items-center gap-1 rounded-full border border-[#FFD23F]/40 bg-[#FFD23F]/10 px-2 py-0.5 text-[10px] font-black text-[#FFD23F]">
-                    <Star className="size-2.5 fill-[#FFD23F] text-[#FFD23F]" />
-                    {(a.score ?? 0).toFixed(1)}
-                  </span>
-                </span>
+              {/* Rating — menempel flush di pojok kanan atas. */}
+              <span className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-xl bg-[#FFD23F] px-2.5 py-1 text-[11px] font-black text-black">
+                <Star className="size-3 fill-black text-black" />
+                {(a.score ?? 0).toFixed(1)}
+              </span>
 
-                <span className="line-clamp-2 text-[15px] font-black leading-tight tracking-tight text-[#FFFAF0]">
+              <div className="absolute inset-x-0 bottom-0 p-3">
+                <p className="line-clamp-1 text-[16px] font-black leading-tight tracking-tight text-white">
                   {a.title}
-                </span>
-
-                {/* Sinopsis singkat di bawah judul — 2 baris, tidak memotong
-                    tombol Nonton di baris bawah. */}
+                </p>
                 {a.synopsis && (
-                  <span className="line-clamp-2 text-[10.5px] font-medium leading-snug text-white/45">
+                  <p className="mt-0.5 line-clamp-2 text-[10.5px] font-medium leading-snug text-white/60">
                     {String(a.synopsis)}
-                  </span>
+                  </p>
                 )}
 
-                <span className="flex items-center gap-2 text-[10px] font-semibold text-white/50">
-                  {a.type && (
-                    <span className="rounded border border-white/12 bg-white/[0.05] px-1.5 py-0.5 uppercase text-white/65">
-                      {String(a.type)}
+                <div className="mt-1.5 flex flex-wrap items-center gap-2.5 text-[10px] font-semibold text-white/60">
+                  <span className="flex items-center gap-1">
+                    <Clapperboard className="size-3" />
+                    {a.type ? String(a.type) : "Anime"}
+                  </span>
+                  {typeof a.episodes === "number" && a.episodes > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Tv className="size-3" /> {a.episodes} eps
                     </span>
                   )}
-                  {typeof a.episodes === "number" && a.episodes > 0 && (
-                    <span>{a.episodes} eps</span>
-                  )}
                   <span className="flex items-center gap-1">
-                    <Play className="size-2.5 fill-white/50" />
+                    <Play className="size-3" />
                     {fmtShort(viewsOf(a.id))}
                   </span>
-                  <span className="ml-auto flex items-center gap-0.5 rounded-lg bg-[#FFD23F] px-2.5 py-1 text-[10px] font-black text-black transition group-hover:brightness-105">
-                    Nonton <ChevronRight className="size-3" />
-                  </span>
-                </span>
-              </span>
-            </button>
+                </div>
+
+                <div className="mt-2 flex items-center gap-1.5">
+                  <button
+                    onClick={() =>
+                      onPick(a.id, a.title, (a.source as any) ?? "anilist")
+                    }
+                    className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg bg-[#FFD23F] px-2 py-1.5 text-[11px] font-black text-black transition active:scale-[0.98]"
+                  >
+                    <Play className="size-3 fill-black" /> Nonton Sekarang
+                  </button>
+                  <button
+                    aria-label="Tambah ke Favorite"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!user) {
+                        toast.error("Masuk dulu untuk menyimpan Favorite");
+                        return;
+                      }
+                      try {
+                        const r = await toggleFav({
+                          animeId: a.id,
+                          animeTitle: a.title,
+                          animeImage: a.image,
+                          kind: /sanka/.test(String(a.source ?? ""))
+                            ? "donghua"
+                            : "anime",
+                          status: status,
+                        });
+                        if ((r as any)?.favorited === false)
+                          toast.success("Dihapus dari Favorite");
+                        else
+                          toast.success("Telah ditambahkan ke Favorite");
+                      } catch (err) {
+                        toast.error(
+                          err instanceof Error ? err.message : "Gagal",
+                        );
+                      }
+                    }}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white backdrop-blur transition active:scale-95"
+                  >
+                    <Heart className="size-3.5" />
+                  </button>
+                  <button
+                    aria-label="Bagikan"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const url = `${window.location.origin}/info?anime=${encodeURIComponent(String(a.id))}&judul=${encodeURIComponent(a.title ?? "")}`;
+                      const nav = navigator as Navigator & {
+                        share?: (d: ShareData) => Promise<void>;
+                      };
+                      if (nav.share) {
+                        void nav
+                          .share({ title: a.title, url })
+                          .catch(() => undefined);
+                        return;
+                      }
+                      void navigator.clipboard
+                        ?.writeText(url)
+                        .then(() => toast.success("Tautan disalin"))
+                        .catch(() => undefined);
+                    }}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white backdrop-blur transition active:scale-95"
+                  >
+                    <Share2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>

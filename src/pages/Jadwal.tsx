@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useQuery } from "convex/react";
+import { CalendarDays } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
@@ -497,7 +498,14 @@ function JadwalContent() {
           Tidak ada jadwal rilis hari ini.
         </p>
       ) : (
-        <div className="space-y-2 pb-2">
+        <div className="relative pb-2 pl-[62px]">
+          {/* GARIS TIMELINE — satu garis lurus ke bawah; bagian yang sudah
+              lewat waktu tayangnya berwarna (progress berjalan). */}
+          <span
+            aria-hidden
+            className="absolute bottom-0 left-[30px] top-0 w-px bg-white/12"
+          />
+          <div className="space-y-2">
           {shownList.map((item) => {
             // Hitung mundur per item: "x jam lagi" sampai jam rilis tiba,
             // lalu berubah jadi "Sudah tayang" dan itemnya sedikit redup.
@@ -517,15 +525,45 @@ function JadwalContent() {
                   : im > 0
                     ? `${im}m ${is}s lagi`
                     : `${is}s lagi`;
+            const wibAt = at > 0 ? new Date(at + 7 * 3_600_000) : null;
+            const timeLabel =
+              item.time ||
+              (wibAt
+                ? `${String(wibAt.getUTCHours()).padStart(2, "0")}:${String(wibAt.getUTCMinutes()).padStart(2, "0")}`
+                : "--:--");
             return (
-              <button
+              <div
                 key={`${item.source}-${item.id ?? item.slug ?? ""}-${item.episode ?? 0}`}
-                onClick={() => openItem(item)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition hover:border-primary/40",
-                  itemAired && "opacity-60",
-                )}
+                className="relative"
               >
+                {/* Titik waktu di tengah garis timeline. */}
+                <span
+                  className={cn(
+                    "absolute top-4 z-10 flex w-[52px] -translate-x-1/2 items-center justify-center rounded-md px-1 py-0.5 text-[9.5px] font-black tabular-nums transition-colors",
+                    itemAired
+                      ? "bg-primary text-white shadow-[0_0_10px_-2px] shadow-primary/70"
+                      : "bg-[#151922] text-white/60 ring-1 ring-white/15",
+                  )}
+                  style={{ left: "-32px" }}
+                >
+                  {timeLabel}
+                </span>
+                {/* Ruas garis berwarna untuk waktu yang sudah berjalan. */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute -top-2 bottom-0 w-px",
+                    itemAired ? "bg-primary" : "bg-transparent",
+                  )}
+                  style={{ left: "-32px" }}
+                />
+                <button
+                  onClick={() => openItem(item)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition hover:border-primary/40",
+                    itemAired && "opacity-70",
+                  )}
+                >
                 {/* Gambar + badge episode */}
                 <div className="relative w-16 shrink-0">
                   <div className="aspect-[2/3] overflow-hidden rounded-xl bg-black">
@@ -581,11 +619,26 @@ function JadwalContent() {
                     )}
                   </div>
                 </div>
-              </button>
+                </button>
+              </div>
             );
           })}
+          </div>
         </div>
       )}
+
+      {/* TOMBOL HARI BERIKUTNYA — kotak kecil rounded di kanan bawah. */}
+      <button
+        onClick={() => {
+          setDay((d) => (d + 1) % 7);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        aria-label={`Lihat jadwal hari ${DAYS_ID[(day + 1) % 7]}`}
+        className="fixed bottom-24 right-3 z-30 flex items-center gap-1.5 rounded-xl border border-primary/45 bg-[#151922]/95 px-3 py-2.5 text-[11.5px] font-black text-white shadow-lg backdrop-blur active:scale-95"
+      >
+        <CalendarDays className="size-3.5 text-primary" />
+        {DAYS_ID[(day + 1) % 7]}
+      </button>
 
       {/* "Lihat semua" menampilkan seluruh rilis hari itu (permintaan user). */}
       {list.length > shownList.length && (

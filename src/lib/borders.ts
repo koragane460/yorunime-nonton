@@ -65,4 +65,28 @@ export const BORDERS: BorderDef[] = [
     price: 5200,
     blurb: "Grid neon berjalan di sekeliling foto",
   },
+  {
+    id: "rosegold",
+    name: "Rose Gold",
+    price: 3600,
+    blurb: "Logam rose gold bertekstur sikat, tenang dan mewah",
+  },
+  {
+    id: "sapphire",
+    name: "Sapphire",
+    price: 4200,
+    blurb: "Biru safir berfaset dengan sorot permata",
+  },
+  {
+    id: "imperial",
+    name: "Imperial",
+    price: 8500,
+    blurb: "Ring emas bermahkota dengan ukiran kerajaan",
+  },
+  {
+    id: "obsidian",
+    name: "Obsidian",
+    price: 9000,
+    blurb: "Batu hitam bertepi perak dengan satu permata",
+  },
 ];

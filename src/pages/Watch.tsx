@@ -35,6 +35,7 @@ import {
   Heart,
   Coffee,
   Flag,
+  Share2,
   Check,
   X,
   Volume2,
@@ -956,8 +957,10 @@ function WatchContent() {
     // Priority: (1) subtitle Indonesia yang sudah menempel di video, (2) lagu
     // terjemahan otomatis YoruNime. Jangan pakai track native dari server
     // (harusnya subtitle milik user, bukan subtitle server asli) mengalah.
+    // Pemasangan OTOMATIS: begitu subtitle Indonesia siap (atau subtitle
+    // bawaan hilang saat pindah server), langsung dipakai tanpa membuka menu.
     if (autoVtt) setActiveSub(AUTO_SUB);
-  }, [autoVtt, subTouched, bakedSubs]);
+  }, [autoVtt, subTouched, bakedSubs, epParam, sourceIdx]);
 
   // Ambil isi subtitle yang sedang dipakai (bisa langsung tertulis pada video
   // terlampir/source, atau lirik terjemahan otomatis YoruNime dari
@@ -3065,18 +3068,19 @@ function WatchContent() {
           angka + Laporkan. Semua tombol memakai KETEBALAN border yang sama
           (2px, tidak berlebihan) dan state tekan yang CLEAN — tanpa ring /
           glow mencolok di pinggir. */}
-      <div className="w-full px-3 pt-2">
+      {/* Aksi panjang ke samping dengan sudut rounded; border tipis dan
+          teks "strong" (bukan bold tebal). Kalau ruang sempit, baris kedua
+          (Donate/Laporkan/Bagikan) otomatis turun ke bawah. */}
+      <div className="w-full space-y-2 px-3 pt-2">
         <div className="flex items-stretch gap-2">
-          <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-xl border-2 border-white/15 bg-white/[0.04]">
+          <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-full border border-white/15 bg-white/[0.04]">
             <button
               onClick={() => {
-                // Tombol Like menyatu: menekan lagi membatalkan, menekan saat
-                // sebelumnya tidak suka akan mengganti jadi suka.
                 void toggleLike({ animeId, value: 1 }).catch(() => {});
               }}
               aria-label="Like"
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-1.5 text-sm font-bold transition",
+                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold transition",
                 likeStats?.liked
                   ? "bg-white/15 text-white"
                   : "text-muted-foreground hover:bg-white/5",
@@ -3090,7 +3094,6 @@ function WatchContent() {
                 {(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}
               </span>
             </button>
-            {/* Garis pembatas lurus ke atas, membelah dua sisi tombol */}
             <span aria-hidden className="w-px shrink-0 self-stretch bg-white/20" />
             <button
               onClick={() => {
@@ -3098,7 +3101,7 @@ function WatchContent() {
               }}
               aria-label="Tidak suka"
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-1.5 py-1.5 text-sm font-bold transition",
+                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold transition",
                 likeStats?.disliked
                   ? "bg-white/15 text-white"
                   : "text-muted-foreground hover:bg-white/5",
@@ -3119,15 +3122,13 @@ function WatchContent() {
                 animeId: favId,
                 animeTitle: detailReady ? detailData.title : D.title,
                 animeImage: detailReady ? detailData.image : D.image,
-                // Jenis + status tayang ikut tersimpan supaya layar Subscribe
-                // bisa memisahkan Ongoing / Completed tanpa tombol filter.
                 kind: isDonghua ? "donghua" : "anime",
                 status:
                   (detailReady ? detailData.status : D.status) ?? undefined,
               }).catch(() => {});
             }}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-1.5 text-xs font-bold transition",
+              "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition",
               isFav
                 ? "border-white/25 bg-white/15 text-white"
                 : "border-white/15 bg-white/[0.04] text-muted-foreground hover:bg-white/5",
@@ -3136,23 +3137,48 @@ function WatchContent() {
             <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
             <span>Favorite</span>
           </button>
-          <button
-            onClick={() => setReportOpen(true)}
-            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/5"
-          >
-            <Flag className="size-4" aria-hidden />
-            <span>Laporkan</span>
-          </button>
-          {/* DONATE — kotak di kanan Laporkan, gaya sama, ikon kopi. */}
+        </div>
+
+        <div className="flex items-stretch gap-2">
           <a
             href="https://sociabuzz.com/yorunime/donate"
             target="_blank"
             rel="noreferrer"
-            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-2 border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-white/5"
+            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white/5"
           >
-            <Coffee className="size-4" aria-hidden />
+            <Coffee className="size-4 shrink-0" aria-hidden />
             <span>Donate</span>
           </a>
+          <button
+            onClick={() => setReportOpen(true)}
+            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white/5"
+          >
+            <Flag className="size-4 shrink-0" aria-hidden />
+            <span>Laporkan</span>
+          </button>
+          <button
+            onClick={() => {
+              const url = window.location.href;
+              const title = detailReady ? detailData.title : D.title;
+              const nav = navigator as Navigator & {
+                share?: (d: ShareData) => Promise<void>;
+              };
+              if (nav.share) {
+                void nav
+                  .share({ title, url })
+                  .catch(() => undefined);
+                return;
+              }
+              void navigator.clipboard
+                ?.writeText(url)
+                .then(() => toast.success("Tautan disalin — siap dibagikan"))
+                .catch(() => toast.error("Gagal membagikan tautan"));
+            }}
+            aria-label="Bagikan"
+            className="flex size-9 shrink-0 items-center justify-center self-center rounded-full border border-white/15 bg-white/[0.04] text-muted-foreground transition hover:bg-white/5 active:scale-95"
+          >
+            <Share2 className="size-4" />
+          </button>
         </div>
       </div>
 
@@ -3545,6 +3571,15 @@ function WatchContent() {
               comments={shownComments}
               meId={user?._id}
               onOpenImage={(url) => setZoomImage(url)}
+              onSeek={(seconds) => {
+                const v = videoRef.current;
+                if (!v) {
+                  toast.info("Putar video dulu untuk melompat ke menit ini");
+                  return;
+                }
+                v.currentTime = seconds;
+                void v.play().catch(() => undefined);
+              }}
               onDeleted={(id) => {
                 // Komentar yang baru dihapus langsung dikeluarkan dari daftar
                 // supaya tidak perlu menunggu update query.

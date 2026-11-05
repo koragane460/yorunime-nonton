@@ -291,7 +291,7 @@ export function StaffPanel({ level }: { level: "dev" | "mod" | "none" }) {
             value={annText}
             onChange={(e) => setAnnText(e.target.value)}
             rows={3}
-            placeholder="mis. [update] Server sudah normal, selamat menonton!"
+            placeholder={"v1.0.0 | Update 1.0\n- perbaikan UI\n- mini player baru\n- fix premium"}
             className="mt-2 w-full resize-none rounded-lg border border-border bg-background/70 px-3 py-2 text-xs outline-none focus:border-amber-300/60"
           />
           <div className="mt-1.5 flex items-center gap-1.5">

@@ -76,7 +76,18 @@ export const state = query({
       };
     });
     const equippedIds = equippedUidsOf(s ?? { owned: [] });
-    const equippedList = owned.filter((o) => equippedIds.includes(o.uid));
+    const claimRows = s?.claims ?? [];
+    // STATUS KLAIM PER PET — tiap pet punya jeda 24 jam sendiri.
+    const equippedList = owned
+      .filter((o) => equippedIds.includes(o.uid))
+      .map((o) => {
+        const at = claimRows.find((c) => c.uid === o.uid)?.at ?? s?.claimAt ?? 0;
+        return {
+          ...o,
+          claimReady: now - at >= CLAIM_MS,
+          claimIn: Math.max(0, CLAIM_MS - (now - at)),
+        };
+      });
     const equipped = equippedList[0] ?? null;
     const boost = sceneBoost(s?.scene ?? "hutan");
     const claimAt = s?.claimAt ?? now;
@@ -131,7 +142,17 @@ export const view = query({
       };
     });
     const equippedIds = equippedUidsOf(s ?? { owned: [] });
-    const equippedList = owned.filter((o) => equippedIds.includes(o.uid));
+    const claimRows = s?.claims ?? [];
+    const equippedList = owned
+      .filter((o) => equippedIds.includes(o.uid))
+      .map((o) => {
+        const at = claimRows.find((c) => c.uid === o.uid)?.at ?? s?.claimAt ?? 0;
+        return {
+          ...o,
+          claimReady: Date.now() - at >= CLAIM_MS,
+          claimIn: Math.max(0, CLAIM_MS - (Date.now() - at)),
+        };
+      });
     const equipped = equippedList[0] ?? null;
     const boost = sceneBoost(s?.scene ?? "hutan");
     return {
@@ -284,28 +305,39 @@ export const sell = mutation({
 
 /** Klaim hadiah 24 jam - reset hitungan mundur dari waktu klaim. */
 export const claim = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { uid: v.optional(v.string()) },
+  handler: async (ctx, { uid }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Belum masuk");
     const s = await loadOrCreate(ctx, userId);
     const now = Date.now();
-    if (now - s.claimAt < CLAIM_MS)
-      throw new Error("Belum 24 jam - tunggu dulu");
     const uids = equippedUidsOf(s);
-    const list = s.owned.filter((o) => uids.includes(o.uid));
+    const list = s.owned.filter(
+      (o) => uids.includes(o.uid) && (!uid || o.uid === uid),
+    );
     if (list.length === 0) throw new Error("Pasang pet dulu (equip)");
-    // Klaim = total pet terpasang + BOOST scene aktif per pet
-    // (scene yang lebih mahal memberi boost lebih besar — permintaan).
+    // KLAIM PER PET: tiap pet punya waktu klaim sendiri, jadi klaim satu pet
+    // tidak mengunci pet lain (permintaan: "sendiri sendiri, ga digabung").
+    const claimRows = [...(s.claims ?? [])];
+    const ready = list.filter((o) => {
+      const at = claimRows.find((c) => c.uid === o.uid)?.at ?? s.claimAt;
+      return now - at >= CLAIM_MS;
+    });
+    if (ready.length === 0) throw new Error("Belum 24 jam - tunggu dulu");
     const boost = sceneBoost(s.scene);
-    const amount = list.reduce(
+    const amount = ready.reduce(
       (t, o) => t + (petById(o.petId)?.claim ?? 0) + boost,
       0,
     );
+    for (const o of ready) {
+      const i = claimRows.findIndex((c) => c.uid === o.uid);
+      if (i >= 0) claimRows[i] = { uid: o.uid, at: now };
+      else claimRows.push({ uid: o.uid, at: now });
+    }
     const ur = await ctx.db.get(userId);
     await ctx.db.patch(userId, { diamonds: (ur?.diamonds ?? 0) + amount });
-    await ctx.db.patch(s._id, { claimAt: now });
-    return { amount, boost, pets: list.length };
+    await ctx.db.patch(s._id, { claimAt: now, claims: claimRows });
+    return { amount, boost, pets: ready.length };
   },
 });
 

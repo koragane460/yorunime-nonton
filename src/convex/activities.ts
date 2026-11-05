@@ -1072,13 +1072,31 @@ export const unpinComment = mutation({
 });
 
 /** Blokir user → komentar & riwayat interaksinya disembunyikan dari kita. */
+/** Kelompok kategori blokir (dipakai chip filter di Daftar Blokir). */
+function blockCategory(reason?: string): string | undefined {
+  const r = (reason ?? "").toLowerCase();
+  if (!r) return undefined;
+  if (r.includes("spoil")) return "Spoiler";
+  if (r.includes("dewasa")) return "Seksual";
+  if (r.includes("rundung") || r.includes("kebencian")) return "Menghina";
+  if (r.includes("spam") || r.includes("promosi") || r.includes("toxic"))
+    return "Toxic";
+  return "Menghina";
+}
+
 export const blockUser = mutation({
   args: {
     userId: v.id("users"),
     reason: v.optional(v.string()),
     hideHistory: v.optional(v.boolean()),
+    animeTitle: v.optional(v.string()),
+    episode: v.optional(v.number()),
+    evidence: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, reason, hideHistory }) => {
+  handler: async (
+    ctx,
+    { userId, reason, hideHistory, animeTitle, episode, evidence },
+  ) => {
     const me = await getAuthUserId(ctx);
     if (me === null) throw new Error("Not signed in");
     if (String(me) === String(userId))
@@ -1095,6 +1113,10 @@ export const blockUser = mutation({
         blockedId: userId,
         reason,
         hideHistory: hideHistory !== false,
+        category: blockCategory(reason),
+        animeTitle: animeTitle?.slice(0, 140),
+        episode,
+        evidence: evidence?.slice(0, 300),
         createdAt: Date.now(),
       });
     }
@@ -1146,15 +1168,41 @@ export const listBlocked = query({
     const out = [];
     for (const r of rows) {
       const u = await ctx.db.get(r.blockedId);
+      // Snapshot konteks saat blokir (judul anime, episode, cuplikan).
+      const animeTitle = r.animeTitle;
+      const episode = r.episode;
+      const evidence = r.evidence;
       out.push({
         userId: r.blockedId,
         username: u?.username ?? "user",
         image: u?.image,
         reason: r.reason,
+        category: r.category ?? blockCategory(r.reason),
+        animeTitle,
+        episode,
+        evidence,
+        createAt: r.createdAt,
         createdAt: r.createdAt,
       });
     }
     return out;
+  },
+});
+
+/** Hapus catatan blokir secara permanen (dari menu kartu daftar blokir). */
+export const deleteBlockRecord = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const me = await getAuthUserId(ctx);
+    if (me === null) throw new Error("Not signed in");
+    const rows = await ctx.db
+      .query("userBlocks")
+      .withIndex("blocker_blocked", (q) =>
+        q.eq("blockerId", me).eq("blockedId", userId),
+      )
+      .collect();
+    for (const r of rows) await ctx.db.delete(r._id);
+    return { ok: true };
   },
 });
 
@@ -1216,6 +1264,13 @@ export const reportComment = mutation({
           blockedId: c.userId,
           reason: category,
           hideHistory: true,
+          category: blockCategory(category),
+          animeTitle: c.animeTitle,
+          episode: (() => {
+            const m = String(c.animeId).match(/__ep(\d+)$/);
+            return m ? Number(m[1]) : undefined;
+          })(),
+          evidence: c.text.slice(0, 300),
           createdAt: Date.now(),
         });
       }

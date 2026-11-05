@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
 import { BlurBanner } from "@/components/BlurBanner";
 import { StripBackIcon } from "@/components/StripBack";
-import { TitleRibbon } from "@/components/Cosmetics";
+import { SocialLinkBoxes } from "@/components/SocialLinks";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Award,
@@ -159,8 +159,7 @@ export function ProfileSheet({
   // menampilkan detail akun dengan banner foto yang bisa diatur di
   // Pengaturan (premium).
 
-  // Title yang sedang dipasang — tampil di bawah stat akun.
-  const cosmetics = useQuery(api.titles.publicOf, { userId });
+
   // GACHA KARTU ANIME DIHAPUS PERMANEN — profil tidak lagi menampilkan
   // kartu karakter; hadiah gacha sekarang langsung masuk (XP/telur/Sacret/
   // premium) lewat mesin vending di YoruVerse › Shop.
@@ -268,7 +267,7 @@ export function ProfileSheet({
               className="absolute right-3 top-3 z-10 flex items-center gap-1.5 py-1 text-white transition active:scale-95"
             >
               <span className="text-[11px] font-black tracking-wide drop-shadow">
-                {detailKonten ? "Detail akun" : "Detail Konten"}
+                {detailKonten ? "Detail akun" : "Konten"}
               </span>
               <svg
                 width="22"
@@ -466,27 +465,13 @@ export function ProfileSheet({
             </div>
             )}
 
-            {/* TITLE terpasang — sebesar bar level, geser ke kanan. */}
-            {(() => {
-              const titles =
-                cosmetics?.titles ??
-                (cosmetics?.title ? [cosmetics.title] : []);
-              if (titles.length === 0) return null;
-              return (
-                <div className="thin-scroll mt-3 flex items-stretch gap-2 overflow-x-auto pb-1">
-                  {titles.slice(0, 3).map((t) => (
-                    <div key={t.id} className="min-w-[85%] shrink-0">
-                      {/* Gede banget (permintaan) — size lg + text override. */}
-                      <TitleRibbon
-                        name={t.name}
-                        size="lg"
-                        className="w-full justify-center text-base"
-                      />
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+            {/* TAUTAN MEDIA SOSIAL — menggantikan baris title yang dihapus. */}
+            {!detailKonten && (
+              <SocialLinkBoxes
+                socials={isMe ? undefined : (profile.socials ?? {})}
+                className="mt-3"
+              />
+            )}
 
             {/* BARIS AKSI — Add Friend · Chat · Give Prem (terpisah, outline),
                 lalu YoruPet & Afinitas sebagai kotak sendiri. */}

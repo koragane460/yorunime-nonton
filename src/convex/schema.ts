@@ -67,6 +67,15 @@ const schema = defineSchema(
       equippedTitles: v.optional(v.array(v.string())),
       /** Izin akses konten 18+ (diberikan developer lewat panel). */
       adultAccess: v.optional(v.boolean()),
+      /** TAUTAN MEDIA SOSIAL — username/handle per platform (tanpa @). */
+      socials: v.optional(
+        v.object({
+          tiktok: v.optional(v.string()),
+          instagram: v.optional(v.string()),
+          discord: v.optional(v.string()),
+          facebook: v.optional(v.string()),
+        }),
+      ),
       
       // Kode UID 7 karakter (huruf + angka) sebagai identitas akun saat
       // verifikasi pembelian.
@@ -571,6 +580,13 @@ const schema = defineSchema(
       reason: v.optional(v.string()),
       /** Sembunyikan komentar & riwayat interaksi user yang diblokir. */
       hideHistory: v.optional(v.boolean()),
+      /** Kategori laporan yang jadi alasan blokir (Spoiler/Toxic/Seksual/Menghina). */
+      category: v.optional(v.string()),
+      /** Cuplikan konteks: judul anime + episode saat blokir. */
+      animeTitle: v.optional(v.string()),
+      episode: v.optional(v.number()),
+      /** Arsip komentar yang dilaporkan (untuk "Bukti Laporan"). */
+      evidence: v.optional(v.string()),
       createdAt: v.number(),
     })
       .index("blockerId", ["blockerId"])
@@ -957,6 +973,10 @@ const schema = defineSchema(
       equippedUids: v.optional(v.array(v.string())),
       /** Waktu klaim Sacret terakhir — klaim berikutnya 24 jam kemudian. */
       claimAt: v.number(),
+      /** Klaim PER PET — tiap pet punya jeda 24 jam sendiri (tidak digabung). */
+      claims: v.optional(
+        v.array(v.object({ uid: v.string(), at: v.number() })),
+      ),
       /** Crystal hasil menjual pet (nilai = harga pet). */
       crystals: v.number(),
       /** Scene/background yang sudah dimiliki. */

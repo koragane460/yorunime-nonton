@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ClanTag } from "@/components/lstream-ui";
@@ -179,6 +180,7 @@ function GridRow({
   clanTagIcon,
   xp,
   days,
+  onOpen,
 }: {
   rank: number;
   image?: string;
@@ -189,10 +191,16 @@ function GridRow({
   clanTagIcon?: string;
   xp?: number;
   days?: number;
+  onOpen?: () => void;
 }) {
   const tag = cleanTag(clanTag);
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-3 transition hover:border-white/25">
+    <div
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen}
+      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-3 transition hover:border-white/25 active:scale-[0.99]"
+    >
       <span
         className={cn(
           "w-7 shrink-0 text-center font-display text-[15px] font-black leading-none",
@@ -246,6 +254,12 @@ function GridRow({
  */
 function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => void }) {
   const [period, setPeriod] = useState<Period>("7");
+  const navigate = useNavigate();
+  const openProfile = (id?: string) => {
+    if (!id) return;
+    onClose();
+    navigate(`/akun?user=${id}`);
+  };
   const xpRows = useQuery(api.xp.leaderboard, {
     period: xpKeyOf(period),
     limit: 50,
@@ -264,6 +278,7 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
 
   type Entry = {
     rank: number;
+    userId?: string;
     image?: string;
     border?: string;
     username?: string;
@@ -278,6 +293,7 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
     mode === "xp"
       ? (xpRows ?? []).map((r) => ({
           rank: r.rank,
+          userId: r.userId,
           image: r.image,
           border: r.avatarBorder,
           username: r.username,
@@ -291,6 +307,7 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
           const p = byId.get(g.userId ?? "");
           return {
             rank: i + 1,
+            userId: g.userId,
             image: g.image ?? p?.image,
             border: g.avatarBorder ?? p?.avatarBorder,
             username: g.username ?? p?.username,
@@ -329,6 +346,24 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
       </header>
 
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-6">
+        {/* TAB PERIODE — dipisah dari kotak dan diletakkan paling atas. */}
+        <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/12 bg-[#0d1017] p-1.5">
+          {PERIODS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={cn(
+                "rounded-xl px-2 py-2.5 text-[11.5px] font-black transition",
+                period === p.key
+                  ? "bg-gradient-to-b from-[#FFE58A] to-[#FFD23F] text-black shadow-[0_8px_20px_-14px_rgba(255,210,63,.9)]"
+                  : "text-white/60 hover:bg-white/10 hover:text-white",
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         {/* SATU KOTAK besar berisi semuanya. */}
         <section className={cn("relative overflow-hidden rounded-3xl border p-3", tone.box)}>
           <span
@@ -351,24 +386,6 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
             </span>
           </div>
 
-          {/* Tombol periode */}
-          <div className="relative grid grid-cols-3 gap-1.5 rounded-2xl border border-white/12 bg-black/35 p-1.5">
-            {PERIODS.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPeriod(p.key)}
-                className={cn(
-                  "rounded-xl px-2 py-2 text-[11px] font-black transition",
-                  period === p.key
-                    ? "bg-white text-black shadow-[0_8px_20px_-14px_rgba(0,0,0,.9)]"
-                    : "text-white/75 hover:bg-white/10",
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
           {/* TOP 1-3 — foto agak besar + hiasan masing-masing, DI DALAM kotak
               berwarna (bukan pinggiran). */}
           <div className="relative mt-3 grid grid-cols-3 gap-2">
@@ -376,10 +393,11 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
               top3.map((r) => {
                 const rk = RANK[r.rank as 1 | 2 | 3] ?? RANK[3];
                 return (
-                  <div
+                  <button
                     key={`${r.rank}-${r.username ?? r.rank}`}
+                    onClick={() => openProfile(r.userId)}
                     className={cn(
-                      "relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border px-1.5 py-3",
+                      "relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border px-1.5 py-3 transition active:scale-[0.98]",
                       rk.card,
                       rk.glow,
                     )}
@@ -422,7 +440,7 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
                         className="shrink-0"
                       />
                     )}
-                  </div>
+                  </button>
                 );
               })
             ) : (
@@ -455,6 +473,7 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
                   clanTagIcon={r.clanTagIcon}
                   xp={r.xp}
                   days={r.days}
+                  onOpen={() => openProfile(r.userId)}
                 />
               ))}
             </div>

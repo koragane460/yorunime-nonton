@@ -7,6 +7,7 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { StripBackIcon } from "@/components/StripBack";
 import {
+  ArrowRight,
   ChevronLeft,
   Disc3,
   Heart,
@@ -279,28 +280,39 @@ function LibraryView({
 }) {
   return (
     <div className="thin-scroll relative z-10 min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-      {/* Pencarian */}
-      <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15">
-        <Search className="size-4 shrink-0 text-white/60" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSearch()}
-          placeholder="Cari lagu atau artis…"
-          className="w-full bg-transparent text-sm outline-none placeholder:text-white/45"
-        />
-        {q && (
-          <button onClick={() => setQ("")} aria-label="Bersihkan">
-            <X className="size-4 text-white/60" />
+      {/* Pencarian — pill besar dengan aksen gradient tipis. */}
+      <div className="relative overflow-hidden rounded-full bg-gradient-to-r from-white/25 via-white/10 to-white/25 p-[1px]">
+        <div className="flex items-center gap-2 rounded-full bg-[#11141b] px-3.5 py-2.5">
+          <Search className="size-4 shrink-0 text-white/55" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSearch()}
+            placeholder="Cari judul lagu atau artis…"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-white/40"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              aria-label="Bersihkan"
+              className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10"
+            >
+              <X className="size-3 text-white/70" />
+            </button>
+          )}
+          <button
+            onClick={onSearch}
+            disabled={searching}
+            aria-label="Cari"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFE58A] to-[#FFD23F] text-black transition active:scale-95 disabled:opacity-60"
+          >
+            {searching ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <ArrowRight className="size-3.5" />
+            )}
           </button>
-        )}
-        <button
-          onClick={onSearch}
-          disabled={searching}
-          className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold text-black disabled:opacity-60"
-        >
-          {searching ? <Loader2 className="size-3 animate-spin" /> : "Cari"}
-        </button>
+        </div>
       </div>
 
       {shown ? (
@@ -402,19 +414,30 @@ function LibraryView({
                 akunnya (query di backend sengaja tidak menerima userId). */}
             {likedRows.length > 0 && (
               <section className="mt-6">
-                <h2 className="mb-2.5 flex items-center gap-1.5 text-sm font-bold">
-                  <Heart className="size-4 fill-current text-[oklch(0.86_0.16_90)]" />{" "}
-                  Disukai
-                  <span className="text-[11px] font-medium text-white/45">
-                    ({likedRows.length} - privat)
-                  </span>
-                </h2>
-                <div className="flex flex-col">
+                <div className="mb-2.5 flex items-end justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="flex items-center gap-1.5 text-[15px] font-black tracking-tight">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-[#FFD23F]/15">
+                        <Heart className="size-3 fill-[#FFD23F] text-[#FFD23F]" />
+                      </span>
+                      Disukai
+                    </h2>
+                    <p className="mt-0.5 text-[10px] font-medium text-white/40">
+                      Playlist pribadi · {likedRows.length} lagu · hanya kamu
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onPick(likedRows.map(toTrack), 0)}
+                    className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black text-white/80 transition active:scale-95"
+                  >
+                    Putar semua
+                  </button>
+                </div>
+                <div className="thin-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
                   {likedRows.map((lt, i) => (
-                    <TrackRow
+                    <CoverCard
                       key={`lk_${lt.key}_${i}`}
                       track={toTrack(lt)}
-                      active={false}
                       onPlay={() => onPick(likedRows.map(toTrack), i)}
                     />
                   ))}

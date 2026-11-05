@@ -953,8 +953,8 @@ function ClanDetailScreen({
 
           {/* DESKRIPSI CLAN — kotak BIRU LANGIT lembut, berbeda dari kotak
               pengumuman (emas) dan kotak claim berlian (kuning). */}
-          <div className="relative mt-2.5 overflow-hidden rounded-xl border border-[#1CA7EC]/45 bg-[#1CA7EC]/[0.09] px-3.5 py-3 pl-4">
-            <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-[#1CA7EC]" />
+          <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-[#1CA7EC]/45 bg-[#1CA7EC]/[0.09] px-3.5 py-3 pl-4">
+            <span aria-hidden className="absolute inset-y-2.5 left-1 w-[3px] rounded-full bg-[#1CA7EC]" />
             {(c as any).description ? (
               <p className="text-[11.5px] leading-relaxed text-zinc-200/95">
                 {(c as any).description}

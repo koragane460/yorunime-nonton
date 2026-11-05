@@ -1246,6 +1246,10 @@ textarea:focus-visible,
   outline: none;
   box-shadow: 0 0 0 1px oklch(1 0 0 / 0.14);
 }
+/* Kolom cari tanpa kotak fokus tambahan di dalam pill. */
+.yn-search-input:focus-visible {
+  box-shadow: none;
+}
 ::selection {
   background: oklch(0.86 0.18 88 / 0.38);
   color: #fff;
@@ -1569,6 +1573,64 @@ a {
 .yn-frame-ember,
 .yn-frame-royal {
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.18), 0 12px 26px -20px rgb(0 0 0 / 0.95);
+}
+/* ---- BORDER PREMIUM BARU (statis, rapi, bukan partikel berulang) ---- */
+.yn-frame-rosegold {
+  background:
+    repeating-linear-gradient(118deg, rgb(255 255 255 / 0.16) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #f7d6c4, #c98a72 38%, #8e5344 62%, #f3c8b4);
+  box-shadow:
+    inset 0 0 0 1.5px rgb(255 236 226 / 0.55),
+    0 0 0 1px rgb(201 138 114 / 0.55),
+    0 10px 24px -18px rgb(0 0 0 / 0.95);
+}
+.yn-frame-sapphire {
+  background:
+    conic-gradient(from 20deg, #0b2a55, #1f6bb8 18%, #7bc6ff 30%, #123a72 44%, #0a1f3f 60%, #2b7fd4 78%, #0b2a55);
+  box-shadow:
+    inset 0 0 0 1.5px rgb(190 226 255 / 0.5),
+    0 0 0 1px rgb(43 127 212 / 0.6),
+    0 0 18px -6px rgb(56 150 240 / 0.6);
+}
+.yn-frame-imperial {
+  background:
+    repeating-conic-gradient(from 0deg, #fff2b8 0deg 6deg, #b8860b 6deg 10deg, #f6c435 10deg 16deg, #7a5a06 16deg 22deg);
+  box-shadow:
+    inset 0 0 0 2px rgb(0 0 0 / 0.35),
+    0 0 0 2px rgb(246 196 53 / 0.45),
+    0 0 22px -8px rgb(246 196 53 / 0.8);
+}
+.yn-frame-imperial::after {
+  content: "";
+  position: absolute;
+  inset: -6px -2px auto;
+  height: 10px;
+  background:
+    conic-gradient(from 90deg at 50% 100%, transparent 0 12%, #f6c435 12% 18%, transparent 18% 30%, #f6c435 30% 36%, transparent 36% 64%, #f6c435 64% 70%, transparent 70% 82%, #f6c435 82% 88%, transparent 88%);
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.6));
+  pointer-events: none;
+}
+.yn-frame-obsidian {
+  background:
+    repeating-conic-gradient(from 8deg, #2a2d33 0deg 9deg, #111318 9deg 18deg, #3a3f47 18deg 22deg),
+    #111318;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(226 232 240 / 0.55),
+    0 0 0 1px rgb(203 213 225 / 0.35),
+    0 0 20px -8px rgb(148 163 184 / 0.7);
+}
+.yn-frame-obsidian::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  bottom: 16%;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #e0f2fe, #38bdf8 55%, #1d4ed8);
+  box-shadow: 0 0 8px rgb(56 189 248 / 0.9);
+  transform: rotate(45deg);
+  pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .yn-frame-aurora,
@@ -2452,6 +2514,16 @@ a {
 /* ------------------------------------------------------------------
  * TAG CLAN — 6 tier dengan BENTUK dan BACKGROUND yang benar-benar beda.
  * ------------------------------------------------------------------ */
+/* Preview border di Shop: hentikan animasi muter/kilau supaya preview
+   terlihat rapi dan tenang (permintaan: "gausah mute muter border-nya"). */
+.yn-frame-still .yn-frame,
+.yn-frame-still .yn-frame *,
+.yn-frame-still .yn-frame::before,
+.yn-frame-still .yn-frame::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 .clan-tag-tier-1 {
   clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 50%, 100% 100%, 0 100%, 9px 50%);
   background-image:

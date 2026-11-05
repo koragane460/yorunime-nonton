@@ -378,8 +378,10 @@ export function PetArt({
         loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}
+        // object-contain: seluruh badan pet terlihat (tidak terpotong),
+        // tanpa lingkaran latar yang membuat sudut foto terlihat kasar.
         className={cn(
-          "size-full rounded-full object-cover object-center",
+          "size-full object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,0.45)]",
           className,
         )}
       />

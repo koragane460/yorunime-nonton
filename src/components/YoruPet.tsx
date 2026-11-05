@@ -14,7 +14,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ChevronLeft, Egg, BookOpen, Coins, Gift, Settings2, Sparkles } from "lucide-react";
+import {
+  ChevronLeft,
+  Egg,
+  BookOpen,
+  Coins,
+  Gift,
+  Mountain,
+  Settings2,
+  Sparkles,
+} from "lucide-react";
 import { StripBackIcon } from "@/components/StripBack";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -168,9 +177,10 @@ export function YoruPetScreen({
     }
   };
 
-  const doClaim = () =>
+  /** Klaim Sacret SATU pet — tiap pet punya jeda 24 jam sendiri. */
+  const doClaim = (uid: string) =>
     void run(async () => {
-      const r = await claimM({});
+      const r = await claimM({ uid });
       toast.success(`Klaim +${r.amount.toLocaleString("id-ID")} Sacret!`);
     });
 
@@ -355,50 +365,8 @@ export function YoruPetScreen({
           {/* Panggung TANPA kotak pembatas — hanya background, pet
               berdiri langsung di atasnya (permintaan user). */}
           <div className="relative h-72 w-full max-w-2xl overflow-hidden">
-            {/* ---- LAPISAN LANGIT (scene) ---- */}
-            <div
-              className={cn("absolute inset-0 bg-gradient-to-b", scene.sky)}
-              aria-hidden
-            />
-            {scene.image && (
-              <img
-                src={scene.image}
-                alt=""
-                className="absolute inset-0 size-full object-cover"
-              />
-            )}
-            {/* Grain film + titik rapat + vignette panggung — tekstur biar
-                tidak terlalu smooth. */}
-            <svg
-              aria-hidden
-              className="pointer-events-none absolute inset-0 size-full opacity-30 mix-blend-overlay"
-            >
-              <filter id="yn-stage-noise">
-                <feTurbulence
-                  type="fractalNoise"
-                  baseFrequency="0.9"
-                  numOctaves="3"
-                  stitchTiles="stitch"
-                />
-              </filter>
-              <rect width="100%" height="100%" filter="url(#yn-stage-noise)" />
-            </svg>
-            <span
-              aria-hidden
-              className="absolute inset-0 opacity-60 mix-blend-overlay bg-[radial-gradient(rgba(255,255,255,0.16)_1px,transparent_1.2px)] [background-size:9px_9px]"
-            />
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.24)_1px,transparent_1.1px)] opacity-70 [background-size:11px_11px] [background-position:4px_5px]"
-            />
-            <span
-              aria-hidden
-              className="absolute inset-0 opacity-35 mix-blend-soft-light bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.16)_0px,rgba(255,255,255,0.16)_1px,transparent_1px,transparent_6px)]"
-            />
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.45)_100%)]"
-            />
+            {/* Panggung transparan: TIDAK ada kotak/latar kedua di tengah —
+                pet langsung berdiri di atas background kebun. */}
             {/* Sinar matahari/bulan — halus, tanpa glow menyilaukan. */}            <span
               aria-hidden
               className="absolute -right-10 -top-12 size-32 rounded-full bg-white/15 blur-2xl"
@@ -410,36 +378,6 @@ export function YoruPetScreen({
             {/* Hiasan khas scene — dahan melengkung + detail beranimasi. */}
             <SceneDecor key={scene.id} id={scene.id} />
 
-            {/* ---- DUA LAPIS BUKIT JAUH (siluet) ---- */}
-            <svg
-              viewBox="0 0 400 120"
-              preserveAspectRatio="none"
-              className="absolute inset-x-0 bottom-[26%] h-24 w-full"
-              aria-hidden
-            >
-              <path
-                d="M0 88 Q 60 36 120 74 T 260 66 T 400 84 L400 120 L0 120 Z"
-                fill="rgba(0,0,0,0.42)"
-              />
-              <path
-                d="M0 104 Q 90 62 180 94 T 400 98 L400 120 L0 120 Z"
-                fill="rgba(0,0,0,0.62)"
-              />
-            </svg>
-
-            {/* ---- LAPISAN LANTAI ---- */}
-            <div
-              className={cn(
-                "absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b opacity-85",
-                scene.floor,
-              )}
-              aria-hidden
-            />
-            {/* Kilau rumput / pantulan cahaya di lantai. */}
-            <span
-              aria-hidden
-              className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent"
-            />
             {/* Partikel melayang DI DALAM panggung (lebih dekat ke pet). */}
             {particles.map((p, i) => (
               <motion.span
@@ -453,12 +391,6 @@ export function YoruPetScreen({
                 {scene.particle}
               </motion.span>
             ))}
-            {/* Vignette biar fokus ke tengah. */}
-            <span
-              aria-hidden
-              className="absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.7)]"
-            />
-
             {/* pet berjalan + bubble klaim di atasnya */}
             {equipped ? (
               <motion.div
@@ -472,19 +404,19 @@ export function YoruPetScreen({
                   "absolute -top-10 left-1/2 w-max max-w-[160px] -translate-x-1/2",
                   isView && "hidden",
                 )}>
-                  {claimReady ? (
+                  {equipped.claimReady ? (
                     <button
-                      onClick={doClaim}
+                      onClick={() => doClaim(equipped.uid)}
                       disabled={busy}
                       className="flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-[10px] font-black text-black shadow-[0_0_16px_-4px_rgba(255,207,64,.9)] transition active:scale-95"
                     >
                       <Gift className="size-3" aria-hidden />
-                      Klaim {claimTotal.toLocaleString("id-ID")} Sacret
+                      Klaim {((equipped.claim ?? 0) + boost).toLocaleString("id-ID")}
                     </button>
                   ) : (
-                    <div className="rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-center text-[10px] font-bold text-zinc-200 backdrop-blur-sm">
-                      <span className="mr-1">🎁</span>
-                      {fmtLeft(claimIn - tick * 1000)}
+                    <div className="flex items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-center text-[10px] font-bold text-zinc-200 backdrop-blur-sm">
+                      <Gift className="size-3 text-gold" aria-hidden />
+                      {fmtLeft((equipped.claimIn ?? 0) - tick * 1000)}
                     </div>
                   )}
                 </div>
@@ -575,6 +507,25 @@ export function YoruPetScreen({
                     delay: i * 0.2,
                   }}
                 >
+                  {/* Klaim Sacret sendiri-sendiri per pet. */}
+                  {!isView && (
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2">
+                      {p.claimReady ? (
+                        <button
+                          onClick={() => doClaim(p.uid)}
+                          disabled={busy}
+                          className="flex items-center gap-1 whitespace-nowrap rounded-full bg-gold px-1.5 py-0.5 text-[9px] font-black text-black"
+                        >
+                          <Gift className="size-2.5" /> Klaim
+                        </button>
+                      ) : (
+                        <span className="flex items-center gap-0.5 whitespace-nowrap rounded-full bg-black/55 px-1.5 py-0.5 text-[8.5px] font-bold text-zinc-300">
+                          <Gift className="size-2.5 text-gold" />
+                          {fmtLeft((p.claimIn ?? 0) - tick * 1000)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className={cn("relative size-12 sm:size-14", RARITY_STYLE[p.rarity as PetRarity]?.glow)}>
                     <PetArt petId={p.petId} />
                   </div>
@@ -634,7 +585,7 @@ export function YoruPetScreen({
               onClick={() => setSheet("scene")}
               className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl bg-gradient-to-b from-teal-400 to-emerald-700 py-3 text-black shadow-[0_10px_22px_-10px_rgba(16,185,129,.85)] transition active:scale-[0.97]"
             >
-              <span className="text-lg leading-none" aria-hidden>🏞️</span>
+              <Mountain className="size-5" aria-hidden />
               <span className="mt-0.5 block text-[12px] font-black leading-tight">Scene</span>
               <span className="block text-[9px] font-bold opacity-80">ganti latar</span>
             </button>
