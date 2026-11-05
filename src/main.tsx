@@ -203,9 +203,11 @@ createRoot(document.getElementById("root")!).render(
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/home" />}
               />
+              {/* Login sekarang menyatu dengan welcome (slide ke-3), jadi
+                  rute lama diarahkan ke alur yang sama. */}
               <Route
                 path="/login"
-                element={<Login />}
+                element={<Welcome />}
               />
               <Route
                 path="/dashboard"

@@ -3,6 +3,13 @@
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
 
+/* Font display khusus layar sambutan (Welcome / SIAP MULAI?). */
+.yn-fredoka {
+  font-family: "Fredoka One", var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
 /* Aksen kuning: star rating, badge highlights, tab indicator, New badge */
 .yn-gold-star {
   color: var(--gold-strong);

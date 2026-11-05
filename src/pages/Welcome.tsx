@@ -11,16 +11,20 @@ import {
   ArrowRight,
   Ban,
   ChevronLeft,
-  ChevronDown,
   ChevronUp,
   Clock,
   Crown,
   Film,
   Flag,
   FlaskConical,
+  Gift,
   Heart,
   Info,
   KeyRound,
+  MonitorPlay,
+  ShieldUser,
+  TrendingUp,
+  User,
   Loader2,
   LogIn,
   Mail,
@@ -139,32 +143,57 @@ function Starfield() {
   );
 }
 
-/** Tiga teks peraturan di layar Disclaimer (kotak judul + teks di bawah). */
+/** Tiga teks peraturan di layar Disclaimer (tanpa kotak latar). */
 const RULE_CARDS = [
-  "Dilarang untuk menyebutkan nama merek lain agar tidak terjadi kegaduhan & perselisihan",
+  "Dilarang untuk menyebutkan nama merek lain agar tidak terjadi kegaduhan & perselisihan, dan ingat YoruNime adalah aplikasi tidak resmi atau aplikasi pihak ketiga.",
   "Aplikasi ini tidak mengunggah, menyimpan, dan menyalahgunakan konten media. Semua tautan berasal dari sumber publik di media.",
-  "Jika merasa konten yang ada di YoruNime mempunyai hak cipta, jangan membuat issue untuk hal yang tidak pasti. Dan jika merasa konten yang diberikan memiliki Hak Cipta silahkan hubungi yorunimesupport@gmail.com",
+  "Jika merasa konten di YoruNime mempunyai hak cipta, jangan membuat issue untuk hal yang tidak pasti. Hubungi yorunimesupport@gmail.com.",
 ];
 
-/** Petunjuk scroll-down beranimasi (animasi saja, bukan scroll sungguhan). */
-function ScrollCue({ onClick, label }: { onClick: () => void; label: string }) {
+/** Kredensial akun tester (sama dengan halaman login lama). */
+const TESTER_USER = "Tester YoruNime";
+const TESTER_PASS = "yttaajadeh";
+
+/**
+ * Isi dokumen legal. GANTI teks di sini saat Privacy Policy / Terms of
+ * Service sudah siap — modal otomatis menampilkan isi array ini.
+ */
+const LEGAL_DOCS: Record<"privacy" | "terms", { title: string; body: string[] }> = {
+  privacy: {
+    title: "Privacy Policy",
+    body: [
+      "YoruNime menyimpan data akun seperlunya untuk sinkronisasi riwayat nonton, level, dan daftar favorit.",
+      "Kami tidak menjual data pengguna ke pihak ketiga.",
+      "Kebijakan ini masih dalam penyusunan dan akan diperbarui.",
+    ],
+  },
+  terms: {
+    title: "Terms of Service",
+    body: [
+      "YoruNime adalah aplikasi tidak resmi/pihak ketiga yang menautkan konten dari sumber publik.",
+      "Pengguna wajib mengikuti peraturan komunitas dan menghormati hak cipta pemilik konten.",
+      "Ketentuan ini masih dalam penyusunan dan akan diperbarui.",
+    ],
+  },
+};
+
+/** Petunjuk scroll beranimasi ke ATAS (tanpa teks). */
+function ScrollCue({ onClick }: { onClick?: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="mx-auto mt-8 flex w-40 flex-col items-center gap-1.5 px-2 py-1 transition active:scale-95"
+      aria-label="Lanjut"
+      className="mx-auto mt-6 flex w-16 flex-col items-center py-2 transition active:scale-95"
     >
-      <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-zinc-400">
-        {label}
-      </span>
       <motion.span
         className="flex flex-col items-center"
-        animate={{ y: [0, 7, 0] }}
-        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ y: [0, -7, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
         aria-hidden
       >
-        <ChevronDown className="size-5 text-white/85" />
-        <ChevronDown className="-mt-2.5 size-5 text-white/35" />
+        <ChevronUp className="size-5 text-white/30" />
+        <ChevronUp className="-mt-2.5 size-5 text-white/85" />
       </motion.span>
     </button>
   );
@@ -187,6 +216,15 @@ function WelcomeFlow() {
     "intro",
   );
   const discRef = useRef<HTMLDivElement | null>(null);
+  const loginRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  /** true = langsung geser ke bagian login (mis. percobaan auto-login gagal). */
+  const [focusLogin, setFocusLogin] = useState(false);
+  const [testerOpen, setTesterOpen] = useState(false);
+  const [testerUser, setTesterUser] = useState("");
+  const [testerPass, setTesterPass] = useState("");
+  const [testerErr, setTesterErr] = useState<string | null>(null);
+  const [legalDoc, setLegalDoc] = useState<null | "privacy" | "terms">(null);
   const [loggingIn, setLoggingIn] = useState(false);
   // true = aplikasi baru dibuka kembali (balik dari tab/app lain) → tampilkan
   // layar YoruNime sebentar supaya konten lama tidak kelihatan.
@@ -323,7 +361,8 @@ function WelcomeFlow() {
             e instanceof Error ? e.message : "Gagal masuk secara otomatis.";
           if (attempts >= 5) {
             setAnonErr(msg);
-            setStage("login");
+            setFocusLogin(true);
+            setStage("onboard");
             return;
           }
           await new Promise((r) => setTimeout(r, 700));
@@ -342,11 +381,6 @@ function WelcomeFlow() {
       navigate("/home", { replace: true });
       return;
     }
-    // Sudah pernah onboard → langsung ke layar LOGIN (Google / tester).
-    if (readOnboarded()) {
-      navigate("/login", { replace: true });
-      return;
-    }
     setStage("onboard");
   };
   useEffect(() => {
@@ -359,6 +393,23 @@ function WelcomeFlow() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, updatePending, reopened, isAuthenticated]);
+
+  // Bagian login ada di slide ke-3 pada SATU halaman scroll. Kalau user
+  // sudah pernah onboard (atau auto-login gagal), langsung geser ke sana.
+  useEffect(() => {
+    if (stage !== "onboard") return;
+    if (!focusLogin && !readOnboarded()) return;
+    const t = setTimeout(() => {
+      loginRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [stage, focusLogin]);
+
+  /** Tandai onboard selesai begitu user sudah masuk area login. */
+  const handleOnboardScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop > el.clientHeight * 1.4) saveOnboarded();
+  };
 
   // Sudah login sejak awal → jangan tampilkan welcome sama sekali.
   // CATATAN: early return ini harus SETELAH semua hook di atas — kalau
@@ -377,6 +428,19 @@ function WelcomeFlow() {
       setLoginErr(e instanceof Error ? e.message : "Gagal masuk. Coba lagi.");
       setLoggingIn(false);
     }
+  };
+
+  /** Tester: cek username/password dulu, baru buat sesi. */
+  const doTesterLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (testerUser.trim() !== TESTER_USER || testerPass !== TESTER_PASS) {
+      setTesterErr("Username atau password tester salah.");
+      return;
+    }
+    setTesterErr(null);
+    setTesterOpen(false);
+    saveOnboarded();
+    await doAnonLogin();
   };
 
   /** Masuk pakai akun Google (Firebase) → sesi dikirim ke Convex. */
@@ -689,103 +753,291 @@ function WelcomeFlow() {
             exit={{ opacity: 0, y: -32 }}
             transition={{ duration: 0.28 }}
           >
-            {/* Header: hanya tombol Lewati — navigasi utama lewat scroll */}
-            <div className="flex items-center justify-end px-5 pb-1 pt-6">
-              <button
-                onClick={() => {
-                  saveOnboarded();
-                  navigate("/login", { replace: true });
-                }}
-                className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
-              >
-                Lewati
-              </button>
-            </div>
-
-            {/* Isi: satu halaman panjang — scroll VERTIKAL ke bawah
-                (Welcome → Disclaimer), bukan geser ke samping. */}
-            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+            <div
+              ref={scrollRef}
+              onScroll={handleOnboardScroll}
+              className="thin-scroll h-full snap-y snap-mandatory scroll-smooth overflow-y-auto overscroll-contain px-5"
+            >
               <motion.div
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.35 }}
               >
-                    <div className="flex min-h-[64vh] flex-col items-center justify-center text-center">
-                      <h1
-                        className="text-6xl font-black leading-none tracking-tight yn-title"
-                        style={{
-                          // Huruf "putus-putus": gradasi garis horizontal
-                          // yang memotong teks (background-clip: text).
-                          backgroundImage:
-                            "repeating-linear-gradient(180deg, rgba(255,255,255,0.98) 0 11px, rgba(255,255,255,0) 11px 17px)",
-                          WebkitBackgroundClip: "text",
-                          backgroundClip: "text",
-                          color: "transparent",
-                        }}
-                      >
-                        Welcome
-                      </h1>
-                      <p className="mt-7 text-lg font-bold leading-snug text-white/90">
-                        Aplikasi nonton anime, donghua &amp; film
-                      </p>
-                      <p className="mt-1 text-lg font-bold leading-snug text-white/70">
-                        baca manga &amp; manhwa
-                      </p>
-                    </div>
-                    {/* Petunjuk scroll ke bawah — murni animasi */}
-                    <ScrollCue
-                      label="Scroll"
-                      onClick={() =>
-                        discRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-                      }
-                    />
-                    <div ref={discRef} className="h-4 shrink-0" aria-hidden />
+                {/* ================= SLIDE 1 — WELCOME ================= */}
+                <section className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]">
+                  <p className="text-center text-[11px] font-black tracking-[0.22em] text-white">
+                    APP: {APP_VERSION}.0 (1)
+                  </p>
+                  <div className="flex flex-1 flex-col items-center justify-center text-center">
+                    <h1 className="yn-fredoka text-[clamp(3.4rem,16vw,6rem)] leading-none text-white">
+                      Welcome
+                    </h1>
+                    <p className="mt-3 max-w-[19rem] text-[12.5px] font-semibold leading-snug text-white/40">
+                      Aplikasi nonton anime, donghua &amp; film
+                      <br />
+                      baca manga &amp; manhwa
+                    </p>
+                  </div>
+                  <ScrollCue
+                    onClick={() =>
+                      discRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                  />
+                </section>
 
-                    {/* -------- Disclaimer — bagian kedua, di-scroll vertikal -------- */}
-                    <div className="pt-10">
-                    <h2 className="text-4xl leading-none tracking-tight yn-title">
+                {/* ================= SLIDE 2 — DISCLAIMER ================= */}
+                <section
+                  ref={discRef}
+                  className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]"
+                >
+                  <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
+                    {APP_VERSION}.0 (1)
+                  </p>
+                  <div className="flex flex-1 flex-col justify-center py-8">
+                    <h2 className="yn-fredoka text-[2.6rem] leading-none text-white">
                       Disclaimer
                     </h2>
-                    <p className="mt-3 max-w-md text-[12px] leading-relaxed text-muted-foreground">
-                      YoruNime adalah aplikasi tidak resmi atau aplikasi pihak
-                      ketiga. diharap untuk mengikuti peraturan yang ada
-                    </p>
-                    {/* Peraturan: kotak rounded + teks di bawahnya. Kotak #3
-                        berlatar kuning tipis (tidak terlalu mencolok). */}
-                    <div className="mt-6 space-y-4">
+                    <div className="mt-7 space-y-5">
                       {RULE_CARDS.map((text, i) => (
                         <div key={i}>
-                          <div
-                            className={cn(
-                              "rounded-2xl border px-4 py-2.5 text-center text-sm font-black",
-                              i === 2
-                                ? "border-amber-300/35 bg-amber-300/15 text-amber-100"
-                                : "border-white/12 bg-white/[0.07] text-white",
-                            )}
-                          >
-                            Peraturan #{i + 1}
-                          </div>
-                          <p className="mt-2 text-[13px] leading-relaxed text-white/80">
+                          <p className="text-[15px] font-black tracking-tight text-[#1CA7EC]">
+                            | Peraturan #{i + 1}
+                          </p>
+                          <p className="mt-1.5 text-[12px] leading-relaxed text-white/40">
                             {text}
                           </p>
                         </div>
                       ))}
                     </div>
-                    {/* Animasi scroll-down → ke layar Login (tanpa background) */}
-                    <ScrollCue
-                      label="Scroll"
-                      onClick={() => {
-                        saveOnboarded();
-                        navigate("/login", { replace: true });
-                      }}
-                    />
-                    <div className="h-4 shrink-0" aria-hidden />
+                  </div>
+                  <ScrollCue
+                    onClick={() =>
+                      loginRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                  />
+                </section>
+
+                {/* ================= SLIDE 3 — LOGIN ================= */}
+                <section
+                  ref={loginRef}
+                  className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]"
+                >
+                  <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
+                    {APP_VERSION}.0 (1)
+                  </p>
+                  <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-6">
+                    <h2 className="yn-fredoka text-[clamp(2.7rem,12vw,3.8rem)] leading-none text-white">
+                      SIAP MULAI?
+                    </h2>
+                    <p className="mt-2 rounded-2xl bg-white/[0.045] px-3 py-2 text-[10.5px] leading-snug text-white/45">
+                      YoruNime mewajibkan mu login dengan google untuk
+                      sinkronisasi riwayat nonton, level akun, dan list favorite
+                      mu.
+                    </p>
+
+                    {/* 4 kotak fitur — 2x2, ukuran sama. */}
+                    <div className="mt-2.5 grid grid-cols-2 gap-2">
+                      {[
+                        { icon: MonitorPlay, label: "1080p Kualitas" },
+                        { icon: Users, label: "Komunitas" },
+                        { icon: TrendingUp, label: "Leveling" },
+                        { icon: Gift, label: "FREE" },
+                      ].map(({ icon: Icon, label }) => (
+                        <div
+                          key={label}
+                          className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2"
+                        >
+                          <Icon className="size-4 shrink-0 text-[#1CA7EC]" />
+                          <span className="text-[10.5px] font-black leading-tight text-white">
+                            {label}
+                          </span>
+                        </div>
+                      ))}
                     </div>
+
+                    {/* Login Google */}
+                    <button
+                      onClick={doGoogleLogin}
+                      disabled={loggingIn}
+                      className="mt-2.5 flex h-14 w-full items-center gap-3 rounded-2xl bg-white px-3 text-left transition active:scale-[0.99] disabled:opacity-60"
+                    >
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white">
+                        <GoogleGIcon className="size-6" />
+                      </span>
+                      <span className="flex-1 text-[12px] font-black text-zinc-900">
+                        Tekan Disini Untuk Login
+                      </span>
+                      <ArrowRight className="size-5 text-zinc-900/35" />
+                    </button>
+
+                    <div className="my-3 flex items-center gap-3">
+                      <span className="h-px flex-1 bg-white/30" />
+                      <span className="text-[9.5px] font-black tracking-[0.22em] text-white/30">
+                        ATAU
+                      </span>
+                      <span className="h-px flex-1 bg-white/30" />
+                    </div>
+
+                    {/* Tester */}
+                    <button
+                      onClick={() => {
+                        setTesterErr(null);
+                        setTesterOpen(true);
+                      }}
+                      className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3.5 py-3 transition active:scale-[0.99]"
+                    >
+                      <ShieldUser className="size-6 shrink-0 text-[#1CA7EC]" />
+                      <span className="text-[12px] font-black text-white">
+                        Tester Login Only
+                      </span>
+                    </button>
+
+                    <p className="mt-3 text-center text-[9.5px] leading-relaxed text-white/40">
+                      Dengan melakukan login maka kamu telah setuju dengan{" "}
+                      <button
+                        onClick={() => setLegalDoc("privacy")}
+                        className="font-bold text-[#1CA7EC]"
+                      >
+                        Privacy Policy
+                      </button>{" "}
+                      &amp;{" "}
+                      <button
+                        onClick={() => setLegalDoc("terms")}
+                        className="font-bold text-[#1CA7EC]"
+                      >
+                        Terms of Service
+                      </button>
+                      .
+                    </p>
+
+                    {(loginErr || anonErr) && (
+                      <p className="mt-2 text-center text-[10.5px] font-semibold text-red-400">
+                        {loginErr ?? anonErr}
+                      </p>
+                    )}
+                  </div>
+                </section>
               </motion.div>
             </div>
 
-            {/* Tombol Lanjut DIHAPUS — navigasi lewat scroll vertikal +
-                animasi scroll di paling bawah (permintaan user). */}
+            {/* Modal Tester Login */}
+            <AnimatePresence>
+              {testerOpen && (
+                <motion.div
+                  key="tester"
+                  className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setTesterOpen(false)}
+                >
+                  <motion.form
+                    onSubmit={doTesterLogin}
+                    onClick={(e) => e.stopPropagation()}
+                    initial={{ opacity: 0, scale: 0.94, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#0c1017] p-5 shadow-2xl"
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="size-6" />
+                      <User className="size-8 text-white" />
+                      <button
+                        type="button"
+                        onClick={() => setTesterOpen(false)}
+                        aria-label="Tutup"
+                        className="text-white/50 transition hover:text-white"
+                      >
+                        <X className="size-5" />
+                      </button>
+                    </div>
+                    <h3 className="mt-2 text-center text-lg font-black text-white">
+                      Tester Login
+                    </h3>
+                    <div className="mt-4 space-y-2.5">
+                      <Input
+                        value={testerUser}
+                        onChange={(e) => setTesterUser(e.target.value)}
+                        placeholder="Username Tester"
+                        autoComplete="username"
+                        className="h-11 rounded-xl border-white/10 bg-white/[0.05] text-sm text-white"
+                      />
+                      <Input
+                        value={testerPass}
+                        onChange={(e) => setTesterPass(e.target.value)}
+                        placeholder="Password Tester"
+                        type="password"
+                        autoComplete="current-password"
+                        className="h-11 rounded-xl border-white/10 bg-white/[0.05] text-sm text-white"
+                      />
+                    </div>
+                    {testerErr && (
+                      <p className="mt-2 text-[11px] font-semibold text-red-400">
+                        {testerErr}
+                      </p>
+                    )}
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        type="submit"
+                        disabled={loggingIn}
+                        className="h-9 rounded-xl px-4 text-xs font-black"
+                      >
+                        {loggingIn ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          "Login"
+                        )}
+                      </Button>
+                    </div>
+                  </motion.form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Modal Privacy Policy / Terms of Service */}
+            <AnimatePresence>
+              {legalDoc && (
+                <motion.div
+                  key="legal"
+                  className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setLegalDoc(null)}
+                >
+                  <motion.div
+                    onClick={(e) => e.stopPropagation()}
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    className="w-full max-w-md rounded-3xl border border-white/12 bg-[#0c1017] p-5 shadow-2xl"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-black text-white">
+                        {LEGAL_DOCS[legalDoc].title}
+                      </h3>
+                      <button
+                        onClick={() => setLegalDoc(null)}
+                        aria-label="Tutup"
+                        className="text-white/50 transition hover:text-white"
+                      >
+                        <X className="size-5" />
+                      </button>
+                    </div>
+                    <div className="thin-scroll mt-3 max-h-[55vh] space-y-2.5 overflow-y-auto pr-1">
+                      {LEGAL_DOCS[legalDoc].body.map((p, i) => (
+                        <p
+                          key={i}
+                          className="text-[11.5px] leading-relaxed text-white/55"
+                        >
+                          {p}
+                        </p>
+                      ))}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.section>
         )}
 
