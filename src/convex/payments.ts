@@ -35,21 +35,21 @@ export const TIERS: Record<
 > = {
   basic: {
     label: "Yoru Basic",
-    monthly: 8_000,
+    monthly: 5_000,
     maxQuality: 720,
     download: false,
     earlyAccess: false,
   },
   plus: {
     label: "Yoru Plus",
-    monthly: 50_000,
+    monthly: 25_000,
     maxQuality: 1080,
     download: true,
     earlyAccess: true,
   },
   vip: {
     label: "Yoru VIP",
-    monthly: 120_000,
+    monthly: 50_000,
     maxQuality: 2160,
     download: true,
     earlyAccess: true,
@@ -73,11 +73,11 @@ export const PLANS: Record<
 > = {
   // Harga di sini adalah harga Yoru Basic (tingkatan terendah). Tingkatan
   // Plus/VIP memakai harga default sendiri × durasi (lihat `tierPrice`).
-  p1: { label: "Premium 1 Bulan", days: 30, price: 8000, sacret: 600 },
-  p2: { label: "Premium 4 Bulan", days: 120, price: 32000, sacret: 1350 },
-  p3: { label: "Premium 1 Tahun", days: 365, price: 97000, sacret: 6000 },
-  p4: { label: "Premium 3 Tahun", days: 1095, price: 292000, sacret: 11000 },
-  p5: { label: "Premium 7 Tahun", days: 2555, price: 681000, sacret: 21000 },
+  p1: { label: "Premium 1 Bulan", days: 30, price: 5000, sacret: 900 },
+  p2: { label: "Premium 4 Bulan", days: 120, price: 20000, sacret: 2600 },
+  p3: { label: "Premium 1 Tahun", days: 365, price: 61000, sacret: 9000 },
+  p4: { label: "Premium 3 Tahun", days: 1095, price: 183000, sacret: 20000 },
+  p5: { label: "Premium 7 Tahun", days: 2555, price: 426000, sacret: 40000 },
 };
 
 /** Lama logo merah tampil setelah akun di-tag developer. */
@@ -633,7 +633,7 @@ export const devTestBot = action({
     { expectedAmount },
   ): Promise<{ verdict: string; note: string; engine: string }> => {
     await staffGuard(ctx, "dev");
-    const amount = expectedAmount ?? 7000;
+    const amount = expectedAmount ?? 5000;
     return (await ctx.runAction(internal.aiNode.analyzeProof, {
       imageUrl: null,
       proofText: `Transfer Rp ${amount} via QRIS atas nama Rii`,

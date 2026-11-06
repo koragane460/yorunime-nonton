@@ -797,6 +797,93 @@ export const resetTestData = mutation({
   },
 });
 
+/**
+ * RESET TOTAL AKUN — dipakai sekali lewat CLI developer.
+ *
+ * Menghapus semua akun, sesi login, dan data milik user supaya pendaftaran
+ * berikutnya mulai dari ID #1 lagi. Konten global (katalog anime, pengaturan
+ * pembayaran, QRIS, dan cache) sengaja TIDAK dihapus agar aplikasi tetap bisa
+ * dipakai setelah reset.
+ */
+export const resetAllAccounts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // Urutan tidak penting untuk Convex, tapi users dihapus paling akhir supaya
+    // relasi yang masih menunjuk ke user tidak sempat dibaca di tengah proses.
+    const tables = [
+      "chatMessages",
+      "stickerPurchases",
+      "premiumGives",
+      "xpEvents",
+      "clans",
+      "clanMembers",
+      "clanRequests",
+      "clanLogs",
+      "friendships",
+      "friendRequests",
+      "downloads",
+      "watchRooms",
+      "watchRoomMembers",
+      "notifications",
+      "affinity",
+      "affinityInvites",
+      "affinityBreaks",
+      "saldoLedger",
+      "withdrawals",
+      "stories",
+      "storyViews",
+      "watchHistory",
+      "animeComments",
+      "userBlocks",
+      "commentHides",
+      "animeFavorites",
+      "animeLikes",
+      "musicLikes",
+      "comicHistory",
+      "comicFavorites",
+      "gachaState",
+      "userTitles",
+      "premiumPurchases",
+      "clickGame",
+      "absenLogs",
+      "csThreads",
+      "csMessages",
+      "contentReports",
+      "voteEvents",
+      "characterLikes",
+      "waifuVotes",
+      "petState",
+      "voiceRooms",
+      "voiceMusic",
+      "presences",
+      "voiceSignals",
+      "gameSessions",
+      "gameInvites",
+      "follows",
+      "feedPosts",
+      "feedComments",
+      "shortcuts",
+      "counters",
+      "authAccounts",
+      "authSessions",
+      "authRefreshTokens",
+      "authVerificationCodes",
+      "authVerifiers",
+      "authRateLimits",
+      "users",
+    ];
+    let deleted = 0;
+    for (const table of tables) {
+      const rows = await ctx.db.query(table as any).collect();
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        deleted += 1;
+      }
+    }
+    return { ok: true, deleted, nextSeqId: 1 };
+  },
+});
+
 export const setAnnouncementActive = mutation({
   args: { id: v.id("announcements"), active: v.boolean() },
   handler: async (ctx, { id, active }) => {

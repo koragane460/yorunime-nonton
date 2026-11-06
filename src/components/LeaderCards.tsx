@@ -7,14 +7,14 @@ import { FramedAvatar } from "@/components/FramedAvatar";
 import { fmtShort } from "@/components/HomeHead";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Crown, Trophy, X } from "lucide-react";
-
-/* ====================================================================== *
- *  PAPAN PERINGKAT HOME
- *  Dua kartu LEBAR & MENYAMPING (Top XP · Top Give) — ketuk untuk buka
- *  layar lengkap: periode 7/30/sepanjang masa, Top 1-3 (foto besar +
- *  hiasan per peringkat), lalu grid 4-50 lengkap.
- * ====================================================================== */
+import {
+  ArrowRight,
+  ChevronLeft,
+  Crown,
+  Sparkles,
+  Trophy,
+  X,
+} from "lucide-react";
 
 type XpRow = {
   rank: number;
@@ -41,13 +41,25 @@ type GiveRow = {
   xp?: number;
   avatarBorder?: string;
 };
+type ClanRow = {
+  _id: string;
+  name: string;
+  tag: string;
+  tagIcon?: string;
+  level: number;
+  levelProgress: number;
+  levelCost: number;
+  totalXp: number;
+  diamonds: number;
+  memberCount: number;
+  avatarUrl?: string;
+  leaderUsername: string;
+  leaderImage?: string;
+  leaderSeqId?: number;
+  tagTier?: number;
+  tagBg?: string;
+};
 
-/**
- * Tag clan SAH — harus benar-benar tag asli dari clan (bukan teks kosong,
- * bukan "[]", bukan "-"), di-normalize: hanya huruf/angka, panjang 2-6.
- * Kalau tag tidak valid, TIDAK ditampilkan (lebih baik kosong daripada
- * menampilkan "[]" yang jelek).
- */
 function cleanTag(t?: string | null): string | null {
   if (!t) return null;
   const s = t.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -57,119 +69,89 @@ function cleanTag(t?: string | null): string | null {
 
 export type Period = "1" | "7" | "30";
 
-const PERIODS: { key: Period; label: string; xpKey: string }[] = [
-  { key: "1", label: "Setiap hari", xpKey: "harian" },
-  { key: "7", label: "7 Hari", xpKey: "mingguan" },
-  { key: "30", label: "30 Hari", xpKey: "bulanan" },
+const PERIODS: { key: Period; label: string; short: string; xpKey: string }[] = [
+  { key: "1", label: "Setiap hari", short: "Harian", xpKey: "harian" },
+  { key: "7", label: "7 hari", short: "7D", xpKey: "mingguan" },
+  { key: "30", label: "30 hari", short: "30D", xpKey: "bulanan" },
 ];
 
 const periodLabel = (p: Period) =>
-  PERIODS.find((x) => x.key === p)?.label ?? "Setiap hari";
+  PERIODS.find((x) => x.key === p)?.short ?? "Harian";
 const xpKeyOf = (p: Period) =>
   PERIODS.find((x) => x.key === p)?.xpKey ?? "harian";
 
-/** Latar berwarna per jenis papan (permintaan: background-nya dikasih warna). */
 const TONE = {
   xp: {
-    box: "border-[#1CA7EC]/35 bg-card",
-    chip: "border-sky-300/40 bg-sky-400/15 text-sky-100",
-    icon: "text-sky-200",
+    frame:
+      "border-sky-300/25 bg-[linear-gradient(150deg,#111a2b_0%,#0b1220_55%,#070b13_100%)]",
+    glow: "shadow-[0_32px_70px_-46px_rgba(28,167,236,.9)]",
+    accent: "text-sky-200",
+    pill: "border-sky-300/30 bg-sky-400/12 text-sky-100",
+    active: "bg-sky-400/25 text-sky-100",
+    orb: "bg-sky-400/18",
   },
   give: {
-    box: "border-[#FFD23F]/40 bg-card",
-    chip: "border-amber-300/45 bg-amber-400/15 text-amber-100",
-    icon: "text-amber-200",
+    frame:
+      "border-amber-300/25 bg-[linear-gradient(150deg,#241b10_0%,#1a130b_55%,#0d0a06_100%)]",
+    glow: "shadow-[0_32px_70px_-46px_rgba(255,210,63,.8)]",
+    accent: "text-amber-200",
+    pill: "border-amber-300/30 bg-amber-400/12 text-amber-100",
+    active: "bg-amber-400/25 text-amber-100",
+    orb: "bg-amber-400/18",
+  },
+  clan: {
+    frame:
+      "border-emerald-300/25 bg-[linear-gradient(150deg,#0f1f1b_0%,#0b1714_55%,#060d0b_100%)]",
+    glow: "shadow-[0_32px_70px_-46px_rgba(52,211,153,.75)]",
+    accent: "text-emerald-200",
+    pill: "border-emerald-300/30 bg-emerald-400/12 text-emerald-100",
+    active: "bg-emerald-400/25 text-emerald-100",
+    orb: "bg-emerald-400/16",
   },
 } as const;
 
-/** Hiasan/EFEK per peringkat — warnanya menempel DI KOTAK orangnya. */
-const RANK = {
-  1: {
-    card: "border-gold-strong/70 bg-card",
-    ring: "ring-2 ring-gold-strong/80",
-    text: "text-[#FFFAF0]",
-    badge: "bg-gold-strong text-[#241c02]",
-    glow: "",
-  },
-  2: {
-    card: "border-[#FFFAF0]/40 bg-card",
-    ring: "ring-2 ring-[#FFFAF0]/70",
-    text: "text-[#FFFAF0]",
-    badge: "bg-[#FFFAF0] text-[#241c02]",
-    glow: "",
-  },
-  3: {
-    card: "border-[#E84855]/55 bg-card",
-    ring: "ring-2 ring-[#E84855]/70",
-    text: "text-[#FFFAF0]",
-    badge: "bg-[#E84855] text-[#FFFAF0]",
-    glow: "",
-  },
-} as const;
+const PARTICLES = [
+  { x: -46, y: -44, s: 5, c: "#FFD23F", d: 0 },
+  { x: 38, y: -52, s: 4, c: "#7FD3F7", d: 0.35 },
+  { x: -62, y: -8, s: 4, c: "#FF8FA3", d: 0.7 },
+  { x: 58, y: -16, s: 5, c: "#B9A7FF", d: 0.2 },
+  { x: -28, y: -68, s: 3, c: "#9AF0C7", d: 1.1 },
+  { x: 22, y: -76, s: 4, c: "#FFD23F", d: 0.55 },
+  { x: -72, y: -34, s: 3, c: "#7FD3F7", d: 1.4 },
+  { x: 70, y: -40, s: 3, c: "#FF8FA3", d: 0.9 },
+  { x: -38, y: 30, s: 3, c: "#B9A7FF", d: 0.15 },
+  { x: 44, y: 34, s: 4, c: "#9AF0C7", d: 0.8 },
+  { x: 4, y: -60, s: 3, c: "#FFFFFF", d: 1.7 },
+  { x: -86, y: 6, s: 2.5, c: "#FFD23F", d: 1.25 },
+  { x: 84, y: 4, s: 2.5, c: "#7FD3F7", d: 0.45 },
+  { x: -12, y: 48, s: 3, c: "#FF8FA3", d: 1.55 },
+];
 
-/** Satu kolom Top 1-3 di kartu Home: foto → username → total. */
-function TopCell({
-  rank,
-  image,
-  border,
-  username,
-  value,
-  label,
-}: {
-  rank: number;
-  image?: string;
-  border?: string;
-  username?: string;
-  value: string;
-  label: string;
-}) {
-  const r = RANK[rank as 1 | 2 | 3] ?? RANK[3];
+function ParticleBurst() {
   return (
-    <span
-      className={cn(
-        "relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border px-1 py-2",
-        r.card,
-        r.glow,
-      )}
-    >
-      <span
-        className={cn(
-          "absolute -top-1.5 left-1/2 flex h-4 min-w-4 -translate-x-1/2 items-center justify-center rounded-full px-1 text-[9px] font-black leading-none",
-          r.badge,
-        )}
-      >
-        {rank}
-      </span>
-      <FramedAvatar
-        border={border}
-        src={image}
-        seed={username}
-        className={cn("size-11 shrink-0", r.ring)}
-      />
-      <span className="w-full truncate px-0.5 text-center text-[10px] font-black leading-tight text-white">
-        {username ?? "-"}
-      </span>
-      {/* Angka total diposisikan RAPI di bawah nama (permintaan: posisi
-          angkanya dibenerin) — angka besar + label kecil di bawahnya. */}
-      <span className="mt-0.5 w-full rounded-lg bg-black/35 px-1 py-1 text-center leading-none">
-        <span className="block truncate font-display text-[13px] font-black tracking-tight text-white">
-          {value}
-        </span>
-        <span className="mt-0.5 block text-[8px] font-bold uppercase tracking-wider text-white/55">
-          {label}
-        </span>
-      </span>
+    <span aria-hidden className="pointer-events-none absolute inset-0 overflow-visible">
+      <span className="absolute left-1/2 top-1/2 size-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,210,63,.22),rgba(127,211,247,.1)_45%,transparent_72%)] blur-[2px]" />
+      {PARTICLES.map((p, i) => (
+        <span
+          key={i}
+          className="lb-particle absolute left-1/2 top-1/2 rounded-full"
+          style={
+            {
+              width: p.s,
+              height: p.s,
+              background: p.c,
+              animationDelay: `${p.d}s`,
+              "--dx": `${p.x}px`,
+              "--dy": `${p.y}px`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
     </span>
   );
 }
 
-/**
- * Baris grid 4-50 (permintaan: AGAK GEDE). Isi: peringkat · foto ·
- * username + tag clan (tag SAH) + level · total XP · total give.
- * "ID" sudah diganti LEVEL, dan "Total XP" / "Total Give" dibungkus
- * kotak rounded biar kelihatan rapi.
- */
-function GridRow({
+function PodiumEntry({
   rank,
   image,
   border,
@@ -177,9 +159,10 @@ function GridRow({
   level,
   clanTag,
   clanTagIcon,
-  xp,
-  days,
-  onOpen,
+  value,
+  unit,
+  center,
+  onClick,
 }: {
   rank: number;
   image?: string;
@@ -188,71 +171,384 @@ function GridRow({
   level?: number;
   clanTag?: string;
   clanTagIcon?: string;
-  xp?: number;
-  days?: number;
-  onOpen?: () => void;
+  clanName?: string;
+  value: string;
+  unit: string;
+  center?: boolean;
+  onClick?: () => void;
 }) {
   const tag = cleanTag(clanTag);
   return (
-    <div
-      role={onOpen ? "button" : undefined}
-      tabIndex={onOpen ? 0 : undefined}
-      onClick={onOpen}
-      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-3 transition hover:border-white/25 active:scale-[0.99]"
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={cn(
+        "group relative flex min-w-0 flex-1 flex-col items-center justify-end pb-1 text-center transition active:scale-[0.98]",
+        center ? "z-10" : "z-0",
+      )}
     >
       <span
         className={cn(
-          "w-7 shrink-0 text-center font-display text-[15px] font-black leading-none",
-          rank <= 3 ? "text-gold-strong" : "text-white/45",
+          "mb-1 flex items-center justify-center font-display font-black leading-none tracking-[-0.04em]",
+          center
+            ? "text-[26px] text-gold-strong drop-shadow-[0_2px_12px_rgba(255,210,63,.5)]"
+            : "text-[20px] text-white/55",
         )}
       >
         {rank}
       </span>
-      <FramedAvatar border={border} src={image} seed={username} className="size-12 shrink-0" />
-      <span className="min-w-0 flex-1">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-[14px] font-black leading-tight text-white">
-            {username ?? "user"}
-          </span>
-          {tag && (
-            <ClanTag
-              icon={clanTagIcon || DEFAULT_CLAN_ICON}
-              tag={tag}
-              className="shrink-0"
-            />
+      <span className={cn("relative flex items-center justify-center", center ? "mb-2" : "mb-1.5")}>
+        {rank === 1 && <ParticleBurst />}
+        {rank === 1 && (
+          <Crown
+            className="absolute -top-5 left-1/2 z-20 size-6 -translate-x-1/2 text-gold-strong drop-shadow-[0_2px_8px_rgba(255,210,63,.7)]"
+            fill="currentColor"
+            aria-hidden
+          />
+        )}
+        <FramedAvatar
+          border={border}
+          src={image}
+          seed={username}
+          className={cn(
+            "relative z-10 shrink-0 rounded-full",
+            center
+              ? "size-[74px] ring-2 ring-gold-strong/80 shadow-[0_0_30px_-8px_rgba(255,210,63,.75)]"
+              : rank === 2
+                ? "size-[58px] ring-2 ring-white/35"
+                : "size-[54px] ring-2 ring-[#E84855]/45",
           )}
+        />
+      </span>
+      <span
+        className={cn(
+          "w-full truncate font-black leading-tight text-white",
+          center ? "text-[13px]" : "text-[11.5px]",
+        )}
+      >
+        {username?.trim() || "user"}
+      </span>
+      {level !== undefined && (
+        <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[8.5px] font-black leading-none text-white/60">
+          <Crown className="size-2.5" aria-hidden />
+          Lv.{level}
         </span>
-        <span className="mt-1 flex items-center gap-1">
-          <span className="inline-flex items-center gap-1 rounded-md bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-black leading-none text-sky-200">
-            <Crown className="size-2.5" aria-hidden />
-            Lv.{level ?? 1}
-          </span>
+      )}
+      {tag && (
+        <span className={cn("mt-1", center ? "" : "scale-90")}>
+          <ClanTag
+            icon={clanTagIcon || DEFAULT_CLAN_ICON}
+            tag={tag}
+            level={level}
+            className="shrink-0"
+          />
+        </span>
+      )}
+      <span
+        className={cn(
+          "mt-1.5 inline-flex min-w-[62px] max-w-full items-center justify-center gap-1 rounded-lg border px-2 py-1 font-display font-black leading-none",
+          center
+            ? "border-gold-strong/35 bg-gold-strong/12 text-[15px] text-[#FFE9A3]"
+            : "border-white/12 bg-white/[0.06] text-[12px] text-white/85",
+        )}
+      >
+        <span className="truncate">{value}</span>
+        <span className="text-[8px] font-bold uppercase tracking-wider opacity-60">
+          {unit}
         </span>
       </span>
-      <span className="shrink-0 space-y-1 text-right">
-        <span className="block rounded-lg bg-sky-400/12 px-2 py-1 text-[12px] font-black leading-none text-sky-200">
-          {(xp ?? 0).toLocaleString("id-ID")}
-          <span className="ml-0.5 text-[9px] font-bold text-sky-200/70">XP</span>
-        </span>
-        <span className="block rounded-lg bg-amber-400/12 px-2 py-1 text-[12px] font-black leading-none text-amber-200">
-          {(days ?? 0).toLocaleString("id-ID")}
-          <span className="ml-0.5 text-[9px] font-bold text-amber-200/70">give</span>
-        </span>
-      </span>
+    </button>
+  );
+}
+
+function Podium({
+  entries,
+  onOpen,
+}: {
+  entries: {
+    rank: number;
+    image?: string;
+    border?: string;
+    username?: string;
+    level?: number;
+    clanTag?: string;
+    clanTagIcon?: string;
+    value: string;
+    unit: string;
+    userId?: string;
+  }[];
+  onOpen?: (id?: string) => void;
+}) {
+  const byRank = new Map(entries.map((e) => [e.rank, e]));
+  const one = byRank.get(1);
+  const two = byRank.get(2);
+  const three = byRank.get(3);
+  return (
+    <div className="relative flex flex-1 items-end justify-between gap-2 px-1 pb-1">
+      {two ? (
+        <PodiumEntry
+          {...two}
+          onClick={onOpen ? () => onOpen(two.userId) : undefined}
+        />
+      ) : (
+        <span className="min-w-0 flex-1" />
+      )}
+      {one ? (
+        <PodiumEntry
+          {...one}
+          center
+          onClick={onOpen ? () => onOpen(one.userId) : undefined}
+        />
+      ) : (
+        <span className="min-w-0 flex-1" />
+      )}
+      {three ? (
+        <PodiumEntry
+          {...three}
+          onClick={onOpen ? () => onOpen(three.userId) : undefined}
+        />
+      ) : (
+        <span className="min-w-0 flex-1" />
+      )}
     </div>
   );
 }
 
-/**
- * Layar penuh papan peringkat.
- * - Tidak ada podium, tidak ada tulisan "N papan · periode …" di luar kotak:
- *   periode ditulis DI KOTAK kiri atas ("PERIODE 7 HARI").
- * - Top 1-3: foto agak besar + hiasan per peringkat, username, total XP
- *   dan total give premium.
- * - Grid 4-50: foto, username, ID, tag clan, total XP, total give.
- */
-function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => void }) {
+function PeriodTabs({
+  period,
+  onChange,
+}: {
+  period: Period;
+  onChange: (p: Period) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/25 p-0.5">
+      {PERIODS.map((p) => (
+        <button
+          key={p.key}
+          type="button"
+          onClick={() => onChange(p.key)}
+          aria-pressed={period === p.key}
+          className={cn(
+            "rounded-full px-2.5 py-1 text-[9.5px] font-black transition",
+            period === p.key
+              ? "bg-white text-[#0b0d12] shadow-sm"
+              : "text-white/45 hover:text-white/80",
+          )}
+        >
+          {p.short}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SeeAll({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1 text-[10px] font-black text-white/55 transition hover:text-white active:scale-95"
+    >
+      Lihat semua
+      <ArrowRight className="size-3.5" strokeWidth={2.4} aria-hidden />
+    </button>
+  );
+}
+
+function CardShell({
+  tone,
+  title,
+  icon,
+  right,
+  children,
+}: {
+  tone: keyof typeof TONE;
+  title: string;
+  icon: React.ReactNode;
+  right: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const t = TONE[tone];
+  return (
+    <section
+      className={cn(
+        "relative flex h-[326px] w-full shrink-0 snap-center flex-col overflow-hidden rounded-[28px] border p-3.5",
+        t.frame,
+        t.glow,
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute -right-16 -top-20 size-52 rounded-full blur-3xl",
+          t.orb,
+        )}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(rgba(255,255,255,.055)_1px,transparent_1.2px)] [background-size:20px_20px]"
+      />
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.18em]",
+              t.accent,
+            )}
+          >
+            {icon}
+            {tone === "clan" ? "Clan" : "Leaderboard"}
+          </span>
+          <h3 className="mt-0.5 font-display text-[21px] font-black leading-none tracking-[-0.03em] text-white">
+            {title}
+          </h3>
+        </div>
+        {right}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function XpGiveCard({
+  mode,
+  onOpen,
+}: {
+  mode: "xp" | "give";
+  onOpen: (period: Period) => void;
+}) {
+  const navigate = useNavigate();
   const [period, setPeriod] = useState<Period>("1");
+  const xpRows = useQuery(api.xp.leaderboard, {
+    period: xpKeyOf(period),
+    limit: 3,
+  }) as XpRow[] | undefined;
+  const giveRows = useQuery(api.account.topGive, {
+    limit: 3,
+    period,
+  }) as GiveRow[] | undefined;
+
+  const openProfile = (id?: string) => {
+    if (!id) return;
+    navigate(`/akun?user=${id}`);
+  };
+
+  const entries =
+    mode === "xp"
+      ? (xpRows ?? []).map((r) => ({
+          rank: r.rank,
+          userId: r.userId,
+          image: r.image,
+          border: r.avatarBorder,
+          username: r.username,
+          level: r.level,
+          clanTag: r.clanTag,
+          clanTagIcon: r.clanTagIcon,
+          value: fmtShort(r.xp ?? 0),
+          unit: "XP",
+        }))
+      : (giveRows ?? []).map((g, i) => ({
+          rank: i + 1,
+          userId: g.userId,
+          image: g.image,
+          border: g.avatarBorder,
+          username: g.username,
+          level: g.level,
+          clanTag: g.clanTag,
+          clanTagIcon: g.clanTagIcon,
+          value: fmtShort(g.days ?? 0),
+          unit: "hari",
+        }));
+
+  return (
+    <CardShell
+      tone={mode}
+      title={mode === "xp" ? "Top XP" : "Top Give Premium"}
+      icon={
+        mode === "xp" ? (
+          <Trophy className="size-3" aria-hidden />
+        ) : (
+          <Sparkles className="size-3" aria-hidden />
+        )
+      }
+      right={<SeeAll onClick={() => onOpen(period)} />}
+    >
+      <div className="relative mt-2 flex items-center justify-between gap-2">
+        <PeriodTabs period={period} onChange={setPeriod} />
+        <span className="truncate text-[9px] font-bold uppercase tracking-[0.16em] text-white/30">
+          {mode === "xp" ? "XP" : "Give"} · {periodLabel(period)}
+        </span>
+      </div>
+      {entries.length > 0 ? (
+        <Podium entries={entries} onOpen={openProfile} />
+      ) : (
+        <div className="relative flex flex-1 items-center justify-center">
+          <p className="text-center text-[11px] font-semibold text-white/40">
+            Belum ada data untuk periode ini.
+          </p>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+function ClanCard({ onOpen }: { onOpen: () => void }) {
+  const rows = useQuery(api.clans.topClans, { limit: 3 }) as
+    | ClanRow[]
+    | undefined;
+  const entries = (rows ?? []).map((c, i) => ({
+    rank: i + 1,
+    image: c.leaderImage ?? c.avatarUrl,
+    border: undefined,
+    username: c.leaderUsername,
+    level: c.level,
+    clanTag: c.tag,
+    clanTagIcon: c.tagIcon,
+    value: `Lv.${c.level}`,
+    unit: "clan",
+  }));
+
+  return (
+    <CardShell
+      tone="clan"
+      title="Top Leader Clan"
+      icon={<Trophy className="size-3" aria-hidden />}
+      right={<SeeAll onClick={onOpen} />}
+    >
+      <div className="relative mt-2 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[9.5px] font-black text-emerald-100">
+          <Sparkles className="size-3" aria-hidden />
+          Sepanjang masa
+        </span>
+        <span className="truncate text-[9px] font-bold uppercase tracking-[0.16em] text-white/30">
+          Level · XP
+        </span>
+      </div>
+      {entries.length > 0 ? (
+        <Podium entries={entries} />
+      ) : (
+        <div className="relative flex flex-1 items-center justify-center">
+          <p className="text-center text-[11px] font-semibold text-white/40">
+            Belum ada clan. Jadilah yang pertama.
+          </p>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+function LeaderOverlay({
+  mode,
+  initialPeriod,
+  onClose,
+}: {
+  mode: "xp" | "give";
+  initialPeriod: Period;
+  onClose: () => void;
+}) {
+  const [period, setPeriod] = useState<Period>(initialPeriod);
   const navigate = useNavigate();
   const openProfile = (id?: string) => {
     if (!id) return;
@@ -268,8 +564,6 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
     period,
   }) as GiveRow[] | undefined;
 
-  // Peta bantu: semua data profil dipakai kedua papan (XP & give saling
-  // melengkapi — tiap baris selalu punya XP, give, ID, dan tag clan).
   const byId = new Map<string, XpRow>();
   for (const r of xpRows ?? []) if (r.userId) byId.set(r.userId, r);
   const giveById = new Map<string, GiveRow>();
@@ -345,7 +639,6 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
       </header>
 
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-        {/* TAB PERIODE — dipisah dari kotak dan diletakkan paling atas. */}
         <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/12 bg-[#0d1017] p-1.5">
           {PERIODS.map((p) => (
             <button
@@ -363,48 +656,35 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
           ))}
         </div>
 
-        {/* SATU KOTAK besar berisi semuanya. */}
-        <section className={cn("relative overflow-hidden rounded-3xl border p-3", tone.box)}>
-          <span
-            aria-hidden
-            className="absolute inset-0 opacity-45 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]"
-          />
-
-          {/* KIRI ATAS DALAM KOTAK — label periode (mengganti "N papan"). */}
-          <div className="relative mb-3 flex items-center gap-2">
+        <section className={cn("relative overflow-hidden rounded-3xl border p-3", tone.frame)}>
+          <span className="pointer-events-none absolute inset-0 opacity-45 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]" />
+          <div className="relative mb-2 flex items-center gap-2">
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
-                tone.chip,
+                tone.pill,
               )}
             >
-              Periode {periodLabel(period)}
+              {PERIODS.find((p) => p.key === period)?.label}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/45">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
               {mode === "xp" ? "XP" : "Give"}
             </span>
           </div>
-
-          {/* TOP 1-3 — foto agak besar + hiasan masing-masing, DI DALAM kotak
-              berwarna (bukan pinggiran). */}
-          <div className="relative mt-3 grid grid-cols-3 gap-2">
+          <div className="relative grid grid-cols-3 gap-2 pt-2">
             {top3.length > 0 ? (
               top3.map((r) => {
-                const rk = RANK[r.rank as 1 | 2 | 3] ?? RANK[3];
+                const rk = TONE[mode];
                 return (
                   <button
                     key={`${r.rank}-${r.username ?? r.rank}`}
                     onClick={() => openProfile(r.userId)}
-                    className={cn(
-                      "relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border px-1.5 py-3 transition active:scale-[0.98]",
-                      rk.card,
-                      rk.glow,
-                    )}
+                    className="relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.04] px-1.5 py-3 transition active:scale-[0.98]"
                   >
                     <span
                       className={cn(
-                        "absolute -top-2 left-1/2 flex h-5 min-w-5 -translate-x-1/2 items-center justify-center rounded-full px-1.5 text-[10px] font-black leading-none",
-                        rk.badge,
+                        "absolute -top-2 left-1/2 flex h-5 min-w-5 -translate-x-1/2 items-center justify-center rounded-full border px-1.5 text-[10px] font-black leading-none",
+                        rk.pill,
                       )}
                     >
                       {r.rank}
@@ -413,12 +693,17 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
                       border={r.border}
                       src={r.image}
                       seed={r.username}
-                      className={cn("size-16 shrink-0", rk.ring)}
+                      className={cn(
+                        "shrink-0 ring-2",
+                        r.rank === 1
+                          ? "size-16 ring-gold-strong/70"
+                          : "size-14 ring-white/25",
+                      )}
                     />
                     <span className="mt-1 w-full truncate text-center text-[12px] font-black leading-tight text-white">
                       {r.username?.trim() || "user"}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] font-black leading-none text-white/70">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] font-black leading-none text-white/60">
                       <Crown className="size-2.5" aria-hidden />
                       Lv.{r.level ?? 1}
                     </span>
@@ -450,13 +735,12 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
           </div>
         </section>
 
-        {/* GRID 4-50 — ke bawah. */}
         {rest.length > 0 && (
           <>
             <div className="mt-5 flex items-baseline justify-between gap-2">
               <h3 className="yn-sec text-sm">Peringkat 4 - {rows.length}</h3>
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-                {periodLabel(period)}
+                {PERIODS.find((p) => p.key === period)?.label}
               </span>
             </div>
             <div className="mt-2 grid grid-cols-1 gap-1.5">
@@ -483,120 +767,211 @@ function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => 
   );
 }
 
-/**
- * DUA KARTU PAPAN PERINGKAT — MELEBAR ke samping & TIDAK tinggi (bukan
- * kotak persegi besar). Kiri = teks ringkas (label + judul + periode),
- * kanan = Top 1/2/3 disusun BERDAMPINGAN: foto, lalu username, lalu
- * total XP / total give di bawahnya. Latar tiap kartu berwarna.
- */
-export function LeaderCards() {
-  const [open, setOpen] = useState<null | "xp" | "give">(null);
-
-  const xpRows = useQuery(api.xp.leaderboard, {
-    period: "harian",
-    limit: 3,
-  }) as XpRow[] | undefined;
-  const giveRows = useQuery(api.account.topGive, {
-    limit: 3,
-    period: "1",
-  }) as GiveRow[] | undefined;
-
-  const xpTop = (xpRows ?? []).slice(0, 3).map((r) => ({
-    rank: r.rank,
-    image: r.image,
-    border: r.avatarBorder,
-    // TANPA fallback "user#<id>" — permintaan: kotak Top 1/2/3 di Home
-    // tidak menampilkan ID. Nama kosong tampil netral sebagai "user".
-    username: r.username?.trim() || "user",
-    value: fmtShort(r.xp ?? 0),
-    label: "XP",
-  }));
-  const giveTop = (giveRows ?? []).slice(0, 3).map((g, i) => ({
-    rank: i + 1,
-    image: g.image,
-    border: g.avatarBorder,
-    username: g.username?.trim() || "user",
-    value: `${fmtShort(g.days ?? 0)} hr`,
-    label: "Give",
-  }));
-
-  const card = (mode: "xp" | "give") => {
-    const tone = TONE[mode];
-    const list = mode === "xp" ? xpTop : giveTop;
-    const cells = list.length ? list : [1, 2, 3].map((rank) => ({
-      rank,
-      image: undefined,
-      border: undefined,
-      username: "-",
-      value: "-",
-      label: mode === "xp" ? "XP" : "Give",
-    }));
-    return (
-      <button
-        key={mode}
-        onClick={() => setOpen(mode)}
+function GridRow({
+  rank,
+  image,
+  border,
+  username,
+  level,
+  clanTag,
+  clanTagIcon,
+  xp,
+  days,
+  onOpen,
+}: {
+  rank: number;
+  image?: string;
+  border?: string;
+  username?: string;
+  level?: number;
+  clanTag?: string;
+  clanTagIcon?: string;
+  xp?: number;
+  days?: number;
+  onOpen?: () => void;
+}) {
+  const tag = cleanTag(clanTag);
+  return (
+    <div
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen}
+      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-3 transition hover:border-white/25 active:scale-[0.99]"
+    >
+      <span
         className={cn(
-          "relative flex w-[95%] shrink-0 snap-center items-stretch gap-2.5 overflow-hidden rounded-[24px] border px-3 py-3 text-left shadow-[0_28px_56px_-40px_rgba(0,0,0,1)] transition hover:brightness-110 active:scale-[0.99] sm:w-[62%] lg:w-[46%]",
-          tone.box,
+          "w-7 shrink-0 text-center font-display text-[15px] font-black leading-none",
+          rank <= 3 ? "text-gold-strong" : "text-white/45",
         )}
       >
-        <span
-          aria-hidden
-          className="absolute inset-0 opacity-45 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]"
-        />
-
-        {/* KIRI — teks diringkas supaya pas melebar ke samping. */}
-        <span className="relative flex w-[30%] min-w-0 shrink-0 flex-col justify-center gap-1.5">
-          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/60">
-            <Trophy className={cn("size-3", tone.icon)} />
-            Papan
+        {rank}
+      </span>
+      <FramedAvatar border={border} src={image} seed={username} className="size-12 shrink-0" />
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-[14px] font-black leading-tight text-white">
+            {username ?? "user"}
           </span>
-          <span className="font-display text-[19px] font-black leading-[0.95] tracking-[-0.03em] text-white">
-            {mode === "xp" ? (
-              <>
-                Top <span className="text-sky-200">XP</span>
-              </>
-            ) : (
-              <>
-                Top Give <span className="text-amber-200">Prem</span>
-              </>
-            )}
-          </span>
-          <span
-            className={cn(
-              "w-fit rounded-full border px-2 py-0.5 text-[9px] font-black",
-              tone.chip,
-            )}
-          >
-            Setiap hari
+          {tag && (
+            <ClanTag
+              icon={clanTagIcon || DEFAULT_CLAN_ICON}
+              tag={tag}
+              className="shrink-0"
+            />
+          )}
+        </span>
+        <span className="mt-1 flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-md bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-black leading-none text-sky-200">
+            <Crown className="size-2.5" aria-hidden />
+            Lv.{level ?? 1}
           </span>
         </span>
+      </span>
+      <span className="shrink-0 space-y-1 text-right">
+        <span className="block rounded-lg bg-sky-400/12 px-2 py-1 text-[12px] font-black leading-none text-sky-200">
+          {(xp ?? 0).toLocaleString("id-ID")}
+          <span className="ml-0.5 text-[9px] font-bold text-sky-200/70">XP</span>
+        </span>
+        <span className="block rounded-lg bg-amber-400/12 px-2 py-1 text-[12px] font-black leading-none text-amber-200">
+          {(days ?? 0).toLocaleString("id-ID")}
+          <span className="ml-0.5 text-[9px] font-bold text-amber-200/70">give</span>
+        </span>
+      </span>
+    </div>
+  );
+}
 
-        {/* KANAN — Top 1/2/3 berdampingan, isinya ke bawah: foto → nama → total */}
-        <span className="relative grid min-w-0 flex-1 grid-cols-3 gap-1.5">
-          {cells.map((r) => (
-            <TopCell key={`${mode}-${r.rank}`} {...r} />
+function ClanOverlay({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate();
+  const rows = useQuery(api.clans.topClans, { limit: 5 }) as
+    | ClanRow[]
+    | undefined;
+  return (
+    <div className="screen-enter fixed inset-0 z-[78] flex flex-col bg-[#060d0b]">
+      <header className="flex items-center gap-3 px-4 py-3">
+        <button
+          onClick={onClose}
+          aria-label="Kembali"
+          className="flex size-9 items-center justify-center text-white/85 transition active:scale-90"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <h2 className="yn-title min-w-0 flex-1 truncate text-xl text-white">
+          Top Leader Clan
+        </h2>
+        <button
+          onClick={onClose}
+          aria-label="Tutup"
+          className="flex size-9 items-center justify-center text-white/70 transition active:scale-90"
+        >
+          <X className="size-4" />
+        </button>
+      </header>
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-8">
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200/70">
+          Peringkat sepanjang masa · Level lalu XP
+        </p>
+        <div className="space-y-2">
+          {(rows ?? []).map((c, i) => (
+            <button
+              key={c._id}
+              onClick={() => {
+                onClose();
+                navigate("/clan");
+              }}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-3xl border p-3 text-left transition active:scale-[0.99]",
+                i === 0
+                  ? "border-gold-strong/35 bg-[linear-gradient(110deg,rgba(255,210,63,.12),rgba(255,255,255,.03))]"
+                  : "border-white/10 bg-white/[0.045]",
+              )}
+            >
+              <span
+                className={cn(
+                  "w-6 shrink-0 text-center font-display text-lg font-black",
+                  i === 0 ? "text-gold-strong" : "text-white/45",
+                )}
+              >
+                {i + 1}
+              </span>
+              <FramedAvatar
+                src={c.leaderImage ?? c.avatarUrl}
+                seed={c.name}
+                className={cn(
+                  "shrink-0",
+                  i === 0 ? "size-14 ring-2 ring-gold-strong/60" : "size-12",
+                )}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-[14px] font-black text-white">
+                    {c.name}
+                  </span>
+                  {i === 0 && (
+                    <Crown className="size-3.5 shrink-0 text-gold-strong" fill="currentColor" aria-hidden />
+                  )}
+                </span>
+                <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-white/45">
+                  {c.leaderUsername}
+                </span>
+                <span className="mt-1 flex items-center gap-1.5">
+                  <ClanTag
+                    icon={c.tagIcon || DEFAULT_CLAN_ICON}
+                    tag={c.tag}
+                    level={c.level}
+                    tier={c.tagTier}
+                    bg={c.tagBg}
+                  />
+                  <span className="rounded-md bg-emerald-400/12 px-1.5 py-0.5 text-[9px] font-black text-emerald-200">
+                    {c.memberCount} member
+                  </span>
+                </span>
+              </span>
+              <span className="shrink-0 space-y-1 text-right">
+                <span className="block rounded-lg border border-emerald-300/25 bg-emerald-400/12 px-2 py-1 text-[12px] font-black leading-none text-emerald-100">
+                  Lv.{c.level}
+                </span>
+                <span className="block rounded-lg border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] font-black leading-none text-white/75">
+                  {fmtShort(c.totalXp)}
+                  <span className="ml-0.5 text-[8px] font-bold text-white/40">XP</span>
+                </span>
+              </span>
+            </button>
           ))}
-        </span>
-      </button>
-    );
-  };
+          {rows !== undefined && rows.length === 0 && (
+            <p className="py-10 text-center text-xs text-white/45">
+              Belum ada clan. Buat clan pertama dari halaman Clan.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LeaderCards() {
+  const [open, setOpen] = useState<null | { kind: "xp" | "give"; period: Period } | null>(
+    null,
+  );
+  const [clanOpen, setClanOpen] = useState(false);
 
   return (
     <>
       <section className="fade-enter mt-5">
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <h2 className="yn-sec text-lg">Papan Peringkat</h2>
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gold-strong">
-            Top XP &amp; Top Give
-          </span>
-        </div>
-        <div className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
-          {card("xp")}
-          {card("give")}
+        <div className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <XpGiveCard mode="xp" onOpen={(period) => setOpen({ kind: "xp", period })} />
+          <XpGiveCard mode="give" onOpen={(period) => setOpen({ kind: "give", period })} />
+          <ClanCard onOpen={() => setClanOpen(true)} />
         </div>
       </section>
-      {open && <LeaderOverlay mode={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <LeaderOverlay
+          mode={open.kind}
+          initialPeriod={open.period}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      {clanOpen && <ClanOverlay onClose={() => setClanOpen(false)} />}
     </>
   );
 }

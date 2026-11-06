@@ -832,6 +832,58 @@
   }
 }
 
+/* Partikel warna di belakang Top 1 — menyebar dari tengah lalu memudar. */
+@keyframes lb-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  18% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+      scale(1.15);
+  }
+}
+.lb-particle {
+  animation: lb-burst 3.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+  box-shadow: 0 0 6px currentColor;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-particle {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
+/* Partikel tier profil — mengapung pelan di sekitar kartu tier. */
+@keyframes tier-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+      scale(1.1);
+  }
+}
+.tier-particle {
+  animation: tier-float 4.2s ease-in-out infinite;
+  box-shadow: 0 0 7px currentColor;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-particle {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 /* Bottom sheet meluncur halus dari bawah. */
 @keyframes sheet-up {
   from {

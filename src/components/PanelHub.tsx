@@ -9,15 +9,20 @@ import {
   Award,
   Bone,
   BookOpen,
+  Clapperboard,
   Crown,
   Download,
   Gem,
   History,
+  ListChecks,
+  Mic,
   Music,
   Newspaper,
   LayoutGrid,
   Shield,
   ShoppingBag,
+  Sparkles,
+  Sticker,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +36,11 @@ import {
  * ====================================================================== */
 
 export type PanelKey =
+  | "yoraverse"
+  | "quest"
+  | "sticker"
+  | "nobar"
+  | "voice"
   | "feed"
   | "baca"
   | "history"
@@ -41,16 +51,26 @@ export type PanelKey =
   | "title"
   | "shop";
 
-const BOXES: { key: PanelKey; label: string; hint: string; Icon: LucideIcon }[] = [
-  { key: "feed", label: "Feed", hint: "Konten teman", Icon: Newspaper },
-  { key: "baca", label: "Baca", hint: "Manga & manhwa", Icon: BookOpen },
-  { key: "history", label: "History", hint: "Yang ditonton", Icon: History },
-  { key: "download", label: "Download", hint: "Tersimpan", Icon: Download },
-  { key: "clan", label: "Clan", hint: "Grup kamu", Icon: Shield },
-  { key: "music", label: "Music", hint: "Player & playlist", Icon: Music },
-  { key: "pet", label: "YoruPet", hint: "Peliharaanmu", Icon: Bone },
-  { key: "title", label: "Title", hint: "Gelar profile", Icon: Award },
-  { key: "shop", label: "Shop", hint: "Border & cosmetic", Icon: ShoppingBag },
+const BOXES: {
+  key: PanelKey;
+  label: string;
+  hint: string;
+  Icon: LucideIcon;
+  tone: string;
+}[] = [
+  { key: "quest", label: "Quest", hint: "Misi harian", Icon: ListChecks, tone: "from-amber-400/18 via-white/[0.05] to-transparent" },
+  { key: "sticker", label: "Shop Sticker", hint: "Pack chat", Icon: Sticker, tone: "from-violet-400/20 via-white/[0.05] to-transparent" },
+  { key: "nobar", label: "Nobar", hint: "Nonton bareng", Icon: Clapperboard, tone: "from-sky-400/20 via-white/[0.05] to-transparent" },
+  { key: "voice", label: "Voice", hint: "Room suara", Icon: Mic, tone: "from-emerald-400/18 via-white/[0.05] to-transparent" },
+  { key: "feed", label: "Feed", hint: "Konten teman", Icon: Newspaper, tone: "from-rose-400/14 via-white/[0.04] to-transparent" },
+  { key: "baca", label: "Baca", hint: "Manga & manhwa", Icon: BookOpen, tone: "from-orange-400/14 via-white/[0.04] to-transparent" },
+  { key: "history", label: "History", hint: "Yang ditonton", Icon: History, tone: "from-white/[0.1] via-white/[0.04] to-transparent" },
+  { key: "download", label: "Download", hint: "Tersimpan", Icon: Download, tone: "from-white/[0.1] via-white/[0.04] to-transparent" },
+  { key: "clan", label: "Clan", hint: "Grup kamu", Icon: Shield, tone: "from-gold/20 via-white/[0.05] to-transparent" },
+  { key: "music", label: "Music", hint: "Player & playlist", Icon: Music, tone: "from-fuchsia-400/16 via-white/[0.04] to-transparent" },
+  { key: "pet", label: "YoruPet", hint: "Peliharaanmu", Icon: Bone, tone: "from-lime-400/14 via-white/[0.04] to-transparent" },
+  { key: "title", label: "Title", hint: "Gelar profile", Icon: Award, tone: "from-indigo-400/16 via-white/[0.04] to-transparent" },
+  { key: "shop", label: "Shop", hint: "Border & cosmetic", Icon: ShoppingBag, tone: "from-white/[0.12] via-white/[0.05] to-transparent" },
 ];
 
 /** Sheet 55% layar — profil di atas, 9 kotak (3×3) di bawahnya. */
@@ -79,8 +99,8 @@ export function PanelHub({
         onClick={onClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-[3px]"
       />
-      {/* Sheet 55% tinggi layar — TANPA outline (permintaan: NO OUTLINE). */}
-      <div className="screen-enter absolute inset-x-0 bottom-0 flex h-[55dvh] flex-col overflow-hidden rounded-t-[28px] bg-[#0d1017] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
+      {/* Sheet 68% tinggi layar — TANPA outline. */}
+      <div className="screen-enter absolute inset-x-0 bottom-0 flex h-[68dvh] flex-col overflow-hidden rounded-t-[28px] bg-[#0d1017] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
         {/* Pegangan tarik */}
         <div className="flex justify-center pt-2.5">
           <span className="h-1 w-11 rounded-full bg-white/25" />
@@ -142,8 +162,28 @@ export function PanelHub({
           </div>
         </div>
 
-        {/* 9 kotak */}
+        {/* YoruVerse + isi panel */}
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5">
+          <button
+            onClick={() => onPick("yoraverse")}
+            className="relative mb-2.5 flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-gold/35 bg-[linear-gradient(120deg,rgba(255,210,63,.16),rgba(255,255,255,.045))] px-3 py-3 text-left transition active:scale-[0.99]"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+              <Sparkles className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-black leading-tight text-white">
+                YoruVerse
+              </span>
+              <span className="block truncate text-[10px] leading-tight text-white/45">
+                Quest, shop, nobar, voice &amp; lainnya
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full bg-gold px-2.5 py-1 text-[10px] font-black text-black">
+              Buka
+            </span>
+          </button>
+
           {/* Pintasan ke layar MENU (daftar semua tujuan aplikasi). */}
           <button
             onClick={() => {
@@ -164,17 +204,18 @@ export function PanelHub({
               </span>
             </span>
           </button>
-          <div className="grid grid-cols-3 gap-2.5">
-            {BOXES.map(({ key, label, hint, Icon }) => (
+          <div className="grid grid-cols-2 gap-2.5">
+            {BOXES.map(({ key, label, hint, Icon, tone }) => (
               <button
                 key={key}
                 onClick={() => onPick(key)}
                 className={cn(
-                  "group flex flex-col items-start justify-between gap-2 rounded-2xl border border-transparent bg-white/[0.06] p-3 text-left",
-                  "transition hover:border-gold-strong/45 hover:bg-white/[0.1] active:scale-[0.97]",
+                  "group flex min-h-[86px] flex-col items-start justify-between gap-2 rounded-2xl border border-white/[0.07] bg-gradient-to-br p-3 text-left",
+                  tone,
+                  "transition hover:border-gold-strong/45 active:scale-[0.97]",
                 )}
               >
-                <span className="flex size-9 items-center justify-center rounded-xl bg-black/35 text-gold-strong transition group-hover:text-white">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-black/30 text-white/90 transition group-hover:text-gold-strong">
                   <Icon className="size-[17px]" />
                 </span>
                 <span className="min-w-0">

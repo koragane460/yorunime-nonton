@@ -67,16 +67,15 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import { StickerStore } from "@/components/StickerStore";
-import { AccountHeader, AnnouncementBox, Spotlight } from "@/components/HomeTop";
+import { AccountHeader, Spotlight } from "@/components/HomeTop";
 import { LeaderCards } from "@/components/LeaderCards";
+import { QuickGenre } from "@/components/QuickGenre";
 import { GenreScreen } from "@/components/GenreScreen";
 import { NobarCatalogScreen } from "@/components/NobarCatalogScreen";
 import {
   AfinitasPromo,
   FeedPromo,
   DonatePromo,
-  ChatVoiceRow,
-  DailyQuestRow,
   GreetingBar,
   LeaderPodium,
   PillButton,
@@ -1246,37 +1245,7 @@ function HomeContent() {
         }}
       />
 
-      {/* 2) GENRE CEPAT — DI ATAS kotak pengumuman (permintaan), chip
-          pendek tanpa glow, ditekan → layar fullscreen GENRE. */}
-      {!loading && genreList.length > 0 && (
-        <div className="fade-enter mt-3">
-          {/* `md:-mx-6 md:px-6` — padding konten AppLayout jadi 24px di md+,
-              jadi bleed ikut 24px supaya tepi kanan baris GENRE persis
-              sejajar dengan kotak pengumuman di bawahnya (rounded PAS).
-              Spacer kanan menjamin sudut chip terakhir tidak pernah
-              menempel di tepi layar saat scroll mentok. */}
-          <div className="thin-scroll -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:-mx-6 md:px-6">
-            {genreList.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => setGenreScreen(g.id)}
-                className="flex min-w-[86px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-[12px] font-bold text-white/85 transition hover:border-white/35 hover:bg-white/[0.12] hover:text-white active:scale-95"
-              >
-                {g.name}
-              </button>
-            ))}
-            {/* Jarak akhir — sudut rounded chip terakhir selalu lega. */}
-            <span aria-hidden className="w-1 shrink-0" />
-          </div>
-        </div>
-      )}
-
-      {/* 3) KOTAK PENGUMUMAN — besar & memanjang ke bawah. Isi (update/error)
-          diatur lewat panel developer, jadi tidak perlu deploy. */}
-      <AnnouncementBox />
-
-      {/* 4) SPOTLIGHT — HANYA judul yang sedang trending (bukan Top Anime),
-          kartu ringkas poster + info, bisa digeser snap. */}
+      {/* 2) SPOTLIGHT — tanpa judul, titik di tengah bawah, kartu lebih besar. */}
       <Spotlight
         items={todayList.length > 0 ? todayList : topList}
         viewsOf={viewCountFor}
@@ -1300,16 +1269,17 @@ function HomeContent() {
           untuk periode 7 hari / 30 hari / sepanjang masa + podium + grid 4-50. */}
       <LeaderCards />
 
-      {/* 6) STICKER SHOP · NOBAR · VOICE — tiap kotak dikasih warna. */}
-      <ChatVoiceRow
-        onOpenChat={() => setShowChat(true)}
-        onOpenSticker={() => setShowSticker(true)}
-        onOpenNobar={() => setShowNobar(true)}
-        onOpenVoice={() => setShowVoice(true)}
-      />
-
-      {/* 6b) DAILY QUEST — 3 misi ringan per hari, reset jam 00.00. */}
-      <DailyQuestRow />
+      {/* 6) QUICK GENRE — menggantikan posisi Daily Quest. Katalog A–Z
+          horizontal ada di dalam kartu yang sama. */}
+      {!loading && genreList.length > 0 && (
+        <QuickGenre
+          genres={genreList}
+          onOpenGenre={(id) => setGenreScreen(id)}
+          onPick={(id, title, source) =>
+            openAnime(id, title, (source as CatalogPickSource) ?? "anilist")
+          }
+        />
+      )}
 
       {/* PROMO — Afinitas + Feed digabung jadi SATU carousel yang bisa
           digeser ke kiri/kanan (permintaan), lengkap dengan titik pagination. */}

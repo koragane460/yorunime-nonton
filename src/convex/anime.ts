@@ -1138,6 +1138,40 @@ export const animeSearch = action({
   },
 });
 
+/** Katalog A–Z: judul yang benar-benar BERAWALAN dengan huruf terpilih. */
+export const animeByLetter = action({
+  args: { letter: v.string(), page: v.optional(v.number()) },
+  handler: async (runCtx, { letter, page = 1 }) => {
+    const L = letter.trim().toUpperCase().slice(0, 1);
+    if (!/^[A-Z]$/.test(L)) return [];
+    const p = Math.max(1, Math.min(8, Math.round(page)));
+    return (await cached(
+      runCtx,
+      `az:v1:${L}:${p}`,
+      12 * 60 * 60 * 1000,
+      async () => {
+        try {
+          const d = await aniGraphql(
+            `query($s:String,$p:Int){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:false){ ${ANILIST_FIELDS} } } }`,
+            { s: L, p },
+          );
+          return (d?.Page?.media ?? [])
+            .filter((m: any) => {
+              if (!m?.idMal) return false;
+              const title = String(
+                m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
+              ).trim();
+              return title.toUpperCase().startsWith(L);
+            })
+            .map(anilistCard);
+        } catch {
+          return [];
+        }
+      },
+    )) as AnimeCard[];
+  },
+});
+
 export const animeGenres = action({
   args: {},
   handler: async (runCtx) =>

@@ -47,10 +47,11 @@ const TIER_INFO: {
     id: "basic",
     label: "Yoru Basic",
     tagline: "Buat nonton harian, tanpa iklan",
-    monthly: 8_000,
+    monthly: 5_000,
     features: [
       "Tanpa iklan di semua halaman",
       "Kualitas sampai 720p",
+      "XP nonton 2× tiap 2 menit",
       "Centang biru di samping nama",
       "1 perangkat aktif",
     ],
@@ -61,12 +62,13 @@ const TIER_INFO: {
     id: "plus",
     label: "Yoru Plus",
     tagline: "Kualitas penuh + download",
-    monthly: 50_000,
+    monthly: 25_000,
     features: [
       "Semua fitur Yoru Basic",
       "Kualitas sampai 1080p",
       "Download episode",
       "Akses episode lebih awal",
+      "XP nonton 2× + bonus Sacret",
       "2 perangkat aktif",
     ],
     ring: "border-[#1CA7EC]/60",
@@ -76,12 +78,13 @@ const TIER_INFO: {
     id: "vip",
     label: "Yoru VIP",
     tagline: "Semua fitur, tanpa batas",
-    monthly: 120_000,
+    monthly: 50_000,
     features: [
       "Semua fitur Yoru Plus",
       "Kualitas sampai 4K",
       "Download tanpa batas harian",
       "Badge Yoru VIP emas di nama",
+      "XP nonton 2× + bonus Sacret terbesar",
       "4 perangkat + prioritas antrean",
     ],
     ring: "border-[#FFD23F]/70",
@@ -831,7 +834,7 @@ function Checkout({
           value={note}
           onChange={(e) => onNote(e.target.value)}
           rows={2}
-          placeholder="contoh: Transfer Rp 7.000 dari GoPay atas nama Rii"
+          placeholder="contoh: Transfer Rp 5.000 dari GoPay atas nama Rii"
           className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-xs outline-none focus:border-gold/70"
         />
         <p className="mt-1 text-[11px] text-zinc-500">

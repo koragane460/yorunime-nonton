@@ -175,7 +175,11 @@ export function AnimeCard({
                   : "bg-sky-600 text-white",
               )}
             >
-              {status}
+              {/tamat|completed|ended|selesai|finish/i.test(status)
+                ? "Completed"
+                : /ongoing|airing|releasing|tayang/i.test(status)
+                  ? "Ongoing"
+                  : status}
             </span>
           )}
           {rank !== undefined && (
@@ -189,6 +193,13 @@ export function AnimeCard({
             </span>
           )}
         </div>
+        {/* Rating DIGABUNG ke poster: pojok kanan bawah, gaya rapi. */}
+        {score !== undefined && score > 0 && (
+          <span className="absolute bottom-1.5 right-1.5 z-10 inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-black/75 px-1.5 py-0.5 text-[10px] font-black leading-none text-amber-300 backdrop-blur-sm">
+            <Star className="size-2.5 fill-current" aria-hidden />
+            {score.toFixed(1)}
+          </span>
+        )}
       </div>
       {!imageOnly && (
         <div className="rounded-b-xl bg-black/55 p-2 backdrop-blur-sm">
@@ -201,12 +212,6 @@ export function AnimeCard({
               + rating dulu, lalu ikon TV + tipe; "· N episode" wrap sendiri
               ke baris berikutnya di kartu yang sempit. */}
           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] text-white/70">
-            {score !== undefined && score > 0 && (
-              <span className="inline-flex items-center gap-0.5 font-bold text-yellow-400">
-                <Star className="size-3 fill-current" aria-hidden />
-                {score.toFixed(1)}
-              </span>
-            )}
             {type && (
               <span className="inline-flex items-center gap-0.5">
                 <Tv className="size-3" aria-hidden />

@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConvexAuth } from "convex/react";
 import { CommentsSection, type CommentT } from "@/components/Comments";
 import { SectionTitle } from "@/components/lstream-ui";
-import { setMiniCue, setMiniPlayer } from "@/components/AppLayout";
+import { setMiniCue, setMiniPlayer, showXpPopup } from "@/components/AppLayout";
 import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
@@ -20,7 +20,6 @@ import {
   Maximize,
   Minimize,
   Pause,
-  PictureInPicture2,
   Play,
   RotateCcw,
   RotateCw,
@@ -43,8 +42,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-// Ikon mahkota Premium — gaya SF Symbols supaya konsisten dengan Home.
-import { CrownIcon } from "@/components/ios-icons";
 import { NobarDock } from "@/components/NobarDock";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -319,11 +316,21 @@ function WatchContent() {
   // /nonton dan /baca), jadi tombol kembali membaca target yang sama,
   // mengganti URL di history, lalu navigate replace tanpa full reload.
   // Browser tidak akan membaca ulang halaman (no-refresh back).
+  // XP sesi nonton — dikumpulkan tiap 2 menit dan ditampilkan di popup.
+  const sessionXpRef = useRef(0);
+
   const goBackFromWatch = useCallback(() => {
     try {
       window.scrollTo({ top: 0 });
     } catch {
       /* abaikan */
+    }
+    if (sessionXpRef.current > 0) {
+      showXpPopup({
+        sessionXp: sessionXpRef.current,
+        amount: 0,
+        event: "Stop nonton",
+      });
     }
     // Host TIDAK BOLEH keluar selama room masih ada — harus membubarkan
     // room dulu lewat tombol "Bubarkan Room". Peserta biasa keluar otomatis.
@@ -391,6 +398,7 @@ function WatchContent() {
   // episode tersebut, jadi subtitle Indonesia tetap muncul.
   const donghuaSub = useAction(api.subtitle.donghuaSubtitle);
   const record = useMutation(api.activities.recordWatch);
+  const claimWatchXp = useMutation(api.xp.claimWatchXp);
   const saveProgress = useMutation(api.activities.saveProgress);
   const saveSettings = useMutation(api.account.updateSettings);
   const currentUser = useQuery(api.users.currentUser, {});
@@ -598,6 +606,68 @@ function WatchContent() {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoHolding, streamUrl, epParam]);
+
+  // XP nonton — tiap 2 menit video yang benar-benar berjalan. Server yang
+  // menghitung 200 / 400 (premium) dan memasang cooldown anti-spam.
+  useEffect(() => {
+    if (!user) return;
+    const t = window.setInterval(() => {
+      const v = videoRef.current;
+      if (!v || v.paused || v.ended || document.hidden) return;
+      void claimWatchXp()
+        .then((r: any) => {
+          if (!r || !r.awarded) return;
+          sessionXpRef.current += Number(r.awarded);
+          showXpPopup({
+            sessionXp: sessionXpRef.current,
+            amount: Number(r.awarded),
+            event: "XP nonton 2 menit",
+          });
+        })
+        .catch(() => {});
+    }, 120_000);
+    return () => window.clearInterval(t);
+  }, [user?._id, claimWatchXp, epParam, streamUrl]);
+
+  // Turunkan halaman cukup jauh → player otomatis jadi mini player. Tidak ada
+  // tombol Mini lagi; transisi ditangani MiniPlayerHost dengan animasi masuk.
+  useEffect(() => {
+    if (!streamUrl || isFs || !playing) return;
+    let fired = false;
+    const onScroll = () => {
+      if (fired || window.scrollY < 560) return;
+      fired = true;
+      setMiniPlayer({
+        animeId,
+        animeTitle: D.title,
+        animeImage: D.image ?? undefined,
+        episodeNumber: currentEp?.number,
+        episodeId: epParam ?? undefined,
+        streamUrl,
+        isEmbed: sourceType === "embed",
+        startAt: videoRef.current?.currentTime ?? 0,
+      });
+      showXpPopup({
+        sessionXp: sessionXpRef.current,
+        amount: 0,
+        event: "Mini player",
+      });
+      navigate("/home");
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [
+    streamUrl,
+    isFs,
+    playing,
+    animeId,
+    epParam,
+    currentEp?.number,
+    D.title,
+    D.image,
+    sourceType,
+    navigate,
+  ]);
 
   /**
    * Resolusi asli tiap file MP4 di daftar server episode ini.
@@ -1838,11 +1908,20 @@ function WatchContent() {
   // mengira videonya buffering padahal masih diputar. Jadi ada jeda singkat
   // tanpa spinner setiap kali status layar penuh berubah.
   const [fsSettle, setFsSettle] = useState(false);
+  const fsWasRef = useRef(false);
   // Prefix dipakai hanya di sini supaya logika keluar layar penuh tetap sama
   // di browser yang hanya mendukung API lama.
   useEffect(() => {
     const settle = () => {
       const fsNow = !!fullscreenElement();
+      if (fsWasRef.current && !fsNow) {
+        showXpPopup({
+          sessionXp: sessionXpRef.current,
+          amount: 0,
+          event: "Keluar fullscreen",
+        });
+      }
+      fsWasRef.current = fsNow;
       setIsFs(fsNow);
       // Keluar layar penuh = kunci UI otomatis dilepas.
       if (!fsNow) setUiLocked(false);
@@ -1862,6 +1941,14 @@ function WatchContent() {
     // document.fullscreenElement, jadi status UI diambil dari event ini.
     const onNativeFs = (e: Event) => {
       const fsNow = e.type === "webkitbeginfullscreen";
+      if (fsWasRef.current && !fsNow) {
+        showXpPopup({
+          sessionXp: sessionXpRef.current,
+          amount: 0,
+          event: "Keluar fullscreen",
+        });
+      }
+      fsWasRef.current = fsNow;
       setIsFs(fsNow);
       if (!fsNow) setUiLocked(false);
       setControlsOn(true);
@@ -2282,8 +2369,24 @@ function WatchContent() {
             poster={D.image}
             className="h-full w-full object-contain"
             style={{ filter: videoFilter }}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
+            onPlay={() => {
+              setPlaying(true);
+              showXpPopup({
+                sessionXp: sessionXpRef.current,
+                amount: 0,
+                event: "Nonton",
+              });
+            }}
+            onPause={() => {
+              setPlaying(false);
+              if (sessionXpRef.current > 0) {
+                showXpPopup({
+                  sessionXp: sessionXpRef.current,
+                  amount: 0,
+                  event: "Jeda",
+                });
+              }
+            }}
             onEnded={() => {
               // Auto next: sehabis episode selesai, episode berikutnya
               // langsung diputar (autoplay dimulai begitu video baru siap).
@@ -2748,32 +2851,6 @@ function WatchContent() {
                   </button>
                 )}
                 <button
-                  disabled={!streamUrl}
-                  onClick={async () => {
-                    // Kirim ke mini player global (AppLayout) lalu balik ke Home
-                    setMiniPlayer({
-                      animeId,
-                      animeTitle: D.title,
-                      animeImage: D.image ?? undefined,
-                      episodeNumber: currentEp?.number,
-                      episodeId: epParam ?? undefined,
-                      streamUrl: streamUrl,
-                      isEmbed: false,
-                    });
-                    toast.success("Mini player aktif — kembali ke Home");
-                    navigate("/home");
-                  }}
-                  className={cn(
-                    "rounded p-1.5",
-                    !streamUrl
-                      ? "cursor-not-allowed bg-white/[0.04] text-zinc-600"
-                      : "bg-white/15",
-                  )}
-                  aria-label="Mini player"
-                >
-                  <PictureInPicture2 className="size-4" />
-                </button>
-                <button
                   onClick={toggleFullscreen}
                   className="rounded bg-white/15 p-1.5"
                   aria-label="Layar penuh"
@@ -3071,115 +3148,99 @@ function WatchContent() {
       {/* Aksi panjang ke samping dengan sudut rounded; border tipis dan
           teks "strong" (bukan bold tebal). Kalau ruang sempit, baris kedua
           (Donate/Laporkan/Bagikan) otomatis turun ke bawah. */}
-      <div className="w-full space-y-2 px-3 pt-2">
-        <div className="flex items-stretch gap-2">
-          <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-full border border-white/15 bg-white/[0.04]">
-            <button
-              onClick={() => {
-                void toggleLike({ animeId, value: 1 }).catch(() => {});
-              }}
-              aria-label="Like"
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold transition",
-                likeStats?.liked
-                  ? "bg-white/15 text-white"
-                  : "text-muted-foreground hover:bg-white/5",
-              )}
-            >
-              <ThumbsUp
-                className={cn("size-4", likeStats?.liked && "fill-current")}
-                aria-hidden
-              />
-              <span className="tabular-nums">
-                {(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}
-              </span>
-            </button>
-            <span aria-hidden className="w-px shrink-0 self-stretch bg-white/20" />
-            <button
-              onClick={() => {
-                void toggleLike({ animeId, value: -1 }).catch(() => {});
-              }}
-              aria-label="Tidak suka"
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold transition",
-                likeStats?.disliked
-                  ? "bg-white/15 text-white"
-                  : "text-muted-foreground hover:bg-white/5",
-              )}
-            >
-              <ThumbsDown
-                className={cn("size-4", likeStats?.disliked && "fill-current")}
-                aria-hidden
-              />
-              <span className="tabular-nums">
-                {(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}
-              </span>
-            </button>
-          </div>
-          <button
-            onClick={() => {
-              void toggleFav({
-                animeId: favId,
-                animeTitle: detailReady ? detailData.title : D.title,
-                animeImage: detailReady ? detailData.image : D.image,
-                kind: isDonghua ? "donghua" : "anime",
-                status:
-                  (detailReady ? detailData.status : D.status) ?? undefined,
-              }).catch(() => {});
-            }}
-            className={cn(
-              "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition",
-              isFav
-                ? "border-white/25 bg-white/15 text-white"
-                : "border-white/15 bg-white/[0.04] text-muted-foreground hover:bg-white/5",
-            )}
-          >
-            <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
-            <span>Favorite</span>
-          </button>
-        </div>
-
-        <div className="flex items-stretch gap-2">
-          <a
-            href="https://sociabuzz.com/yorunime/donate"
-            target="_blank"
-            rel="noreferrer"
-            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white/5"
-          >
-            <Coffee className="size-4 shrink-0" aria-hidden />
-            <span>Donate</span>
-          </a>
-          <button
-            onClick={() => setReportOpen(true)}
-            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-white/5"
-          >
-            <Flag className="size-4 shrink-0" aria-hidden />
-            <span>Laporkan</span>
-          </button>
-          <button
-            onClick={() => {
-              const url = window.location.href;
-              const title = detailReady ? detailData.title : D.title;
-              const nav = navigator as Navigator & {
-                share?: (d: ShareData) => Promise<void>;
-              };
-              if (nav.share) {
-                void nav
-                  .share({ title, url })
-                  .catch(() => undefined);
-                return;
-              }
-              void navigator.clipboard
-                ?.writeText(url)
-                .then(() => toast.success("Tautan disalin — siap dibagikan"))
-                .catch(() => toast.error("Gagal membagikan tautan"));
-            }}
-            aria-label="Bagikan"
-            className="flex size-9 shrink-0 items-center justify-center self-center rounded-full border border-white/15 bg-white/[0.04] text-muted-foreground transition hover:bg-white/5 active:scale-95"
-          >
-            <Share2 className="size-4" />
-          </button>
-        </div>
+      {/* Aksi ringkas: 4 per baris, sisanya turun ke bawah. */}
+      <div className="grid w-full grid-cols-4 gap-1.5 px-3 pt-2">
+        <button
+          onClick={() => {
+            void toggleLike({ animeId, value: 1 }).catch(() => {});
+          }}
+          aria-label="Like"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[9px] font-bold transition active:scale-95",
+            likeStats?.liked
+              ? "border-white/25 bg-white/15 text-white"
+              : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
+          )}
+        >
+          <ThumbsUp className={cn("size-4", likeStats?.liked && "fill-current")} aria-hidden />
+          <span className="tabular-nums">
+            Like {(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}
+          </span>
+        </button>
+        <button
+          onClick={() => {
+            void toggleLike({ animeId, value: -1 }).catch(() => {});
+          }}
+          aria-label="Tidak suka"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[9px] font-bold transition active:scale-95",
+            likeStats?.disliked
+              ? "border-white/25 bg-white/15 text-white"
+              : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
+          )}
+        >
+          <ThumbsDown className={cn("size-4", likeStats?.disliked && "fill-current")} aria-hidden />
+          <span className="tabular-nums">
+            Dislike {(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}
+          </span>
+        </button>
+        <button
+          onClick={() => {
+            void toggleFav({
+              animeId: favId,
+              animeTitle: detailReady ? detailData.title : D.title,
+              animeImage: detailReady ? detailData.image : D.image,
+              kind: isDonghua ? "donghua" : "anime",
+              status: (detailReady ? detailData.status : D.status) ?? undefined,
+            }).catch(() => {});
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[9px] font-bold transition active:scale-95",
+            isFav
+              ? "border-white/25 bg-white/15 text-white"
+              : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
+          )}
+        >
+          <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
+          Favorite
+        </button>
+        <a
+          href="https://sociabuzz.com/yorunime/donate"
+          target="_blank"
+          rel="noreferrer"
+          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[9px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+        >
+          <Coffee className="size-4 shrink-0" aria-hidden />
+          Donate
+        </a>
+        <button
+          onClick={() => setReportOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[9px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+        >
+          <Flag className="size-4 shrink-0" aria-hidden />
+          Laporkan
+        </button>
+        <button
+          onClick={() => {
+            const url = window.location.href;
+            const title = detailReady ? detailData.title : D.title;
+            const nav = navigator as Navigator & {
+              share?: (d: ShareData) => Promise<void>;
+            };
+            if (nav.share) {
+              void nav.share({ title, url }).catch(() => undefined);
+              return;
+            }
+            void navigator.clipboard
+              ?.writeText(url)
+              .then(() => toast.success("Tautan disalin — siap dibagikan"))
+              .catch(() => toast.error("Gagal membagikan tautan"));
+          }}
+          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[9px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+        >
+          <Share2 className="size-4" />
+          Bagikan
+        </button>
       </div>
 
       {/* Pratinjau gambar komentar layar penuh. */}
@@ -3300,9 +3361,10 @@ function WatchContent() {
           </div>
         </div>
 
-        {/* 4 KOTAK ALAT — urutan: Kualitas · Download · Kecepatan · Mini. */}
+        {/* 3 KOTAK ALAT — Kualitas · Download · Kecepatan. Mini player
+            sekarang otomatis saat halaman digeser ke bawah. */}
         {(isHost || !room) && (
-          <div className="mt-3 grid grid-cols-4 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <ToolButton
               icon={<Settings2 className="size-4" />}
               label="Kualitas"
@@ -3320,23 +3382,6 @@ function WatchContent() {
               icon={<Gauge className="size-4" />}
               label={`${speed}x`}
               onClick={() => setSpeedOpen(true)}
-            />
-            <ToolButton
-              icon={<PictureInPicture2 className="size-4" />}
-              label="Mini"
-              disabled={!streamUrl}
-              onClick={() => {
-                setMiniPlayer({
-                  animeId,
-                  animeTitle: D.title,
-                  animeImage: D.image ?? undefined,
-                  episodeNumber: currentEp?.number,
-                  episodeId: epParam ?? undefined,
-                  streamUrl,
-                  isEmbed: sourceType === "embed",
-                });
-                navigate("/home");
-              }}
             />
           </div>
         )}
@@ -3479,32 +3524,16 @@ function WatchContent() {
           </>
         )}
 
-        {/* Kotak Premium di bawah toolbar — gaya & teks SAMA persis dengan
-            kartu Premium di Home. Selalu tampil (termasuk untuk akun
-            Premium), sama seperti kotak Premium di Home. */}
-        {/* Garis pembatas DI ATAS kotak Premium (permintaan). */}
-        <div className="mt-4 h-px w-full bg-white/15" />
-        {(
-          <button
-            onClick={() => navigate("/premium")}
-            className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-gold/30 bg-gradient-to-r from-gold/15 via-secondary/40 to-secondary/40 p-3.5 text-left shadow-[0_0_24px_-8px] shadow-gold/40 transition hover:border-gold/60"
-          >
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/15 shadow-[0_0_16px_-4px] shadow-gold/50">
-              <CrownIcon className="size-7 text-gold" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-mono text-[11px] font-bold tracking-[0.2em] text-gold">
-                PREMIUM
-              </span>
-              <span className="mt-0.5 block text-xs leading-snug text-zinc-300">
-                Premium mulai dari 7.000 — baca manga dan manhwa sepuasnya
-              </span>
-            </span>
-            <span className="flex shrink-0 items-center rounded-xl bg-gold px-3.5 py-2 text-xs font-bold text-black">
-              Buka Premium
-            </span>
-          </button>
-        )}
+        {/* Kotak rekomendasi kualitas — abu-abu, ikon "!" di kiri. */}
+        <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.055] p-3">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.06] text-[12px] font-black text-white/60">
+            !
+          </span>
+          <p className="min-w-0 text-[10.5px] font-medium leading-relaxed text-white/45">
+            Direkomendasikan kualitas 360p jika merasa lag dan buffering.
+            Setiap 2 menit kamu bakalan dapet 200 XP
+          </p>
+        </div>
 
         {/* Kecerahan & volume HANYA ada di layar penuh. Di luar layar penuh
             tidak ada tombolnya sama sekali, sesuai permintaan. */}

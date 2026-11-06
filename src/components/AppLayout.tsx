@@ -49,6 +49,10 @@ import { MOST_MIN_TITLES, type TopPanel } from "@/components/HomeTopButtons";
 import { applyAntiLag, getAntiLag } from "@/lib/antilag";
 import { MusicMiniBar } from "@/components/MusicMiniBar";
 import { YoruVerseScreen } from "@/components/YoruVerse";
+import {
+  YoruVerseHubScreen,
+  type YoruFeature,
+} from "@/components/YoruVerseHub";
 import { PanelHub, type PanelKey } from "@/components/PanelHub";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
@@ -87,6 +91,8 @@ export function AppLayout({
   const [hubOpen, setHubOpen] = useState(false);
   // Tampilan awal YoruVerse saat dibuka dari sheet Panel (shop/pet/music).
   const [yvView, setYvView] = useState<"shop" | "pet" | "music" | null>(null);
+  // Fitur lokal YoruVerse yang langsung dibuka dari Panel.
+  const [yvFeature, setYvFeature] = useState<YoruFeature | null>(null);
   // YORUVERSE — hub virtual (tombol kuning di panel akun). Layar penuh
   // yang dirender di atas segalanya (z-[70]).
   const [yvOpen, setYvOpen] = useState(false);
@@ -101,6 +107,19 @@ export function AppLayout({
   const pickHub = (key: PanelKey) => {
     setHubOpen(false);
     switch (key) {
+      case "yoraverse":
+        setYvView(null);
+        setYvFeature(null);
+        setYvOpen(true);
+        break;
+      case "quest":
+      case "sticker":
+      case "nobar":
+      case "voice":
+        setYvView(null);
+        setYvFeature(key);
+        setYvOpen(true);
+        break;
       case "feed":
         navigate("/feed");
         break;
@@ -133,6 +152,36 @@ export function AppLayout({
         break;
     }
   };
+
+  // Pintasan dari halaman Akun/Profil: /home?panel=favorites|history|...
+  // Membuka layar yang sama seperti tombol Panel, lalu query dibersihkan
+  // supaya layar tidak terbuka ulang saat user menutupnya.
+  useEffect(() => {
+    const panel = new URLSearchParams(location.search).get("panel");
+    if (!panel) return;
+    if (panel === "favorites") setNavPanel("favorites");
+    else if (panel === "history") setTopPanel("continue");
+    else if (panel === "download") setTopPanel("downloads");
+    else if (panel === "yoraverse") {
+      setYvView(null);
+      setYvFeature(null);
+      setYvOpen(true);
+    } else if (
+      panel === "quest" ||
+      panel === "sticker" ||
+      panel === "nobar" ||
+      panel === "voice"
+    ) {
+      setYvView(null);
+      setYvFeature(panel);
+      setYvOpen(true);
+    }
+    const next = new URLSearchParams(location.search);
+    next.delete("panel");
+    const qs = next.toString();
+    navigate(`${location.pathname}${qs ? `?${qs}` : ""}`, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (!navPanel) return;
@@ -262,17 +311,33 @@ export function AppLayout({
       {!overlayOpen && location.pathname !== "/catalog" && location.pathname !== "/feed" && <AppFooter />}
       <MusicMiniBar />
       <MiniPlayerHost />
+      <XpPopupHost />
 
       <OverlayScrollLock />
-      {yvOpen && (
-        <YoruVerseScreen
-          initialView={yvView}
-          onClose={() => {
-            setYvOpen(false);
-            setYvView(null);
-          }}
-        />
-      )}
+      {yvOpen &&
+        (yvView ? (
+          <YoruVerseScreen
+            initialView={yvView}
+            onClose={() => {
+              setYvOpen(false);
+              setYvView(null);
+              setYvFeature(null);
+            }}
+          />
+        ) : (
+          <YoruVerseHubScreen
+            initialFeature={yvFeature}
+            onClose={() => {
+              setYvOpen(false);
+              setYvView(null);
+              setYvFeature(null);
+            }}
+            onOpenSub={(v) => {
+              setYvFeature(null);
+              setYvView(v);
+            }}
+          />
+        ))}
       {/* SHEET PANEL — tombol tengah navigasi bawah (55% layar). */}
       {hubOpen && <PanelHub onClose={() => setHubOpen(false)} onPick={pickHub} />}
     </div>
@@ -538,6 +603,105 @@ export function useHideNavWhile(active: boolean) {
   }, [active]);
 }
 
+// --------------------------------------------------------- XP popup ----
+
+type XpPopupState = {
+  /** XP yang dikumpulkan selama sesi nonton ini. */
+  sessionXp: number;
+  /** XP yang baru masuk dari klaim 2 menit (0 kalau bukan klaim). */
+  amount: number;
+  /** Label kejadian: Nonton, Jeda, Keluar fullscreen, Mini player, dll. */
+  event: string;
+  at: number;
+};
+
+let xpPopupCurrent: XpPopupState | null = null;
+let xpPopupListeners: ((s: XpPopupState | null) => void)[] = [];
+
+export function showXpPopup(s: Omit<XpPopupState, "at">) {
+  xpPopupCurrent = { ...s, at: Date.now() };
+  xpPopupListeners.forEach((l) => l(xpPopupCurrent));
+}
+
+export function hideXpPopup() {
+  xpPopupCurrent = null;
+  xpPopupListeners.forEach((l) => l(null));
+}
+
+function useXpPopup() {
+  return useSyncExternalStore(
+    (cb) => {
+      xpPopupListeners.push(cb);
+      return () => {
+        xpPopupListeners = xpPopupListeners.filter((l) => l !== cb);
+      };
+    },
+    () => xpPopupCurrent,
+    () => xpPopupCurrent,
+  );
+}
+
+function XpPopupHost() {
+  const data = useXpPopup();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!data) return;
+    const t = window.setTimeout(() => hideXpPopup(), 4200);
+    return () => window.clearTimeout(t);
+  }, [data?.at]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!data) return null;
+  const level = user?.level ?? 1;
+  const xp = user?.xp ?? 0;
+  const cost = xpForLevel(level);
+  const inLevel = Math.max(0, Math.min(xp, cost));
+  const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
+  const left = Math.max(0, cost - inLevel);
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[125] flex justify-center px-4">
+      <div className="pop-enter pointer-events-auto w-full max-w-sm overflow-hidden rounded-3xl border border-gold/30 bg-[#12161f]/97 p-3.5 shadow-[0_30px_70px_-30px_rgba(0,0,0,1)] backdrop-blur-xl">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gold/15 text-gold">
+            <AwardIcon className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-[12px] font-black text-white">
+                {data.event}
+              </p>
+              <button
+                onClick={hideXpPopup}
+                aria-label="Tutup XP"
+                className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/45"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+            <p className="mt-1 font-display text-[26px] font-black leading-none text-gold">
+              +{data.sessionXp.toLocaleString("id-ID")}
+              <span className="ml-1 text-[10px] font-bold text-white/45">XP sesi</span>
+            </p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/40">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#7FD3F7)] transition-all duration-700"
+                style={{ width: `${Math.max(3, pct)}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[9.5px] font-semibold text-white/40">
+              <span className="truncate">Level {level} sekarang</span>
+              <span className="shrink-0 text-white/55">
+                {left.toLocaleString("id-ID")} XP ke Lv.{level + 1}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ------------------------------------------------------- mini player ----
 
 type MiniState = {
@@ -549,6 +713,8 @@ type MiniState = {
   episodeId?: string;
   streamUrl: string;
   isEmbed: boolean;
+  /** Detik terakhir dari player utama supaya mini lanjut di posisi sama. */
+  startAt?: number;
 };
 
 let miniListeners: ((s: MiniState | null) => void)[] = [];
@@ -564,7 +730,8 @@ function getMiniCue() {
   return miniCueText;
 }
 export function setMiniPlayer(s: MiniState | null) {
-  if (s?.streamUrl !== miniCurrent?.streamUrl) miniTime = 0;
+  if (s?.streamUrl !== miniCurrent?.streamUrl)
+    miniTime = Math.max(0, s?.startAt ?? 0);
   if (!s) miniCueText = "";
   miniCurrent = s;
   miniListeners.forEach((l) => l(s));
@@ -630,7 +797,7 @@ export function MiniPlayerHost() {
 
   return (
     <div
-      className="fixed z-[60] touch-none overflow-hidden rounded-xl border border-foreground/40 shadow-2xl"
+      className="screen-enter fixed z-[60] touch-none overflow-hidden rounded-xl border border-foreground/40 shadow-2xl"
       style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);

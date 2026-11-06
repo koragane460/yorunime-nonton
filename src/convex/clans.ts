@@ -272,6 +272,45 @@ export const listClans = query({
   },
 });
 
+/** Total XP sebuah clan dari level 1 sampai level sekarang. */
+export function totalClanXp(level: number, levelProgress: number) {
+  const l = Math.max(1, level);
+  const before = 700 * (l - 1) + 5 * (l - 1) * (l - 2);
+  return before + Math.max(0, levelProgress ?? 0);
+}
+
+/** Top 5 clan untuk papan peringkat Home (all-time, level lalu XP). */
+export const topClans = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 5 }) => {
+    const clans = await ctx.db.query("clans").collect();
+    clans.sort(
+      (a, b) =>
+        (b.level ?? 1) - (a.level ?? 1) ||
+        (b.levelProgress ?? 0) - (a.levelProgress ?? 0) ||
+        b.diamonds - a.diamonds,
+    );
+    const out = [];
+    for (const clan of clans.slice(0, Math.max(1, Math.min(5, limit)))) {
+      const [leader, members] = await Promise.all([
+        ctx.db.get(clan.leaderId),
+        ctx.db
+          .query("clanMembers")
+          .withIndex("clanId", (q) => q.eq("clanId", clan._id))
+          .collect(),
+      ]);
+      out.push({
+        ...clanPublic(clan, members.length),
+        leaderUsername: leader?.username ?? clan.name,
+        leaderImage: leader?.image,
+        leaderSeqId: leader?.seqId,
+        totalXp: totalClanXp(clan.level ?? 1, clan.levelProgress ?? 0),
+      });
+    }
+    return out;
+  },
+});
+
 export const myMembership = query({
   args: {},
   handler: async (ctx) => {

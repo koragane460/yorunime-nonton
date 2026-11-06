@@ -33,6 +33,45 @@ export const recordXp = mutation({
   },
 });
 
+/**
+ * XP nonton tiap 2 menit. Premium dapat 2× (400 XP). Cooldown di server
+ * mencegah klien memanggil berulang kali untuk memanen XP.
+ */
+export const claimWatchXp = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+    const now = Date.now();
+    // Beri toleransi 5 detik untuk timer browser yang meleset sedikit.
+    if (now - (user.lastWatchXpAt ?? 0) < 115_000) {
+      return {
+        awarded: 0,
+        amount: 0,
+        xp: user.xp ?? 0,
+        level: user.level ?? 1,
+        premium: (user.premiumUntil ?? 0) > now,
+        nextCost: xpForLevel(user.level ?? 1),
+      };
+    }
+    const premium = !!user.unlimitedPremium || (user.premiumUntil ?? 0) > now;
+    const amount = premium ? 400 : 200;
+    await addXpInternal(ctx, userId, amount, premium ? "watch-premium" : "watch");
+    await ctx.db.patch(userId, { lastWatchXpAt: now });
+    const after = await ctx.db.get(userId);
+    return {
+      awarded: amount,
+      amount,
+      xp: after?.xp ?? 0,
+      level: after?.level ?? 1,
+      premium,
+      nextCost: xpForLevel(after?.level ?? 1),
+    };
+  },
+});
+
 const PERIOD_MS: Record<string, number> = {
   harian: 24 * 3600 * 1000,
   mingguan: 7 * 24 * 3600 * 1000,

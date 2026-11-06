@@ -261,27 +261,6 @@ export function Spotlight({
 
   return (
     <section className="fade-enter mt-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="yn-sec text-xl">Spotlight</h2>
-        </div>
-        {/* Titik halaman pindah ke kanan judul — tidak lagi memakan
-            ruang di bawah kartu. */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          {list.map((a, i) => (
-            <button
-              key={a.id}
-              onClick={() => go(i)}
-              aria-label={`Slide spotlight ${i + 1}`}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                i === idx ? "w-5 bg-[#FFD23F]" : "w-1.5 bg-white/25 hover:bg-white/45",
-              )}
-            />
-          ))}
-        </div>
-      </div>
-
       <div
         ref={trackRef}
         onScroll={(e) => {
@@ -314,7 +293,7 @@ export function Spotlight({
           return (
             <div
               key={a.id}
-              className="group relative h-[210px] w-[92%] shrink-0 snap-center overflow-hidden rounded-2xl border border-white/12 bg-black text-left transition hover:border-white/30 sm:w-[70%] lg:w-[54%]"
+              className="group relative h-[318px] w-[94%] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/12 bg-black text-left transition hover:border-white/30 sm:h-[340px] sm:w-[76%] lg:w-[62%]"
             >
               {/* Banner anime sebagai latar penuh. */}
               <img
@@ -457,6 +436,22 @@ export function Spotlight({
         })}
       </div>
 
+      {/* Titik halaman di TENGAH BAWAH — tanpa judul Spotlight. */}
+      <div className="mt-2.5 flex items-center justify-center gap-1.5">
+        {list.map((a, i) => (
+          <button
+            key={a.id}
+            onClick={() => go(i)}
+            aria-label={`Slide spotlight ${i + 1}`}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              i === idx
+                ? "w-6 bg-[#FFD23F]"
+                : "w-1.5 bg-white/25 hover:bg-white/45",
+            )}
+          />
+        ))}
+      </div>
     </section>
   );
 }

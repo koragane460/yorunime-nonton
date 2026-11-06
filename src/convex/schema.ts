@@ -105,6 +105,8 @@ const schema = defineSchema(
       bannedUntil: v.optional(v.number()),
       bannedReason: v.optional(v.string()),
       nsfwStrikes: v.optional(v.number()),
+      /** Waktu terakhir XP nonton 2 menit diklaim (anti spam). */
+      lastWatchXpAt: v.optional(v.number()),
       seqId: v.optional(v.number()),
       deviceKey: v.optional(v.string()),
       lastSeenUpdate: v.optional(v.number()),

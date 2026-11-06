@@ -28,6 +28,7 @@ import {
 import {
   STAFF_BADGE,
   LEVEL_BADGE_TIERS,
+  badgeForLevel,
   CLAN_ROLE_BADGE,
   clanNameCls,
   timeAgo,
@@ -81,6 +82,7 @@ import {
   Check,
   BadgeCheck,
   Pencil,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -136,18 +138,372 @@ function AkunContent() {
     );
   }
 
-  // Halaman Akun sekarang HANYA Pengaturan: kartu identitas baru di atas,
-  // lalu seluruh preferensi, tautan sosial, CS, dan Gmail. Header profil
-  // lama, kartu clan, feed komentar, dan FAB pengaturan sudah dihapus.
+  // Tab Pengaturan dibuka lewat ikon gerigi di profil. Tanpa ?tab=settings,
+  // halaman Akun tampil sebagai profil yang hidup — bukan daftar pengaturan.
+  if (params.get("tab") === "settings") {
+    return (
+      <>
+        <SettingsScreen
+          onClose={() => navigate("/akun")}
+          onSignOut={signOut}
+          onOpenCs={() => setCsOpen(true)}
+        />
+        {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
+      </>
+    );
+  }
+
   return (
     <>
-      <SettingsScreen
+      <AkunProfileScreen
         onClose={() => navigate("/home")}
-        onSignOut={signOut}
+        onSettings={() => navigate("/akun?tab=settings")}
         onOpenCs={() => setCsOpen(true)}
       />
       {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
     </>
+  );
+}
+
+/* ====================================================== PROFIL AKUN ====
+   Halaman utama /akun: kartu profil terang, tier berpartikel, kotak level,
+   statistik, aksi cepat, dan bagian beli Premium. Pengaturan tetap ada,
+   tapi lewat ikon gerigi — bukan isi utama halaman. */
+
+const TIER_PARTICLES = [
+  { x: -34, y: -18, s: 3, c: "#FFD23F", d: 0 },
+  { x: 46, y: -26, s: 2.5, c: "#7FD3F7", d: 0.4 },
+  { x: -58, y: 10, s: 2, c: "#FF9AA3", d: 0.8 },
+  { x: 64, y: 8, s: 3, c: "#B9A7FF", d: 0.2 },
+  { x: -18, y: 26, s: 2, c: "#9AF0C7", d: 1.1 },
+  { x: 22, y: 28, s: 2.5, c: "#FFD23F", d: 0.65 },
+  { x: -44, y: -4, s: 2, c: "#FFFFFF", d: 1.4 },
+  { x: 38, y: -6, s: 2, c: "#7FD3F7", d: 0.95 },
+];
+
+function AkunTierCard({ level }: { level: number }) {
+  const badge = badgeForLevel(level);
+  const Icon = badge.icon;
+  return (
+    <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(115deg,rgba(255,255,255,.10),rgba(255,255,255,.03)_55%,rgba(0,0,0,.16))] px-3 py-3">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-12 size-28 rounded-full bg-white/10 blur-2xl"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-2 top-1/2 size-20 -translate-y-1/2 rounded-full border border-white/10"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-5 top-1/2 size-28 -translate-y-1/2 rounded-full border border-white/[0.06]"
+      />
+      <span aria-hidden className="pointer-events-none absolute inset-0">
+        {TIER_PARTICLES.map((p, i) => (
+          <span
+            key={i}
+            className="tier-particle absolute left-1/2 top-1/2 rounded-full"
+            style={
+              {
+                width: p.s,
+                height: p.s,
+                background: p.c,
+                animationDelay: `${p.d}s`,
+                "--dx": `${p.x}px`,
+                "--dy": `${p.y}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </span>
+      <div className="relative flex items-center gap-3">
+        <span
+          className={cn(
+            "flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-[0_6px_18px_-8px_rgba(0,0,0,.8)]",
+            badge.cls,
+          )}
+        >
+          <Icon className="size-5 text-[#17121c]" strokeWidth={2.1} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[8.5px] font-black uppercase tracking-[0.2em] text-white/45">
+            Tier profil
+          </p>
+          <p className="mt-0.5 truncate font-display text-lg font-black leading-none text-white">
+            {badge.name}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-white/15 bg-black/20 px-2.5 py-1 text-[10px] font-black text-white/70">
+          Lv.{level.toLocaleString("id-ID")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function AkunLevelCard({ level, xp }: { level: number; xp: number }) {
+  const cost = xpForLevel(level);
+  const inLevel = Math.max(0, Math.min(xp, cost));
+  const pct = Math.min(100, (inLevel / Math.max(1, cost)) * 100);
+  const left = Math.max(0, cost - inLevel);
+  return (
+    <div className="mt-2 rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[11px] font-black text-white">
+          Level {level}
+          <span className="ml-1.5 text-[9px] font-semibold text-white/35">
+            sekarang
+          </span>
+        </p>
+        <p className="truncate text-[9.5px] font-bold text-white/45">
+          {inLevel.toLocaleString("id-ID")} / {cost.toLocaleString("id-ID")} XP
+        </p>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/35">
+        <div
+          className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#7FD3F7)]"
+          style={{ width: `${Math.max(3, pct)}%` }}
+        />
+      </div>
+      <p className="mt-1.5 text-[9px] font-semibold text-white/35">
+        {left.toLocaleString("id-ID")} XP lagi ke Level {level + 1}
+      </p>
+    </div>
+  );
+}
+
+function AkunProfileScreen({
+  onClose,
+  onSettings,
+  onOpenCs,
+}: {
+  onClose: () => void;
+  onSettings: () => void;
+  onOpenCs: () => void;
+}) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const stats = useQuery(api.account.profileStats, user ? {} : "skip");
+  const [editOpen, setEditOpen] = useState(false);
+  if (!user) return null;
+
+  const level = user.level ?? 1;
+  const xp = user.xp ?? 0;
+  const premium = (user.premiumUntil ?? 0) > Date.now() || !!user.unlimitedPremium;
+  const premiumDays = Math.max(
+    0,
+    Math.ceil(((user.premiumUntil ?? 0) - Date.now()) / 86_400_000),
+  );
+  const badge = badgeForLevel(level);
+  const clanTag = user.clanTag;
+
+  const ACTIONS: {
+    label: string;
+    Icon: LucideIcon;
+    onClick: () => void;
+  }[] = [
+    { label: "Favorite", Icon: Heart, onClick: () => navigate("/home?panel=favorites") },
+    { label: "History", Icon: HistoryIcon, onClick: () => navigate("/home?panel=history") },
+    { label: "Clan", Icon: Shield, onClick: () => navigate("/clan") },
+    { label: "YoruVerse", Icon: Sparkles, onClick: () => navigate("/home?panel=yoraverse") },
+    { label: "Toko", Icon: Crown, onClick: () => navigate("/premium") },
+    { label: "Pengaturan", Icon: SettingsIcon, onClick: onSettings },
+  ];
+
+  return (
+    <div className="pb-28 pt-3">
+      <header className="flex items-center gap-2.5">
+        <button
+          onClick={onClose}
+          aria-label="Kembali"
+          className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
+        >
+          <StripBackIcon />
+        </button>
+        <h1 className="min-w-0 flex-1 truncate text-[19px] font-black tracking-tight">
+          Akun
+        </h1>
+        <button
+          onClick={onOpenCs}
+          aria-label="Customer service"
+          className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/65 transition hover:text-white active:scale-95"
+        >
+          <Headset className="size-4" />
+        </button>
+        <button
+          onClick={onSettings}
+          aria-label="Pengaturan"
+          className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/65 transition hover:text-white active:scale-95"
+        >
+          <SettingsIcon className="size-4" />
+        </button>
+      </header>
+
+      <section className="relative mt-3 overflow-hidden rounded-[30px] border border-white/12 bg-[linear-gradient(155deg,#202737_0%,#171c27_46%,#11151d_100%)] p-4 shadow-[0_28px_60px_-42px_rgba(0,0,0,.95)]">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-[#FFD23F]/10 blur-3xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -bottom-24 -right-20 size-56 rounded-full bg-[#7FD3F7]/10 blur-3xl"
+        />
+
+        <div className="relative flex items-start justify-between gap-2">
+          <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 font-mono text-[9px] font-bold text-white/45">
+            {displayId(user.seqId, user._id)}
+          </span>
+          <button
+            onClick={() => setEditOpen(true)}
+            aria-label="Ubah foto dan username"
+            className="flex size-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-white/75 transition hover:text-white active:scale-95"
+          >
+            <Pencil className="size-4" />
+          </button>
+        </div>
+
+        <div className="relative mt-1 flex flex-col items-center text-center">
+          <span className="relative">
+            <span className="absolute -inset-1.5 rounded-full bg-[conic-gradient(from_120deg,rgba(255,210,63,.7),rgba(127,211,247,.55),rgba(232,72,85,.45),rgba(255,210,63,.7))] blur-[1px]" />
+            <span className="absolute -inset-1.5 rounded-full bg-[conic-gradient(from_120deg,rgba(255,210,63,.65),rgba(127,211,247,.5),rgba(232,72,85,.4),rgba(255,210,63,.65))] opacity-60 blur-md" />
+            <FramedAvatar
+              border={user.avatarBorder}
+              src={user.image}
+              seed={user.username}
+              className="relative size-[96px] rounded-full ring-2 ring-[#202737]"
+            />
+            <button
+              onClick={() => setEditOpen(true)}
+              aria-label="Ganti foto"
+              className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border-2 border-[#1b2130] bg-gold text-black transition active:scale-90"
+            >
+              <Camera className="size-3.5" strokeWidth={2.4} />
+            </button>
+          </span>
+
+          <div className="mt-2.5 flex min-w-0 max-w-full items-center gap-1.5">
+            <h2 className="truncate font-display text-[22px] font-black leading-tight text-white">
+              {user.username ?? "user"}
+            </h2>
+            {premium && <BlueCheck className="size-4 shrink-0" />}
+          </div>
+          <p className="mt-0.5 max-w-full truncate text-[11px] font-medium text-white/40">
+            {user.email ?? user.name ?? "Akun YoruNime"}
+          </p>
+
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
+            <LevelBadge level={level} />
+            {clanTag && (
+              <ClanTag
+                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                tag={clanTag}
+                level={user.clanLevel}
+              />
+            )}
+            {premium && (
+              <span className="rounded-full border border-gold/40 bg-gold/12 px-2 py-0.5 text-[9px] font-black text-gold">
+                PREMIUM
+              </span>
+            )}
+          </div>
+
+          <div className="mt-3 w-full text-left">
+            <AkunTierCard level={level} />
+            <AkunLevelCard level={level} xp={xp} />
+          </div>
+
+          <button
+            onClick={() => setEditOpen(true)}
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.055] py-2 text-[11px] font-black text-white/75 transition hover:bg-white/[0.09] active:scale-[0.99]"
+          >
+            <Camera className="size-3.5 text-gold" />
+            Ubah foto &amp; username
+          </button>
+        </div>
+      </section>
+
+      {/* Statistik ringkas */}
+      <div className="mt-2.5 grid grid-cols-3 gap-2">
+        {[
+          ["Nonton", stats?.watchCount ?? 0],
+          ["Menit", stats?.minutesWatched ?? 0],
+          ["Komentar", stats?.commentCount ?? 0],
+        ].map(([label, value]) => (
+          <div
+            key={String(label)}
+            className="rounded-2xl border border-white/10 bg-white/[0.045] px-2 py-2.5 text-center"
+          >
+            <p className="truncate font-display text-lg font-black leading-none text-white">
+              {Number(value).toLocaleString("id-ID")}
+            </p>
+            <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-white/35">
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Beli / perpanjang Premium */}
+      <button
+        onClick={() => navigate("/premium")}
+        className="relative mt-2.5 flex w-full items-center gap-3 overflow-hidden rounded-[24px] border border-gold/35 bg-[linear-gradient(115deg,rgba(255,210,63,.18),rgba(232,72,85,.08)_55%,rgba(255,255,255,.03))] p-3.5 text-left transition active:scale-[0.99]"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gold/15 text-gold">
+          <Crown className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-black text-white">
+            {premium ? `Premium aktif · ${premiumDays} hari` : "Beli Premium"}
+          </span>
+          <span className="mt-0.5 block text-[10px] leading-snug text-white/50">
+            XP nonton 2× lipat tiap 2 menit, 1080p, tanpa iklan. Mulai Rp5.000.
+          </span>
+        </span>
+        <span className="shrink-0 rounded-full bg-gold px-3 py-1.5 text-[10px] font-black text-black">
+          {premium ? "Perpanjang" : "Pilih paket"}
+        </span>
+      </button>
+
+      {/* Aksi cepat — 3 per baris, kotak kecil. */}
+      <div className="mt-2.5 grid grid-cols-3 gap-2">
+        {ACTIONS.map(({ label, Icon, onClick }) => (
+          <button
+            key={label}
+            onClick={onClick}
+            className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.045] px-1 text-center transition hover:border-white/25 hover:bg-white/[0.075] active:scale-[0.97]"
+          >
+            <Icon className="size-4 text-gold/90" />
+            <span className="truncate text-[10px] font-black text-white/75">
+              {label}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+        <div className="flex items-center gap-2.5">
+          <span className={cn("flex size-9 items-center justify-center rounded-xl bg-gradient-to-br", badge.cls)}>
+            <badge.icon className="size-4 text-[#17121c]" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-black text-white">
+              Tier {badge.name}
+            </p>
+            <p className="text-[10px] text-white/40">
+              Naik level untuk membuka tier berikutnya.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/home?panel=yoraverse")}
+            className="shrink-0 rounded-full border border-white/12 px-2.5 py-1 text-[9.5px] font-black text-white/60"
+          >
+            Lihat
+          </button>
+        </div>
+      </div>
+
+      {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
+    </div>
   );
 }
 
@@ -1138,63 +1494,57 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="pop-enter w-full max-w-sm rounded-3xl border border-white/12 bg-[#0f131b] p-4 shadow-2xl"
+        className="pop-enter thin-scroll max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[30px] border border-white/12 bg-[#121722] p-5 shadow-[0_30px_80px_-30px_rgba(0,0,0,1)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#1CA7EC]/15">
-            <Pencil className="size-4 text-[#1CA7EC]" />
-          </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-black text-white">Ubah Foto &amp; Username</p>
-            <p className="text-[10px] text-white/40">Kelola foto & nama tampilan akunmu</p>
+            <p className="text-[15px] font-black text-white">Ubah Profil</p>
+            <p className="text-[10px] text-white/40">
+              Foto, username, dan email akunmu
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Tutup"
-            className="flex size-8 items-center justify-center rounded-full bg-white/8 text-white/60 transition hover:text-white"
+            className="flex size-8 items-center justify-center rounded-full bg-white/[0.07] text-white/60 transition hover:text-white"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
+        {/* Foto di atas, tombol ganti foto bulat kecil. */}
+        <div className="mt-5 flex flex-col items-center">
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={busyPhoto}
-            className="relative shrink-0 rounded-full transition active:scale-95 disabled:opacity-60"
+            className="relative rounded-full transition active:scale-95 disabled:opacity-60"
             aria-label="Ganti foto profil"
           >
             <FramedAvatar
               border={user.avatarBorder}
               src={user.image}
               seed={user.username}
-              className="size-[72px] rounded-full ring-1 ring-[#1CA7EC]/35"
+              className="size-[104px] rounded-full ring-2 ring-gold/35"
             />
-            <span className="absolute -bottom-0.5 -right-0.5 flex size-7 items-center justify-center rounded-full border-2 border-[#0f131b] bg-[#1CA7EC] text-white">
-              <Camera className="size-3.5" strokeWidth={2.2} />
+            <span className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full border-2 border-[#121722] bg-gold text-black shadow-lg">
+              <Camera className="size-3.5" strokeWidth={2.4} />
             </span>
           </button>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-bold text-white">Foto profil</p>
-            <p className="mt-0.5 text-[10px] leading-snug text-white/40">
-              Ketuk foto untuk memilih gambar baru dari galeri.
-            </p>
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={busyPhoto}
-              className="mt-1.5 text-[10.5px] font-black text-[#1CA7EC] disabled:opacity-50"
-            >
-              {busyPhoto ? "Mengunggah…" : "Ganti foto"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busyPhoto}
+            className="mt-2 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1 text-[10px] font-black text-white/65 transition hover:text-white disabled:opacity-50"
+          >
+            {busyPhoto ? "Mengunggah…" : "Ganti foto"}
+          </button>
         </div>
         <input
           ref={fileRef}
@@ -1207,8 +1557,8 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         <label className="mt-4 block text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
           Username
         </label>
-        <div className="mt-1.5 flex items-center gap-1 rounded-xl border border-white/15 bg-black/40 px-3 focus-within:border-[#1CA7EC]/60">
-          <span className="text-[13px] font-bold text-white/30">@</span>
+        <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 focus-within:border-gold/50">
+          <User className="size-4 shrink-0 text-white/35" />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -1227,6 +1577,23 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
           3–20 karakter, hanya huruf, angka, dan garis bawah (_).
         </p>
 
+        <label className="mt-3 block text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
+          Email
+        </label>
+        <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3">
+          <Mail className="size-4 shrink-0 text-white/25" />
+          <input
+            value={user.email ?? "Belum ada email"}
+            readOnly
+            aria-readonly
+            className="min-w-0 flex-1 cursor-default bg-transparent py-2.5 text-[12px] font-semibold text-white/40 outline-none"
+          />
+          <Lock className="size-3.5 shrink-0 text-white/20" />
+        </div>
+        <p className="mt-1.5 text-[10px] leading-snug text-white/30">
+          Email hanya bisa diubah lewat Customer Service.
+        </p>
+
         {err && (
           <p className="mt-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-[10.5px] font-semibold text-red-300">
             {err}
@@ -1237,7 +1604,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={() => void save()}
           disabled={saving || busyPhoto || !changed || clean.length < 3}
-          className="mt-4 w-full rounded-xl bg-[#1CA7EC] py-2.5 text-[12px] font-black text-white transition active:scale-[0.99] disabled:opacity-40"
+          className="mt-4 w-full rounded-xl bg-gold py-2.5 text-[12px] font-black text-black transition active:scale-[0.99] disabled:opacity-40"
         >
           {saving ? "Menyimpan…" : "Simpan perubahan"}
         </button>

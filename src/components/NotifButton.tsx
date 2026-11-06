@@ -83,6 +83,7 @@ function NotifSheet({
   const navigate = useNavigate();
 
   const notifs = useQuery(api.moderation.myNotifications, user ? {} : "skip");
+  const announcements = useQuery(api.moderation.activeAnnouncements, {});
   const friendComments = useQuery(
     api.activities.myFriendsComments,
     user ? {} : "skip",
@@ -101,8 +102,9 @@ function NotifSheet({
   }, [open, !!notifs]);
 
   const list = notifs ?? [];
+  const news = announcements ?? [];
   const comments = friendComments ?? [];
-  const empty = list.length === 0 && comments.length === 0;
+  const empty = list.length === 0 && comments.length === 0 && news.length === 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -136,6 +138,41 @@ function NotifSheet({
           </div>
         ) : (
           <div className="space-y-2.5 px-4 pt-3">
+            {news.length > 0 && (
+              <>
+                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+                  <Megaphone className="size-3" /> Pengumuman
+                </p>
+                {news.map((a: any) => (
+                  <div
+                    key={a._id}
+                    className="overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-400/[0.12] to-transparent p-3"
+                  >
+                    <div className="flex gap-3">
+                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-200">
+                        <Megaphone className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="min-w-0 flex-1 truncate text-[13px] font-bold">
+                            Pengumuman YoruNime
+                          </p>
+                          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                            {timeAgo(a.createdAt)}
+                          </span>
+                        </div>
+                        <p className="mt-1 whitespace-pre-line text-[12.5px] leading-snug text-zinc-200">
+                          {a.message}
+                        </p>
+                        <p className="mt-1 text-[10px] text-white/35">
+                          dari {a.authorName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
             {list.map((n: any, i: number) => {
               // Ajakan/hasil Afinitas → langsung ke layar Afinitas KAMU.
               const isAffinity = !!n.type?.startsWith("affinity");
