@@ -55,19 +55,18 @@ function cleanTag(t?: string | null): string | null {
   return s;
 }
 
-export type Period = "7" | "30" | "all";
+export type Period = "1" | "7" | "30";
 
 const PERIODS: { key: Period; label: string; xpKey: string }[] = [
-  { key: "7", label: "7 hari", xpKey: "mingguan" },
-  { key: "30", label: "30 hari", xpKey: "bulanan" },
-  // Kunci yang tidak dikenal backend = total XP sepanjang masa.
-  { key: "all", label: "Sepanjang masa", xpKey: "sepanjangmasa" },
+  { key: "1", label: "Setiap hari", xpKey: "harian" },
+  { key: "7", label: "7 Hari", xpKey: "mingguan" },
+  { key: "30", label: "30 Hari", xpKey: "bulanan" },
 ];
 
 const periodLabel = (p: Period) =>
-  PERIODS.find((x) => x.key === p)?.label ?? "7 hari";
+  PERIODS.find((x) => x.key === p)?.label ?? "Setiap hari";
 const xpKeyOf = (p: Period) =>
-  PERIODS.find((x) => x.key === p)?.xpKey ?? "mingguan";
+  PERIODS.find((x) => x.key === p)?.xpKey ?? "harian";
 
 /** Latar berwarna per jenis papan (permintaan: background-nya dikasih warna). */
 const TONE = {
@@ -253,7 +252,7 @@ function GridRow({
  * - Grid 4-50: foto, username, ID, tag clan, total XP, total give.
  */
 function LeaderOverlay({ mode, onClose }: { mode: "xp" | "give"; onClose: () => void }) {
-  const [period, setPeriod] = useState<Period>("7");
+  const [period, setPeriod] = useState<Period>("1");
   const navigate = useNavigate();
   const openProfile = (id?: string) => {
     if (!id) return;
@@ -494,12 +493,12 @@ export function LeaderCards() {
   const [open, setOpen] = useState<null | "xp" | "give">(null);
 
   const xpRows = useQuery(api.xp.leaderboard, {
-    period: "mingguan",
+    period: "harian",
     limit: 3,
   }) as XpRow[] | undefined;
   const giveRows = useQuery(api.account.topGive, {
     limit: 3,
-    period: "7",
+    period: "1",
   }) as GiveRow[] | undefined;
 
   const xpTop = (xpRows ?? []).slice(0, 3).map((r) => ({
@@ -569,10 +568,7 @@ export function LeaderCards() {
               tone.chip,
             )}
           >
-            7 hari
-          </span>
-          <span className="flex items-center gap-1 text-[10px] font-black text-white/80">
-            Ketuk buka <ChevronLeft className="size-3 rotate-180" />
+            Setiap hari
           </span>
         </span>
 

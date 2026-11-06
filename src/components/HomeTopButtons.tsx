@@ -67,6 +67,7 @@ function PanelShell({
   children,
   footer,
   inline,
+  footerBottom,
 }: {
   title: string;
   subtitle?: string;
@@ -75,6 +76,8 @@ function PanelShell({
   footer?: React.ReactNode;
   /** true = isi tampil di tempat (tab), bukan layar fullscreen. */
   inline?: boolean;
+  /** true = footer (mis. toggle Single/Multi) di kanan BAWAH, bukan header. */
+  footerBottom?: boolean;
 }) {
   // Mode tab: panel ini bukan layar penuh, jadi cukupopan biasa dan
   // navigasi bawah tetap terlihat.
@@ -95,11 +98,14 @@ function PanelShell({
             <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
           )}
         </div>
-        {footer}
+        {!footerBottom && footer}
       </header>
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {children}
       </div>
+      {footerBottom && footer && (
+        <div className="border-t border-border px-4 py-3">{footer}</div>
+      )}
     </div>
   );
 }
@@ -1152,44 +1158,14 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
           : "Tontonanmu dikelompokkan per hari"
       }
       onClose={onClose}
+      footerBottom
       footer={
         <div className="flex w-full items-center justify-end gap-2">
-          {/* Saklar SINGLE / MULTI — di POJOK KANAN BAWAH (permintaan). */}
-          <div className="flex items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.8)]">
-            <button
-              type="button"
-              onClick={() => pickMode("single")}
-              aria-pressed={mode === "single"}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black transition active:scale-95",
-                mode === "single"
-                  ? "bg-white text-sky-700"
-                  : "text-sky-950/75 hover:bg-white/30",
-              )}
-            >
-              <List className="size-3" aria-hidden />
-              Single
-            </button>
-            <button
-              type="button"
-              onClick={() => pickMode("multi")}
-              aria-pressed={mode === "multi"}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black transition active:scale-95",
-                mode === "multi"
-                  ? "bg-white text-sky-700"
-                  : "text-sky-950/75 hover:bg-white/30",
-              )}
-            >
-              <Filter className="size-3" aria-hidden />
-              Multi
-            </button>
-          </div>
           <button
             onClick={() => setShowDownloads(true)}
             aria-label="Download"
             title="Download"
-            className="relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/60 hover:text-primary"
+            className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/60 hover:text-primary"
           >
             <Download className="size-4" />
             {stats && stats.done > 0 && (
@@ -1198,16 +1174,40 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
               </span>
             )}
           </button>
+          {/* Saklar SINGLE / MULTI — PALING KANAN BAWAH, lebih besar. */}
+          <div className="flex items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.8)]">
+            <button
+              type="button"
+              onClick={() => pickMode("single")}
+              aria-pressed={mode === "single"}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-black transition active:scale-95",
+                mode === "single"
+                  ? "bg-white text-sky-700"
+                  : "text-sky-950/75 hover:bg-white/30",
+              )}
+            >
+              <List className="size-4" aria-hidden />
+              Single
+            </button>
+            <button
+              type="button"
+              onClick={() => pickMode("multi")}
+              aria-pressed={mode === "multi"}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-black transition active:scale-95",
+                mode === "multi"
+                  ? "bg-white text-sky-700"
+                  : "text-sky-950/75 hover:bg-white/30",
+              )}
+            >
+              <Filter className="size-4" aria-hidden />
+              Multi
+            </button>
+          </div>
         </div>
       }
     >
-      {/* Keterangan mode — tombolnya ada di footer kanan bawah. */}
-      <p className="mb-2 text-[11px] leading-snug text-muted-foreground">
-        {mode === "single"
-          ? "Single — satu baris per judul: nonton episode baru menimpa yang lama."
-          : "Multi — tiap episode punya baris sendiri, yang lama tetap tersimpan."}
-      </p>
-
       {items.length === 0 ? (
         <EmptyState
           icon={<PlayCircle className="size-6" />}

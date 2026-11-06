@@ -2774,34 +2774,25 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
       <div className="w-full p-3">
-        {/* Header pencarian: judul TETAP tampil (ciri khas YoruNime, tidak
-            disembunyikan) tapi dibuat lebih besar + aksen keemasan kecil:
-            batang emas, eyebrow huruf lebar, dan ikon kaca pembesar. */}
+        {/* Header pencarian: hanya tombol kembali + judul. Tanpa eyebrow,
+            tanpa ikon kaca di kanan, tanpa aksen emas. */}
         <div className="mb-4 mt-3 flex items-center gap-3">
           <button
             onClick={onClose}
             aria-label="Kembali"
-            className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] transition hover:border-gold-strong/50 active:scale-95"
+            className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] transition hover:border-white/30 active:scale-95"
           >
             <ChevronLeft className="size-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="yn-eyebrow text-[10px]">YoruNime Search</p>
-            <h1 className="mt-0.5 bg-gradient-to-r from-white via-white to-white/55 bg-clip-text yn-title text-[1.35rem] leading-tight text-transparent">
+            <h1 className="yn-title text-[1.35rem] leading-tight text-white">
               Cari Anime, Donghua, Film
             </h1>
           </div>
-          <span
-            aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-gold-strong/35 bg-gold-soft text-gold-strong shadow-[0_0_18px_-8px_rgba(246,200,53,.9)]"
-          >
-            <Search className="size-4" />
-          </span>
         </div>
-        <div className="yn-hairline-gold mb-3" />
 
-        {/* Input + tombol Cari */}
-        <div className="flex w-full items-center gap-2 rounded-full border border-border bg-card px-4 py-3">
+        {/* Input + tombol Cari — netral, tanpa border/aksen kuning. */}
+        <div className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-card px-4 py-3 focus-within:border-white/25">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             autoFocus

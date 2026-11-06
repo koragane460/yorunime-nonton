@@ -765,14 +765,15 @@ function WelcomeFlow() {
               >
                 {/* ================= SLIDE 1 — WELCOME ================= */}
                 <section className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]">
-                  <p className="text-center text-[11px] font-black tracking-[0.22em] text-white">
+                  <p className="text-center text-[11px] font-medium tracking-[0.22em] text-white/90">
                     APP: {APP_VERSION}.0 (1)
                   </p>
                   <div className="flex flex-1 flex-col items-center justify-center text-center">
-                    <h1 className="yn-fredoka text-[clamp(3.4rem,16vw,6rem)] leading-none text-white">
-                      Welcome
+                    <h1 className="yn-fredoka text-[clamp(3.9rem,18vw,7rem)] leading-none text-white">
+                      {/* Garis kiri W dipotong tipis & rapi (bukan clipping acak). */}
+                      <span className="inline-block [clip-path:inset(0_0_0_7%)]">W</span>elcome
                     </h1>
-                    <p className="mt-3 max-w-[19rem] text-[12.5px] font-semibold leading-snug text-white/40">
+                    <p className="mt-4 max-w-[21rem] text-[14.5px] font-semibold leading-snug text-white/40">
                       Aplikasi nonton anime, donghua &amp; film
                       <br />
                       baca manga &amp; manhwa
@@ -794,7 +795,7 @@ function WelcomeFlow() {
                     {APP_VERSION}.0 (1)
                   </p>
                   <div className="flex flex-1 flex-col justify-center py-8">
-                    <h2 className="yn-fredoka text-[2.6rem] leading-none text-white">
+                    <h2 className="yn-fredoka text-[2.6rem] leading-none text-white underline decoration-white/35 decoration-[3px] underline-offset-[10px]">
                       Disclaimer
                     </h2>
                     <div className="mt-7 space-y-5">
@@ -826,17 +827,21 @@ function WelcomeFlow() {
                     {APP_VERSION}.0 (1)
                   </p>
                   <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-6">
-                    <h2 className="yn-fredoka text-[clamp(2.7rem,12vw,3.8rem)] leading-none text-white">
-                      SIAP MULAI?
+                    <h2 className="yn-fredoka text-[clamp(2.7rem,12vw,3.8rem)] leading-none">
+                      <span className="text-white">SIAP </span>
+                      {/* 4 warna kuning konsisten untuk "MULAI?". */}
+                      <span className="bg-[linear-gradient(90deg,#FFF6C7_0%,#FFE066_38%,#FFC93C_68%,#F59E0B_100%)] bg-clip-text text-transparent">
+                        MULAI?
+                      </span>
                     </h2>
-                    <p className="mt-2 rounded-2xl bg-white/[0.045] px-3 py-2 text-[10.5px] leading-snug text-white/45">
+                    <p className="mt-2 text-[11.5px] leading-snug text-white/45">
                       YoruNime mewajibkan mu login dengan google untuk
                       sinkronisasi riwayat nonton, level akun, dan list favorite
                       mu.
                     </p>
 
-                    {/* 4 kotak fitur — 2x2, ukuran sama. */}
-                    <div className="mt-2.5 grid grid-cols-2 gap-2">
+                    {/* 4 kotak fitur — 2x2, tidak melebar ke samping. */}
+                    <div className="mx-auto mt-3 grid w-full max-w-[20rem] grid-cols-2 gap-2">
                       {[
                         { icon: MonitorPlay, label: "1080p Kualitas" },
                         { icon: Users, label: "Komunitas" },
@@ -859,7 +864,7 @@ function WelcomeFlow() {
                     <button
                       onClick={doGoogleLogin}
                       disabled={loggingIn}
-                      className="mt-2.5 flex h-14 w-full items-center gap-3 rounded-2xl bg-white px-3 text-left transition active:scale-[0.99] disabled:opacity-60"
+                      className="mt-16 flex h-14 w-full items-center gap-3 rounded-2xl bg-white px-3 text-left transition active:scale-[0.99] disabled:opacity-60"
                     >
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white">
                         <GoogleGIcon className="size-6" />
@@ -892,23 +897,24 @@ function WelcomeFlow() {
                       </span>
                     </button>
 
-                    <p className="mt-3 text-center text-[9.5px] leading-relaxed text-white/40">
-                      Dengan melakukan login maka kamu telah setuju dengan{" "}
-                      <button
-                        onClick={() => setLegalDoc("privacy")}
-                        className="font-bold text-[#1CA7EC]"
-                      >
-                        Privacy Policy
-                      </button>{" "}
-                      &amp;{" "}
-                      <button
-                        onClick={() => setLegalDoc("terms")}
-                        className="font-bold text-[#1CA7EC]"
-                      >
-                        Terms of Service
-                      </button>
-                      .
-                    </p>
+                    <div className="mt-3 text-center text-[9.5px] leading-relaxed text-white/40">
+                      <p>Dengan melakukan login maka kamu telah setuju dengan</p>
+                      {/* Dua dokumen di bawah, bukan berdampingan. */}
+                      <div className="mt-1 flex flex-col items-center gap-0.5">
+                        <button
+                          onClick={() => setLegalDoc("privacy")}
+                          className="font-bold text-[#1CA7EC]"
+                        >
+                          Privacy Policy
+                        </button>
+                        <button
+                          onClick={() => setLegalDoc("terms")}
+                          className="font-bold text-[#1CA7EC]"
+                        >
+                          Terms of Service
+                        </button>
+                      </div>
+                    </div>
 
                     {(loginErr || anonErr) && (
                       <p className="mt-2 text-center text-[10.5px] font-semibold text-red-400">

@@ -43,7 +43,6 @@ import {
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { displayId, usernameColor } from "@/lib/lstream";
-import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 import { NotifButton } from "@/components/NotifButton";
 import { FavoritesScreen } from "@/components/FavoritesScreen";
 import { MOST_MIN_TITLES, type TopPanel } from "@/components/HomeTopButtons";
@@ -265,7 +264,6 @@ export function AppLayout({
       <MiniPlayerHost />
 
       <OverlayScrollLock />
-      <AnnouncementPopup />
       {yvOpen && (
         <YoruVerseScreen
           initialView={yvView}

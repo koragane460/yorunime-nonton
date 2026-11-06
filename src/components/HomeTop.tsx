@@ -147,7 +147,6 @@ export function AnnouncementBox() {
   const updatedLabel = new Date(updatedAt).toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
-    year: "numeric",
   });
 
   // Warna titik update — bervariasi, konsisten per indeks.
@@ -155,49 +154,46 @@ export function AnnouncementBox() {
 
   return (
     <section className="fade-enter relative mt-3 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-3.5">
-      {/* Kepala: kotak ikon · Pengumuman · chip versi. */}
-      <div className="flex items-center gap-2">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#FFD23F]/15 text-[#FFD23F]">
-          <Megaphone className="size-4" />
+      {/* Ikon lebih besar + latar membulat; judul & isi sejajar di kanannya. */}
+      <div className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFD23F]/15 text-[#FFD23F]">
+          <Megaphone className="size-5" />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-black tracking-tight text-white">
-          Pengumuman
-        </span>
-        {version && (
-          <span className="shrink-0 rounded-md bg-white/[0.08] px-2 py-1 text-[9.5px] font-black uppercase tracking-wide text-white/60">
-            {version} rilis
-          </span>
-        )}
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-black leading-tight tracking-tight text-white">
+            Pengumuman
+          </p>
+          {heading && (
+            <h3 className="mt-1 text-[16px] font-black leading-snug tracking-tight text-white">
+              {heading}
+            </h3>
+          )}
+
+          {updates.length > 0 && (
+            <ul className="mt-2 grid gap-1.5 pl-1">
+              {updates.map((u, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span
+                    aria-hidden
+                    className="mt-1.5 size-1.5 shrink-0 rounded-full"
+                    style={{ background: DOTS[i % DOTS.length] }}
+                  />
+                  <span className="min-w-0 text-[12px] font-medium leading-relaxed text-white/75">
+                    {u}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Garis pembatas 30%, tidak full ke samping. */}
+          <span aria-hidden className="mt-3 block h-px w-full bg-white/30 opacity-30" />
+          <p className="mt-2 text-[10.5px] font-medium text-white/40">
+            Diperbarui {updatedLabel}
+          </p>
+        </div>
       </div>
-
-      {heading && (
-        <h3 className="mt-2.5 text-[16px] font-black leading-snug tracking-tight text-white">
-          {heading}
-        </h3>
-      )}
-
-      {updates.length > 0 && (
-        <ul className="mt-2 grid gap-1.5">
-          {updates.map((u, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span
-                aria-hidden
-                className="mt-1.5 size-1.5 shrink-0 rounded-full"
-                style={{ background: DOTS[i % DOTS.length] }}
-              />
-              <span className="min-w-0 text-[12px] font-medium leading-relaxed text-white/75">
-                {u}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Garis pembatas 30%, tidak full ke samping. */}
-      <span aria-hidden className="mt-3 block h-px w-full bg-white/30 opacity-30" />
-      <p className="mt-2 text-[10.5px] font-medium text-white/40">
-        Diperbarui {updatedLabel}
-      </p>
     </section>
   );
 }
@@ -223,6 +219,12 @@ export function Spotlight({
   const list = items.slice(0, 3);
   const toggleFav = useMutation(api.activities.toggleFavorite);
   const { user } = useAuth();
+  // Untuk mewarnai ikon love MERAH saat judul sudah ada di Favorite.
+  const favs = useQuery(
+    api.activities.myFavorites,
+    user ? {} : "skip",
+  ) as { animeId?: string }[] | undefined;
+  const favIds = new Set((favs ?? []).map((f) => String(f.animeId)));
 
   /** Posisi scroll untuk slide ke-i — pakai posisi ELEMENNYA (bukan
    *  perkiraan lebar layar), supaya titik pagination & auto-geser pas
@@ -263,10 +265,7 @@ export function Spotlight({
     <section className="fade-enter mt-4">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="yn-sec text-base">Spotlight</h2>
-          <p className="mt-0.5 text-[10px] font-semibold text-white/45">
-            Anime yang sedang trending
-          </p>
+          <h2 className="yn-sec text-xl">Spotlight</h2>
         </div>
         {/* Titik halaman pindah ke kanan judul — tidak lagi memakan
             ruang di bawah kartu. */}
@@ -415,9 +414,20 @@ export function Spotlight({
                         );
                       }
                     }}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white backdrop-blur transition active:scale-95"
+                    aria-pressed={favIds.has(String(a.id))}
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-lg backdrop-blur transition active:scale-95",
+                      favIds.has(String(a.id))
+                        ? "bg-[#E84855] text-white"
+                        : "bg-white/15 text-white",
+                    )}
                   >
-                    <Heart className="size-3.5" />
+                    <Heart
+                      className={cn(
+                        "size-3.5",
+                        favIds.has(String(a.id)) && "fill-current text-white",
+                      )}
+                    />
                   </button>
                   <button
                     aria-label="Bagikan"

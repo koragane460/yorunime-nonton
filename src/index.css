@@ -2204,6 +2204,12 @@ a {
   border-radius: inherit;
   contain: paint;
 }
+/* Efek profil diputar SEKALI, tidak loop terus-menerus. */
+.profile-decor *,
+.profile-decor-preview * {
+  animation-iteration-count: 1 !important;
+  animation-fill-mode: both;
+}
 .decor-edge {
   position: absolute;
   inset: 0;

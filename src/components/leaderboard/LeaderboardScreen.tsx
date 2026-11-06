@@ -159,15 +159,19 @@ function XpView() {
     <>
       {/* Tab periode: kotak rounded hijau muda agak ketus (LEBIH KECIL). */}
       <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
-        {["harian", "mingguan", "bulanan"].map((p) => (
+        {([
+          ["harian", "Setiap hari"],
+          ["mingguan", "7 Hari"],
+          ["bulanan", "30 Hari"],
+        ] as const).map(([p, label]) => (
           <button key={p} onClick={() => setPeriod(p)}
             className={cn(
-              "rounded-xl py-2 text-[11px] font-black capitalize transition",
+              "rounded-xl py-2 text-[11px] font-black transition",
               period === p
                 ? "bg-gold text-[#241c02]"
                 : "text-white/55 hover:bg-white/10 hover:text-white",
             )}>
-            {p}
+            {label}
           </button>
         ))}
       </div>

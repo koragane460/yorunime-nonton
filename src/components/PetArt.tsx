@@ -384,6 +384,12 @@ export function PetArt({
           "size-full object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,0.45)]",
           className,
         )}
+        style={{
+          maskImage:
+            "radial-gradient(ellipse at center, #000 62%, transparent 84%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse at center, #000 62%, transparent 84%)",
+        }}
       />
     );
   }

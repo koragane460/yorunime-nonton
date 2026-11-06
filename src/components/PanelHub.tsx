@@ -144,7 +144,7 @@ export function PanelHub({
 
         {/* 9 kotak */}
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5">
-          {/* Pintasan ke layar MENU (semua tujuan + tombol cepat user). */}
+          {/* Pintasan ke layar MENU (daftar semua tujuan aplikasi). */}
           <button
             onClick={() => {
               onClose();
@@ -157,10 +157,10 @@ export function PanelHub({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[12.5px] font-black leading-tight text-white">
-                Menu &amp; Pintasan
+                Menu
               </span>
               <span className="block truncate text-[10px] leading-tight text-white/45">
-                Semua layar + tombol cepat buatan kamu
+                Semua layar YoruNime
               </span>
             </span>
           </button>

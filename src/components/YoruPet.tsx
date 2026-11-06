@@ -429,12 +429,10 @@ export function YoruPetScreen({
                       scaleX: { duration: 0.35 },
                       y: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
                     }}
-                    // PET EQUIP TANPA bulatan: tanpa latar putih, tanpa ring
-                    // outline, tanpa highlight lingkaran — tinggal pet-nya saja.
-                    className={cn(
-                      "relative size-24",
-                      equippedDef?.glow,
-                    )}
+                    // PET EQUIP TANPA kotak/latar: glow kotak di div ini
+                    // dihapus (sumber bayangan kotak samar); aura bulat
+                    // tetap dipakai lewat span di dalamnya.
+                    className="relative size-24"
                   >
                     {/* Aura berdenyut di belakang pet. */}
                     <span
@@ -974,34 +972,33 @@ export function YoruPetScreen({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-6 backdrop-blur-sm"
           >
+            {/* Kartu hasil tetas — minimalis: tanpa glow ramai / rotasi loop. */}
             <motion.div
-              initial={{ scale: 0.4, y: 30 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ type: "spring", bounce: 0.5 }}
-              className={cn(
-                "flex w-56 flex-col items-center gap-1 rounded-3xl border border-white/20 bg-background p-5",
-                RARITY_STYLE[hatched.rarity].glow,
-              )}
+              initial={{ opacity: 0, scale: 0.94, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="w-56 rounded-3xl border border-white/10 bg-[#0d1017] p-5 text-center"
             >
-              <motion.span
-                animate={{ rotate: [-6, 6, -6] }}
-                transition={{ duration: 1.6, repeat: Infinity }}
-                className="block size-20"
-              >
+              <span className="mx-auto block size-24">
                 <PetArt petId={hatched.petId} />
-              </motion.span>
-              <p className="text-base font-black">{hatched.name}</p>
+              </span>
+              <p className="mt-1 text-lg font-black leading-tight text-white">
+                {hatched.name}
+              </p>
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-black",
+                  "mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[9.5px] font-black",
                   RARITY_STYLE[hatched.rarity].chip,
                 )}
               >
                 {hatched.rarity}
               </span>
-              <p className="text-[10px] font-bold text-zinc-400">Ketuk untuk menutup</p>
+              <span aria-hidden className="mt-4 block h-px w-full bg-white/10" />
+              <p className="mt-2.5 text-[10px] font-medium text-white/40">
+                Ketuk untuk menutup
+              </p>
             </motion.div>
           </motion.button>
         )}
