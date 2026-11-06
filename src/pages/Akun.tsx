@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -79,6 +79,8 @@ import {
   Settings as SettingsIcon,
   X,
   Check,
+  BadgeCheck,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -101,14 +103,7 @@ function AkunContent() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  // Layar Akun kini HANYA tombol Pengaturan. Banner, profil, title, story,
-  // statistik, dan tab history/komen/favorite dihapus permanen.
-  const [settingsOpen, setSettingsOpen] = useState(
-    params.get("tab") === "settings",
-  );
   const [csOpen, setCsOpen] = useState(false);
-  // Detail akun (layar penuh) — dibuka dengan menekan header profil di atas.
-  const [detailOpen, setDetailOpen] = useState(false);
   // ?user=<id> — buka profil orang lain dari luar (mis. notifikasi).
   // ?afinitas=1 — langsung buka layar AFINITAS; tanpa ?user = Afinitas
   // MILIK KAMU (notifikasi ajakan Afinitas mengarah ke sini, bukan ke
@@ -124,65 +119,35 @@ function AkunContent() {
   };
 
   if (!user) return null;
+
+  // Deep link: profil orang lain (dipakai notifikasi & daftar teman).
+  if (viewUserId && !openAffinity) {
+    return <ProfileSheet userId={viewUserId} onClose={clearDeepLink} />;
+  }
+
+  // Deep link: LANGSUNG ke layar Afinitas — targetnya user ?user= kalau
+  // ada, kalau tidak Afinitas milik kamu sendiri.
+  if (openAffinity) {
+    return (
+      <AfinitasScreen
+        targetUserId={viewUserId ?? user._id}
+        onClose={clearDeepLink}
+      />
+    );
+  }
+
+  // Halaman Akun sekarang HANYA Pengaturan: kartu identitas baru di atas,
+  // lalu seluruh preferensi, tautan sosial, CS, dan Gmail. Header profil
+  // lama, kartu clan, feed komentar, dan FAB pengaturan sudah dihapus.
   return (
-    <div className="relative pb-6">
-      {/* Kotak profil full lebar + rounded di PALING ATAS: foto profil
-          diperbesar, lalu username, tag clan, level, badge, dan title.
-          SELURUH header bisa ditekan → membuka DETAIL AKUN (permintaan
-          user); tombol pengaturan tetap jadi FAB di pojok kanan bawah. */}
-      <AkunProfileHeader user={user} onOpen={() => setDetailOpen(true)} />
-
-      {/* Detail clan milikmu (avatar, tag, role, level) + pintu ke layar
-          Clan. Belum punya clan → kotak berubah jadi ajakan bikin clan. */}
-      <AkunClanCard />
-
-      {/* Tombol Pengaturan versi FAB — melayang di pojok kanan bawah,
-          di atas bottom nav, selalu terjangkat oleh jempol. */}
-      <button
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Pengaturan"
-        className="fixed bottom-24 right-4 z-40 flex size-14 items-center justify-center rounded-full border border-gold/40 bg-gradient-to-br from-gold/80 to-gold/50 text-black shadow-[0_8px_24px_-6px_rgba(212,175,55,0.7)] transition active:scale-90"
-      >
-        <SettingsIcon className="size-6" />
-      </button>
-
-      {/* Feed komentar: diri sendiri, teman, dan developer — grid ke bawah,
-          tanpa kotak latar. */}
-      <AkunCommentsFeed />
-
-      {settingsOpen && (
-        <SettingsScreen
-          onClose={() => setSettingsOpen(false)}
-          onSignOut={signOut}
-          onOpenCs={() => {
-            setSettingsOpen(false);
-            setCsOpen(true);
-          }}
-        />
-      )}
+    <>
+      <SettingsScreen
+        onClose={() => navigate("/home")}
+        onSignOut={signOut}
+        onOpenCs={() => setCsOpen(true)}
+      />
       {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
-      {/* DETAIL AKUN — dibuka dari header profil di atas. */}
-      {detailOpen && !viewUserId && (
-        <ProfileSheet
-          userId={user._id}
-          onClose={() => setDetailOpen(false)}
-        />
-      )}
-
-      {/* Deep link: profil orang lain (dipakai notifikasi & daftar teman). */}
-      {viewUserId && !openAffinity && (
-        <ProfileSheet userId={viewUserId} onClose={clearDeepLink} />
-      )}
-
-      {/* Deep link: LANGSUNG ke layar Afinitas — targetnya user ?user= kalau
-          ada, kalau tidak Afinitas milik kamu sendiri. */}
-      {openAffinity && (
-        <AfinitasScreen
-          targetUserId={viewUserId ?? user._id}
-          onClose={clearDeepLink}
-        />
-      )}
-    </div>
+    </>
   );
 }
 
@@ -584,11 +549,10 @@ function SettingsScreen({
   // MULTI-EQUIP — maksimal 3 title tampil di detail akun.
   const toggleTitleM = useMutation(api.titles.toggleTitle);
   const [busyCosmetic, setBusyCosmetic] = useState<string | null>(null);
+  // Sheet baru untuk foto + username (tombol di kartu identitas).
+  const [editOpen, setEditOpen] = useState(false);
   // GACHA KARTU ANIME DIHAPUS PERMANEN — hadiah gacha sekarang keluar dari
   // mesin vending (XP, telur pet, Sacret, premium), bukan kartu karakter.
-  const [name, setName] = useState(user?.username ?? "");
-  const [savingName, setSavingName] = useState(false);
-  const [busyPhoto, setBusyPhoto] = useState(false);
   const [banner, setBanner] = useState(user?.bannerUrl ?? "");
   const [busyBanner, setBusyBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement | null>(null);
@@ -637,7 +601,8 @@ function SettingsScreen({
 
   const ownedBorders = user.ownedBorders ?? [];
   const equippedBorder = user.avatarBorder ?? "none";
-  const isPremium = (user.premiumUntil ?? 0) > Date.now();
+  const isPremium =
+    !!user.unlimitedPremium || (user.premiumUntil ?? 0) > Date.now();
 
   // Simpan tanpa nunggu server (fire & forget) → UI terasa instan
   const quickSave = (args: Record<string, unknown>) => {
@@ -645,23 +610,6 @@ function SettingsScreen({
     void update(args).catch((e) =>
       setErr(e instanceof Error ? e.message : "Gagal menyimpan"),
     );
-  };
-
-  /** Simpan username baru dari kartu Setting Profil. Server yang mengurus
-   *  validasi (minimal 3 karakter, hanya A-Z/a-z/0-9/_ , tidak bentrok). */
-  const saveName = async () => {
-    if (savingName) return;
-    const clean = name.trim();
-    if (clean === (user?.username ?? "")) return;
-    setErr("");
-    setSavingName(true);
-    try {
-      await updateProfile({ username: clean });
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal menyimpan username");
-    } finally {
-      setSavingName(false);
-    }
   };
 
   const applyTheme = (t: string, color?: string) => {
@@ -758,49 +706,9 @@ function SettingsScreen({
   };
 
   return (
-    <FullScreen title="Pengaturan" onClose={onClose}>
-      {/* ===== SETTING PROFIL — ganti username (dipakai di komentar, chat,
-          clan, dan leaderboard). Validasi ada di server: 3-20 karakter,
-          hanya A-Z a-z 0-9 _, dan tidak boleh bentrok. ===== */}
-      <div className="rounded-2xl border border-border bg-card p-3">
-        <div className="mb-2.5 flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-            <User className="size-[18px] text-primary" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold">Setting Profil</p>
-            <p className="text-[11px] text-muted-foreground">
-              Username tampil di komentar, chat &amp; clan
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="username"
-            maxLength={20}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            className="min-w-0 flex-1 rounded-xl bg-black/35 px-3 py-2.5 text-[13px] font-bold outline-none placeholder:text-white/30"
-          />
-          <button
-            onClick={() => void saveName()}
-            disabled={
-              savingName ||
-              name.trim() === (user?.username ?? "") ||
-              name.trim().length < 3
-            }
-            className="shrink-0 rounded-full bg-primary px-4 py-2.5 text-[12px] font-black text-primary-foreground transition active:scale-[0.97] disabled:opacity-45"
-          >
-            {savingName ? "Menyimpan…" : "Simpan"}
-          </button>
-        </div>
-        <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
-          3–20 karakter, hanya huruf, angka, dan garis bawah (_).
-        </p>
-      </div>
+    <FullScreen title="Pengaturan Akun" onClose={onClose}>
+      {/* ===== KARTU IDENTITAS BARU ===== */}
+      <ProfileOverviewCard user={user} onEdit={() => setEditOpen(true)} />
 
       {/* ===== KOTAK KATEGORI — permintaan: pengaturan jadi kumpulan kotak
           per kategori, tiap kotak berisi deretan tombol toggle on/off. ===== */}
@@ -997,7 +905,332 @@ function SettingsScreen({
 
       {/* Pintasan layar Notifikasi (overlay dari Pengaturan). */}
       {showNotif && <NotifScreen onClose={() => setShowNotif(false)} />}
+
+      {/* Sheet edit identitas: foto + username dalam satu tempat. */}
+      {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
     </FullScreen>
+  );
+}
+
+/* ==================================================== kartu identitas ====
+   Kartu profil baru di paling atas Pengaturan Akun: foto di kiri, username
+   + nama Google + ID di kanan, badge tier hanya untuk akun premium, satu
+   tombol edit, lalu dua kotak Sisa Premium & Saldo Sacret.
+   ========================================================================= */
+const TIER_STYLE: Record<
+  "basic" | "plus" | "vip",
+  { label: string; pill: string; icon: string }
+> = {
+  basic: {
+    label: "Basic",
+    pill: "border-[#1CA7EC]/45 bg-[#1CA7EC]/12 text-[#8FD8F7]",
+    icon: "text-[#1CA7EC]",
+  },
+  plus: {
+    label: "Plus",
+    pill: "border-[#E84855]/50 bg-[#E84855]/12 text-[#FF9AA3]",
+    icon: "text-[#E84855]",
+  },
+  vip: {
+    label: "VIP",
+    pill: "border-gold/50 bg-gold/12 text-gold",
+    icon: "text-gold",
+  },
+};
+
+function ProfileOverviewCard({
+  user,
+  onEdit,
+}: {
+  user: any;
+  onEdit: () => void;
+}) {
+  const unlimited = !!user.unlimitedPremium;
+  const until = user.premiumUntil ?? 0;
+  const premium = unlimited || until > Date.now();
+  const tier = premium
+    ? TIER_STYLE[(user.premiumTier ?? "basic") as "basic" | "plus" | "vip"]
+    : null;
+  const days = premium
+    ? unlimited
+      ? null
+      : Math.max(1, Math.ceil((until - Date.now()) / 86_400_000))
+    : 0;
+  const endDate =
+    premium && !unlimited
+      ? new Date(until).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : null;
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.055] via-card to-card p-3.5 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.9)]">
+      {/* Aksen tipis, bukan glow ramai. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-12 -top-12 size-32 rounded-full bg-[#1CA7EC]/10 blur-2xl"
+      />
+
+      <div className="relative flex items-start gap-3">
+        <FramedAvatar
+          border={user.avatarBorder}
+          src={user.image}
+          seed={user.username}
+          className="size-[76px] shrink-0 rounded-full ring-1 ring-[#1CA7EC]/35"
+        />
+
+        <div className="min-w-0 flex-1 pt-0.5">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[17px] font-black leading-tight",
+                usernameColor(user.username ?? "user"),
+              )}
+            >
+              {user.username ?? "user"}
+            </span>
+            {tier && (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8px] font-black uppercase leading-none tracking-[0.08em]",
+                  tier.pill,
+                )}
+              >
+                <BadgeCheck className={cn("size-3", tier.icon)} strokeWidth={2.6} />
+                {tier.label}
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 truncate text-[11.5px] font-medium leading-tight text-white/50">
+            {user.name || user.email || "Akun Google"}
+          </p>
+          <p className="mt-1.5 truncate text-[10px] font-semibold leading-tight tracking-wide text-white/32">
+            ID: {displayId(user.seqId, user._id)}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onEdit}
+        className="relative mt-3 flex w-full items-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 py-2.5 text-left transition hover:border-[#1CA7EC]/50 hover:bg-white/[0.08] active:scale-[0.99]"
+      >
+        <Camera className="size-4 shrink-0 text-[#1CA7EC]" strokeWidth={2} />
+        <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
+          Ubah foto &amp; username
+        </span>
+        <Pencil className="size-3.5 shrink-0 text-white/35" />
+      </button>
+
+      <div className="relative mt-2 grid grid-cols-2 gap-2">
+        <div className="rounded-2xl border border-gold/20 bg-gold/[0.06] px-3 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <Crown className="size-3.5 text-gold" strokeWidth={2.2} />
+            <p className="text-[8.5px] font-black uppercase tracking-[0.13em] text-gold/80">
+              Sisa Premium
+            </p>
+          </div>
+          <p className="mt-1.5 truncate text-[21px] font-black leading-none text-white">
+            {unlimited ? "∞" : days}
+            <span className="ml-1 text-[10px] font-semibold text-white/45">
+              {unlimited ? "tanpa batas" : "hari"}
+            </span>
+          </p>
+          <p className="mt-1 truncate text-[9px] font-medium text-white/38">
+            {unlimited
+              ? "Aktif selamanya"
+              : endDate
+                ? `s/d ${endDate}`
+                : "Belum aktif"}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-[#1CA7EC]/20 bg-[#1CA7EC]/[0.06] px-3 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <SacretIcon className="size-3.5 text-[#1CA7EC]" />
+            <p className="text-[8.5px] font-black uppercase tracking-[0.13em] text-[#8FD8F7]/80">
+              Saldo Sacret
+            </p>
+          </div>
+          <p className="mt-1.5 truncate text-[21px] font-black leading-none text-white">
+            {(user.diamonds ?? 0).toLocaleString("id-ID")}
+          </p>
+          <p className="mt-1 truncate text-[9px] font-medium text-white/38">
+            Sacret siap dipakai
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================= sheet edit ==== */
+function EditIdentitySheet({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
+  const updateProfile = useMutation(api.account.updateProfile);
+  const [name, setName] = useState(user?.username ?? "");
+  const [busyPhoto, setBusyPhoto] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  if (!user) return null;
+
+  const clean = name.trim();
+  const changed = clean !== (user.username ?? "");
+
+  const pickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || busyPhoto) return;
+    setBusyPhoto(true);
+    setErr("");
+    void (async () => {
+      try {
+        const small = await shrinkAvatar(f);
+        await updateProfile({ image: small });
+        toast.success("Foto profil diperbarui ✨");
+      } catch (e2) {
+        setErr(e2 instanceof Error ? e2.message : "Gagal mengganti foto");
+      } finally {
+        setBusyPhoto(false);
+      }
+    })();
+  };
+
+  const save = async () => {
+    if (saving) return;
+    if (clean.length < 3) {
+      setErr("Username minimal 3 karakter");
+      return;
+    }
+    if (!changed) {
+      onClose();
+      return;
+    }
+    setSaving(true);
+    setErr("");
+    try {
+      await updateProfile({ username: clean });
+      toast.success("Username diperbarui ✨");
+      onClose();
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan username");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="pop-enter w-full max-w-sm rounded-3xl border border-white/12 bg-[#0f131b] p-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#1CA7EC]/15">
+            <Pencil className="size-4 text-[#1CA7EC]" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-black text-white">Ubah Foto &amp; Username</p>
+            <p className="text-[10px] text-white/40">Kelola foto & nama tampilan akunmu</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-8 items-center justify-center rounded-full bg-white/8 text-white/60 transition hover:text-white"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busyPhoto}
+            className="relative shrink-0 rounded-full transition active:scale-95 disabled:opacity-60"
+            aria-label="Ganti foto profil"
+          >
+            <FramedAvatar
+              border={user.avatarBorder}
+              src={user.image}
+              seed={user.username}
+              className="size-[72px] rounded-full ring-1 ring-[#1CA7EC]/35"
+            />
+            <span className="absolute -bottom-0.5 -right-0.5 flex size-7 items-center justify-center rounded-full border-2 border-[#0f131b] bg-[#1CA7EC] text-white">
+              <Camera className="size-3.5" strokeWidth={2.2} />
+            </span>
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-bold text-white">Foto profil</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-white/40">
+              Ketuk foto untuk memilih gambar baru dari galeri.
+            </p>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={busyPhoto}
+              className="mt-1.5 text-[10.5px] font-black text-[#1CA7EC] disabled:opacity-50"
+            >
+              {busyPhoto ? "Mengunggah…" : "Ganti foto"}
+            </button>
+          </div>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={pickPhoto}
+        />
+
+        <label className="mt-4 block text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
+          Username
+        </label>
+        <div className="mt-1.5 flex items-center gap-1 rounded-xl border border-white/15 bg-black/40 px-3 focus-within:border-[#1CA7EC]/60">
+          <span className="text-[13px] font-bold text-white/30">@</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="username"
+            maxLength={20}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            className="min-w-0 flex-1 bg-transparent py-2.5 text-[13px] font-bold text-white outline-none placeholder:text-white/25"
+          />
+          <span className="shrink-0 text-[9px] font-semibold text-white/25">
+            {clean.length}/20
+          </span>
+        </div>
+        <p className="mt-1.5 text-[10px] leading-snug text-white/35">
+          3–20 karakter, hanya huruf, angka, dan garis bawah (_).
+        </p>
+
+        {err && (
+          <p className="mt-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-[10.5px] font-semibold text-red-300">
+            {err}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={saving || busyPhoto || !changed || clean.length < 3}
+          className="mt-4 w-full rounded-xl bg-[#1CA7EC] py-2.5 text-[12px] font-black text-white transition active:scale-[0.99] disabled:opacity-40"
+        >
+          {saving ? "Menyimpan…" : "Simpan perubahan"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1552,7 +1785,7 @@ function FullScreen({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-background">
       <div className="w-full min-w-0 px-3 pb-8">
-        <div className="mb-2 mt-1 flex items-center gap-2">
+        <div className="sticky top-0 z-10 -mx-3 mb-3 flex items-center gap-1.5 border-b border-white/10 bg-background/95 px-3 py-3 backdrop-blur">
           <button
             onClick={onClose}
             aria-label="Kembali"
@@ -1560,8 +1793,11 @@ function FullScreen({
           >
             <StripBackIcon />
           </button>
+          <h1 className="min-w-0 truncate text-[17px] font-bold tracking-tight">
+            {title}
+          </h1>
         </div>
-        {children}
+        <div className="space-y-3">{children}</div>
       </div>
     </div>
   );
