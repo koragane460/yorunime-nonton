@@ -598,6 +598,17 @@ function odNum(v: any): number | undefined {
   return Number.isNaN(n) ? undefined : n;
 }
 
+/** Skor Otakudesu bisa berupa "8.2" atau "82" — jangan sampai titiknya
+ *  hilang dan berubah jadi 682 seperti versi lama. */
+function odScore(v: any): number | undefined {
+  const n = parseFloat(String(v ?? "").replace(",", ".").replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  let out = n;
+  if (out > 100) out /= 100;
+  else if (out > 10) out /= 10;
+  return Math.min(10, Number(out.toFixed(1)));
+}
+
 function odList(json: any): AnimeCard[] {
   const list = json?.data?.animeList ?? json?.data ?? [];
   return (Array.isArray(list) ? list : []).map((a: any) => ({
@@ -605,8 +616,9 @@ function odList(json: any): AnimeCard[] {
     id: a.animeId ?? a.anime_id ?? a.id ?? "",
     title: a.title ?? a.animeTitle ?? "Tanpa judul",
     image: a.poster ?? a.image ?? "",
-    score: a.score ? odNum(a.score) : undefined,
+    score: a.score ? odScore(a.score) : undefined,
     episodes: a.episodes ? odNum(a.episodes) : undefined,
+    type: a.type ?? a.animeType ?? "Anime",
     status: a.status
       ? String(a.status).includes("Ongoing")
         ? "Ongoing"
@@ -1440,6 +1452,8 @@ const BROWSE_WHERE = {
   // Donghua menggantikan Special di deretan kategori Home.
   donghua: "format:DONGHUA",
   upcoming: "status:NOT_YET_RELEASED",
+  ongoing: "status:RELEASING",
+  completed: "status:FINISHED",
   popular: "",
 } as const;
 
@@ -1462,6 +1476,8 @@ export const animeBrowse = action({
       v.literal("special"),
       v.literal("season"),
       v.literal("upcoming"),
+      v.literal("ongoing"),
+      v.literal("completed"),
       v.literal("popular"),
     ),
     page: v.optional(v.number()),

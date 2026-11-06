@@ -89,12 +89,14 @@ function GivePremiumDialog({
   kind,
   clanId,
   peerId,
+  channel,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   kind: string;
   clanId?: Id<"clans">;
   peerId?: Id<"users">;
+  channel?: string;
 }) {
   const { user } = useAuth();
   const [days, setDays] = useState(1);
@@ -123,6 +125,7 @@ function GivePremiumDialog({
         kind,
         clanId,
         peerId,
+        channel,
         days,
         receivers,
         message: message.trim() || undefined,
@@ -617,9 +620,11 @@ export function ChatPanel({
   onOpenProfile,
   noPremium,
   onDeleteLocal,
+  channel,
 }: {
   kind: string;
   clanId?: Id<"clans">;
+  channel?: string;
   peerId?: Id<"users">;
   roomId?: Id<"watchRooms">;
   messages: ChatMsg[];
@@ -803,14 +808,14 @@ export function ChatPanel({
                   />
                 )}
               </button>
-              <div className={cn("flex w-3/4 min-w-0 flex-col", mine ? "items-end" : "items-start")}>
+              <div className={cn("flex min-w-0 max-w-[78%] flex-col", mine ? "items-end" : "items-start")}>
                 <div
                   className={cn(
                     // Semua bubble panjangnya SAMA (w-full di kolom w-3/4):
                     // pesan pendek maupun panjang tetap satu ukuran kotak.
                     // Ekor gelembung: pesan sendiri ke kanan bawah, pesan
                     // orang lain ke kiri bawah (bentuk ikon Collection).
-                    "flex w-full flex-col rounded-md px-3 py-2",
+                    "flex w-fit max-w-full flex-col rounded-md px-3 py-2",
                     // Pesan yang isinya cuma foto: bubble dibuat transparan
                     // supaya tidak ada kotak hitam di belakang fotonya.
                     // Ekor HANYA dipasang di bubble yang punya warna latar;
@@ -1005,76 +1010,87 @@ export function ChatPanel({
             </button>
           </div>
         )}
-        <div className="flex items-center gap-2">
+        {/* SATU BARIS LURUS: foto akun di kiri, kolom pesan, lalu ikon
+            foto/premium/sticker di kanan. Begitu mulai mengetik, ketiga
+            ikon berganti jadi satu tombol kirim. */}
+        <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.045] p-1.5">
+          <Avatar
+            src={user?.image}
+            seed={user?.username ?? "user"}
+            className="size-9 shrink-0"
+          />
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
             placeholder={muted ? "Kamu sedang dimute…" : "Tulis pesan…"}
             disabled={muted}
-            className="h-11 flex-1 rounded-full border-white/25 bg-black/50 text-[15px] focus-visible:border-white/45 focus-visible:ring-0 disabled:opacity-50"
+            className="h-9 min-w-0 flex-1 rounded-full border-0 bg-transparent px-2 text-[14px] focus-visible:border-0 focus-visible:ring-0 disabled:opacity-50"
           />
-          <Button
-            size="icon"
-            disabled={muted}
-            className="size-11 rounded-full bg-primary text-primary-foreground hover:brightness-110"
-            onClick={submit}
-          >
-            <Send className="size-5" />
-          </Button>
-        </div>
-        {/* 3 KOTAK HORIZONTAL + AGAK MIRING di bawah kolom pesan:
-            ikon di KIRI, teks di KANAN (bukan bertumpuk), dan tiap kotak
-            sedikit dimiringkan supaya tidak kaku (permintaan). */}
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            disabled={muted}
-            onClick={() => {
-              if (muted) {
-                setSendError("Kamu sedang dimute — tidak bisa kirim foto");
-                return;
-              }
-              setSendError(null);
-              fileRef.current?.click();
-            }}
-            className="flex -rotate-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-[10px] font-bold text-white/75 transition hover:border-sky-300/45 hover:bg-sky-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
-          >
-            <ImagePlus className="size-4 shrink-0 text-sky-300" />
-            <span className="truncate">Foto</span>
-          </button>
-          <button
-            type="button"
-            disabled={muted || !!noPremium}
-            onClick={() => {
-              if (muted) {
-                setSendError("Kamu sedang dimute — tidak bisa memberi premium");
-                return;
-              }
-              setSendError(null);
-              setGiveOpen(true);
-            }}
-            className="flex rotate-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-[10px] font-bold text-white/75 transition hover:border-amber-300/45 hover:bg-amber-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
-          >
-            <Crown className="size-4 shrink-0 text-amber-300" />
-            <span className="truncate">Give Prem</span>
-          </button>
-          <button
-            type="button"
-            disabled={muted}
-            onClick={() => {
-              if (muted) {
-                setSendError("Kamu sedang dimute — tidak bisa kirim sticker");
-                return;
-              }
-              setSendError(null);
-              setStickerOpen(true);
-            }}
-            className="flex -rotate-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.05] px-2 py-2.5 text-[10px] font-bold text-white/75 transition hover:border-violet-300/45 hover:bg-violet-400/10 hover:text-white active:scale-[0.97] disabled:opacity-40"
-          >
-            <Sticker className="size-4 shrink-0 text-violet-300" />
-            <span className="truncate">Sticker</span>
-          </button>
+          {text.trim() ? (
+            <Button
+              size="icon"
+              disabled={muted}
+              className="size-9 shrink-0 rounded-full bg-primary text-primary-foreground hover:brightness-110"
+              onClick={submit}
+              aria-label="Kirim pesan"
+            >
+              <Send className="size-4.5" />
+            </Button>
+          ) : (
+            <div className="flex shrink-0 items-center gap-0.5">
+              <button
+                type="button"
+                disabled={muted}
+                onClick={() => {
+                  if (muted) {
+                    setSendError("Kamu sedang dimute — tidak bisa kirim foto");
+                    return;
+                  }
+                  setSendError(null);
+                  fileRef.current?.click();
+                }}
+                aria-label="Kirim foto"
+                className="flex size-9 items-center justify-center rounded-full text-sky-300 transition hover:bg-sky-400/15 active:scale-90 disabled:opacity-40"
+              >
+                <ImagePlus className="size-4.5" />
+              </button>
+              {!noPremium && (
+                <button
+                  type="button"
+                  disabled={muted}
+                  onClick={() => {
+                    if (muted) {
+                      setSendError("Kamu sedang dimute — tidak bisa memberi premium");
+                      return;
+                    }
+                    setSendError(null);
+                    setGiveOpen(true);
+                  }}
+                  aria-label="Give premium"
+                  className="flex size-9 items-center justify-center rounded-full text-amber-300 transition hover:bg-amber-400/15 active:scale-90 disabled:opacity-40"
+                >
+                  <Crown className="size-4.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={muted}
+                onClick={() => {
+                  if (muted) {
+                    setSendError("Kamu sedang dimute — tidak bisa kirim sticker");
+                    return;
+                  }
+                  setSendError(null);
+                  setStickerOpen(true);
+                }}
+                aria-label="Kirim sticker"
+                className="flex size-9 items-center justify-center rounded-full text-violet-300 transition hover:bg-violet-400/15 active:scale-90 disabled:opacity-40"
+              >
+                <Sticker className="size-4.5" />
+              </button>
+            </div>
+          )}
         </div>
         <input
           ref={fileRef}
@@ -1211,9 +1227,10 @@ export function ChatPanel({
         open={giveOpen}
         onOpenChange={setGiveOpen}
         kind={kind}
-        clanId={clanId}
-        peerId={peerId}
-      />
+          clanId={clanId}
+          peerId={peerId}
+          channel={channel}
+        />
       {reportMsg && <ReportDialog msg={reportMsg} onClose={() => setReportMsg(null)} />}
       {zoomImg && (
         <div

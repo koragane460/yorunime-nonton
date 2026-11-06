@@ -317,10 +317,10 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
         {ownClan && (
           <button
             onClick={() => setPick({ id: ownClan._id, tab: "member" })}
-            className="mx-auto relative flex w-full flex-col items-center gap-2 rounded-3xl border border-white/12 bg-white/[0.04] px-4 py-5 text-center transition hover:border-white/30 active:scale-[0.99]"
+            className="mx-auto relative flex w-full flex-col items-center gap-2 rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-[#0d2a44] via-[#102f4d] to-[#143b5c] px-4 py-5 text-center transition hover:border-[#1CA7EC]/45 active:scale-[0.99]"
           >
             {/* STATUS CLAN — dibungkus kotak, di KANAN ATAS. */}
-            <span className="absolute right-3 top-3 flex max-w-[52%] flex-col items-end gap-1.5 rounded-xl border border-white/12 bg-black/40 p-2 text-left">
+            <span className="absolute right-3 top-3 flex max-w-[52%] flex-col items-end gap-1.5 rounded-xl border border-sky-300/25 bg-sky-400/10 p-2 text-left backdrop-blur">
               <span className="text-[9px] font-black uppercase tracking-widest text-white/55">
                 Status clan
               </span>
@@ -346,8 +346,8 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
                 className="size-16 shrink-0 rounded-2xl object-cover ring-2 ring-white/30"
               />
             ) : (
-              <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
-                <Shield className="size-8 text-violet-300" aria-hidden />
+              <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+                <Shield className="size-8 text-violet-200" aria-hidden />
               </span>
             )}
             <ClanTag
@@ -365,7 +365,7 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
             {/* DESKRIPSI CLAN — kotak kecil (kalau diisi), sama seperti
                 yang di detail clan. */}
             {ownClan.description ? (
-              <span className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-left text-[11px] leading-relaxed text-zinc-300/90">
+              <span className="w-full rounded-xl border border-sky-300/20 bg-sky-950/40 px-3 py-2 text-left text-[11px] leading-relaxed text-sky-50/85">
                 {ownClan.description}
               </span>
             ) : null}
@@ -384,7 +384,7 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
               </span>
             </div>
             {/* Bar level clan */}
-            <div className="flex w-full max-w-xs items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5">
+            <div className="flex w-full max-w-xs items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-1.5">
               <span className="shrink-0 text-[11px] font-black text-gold">
                 Lv.{ownClan.level}
               </span>
@@ -403,7 +403,7 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
             </div>
             {/* Judul — putih, TANPA outline kuning tapi tetap beda dari
                 background utama (permintaan). */}
-            <span className="mt-1 rounded-xl bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-none ring-1 ring-white/15">
+            <span className="mt-1 rounded-xl border border-sky-300/30 bg-gradient-to-r from-sky-500/30 to-cyan-400/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-sky-50 shadow-none">
               CLAN MU ADA DISINI!
             </span>
           </button>
@@ -432,14 +432,14 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
               onClick={() =>
                 user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1")
               }
-              className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 py-3.5 text-sm font-extrabold text-emerald-50 transition hover:bg-emerald-400/15 active:scale-[0.98]"
             >
               <Plus className="size-4 text-emerald-300" aria-hidden />
               Buat clan
             </button>
             <button
               onClick={() => setSearchOpen((v) => !v)}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-sky-300/25 bg-sky-400/10 py-3.5 text-sm font-extrabold text-sky-50 transition hover:bg-sky-400/15 active:scale-[0.98]"
             >
               <LogIn className="size-4 text-sky-300" aria-hidden />
               Join clan
@@ -505,6 +505,19 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
  * EXPORT — dipakai juga oleh YoruVerse › Clan supaya tampilannya persis
  * sama dengan daftar clan di sini (permintaan pemilik).
  */
+const CLAN_TONES = [
+  "border-sky-400/25 bg-gradient-to-br from-[#0e2a44] via-[#12344f] to-[#16405e]",
+  "border-violet-400/25 bg-gradient-to-br from-[#241a3d] via-[#2a1e49] to-[#342257]",
+  "border-amber-400/25 bg-gradient-to-br from-[#3a2911] via-[#443117] to-[#50391a]",
+  "border-rose-400/25 bg-gradient-to-br from-[#3a1825] via-[#431c2c] to-[#512235]",
+] as const;
+
+function clanTone(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return CLAN_TONES[h % CLAN_TONES.length];
+}
+
 export function ClanRow({
   clan: c,
   onOpen,
@@ -520,11 +533,12 @@ export function ClanRow({
 }) {
   const levelCost = c.levelCost ?? 100000;
   const progress = Math.min(100, ((c.levelProgress ?? 0) / levelCost) * 100);
+  const tone = clanTone(String(c.name ?? ""));
   // Foto clan boleh gagal dimuat (link mati) — kalau gagal, langsung ganti
   // dengan kotak ikon supaya tidak pernah tampil sebagai teks rusak.
   const [imgOk, setImgOk] = useState(true);
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
+    <div className={cn("rounded-2xl border p-3", tone)}>
       {/* Foto clan (kiri) + nama & tag di kanannya */}
       <button onClick={() => onOpen("member")} className="flex w-full items-center gap-2.5 text-left">
         {c.avatarUrl && imgOk ? (
@@ -535,7 +549,7 @@ export function ClanRow({
             className="size-11 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
           />
         ) : (
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-secondary/40 text-muted-foreground">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/70">
             <Users className="size-5" />
           </span>
         )}
@@ -558,12 +572,12 @@ export function ClanRow({
             ["SLOT MEMBER", String(c.memberCount ?? 0), Users, "text-white/80"],
             ["SACRET", Number(c.diamonds ?? 0).toLocaleString("id-ID"), SacretIcon, "text-sky-300"],
             ["HARI", String(c.ageDays ?? 0), Timer, "text-white/60"],
-          ] as const).map(([label, value, Icon, tone]) => (
+          ] as const).map(([label, value, Icon, toneCls]) => (
             <span key={label} className="leading-none">
               <span className="block text-[7.5px] font-black tracking-[0.1em] text-white/35">
                 {label}
               </span>
-              <span className={cn("mt-0.5 inline-flex items-center gap-1 text-[10px] font-black", tone)}>
+              <span className={cn("mt-0.5 inline-flex items-center gap-1 text-[10px] font-black", toneCls)}>
                 <Icon className="size-2.5 shrink-0" /> {value}
               </span>
             </span>
@@ -572,12 +586,12 @@ export function ClanRow({
       </button>
 
       {/* DESKRIPSI clan — menggantikan posisi stats lama di tengah. */}
-      <p className="mt-1.5 line-clamp-2 rounded-lg bg-white/[0.035] px-2.5 py-1.5 text-[10.5px] leading-relaxed text-zinc-300/80">
+      <p className="mt-1.5 line-clamp-2 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10.5px] leading-relaxed text-white/75">
         {c.description || "Belum ada deskripsi clan."}
       </p>
 
       {/* Bar level dibungkus kotak satu baris, level di kiri */}
-      <div className="mt-2 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
+      <div className="mt-2 flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
         <span className="shrink-0 text-[10px] font-black">Lv.{c.level}</span>
         <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
           <div
@@ -926,7 +940,7 @@ function ClanDetailScreen({
               />
             </div>
             {/* STATS di KANAN ATAS — label jelas: SLOT MEMBER · SACRET · HARI */}
-            <div className="grid shrink-0 grid-cols-1 gap-1.5 rounded-xl bg-white/[0.06] px-2.5 py-2 text-right">
+            <div className="grid shrink-0 grid-cols-1 gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-right ring-1 ring-white/10">
               {([
                 [
                   "SLOT MEMBER",

@@ -23,8 +23,8 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
 
   const [listOpen, setListOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  /** Filter daftar room: semua / publik / clan. */
-  const [scope, setScope] = useState<"all" | "publik" | "clan">("all");
+  /** Filter daftar room: publik (default) / clan. */
+  const [scope, setScope] = useState<"publik" | "clan">("publik");
   const [joinOpen, setJoinOpen] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -84,67 +84,58 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           </p>
         </div>
 
-        {/* Dua tombol aksi — SEBARIS di kotak yang sama (tidak dipisah). */}
-        <div className="grid grid-cols-2">
-          <button
-            onClick={() => setCreating(true)}
-            className="flex flex-col items-center gap-2 border-r border-white/10 py-5 transition hover:bg-white/[0.06] active:scale-[0.98]"
-          >
-            <span className="flex size-10 items-center justify-center rounded-xl border border-[#1CA7EC]/35 bg-[#1CA7EC]/15">
-              <Video className="size-5 text-[#1CA7EC]" aria-hidden />
-            </span>
-            <span className="text-sm font-extrabold text-white">Buat Room</span>
-          </button>
-          <button
-            onClick={() => setJoinOpen((v) => !v)}
-            className="flex flex-col items-center gap-2 py-5 transition hover:bg-white/[0.06] active:scale-[0.98]"
-          >
-            <span className="flex size-10 items-center justify-center rounded-xl border border-[#FFD23F]/35 bg-[#FFD23F]/12">
-              <LogIn className="size-5 text-[#FFD23F]" aria-hidden />
-            </span>
-            <span className="text-sm font-extrabold text-white">Join Room</span>
-          </button>
+        {/* Dua tombol aksi — tetap menyatu dengan kartu, tapi diberi
+            garis tipis sendiri supaya tidak terlihat menempel. */}
+        <div className="p-3">
+          <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.02]">
+            <button
+              onClick={() => setCreating(true)}
+              className="flex flex-col items-center gap-2 border-r border-white/12 py-4 transition hover:bg-white/[0.06] active:scale-[0.98]"
+            >
+              <span className="flex size-10 items-center justify-center rounded-xl border border-[#1CA7EC]/35 bg-[#1CA7EC]/15">
+                <Video className="size-5 text-[#1CA7EC]" aria-hidden />
+              </span>
+              <span className="text-sm font-extrabold text-white">Buat Room</span>
+            </button>
+            <button
+              onClick={() => setJoinOpen((v) => !v)}
+              className="flex flex-col items-center gap-2 py-4 transition hover:bg-white/[0.06] active:scale-[0.98]"
+            >
+              <span className="flex size-10 items-center justify-center rounded-xl border border-[#FFD23F]/35 bg-[#FFD23F]/12">
+                <LogIn className="size-5 text-[#FFD23F]" aria-hidden />
+              </span>
+              <span className="text-sm font-extrabold text-white">Join Room</span>
+            </button>
+          </div>
         </div>
 
       </div>
 
-      {/* Filter room: DUA KOTAK TERPISAH di bawah kartu besar, gayanya juga
-          beda (Publik biru Sky, Clan kuning Harvest). Ketuk judul lagi untuk
-          kembali menampilkan semua room. */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* Filter room — dua kotak kecil, hanya ikon + teks. Publik default. */}
+      <div className="grid grid-cols-2 gap-2">
         <button
-          onClick={() => setScope((v) => (v === "publik" ? "all" : "publik"))}
+          onClick={() => setScope("publik")}
           aria-pressed={scope === "publik"}
           className={
             scope === "publik"
-              ? "flex flex-col items-start gap-1 rounded-2xl border border-[#1CA7EC] bg-[#1CA7EC]/18 p-3 text-left transition active:scale-[0.98]"
-              : "flex flex-col items-start gap-1 rounded-2xl border border-[#1CA7EC]/30 bg-white/[0.04] p-3 text-left transition hover:border-[#1CA7EC]/60 active:scale-[0.98]"
+              ? "flex items-center justify-center gap-1.5 rounded-xl border border-[#1CA7EC] bg-[#1CA7EC]/18 px-3 py-2.5 text-xs font-black text-white transition active:scale-[0.98]"
+              : "flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-xs font-black text-white/55 transition hover:text-white active:scale-[0.98]"
           }
         >
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[#1CA7EC]/20">
-            <Globe className="size-4 text-[#7fd3f7]" aria-hidden />
-          </span>
-          <span className="text-[13px] font-black text-white">Publik</span>
-          <span className="text-[10px] leading-snug text-white/50">
-            Room terbuka untuk semua orang
-          </span>
+          <Globe className="size-4 shrink-0 text-[#7fd3f7]" aria-hidden />
+          Publik
         </button>
         <button
-          onClick={() => setScope((v) => (v === "clan" ? "all" : "clan"))}
+          onClick={() => setScope("clan")}
           aria-pressed={scope === "clan"}
           className={
             scope === "clan"
-              ? "flex flex-col items-start gap-1 rounded-2xl border border-[#FFD23F] bg-[#FFD23F]/15 p-3 text-left transition active:scale-[0.98]"
-              : "flex flex-col items-start gap-1 rounded-2xl border border-[#FFD23F]/30 bg-white/[0.04] p-3 text-left transition hover:border-[#FFD23F]/60 active:scale-[0.98]"
+              ? "flex items-center justify-center gap-1.5 rounded-xl border border-[#FFD23F] bg-[#FFD23F]/15 px-3 py-2.5 text-xs font-black text-white transition active:scale-[0.98]"
+              : "flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-xs font-black text-white/55 transition hover:text-white active:scale-[0.98]"
           }
         >
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[#FFD23F]/20">
-            <Users className="size-4 text-[#FFD23F]" aria-hidden />
-          </span>
-          <span className="text-[13px] font-black text-white">Clan</span>
-          <span className="text-[10px] leading-snug text-white/50">
-            Room khusus anggota clan
-          </span>
+          <Users className="size-4 shrink-0 text-[#FFD23F]" aria-hidden />
+          Clan
         </button>
       </div>
 
@@ -234,7 +225,9 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
         )}
         {(rooms ?? [])
           .filter((r) =>
-            scope === "all" ? true : scope === "clan" ? !!r.clanId : !r.clanId,
+            scope === "clan"
+              ? !!r.clanId
+              : !r.clanId && r.visibility !== "selected",
           )
           .map((r) => (
             <RoomCard key={r._id} room={r} busy={busy} onJoin={() => void doJoin(r._id)} />

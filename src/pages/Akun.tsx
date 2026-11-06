@@ -595,8 +595,6 @@ function SettingsScreen({
   const [showBlocked, setShowBlocked] = useState(false);
   const panelLevel: "dev" | "mod" | "none" =
     access?.level === "dev" ? "dev" : access?.level === "mod" ? "mod" : "none";
-  useHideNavOnMount(); // fullscreen: navbar & mini player hilang total
-
   if (!user) return null;
 
   const ownedBorders = user.ownedBorders ?? [];
@@ -706,14 +704,28 @@ function SettingsScreen({
   };
 
   return (
-    <FullScreen title="Pengaturan Akun" onClose={onClose}>
+    <div className="space-y-2.5 pb-28 pt-3">
+      {/* Header halaman — TIDAK fullscreen, navbar bawah tetap terlihat. */}
+      <div className="flex items-center gap-2.5">
+        <button
+          onClick={onClose}
+          aria-label="Kembali"
+          className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
+        >
+          <StripBackIcon />
+        </button>
+        <h1 className="min-w-0 truncate text-[19px] font-black tracking-tight">
+          Pengaturan Akun
+        </h1>
+      </div>
+
       {/* ===== KARTU IDENTITAS BARU ===== */}
       <ProfileOverviewCard user={user} onEdit={() => setEditOpen(true)} />
 
       {/* ===== KOTAK KATEGORI — permintaan: pengaturan jadi kumpulan kotak
           per kategori, tiap kotak berisi deretan tombol toggle on/off. ===== */}
       <SettingsBox
-        icon={<Play className="size-[18px] text-primary" />}
+        icon={<Play className="size-[18px]" />}
         title="Nonton"
         desc="Perilaku player & pemutaran otomatis"
         items={PREF_NONTON}
@@ -721,7 +733,7 @@ function SettingsScreen({
         onToggle={toggleWatch}
       />
       <SettingsBox
-        icon={<Bell className="size-[18px] text-primary" />}
+        icon={<Bell className="size-[18px]" />}
         title="Notifikasi"
         desc="Feed, episode anime, chat teman & clan"
         items={PREF_NOTIF}
@@ -729,7 +741,7 @@ function SettingsScreen({
         onToggle={toggleNotif}
       />
       <SettingsBox
-        icon={<Palette className="size-[18px] text-primary" />}
+        icon={<Palette className="size-[18px]" />}
         title="Tampilan"
         desc="Tema, animasi & kenyamanan layar"
         items={PREF_TAMPILAN}
@@ -738,14 +750,14 @@ function SettingsScreen({
       />
       {/* BANNER PROFIL — dikembalikan ke Pengaturan, menyatu di kotak
           kategori Tampilan (bukan lagi terpisah dari ganti photo profil). */}
-      <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="rounded-3xl border border-violet-400/15 bg-gradient-to-br from-violet-400/[0.08] via-card to-card p-3">
         <div className="mb-2.5 flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-            <Palette className="size-[18px] text-primary" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/15">
+            <Palette className="size-[18px] text-violet-300" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold">Banner Profil</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[13px] font-black leading-tight">Banner Profil</p>
+            <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground">
               Tampil di detail akun fullscreen · khusus Premium
             </p>
           </div>
@@ -755,7 +767,7 @@ function SettingsScreen({
             </span>
           )}
         </div>
-        <div className="relative mb-2 h-24 overflow-hidden rounded-xl bg-black/30">
+        <div className="relative mb-2 h-20 overflow-hidden rounded-xl bg-white/[0.04]">
           {banner ? (
             <img src={banner} alt="" className="size-full object-cover" />
           ) : (
@@ -819,7 +831,7 @@ function SettingsScreen({
       </div>
 
       <SettingsBox
-        icon={<MessageSquare className="size-[18px] text-primary" />}
+        icon={<MessageSquare className="size-[18px]" />}
         title="Chat"
         desc="Pesan, sticker & cara mengetik"
         items={PREF_CHAT}
@@ -827,7 +839,7 @@ function SettingsScreen({
         onToggle={toggleChat}
       />
       <SettingsBox
-        icon={<Shield className="size-[18px] text-primary" />}
+        icon={<Shield className="size-[18px]" />}
         title="Privasi"
         desc="Siapa yang bisa melihat & menghubungimu"
         items={PREF_PRIVASI}
@@ -855,7 +867,7 @@ function SettingsScreen({
         </span>
       </button>
       <SettingsBox
-        icon={<Download className="size-[18px] text-primary" />}
+        icon={<Download className="size-[18px]" />}
         title="Unduhan & Kuota"
         desc="Mengelola unduhan & penghemat data"
         items={PREF_UNDUHAN}
@@ -908,7 +920,7 @@ function SettingsScreen({
 
       {/* Sheet edit identitas: foto + username dalam satu tempat. */}
       {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
-    </FullScreen>
+    </div>
   );
 }
 
@@ -1256,22 +1268,28 @@ function ToggleRow({
   onToggle: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
+    <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.035] px-2.5 py-2">
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium">{label}</p>
-        {desc && <p className="text-[11px] text-muted-foreground">{desc}</p>}
+        <p className="text-[12.5px] font-medium leading-tight">{label}</p>
+        {desc && (
+          <p className="mt-0.5 line-clamp-1 text-[10.5px] leading-tight text-muted-foreground">
+            {desc}
+          </p>
+        )}
       </div>
       <button
         onClick={() => onToggle(!value)}
+        aria-pressed={value}
+        aria-label={label}
         className={cn(
-          "relative h-6 w-11 shrink-0 rounded-full transition",
-          value ? "bg-gradient-to-r from-emerald-400 to-primary shadow-[0_0_12px_-4px_rgba(var(--primary),0.9)]" : "bg-zinc-600",
+          "relative h-5.5 w-10 shrink-0 rounded-full transition",
+          value ? "bg-primary" : "bg-white/20",
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 size-5 rounded-full bg-white shadow-md transition-all",
-            value ? "left-[22px]" : "left-0.5",
+            "absolute top-0.5 size-4.5 rounded-full bg-white shadow-sm transition-all",
+            value ? "left-[19px]" : "left-0.5",
           )}
         />
       </button>
@@ -1384,6 +1402,42 @@ function useLocalPrefs(
 }
 
 /** Satu kotak kategori berisi judul + deretan toggle on/off. */
+const SETTINGS_TONES: Record<
+  string,
+  { card: string; chip: string; line: string }
+> = {
+  Nonton: {
+    card: "border-sky-400/15 bg-gradient-to-br from-sky-400/[0.09] via-card to-card",
+    chip: "bg-sky-400/15 text-sky-300",
+    line: "bg-sky-400/60",
+  },
+  Notifikasi: {
+    card: "border-amber-400/15 bg-gradient-to-br from-amber-400/[0.08] via-card to-card",
+    chip: "bg-amber-400/15 text-amber-300",
+    line: "bg-amber-400/60",
+  },
+  Tampilan: {
+    card: "border-violet-400/15 bg-gradient-to-br from-violet-400/[0.08] via-card to-card",
+    chip: "bg-violet-400/15 text-violet-300",
+    line: "bg-violet-400/60",
+  },
+  Chat: {
+    card: "border-rose-400/15 bg-gradient-to-br from-rose-400/[0.08] via-card to-card",
+    chip: "bg-rose-400/15 text-rose-300",
+    line: "bg-rose-400/60",
+  },
+  Privasi: {
+    card: "border-emerald-400/15 bg-gradient-to-br from-emerald-400/[0.08] via-card to-card",
+    chip: "bg-emerald-400/15 text-emerald-300",
+    line: "bg-emerald-400/60",
+  },
+  "Unduhan & Kuota": {
+    card: "border-cyan-400/15 bg-gradient-to-br from-cyan-400/[0.08] via-card to-card",
+    chip: "bg-cyan-400/15 text-cyan-300",
+    line: "bg-cyan-400/60",
+  },
+};
+
 function SettingsBox({
   icon,
   title,
@@ -1399,19 +1453,32 @@ function SettingsBox({
   value: Record<string, boolean>;
   onToggle: (key: string) => void;
 }) {
+  // Kotak dipangkas: 3 pengaturan teratas tampil dulu, sisanya bisa
+  // dibuka tanpa meninggalkan halaman. Ini yang bikin halaman tidak
+  // memanjang ke bawah terus.
+  const [open, setOpen] = useState(false);
+  const tone = SETTINGS_TONES[title] ?? {
+    card: "border-border bg-card",
+    chip: "bg-primary/15 text-primary",
+    line: "bg-primary/60",
+  };
+  const shown = open ? items : items.slice(0, 3);
+  const rest = items.length - shown.length;
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-3">
-      <div className="mb-2.5 flex items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+    <div className={cn("overflow-hidden rounded-3xl border p-3", tone.card)}>
+      <div className="flex items-center gap-2.5">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", tone.chip)}>
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold">{title}</p>
-          <p className="text-[11px] text-muted-foreground">{desc}</p>
+          <p className="text-[13px] font-black leading-tight">{title}</p>
+          <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground">{desc}</p>
         </div>
+        <span aria-hidden className={cn("h-5 w-0.5 shrink-0 rounded-full opacity-70", tone.line)} />
       </div>
-      <div className="space-y-2">
-        {items.map((it) => (
+      <div className="mt-2.5 space-y-1.5">
+        {shown.map((it) => (
           <ToggleRow
             key={it.key}
             label={it.label}
@@ -1421,6 +1488,15 @@ function SettingsBox({
           />
         ))}
       </div>
+      {(rest > 0 || open) && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="mt-2 w-full rounded-lg py-1.5 text-[10.5px] font-bold text-white/45 transition hover:bg-white/[0.04] hover:text-white/75"
+        >
+          {open ? "Sembunyikan" : `Lihat ${rest} pengaturan lainnya`}
+        </button>
+      )}
     </div>
   );
 }

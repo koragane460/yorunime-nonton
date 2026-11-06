@@ -15,7 +15,11 @@ import { cn } from "@/lib/utils";
  * tetap terasa hidup tanpa membuka chat.
  */
 export function GlobalChatPreview() {
-  const msgs = useQuery(api.chat.listMessages, { kind: "global", limit: 6 });
+  const msgs = useQuery(api.chat.listMessages, {
+    kind: "global",
+    channel: "scg1",
+    limit: 6,
+  });
   const [idx, setIdx] = useState(0);
 
   // Rotasi 1 pesan setiap 3 menit.

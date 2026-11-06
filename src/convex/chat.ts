@@ -86,6 +86,29 @@ export const listMessages = query({
         )
         .order("desc")
         .take(limit);
+    } else if (kind === "global" && channel) {
+      // CHAT GLOBAL PER-SERVER: SCG #1, SCG #2, dan Rekrut Clan punya
+      // riwayat masing-masing. Kunci channel disimpan di dmKey supaya
+      // tidak perlu index baru. Pesan global lama (tanpa dmKey) tetap
+      // dianggap milik SCG #1 agar riwayat lama tidak hilang.
+      const key = `global:${channel}`;
+      rows = await ctx.db
+        .query("chatMessages")
+        .withIndex("dmKey_created", (q) => q.eq("dmKey", key))
+        .order("desc")
+        .take(limit);
+      if (channel === "scg1") {
+        const legacy = await ctx.db
+          .query("chatMessages")
+          .withIndex("kind_clan_created", (q) =>
+            q.eq("kind", "global").eq("clanId", undefined),
+          )
+          .order("desc")
+          .take(limit);
+        rows = [...rows, ...legacy.filter((r: any) => !r.dmKey)]
+          .sort((a: any, b: any) => b.createdAt - a.createdAt)
+          .slice(0, limit);
+      }
     } else {
       rows = await ctx.db
         .query("chatMessages")
@@ -245,6 +268,13 @@ export const sendMessage = mutation({
       if (!peerId) throw new Error("Penerima tidak ada");
       index = dmKey(userId, peerId);
     }
+    if (kind === "global" && channel) {
+      // Server chat global yang valid. Rekrut Clan juga server global,
+      // tetap terpisah dari SCG #1 & SCG #2.
+      const allowed = new Set(["scg1", "scg2", "recruit"]);
+      if (!allowed.has(channel)) throw new Error("Server chat tidak dikenal");
+      index = `global:${channel}`;
+    }
     if (kind === "voice") {
       // channel = "voice:<voiceRoomId>" — hanya member room yang boleh chat.
       const voiceRoomId = channel?.startsWith("voice:")
@@ -374,11 +404,13 @@ export const givePremium = mutation({
     kind: v.string(),
     clanId: v.optional(v.id("clans")),
     peerId: v.optional(v.id("users")),
+    /** Server chat global (scg1/scg2/recruit) — give ikut server asalnya. */
+    channel: v.optional(v.string()),
     days: v.number(),
     receivers: v.number(),
     message: v.optional(v.string()),
   },
-  handler: async (ctx, { kind, clanId, peerId, days, receivers, message }) => {
+  handler: async (ctx, { kind, clanId, peerId, channel, days, receivers, message }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
     const me = await ctx.db.get(userId);
@@ -431,6 +463,11 @@ export const givePremium = mutation({
     };
     if (clanId) chatDoc.clanId = clanId;
     if (kind === "dm" && peerId) chatDoc.dmKey = dmKey(userId, peerId);
+    if (kind === "global" && channel) {
+      const allowed = new Set(["scg1", "scg2", "recruit"]);
+      if (!allowed.has(channel)) throw new Error("Server chat tidak dikenal");
+      chatDoc.dmKey = `global:${channel}`;
+    }
     const messageId = await ctx.db.insert("chatMessages", chatDoc as never);
     await ctx.db.patch(giveId, { chatMessageId: messageId });
 

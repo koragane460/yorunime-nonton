@@ -17,7 +17,7 @@ import { CuplixOverlay } from "@/components/CuplixOverlay";
 import { CharacterRow } from "@/components/CharacterRow";
 import { RequestButtons } from "@/components/RequestButtons";
 import { ChatPanel, type ChatMsg } from "@/components/ChatPanel";
-import { CardCarousel, CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
+import { CatalogScreen, type CardT as CatalogCard, type CatalogKind, type PickSource as CatalogPickSource } from "@/components/CatalogRows";
 import { formatViews, type ComicItem } from "@/components/ComicCard";
 import type { FilmCard as FilmCardT } from "@/convex/films";
 import { isMusicSecret } from "@/lib/musicSecret";
@@ -29,6 +29,7 @@ const MusicScreen = lazy(() => import("@/pages/Music"));
 import {
   Loader2,
   Check,
+  ArrowLeft,
   Heart,
   X,
   Lock,
@@ -75,7 +76,6 @@ import {
   FeedPromo,
   DonatePromo,
   ChatVoiceRow,
-  ContinueWatchingRow,
   DailyQuestRow,
   GreetingBar,
   LeaderPodium,
@@ -370,7 +370,7 @@ function PromoCarousel({ slides }: { slides: ReactNode[] }) {
         {slides.map((s, i) => (
           <div
             key={i}
-            className="h-[176px] w-[92%] shrink-0 snap-center overflow-hidden rounded-3xl"
+            className="h-[158px] w-full shrink-0 snap-center overflow-hidden rounded-3xl border border-white/10"
           >
             {s}
           </div>
@@ -802,7 +802,15 @@ function BrowseRow({
   title,
   onPick,
 }: {
-  kind: "movie" | "ova" | "special" | "season" | "upcoming" | "popular";
+  kind:
+    | "movie"
+    | "ova"
+    | "special"
+    | "season"
+    | "upcoming"
+    | "ongoing"
+    | "completed"
+    | "popular";
   title: string;
   onPick: (id: string) => void;
 }) {
@@ -936,7 +944,6 @@ function HomeContent() {
   const heroDonghua = useAction(api.sanka.donghuaLatestCards);
   const top = useAction(api.anime.animeTop);
   const today = useAction(api.anime.animeTrendingToday);
-  const forYou = useAction(api.anime.animeForYou);
   const genres = useAction(api.anime.animeGenres);
 
   // Pencarian dipindahkan penuh ke layar SearchScreen (fullscreen):
@@ -944,7 +951,6 @@ function HomeContent() {
 
   const [topList, setTopList] = useState<AnimeCardT[]>([]);
   const [todayList, setTodayList] = useState<AnimeCardT[]>([]);
-  const [foryouList, setForyouList] = useState<AnimeCardT[]>([]);
   const [genreList, setGenreList] = useState<{ id: string; name: string }[]>([]);
   // Manga & manhwa untuk baris "Terbaru & Populer" di Home — diambil dari
   // aksi manga (newest + trending digabung, tanpa dobel per slug).
@@ -997,13 +1003,11 @@ function HomeContent() {
       // Home sendiri hanya menampilkan 12 kartu pertama.
       top({ limit: 50 }),
       today({}),
-      forYou({ seed: (user?.name?.length ?? 0) + 3 }),
       genres({}),
-    ]).then(([rTop, rToday, rForYou, rGenres]) => {
+    ]).then(([rTop, rToday, rGenres]) => {
       if (!alive) return;
       if (rTop.status === "fulfilled") setTopList((rTop.value as AnimeCardT[]) ?? []);
       if (rToday.status === "fulfilled") setTodayList((rToday.value as AnimeCardT[]) ?? []);
-      if (rForYou.status === "fulfilled") setForyouList((rForYou.value as AnimeCardT[]) ?? []);
       if (rGenres.status === "fulfilled")
         setGenreList((rGenres.value as { id: string; name: string }[]) ?? []);
       setLoading(false);
@@ -1206,7 +1210,7 @@ function HomeContent() {
     paint();
     window.addEventListener("resize", paint);
     return () => window.removeEventListener("resize", paint);
-  }, [todayAiring.length, foryouList.length, genreList.length]);
+  }, [todayAiring.length, genreList.length]);
 
   // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
@@ -1354,13 +1358,9 @@ function HomeContent() {
 
 
 
-      {/* 6a-2) LANJUTKAN NONTON — banner anime + bar progres + posisi
-          menit (mis. 16.45/24.00), geser ke kanan. */}
-      <ContinueWatchingRow />
-
-      {/* 6b) SEASON INI — lalu GENRE di bawahnya: chip-pill geser ke
-          kanan. Menekan chip membuka layar SearchScreen dengan genre itu
-          terpilih (panel multi-select genre ikut terbuka). */}
+      {/* URUTAN HOME DIBATASI — hanya 8 kategori inti supaya tidak berat:
+          Season Ini · Manga · Manhwa · Film · Ongoing · Completed ·
+          Favorite · Top Anime. */}
       <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
 
 
@@ -1392,17 +1392,43 @@ function HomeContent() {
           ke halaman Film. Menggantikan tombol Film & Series di atas. */}
       <FilmHomeSection />
 
-      {/* 6e) KATEGORI LENGKAP: Movie / OVA / Donghua / Upcoming */}
-      <BrowseRow kind="movie" title="Movie" onPick={openAnime} />
-      <BrowseRow kind="ova" title="OVA &amp; ONA" onPick={openAnime} />
-      {/* Slot khusus Donghua: dua baris geser ke kanan + "Lihat selengkapnya". */}
-      <CardCarousel
-        kind="donghua"
-        title="Donghua"
-        subtitle="subtitle Indonesia"
-        onPick={openAnime}
-      />
-      <BrowseRow kind="upcoming" title="Segera Rilis (Upcoming)" onPick={openAnime} />
+      {/* DUA KATEGORI STATUS — semua judul Ongoing / Completed. */}
+      <BrowseRow kind="ongoing" title="Ongoing Anime" onPick={openAnime} />
+      <BrowseRow kind="completed" title="Completed Anime" onPick={openAnime} />
+
+      {/* FAVORITE KAMU — sebelum Top Anime, bukan setelah footer. */}
+      {favQuery && (
+        <div className="fade-enter mt-5">
+          <SectionTitle>Favorite Kamu</SectionTitle>
+          {favQuery.length === 0 && (
+            <p className="mt-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3 text-[11px] text-white/45">
+              Belum ada anime favorit. Tekan ikon hati di detail anime untuk menyimpannya di sini.
+            </p>
+          )}
+          <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
+            {favQuery.map((f: any) => {
+              const real = favReal[String(f.animeId)];
+              return (
+                <button
+                  key={f._id}
+                  onClick={() => openAnime(real?.id ?? f.animeId, real?.title ?? f.animeTitle)}
+                  className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
+                >
+                  <img
+                    src={real?.image || f.animeImage || ""}
+                    alt=""
+                    className="aspect-[2/3] w-full object-cover"
+                  />
+                  <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
+                  <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
+                    {real?.title || f.animeTitle}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 7) TOP ANIME — 12 kartu, sisanya di layar penuh */}
       <SectionRow
@@ -1428,52 +1454,6 @@ function HomeContent() {
         )}
       </SectionRow>
 
-      <SectionRow
-        title="Top Anime Hari Ini"
-        count={todayList.length}
-        onMore={() =>
-          setCatalog({
-            kind: "popular",
-            title: "Top Anime Hari Ini",
-            items: todayList as unknown as CatalogCard[],
-          })
-        }
-      >
-        {loading ? (
-          <GridSkeleton count={12} />
-        ) : (
-          <AnimeGrid
-            items={todayList.slice(0, 12)}
-            onPick={openAnime}
-            ranked
-            newIds={new Set()}
-          />
-        )}
-      </SectionRow>
-
-      <SectionRow
-        title="Untuk Kamu"
-        count={foryouList.length}
-        onMore={() =>
-          setCatalog({
-            kind: "popular",
-            title: "Untuk Kamu",
-            items: foryouList as unknown as CatalogCard[],
-          })
-        }
-      >
-        {loading ? (
-          <GridSkeleton count={12} />
-        ) : (
-          <AnimeGrid
-            items={foryouList.slice(0, 12)}
-            onPick={openAnime}
-            newIds={new Set()}
-            views={undefined}
-          />
-        )}
-      </SectionRow>
-
       {/* 8) FOOTER — paling bawah halaman, sebelum layar overlay. */}
       <HomeFooter />
 
@@ -1485,34 +1465,6 @@ function HomeContent() {
           onClose={() => setCatalog(null)}
           onPick={openAnime}
         />
-      )}
-
-      {favQuery && favQuery.length > 0 && (
-        <>
-          <SectionTitle>Favorite Kamu</SectionTitle>
-          <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
-            {favQuery.map((f: any) => {
-              const real = favReal[String(f.animeId)];
-              return (
-                <button
-                  key={f._id}
-                  onClick={() => openAnime(real?.id ?? f.animeId, real?.title ?? f.animeTitle)}
-                  className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
-                >
-                  <img
-                    src={real?.image || f.animeImage || ""}
-                    alt=""
-                    className="aspect-[2/3] w-full object-cover"
-                  />
-                  <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
-                  <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
-                    {real?.title || f.animeTitle}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </>
       )}
 
       {/* Screens */}
@@ -3102,6 +3054,14 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
 // ------------------------------------------------------ chat screens ----
 
 
+const GLOBAL_CHANNELS = [
+  { key: "scg1", label: "SCG #1" },
+  { key: "scg2", label: "SCG #2" },
+  { key: "recruit", label: "Rekrut Clan" },
+] as const;
+
+type GlobalChannel = (typeof GLOBAL_CHANNELS)[number]["key"];
+
 function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   useHideNavOnMount();
   const { user } = useAuth();
@@ -3110,9 +3070,12 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
   const friendTab = "teman" as const;
   const [profileId, setProfileId] = useState<Id<"users"> | null>(null);
   const [clanTutorial, setClanTutorial] = useState(false);
+  // Tiap server punya riwayat sendiri. "Rekrut Clan" juga server global,
+  // tapi dipisah dari SCG #1 & SCG #2.
+  const [channel, setChannel] = useState<GlobalChannel>("scg1");
   const { messages: msgs, sendFast, dropLocal, loading: chatLoading } = useFastChat(
-    { kind: "global", limit: 60 },
-    { kind: "global" },
+    { kind: "global", channel, limit: 60 },
+    { kind: "global", channel },
     user,
   );
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip");
@@ -3168,40 +3131,57 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
     <>
       {/* Full screen beneran: nutupin navbar + panel akun sampai ke bawah */}
       <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
-        <div className="yn-bar flex w-full items-center gap-3 border-b border-white/10 px-4 py-3">
+        <div className="relative flex w-full items-center px-3 py-3">
           <button
             onClick={onClose}
             aria-label="Kembali"
-            className="flex size-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] transition active:scale-95"
+            className="flex size-9 items-center justify-center text-white/90 transition active:scale-90"
           >
-            <ChevronLeft className="size-4" />
+            <ArrowLeft className="size-6" />
           </button>
-          <div className="min-w-0 flex-1">
-            <span className="yn-eyebrow text-[9px]">Obrolan</span>
-            <h1 className="yn-title truncate text-lg">
-              {tab === "chat" ? "Diskusi Bareng" : "Chat"}
-            </h1>
-          </div>
+          <h1 className="pointer-events-none absolute inset-x-0 text-center text-[19px] font-black tracking-tight">
+            {tab === "chat" ? "Chat Global" : "Chat"}
+          </h1>
+          <span aria-hidden className="ml-auto size-9" />
         </div>
-        {/* Tab dikecualikan dari px-4: KOTAK PESAN (chat/clan/teman) harus
-            full ke samping — hanya baris tab yang tetap punya jarak. */}
-        <div className="w-full">
-          {/* Tab: Chat · Clan · Teman. Sticker sekarang punya toko sendiri. */}
-          <div className="flex gap-1.5 px-4 py-2.5">
-            {(["chat", "clan", "teman"] as const).map((t) => (
+        {/* Tab tanpa background — hanya garis bawah tipis saat aktif. */}
+        <div className="flex gap-6 px-4">
+          {(["chat", "clan", "teman"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "relative -mb-px border-b-2 pb-2 text-[13px] font-black transition",
+                tab === t
+                  ? "border-white text-white"
+                  : "border-transparent text-white/40 hover:text-white/70",
+              )}
+            >
+              {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
+            </button>
+          ))}
+        </div>
+        {/* TIGA KOTAK SERVER — teks ke samping, ukuran agak besar. */}
+        {tab === "chat" && (
+          <div className="grid grid-cols-3 gap-2 px-4 pt-3">
+            {GLOBAL_CHANNELS.map((ch) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={ch.key}
+                type="button"
+                onClick={() => setChannel(ch.key)}
+                aria-pressed={channel === ch.key}
                 className={cn(
-                  "yn-chip flex-1 justify-center px-1 py-2 text-[11px]",
-                  tab === t && "yn-chip-on",
+                  "whitespace-nowrap rounded-xl border px-1.5 py-2.5 text-[clamp(11px,3.3vw,13px)] font-black tracking-tight transition active:scale-[0.97]",
+                  channel === ch.key
+                    ? "border-white/30 bg-white/[0.12] text-white"
+                    : "border-white/10 bg-white/[0.04] text-white/50 hover:text-white/80",
                 )}
               >
-                {t === "chat" ? "Chat" : t === "clan" ? "Clan" : "Teman"}
+                {ch.label}
               </button>
             ))}
           </div>
-        </div>
+        )}
 
         {/* Isi di atas input; chat rata full tanpa rounding */}
         <div className="flex min-h-0 w-full flex-1 flex-col pb-2 pt-3">
@@ -3217,6 +3197,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   mengetik sebelum riwayat tiba pun aman. */}
               <ChatPanel
                 kind="global"
+                channel={channel}
                 messages={(msgs ?? []) as unknown as ChatMsg[]}
                 meId={meId}
                 onOpenProfile={(id) => setProfileId(id)}

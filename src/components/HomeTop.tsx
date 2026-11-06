@@ -153,33 +153,33 @@ export function AnnouncementBox() {
   const DOTS = ["#FFD23F", "#1CA7EC", "#E84855", "#7bd88f", "#c084fc"];
 
   return (
-    <section className="fade-enter relative mt-3 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-3.5">
-      {/* Ikon lebih besar + latar membulat; judul & isi sejajar di kanannya. */}
-      <div className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFD23F]/15 text-[#FFD23F]">
-          <Megaphone className="size-5" />
+    <section className="fade-enter relative mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+      <div className="flex items-start gap-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#FFD23F]/15 text-[#FFD23F]">
+          <Megaphone className="size-4" />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-black leading-tight tracking-tight text-white">
+          <p className="text-[13px] font-black leading-tight tracking-tight text-white">
             Pengumuman
           </p>
           {heading && (
-            <h3 className="mt-1 text-[16px] font-black leading-snug tracking-tight text-white">
+            <h3 className="mt-0.5 text-[14px] font-black leading-snug tracking-tight text-white">
               {heading}
             </h3>
           )}
 
           {updates.length > 0 && (
-            <ul className="mt-2 grid gap-1.5 pl-1">
+            /* Isi update 2 kolom: #1 kiri, #2 kanan, #3 kiri baris berikutnya. */
+            <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
               {updates.map((u, i) => (
-                <li key={i} className="flex items-start gap-2">
+                <li key={i} className="flex min-w-0 items-start gap-1.5">
                   <span
                     aria-hidden
                     className="mt-1.5 size-1.5 shrink-0 rounded-full"
                     style={{ background: DOTS[i % DOTS.length] }}
                   />
-                  <span className="min-w-0 text-[12px] font-medium leading-relaxed text-white/75">
+                  <span className="min-w-0 text-[10.5px] font-medium leading-snug text-white/75">
                     {u}
                   </span>
                 </li>
@@ -187,9 +187,7 @@ export function AnnouncementBox() {
             </ul>
           )}
 
-          {/* Garis pembatas 30%, tidak full ke samping. */}
-          <span aria-hidden className="mt-3 block h-px w-full bg-white/30 opacity-30" />
-          <p className="mt-2 text-[10.5px] font-medium text-white/40">
+          <p className="mt-1.5 text-[9.5px] font-medium text-white/35">
             Diperbarui {updatedLabel}
           </p>
         </div>

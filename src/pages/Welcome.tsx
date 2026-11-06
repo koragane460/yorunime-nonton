@@ -765,13 +765,21 @@ function WelcomeFlow() {
               >
                 {/* ================= SLIDE 1 — WELCOME ================= */}
                 <section className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]">
-                  <p className="text-center text-[11px] font-medium tracking-[0.22em] text-white/90">
-                    APP: {APP_VERSION}.0 (1)
+                  <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
+                    {APP_VERSION}.0 (1)
                   </p>
                   <div className="flex flex-1 flex-col items-center justify-center text-center">
-                    <h1 className="yn-fredoka text-[clamp(3.9rem,18vw,7rem)] leading-none text-white">
-                      {/* Garis kiri W dipotong tipis & rapi (bukan clipping acak). */}
-                      <span className="inline-block [clip-path:inset(0_0_0_7%)]">W</span>elcome
+                    <h1 className="yn-fredoka text-[clamp(3.9rem,18vw,7rem)] uppercase leading-none text-white">
+                      {/* W dengan celah slash di batang kiri — sama seperti
+                          wordmark di referensi terakhir. */}
+                      <span className="relative inline-block">
+                        W
+                        <span
+                          aria-hidden
+                          className="absolute left-[17%] top-[-6%] h-[112%] w-[7%] -rotate-[15deg] bg-background"
+                        />
+                      </span>
+                      ELCOME
                     </h1>
                     <p className="mt-4 max-w-[21rem] text-[14.5px] font-semibold leading-snug text-white/40">
                       Aplikasi nonton anime, donghua &amp; film
@@ -821,39 +829,49 @@ function WelcomeFlow() {
                 {/* ================= SLIDE 3 — LOGIN ================= */}
                 <section
                   ref={loginRef}
-                  className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]"
+                  className="relative flex min-h-[100svh] snap-start flex-col pb-8 pt-5 [scroll-snap-stop:always]"
                 >
                   <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
                     {APP_VERSION}.0 (1)
                   </p>
-                  <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-6">
-                    <h2 className="yn-fredoka text-[clamp(2.7rem,12vw,3.8rem)] leading-none">
+                  <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end pb-2 pt-10">
+                    <h2 className="yn-fredoka text-center text-[clamp(2.7rem,12vw,3.8rem)] leading-none">
                       <span className="text-white">SIAP </span>
                       {/* 4 warna kuning konsisten untuk "MULAI?". */}
                       <span className="bg-[linear-gradient(90deg,#FFF6C7_0%,#FFE066_38%,#FFC93C_68%,#F59E0B_100%)] bg-clip-text text-transparent">
                         MULAI?
                       </span>
                     </h2>
-                    <p className="mt-2 text-[11.5px] leading-snug text-white/45">
+                    <p className="mt-2 text-center text-[11.5px] leading-snug text-white/45">
                       YoruNime mewajibkan mu login dengan google untuk
                       sinkronisasi riwayat nonton, level akun, dan list favorite
                       mu.
                     </p>
 
-                    {/* 4 kotak fitur — 2x2, tidak melebar ke samping. */}
-                    <div className="mx-auto mt-3 grid w-full max-w-[20rem] grid-cols-2 gap-2">
+                    {/* 4 kotak fitur — selebar tombol login, 2x2. */}
+                    <div className="mt-3 grid w-full grid-cols-2 gap-2">
                       {[
-                        { icon: MonitorPlay, label: "1080p Kualitas" },
-                        { icon: Users, label: "Komunitas" },
-                        { icon: TrendingUp, label: "Leveling" },
-                        { icon: Gift, label: "FREE" },
-                      ].map(({ icon: Icon, label }) => (
+                        { icon: MonitorPlay, label: "1080p Kualitas", free: false },
+                        { icon: Users, label: "Komunitas", free: false },
+                        { icon: TrendingUp, label: "Leveling", free: false },
+                        { icon: Gift, label: "FREE", free: true },
+                      ].map(({ icon: Icon, label, free }) => (
                         <div
                           key={label}
-                          className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2"
+                          className={cn(
+                            "flex min-h-11 items-center gap-2 rounded-xl px-2.5 py-2",
+                            free
+                              ? "bg-[#FFD23F] text-[#241c02]"
+                              : "border border-white/10 bg-white/[0.04] text-white",
+                          )}
                         >
-                          <Icon className="size-4 shrink-0 text-[#1CA7EC]" />
-                          <span className="text-[10.5px] font-black leading-tight text-white">
+                          <Icon
+                            className={cn(
+                              "size-4 shrink-0",
+                              free ? "text-[#241c02]" : "text-[#1CA7EC]",
+                            )}
+                          />
+                          <span className="text-[10.5px] font-black leading-tight">
                             {label}
                           </span>
                         </div>
@@ -864,7 +882,7 @@ function WelcomeFlow() {
                     <button
                       onClick={doGoogleLogin}
                       disabled={loggingIn}
-                      className="mt-16 flex h-14 w-full items-center gap-3 rounded-2xl bg-white px-3 text-left transition active:scale-[0.99] disabled:opacity-60"
+                      className="mt-9 flex h-14 w-full items-center gap-3 rounded-2xl bg-white px-3 text-left transition active:scale-[0.99] disabled:opacity-60"
                     >
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white">
                         <GoogleGIcon className="size-6" />
@@ -899,14 +917,15 @@ function WelcomeFlow() {
 
                     <div className="mt-3 text-center text-[9.5px] leading-relaxed text-white/40">
                       <p>Dengan melakukan login maka kamu telah setuju dengan</p>
-                      {/* Dua dokumen di bawah, bukan berdampingan. */}
-                      <div className="mt-1 flex flex-col items-center gap-0.5">
+                      {/* Kedua dokumen dalam satu baris. */}
+                      <div className="mt-1 flex flex-wrap items-center justify-center gap-x-1">
                         <button
                           onClick={() => setLegalDoc("privacy")}
                           className="font-bold text-[#1CA7EC]"
                         >
                           Privacy Policy
                         </button>
+                        <span className="text-white/35">&amp;</span>
                         <button
                           onClick={() => setLegalDoc("terms")}
                           className="font-bold text-[#1CA7EC]"

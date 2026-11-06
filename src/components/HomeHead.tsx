@@ -431,7 +431,7 @@ export function DailyQuestRow() {
         <h2 className="text-lg font-bold tracking-tight">Daily Quest</h2>
         <span className="text-[11px] text-muted-foreground">reset 00.00</span>
       </div>
-      <div className="thin-scroll -mx-1 mt-2 flex gap-2.5 overflow-x-auto px-1 pb-1">
+      <div className="mt-2 space-y-2">
         {quests.map((q) => {
           const val = Math.min(q.target, q.get(p, store.local));
           const done = q.get(p, store.local) >= q.target;
@@ -440,50 +440,49 @@ export function DailyQuestRow() {
             <div
               key={q.id}
               className={cn(
-                "flex w-56 shrink-0 flex-col rounded-xl border border-dashed border-amber-300/35 bg-[linear-gradient(165deg,rgba(251,191,36,.10),rgba(17,12,26,.65))] p-2.5 shadow-[0_14px_30px_-24px_rgba(251,191,36,.7)]",
+                "rounded-2xl border px-3 py-2.5 transition",
+                done
+                  ? "border-emerald-400/20 bg-emerald-400/[0.06]"
+                  : "border-white/[0.07] bg-white/[0.035]",
               )}
             >
-              <div className="flex items-start gap-1.5">
+              <div className="flex items-start gap-2.5">
                 <span
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-md border",
+                    "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
                     done
-                      ? "border-emerald-400/60 bg-emerald-400/20 text-emerald-300"
-                      : "border-white/25 bg-white/[0.07] text-white/70",
+                      ? "border-emerald-400/50 bg-emerald-400/15 text-emerald-300"
+                      : "border-white/20 text-transparent",
                   )}
+                  aria-hidden
                 >
-                  {done ? (
-                    <Check className="size-3.5" />
-                  ) : (
-                    <X className="size-3.5" />
-                  )}
+                  <Check className="size-3" />
                 </span>
-                <p className="min-w-0 flex-1 text-[10px] font-semibold leading-tight text-white/85">
-                  {q.text}
-                  <span className="mt-0.5 block text-[10px] font-black text-amber-300">
-                    +{q.xp} XP Level
-                  </span>
-                </p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 text-[11.5px] font-semibold leading-snug text-white/85">
+                      {q.text}
+                    </p>
+                    <span className="shrink-0 text-[9.5px] font-black text-gold-strong">
+                      +{q.xp} XP
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-[width] duration-500",
+                          done ? "bg-emerald-400" : "bg-gold-strong",
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="shrink-0 text-[9px] font-semibold tabular-nums text-white/40">
+                      {val}/{q.target}
+                    </span>
+                  </div>
+                </div>
               </div>
-              {/* Kiri atas bar: "0/1 Selesai" */}
-              <p className="mt-2 text-[9px] font-semibold text-white/50">
-                {val}/{q.target} Selesai
-              </p>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/10">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-[width] duration-500",
-                    done
-                      ? "bg-gradient-to-r from-emerald-400 to-teal-300"
-                      : "bg-gradient-to-r from-amber-400 to-orange-400",
-                  )}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              {/* Kanan bawah bar: "- 30%" */}
-              <p className="mt-1 text-right text-[9px] font-bold text-white/50">
-                - {pct}%
-              </p>
             </div>
           );
         })}
@@ -692,66 +691,69 @@ export function ChatVoiceRow({
         <h2 className="text-lg font-bold tracking-tight">Hiburan &amp; Voice</h2>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-3">
-      {/* STICKER SHOP — panel paling tinggi (2 baris). Tanpa outline. */}
+      {/* STICKER SHOP — panel tinggi 2 baris, latar amber/oranye penuh. */}
       <button
         onClick={onOpenSticker}
-        className={cn(
-          "group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl bg-card p-4 text-left transition active:scale-[0.98]",
-          "border border-[#FFFAF0]/10",
-        )}
+        className="group relative row-span-2 flex min-h-[228px] flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-[#B45309] p-4 text-left text-white transition active:scale-[0.98]"
       >
         <span
           aria-hidden
-          className="absolute inset-0 opacity-40 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]"
+          className="absolute inset-0 opacity-70 [background-size:20px_20px] [background-image:radial-gradient(rgba(255,255,255,.22)_1px,transparent_1.2px)]"
         />
         <span className="relative flex items-start justify-between gap-2">
-          <span className="yn-eyebrow">Toko</span>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#FFD23F]/18">
-            <Sticker className="size-4 text-[#FFD23F]" />
+          <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/75">Toko</span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/25">
+            <Sticker className="size-4.5 text-white" />
           </span>
         </span>
         <span className="relative flex flex-col gap-1">
           <span className="font-display text-xl font-black leading-none tracking-tight">
             Sticker Shop
           </span>
-          <span className="yn-meta">Pack lucu, anime & random — langsung ke chat</span>
-          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-[#1CA7EC] px-2.5 py-1 text-[10px] font-bold text-[#FFFAF0]">
+          <span className="text-[10.5px] font-medium leading-snug text-white/85">
+            Pack lucu, anime &amp; random — langsung ke chat
+          </span>
+          <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-[#8a3d05]">
             <Sparkles className="size-3" /> Buka toko
           </span>
         </span>
       </button>
 
-      {/* NOBAR — nonton bareng. Gradasi campur warna ikon (rose + amber). */}
+      {/* NOBAR — coral/pink, bukan hitam. */}
       <button
         onClick={onOpenNobar}
-        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-[#E84855]/35 bg-card p-4 text-left transition active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 via-[#E84855] to-fuchsia-600 p-4 text-left text-white transition active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
-          <span className="yn-eyebrow">Nonton</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#E84855]/18">
-            <Tv className="size-4 text-[#E84855]" />
+          <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/75">Nonton</span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25">
+            <Tv className="size-4 text-white" />
           </span>
         </span>
         <span className="relative flex flex-col">
           <span className="text-base font-black leading-tight tracking-tight">Nobar</span>
-          <span className="yn-meta">Nonton bareng komunitas</span>
+          <span className="text-[10.5px] font-medium leading-snug text-white/80">
+            Nonton bareng komunitas
+          </span>
         </span>
       </button>
 
-      {/* VOICE — ngobrol suara. Gradasi campur warna ikon (sky + violet). */}
+      {/* VOICE — biru/teal, bukan hitam. */}
       <button
         onClick={onOpenVoice}
-        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl border border-[#1CA7EC]/35 bg-card p-4 text-left transition active:scale-[0.98]"
+        className="relative flex h-28 flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-sky-500 via-[#1CA7EC] to-indigo-500 p-4 text-left text-white transition active:scale-[0.98]"
       >
         <span className="relative flex items-start justify-between gap-2">
-          <span className="yn-eyebrow">Suara</span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1CA7EC]/18">
-            <Mic className="size-4 text-[#1CA7EC]" />
+          <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/75">Suara</span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25">
+            <Mic className="size-4 text-white" />
           </span>
         </span>
         <span className="relative flex flex-col">
           <span className="text-base font-black leading-tight tracking-tight">Voice Call</span>
-          <span className="yn-meta">Nobaron &amp; ngobrol</span>
+          <span className="text-[10.5px] font-medium leading-snug text-white/80">
+            Nobaron &amp; ngobrol
+          </span>
         </span>
       </button>
       </div>

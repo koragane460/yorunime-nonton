@@ -25,6 +25,16 @@ function viewsOf(id: string): number {
   return 900 + (h % 700);
 }
 
+/** Skor dari API lama bisa berupa 682 (titik hilang) — normalisasi ke 6.8. */
+function scoreOf(c: GenreCard): number {
+  const raw = Number(c.score ?? 0);
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  let out = raw;
+  if (out > 100) out /= 100;
+  else if (out > 10) out /= 10;
+  return Math.min(10, out);
+}
+
 /**
  * LAYAR GENRE (fullscreen) — dibuka dari kotak genre di Home.
  * Atas: panah kiri tanpa latar · ikon cari di kanan (tanpa latar).
@@ -50,6 +60,7 @@ export function GenreScreen({
   const [sel, setSel] = useState(initialId);
   const [items, setItems] = useState<GenreCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAll, setLoadingAll] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<GenreCard[] | null>(null);
@@ -59,18 +70,40 @@ export function GenreScreen({
   const name =
     genres.find((g) => g.id === sel)?.name ?? genres.find((g) => g.id === initialId)?.name ?? "";
 
-  // Hasil genre terpilih.
+  // Hasil genre terpilih — halaman pertama tampil dulu, lalu sisanya
+  // diambil otomatis sampai habis supaya SEMUA judul genre ini muncul.
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setLoadingAll(false);
     void (async () => {
+      let first: GenreCard[] = [];
       try {
-        const r = (await loadGenre({ genreId: sel })) as GenreCard[];
-        if (alive) setItems(r ?? []);
+        first = ((await loadGenre({ genreId: sel })) as GenreCard[]) ?? [];
       } catch {
-        if (alive) setItems([]);
+        first = [];
       }
-      if (alive) setLoading(false);
+      if (!alive) return;
+      setItems(first);
+      setLoading(false);
+      if (first.length === 0) return;
+
+      setLoadingAll(true);
+      const seen = new Set(first.map((c) => String(c.id)));
+      for (let page = 2; page <= 6; page++) {
+        let more: GenreCard[] = [];
+        try {
+          more = ((await loadGenre({ genreId: sel, page })) as GenreCard[]) ?? [];
+        } catch {
+          break;
+        }
+        if (!alive) return;
+        const fresh = more.filter((c) => !seen.has(String(c.id)));
+        if (fresh.length === 0) break;
+        fresh.forEach((c) => seen.add(String(c.id)));
+        setItems((prev) => [...prev, ...fresh]);
+      }
+      if (alive) setLoadingAll(false);
     })();
     return () => {
       alive = false;
@@ -197,13 +230,23 @@ export function GenreScreen({
             {results ? `Hasil "${q.trim()}"` : `Genre ${name}`}
           </h2>
           <span className="text-[11px] font-bold text-white/45">
-            {loading || searching ? "Memuat…" : `${list.length} judul`}
+            {loading || searching
+              ? "Memuat…"
+              : loadingAll
+                ? `${list.length}+ judul`
+                : `${list.length} judul`}
           </span>
         </div>
 
         {/* GRID 3 PER BARIS — poster, judul, rating, views. */}
         <div className="mt-3 grid grid-cols-3 gap-2">
-          {list.map((c, i) => (
+          {list.map((c, i) => {
+            const score = scoreOf(c);
+            const status =
+              (c.status ?? "").toLowerCase() === "completed"
+                ? "Completed"
+                : "Ongoing";
+            return (
             <button
               key={`${c.id}-${i}`}
               type="button"
@@ -217,40 +260,37 @@ export function GenreScreen({
                   loading="lazy"
                   className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
                 />
-                {/* Chip STATUS di kiri atas — sama seperti kartu Home. */}
-                <span
-                  className={cn(
-                    "absolute left-1 top-1 rounded-md px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white",
-                    (c.status ?? "").toLowerCase() === "completed"
-                      ? "bg-sky-700"
-                      : "bg-emerald-600",
+                {/* SATU kotak netral: status + rating. Tidak berubah warna. */}
+                <span className="absolute left-1 top-1 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white backdrop-blur-sm">
+                  {status}
+                  {score > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-amber-300">
+                      <Star className="size-2 fill-amber-300" />
+                      {score.toFixed(1)}
+                    </span>
                   )}
-                >
-                  {(c.status ?? "Ongoing").toLowerCase() === "completed"
-                    ? "Completed"
-                    : "Ongoing"}
                 </span>
-                {typeof c.score === "number" && c.score > 0 && (
-                  <span className="absolute right-1 top-1 flex items-center gap-0.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[9px] font-black text-amber-300 backdrop-blur">
-                    <Star className="size-2.5 fill-amber-300" />
-                    {c.score.toFixed(1)}
-                  </span>
-                )}
               </div>
               <p className="mt-1.5 line-clamp-2 text-[11px] font-bold leading-tight text-white/90">
                 {c.title}
               </p>
-              {/* Rating + views — SELALU tampil (0.0 kalau datanya kosong,
-                  biar tidak ada kartu yang kosong angkanya). */}
-              <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/55">
-                <Star className="size-2.5 fill-amber-300 text-amber-300" />
-                {(c.score ?? 0).toFixed(1)}
-                <span className="mx-0.5 opacity-40">·</span>
-                <Eye className="size-2.5" />
-                {viewsOf(c.id).toLocaleString("id-ID")}
+              {/* Rating · views · tipe — selalu tampil. */}
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[9.5px] text-white/55">
+                <span className="inline-flex items-center gap-0.5">
+                  <Star className="size-2.5 shrink-0 fill-amber-300 text-amber-300" />
+                  {score.toFixed(1)}
+                </span>
+                <span className="opacity-40">·</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <Eye className="size-2.5 shrink-0" />
+                  {viewsOf(c.id).toLocaleString("id-ID")}
+                </span>
+                <span className="opacity-40">·</span>
+                <span>{c.type ?? "Anime"}</span>
               </p>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {!loading && list.length === 0 && !searching && (

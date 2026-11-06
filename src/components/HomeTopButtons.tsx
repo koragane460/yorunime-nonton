@@ -1079,9 +1079,7 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rows = useQuery(api.activities.continueWatching, user ? {} : "skip");
-  const stats = useQuery(api.downloads.downloadStats, "skip");
   const collapse = useMutation(api.activities.collapseHistory);
-  const [showDownloads, setShowDownloads] = useState(false);
   const items = ((rows ?? []) as unknown as ContRow[])
     .slice()
     .sort((a, b) => b.updatedAt - a.updatedAt);
@@ -1139,16 +1137,6 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
       .map(([, g]) => g);
   }, [items]);
 
-  // Download tidak lagi jadi tombol navigasi sendiri supaya baris nav tidak
-  // terlalu padat; ia dijangkau lewat tombol di header layar ini.
-  if (showDownloads) {
-    return (
-      <DownloadsPanel
-        onClose={() => (items.length ? setShowDownloads(false) : onClose())}
-      />
-    );
-  }
-
   return (
     <PanelShell
       title="History"
@@ -1160,34 +1148,21 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footerBottom
       footer={
-        <div className="flex w-full items-center justify-end gap-2">
-          <button
-            onClick={() => setShowDownloads(true)}
-            aria-label="Download"
-            title="Download"
-            className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary/60 hover:text-primary"
-          >
-            <Download className="size-4" />
-            {stats && stats.done > 0 && (
-              <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
-                {stats.done > 99 ? "99+" : stats.done}
-              </span>
-            )}
-          </button>
-          {/* Saklar SINGLE / MULTI — PALING KANAN BAWAH, lebih besar. */}
-          <div className="flex items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.8)]">
+        <div className="flex w-full items-center justify-end">
+          {/* Saklar SINGLE / MULTI — ukuran sama seperti filter di Subscribe. */}
+          <div className="flex items-stretch overflow-hidden rounded-full border border-white/15 bg-white/[0.06]">
             <button
               type="button"
               onClick={() => pickMode("single")}
               aria-pressed={mode === "single"}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-black transition active:scale-95",
+                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-black transition active:scale-95",
                 mode === "single"
                   ? "bg-white text-sky-700"
-                  : "text-sky-950/75 hover:bg-white/30",
+                  : "text-white/55 hover:text-white/85",
               )}
             >
-              <List className="size-4" aria-hidden />
+              <List className="size-3.5" aria-hidden />
               Single
             </button>
             <button
@@ -1195,13 +1170,13 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
               onClick={() => pickMode("multi")}
               aria-pressed={mode === "multi"}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-black transition active:scale-95",
+                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-black transition active:scale-95",
                 mode === "multi"
                   ? "bg-white text-sky-700"
-                  : "text-sky-950/75 hover:bg-white/30",
+                  : "text-white/55 hover:text-white/85",
               )}
             >
-              <Filter className="size-4" aria-hidden />
+              <Filter className="size-3.5" aria-hidden />
               Multi
             </button>
           </div>

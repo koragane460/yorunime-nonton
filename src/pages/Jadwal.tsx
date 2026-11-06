@@ -627,34 +627,53 @@ function JadwalContent() {
         </div>
       )}
 
-      {/* TOMBOL HARI BERIKUTNYA — kotak kecil rounded di kanan bawah. */}
-      <button
-        onClick={() => {
-          setDay((d) => (d + 1) % 7);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-        aria-label={`Lihat jadwal hari ${DAYS_ID[(day + 1) % 7]}`}
-        className="fixed bottom-24 right-3 z-30 flex items-center gap-1.5 rounded-xl border border-primary/45 bg-[#151922]/95 px-3 py-2.5 text-[11.5px] font-black text-white shadow-lg backdrop-blur active:scale-95"
-      >
-        <CalendarDays className="size-3.5 text-primary" />
-        {DAYS_ID[(day + 1) % 7]}
-      </button>
+      {/* DUA TOMBOL HARI — kotak rounded sama ukuran, berdampingan di
+          kanan bawah. Kiri = hari sebelumnya, kanan = hari berikutnya. */}
+      <div className="fixed bottom-24 right-3 z-30 flex items-center gap-2">
+        <button
+          onClick={() => {
+            setDay((d) => (d + 6) % 7);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          aria-label={`Lihat jadwal hari ${DAYS_ID[(day + 6) % 7]}`}
+          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-[#151922]/95 px-3 py-2.5 text-[11.5px] font-black text-white/75 backdrop-blur transition hover:text-white active:scale-95"
+        >
+          <CalendarDays className="size-3.5 text-white/50" />
+          {DAYS_ID[(day + 6) % 7]}
+        </button>
+        <button
+          onClick={() => {
+            setDay((d) => (d + 1) % 7);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          aria-label={`Lihat jadwal hari ${DAYS_ID[(day + 1) % 7]}`}
+          className="flex items-center gap-1.5 rounded-xl border border-primary/45 bg-[#151922]/95 px-3 py-2.5 text-[11.5px] font-black text-white backdrop-blur transition active:scale-95"
+        >
+          <CalendarDays className="size-3.5 text-primary" />
+          {DAYS_ID[(day + 1) % 7]}
+        </button>
+      </div>
 
-      {/* "Lihat semua" menampilkan seluruh rilis hari itu (permintaan user). */}
-      {list.length > shownList.length && (
+      {/* "Lihat semua" menampilkan seluruh rilis hari itu. "Kembali ke
+          atas" tetap ada setelah semua rilis dibuka. */}
+      {list.length > 8 && (
         <div className="mt-5 flex items-center justify-between gap-3 pb-6">
-          <button
-            onClick={() => {
-              setShowAll(true);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            className="flex-1 rounded-2xl border border-primary/50 bg-primary/10 px-4 py-3 text-xs font-bold text-primary transition hover:bg-primary/20"
-          >
-            {`Lihat semua (${list.length} rilis hari ini)`}
-          </button>
+          {!showAll ? (
+            <button
+              onClick={() => {
+                setShowAll(true);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="text-left text-xs font-bold text-primary transition hover:text-primary/80"
+            >
+              {`Lihat semua (${list.length} rilis hari ini)`}
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="shrink-0 rounded-2xl border border-white/15 bg-white/[0.04] px-4 py-3 text-xs font-semibold text-muted-foreground transition hover:border-foreground/40 hover:text-foreground"
+            className="ml-auto shrink-0 text-xs font-semibold text-muted-foreground transition hover:text-foreground"
           >
             Kembali ke atas
           </button>
