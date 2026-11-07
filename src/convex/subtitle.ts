@@ -106,6 +106,26 @@ const toVtt = (cues: Cue[]) =>
   "\n";
 
 /**
+ * Terjemahan mesin cenderung formal ("saya", "Anda", "tidak"). Subtitle
+ * anime terasa lebih hidup dengan sapaan sehari-hari. Penggantian dibatasi
+ * pada kata utuh supaya nama/judul tidak ikut berubah. */
+function informalize(text: string): string {
+  return text
+    .replace(/\bSaya\b/g, "Aku")
+    .replace(/\bsaya\b/g, "aku")
+    .replace(/\bAnda\b/g, "Kamu")
+    .replace(/\banda\b/g, "kamu")
+    .replace(/\bApakah\b/g, "Apa")
+    .replace(/\bapakah\b/g, "apa")
+    .replace(/\bTidak\b/g, "Nggak")
+    .replace(/\btidak\b/g, "nggak")
+    .replace(/\bTetapi\b/g, "Tapi")
+    .replace(/\btetapi\b/g, "tapi")
+    .replace(/\bNamun\b/g, "Tapi")
+    .replace(/\bnamun\b/g, "tapi");
+}
+
+/**
  * Terjemahkan banyak baris sekaligus; separator dipakai agar urut terjaga.
  * `from` = "en" untuk track English, "auto" kalau bahasanya tidak diketahui.
  *
@@ -330,7 +350,10 @@ async function translateCues(
   const translated = done.some(Boolean);
   const partial = failCount > 0;
   return {
-    cues: cues.map((c, i) => ({ ...c, text: out[i] ?? c.text })),
+    cues: cues.map((c, i) => ({
+      ...c,
+      text: informalize(out[i] ?? c.text),
+    })),
     translated,
     partial,
   };

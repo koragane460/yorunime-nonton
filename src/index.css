@@ -10,6 +10,20 @@
   letter-spacing: 0.01em;
 }
 
+/* Subtitle player: lembut, rapi, dan punya outline penuh di semua sisi.
+   `paint-order` membuat stroke berada di belakang isi huruf supaya bentuk
+   huruf tidak menipis; `text-wrap: balance` meratakan baris panjang. */
+.yn-subtitle {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  line-height: 1.36;
+  text-wrap: balance;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 1.25px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.62);
+}
+
 /* Aksen kuning: star rating, badge highlights, tab indicator, New badge */
 .yn-gold-star {
   color: var(--gold-strong);
@@ -1727,15 +1741,134 @@ a {
   0%, 100% { background-position: 0 0, 0 0, 0 0; }
   50% { background-position: 0 0, 12px 0, 0 0; }
 }
+/* ---- GR: rantai baja dengan api biru dan permata di puncak ---- */
+.yn-frame-gr {
+  background:
+    conic-gradient(
+      from 210deg,
+      #06111e 0deg,
+      #1e4f7a 28deg,
+      #84d8ff 42deg,
+      #0b1e33 62deg,
+      #071221 110deg,
+      #2f7dbd 158deg,
+      #b5efff 176deg,
+      #0a1a2d 198deg,
+      #06111e 260deg,
+      #3c8bc5 330deg,
+      #06111e 360deg
+    );
+  animation: yn-ring-spin 26s linear infinite;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(183 234 255 / 0.55),
+    0 0 0 1px rgb(41 121 181 / 0.6),
+    0 0 24px -6px rgb(56 170 255 / 0.85);
+}
+.yn-frame-gr::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 9999px;
+  border: 2px dashed rgb(163 230 255 / 0.55);
+  filter: drop-shadow(0 0 4px rgb(56 189 248 / 0.7));
+  animation: yn-ring-spin 19s linear infinite reverse;
+  pointer-events: none;
+}
+.yn-frame-gr::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #e0f7ff, #67c8ff 46%, #1d4ed8);
+  box-shadow: 0 0 10px rgb(96 200 255 / 0.95), inset 0 0 0 1px rgb(255 255 255 / 0.55);
+  transform: translateX(-50%) rotate(45deg);
+  animation: yn-gem-pulse 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ---- HuTao: kayu merah, emas, bunga, dan hantu kecil ---- */
+.yn-frame-hutao {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 180, 162, 0.95) 0 3px, transparent 4px),
+    radial-gradient(circle at 82% 78%, rgba(255, 141, 122, 0.9) 0 3px, transparent 4px),
+    radial-gradient(circle at 76% 16%, rgba(255, 214, 140, 0.55), transparent 22%),
+    repeating-conic-gradient(
+      from 0deg,
+      #3b0d12 0deg 8deg,
+      #6b1a1f 8deg 15deg,
+      #26090d 15deg 24deg
+    ),
+    #3b0d12;
+  animation: yn-ring-spin 44s linear infinite;
+  box-shadow:
+    inset 0 0 0 1.5px rgb(255 214 140 / 0.6),
+    0 0 0 1px rgb(147 44 50 / 0.65),
+    0 0 24px -6px rgb(239 68 68 / 0.8);
+}
+.yn-frame-hutao::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1.5px solid rgb(255 214 140 / 0.45);
+  box-shadow: inset 0 0 8px rgb(255 180 120 / 0.22);
+  pointer-events: none;
+}
+.yn-frame-hutao::after {
+  content: "";
+  position: absolute;
+  right: 8%;
+  top: -5px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #ffe6a3 0 18%, #ff8d7a 22% 55%, #8f1d26 60%);
+  box-shadow: 0 0 9px rgb(255 130 110 / 0.85);
+  animation: yn-gem-pulse 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ---- Halloween: malam ungu, bulan, labu, dan kilau oranye ---- */
 .yn-frame-halloween {
   background:
-    repeating-linear-gradient(125deg, #f97316 0 7px, #1c1024 7px 14px),
-    radial-gradient(circle at 72% 24%, rgba(251, 191, 36, 0.55), transparent 42%);
-  animation: yn-frame-drift 12s ease-in-out infinite alternate;
+    radial-gradient(circle at 76% 17%, #ffe3a1 0 4px, rgba(255, 210, 122, 0.28) 4.5px 8px, transparent 9px),
+    radial-gradient(circle at 22% 78%, #fb923c 0 3.5px, transparent 4.5px),
+    repeating-conic-gradient(
+      from 0deg,
+      #160a22 0deg 10deg,
+      #36124d 10deg 18deg,
+      #f97316 18deg 20deg
+    ),
+    #160a22;
+  animation: yn-frame-drift 13s ease-in-out infinite alternate;
   box-shadow:
-    inset 0 0 0 1.5px rgb(251 146 60 / 0.7),
-    0 0 0 1px rgb(124 58 237 / 0.55),
-    0 0 20px -7px rgb(249 115 22 / 0.85);
+    inset 0 0 0 1.5px rgb(251 146 60 / 0.72),
+    0 0 0 1px rgb(124 58 237 / 0.6),
+    0 0 24px -6px rgb(249 115 22 / 0.9);
+}
+.yn-frame-halloween::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1.5px dashed rgb(253 186 116 / 0.4);
+  animation: yn-ring-spin 38s linear infinite reverse;
+  pointer-events: none;
+}
+.yn-frame-halloween::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  bottom: -5px;
+  width: 12px;
+  height: 10px;
+  border-radius: 45% 45% 52% 52%;
+  background: radial-gradient(circle at 35% 42%, #1c1024 0 1.2px, transparent 1.6px), radial-gradient(circle at 65% 42%, #1c1024 0 1.2px, transparent 1.6px), linear-gradient(145deg, #ffb347, #f97316 58%, #c2410c);
+  box-shadow: 0 0 9px rgb(249 115 22 / 0.85);
+  pointer-events: none;
 }
 .yn-frame-natal {
   background:
@@ -1775,6 +1908,12 @@ a {
   .yn-frame-imperial,
   .yn-frame-obsidian,
   .yn-frame-halloween,
+  .yn-frame-gr,
+  .yn-frame-gr::before,
+  .yn-frame-gr::after,
+  .yn-frame-hutao,
+  .yn-frame-hutao::after,
+  .yn-frame-halloween::before,
   .yn-frame-natal,
   .yn-frame-imlek,
   .yn-frame-lebaran,
@@ -1794,6 +1933,10 @@ a {
   .yn-frame-imperial,
   .yn-frame-obsidian,
   .yn-frame-halloween,
+  .yn-frame-gr,
+  .yn-frame-gr::before,
+  .yn-frame-hutao,
+  .yn-frame-halloween::before,
   .yn-frame-natal,
   .yn-frame-imlek,
   .yn-frame-lebaran {

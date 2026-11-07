@@ -183,7 +183,7 @@ export function QuickGenre({
 
   return (
     <>
-      <section className="fade-enter relative mt-5 overflow-hidden rounded-[24px] border border-rose-300/15 bg-[linear-gradient(145deg,#1a1012_0%,#110b0d_55%,#08070b_100%)] p-3">
+      <section className="fade-enter relative mt-5 overflow-hidden rounded-[22px] border border-rose-300/15 bg-[linear-gradient(120deg,#1c1014_0%,#140d13_55%,#12101a_100%)] p-2.5">
         <span
           aria-hidden
           className="pointer-events-none absolute -right-12 -top-14 size-40 rounded-full bg-rose-500/10 blur-3xl"
@@ -193,73 +193,75 @@ export function QuickGenre({
           className="pointer-events-none absolute -left-10 -bottom-16 size-32 rounded-full bg-gold/5 blur-3xl"
         />
 
-        {/* Satu kotak toggle: Genre kiri, Katalog kanan (dengan ikon). */}
-        <div className="relative flex rounded-2xl border border-white/10 bg-white/[0.045] p-1">
-          <button
-            type="button"
-            onClick={() => setTab("genre")}
-            aria-pressed={tab === "genre"}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.98]",
-              tab === "genre"
-                ? "bg-white text-black shadow-[0_8px_18px_-12px_rgba(0,0,0,.9)]"
-                : "text-white/55 hover:text-white",
-            )}
-          >
-            <span
+        <div className="relative flex items-stretch gap-2">
+          {/* Dua tombol kecil bertumpuk di kiri — bukan bar panjang. */}
+          <div className="flex w-[74px] shrink-0 flex-col gap-1 rounded-[16px] border border-white/10 bg-white/[0.055] p-1">
+            <button
+              type="button"
+              onClick={() => setTab("genre")}
+              aria-pressed={tab === "genre"}
               className={cn(
-                "size-1.5 rounded-full transition",
-                tab === "genre" ? "bg-rose-500" : "bg-rose-400/60",
+                "flex h-7 items-center justify-center gap-1 rounded-[11px] text-[9px] font-black transition active:scale-[0.97]",
+                tab === "genre"
+                  ? "bg-gold-strong text-black shadow-[0_8px_16px_-10px_rgba(255,210,63,.9)]"
+                  : "text-white/50 hover:text-white",
               )}
-            />
-            Genre
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("catalog")}
-            aria-pressed={tab === "catalog"}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.98]",
-              tab === "catalog"
-                ? "bg-gold-strong text-black shadow-[0_8px_18px_-12px_rgba(255,210,63,.9)]"
-                : "text-white/55 hover:text-white",
-            )}
-          >
-            <Grid3X3 className="size-3.5" />
-            Katalog
-          </button>
-        </div>
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full transition",
+                  tab === "genre" ? "bg-rose-600" : "bg-rose-400/60",
+                )}
+              />
+              Genre
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("catalog")}
+              aria-pressed={tab === "catalog"}
+              className={cn(
+                "flex h-7 items-center justify-center gap-1 rounded-[11px] text-[9px] font-black transition active:scale-[0.97]",
+                tab === "catalog"
+                  ? "bg-gold-strong text-black shadow-[0_8px_16px_-10px_rgba(255,210,63,.9)]"
+                  : "text-white/50 hover:text-white",
+              )}
+            >
+              <Grid3X3 className="size-3" />
+              Katalog
+            </button>
+          </div>
 
-        {tab === "genre" ? (
-          <div className="thin-scroll relative mt-2.5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {genres.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => onOpenGenre(g.id)}
-                className="shrink-0 whitespace-nowrap rounded-full border border-rose-400/50 bg-rose-500/[0.07] px-3 py-1.5 text-[10.5px] font-bold text-white/75 transition hover:border-rose-300/80 hover:bg-rose-500/15 hover:text-white active:scale-[0.97]"
-              >
-                {g.name}
-              </button>
-            ))}
-            {genres.length === 0 && (
-              <span className="py-2 text-center text-[11px] text-white/35">
-                Memuat genre…
-              </span>
+          <div className="relative flex min-w-0 flex-1 items-center">
+            {tab === "genre" ? (
+              <div className="thin-scroll flex w-full gap-1.5 overflow-x-auto px-0.5 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {genres.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => onOpenGenre(g.id)}
+                    className="shrink-0 whitespace-nowrap rounded-full border border-rose-400/50 bg-rose-500/[0.07] px-3 py-1.5 text-[10px] font-bold text-white/75 transition hover:border-rose-300/80 hover:bg-rose-500/15 hover:text-white active:scale-[0.97]"
+                  >
+                    {g.name}
+                  </button>
+                ))}
+                {genres.length === 0 && (
+                  <span className="px-2 text-[10px] text-white/35">Memuat…</span>
+                )}
+              </div>
+            ) : (
+              <div className="thin-scroll flex w-full gap-1.5 overflow-x-auto px-0.5 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {LETTERS.map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLetter(l)}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-gold-strong/30 bg-gold-strong/[0.09] font-display text-[11px] font-black text-gold-strong transition hover:border-gold-strong/70 hover:bg-gold-strong/25 active:scale-95"
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        ) : (
-          <div className="thin-scroll relative mt-2.5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {LETTERS.map((l) => (
-              <button
-                key={l}
-                onClick={() => setLetter(l)}
-                className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-white/12 bg-white/[0.055] font-display text-[11px] font-black text-white/70 transition hover:border-gold-strong/50 hover:bg-gold-strong/15 hover:text-gold-strong active:scale-95"
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        )}
+        </div>
       </section>
 
       {letter && (

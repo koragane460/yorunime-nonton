@@ -359,21 +359,9 @@ const QUEST_POOL: QuestDef[] = [
   { id: "d5", text: "Buka detail 5 judul", target: 5, xp: 120, get: (_p, l) => l.detail },
 ];
 
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/** 3 misi berbeda tiap hari (dipilih deterministik dari kunci tanggal). */
-function questsOfDay(day: string): QuestDef[] {
-  return QUEST_POOL.map((q) => ({ q, h: hashStr(`${day}:${q.id}`) }))
-    .sort((a, b) => a.h - b.h)
-    .slice(0, 3)
-    .map((x) => x.q);
+/** 9 misi harian, ditampilkan sebagai grid kotak 3 × 3. */
+function questsOfDay(_day: string): QuestDef[] {
+  return QUEST_POOL;
 }
 
 export function DailyQuestRow() {
@@ -431,7 +419,7 @@ export function DailyQuestRow() {
         <h2 className="text-lg font-bold tracking-tight">Daily Quest</h2>
         <span className="text-[11px] text-muted-foreground">reset 00.00</span>
       </div>
-      <div className="mt-2 space-y-2">
+      <div className="mt-2 grid grid-cols-3 gap-2">
         {quests.map((q) => {
           const val = Math.min(q.target, q.get(p, store.local));
           const done = q.get(p, store.local) >= q.target;
@@ -440,48 +428,47 @@ export function DailyQuestRow() {
             <div
               key={q.id}
               className={cn(
-                "rounded-2xl border px-3 py-2.5 transition",
+                "relative flex aspect-square min-w-0 flex-col overflow-hidden rounded-[18px] border p-2 transition",
                 done
-                  ? "border-emerald-400/20 bg-emerald-400/[0.06]"
-                  : "border-white/[0.07] bg-white/[0.035]",
+                  ? "border-emerald-400/25 bg-[linear-gradient(145deg,rgba(52,211,153,.16),rgba(255,255,255,.035))]"
+                  : "border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,210,63,.035))]",
               )}
             >
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-center justify-between gap-1">
                 <span
                   className={cn(
-                    "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border",
                     done
-                      ? "border-emerald-400/50 bg-emerald-400/15 text-emerald-300"
+                      ? "border-emerald-400/55 bg-emerald-400/20 text-emerald-200"
                       : "border-white/20 text-transparent",
                   )}
                   aria-hidden
                 >
                   <Check className="size-3" />
                 </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 text-[11.5px] font-semibold leading-snug text-white/85">
-                      {q.text}
-                    </p>
-                    <span className="shrink-0 text-[9.5px] font-black text-gold-strong">
-                      +{q.xp} XP
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-[width] duration-500",
-                          done ? "bg-emerald-400" : "bg-gold-strong",
-                        )}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="shrink-0 text-[9px] font-semibold tabular-nums text-white/40">
-                      {val}/{q.target}
-                    </span>
-                  </div>
+                <span className="truncate text-[8px] font-black text-gold-strong">
+                  +{q.xp} XP
+                </span>
+              </div>
+              <p className="mt-1.5 line-clamp-4 min-w-0 text-[9.5px] font-semibold leading-[1.25] text-white/85">
+                {q.text}
+              </p>
+              <div className="mt-auto pt-1.5">
+                <div className="h-[3px] overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-[width] duration-500",
+                      done ? "bg-emerald-400" : "bg-[linear-gradient(90deg,#FFD23F,#E84855)]",
+                    )}
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
+                <p className="mt-1 flex items-center justify-between text-[8px] font-bold tabular-nums text-white/40">
+                  <span>
+                    {val}/{q.target}
+                  </span>
+                  <span>{done ? "Selesai" : `${pct}%`}</span>
+                </p>
               </div>
             </div>
           );

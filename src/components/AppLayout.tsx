@@ -301,7 +301,6 @@ export function AppLayout({
       {!overlayOpen && location.pathname !== "/catalog" && location.pathname !== "/feed" && <AppFooter />}
       <MusicMiniBar />
       <MiniPlayerHost />
-      <XpPopupHost />
 
       <OverlayScrollLock />
       {yvOpen &&
@@ -1171,12 +1170,16 @@ function BottomNav({
       {/* Navbar 6 tombol: BAR ROUNDED super (glassmorphism) yang tidak
           full-width, dan tiap tombol aktif mendapat kotak rounded KEDUA
           (juga glassmorphism) yang berpindah HALUS antar tombol. */}
-      <nav className="nav-bar fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
-        <div className="w-full">
+      <nav
+        className="nav-bar fixed inset-x-0 bottom-0 z-40"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+      >
+        <div className="mx-auto w-full max-w-[27rem] px-3">
           <div
             className={cn(
-              "relative grid grid-cols-5 rounded-t-2xl border-t-0 border-white/12 p-1.5",
-              "bg-[oklch(0.135_0.016_266_/_0.92)] shadow-[0_18px_40px_-28px_rgba(0,0,0,1)]",
+              "relative grid grid-cols-5 gap-0.5 rounded-[30px] border p-1.5",
+              "border-white/16 bg-[linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.055)_46%,rgba(255,210,63,.07))]",
+              "shadow-[0_20px_48px_-26px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.2)]",
               "backdrop-blur-2xl backdrop-saturate-150",
             )}
           >
@@ -1227,21 +1230,14 @@ function BottomNav({
                     : it.label
                 }
                 className={cn(
-                  "nav-item relative z-10 flex select-none flex-col items-center justify-center pb-2 pt-2.5 transition-colors duration-200",
-                  active && "text-gold-strong",
-                  // Tombol PANEL: jendol KE ATAS bar (knob emas), permintaan.
+                  "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-[22px] pb-1.5 pt-2 transition-all duration-200",
+                  active &&
+                    "bg-white/[0.095] text-gold-strong shadow-[inset_0_1px_0_rgba(255,255,255,.16)]",
+                  // Tombol PANEL: satu-satunya tombol dengan permukaan emas.
                   it.hub &&
-                    "z-20 -translate-y-5 rounded-2xl border border-gold-strong/55 bg-[oklch(0.16_0.03_88_/_0.98)] px-3 pb-3 pt-2.5 shadow-[0_12px_24px_-14px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.25)]",
+                    "z-20 -translate-y-4 rounded-[20px] border border-[#FFE58A]/70 bg-[linear-gradient(155deg,#FFF0B0,#FFD23F_54%,#F3A712)] px-2 pb-2 pt-2 text-black shadow-[0_14px_28px_-14px_rgba(255,210,63,.65),inset_0_1px_0_rgba(255,255,255,.55)]",
                 )}
               >
-                {/* GARIS penanda aktif di ATAS ikon — menggantikan kotak
-                    rounded lama (permintaan). */}
-                {active && (
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-3 top-0 h-[3px] rounded-full bg-gold-strong"
-                  />
-                )}
                 {/* Isi tombol (ikon + label). */}
                 <span className="flex flex-col items-center">
                 <Icon
@@ -1250,28 +1246,30 @@ function BottomNav({
                     // 5 kolom: ikon dibuat besar supaya jelas dan mudah
                     // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
                     // supaya tidak terlihat tebel dan berat.
-                    "size-[25px] md:size-[28px] transition-colors duration-200",
-                    // Tombol PANEL sengaja lebih besar + punya kotak emas.
-                    it.hub &&
-                      "size-[30px] text-gold-strong md:size-[32px]",
+                    "size-[24px] md:size-[27px] transition-colors duration-200",
+                    it.hub && "size-[28px] text-black md:size-[30px]",
                     active
                       ? "text-gold-strong"
-                      : it.dim
-                        ? "text-zinc-700"
-                        : "text-zinc-500",
+                      : it.hub
+                        ? "text-black"
+                        : it.dim
+                          ? "text-zinc-700"
+                          : "text-zinc-500",
                   )}
                 />
                 {/* Teks label di bawah ikon (Home, Jadwal, Gacha, Subscribe,
                     Akun). Muncul untuk SEMUA tombol; yang aktif lebih terang. */}
                 <span
                   className={cn(
-                    "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none transition-colors duration-200",
-                    it.hub && "font-black tracking-wide text-white",
+                    "mt-1 max-w-full truncate px-0.5 text-[9.5px] leading-none transition-colors duration-200",
+                    it.hub && "font-black tracking-wide text-black/80",
                     active
                       ? "font-semibold text-gold-strong"
-                      : it.dim
-                        ? "font-medium text-zinc-700"
-                        : "font-medium text-zinc-500",
+                      : it.hub
+                        ? "font-black text-black/80"
+                        : it.dim
+                          ? "font-medium text-zinc-700"
+                          : "font-medium text-zinc-500",
                   )}
                 >
                   {it.label}

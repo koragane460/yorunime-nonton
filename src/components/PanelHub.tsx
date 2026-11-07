@@ -89,7 +89,7 @@ export function PanelHub({
         onClick={onClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-[3px]"
       />
-      <div className="screen-enter absolute inset-x-0 bottom-0 mx-auto flex h-[60dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] bg-[#0d1017] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
+      <div className="screen-enter absolute inset-x-0 bottom-0 mx-auto flex h-[60dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] bg-[linear-gradient(160deg,#211526_0%,#121a2a_52%,#1b1320_100%)] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
         <div className="flex justify-center pt-2.5">
           <span className="h-1 w-11 rounded-full bg-white/25" />
         </div>
@@ -146,31 +146,29 @@ export function PanelHub({
         </div>
 
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5">
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-3 gap-2">
             {BOXES.map(({ key, label, hint, Icon, tone }) => (
               <button
                 key={key}
                 onClick={() => onPick(key)}
                 className={cn(
-                  "group relative flex aspect-[5/6] min-h-[128px] flex-col items-start justify-between overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br p-3 text-left",
+                  "group relative flex aspect-square min-h-[96px] flex-col items-center justify-center overflow-hidden rounded-[20px] border border-white/15 bg-gradient-to-br p-2 text-center",
                   tone,
-                  "transition hover:border-white/30 active:scale-[0.97]",
+                  "shadow-[inset_0_1px_0_rgba(255,255,255,.18)] transition hover:border-white/35 active:scale-[0.96]",
                 )}
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -right-8 -top-8 size-24 rounded-full bg-white/10 blur-2xl"
+                  className="pointer-events-none absolute -right-6 -top-7 size-16 rounded-full bg-white/12 blur-2xl"
                 />
-                <span className="relative flex size-10 items-center justify-center rounded-xl bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.16)] transition group-hover:bg-white/18">
-                  <Icon className="size-5" />
+                <span className="relative flex size-[42px] items-center justify-center rounded-2xl border border-white/15 bg-white/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.22)] transition group-hover:scale-105 group-hover:bg-white/20">
+                  <Icon className="size-6" strokeWidth={1.85} />
                 </span>
-                <span className="relative min-w-0">
-                  <span className="block truncate text-[13px] font-black leading-tight text-white">
-                    {label}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[10px] leading-tight text-white/60">
-                    {hint}
-                  </span>
+                <span className="relative mt-1.5 block w-full truncate text-[12px] font-black leading-tight text-white">
+                  {label}
+                </span>
+                <span className="relative mt-0.5 block w-full truncate text-[8.5px] font-medium leading-tight text-white/50">
+                  {hint}
                 </span>
               </button>
             ))}

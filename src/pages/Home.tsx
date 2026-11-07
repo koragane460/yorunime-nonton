@@ -1193,6 +1193,11 @@ function HomeContent() {
           )
         }
         onHistory={() => navigate("/home?panel=history")}
+        onDiscover={() => {
+          setSearchGenre(null);
+          setSearchOpenGenres(false);
+          setShowSearch(true);
+        }}
       />
       <HomePremiumCard onBuy={() => navigate("/premium")} />
       <ActiveEventCard
@@ -1222,9 +1227,12 @@ function HomeContent() {
         />
       )}
 
-      {/* ZONA WARNA di atas "Season Ini" — gradasi acak lalu melebur ke
-          hitam, bukan blok warna terpisah yang kasar. */}
-      <div className="relative -mx-4 mt-6">
+      {/* LEADERBOARD langsung di bawah Quick Genre/Katalog. */}
+      <LeaderCards />
+
+      {/* ZONA WARNA di antara Leaderboard dan "Season Ini" — gradasi acak
+          yang melebur ke warna latar, bukan blok warna terpisah. */}
+      <div className="relative -mx-4 mt-5">
         <div
           aria-hidden
           className="h-44"
@@ -1235,14 +1243,12 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* SPOTLIGHT & LEADERBOARD tetap ada, tapi bukan lagi penutup atas
-          yang mendorong konten personal ke bawah. */}
+      {/* SPOTLIGHT menjadi penutup editorial setelah Season Ini. */}
       <Spotlight
         items={todayList.length > 0 ? todayList : topList}
         viewsOf={viewCountFor}
         onPick={(id, title, source) => openAnime(id, title, (source as any) ?? "anilist")}
       />
-      <LeaderCards />
 
       <div className="mt-5 flex items-baseline justify-between">
         <h2 className="text-lg font-bold tracking-tight">Promosi &amp; Dukungan</h2>

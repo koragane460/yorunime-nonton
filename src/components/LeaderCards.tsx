@@ -179,26 +179,21 @@ function PodiumEntry({
   onClick?: () => void;
 }) {
   const tag = cleanTag(clanTag);
+  const stand = center
+    ? "h-10 bg-[linear-gradient(180deg,#FFF0B0,#FFD23F_48%,#C98A13)] text-black/65"
+    : rank === 2
+      ? "h-7 bg-[linear-gradient(180deg,#E5EAF2,#AAB5C5_55%,#697586)] text-white"
+      : "h-5 bg-[linear-gradient(180deg,#E8A273,#B9673D_58%,#794025)] text-white";
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "group relative flex min-w-0 flex-1 flex-col items-center justify-end pb-1 text-center transition active:scale-[0.98]",
+        "group relative flex min-w-0 flex-1 flex-col items-center justify-end text-center transition active:scale-[0.98]",
         center ? "z-10" : "z-0",
       )}
     >
-      <span
-        className={cn(
-          "mb-1 flex items-center justify-center font-display font-black leading-none tracking-[-0.04em]",
-          center
-            ? "text-[26px] text-gold-strong drop-shadow-[0_2px_12px_rgba(255,210,63,.5)]"
-            : "text-[20px] text-white/55",
-        )}
-      >
-        {rank}
-      </span>
       <span className={cn("relative flex items-center justify-center", center ? "mb-2" : "mb-1.5")}>
         {rank === 1 && <ParticleBurst />}
         {rank === 1 && (
@@ -255,6 +250,14 @@ function PodiumEntry({
         <span className="text-[8px] font-bold uppercase tracking-wider opacity-60">
           {unit}
         </span>
+      </span>
+      <span
+        className={cn(
+          "mt-1.5 flex w-full items-center justify-center rounded-t-[12px] border-t border-white/45 font-display text-[13px] font-black leading-none shadow-[inset_0_1px_0_rgba(255,255,255,.3)]",
+          stand,
+        )}
+      >
+        {rank}
       </span>
     </button>
   );
@@ -373,7 +376,7 @@ function CardShell({
   return (
     <section
       className={cn(
-        "relative flex h-[326px] w-full shrink-0 snap-center flex-col overflow-hidden rounded-[28px] border p-3.5",
+        "relative flex h-[352px] w-full shrink-0 snap-center flex-col overflow-hidden rounded-[28px] border p-3.5",
         t.frame,
         t.glow,
       )}
@@ -615,6 +618,11 @@ function LeaderOverlay({
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3, 50);
   const tone = TONE[mode];
+  const podiumEntries = top3.map((r) => ({
+    ...r,
+    value: fmtShort(mode === "xp" ? r.xp ?? 0 : r.days ?? 0),
+    unit: mode === "xp" ? "XP" : "hari",
+  }));
 
   return (
     <div className="screen-enter fixed inset-0 z-[78] flex flex-col bg-[#07080d]">
@@ -671,61 +679,11 @@ function LeaderOverlay({
               {mode === "xp" ? "XP" : "Give"}
             </span>
           </div>
-          <div className="relative grid grid-cols-3 gap-2 pt-2">
-            {top3.length > 0 ? (
-              top3.map((r) => {
-                const rk = TONE[mode];
-                return (
-                  <button
-                    key={`${r.rank}-${r.username ?? r.rank}`}
-                    onClick={() => openProfile(r.userId)}
-                    className="relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.04] px-1.5 py-3 transition active:scale-[0.98]"
-                  >
-                    <span
-                      className={cn(
-                        "absolute -top-2 left-1/2 flex h-5 min-w-5 -translate-x-1/2 items-center justify-center rounded-full border px-1.5 text-[10px] font-black leading-none",
-                        rk.pill,
-                      )}
-                    >
-                      {r.rank}
-                    </span>
-                    <FramedAvatar
-                      border={r.border}
-                      src={r.image}
-                      seed={r.username}
-                      className={cn(
-                        "shrink-0 ring-2",
-                        r.rank === 1
-                          ? "size-16 ring-gold-strong/70"
-                          : "size-14 ring-white/25",
-                      )}
-                    />
-                    <span className="mt-1 w-full truncate text-center text-[12px] font-black leading-tight text-white">
-                      {r.username?.trim() || "user"}
-                    </span>
-                    <LevelBadge level={r.level ?? 1} className="origin-top scale-[0.82]" />
-                    <span className="mt-1 w-full space-y-1 text-center">
-                      <span className="block rounded-lg border border-sky-300/25 bg-sky-400/12 px-1.5 py-1 text-[11px] font-black leading-none text-sky-100">
-                        {(r.xp ?? 0).toLocaleString("id-ID")}
-                        <span className="ml-0.5 text-[8px] font-bold text-sky-200/70">XP</span>
-                      </span>
-                      <span className="block rounded-lg border border-amber-300/25 bg-amber-400/12 px-1.5 py-1 text-[11px] font-black leading-none text-amber-100">
-                        {(r.days ?? 0).toLocaleString("id-ID")}
-                        <span className="ml-0.5 text-[8px] font-bold text-amber-200/70">give</span>
-                      </span>
-                    </span>
-                    {cleanTag(r.clanTag) && (
-                      <ClanTag
-                        icon={r.clanTagIcon || DEFAULT_CLAN_ICON}
-                        tag={cleanTag(r.clanTag) as string}
-                        className="shrink-0"
-                      />
-                    )}
-                  </button>
-                );
-              })
+          <div className="relative mt-1 flex min-h-[286px] flex-col px-1 pb-1">
+            {podiumEntries.length > 0 ? (
+              <Podium entries={podiumEntries} onOpen={openProfile} />
             ) : (
-              <p className="col-span-3 py-8 text-center text-xs text-white/50">
+              <p className="flex flex-1 items-center justify-center py-8 text-center text-xs text-white/50">
                 Belum ada data untuk periode ini.
               </p>
             )}

@@ -46,7 +46,7 @@ function LevelRing({ level, xp }: { level: number; xp: number }) {
   const circumference = 2 * Math.PI * r;
   const offset = circumference * (1 - shownPct / 100);
   return (
-    <span className="relative grid size-[50px] shrink-0 place-items-center">
+    <span className="relative grid size-[58px] shrink-0 place-items-center">
       <svg viewBox="0 0 60 60" className="absolute inset-0 size-full -rotate-90" aria-hidden>
         <defs>
           <linearGradient id={`xp-${gid}`} x1="0" y1="0" x2="1" y2="1">
@@ -70,10 +70,10 @@ function LevelRing({ level, xp }: { level: number; xp: number }) {
         />
       </svg>
       <span className="relative flex flex-col items-center justify-center leading-none">
-        <span className="text-[12px] font-black tracking-tight text-white">
+        <span className="text-[13px] font-black tracking-tight text-white">
           {fmtShort(xp)}
         </span>
-        <span className="mt-0.5 text-[6.5px] font-black uppercase tracking-[0.02em] text-white/55">
+        <span className="mt-0.5 text-[7px] font-black uppercase tracking-[0.02em] text-white/55">
           LV{level} › LV{level + 1}
         </span>
       </span>
@@ -97,7 +97,7 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="relative flex h-[62px] min-w-0 flex-1 items-center gap-1.5 overflow-hidden rounded-full border border-white/18 bg-white/[0.09] p-1.5 text-left shadow-[0_18px_45px_-28px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl transition active:scale-[0.985]"
+        className="relative flex h-[72px] min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
         <span
@@ -108,20 +108,20 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
           border={(user as any)?.avatarBorder}
           src={user?.image}
           seed={user?.username}
-          className="relative size-11 shrink-0"
+          className="relative size-[52px] shrink-0"
         />
         <span className="relative min-w-0 flex-1">
-          <span className="block truncate text-[8.5px] font-black uppercase tracking-[0.18em] text-white/60">
+          <span className="block truncate text-[9px] font-black uppercase tracking-[0.17em] text-white/60">
             {greetingOf()}
           </span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1">
-            <span className="truncate text-[15px] font-black leading-tight tracking-tight text-white">
+            <span className="truncate text-[17px] font-black leading-tight tracking-[-0.02em] text-white">
               {user?.username ?? "user"}
             </span>
             {premium && <BlueCheck className="size-3.5 shrink-0" />}
           </span>
           <span className="mt-1 flex min-w-0 items-center gap-1">
-            <LevelBadge level={level} className="origin-left scale-[0.82]" />
+            <LevelBadge level={level} className="origin-left scale-[0.9]" />
             {user?.clanTag && (
               <ClanTag
                 icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
@@ -139,14 +139,14 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
         type="button"
         onClick={onSearch}
         aria-label="Cari anime"
-        className="flex size-[54px] shrink-0 items-center justify-center rounded-full border border-white/18 bg-white/[0.09] text-white/85 shadow-[0_18px_45px_-28px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl transition hover:bg-white/[0.14] hover:text-white active:scale-95"
+        className="flex size-[60px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.095] text-white/88 shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition hover:bg-white/[0.15] hover:text-white active:scale-95"
       >
-        <Search className="size-6" />
+        <Search className="size-[26px]" />
       </button>
       <NotifButton
-        sizeClassName="size-[54px]"
-        className="rounded-full border border-white/18 bg-white/[0.09] shadow-[0_18px_45px_-28px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl hover:bg-white/[0.14] hover:text-white"
-        iconClassName="size-6"
+        sizeClassName="size-[60px]"
+        className="rounded-full border border-white/20 bg-white/[0.095] shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl hover:bg-white/[0.15] hover:text-white"
+        iconClassName="size-[26px]"
       />
     </header>
   );

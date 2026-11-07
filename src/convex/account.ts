@@ -520,6 +520,8 @@ const BORDER_PRICES: Record<string, number> = {
   sapphire: 4200,
   imperial: 8500,
   obsidian: 9000,
+  gr: 7000,
+  hutao: 6500,
   halloween: 4500,
   natal: 4800,
   imlek: 5200,

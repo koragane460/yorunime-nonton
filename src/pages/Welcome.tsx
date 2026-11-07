@@ -131,14 +131,28 @@ function saveDevice(acc: Omit<DeviceAcc, "at">) {
   }
 }
 
-/** Latar layar pemuatan. */
+/** Latar layar pemuatan — malam berbintang yang tenang, bukan gradient neon. */
 function Starfield() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Sapuan cahaya diagonal, sangat samar. */}
-      <div className="absolute -inset-1/4 bg-[linear-gradient(115deg,transparent_38%,color-mix(in_oklch,var(--primary)_9%,transparent)_50%,transparent_62%)]" />
-      {/* Vignette halus supaya tepi tidak mencolok. */}
-      <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_0%,transparent_55%,rgb(0_0_0/0.45))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(90%_65%_at_50%_38%,rgba(108,76,180,.28),transparent_62%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.52)_1px,transparent_1.35px)] opacity-45 [background-size:38px_38px] [mask-image:radial-gradient(75%_65%_at_50%_45%,#000_18%,transparent_78%)]" />
+      <motion.span
+        className="absolute left-[14%] top-[22%] size-1 rounded-full bg-white/70"
+        animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.3, 0.8] }}
+        transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.span
+        className="absolute right-[18%] top-[30%] size-1.5 rounded-full bg-[#b9a7ff]/80"
+        animate={{ opacity: [0.35, 1, 0.35], y: [0, -4, 0] }}
+        transition={{ duration: 4.6, repeat: Infinity, ease: "easeInOut", delay: 0.7 }}
+      />
+      <motion.span
+        className="absolute left-[24%] bottom-[34%] size-1 rounded-full bg-[#7fd3f7]/90"
+        animate={{ opacity: [0.25, 0.9, 0.25] }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,12,.18),transparent_32%,rgba(5,5,12,.5)_100%)]" />
     </div>
   );
 }
@@ -595,86 +609,71 @@ function WelcomeFlow() {
         }}
       >
         <Starfield />
-        {/* Dua noda cahaya aurora yang melayang pelan di belakang logo. */}
-        <motion.span
-          aria-hidden
-          className="absolute -left-20 top-10 size-56 rounded-full bg-primary/25 blur-3xl"
-          animate={{ y: [0, 26, 0], x: [0, 14, 0] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.span
-          aria-hidden
-          className="absolute -right-20 bottom-16 size-64 rounded-full bg-sky-500/15 blur-3xl"
-          animate={{ y: [0, -22, 0], x: [0, -16, 0] }}
-          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-        />
-        {/* Logo dengan cincin glow lembut di belakangnya. */}
-        <motion.div
-          className="relative mb-7"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        >
-          <span
-            aria-hidden
-            className="absolute -inset-4 rounded-[2.8rem] bg-primary/30 blur-2xl"
-          />
-          <img
-            src="/logo-source.jpg"
-            alt="YoruNime"
-            className="relative size-24 rounded-[2rem] object-cover ring-1 ring-white/15"
-          />
-        </motion.div>
-        <motion.h1
-          // Wordmark font display cyrptic: memakai font family theme yang
-          // sudah didefinisikan (--font-display). Karena template Vite
-          // belum mendaftarkan font family custom, pakai fallback yang
-          // halus dan monospace yang jelas: TTF Cryptic menghasilkan
-          // huruf yang lurus & kaku (serif + digit bergaris tebal).
-          className="w-full bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text px-4 text-center font-[family-name:var(--font-display)] text-[clamp(1.9rem,6vw,3.4rem)] font-black leading-[0.92] tracking-[-0.03em] text-transparent"
-          initial={{ opacity: 0, y: 10, filter: "blur(14px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.9, ease: "easeOut" }}
-        >
-          YoruNime
-        </motion.h1>
-        <motion.div
-          aria-hidden
-          className="mt-5 h-px w-40 bg-gradient-to-r from-transparent via-primary to-transparent"
-          initial={{ opacity: 0, scaleX: 0.2 }}
-          animate={{ opacity: 1, scaleX: 1 }}
-          transition={{ delay: 0.5, duration: 0.7 }}
-        />
+        <div className="relative flex w-full flex-col items-center px-6">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, scale: 0.86, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <span aria-hidden className="absolute -inset-10 rounded-full bg-[#8b6cff]/15 blur-3xl" />
+            <span aria-hidden className="absolute -inset-4 rounded-full border border-white/10" />
+            <motion.span
+              aria-hidden
+              className="absolute -inset-7 rounded-full border border-dashed border-[#c4b5fd]/25"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+            />
+            <img
+              src="/logo-512.png"
+              alt="YoruNime"
+              className="relative size-40 rounded-[2.6rem] object-cover shadow-[0_30px_70px_-34px_rgba(0,0,0,.95)] ring-1 ring-white/15"
+            />
+          </motion.div>
+
+          <motion.h1
+            className="mt-9 font-[family-name:var(--font-display)] text-[clamp(2.8rem,12vw,4.4rem)] font-black leading-none tracking-[-0.055em] text-white"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
+          >
+            Yoru<span className="text-[#b9a7ff]">Nime</span>
+          </motion.h1>
+          <motion.p
+            className="mt-3 text-center text-[12.5px] font-medium leading-relaxed text-white/45"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.36, duration: 0.6 }}
+          >
+            Nonton anime sub Indo, tanpa iklan.
+          </motion.p>
+
+          <motion.div
+            className="mt-10 h-1 w-44 overflow-hidden rounded-full bg-white/[0.08]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+          >
+            <motion.span
+              className="block h-full rounded-full bg-[linear-gradient(90deg,#8b6cff,#c4b5fd,#FFD23F)]"
+              initial={{ width: "8%" }}
+              animate={{ width: ["8%", "92%", "100%"] }}
+              transition={{ duration: 1.45, times: [0, 0.78, 1], ease: "easeInOut" }}
+            />
+          </motion.div>
+          <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/25">
+            Menyiapkan pengalaman menonton
+          </p>
+        </div>
+
         <motion.p
-          className="mt-2 text-xs text-muted-foreground"
+          className="absolute bottom-7 text-[9px] tracking-[0.22em] text-white/20"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7, duration: 0.6 }}
-        >
-          Nonton anime, temukan komunitasmu
-        </motion.p>
-        <motion.p
-          className="mt-1 text-[10px] tracking-widest text-zinc-500"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.1, duration: 0.5 }}
+          transition={{ delay: 0.9, duration: 0.5 }}
         >
           {APP_VERSION}
         </motion.p>
-
-        {/* Petunjuk tap-to-skip — muncul setelah animasi utama selesai. */}
-        {!updateAvailable && (
-          <motion.button
-            type="button"
-            onClick={() => advanceFromIntro()}
-            className="mt-8 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold tracking-wide text-zinc-300 transition hover:border-white/30"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5, duration: 0.5 }}
-          >
-            Ketuk untuk lanjut
-          </motion.button>
-        )}
 
         {/* Update tersedia → tombol download + changelog dalam kotak scrollable */}
         {updateAvailable && (
@@ -769,7 +768,7 @@ function WelcomeFlow() {
                     {APP_VERSION}.0 (1)
                   </p>
                   <div className="flex flex-1 flex-col items-center justify-center text-center">
-                    <h1 className="yn-fredoka text-[clamp(3.9rem,18vw,7rem)] uppercase leading-none text-white">
+                    <h1 className="yn-fredoka flex w-full items-center justify-center whitespace-nowrap text-[clamp(3.2rem,15vw,6.4rem)] uppercase leading-none text-white">
                       {/* W dengan celah slash di batang kiri — sama seperti
                           wordmark di referensi terakhir. */}
                       <span className="relative inline-block">
@@ -837,7 +836,7 @@ function WelcomeFlow() {
                   <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end pb-2 pt-10">
                     {/* Hanya judul, subteks, dan 4 kotak ini yang digeser
                         sedikit ke atas — tombol login tetap di tempat. */}
-                    <div className="relative -top-10">
+                    <div className="relative -top-20">
                     <h2 className="yn-fredoka text-center text-[clamp(2.7rem,12vw,3.8rem)] leading-none">
                       <span className="text-white">SIAP </span>
                       {/* 4 warna kuning konsisten untuk "MULAI?". */}

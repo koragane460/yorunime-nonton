@@ -11,7 +11,6 @@ import {
   setMiniCue,
   setMiniPlayer,
   showXpPopup,
-  XpPopupHost,
 } from "@/components/AppLayout";
 import { StripBackIcon } from "@/components/StripBack";
 import {
@@ -25,6 +24,7 @@ import {
   Maximize,
   Minimize,
   Pause,
+  PictureInPicture2,
   Play,
   RotateCcw,
   RotateCw,
@@ -552,6 +552,9 @@ function WatchContent() {
   const [autoVtt, setAutoVtt] = useState("");
   const [cues, setCues] = useState<Cue[]>([]);
   const [activeCue, setActiveCue] = useState<string>("");
+  // Cue kedua yang tumpang tindih (mis. terjemahan tambahan) dipisah ke atas
+  // supaya tidak menumpuk dengan dialog utama di bawah.
+  const [topCue, setTopCue] = useState<string>("");
   // Subtitle Indonesia native (kalau HLS MegaPlay menyediakan track ID)
   // INI HANYA UNTUK INFORMASI. Player tidak memakai track native ini —
   // player digambar sendiri supaya subtitle milik USER (overlay dari
@@ -1028,21 +1031,19 @@ function WatchContent() {
   useEffect(() => {
     if (cues.length === 0) {
       setActiveCue("");
+      setTopCue("");
       setMiniCue("");
       return;
     }
     const t = currentTime;
-    // Cari cue yang BENAR-BENAR mencakup waktu ini. Dulu kode mengambil cue
-    // terakhir yang sudah dimulai (`c.s <= t`) lalu mengecek akhirnya; kalau
-    // ada dua baris yang tumpang tindih, cue terakhir yang sudah lewat bisa
-    // membuat teks kosong walau baris sebelumnya masih berbunyi. Itu sebabnya
-    // subtitle hanya muncul di sebagian dialog.
-    let hit: Cue | null = null;
-    for (const c of cues) {
-      if (c.s <= t && t <= c.e && (!hit || c.s >= hit.s)) hit = c;
-    }
-    const text = hit ? hit.t : "";
+    // Prioritaskan cue yang mulai paling akhir; cue lain yang masih aktif
+    // adalah terjemahan/teks tambahan dan dipindah ke overlay paling atas.
+    const hits = cues
+      .filter((c) => c.s <= t && t <= c.e)
+      .sort((a, b) => b.s - a.s);
+    const text = hits[0]?.t ?? "";
     setActiveCue(text);
+    setTopCue(hits.slice(1).map((c) => c.t).join("\n"));
     // CC diteruskan ke mini player supaya teks subtitle ikut kelihatan.
     setMiniCue(text);
   }, [currentTime, cues]);
@@ -1051,43 +1052,23 @@ function WatchContent() {
   // karena efek itu memakai `detailData` untuk tahu nomor episode.
   const [detailData, setDetailData] = useState<any>(null);
 
-  // Turunkan halaman cukup jauh → player otomatis jadi mini player. Tidak ada
-  // tombol Mini lagi; transisi ditangani MiniPlayerHost dengan animasi masuk.
-  useEffect(() => {
+  // Miniplayer hanya dibuka lewat tombol — tidak lagi otomatis saat halaman
+  // digeser, karena transisi tak sengaja itu sering mengganggu playback.
+  const openMiniPlayer = () => {
     if (!streamUrl || isFs) return;
-    let fired = false;
-    const onScroll = () => {
-      if (fired || window.scrollY < 560) return;
-      fired = true;
-      setMiniPlayer({
-        animeId,
-        animeTitle: detailData?.title ?? "Anime",
-        animeImage: detailData?.image,
-        episodeId: epParam ?? undefined,
-        streamUrl,
-        isEmbed: sourceType === "embed",
-        startAt: videoRef.current?.currentTime ?? 0,
-        sessionXp: sessionXpRef.current,
-      });
-      showXpPopup({
-        sessionXp: sessionXpRef.current,
-        amount: 0,
-        event: "Mini player",
-      });
-      navigate("/home");
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [
-    streamUrl,
-    isFs,
-    animeId,
-    epParam,
-    detailData?.title,
-    detailData?.image,
-    sourceType,
-    navigate,
-  ]);
+    setMiniPlayer({
+      animeId,
+      animeTitle:
+        detailData?.title || params.get("judul") || "Anime",
+      animeImage: detailData?.image,
+      episodeId: epParam ?? undefined,
+      streamUrl,
+      isEmbed: sourceType === "embed",
+      startAt: videoRef.current?.currentTime ?? 0,
+      sessionXp: sessionXpRef.current,
+    });
+    navigate("/home");
+  };
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
   // localStorage jadi tidak perlu diterjemahkan ulang.
@@ -1108,7 +1089,7 @@ function WatchContent() {
     if (isDonghua) {
       // v2 — cache lama bisa berisi terjemahan parsial (bagian bahasa asli),
       // jadi versi cache dinaikkan supaya tidak ketahuan terus.
-      const key = `yorunime-sub-donghua:v4:${epParam}`;
+      const key = `yorunime-sub-donghua:v5:${epParam}`;
       const cachedDonghua = (() => {
         try {
           return localStorage.getItem(key);
@@ -1183,7 +1164,7 @@ function WatchContent() {
             ?.number ?? 1;
     // v2 — cache lama bisa berisi terjemahan parsial, jadi versi cache
     // dinaikkan supaya hasil lama tidak dipakai terus.
-    const key = `yorunime-sub-indo:v4:${malId}:${epNo}`;
+    const key = `yorunime-sub-indo:v5:${malId}:${epNo}`;
     const cached = (() => {
       try {
         return localStorage.getItem(key);
@@ -1324,7 +1305,11 @@ function WatchContent() {
       sankaDetail({ slug: animeId, preferDonghua: true })
         .then((d: any) => {
           if (d?.error) {
-            setDetailData({ error: true });
+            setDetailData({
+              error: true,
+              title: params.get("judul")?.trim() || "Donghua",
+              episodeList: [],
+            });
             return;
           }
           const list = (d?.episodes ?? [])
@@ -1351,12 +1336,25 @@ function WatchContent() {
             });
           }
         })
-        .catch(() => setDetailData({ error: true }));
+        .catch(() =>
+          setDetailData({
+            error: true,
+            title: params.get("judul")?.trim() || "Donghua",
+            episodeList: [],
+          }),
+        );
       return;
     }
     detail({ id: animeId, title: params.get("judul") ?? undefined })
       .then((d: any) => {
-        setDetailData(d);
+        // Detail bisa kosong/error walau stream tetap tersedia. Jangan biarkan
+        // judul menjadi "Untitled": pakai judul dari URL atau label netral.
+        const fallbackTitle = params.get("judul")?.trim() || "Anime";
+        setDetailData(
+          d?.error
+            ? { ...d, error: true, title: d?.title || fallbackTitle }
+            : { ...d, title: d?.title || fallbackTitle },
+        );
         // Tanpa parameter episode → langsung buka episode 1.
         if (!epParam) {
           const first = d?.episodeList?.[0]?.id;
@@ -1365,7 +1363,13 @@ function WatchContent() {
           }
         }
       })
-      .catch(() => setDetailData({ error: true }));
+      .catch(() =>
+        setDetailData({
+          error: true,
+          title: params.get("judul")?.trim() || "Anime",
+          episodeList: [],
+        }),
+      );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animeId, epParam, isDonghua]);
 
@@ -2492,12 +2496,7 @@ function WatchContent() {
           >
             <p
               className={cn(
-                "max-w-[min(88%,40rem)] whitespace-pre-line break-words text-center font-semibold leading-snug text-white",
-                // Outline tipis & rapi: 4 garis 1px saja + bayangan lembut
-                // (bukan outline dobel tebal yang terlihat berantakan).
-                "[text-shadow:-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000,1px_1px_0_#000,0_2px_5px_rgba(0,0,0,0.9)]",
-                // Teks panjang otomatis dikecilkan supaya tetap satu blok rapi
-                // dan tidak menutupi gambar.
+                "yn-subtitle max-w-[min(88%,40rem)] whitespace-pre-line break-words text-center text-white",
                 activeCue.length > 90
                   ? isFs
                     ? "text-[11.5px] sm:text-[13px]"
@@ -2508,6 +2507,16 @@ function WatchContent() {
               )}
             >
               {activeCue}
+            </p>
+          </div>
+        )}
+
+        {/* Terjemahan/cue tambahan ditempatkan di paling atas player agar
+            tidak bergabung dengan dialog utama di bawah. */}
+        {topCue && !bakedSubs && (
+          <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-4">
+            <p className="yn-subtitle max-w-[min(86%,38rem)] whitespace-pre-line break-words text-center text-[10px] text-white/90 sm:text-[11px]">
+              {topCue}
             </p>
           </div>
         )}
@@ -3364,10 +3373,9 @@ function WatchContent() {
           </div>
         </div>
 
-        {/* 3 KOTAK ALAT — Kualitas · Download · Kecepatan. Mini player
-            sekarang otomatis saat halaman digeser ke bawah. */}
+        {/* 4 KOTAK ALAT — Kualitas · Download · Kecepatan · Miniplayer. */}
         {(isHost || !room) && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-4 gap-2">
             <ToolButton
               icon={<Settings2 className="size-4" />}
               label="Kualitas"
@@ -3385,6 +3393,12 @@ function WatchContent() {
               icon={<Gauge className="size-4" />}
               label={`${speed}x`}
               onClick={() => setSpeedOpen(true)}
+            />
+            <ToolButton
+              icon={<PictureInPicture2 className="size-4" />}
+              label="Mini"
+              onClick={openMiniPlayer}
+              disabled={!streamUrl}
             />
           </div>
         )}
@@ -3913,7 +3927,6 @@ function WatchContent() {
           </div>
         </div>
       )}
-      <XpPopupHost />
     </div>
   );
 }
