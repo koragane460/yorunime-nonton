@@ -84,7 +84,7 @@ export function AppLayout({
   // BottomNav (dan dirinya sendiri) unmount.
   const [navPanel, setNavPanel] = useState<TopPanel>(null);
   const [topPanel, setTopPanel] = useState<TopPanel>(null);
-  // PANEL (tombol tengah nav) — sheet setinggi 55% layar. Isinya profil +
+  // PANEL (tombol tengah nav) — sheet setinggi 60% layar. Isinya profil +
   // kotak Feed · Baca · History · Download · Clan · Music · YoruPet · Title
   // · Shop (Feed & Baca sudah digabung jadi tombol ini, permintaan user).
   const [hubOpen, setHubOpen] = useState(false);
@@ -328,7 +328,7 @@ export function AppLayout({
             }}
           />
         ))}
-      {/* SHEET PANEL — tombol tengah navigasi bawah (55% layar). */}
+      {/* SHEET PANEL — tombol tengah navigasi bawah (60% layar). */}
       {hubOpen && <PanelHub onClose={() => setHubOpen(false)} onPick={pickHub} />}
     </div>
   );
@@ -1124,7 +1124,7 @@ function BottomNav({
     iconFill?: ComponentType<{ className?: string; strokeWidth?: number }>;
     panel?: Exclude<TopPanel, null>;
     dim?: boolean;
-    /** Tombol tengah PANEL — bukan rute, membuka sheet 55% layar. */
+    /** Tombol tengah PANEL — bukan rute, membuka sheet 60% layar. */
     hub?: boolean;
     /** Tombol ini punya pasangan (tekan-lama berpindah dengan fade). */
     swaps?: "a" | "b";
@@ -1202,7 +1202,7 @@ function BottomNav({
               <button
                 key={it.path || `panel-${it.label}`}
                 onClick={() => {
-                  // Tombol PANEL tidak punya rute: membuka sheet 55% layar
+                  // Tombol PANEL tidak punya rute: membuka sheet 60% layar
                   // (Feed · Baca · History · Download · dst).
                   if (it.hub) {
                     onOpenHub();

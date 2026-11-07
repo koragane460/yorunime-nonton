@@ -1606,7 +1606,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-black text-white">Ubah Profil</p>
           <p className="text-[10px] text-white/40">
-            Foto, username, dan email akunmu
+            Foto dan username akunmu
           </p>
         </div>
         <button
@@ -1678,23 +1678,6 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         </div>
         <p className="mt-1.5 text-[10px] leading-snug text-white/35">
           3–20 karakter, hanya huruf, angka, dan garis bawah (_).
-        </p>
-
-        <label className="mt-3 block text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
-          Email
-        </label>
-        <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3">
-          <Mail className="size-4 shrink-0 text-white/25" />
-          <input
-            value={user.email ?? "Belum ada email"}
-            readOnly
-            aria-readonly
-            className="min-w-0 flex-1 cursor-default bg-transparent py-2.5 text-[12px] font-semibold text-white/40 outline-none"
-          />
-          <Lock className="size-3.5 shrink-0 text-white/20" />
-        </div>
-        <p className="mt-1.5 text-[10px] leading-snug text-white/30">
-          Email hanya bisa diubah lewat Customer Service.
         </p>
 
         {err && (
@@ -2021,9 +2004,6 @@ function SettingsAccountCard({
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">
           <LevelBadge level={user.level ?? 1} className="origin-left scale-90" />
-          <span className="truncate text-[9px] font-semibold text-white/35">
-            Ketuk untuk detail akun
-          </span>
         </div>
       </div>
       <button

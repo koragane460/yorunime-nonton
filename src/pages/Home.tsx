@@ -877,10 +877,6 @@ function HomeContent() {
   const { user } = useAuth();
   const [params] = useSearchParams();
   const [pickId, setPickId] = useState<string | null>(params.get("pilih"));
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  // Data Top XP minggu ini untuk panel Leaderboard yang MENYATU dengan hero
-  // banner (kotak tegak di kanan banner, langsung kelihatan Top 1-5).
-  const heroLb = useQuery(api.xp.leaderboard, { period: "mingguan", limit: 5 });
   // Layar Top anime (dibuka dari badge TOP di hero banner).
   const [showTopAnime, setShowTopAnime] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -893,7 +889,6 @@ function HomeContent() {
   // yang dibuka dari slide promosi di hero banner.
   const [showVoice, setShowVoice] = useState(false);
   const [afinitas, setAfinitas] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
   // Link pemutar musik rahasia disuntukkan ke window supaya layar pencarian dan
   // podum leaderboard bisa membukanya lewat sandi y2zLo4V tanpa navigasi.
   useEffect(() => {

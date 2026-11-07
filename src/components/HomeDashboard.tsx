@@ -230,11 +230,24 @@ export function HomePremiumCard({ onBuy }: { onBuy: () => void }) {
 export function ActiveEventCard() {
   return (
     <section className="fade-enter mt-5">
-      <h2 className="text-[17px] font-black tracking-tight text-white">
+      <h2 className="yn-sec text-[17px] font-black tracking-tight text-white">
         Event Aktif
       </h2>
-      <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.04] py-5 text-center">
-        <p className="text-[11px] font-semibold text-white/35">Belum ada event</p>
+      <div className="relative mt-2 flex items-center gap-3 overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(120deg,rgba(255,210,63,.1),rgba(255,255,255,.04)_52%,rgba(232,72,85,.06))] p-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-gold/25 bg-gold/10 text-gold">
+          <Star className="size-4 fill-current" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11.5px] font-black text-white">
+            Belum ada event
+          </span>
+          <span className="mt-0.5 block text-[9px] leading-snug text-white/40">
+            Event seru akan muncul di sini.
+          </span>
+        </span>
+        <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white/40">
+          Segera
+        </span>
       </div>
     </section>
   );
@@ -274,7 +287,7 @@ export function HomeCommunityCard({ onOpenChat }: { onOpenChat: () => void }) {
 
   return (
     <section className="fade-enter mt-5">
-      <h2 className="text-[17px] font-black tracking-tight text-white">
+      <h2 className="yn-sec text-[17px] font-black tracking-tight text-white">
         Komunitas
       </h2>
       <div className="mt-2 overflow-hidden rounded-[26px] border border-white/12 bg-[linear-gradient(140deg,rgba(28,167,236,.10),rgba(255,255,255,.045)_48%,rgba(123,216,143,.07))] p-3">
@@ -346,6 +359,7 @@ type RoomRow = {
   animeTitle?: string;
   animeImage?: string;
   episode: number;
+  memberCount?: number;
 };
 
 /** Dua kartu setengah lebar: Clan Mu dan Nobar. */
@@ -392,6 +406,10 @@ export function ClanNobarCards({
 
   const clan = membership?.clan;
   const room = rooms && rooms.length > 0 ? rooms[roomIdx % rooms.length] : null;
+  const nobarOnline = (rooms ?? []).reduce(
+    (total, r) => total + Math.max(0, r.memberCount ?? 0),
+    0,
+  );
 
   return (
     <div className="fade-enter mt-2.5 grid grid-cols-2 gap-2.5">
@@ -467,7 +485,7 @@ export function ClanNobarCards({
           <p className="text-[12px] font-black text-white">Nobar</p>
         </div>
         <p className="mt-0.5 line-clamp-1 text-[8px] font-semibold text-white/40">
-          Nonton bareng yuk! • {rooms?.length ?? 0} Online
+          Nonton bareng yuk! • {nobarOnline} Online
         </p>
 
         <div className="relative mt-1.5 flex-1 overflow-hidden rounded-xl border border-white/10 bg-black">
