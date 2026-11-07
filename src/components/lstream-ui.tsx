@@ -15,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { badgeForLevel, avatarFallback } from "@/lib/lstream";
 import { resolveClanIcon } from "@/lib/clanIcons";
+import { TierIcon } from "@/components/TierIcon";
 
 /** Gaya title staff: dev merah, moderator biru, tester emas, sepuh kuning.
  *  `shape` = bentuk kotak tiap title — tiap title punya siluet berbeda
@@ -387,22 +388,23 @@ export function RedMark({ className }: { className?: string }) {
   );
 }
 
-/** Badge level: ikon tier + angka level (tanpa tulisan tier). */
+/** Tag level: ikon material (ingot/kristal) + angka level. Latarnya gradasi
+tier dengan opacity 50%, tanpa outline — sesuai permintaan. */
 export function LevelBadge({ level, className }: { level: number; className?: string }) {
   const b = badgeForLevel(level);
-  const Icon = b.icon;
   return (
     <span
       className={cn(
-        // badge-shine = animasi kilau menyapu (index.css) — tag level ikut
-        // berkilau mengikuti tag clan.
-        "badge-shine inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white/95",
-        b.cls,
+        "relative inline-flex shrink-0 items-center gap-1 overflow-hidden rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white/95",
         className,
       )}
     >
-      <Icon className="size-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" aria-hidden />
-      Lv.{level}
+      <span aria-hidden className={cn("absolute inset-0 opacity-50", b.cls)} />
+      <TierIcon
+        tier={b.name}
+        className="relative size-3.5 shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]"
+      />
+      <span className="relative">Lv.{level}</span>
     </span>
   );
 }

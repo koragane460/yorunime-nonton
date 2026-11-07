@@ -505,19 +505,6 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
  * EXPORT — dipakai juga oleh YoruVerse › Clan supaya tampilannya persis
  * sama dengan daftar clan di sini (permintaan pemilik).
  */
-const CLAN_TONES = [
-  "border-sky-400/25 bg-gradient-to-br from-[#0e2a44] via-[#12344f] to-[#16405e]",
-  "border-violet-400/25 bg-gradient-to-br from-[#241a3d] via-[#2a1e49] to-[#342257]",
-  "border-amber-400/25 bg-gradient-to-br from-[#3a2911] via-[#443117] to-[#50391a]",
-  "border-rose-400/25 bg-gradient-to-br from-[#3a1825] via-[#431c2c] to-[#512235]",
-] as const;
-
-function clanTone(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return CLAN_TONES[h % CLAN_TONES.length];
-}
-
 export function ClanRow({
   clan: c,
   onOpen,
@@ -533,12 +520,11 @@ export function ClanRow({
 }) {
   const levelCost = c.levelCost ?? 100000;
   const progress = Math.min(100, ((c.levelProgress ?? 0) / levelCost) * 100);
-  const tone = clanTone(String(c.name ?? ""));
   // Foto clan boleh gagal dimuat (link mati) — kalau gagal, langsung ganti
   // dengan kotak ikon supaya tidak pernah tampil sebagai teks rusak.
   const [imgOk, setImgOk] = useState(true);
   return (
-    <div className={cn("rounded-2xl border p-3", tone)}>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
       {/* Foto clan (kiri) + nama & tag di kanannya */}
       <button onClick={() => onOpen("member")} className="flex w-full items-center gap-2.5 text-left">
         {c.avatarUrl && imgOk ? (

@@ -13,7 +13,7 @@ import {
   Award,
   Camera,
   ChevronLeft,
-  Crown,
+  Gem,
   Gift,
   MessageCircle,
   Play,
@@ -353,13 +353,9 @@ export function ProfileSheet({
                     type="button"
                     onClick={() => setTierPopup(true)}
                     aria-label="Daftar tag level"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-white/45 bg-white/5 px-2.5 py-1 font-bold text-white/95 transition active:scale-95"
+                    className="transition active:scale-95"
                   >
-                    <TierIcon
-                      tier={badgeForLevel(profile.level).name}
-                      className="size-4"
-                    />
-                    Lv.{profile.level}
+                    <LevelBadge level={profile.level} />
                   </button>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/25 px-2.5 py-1 font-bold text-white/95">
                     <Users className="size-3.5" aria-hidden />
@@ -524,7 +520,7 @@ export function ProfileSheet({
                     title="Give Premium"
                     className="flex w-12 shrink-0 items-center justify-center rounded-full bg-[#FFD23F] text-[#241c02] transition active:scale-95"
                   >
-                    <Crown className="size-5" />
+                    <Gem className="size-5" />
                   </button>
                 )}
               </div>
@@ -1170,7 +1166,7 @@ function GivePremiumDialog({
       >
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3">
           <span className="flex size-9 items-center justify-center rounded-xl bg-amber-300/15 text-amber-200">
-            <Crown className="size-4.5" />
+            <Gem className="size-4.5" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-black text-white">Give Premium</p>

@@ -67,7 +67,6 @@ import {
   ChevronRight,
   ChevronDown,
   Award,
-  Crown,
   Heart,
   Bookmark,
   Headset,
@@ -82,8 +81,10 @@ import {
   Check,
   BadgeCheck,
   Pencil,
-  Sparkles,
+  Gem,
+  ShoppingBag,
 } from "lucide-react";
+import { TierIcon } from "@/components/TierIcon";
 import { cn } from "@/lib/utils";
 import {
   getAntiLag,
@@ -143,10 +144,11 @@ function AkunContent() {
   if (params.get("tab") === "settings") {
     return (
       <>
-        <SettingsScreen
+        <SettingsMinimal
           onClose={() => navigate("/akun")}
           onSignOut={signOut}
           onOpenCs={() => setCsOpen(true)}
+          onOpenProfile={() => navigate("/akun")}
         />
         {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
       </>
@@ -195,7 +197,6 @@ const TIER_SKIN: Record<string, string> = {
 
 function AkunTierCard({ level }: { level: number }) {
   const badge = badgeForLevel(level);
-  const Icon = badge.icon;
   return (
     <div
       className={cn(
@@ -240,7 +241,7 @@ function AkunTierCard({ level }: { level: number }) {
             badge.cls,
           )}
         >
-          <Icon className="size-5 text-[#17121c]" strokeWidth={2.1} />
+          <TierIcon tier={badge.name} className="size-6" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[8.5px] font-black uppercase tracking-[0.2em] text-white/45">
@@ -250,9 +251,7 @@ function AkunTierCard({ level }: { level: number }) {
             {badge.name}
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-white/15 bg-black/20 px-2.5 py-1 text-[10px] font-black text-white/70">
-          Lv.{level.toLocaleString("id-ID")}
-        </span>
+        <LevelBadge level={level} className="scale-90 origin-right" />
       </div>
     </div>
   );
@@ -289,6 +288,99 @@ function AkunLevelCard({ level, xp }: { level: number; xp: number }) {
   );
 }
 
+/** Daftar tier dari Bronze ke Ascendant — ikon material, garis progres,
+ * penanda tier sekarang, dan sisa XP menuju level berikutnya. */
+function TierLadder({ level, xp }: { level: number; xp: number }) {
+  const current = badgeForLevel(level);
+  const cost = Math.max(1, xpForLevel(level));
+  const inLevel = Math.max(0, Math.min(xp, cost));
+  const left = Math.max(0, cost - inLevel);
+  const pct = Math.min(100, Math.round((inLevel / cost) * 100));
+
+  return (
+    <section className="mt-2.5 rounded-3xl border border-white/10 bg-white/[0.04] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-black text-white">Perjalanan Tier</p>
+          <p className="mt-0.5 text-[9px] text-white/35">
+            Dari Bronze sampai Ascendant
+          </p>
+        </div>
+        <LevelBadge level={level} className="scale-90 origin-right" />
+      </div>
+
+      <div className="relative mt-3">
+        <span
+          aria-hidden
+          className="absolute bottom-5 left-[26px] top-5 w-px bg-gradient-to-b from-fuchsia-300/25 via-sky-400/35 to-amber-500/45"
+        />
+        <div className="space-y-1.5">
+          {/* Tier tertinggi di atas, Bronze di bawah: perjalanan dibaca naik. */}
+          {[...LEVEL_BADGE_TIERS].reverse().map((t) => {
+            const active = t.name === current.name;
+            const passed = level >= t.minLevel;
+            return (
+              <div
+                key={t.name}
+                className={cn(
+                  "relative flex items-center gap-3 rounded-2xl px-1.5 py-1.5",
+                  active
+                    ? "border border-white/15 bg-white/[0.065]"
+                    : "border border-transparent",
+                  !passed && !active && "opacity-55",
+                )}
+              >
+                <span
+                  className={cn(
+                    "relative z-10 flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br shadow-[0_8px_20px_-14px_rgba(0,0,0,.9)]",
+                    t.cls,
+                    !passed && "grayscale",
+                    active && "ring-2 ring-white/60",
+                  )}
+                >
+                  <TierIcon tier={t.name} className="size-5 drop-shadow" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-[11.5px] font-black text-white">
+                      {t.name}
+                    </p>
+                    <span className="shrink-0 rounded-full bg-black/25 px-1.5 py-0.5 text-[8px] font-black text-white/55">
+                      Lv.{t.minLevel.toLocaleString("id-ID")}+
+                    </span>
+                    {active && (
+                      <span className="shrink-0 rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-black text-black">
+                        Kamu
+                      </span>
+                    )}
+                  </div>
+                  {active ? (
+                    <>
+                      <p className="mt-0.5 text-[8.5px] font-semibold text-white/45">
+                        {left.toLocaleString("id-ID")} XP lagi ke Lv.{level + 1}
+                      </p>
+                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/30">
+                        <div
+                          className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#7FD3F7)]"
+                          style={{ width: `${Math.max(3, pct)}%` }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-0.5 text-[8.5px] font-semibold text-white/35">
+                      {passed ? "Sudah dilewati" : `Butuh Lv.${t.minLevel.toLocaleString("id-ID")}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function AkunProfileScreen({
   onClose,
   onSettings,
@@ -311,7 +403,6 @@ function AkunProfileScreen({
     0,
     Math.ceil(((user.premiumUntil ?? 0) - Date.now()) / 86_400_000),
   );
-  const badge = badgeForLevel(level);
   const clanTag = user.clanTag;
 
   const ACTIONS: {
@@ -322,8 +413,8 @@ function AkunProfileScreen({
     { label: "Favorite", Icon: Heart, onClick: () => navigate("/home?panel=favorites") },
     { label: "History", Icon: HistoryIcon, onClick: () => navigate("/home?panel=history") },
     { label: "Clan", Icon: Shield, onClick: () => navigate("/clan") },
-    { label: "YoruVerse", Icon: Sparkles, onClick: () => navigate("/home?panel=yoraverse") },
-    { label: "Premium", Icon: Crown, onClick: () => navigate("/premium") },
+    { label: "Shop", Icon: ShoppingBag, onClick: () => navigate("/home?panel=shop") },
+    { label: "Premium", Icon: Gem, onClick: () => navigate("/premium") },
     { label: "Pengaturan", Icon: SettingsIcon, onClick: onSettings },
   ];
 
@@ -439,6 +530,8 @@ function AkunProfileScreen({
         </div>
       </section>
 
+      <TierLadder level={level} xp={xp} />
+
       {/* Statistik ringkas */}
       <div className="mt-2.5 grid grid-cols-3 gap-2">
         {[
@@ -466,7 +559,7 @@ function AkunProfileScreen({
         className="relative mt-2.5 flex w-full items-center gap-3 overflow-hidden rounded-[24px] border border-gold/35 bg-[linear-gradient(115deg,rgba(255,210,63,.18),rgba(232,72,85,.08)_55%,rgba(255,255,255,.03))] p-3.5 text-left transition active:scale-[0.99]"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gold/15 text-gold">
-          <Crown className="size-5" />
+          <Gem className="size-5" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[13px] font-black text-white">
@@ -495,28 +588,6 @@ function AkunProfileScreen({
             </span>
           </button>
         ))}
-      </div>
-
-      <div className="mt-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-        <div className="flex items-center gap-2.5">
-          <span className={cn("flex size-9 items-center justify-center rounded-xl bg-gradient-to-br", badge.cls)}>
-            <badge.icon className="size-4 text-[#17121c]" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black text-white">
-              Tier {badge.name}
-            </p>
-            <p className="text-[10px] text-white/40">
-              Naik level untuk membuka tier berikutnya.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/home?panel=yoraverse")}
-            className="shrink-0 rounded-full border border-white/12 px-2.5 py-1 text-[9.5px] font-black text-white/60"
-          >
-            Lihat
-          </button>
-        </div>
       </div>
 
       {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
@@ -1326,9 +1397,12 @@ const TIER_STYLE: Record<
 function ProfileOverviewCard({
   user,
   onEdit,
+  onOpen,
 }: {
   user: any;
   onEdit: () => void;
+  /** Ketuk kartu → detail akun. Tombol edit tetap berhenti di sini. */
+  onOpen?: () => void;
 }) {
   const unlimited = !!user.unlimitedPremium;
   const until = user.premiumUntil ?? 0;
@@ -1351,7 +1425,21 @@ function ProfileOverviewCard({
       : null;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.055] via-card to-card p-3.5 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.9)]">
+    <div
+      onClick={() => onOpen?.()}
+      onKeyDown={(e) => {
+        if (onOpen && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      className={cn(
+        "relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.055] via-card to-card p-3.5 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.9)]",
+        onOpen && "cursor-pointer transition hover:border-white/20 active:scale-[0.995]",
+      )}
+    >
       {/* Aksen tipis, bukan glow ramai. */}
       <span
         aria-hidden
@@ -1400,7 +1488,10 @@ function ProfileOverviewCard({
 
       <button
         type="button"
-        onClick={onEdit}
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
         className="relative mt-3 flex w-full items-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3 py-2.5 text-left transition hover:border-[#1CA7EC]/50 hover:bg-white/[0.08] active:scale-[0.99]"
       >
         <Camera className="size-4 shrink-0 text-[#1CA7EC]" strokeWidth={2} />
@@ -1413,7 +1504,7 @@ function ProfileOverviewCard({
       <div className="relative mt-2 grid grid-cols-2 gap-2">
         <div className="rounded-2xl border border-gold/20 bg-gold/[0.06] px-3 py-2.5">
           <div className="flex items-center gap-1.5">
-            <Crown className="size-3.5 text-gold" strokeWidth={2.2} />
+            <Gem className="size-3.5 text-gold" strokeWidth={2.2} />
             <p className="text-[8.5px] font-black uppercase tracking-[0.13em] text-gold/80">
               Sisa Premium
             </p>
@@ -1510,32 +1601,27 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="pop-enter thin-scroll max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[30px] border border-white/12 bg-[#121722] p-5 shadow-[0_30px_80px_-30px_rgba(0,0,0,1)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-black text-white">Ubah Profil</p>
-            <p className="text-[10px] text-white/40">
-              Foto, username, dan email akunmu
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup"
-            className="flex size-8 items-center justify-center rounded-full bg-white/[0.07] text-white/60 transition hover:text-white"
-          >
-            <X className="size-4" />
-          </button>
+    <div className="screen-enter fixed inset-0 z-[95] flex flex-col bg-[#0b0e15]">
+      <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[16px] font-black text-white">Ubah Profil</p>
+          <p className="text-[10px] text-white/40">
+            Foto, username, dan email akunmu
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup"
+          className="flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-white/60 transition hover:text-white"
+        >
+          <X className="size-4" />
+        </button>
+      </header>
 
-        {/* Foto di atas, tombol ganti foto bulat kecil. */}
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-5 py-6">
+          {/* Foto di atas, tombol ganti foto bulat kecil. */}
         <div className="mt-5 flex flex-col items-center">
           <button
             type="button"
@@ -1625,6 +1711,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         >
           {saving ? "Menyimpan…" : "Simpan perubahan"}
         </button>
+        </div>
       </div>
     </div>
   );
@@ -1829,6 +1916,7 @@ function SettingsBox({
   items,
   value,
   onToggle,
+  compact = false,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -1836,18 +1924,17 @@ function SettingsBox({
   items: readonly PrefItem[];
   value: Record<string, boolean>;
   onToggle: (key: string) => void;
+  /** Tampilan minimalis: hanya 3 toggle, tanpa tombol "lihat lainnya". */
+  compact?: boolean;
 }) {
-  // Kotak dipangkas: 3 pengaturan teratas tampil dulu, sisanya bisa
-  // dibuka tanpa meninggalkan halaman. Ini yang bikin halaman tidak
-  // memanjang ke bawah terus.
   const [open, setOpen] = useState(false);
   const tone = SETTINGS_TONES[title] ?? {
     card: "border-border bg-card",
     chip: "bg-primary/15 text-primary",
     line: "bg-primary/60",
   };
-  const shown = open ? items : items.slice(0, 3);
-  const rest = items.length - shown.length;
+  const shown = compact ? items.slice(0, 3) : open ? items : items.slice(0, 3);
+  const rest = compact ? 0 : items.length - shown.length;
 
   return (
     <div className={cn("overflow-hidden rounded-3xl border p-3", tone.card)}>
@@ -1881,6 +1968,173 @@ function SettingsBox({
           {open ? "Sembunyikan" : `Lihat ${rest} pengaturan lainnya`}
         </button>
       )}
+    </div>
+  );
+}
+
+/* ================================================== PENGATURAN MINIMAL ====
+   3 bagian ringkas: Profil, Nonton, Notifikasi. Pengaturan lain tetap
+   tersimpan, tapi tidak lagi memenuhi halaman. */
+
+/** Kartu akun ringkas di Pengaturan: foto, username, level. Ketuk kartu →
+ * detail akun; ikon pensil → layar penuh ubah profil. */
+function SettingsAccountCard({
+  user,
+  onOpen,
+  onEdit,
+}: {
+  user: any;
+  onOpen: () => void;
+  onEdit: () => void;
+}) {
+  const premium = !!user.unlimitedPremium || (user.premiumUntil ?? 0) > Date.now();
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="flex cursor-pointer items-center gap-3 rounded-3xl border border-white/10 bg-[linear-gradient(125deg,rgba(255,255,255,.065),rgba(28,167,236,.05)_58%,rgba(255,210,63,.04))] p-3 transition hover:border-white/20 active:scale-[0.995]"
+    >
+      <FramedAvatar
+        border={user.avatarBorder}
+        src={user.image}
+        seed={user.username}
+        className="size-14 shrink-0 rounded-full ring-1 ring-gold/30"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span
+            className={cn(
+              "truncate text-[15px] font-black leading-tight",
+              usernameColor(user.username ?? "user"),
+            )}
+          >
+            {user.username ?? "user"}
+          </span>
+          {premium && <BlueCheck className="size-3.5 shrink-0" />}
+        </div>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <LevelBadge level={user.level ?? 1} className="origin-left scale-90" />
+          <span className="truncate text-[9px] font-semibold text-white/35">
+            Ketuk untuk detail akun
+          </span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        aria-label="Ubah foto dan username"
+        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.055] text-white/55 transition hover:border-gold/40 hover:text-gold active:scale-95"
+      >
+        <Pencil className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function SettingsMinimal({
+  onClose,
+  onSignOut,
+  onOpenCs,
+  onOpenProfile,
+}: {
+  onClose: () => void;
+  onSignOut: () => Promise<void>;
+  onOpenCs: () => void;
+  onOpenProfile: () => void;
+}) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [editOpen, setEditOpen] = useState(false);
+  const [watchPrefs, setWatchPrefs] = useLocalPrefs("yn:prefs-watch", PREF_NONTON);
+  const [notifPrefs, setNotifPrefs] = useLocalPrefs("yn:prefs-notif", PREF_NOTIF);
+
+  if (!user) return null;
+
+  const toggleWatch = (k: string) => {
+    setWatchPrefs((p) => {
+      const next = { ...p, [k]: !p[k] };
+      if (k === "autoNext") {
+        try {
+          window.localStorage.setItem("yn:auto-next", next.autoNext ? "1" : "0");
+        } catch {
+          /* mode privat */
+        }
+      }
+      return next;
+    });
+  };
+  const toggleNotif = (k: string) =>
+    setNotifPrefs((p) => ({ ...p, [k]: !p[k] }));
+
+  return (
+    <div className="space-y-2.5 pb-28 pt-3">
+      <div className="flex items-center gap-2.5">
+        <button
+          onClick={onClose}
+          aria-label="Kembali"
+          className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
+        >
+          <StripBackIcon />
+        </button>
+        <h1 className="min-w-0 flex-1 truncate text-[19px] font-black tracking-tight">
+          Pengaturan
+        </h1>
+      </div>
+
+      <SettingsAccountCard
+        user={user}
+        onOpen={onOpenProfile}
+        onEdit={() => setEditOpen(true)}
+      />
+
+      <SettingsBox
+        compact
+        icon={<Play className="size-[18px]" />}
+        title="Nonton"
+        desc="Player & pemutaran otomatis"
+        items={PREF_NONTON}
+        value={watchPrefs}
+        onToggle={toggleWatch}
+      />
+      <SettingsBox
+        compact
+        icon={<Bell className="size-[18px]" />}
+        title="Notifikasi"
+        desc="Feed, episode, chat & clan"
+        items={PREF_NOTIF}
+        value={notifPrefs}
+        onToggle={toggleNotif}
+      />
+
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={onOpenCs}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] py-2.5 text-[11px] font-black text-white/65"
+        >
+          <Headset className="size-4" /> CS
+        </button>
+        <button
+          onClick={async () => {
+            await onSignOut();
+            navigate("/home");
+          }}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 py-2.5 text-[11px] font-black text-red-300"
+        >
+          <LogOut className="size-4" /> Keluar
+        </button>
+      </div>
+
+      {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
     </div>
   );
 }

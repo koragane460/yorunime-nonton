@@ -65,9 +65,15 @@ import {
 } from "@/components/ios-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { GlobalChatPreview } from "@/components/GlobalChatPreview";
 import { StickerStore } from "@/components/StickerStore";
 import { AccountHeader, Spotlight } from "@/components/HomeTop";
+import {
+  ActiveEventCard,
+  ClanNobarCards,
+  ContinueWatchingCard,
+  HomeCommunityCard,
+  HomePremiumCard,
+} from "@/components/HomeDashboard";
 import { LeaderCards } from "@/components/LeaderCards";
 import { QuickGenre } from "@/components/QuickGenre";
 import { GenreScreen } from "@/components/GenreScreen";
@@ -913,23 +919,11 @@ function HomeContent() {
     items: CatalogCard[];
   } | null>(null);
   const [updateFirst, setUpdateFirst] = useState(true);
-  // Jangkar tombol pencarian: tinggi warna ungu pada latar-global diukur dari
-  // sini, lalu disimpan sebagai --yn-tint-end supaya warna berhenti tepat di
-  // bawah tombol dan sisanya hitam penuh.
-  const searchAnchor = useRef<HTMLDivElement | null>(null);
-  // Sticky search bar: muncul di paling atas saat user scroll LEWAT kotak
-  // search (permintaan) — kotak lurus samping hitam + kolom cari lebih besar.
-  const [showStickySearch, setShowStickySearch] = useState(false);
-  useEffect(() => {
-    const onScroll = () => {
-      const el = searchAnchor.current;
-      if (!el) return;
-      const past = el.getBoundingClientRect().bottom < 8;
-      setShowStickySearch(past);
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+  // Warna acak untuk zona di atas "Season Ini" — dipilih sekali per mount.
+  const seasonAura = useMemo(() => {
+    const h1 = Math.floor(Math.random() * 360);
+    const h2 = (h1 + 70 + Math.floor(Math.random() * 150)) % 360;
+    return `linear-gradient(180deg, hsla(${h1},72%,55%,.25) 0%, hsla(${h2},68%,46%,.16) 34%, rgba(7,11,19,.82) 72%, var(--background) 100%)`;
   }, []);
 
   const hero = useAction(api.anime.animeOngoing);
@@ -1184,53 +1178,10 @@ function HomeContent() {
     setPickSource(source);
   };
 
-  // Ukur posisi tombol pencarian lalu tulis ke --yn-tint-end pada elemen latar.
-  // Dicek ulang saat ukuran layar berubah supaya batasnya tetap tepat.
-  useEffect(() => {
-    const el = searchAnchor.current;
-    if (!el) return;
-    const paint = () => {
-      const host = el.closest(".yn-app-bg") as HTMLElement | null;
-      if (!host) return;
-      const bottom = el.getBoundingClientRect().bottom + window.scrollY;
-      // Warna ungu sengaja dibuat lebih panjang dari jangkar SEARCH supaya
-      // gradasinya masih keruh sampai bawah pencerahan anime.
-      host.style.setProperty(
-        "--yn-tint-end",
-        `${Math.max(360, Math.round(bottom + 380))}px`,
-      );
-    };
-    paint();
-    window.addEventListener("resize", paint);
-    return () => window.removeEventListener("resize", paint);
-  }, [todayAiring.length, genreList.length]);
-
   // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   return (
     <div className="pb-8">
-      {/* Sticky search bar — muncul di paling atas saat user sudah scroll
-          lewat kotak search. Kotak lurus (samping hitam) + kolom cari lebih
-          besar untuk anime / donghua / film. */}
-      {showStickySearch && (
-        <div className="yn-bar fixed inset-x-0 top-0 z-40 border-b border-white/10 px-3 py-2.5">
-          <button
-            onClick={() => {
-              setSearchGenre(null);
-              setSearchOpenGenres(false);
-              setShowSearch(true);
-            }}
-            className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-3 text-left"
-          >
-            <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="flex-1 text-[15px] text-muted-foreground">
-              Cari anime, donghua, film…
-            </span>
-          </button>
-        </div>
-      )}
-      {/* 1) HEADER AKUN — TANPA background: kiri = foto + username + level
-          + ID, kanan = tombol notif + pengaturan. */}
       <AccountHeader
         onSearch={() => {
           setSearchGenre(null);
@@ -1239,32 +1190,26 @@ function HomeContent() {
         }}
       />
 
-      {/* 2) SPOTLIGHT — tanpa judul, titik di tengah bawah, kartu lebih besar. */}
-      <Spotlight
-        items={todayList.length > 0 ? todayList : topList}
-        viewsOf={viewCountFor}
-        onPick={(id, title, source) => openAnime(id, title, (source as any) ?? "anilist")}
+      {/* Lanjut nonton → premium → event → komunitas → clan/nobar. */}
+      <ContinueWatchingCard
+        onOpen={(h) =>
+          navigate(
+            `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(`${h.animeId}__ep${h.episode}`)}&judul=${encodeURIComponent(h.animeTitle)}`,
+          )
+        }
+        onHistory={() => navigate("/home?panel=history")}
+      />
+      <HomePremiumCard onBuy={() => navigate("/premium")} />
+      <ActiveEventCard />
+      <HomeCommunityCard onOpenChat={() => setShowChat(true)} />
+      <ClanNobarCards
+        onOpenClan={(clanId) =>
+          navigate(clanId ? `/clan?clan=${clanId}` : "/clan")
+        }
+        onOpenNobar={() => setShowNobar(true)}
       />
 
-      {/* 4) KOTAK CHAT — dipindah ke sini (tepat di bawah spotlight). Isinya
-          pratinjau pesan terbaru dari Chat Global, ketuk untuk buka. */}
-      <button
-        onClick={() => setShowChat(true)}
-        className="yn-panel group mt-4 flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition hover:border-white/25 active:scale-[0.99]"
-      >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-500/10">
-          <MessageSquare className="size-4 text-emerald-200" />
-        </span>
-        <GlobalChatPreview />
-        <ChevronRight className="size-4 shrink-0 text-white/40 transition group-hover:translate-x-0.5" />
-      </button>
-
-      {/* 5) PAPAN PERINGKAT — dua kartu lebar (Top XP · Top Give). Ketuk kartu
-          untuk periode 7 hari / 30 hari / sepanjang masa + podium + grid 4-50. */}
-      <LeaderCards />
-
-      {/* 6) QUICK GENRE — menggantikan posisi Daily Quest. Katalog A–Z
-          horizontal ada di dalam kartu yang sama. */}
+      {/* QUICK GENRE — tombol Genre/Katalog menyatu + genre geser. */}
       {!loading && genreList.length > 0 && (
         <QuickGenre
           genres={genreList}
@@ -1275,8 +1220,28 @@ function HomeContent() {
         />
       )}
 
-      {/* PROMO — Afinitas + Feed digabung jadi SATU carousel yang bisa
-          digeser ke kiri/kanan (permintaan), lengkap dengan titik pagination. */}
+      {/* ZONA WARNA di atas "Season Ini" — gradasi acak lalu melebur ke
+          hitam, bukan blok warna terpisah yang kasar. */}
+      <div className="relative -mx-4 mt-6">
+        <div
+          aria-hidden
+          className="h-44"
+          style={{ background: seasonAura }}
+        />
+        <div className="relative -mt-10 px-4">
+          <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+        </div>
+      </div>
+
+      {/* SPOTLIGHT & LEADERBOARD tetap ada, tapi bukan lagi penutup atas
+          yang mendorong konten personal ke bawah. */}
+      <Spotlight
+        items={todayList.length > 0 ? todayList : topList}
+        viewsOf={viewCountFor}
+        onPick={(id, title, source) => openAnime(id, title, (source as any) ?? "anilist")}
+      />
+      <LeaderCards />
+
       <div className="mt-5 flex items-baseline justify-between">
         <h2 className="text-lg font-bold tracking-tight">Promosi &amp; Dukungan</h2>
       </div>
@@ -1291,41 +1256,6 @@ function HomeContent() {
           <DonatePromo key="donate" />,
         ]}
       />
-
-      {/* 5) CARI ANIME — hanya tombol pemicu; pencarian tampil di layar
-          FULL SCREEN (SearchScreen), bukan nempel di Home.
-          `searchAnchor` dipakai untuk mengukur tinggi warna ungu di latar:
-          warna itu harus berhenti tepat di bawah tombol ini. */}
-      <div ref={searchAnchor}>
-        <SectionTitle>Cari anime &amp; donghua</SectionTitle>
-        <button
-          onClick={() => {
-            setSearchGenre(null);
-            setSearchOpenGenres(false);
-            setShowSearch(true);
-          }}
-          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-left backdrop-blur-md transition hover:border-gold-strong/40 active:scale-[0.99]"
-        >
-          <Search className="size-4 shrink-0 text-gold-strong" />
-          <span className="flex-1 text-sm text-muted-foreground">
-            Cari disini
-          </span>
-          <span className="yn-tag">Cari</span>
-        </button>
-        {/* Tombol "Film & Series" lama DIHAPUS — akses film sekarang lewat
-            kategori "Film" (3 baris geser) di bawah baris Manhwa. */}
-      </div>
-
-
-
-
-
-
-
-      {/* URUTAN HOME DIBATASI — hanya 8 kategori inti supaya tidak berat:
-          Season Ini · Manga · Manhwa · Film · Ongoing · Completed ·
-          Favorite · Top Anime. */}
-      <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
 
 
 
@@ -3108,14 +3038,14 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </h1>
           <span aria-hidden className="ml-auto size-9" />
         </div>
-        {/* Tab tanpa background — hanya garis bawah tipis saat aktif. */}
-        <div className="flex gap-6 px-4">
+        {/* Tab tanpa background — jarak konsisten, teks lebih besar. */}
+        <div className="flex gap-9 px-4">
           {(["chat", "clan", "teman"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "relative -mb-px border-b-2 pb-2 text-[13px] font-black transition",
+                "relative -mb-px border-b-2 pb-2 text-[14px] font-black transition",
                 tab === t
                   ? "border-white text-white"
                   : "border-transparent text-white/40 hover:text-white/70",
@@ -3125,9 +3055,9 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
-        {/* TIGA KOTAK SERVER — teks ke samping, ukuran agak besar. */}
+        {/* Tiga chip server kecil, sangat rounded, rata kiri. */}
         {tab === "chat" && (
-          <div className="grid grid-cols-3 gap-2 px-4 pt-3">
+          <div className="flex items-center gap-2 px-4 pt-3">
             {GLOBAL_CHANNELS.map((ch) => (
               <button
                 key={ch.key}
@@ -3135,7 +3065,7 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                 onClick={() => setChannel(ch.key)}
                 aria-pressed={channel === ch.key}
                 className={cn(
-                  "whitespace-nowrap rounded-xl border px-1.5 py-2.5 text-[clamp(11px,3.3vw,13px)] font-black tracking-tight transition active:scale-[0.97]",
+                  "whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-black tracking-tight transition active:scale-[0.97]",
                   channel === ch.key
                     ? "border-white/30 bg-white/[0.12] text-white"
                     : "border-white/10 bg-white/[0.04] text-white/50 hover:text-white/80",
@@ -3245,13 +3175,8 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
 
           {tab === "teman" && (
             <div className="flex min-h-0 flex-1 flex-col">
-              {/* Tombol Teman & Request sejajar — garis bawah saat aktif */}
-              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
-                Daftar teman
-              </p>
-
               {friendTab === "teman" && (
-                <div className="thin-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+                <div className="thin-scroll mx-auto min-h-0 w-[88%] max-w-sm flex-1 space-y-1.5 overflow-y-auto">
                   {friends && friends.length > 0 ? (
                     friends.map((f: any) => (
                       <div

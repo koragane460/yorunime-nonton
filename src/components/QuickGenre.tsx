@@ -85,18 +85,18 @@ export function AZCatalog({
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* Rail A–Z vertikal di kiri. */}
-        <div className="thin-scroll flex w-11 shrink-0 flex-col items-center gap-0.5 overflow-y-auto border-r border-white/10 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Rail A–Z vertikal di kiri — lebih lebar & membulat. */}
+        <div className="thin-scroll m-2 flex w-16 shrink-0 flex-col items-center gap-1 overflow-y-auto rounded-[22px] border border-white/10 bg-white/[0.045] p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {LETTERS.map((l) => (
             <button
               key={l}
               onClick={() => onLetter(l)}
               aria-pressed={l === letter}
               className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-lg font-display text-[11px] font-black transition",
+                "flex size-10 shrink-0 items-center justify-center rounded-[14px] font-display text-[12px] font-black transition",
                 l === letter
-                  ? "bg-gold-strong text-black"
-                  : "text-white/35 hover:bg-white/[0.06] hover:text-white/75",
+                  ? "bg-gold-strong text-black shadow-[0_8px_18px_-10px_rgba(255,210,63,.9)]"
+                  : "text-white/40 hover:bg-white/[0.08] hover:text-white/80",
               )}
             >
               {l}
@@ -178,30 +178,42 @@ export function QuickGenre({
   onOpenGenre: (id: string) => void;
   onPick: (id: string, title?: string, source?: string) => void;
 }) {
-  const [lettersOpen, setLettersOpen] = useState(false);
+  const [tab, setTab] = useState<"genre" | "catalog">("genre");
   const [letter, setLetter] = useState<string | null>(null);
-  const shown = genres.slice(0, 6);
 
   return (
     <>
-      <section className="fade-enter relative mt-5 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,#141018_0%,#0d0b12_55%,#08070b_100%)] p-3">
+      <section className="fade-enter relative mt-5 overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(145deg,#16101d_0%,#0d0b12_55%,#08070b_100%)] p-3">
         <span
           aria-hidden
           className="pointer-events-none absolute -right-12 -top-14 size-40 rounded-full bg-fuchsia-500/10 blur-3xl"
         />
-        <div className="relative flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[12px] font-black text-white">
-            <span className="size-1.5 rounded-full bg-fuchsia-300" />
-            Genre
-          </span>
+
+        {/* Satu kotak toggle: Genre kiri, Katalog kanan (dengan ikon). */}
+        <div className="relative flex rounded-2xl border border-white/10 bg-white/[0.045] p-1">
           <button
-            onClick={() => setLettersOpen((v) => !v)}
-            aria-expanded={lettersOpen}
+            type="button"
+            onClick={() => setTab("genre")}
+            aria-pressed={tab === "genre"}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10.5px] font-black transition active:scale-95",
-              lettersOpen
-                ? "border-gold-strong/50 bg-gold-strong/15 text-gold-strong"
-                : "border-white/12 bg-white/[0.05] text-white/60 hover:text-white",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.98]",
+              tab === "genre"
+                ? "bg-white text-black shadow-[0_8px_18px_-12px_rgba(0,0,0,.9)]"
+                : "text-white/55 hover:text-white",
+            )}
+          >
+            <span className="size-1.5 rounded-full bg-fuchsia-400" />
+            Genre
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("catalog")}
+            aria-pressed={tab === "catalog"}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.98]",
+              tab === "catalog"
+                ? "bg-gold-strong text-black shadow-[0_8px_18px_-12px_rgba(255,210,63,.9)]"
+                : "text-white/55 hover:text-white",
             )}
           >
             <Grid3X3 className="size-3.5" />
@@ -209,36 +221,34 @@ export function QuickGenre({
           </button>
         </div>
 
-        <div className="relative mt-2.5 grid grid-cols-3 gap-1.5">
-          {shown.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => onOpenGenre(g.id)}
-              className="truncate rounded-xl border border-white/[0.08] bg-white/[0.035] px-2 py-2 text-[11px] font-bold text-white/70 transition hover:border-white/25 hover:bg-white/[0.07] hover:text-white active:scale-[0.98]"
-            >
-              {g.name}
-            </button>
-          ))}
-          {shown.length === 0 && (
-            <span className="col-span-3 py-2 text-center text-[11px] text-white/35">
-              Memuat genre…
-            </span>
-          )}
-        </div>
-
-        {lettersOpen && (
-          <div className="fade-enter relative mt-2.5">
-            <div className="thin-scroll -mx-0.5 flex gap-1 overflow-x-auto px-0.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {LETTERS.map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLetter(l)}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.055] font-display text-[11px] font-black text-white/70 transition hover:border-gold-strong/50 hover:bg-gold-strong/15 hover:text-gold-strong active:scale-95"
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
+        {tab === "genre" ? (
+          <div className="thin-scroll relative mt-2.5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {genres.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => onOpenGenre(g.id)}
+                className="shrink-0 whitespace-nowrap rounded-full border border-rose-400/50 bg-rose-500/[0.07] px-3 py-1.5 text-[10.5px] font-bold text-white/75 transition hover:border-rose-300/80 hover:bg-rose-500/15 hover:text-white active:scale-[0.97]"
+              >
+                {g.name}
+              </button>
+            ))}
+            {genres.length === 0 && (
+              <span className="py-2 text-center text-[11px] text-white/35">
+                Memuat genre…
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="thin-scroll relative mt-2.5 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {LETTERS.map((l) => (
+              <button
+                key={l}
+                onClick={() => setLetter(l)}
+                className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-white/12 bg-white/[0.055] font-display text-[11px] font-black text-white/70 transition hover:border-gold-strong/50 hover:bg-gold-strong/15 hover:text-gold-strong active:scale-95"
+              >
+                {l}
+              </button>
+            ))}
           </div>
         )}
       </section>

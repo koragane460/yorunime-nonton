@@ -3,9 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { avatarFallback, usernameColor } from "@/lib/lstream";
-import { ClanTag, TitleBadge } from "@/components/lstream-ui";
-import { TierIcon } from "@/components/ProfileSheet";
-import { badgeForLevel } from "@/lib/lstream";
+import { ClanTag, LevelBadge, TitleBadge } from "@/components/lstream-ui";
 import { useNavigate } from "react-router";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Check, ChevronDown, ChevronLeft, Crown, ImagePlus, MoreVertical, Play, Reply, Send, Sticker, Trash2, VolumeX, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Gem, ImagePlus, MoreVertical, Play, Reply, Send, Sticker, Trash2, VolumeX, X } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -146,7 +144,7 @@ function GivePremiumDialog({
         {/* Header emas premium — crown di lingkaran lembut, tanpa neon. */}
         <div className="relative border-b border-amber-400/20 bg-gradient-to-b from-amber-500/[0.14] to-transparent px-5 pb-4 pt-5 text-center">
           <span className="mx-auto flex size-12 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15">
-            <Crown className="size-6 text-amber-300" />
+            <Gem className="size-6 text-amber-300" />
           </span>
           <DialogTitle className="mt-2.5 text-lg font-bold text-amber-200">
             Give Premium
@@ -284,7 +282,7 @@ function GivePremiumDialog({
               className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 font-bold text-black shadow-[0_2px_10px_-4px_rgba(251,191,36,.6)] hover:brightness-105"
               onClick={submit}
             >
-              <Crown className="size-4" /> {busy ? "Mengirim…" : "Kirim"}
+              <Gem className="size-4" /> {busy ? "Mengirim…" : "Kirim"}
             </Button>
           </div>
         </div>
@@ -823,11 +821,9 @@ export function ChatPanel({
                     // sebagai kotak aneh di samping foto.
                       (m.imageUrl || m.sticker || m.feedPostId) && !m.text
                           ? "border-transparent bg-transparent px-1 pb-1 pt-0 shadow-none"
-                          : give
-                              ? `bubble-give ${mine ? "yn-tail-r" : "yn-tail-l"}`
-                              : mine
-                                  ? "bubble-mine yn-tail-r"
-                                  : "bubble-other yn-tail-l",
+                          : mine
+                              ? "bubble-mine yn-tail-r"
+                              : "bubble-other yn-tail-l",
                     blinkId === m._id && "reply-blink",
                   )}
                 >
@@ -841,13 +837,7 @@ export function ChatPanel({
                     {/* Tag LEVEL user — ikon tier material + Lv.x,
                         gaya sama seperti di detail akun. */}
                     {typeof m.level === "number" && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/45 bg-white/5 px-1.5 py-0 text-[9px] font-bold leading-none text-white/95">
-                        <TierIcon
-                          tier={badgeForLevel(m.level).name}
-                          className="size-3"
-                        />
-                        Lv.{m.level}
-                      </span>
+                      <LevelBadge level={m.level} className="scale-90 origin-left" />
                     )}
                   </div>
                   {/* Tag CLAN — BARIS TERPISAH DI BAWAH username supaya
@@ -885,15 +875,9 @@ export function ChatPanel({
                     </div>
                   )}
                   {give ? (
-                    <div className="mt-1 min-w-48 text-center">
-                      <Crown className="mx-auto size-6 text-amber-400" />
-                      <p className="mt-1 text-sm font-bold">{give.days} Hari premium</p>
-                      <p className="text-xs text-muted-foreground">
-                        {give.days} hari premium untuk {give.slots} orang
-                      </p>
+                    <div className="mt-1 min-w-0 w-full">
                       {give.message && (
-                        // Pesan give ditengahkan sesuai permintaan.
-                        <p className="mt-2 rounded-lg bg-black/25 p-2 text-center text-xs leading-relaxed">
+                        <p className="w-fit max-w-full break-words text-sm font-semibold tracking-[0.01em]">
                           {give.message}
                         </p>
                       )}
@@ -1070,7 +1054,7 @@ export function ChatPanel({
                   aria-label="Give premium"
                   className="flex size-9 items-center justify-center rounded-full text-amber-300 transition hover:bg-amber-400/15 active:scale-90 disabled:opacity-40"
                 >
-                  <Crown className="size-4.5" />
+                  <Gem className="size-[18px]" />
                 </button>
               )}
               <button
@@ -1384,54 +1368,72 @@ function ClaimButton({
   const [err, setErr] = useState<string | null>(null);
   const claimed = mine || give.claimedBy.some((c) => c === (meId as unknown));
   const full = give.claimedBy.length >= give.slots;
-  const taken = Math.min(give.claimedBy.length, give.slots);
+  const gray = claimed || full || owner;
   return (
-    <div className="mt-2">
-      {/* Berapa slot yang sudah terpakai — jadi jelas berapa yang tersisa. */}
-      <p className="text-[10px] text-muted-foreground">
-        {taken}/{give.slots} orang sudah claim
-        {!full && ` · sisa ${give.slots - taken}`}
-      </p>
-      {owner ? (
-        // Pengirim give: tombolnya mati total (bukan sekadar disabled keabu),
-        // supaya jelas dia hanya bisa melihat.
-        <div className="mt-1 w-full shrink-0 rounded-md border border-white/12 bg-white/[0.05] px-2 py-1.5 text-center text-[11px] font-semibold text-white/60">
-          Hanya bisa dilihat
-        </div>
-      ) : (
-      <Button
-        size="sm"
-        disabled={claimed || full || busy}
+    <div className="mt-1.5 w-full">
+      <div
         className={cn(
-          "mt-1 w-full shrink-0 whitespace-nowrap px-2 text-[11px]",
-          claimed
-            ? "bg-emerald-600 text-white hover:bg-emerald-600"
-            : full
-              ? "bg-zinc-500 text-white hover:bg-zinc-500"
-              : "bg-primary text-primary-foreground hover:brightness-110",
+          "flex items-center gap-2 rounded-lg border px-2.5 py-2",
+          gray
+            ? "border-white/10 bg-white/[0.055]"
+            : "border-gold/30 bg-gold/[0.09]",
         )}
-        onClick={async () => {
-          // Tutan: klik sekali langsung berubah jadi "Kamu sudah claim".
-          setErr(null);
-          setBusy(true);
-          setMine(true);
-          try {
-            await claim({ giveId: give._id });
-          } catch (e) {
-            setMine(false);
-            setErr(e instanceof Error ? e.message : "Gagal claim");
-          } finally {
-            setBusy(false);
-          }
-        }}
       >
-        {claimed
-          ? "Kamu sudah claim"
-          : full
-            ? "Slot habis"
-            : `Claim ${give.days} hari`}
-      </Button>
-      )}
+        <span
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-xl",
+            gray ? "bg-white/10 text-white/35" : "bg-gold/15 text-gold",
+          )}
+        >
+          <Gem className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={cn("truncate text-[11px] font-black", gray ? "text-white/55" : "text-white")}>
+            Premium {give.days} Hari
+            <span className="ml-1 font-bold text-white/45">• ×{give.slots}</span>
+          </p>
+          <p className="mt-0.5 truncate text-[8.5px] font-medium text-white/35">
+            {owner
+              ? "Hadiah premium sudah dikirim"
+              : claimed
+                ? "Kotak premium sudah kamu klaim"
+                : full
+                  ? "Semua slot sudah diambil"
+                  : "Klaim premium gratis"}
+          </p>
+        </div>
+        {owner ? (
+          <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-black text-white/35">
+            Terkirim
+          </span>
+        ) : (
+          <button
+            type="button"
+            disabled={claimed || full || busy}
+            onClick={async () => {
+              setErr(null);
+              setBusy(true);
+              setMine(true);
+              try {
+                await claim({ giveId: give._id });
+              } catch (e) {
+                setMine(false);
+                setErr(e instanceof Error ? e.message : "Gagal claim");
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className={cn(
+              "shrink-0 rounded-md border px-2.5 py-1.5 text-[9.5px] font-black transition active:scale-95 disabled:cursor-default",
+              claimed || full
+                ? "border-white/10 bg-white/[0.05] text-white/35"
+                : "border-gold/35 bg-gold text-black",
+            )}
+          >
+            {full ? "Habis" : claimed ? "Sudah" : busy ? "…" : "Claim"}
+          </button>
+        )}
+      </div>
       {err && (
         <p className="mt-1 text-[10px] font-semibold text-red-300">{err}</p>
       )}

@@ -72,12 +72,16 @@ export function YoruVerseScreen({
   const petState = useQuery(api.pets.state, {});
   const [view, setView] = useState<HubView>(initialView);
 
+  // Dibuka langsung dari Panel (Shop/Pet/Music), jadi tombol kembali pada
+  // tiap layar menutup overlay — bukan kembali ke hub YoruVerse yang sudah
+  // dihapus.
+  const back = onClose;
   const sub =
-    view === "clan" ? <ClanScreen onBack={() => setView(null)} /> :
-    view === "shop" ? <ShopScreen onBack={() => setView(null)} /> :
-    view === "title" ? <TitleScreen onBack={() => setView(null)} /> :
-    view === "pet" ? <YoruPetScreen onBack={() => setView(null)} /> :
-    view === "music" ? <MusicScreen onClose={() => setView(null)} /> :
+    view === "clan" ? <ClanScreen onBack={back} /> :
+    view === "shop" ? <ShopScreen onBack={back} /> :
+    view === "title" ? <TitleScreen onBack={back} /> :
+    view === "pet" ? <YoruPetScreen onBack={back} /> :
+    view === "music" ? <MusicScreen onClose={back} /> :
     null;
 
   /* MENU YORUVERSE DIHAPUS PERMANEN (permintaan). Layar ini sekarang

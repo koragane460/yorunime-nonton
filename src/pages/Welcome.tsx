@@ -835,6 +835,9 @@ function WelcomeFlow() {
                     {APP_VERSION}.0 (1)
                   </p>
                   <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end pb-2 pt-10">
+                    {/* Hanya judul, subteks, dan 4 kotak ini yang digeser
+                        sedikit ke atas — tombol login tetap di tempat. */}
+                    <div className="relative -top-10">
                     <h2 className="yn-fredoka text-center text-[clamp(2.7rem,12vw,3.8rem)] leading-none">
                       <span className="text-white">SIAP </span>
                       {/* 4 warna kuning konsisten untuk "MULAI?". */}
@@ -876,6 +879,7 @@ function WelcomeFlow() {
                           </span>
                         </div>
                       ))}
+                    </div>
                     </div>
 
                     {/* Login Google */}

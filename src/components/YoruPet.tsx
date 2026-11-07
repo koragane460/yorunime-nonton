@@ -333,7 +333,7 @@ export function YoruPetScreen({
         <div className="mx-auto flex w-full max-w-2xl items-center gap-2 px-3 pt-3">
           <button
             onClick={onBack}
-            aria-label="Kembali ke YoruVerse"
+            aria-label="Kembali"
             className="flex shrink-0 items-center py-1 pr-1 text-white/90 transition active:opacity-60"
           >
             <StripBackIcon />

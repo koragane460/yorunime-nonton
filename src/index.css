@@ -1331,16 +1331,29 @@ a {
       sebagai satu keluarga tipografi. */
 .yn-sec {
   position: relative;
-  padding-left: 0;
+  padding-left: 13px;
   font-family: var(--font-display);
   font-weight: 900;
   letter-spacing: -0.025em;
   line-height: 1.15;
 }
-/* GARIS AKSEN DIBUANG — permintaan: berhenti pakai garis kecil lurus
-   di samping teks (judul seksi & eyebrow). Judul tetap sama tebalnya. */
+/* Garis aksen gradasi di kiri judul, memanjang sedikit ke atas seperti
+   penanda editorial. Warna campuran emas → biru → transparan. */
 .yn-sec::before {
-  content: none;
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -10px;
+  bottom: 1px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to top,
+    rgba(255, 210, 63, 0.95),
+    rgba(127, 211, 247, 0.8) 48%,
+    rgba(240, 171, 252, 0.35) 78%,
+    transparent 100%
+  );
 }
 
 /* Judul LAYAR (top bar, hero kecil, judul modal) — sama kuatnya dengan

@@ -33,8 +33,12 @@ import {
  */
 export function NotifButton({
   className,
+  iconClassName,
+  sizeClassName = "size-10",
 }: {
   className?: string;
+  iconClassName?: string;
+  sizeClassName?: string;
 }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -49,11 +53,12 @@ export function NotifButton({
         }
         onClick={() => setOpen(true)}
         className={cn(
-          "relative flex size-10 items-center justify-center text-white/75 transition hover:text-white active:scale-95",
+          "relative flex shrink-0 items-center justify-center text-white/75 transition hover:text-white active:scale-95",
+          sizeClassName,
           className,
         )}
       >
-        <BellIcon className="size-5" />
+        <BellIcon className={cn("size-5", iconClassName)} />
         {unread ? <UnreadBadge count={unread} /> : null}
       </button>
 

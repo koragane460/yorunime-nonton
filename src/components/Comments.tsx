@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Avatar, BlueCheck, ClanTag, TitleBadge } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import {
   Ban,
@@ -534,9 +534,7 @@ export function CommentsSection({
                 </span>
                 {pinned.premium && <BlueCheck className="size-3 shrink-0" />}
                 {typeof pinned.level === "number" && (
-                  <span className="rounded-full border border-white/20 bg-white/[0.06] px-1.5 py-px text-[9px] font-bold text-white/70">
-                    Lv.{pinned.level}
-                  </span>
+                  <LevelBadge level={pinned.level} className="scale-90 origin-left" />
                 )}
               </span>
               <span className="mt-0.5 block truncate text-[12.5px] text-white/80">
@@ -849,9 +847,7 @@ function CommentCard({
             </span>
             {c.premium && <BlueCheck className="size-3.5 shrink-0" />}
             {typeof c.level === "number" && (
-              <span className="rounded-full border border-white/20 bg-white/[0.06] px-1.5 py-px text-[9px] font-bold text-white/70">
-                Lv.{c.level}
-              </span>
+              <LevelBadge level={c.level} className="scale-90 origin-left" />
             )}
             <TitleBadge role={c.staffRole} compact />
             {tier && (

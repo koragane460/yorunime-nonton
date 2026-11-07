@@ -5,7 +5,7 @@ import {
   Bookmark,
   Clapperboard,
   Compass,
-  Crown,
+  Gem,
   Film,
   Image as ImageIcon,
   Info,
@@ -39,7 +39,7 @@ const DESTINATIONS: {
   { path: "/title", label: "Title", hint: "Pasang title", Icon: Tag },
   { path: "/gacha", label: "Gacha", hint: "Mesin hadiah", Icon: Sparkles },
   { path: "/music", label: "Musik", hint: "Putar musik", Icon: Music },
-  { path: "/premium", label: "Premium", hint: "Langganan", Icon: Crown },
+  { path: "/premium", label: "Premium", hint: "Langganan", Icon: Gem },
   { path: "/info", label: "Info", hint: "Tentang YoruNime", Icon: Info },
   { path: "/akun", label: "Akun", hint: "Profil & pengaturan", Icon: User },
 ];

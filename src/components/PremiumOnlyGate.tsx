@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Crown, Lock } from "lucide-react";
+import { Gem, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,7 +37,7 @@ export function PremiumOnlyGate({
       <div className="relative flex w-full max-w-[520px] -rotate-[7deg] scale-110 items-center justify-between gap-6 border-y border-white/15 bg-black/85 px-6 py-4 shadow-2xl">
         <div className="flex items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/20">
-            <Crown className="size-4 text-primary" />
+            <Gem className="size-4 text-primary" />
           </span>
           <div className="min-w-0">
             <p className="text-[13px] font-black uppercase tracking-[0.22em] text-white">

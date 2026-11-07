@@ -629,7 +629,7 @@ function JadwalContent() {
 
       {/* DUA TOMBOL HARI — kotak rounded sama ukuran, berdampingan di
           kanan bawah. Kiri = hari sebelumnya, kanan = hari berikutnya. */}
-      <div className="fixed bottom-24 right-3 z-30 flex items-center gap-2">
+      <div className="fixed inset-x-3 bottom-24 z-30 flex items-center justify-between">
         <button
           onClick={() => {
             setDay((d) => (d + 6) % 7);

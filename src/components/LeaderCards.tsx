@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ClanTag } from "@/components/lstream-ui";
+import { ClanTag, LevelBadge } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { fmtShort } from "@/components/HomeHead";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
@@ -231,10 +231,7 @@ function PodiumEntry({
         {username?.trim() || "user"}
       </span>
       {level !== undefined && (
-        <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[8.5px] font-black leading-none text-white/60">
-          <Crown className="size-2.5" aria-hidden />
-          Lv.{level}
-        </span>
+        <LevelBadge level={level} className="mt-0.5 origin-top scale-[0.78]" />
       )}
       {tag && (
         <span className={cn("mt-1", center ? "" : "scale-90")}>
@@ -706,10 +703,7 @@ function LeaderOverlay({
                     <span className="mt-1 w-full truncate text-center text-[12px] font-black leading-tight text-white">
                       {r.username?.trim() || "user"}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] font-black leading-none text-white/60">
-                      <Crown className="size-2.5" aria-hidden />
-                      Lv.{r.level ?? 1}
-                    </span>
+                    <LevelBadge level={r.level ?? 1} className="origin-top scale-[0.82]" />
                     <span className="mt-1 w-full space-y-1 text-center">
                       <span className="block rounded-lg border border-sky-300/25 bg-sky-400/12 px-1.5 py-1 text-[11px] font-black leading-none text-sky-100">
                         {(r.xp ?? 0).toLocaleString("id-ID")}
@@ -824,10 +818,7 @@ function GridRow({
           )}
         </span>
         <span className="mt-1 flex items-center gap-1">
-          <span className="inline-flex items-center gap-1 rounded-md bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-black leading-none text-sky-200">
-            <Crown className="size-2.5" aria-hidden />
-            Lv.{level ?? 1}
-          </span>
+          <LevelBadge level={level ?? 1} className="origin-left scale-90" />
         </span>
       </span>
       <span className="shrink-0 space-y-1 text-right">

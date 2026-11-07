@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, BlueCheck } from "@/components/lstream-ui";
+import { BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { NotifButton } from "@/components/NotifButton";
 import { greetingOf, fmtShort } from "@/components/HomeHead";
-import { TierIcon } from "@/components/ProfileSheet";
-import { badgeForLevel, displayId } from "@/lib/lstream";
+import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
+import { xpForLevel } from "@/lib/level";
 import { cn } from "@/lib/utils";
 import {
   Clapperboard,
@@ -30,64 +30,124 @@ import type { CardT } from "@/components/CatalogRows";
  * ====================================================================== */
 
 /**
- * HEADER AKUN — TANPA background/kotak, sesuai permintaan:
- * kiri = foto profile + username + level + ID, kanan = tombol notif +
- * pengaturan. Sapaan waktu tetap ada sebagai eyebrow kecil di atas nama.
- */
+ * Cincin progres level: total XP di tengah + tujuan level berikutnya.
+ * Progresnya bergerak halus saat XP berubah. */
+function LevelRing({ level, xp }: { level: number; xp: number }) {
+  const gid = useId().replace(/:/g, "");
+  const cost = Math.max(1, xpForLevel(level));
+  const inLevel = Math.max(0, Math.min(xp, cost));
+  const pct = Math.min(100, (inLevel / cost) * 100);
+  const [shownPct, setShownPct] = useState(0);
+  useEffect(() => {
+    const t = window.setTimeout(() => setShownPct(pct), 140);
+    return () => window.clearTimeout(t);
+  }, [pct]);
+  const r = 25;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - shownPct / 100);
+  return (
+    <span className="relative grid size-[50px] shrink-0 place-items-center">
+      <svg viewBox="0 0 60 60" className="absolute inset-0 size-full -rotate-90" aria-hidden>
+        <defs>
+          <linearGradient id={`xp-${gid}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FFD23F" />
+            <stop offset="52%" stopColor="#7FD3F7" />
+            <stop offset="100%" stopColor="#F0ABFC" />
+          </linearGradient>
+        </defs>
+        <circle cx="30" cy="30" r={r} fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="3.5" />
+        <circle
+          cx="30"
+          cy="30"
+          r={r}
+          fill="none"
+          stroke={`url(#xp-${gid})`}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="transition-[stroke-dashoffset] duration-700 ease-out"
+        />
+      </svg>
+      <span className="relative flex flex-col items-center justify-center leading-none">
+        <span className="text-[12px] font-black tracking-tight text-white">
+          {fmtShort(xp)}
+        </span>
+        <span className="mt-0.5 text-[6.5px] font-black uppercase tracking-[0.02em] text-white/55">
+          LV{level} › LV{level + 1}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/**
+ * HEADER HOME — satu pil kaca (glassmorphism) berisi foto, sapaan, username,
+ * tag level + clan, dan cincin XP. Di kanannya dua tombol bulat kaca untuk
+ * pencarian dan notifikasi. Tanpa tonjolan/tab. */
 export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const level = user?.level ?? 1;
+  const xp = user?.xp ?? 0;
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
 
   return (
-    <header className="fade-enter flex w-full items-center gap-3 pt-2">
-      {/* KIRI: foto profile (pakai SHOP BORDER) + nama + level + ID. */}
+    <header className="fade-enter flex w-full items-center gap-2 pt-2">
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition active:scale-[0.98]"
+        className="relative flex h-[62px] min-w-0 flex-1 items-center gap-1.5 overflow-hidden rounded-full border border-white/18 bg-white/[0.09] p-1.5 text-left shadow-[0_18px_45px_-28px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,.14),transparent_38%,rgba(127,211,247,.08)_72%,rgba(255,210,63,.1))]"
+        />
         <FramedAvatar
           border={(user as any)?.avatarBorder}
           src={user?.image}
           seed={user?.username}
-          className="size-16 shrink-0"
+          className="relative size-11 shrink-0"
         />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
+        <span className="relative min-w-0 flex-1">
+          <span className="block truncate text-[8.5px] font-black uppercase tracking-[0.18em] text-white/60">
             {greetingOf()}
           </span>
-          <span className="mt-1 flex min-w-0 items-center gap-2">
-            <span className="truncate text-lg font-black leading-tight tracking-tight">
+          <span className="mt-0.5 flex min-w-0 items-center gap-1">
+            <span className="truncate text-[15px] font-black leading-tight tracking-tight text-white">
               {user?.username ?? "user"}
             </span>
-            {premium && <BlueCheck className="size-4 shrink-0" />}
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/40 bg-white/[0.07] px-2 py-0.5 text-[10px] font-bold text-white/95">
-              <TierIcon tier={badgeForLevel(level).name} className="size-3.5" />
-              Lv.{level}
-            </span>
+            {premium && <BlueCheck className="size-3.5 shrink-0" />}
           </span>
-          <span className="mt-1 block font-mono text-[11px] leading-none text-white/45">
-            ID {displayId((user as any)?.seqId)}
+          <span className="mt-1 flex min-w-0 items-center gap-1">
+            <LevelBadge level={level} className="origin-left scale-[0.82]" />
+            {user?.clanTag && (
+              <ClanTag
+                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                tag={user.clanTag}
+                level={user.clanLevel}
+                className="max-w-[54px] origin-left scale-[0.82] overflow-hidden"
+              />
+            )}
           </span>
         </span>
+        <LevelRing level={level} xp={xp} />
       </button>
 
-      {/* KANAN: cari + notif. Tombol pengaturan DIHAPUS dari sini (pindah ke
-          Akun), tempatnya dipakai notifikasi dan tombol cari di kirinya. */}
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={onSearch}
-          aria-label="Cari anime"
-          className="flex size-12 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white/80 transition hover:border-gold-strong/40 hover:bg-white/[0.1] hover:text-white active:scale-95"
-        >
-          <Search className="size-5" />
-        </button>
-        <NotifButton className="size-12 rounded-2xl border border-white/12 bg-white/[0.06] hover:border-gold-strong/40 hover:bg-white/[0.1]" />
-      </div>
+      <button
+        type="button"
+        onClick={onSearch}
+        aria-label="Cari anime"
+        className="flex size-[54px] shrink-0 items-center justify-center rounded-full border border-white/18 bg-white/[0.09] text-white/85 shadow-[0_18px_45px_-28px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl transition hover:bg-white/[0.14] hover:text-white active:scale-95"
+      >
+        <Search className="size-6" />
+      </button>
+      <NotifButton
+        sizeClassName="size-[54px]"
+        className="rounded-full border border-white/18 bg-white/[0.09] shadow-[0_18px_45px_-28px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl hover:bg-white/[0.14] hover:text-white"
+        iconClassName="size-6"
+      />
     </header>
   );
 }

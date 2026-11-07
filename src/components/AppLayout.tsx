@@ -38,7 +38,6 @@ import {
   BookmarkIconFill,
   BookIcon,
   GemIcon,
-  CrownIcon,
 } from "@/components/ios-icons";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
@@ -93,8 +92,8 @@ export function AppLayout({
   const [yvView, setYvView] = useState<"shop" | "pet" | "music" | null>(null);
   // Fitur lokal YoruVerse yang langsung dibuka dari Panel.
   const [yvFeature, setYvFeature] = useState<YoruFeature | null>(null);
-  // YORUVERSE — hub virtual (tombol kuning di panel akun). Layar penuh
-  // yang dirender di atas segalanya (z-[70]).
+  // Layar fitur Panel (Quest/Shop Sticker/Nobar/Voice) dan sublayar
+  // YoruVerse lama (Shop/Pet/Music) yang masih dipakai.
   const [yvOpen, setYvOpen] = useState(false);
   const openTopPanel = useCallback((p: TopPanel) => setTopPanel(p), []);
   const closeTopPanel = useCallback(() => setTopPanel(null), []);
@@ -107,11 +106,6 @@ export function AppLayout({
   const pickHub = (key: PanelKey) => {
     setHubOpen(false);
     switch (key) {
-      case "yoraverse":
-        setYvView(null);
-        setYvFeature(null);
-        setYvOpen(true);
-        break;
       case "quest":
       case "sticker":
       case "nobar":
@@ -162,11 +156,7 @@ export function AppLayout({
     if (panel === "favorites") setNavPanel("favorites");
     else if (panel === "history") setTopPanel("continue");
     else if (panel === "download") setTopPanel("downloads");
-    else if (panel === "yoraverse") {
-      setYvView(null);
-      setYvFeature(null);
-      setYvOpen(true);
-    } else if (
+    else if (
       panel === "quest" ||
       panel === "sticker" ||
       panel === "nobar" ||
@@ -481,7 +471,7 @@ function AccountPanel({
         </span>
         {premium && (
           <span className="flex items-center gap-1.5 font-bold text-gold">
-            <CrownIcon className="size-5" /> {premiumDays} hari
+            <GemIcon className="size-5" /> {premiumDays} hari
           </span>
         )}
       </div>

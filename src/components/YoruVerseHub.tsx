@@ -161,7 +161,7 @@ export function YoruVerseHubScreen({
       <FeatureChrome
         title="Quest"
         subtitle="Misi harian · reset 00.00"
-        onBack={() => setFeature(null)}
+        onBack={onClose}
       >
         <div className="px-4 pb-10">
           <DailyQuestRow />
@@ -174,17 +174,17 @@ export function YoruVerseHubScreen({
       <FeatureChrome
         title="Shop Sticker"
         subtitle="Pack sticker untuk chat"
-        onBack={() => setFeature(null)}
+        onBack={onClose}
       >
         <StickerStore />
       </FeatureChrome>
     );
   }
   if (feature === "nobar") {
-    return <NobarCatalogScreen onClose={() => setFeature(null)} />;
+    return <NobarCatalogScreen onClose={onClose} />;
   }
   if (feature === "voice") {
-    return <VoiceCallScreen onClose={() => setFeature(null)} />;
+    return <VoiceCallScreen onClose={onClose} />;
   }
 
   const open = (key: HubView) => {
