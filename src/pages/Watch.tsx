@@ -7,7 +7,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConvexAuth } from "convex/react";
 import { CommentsSection, type CommentT } from "@/components/Comments";
 import { SectionTitle } from "@/components/lstream-ui";
-import { setMiniCue, setMiniPlayer, showXpPopup } from "@/components/AppLayout";
+import {
+  setMiniCue,
+  setMiniPlayer,
+  showXpPopup,
+  XpPopupHost,
+} from "@/components/AppLayout";
 import { StripBackIcon } from "@/components/StripBack";
 import {
   ChevronLeft,
@@ -629,46 +634,6 @@ function WatchContent() {
     return () => window.clearInterval(t);
   }, [user?._id, claimWatchXp, epParam, streamUrl]);
 
-  // Turunkan halaman cukup jauh → player otomatis jadi mini player. Tidak ada
-  // tombol Mini lagi; transisi ditangani MiniPlayerHost dengan animasi masuk.
-  useEffect(() => {
-    if (!streamUrl || isFs || !playing) return;
-    let fired = false;
-    const onScroll = () => {
-      if (fired || window.scrollY < 560) return;
-      fired = true;
-      setMiniPlayer({
-        animeId,
-        animeTitle: D.title,
-        animeImage: D.image ?? undefined,
-        episodeNumber: currentEp?.number,
-        episodeId: epParam ?? undefined,
-        streamUrl,
-        isEmbed: sourceType === "embed",
-        startAt: videoRef.current?.currentTime ?? 0,
-      });
-      showXpPopup({
-        sessionXp: sessionXpRef.current,
-        amount: 0,
-        event: "Mini player",
-      });
-      navigate("/home");
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [
-    streamUrl,
-    isFs,
-    playing,
-    animeId,
-    epParam,
-    currentEp?.number,
-    D.title,
-    D.image,
-    sourceType,
-    navigate,
-  ]);
-
   /**
    * Resolusi asli tiap file MP4 di daftar server episode ini.
    *
@@ -1085,6 +1050,44 @@ function WatchContent() {
   // Detail anime (daftar episode) — dideklarasikan SEBELUM efek subtitle
   // karena efek itu memakai `detailData` untuk tahu nomor episode.
   const [detailData, setDetailData] = useState<any>(null);
+
+  // Turunkan halaman cukup jauh → player otomatis jadi mini player. Tidak ada
+  // tombol Mini lagi; transisi ditangani MiniPlayerHost dengan animasi masuk.
+  useEffect(() => {
+    if (!streamUrl || isFs) return;
+    let fired = false;
+    const onScroll = () => {
+      if (fired || window.scrollY < 560) return;
+      fired = true;
+      setMiniPlayer({
+        animeId,
+        animeTitle: detailData?.title ?? "Anime",
+        animeImage: detailData?.image,
+        episodeId: epParam ?? undefined,
+        streamUrl,
+        isEmbed: sourceType === "embed",
+        startAt: videoRef.current?.currentTime ?? 0,
+        sessionXp: sessionXpRef.current,
+      });
+      showXpPopup({
+        sessionXp: sessionXpRef.current,
+        amount: 0,
+        event: "Mini player",
+      });
+      navigate("/home");
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [
+    streamUrl,
+    isFs,
+    animeId,
+    epParam,
+    detailData?.title,
+    detailData?.image,
+    sourceType,
+    navigate,
+  ]);
 
   // Muat (atau buat) subtitle Indonesia untuk episode ini. Hasil disimpan di
   // localStorage jadi tidak perlu diterjemahkan ulang.
@@ -3910,6 +3913,7 @@ function WatchContent() {
           </div>
         </div>
       )}
+      <XpPopupHost />
     </div>
   );
 }

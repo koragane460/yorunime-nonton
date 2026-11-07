@@ -70,7 +70,7 @@ function cleanTag(t?: string | null): string | null {
 export type Period = "1" | "7" | "30";
 
 const PERIODS: { key: Period; label: string; short: string; xpKey: string }[] = [
-  { key: "1", label: "Setiap hari", short: "Harian", xpKey: "harian" },
+  { key: "1", label: "Setiap hari", short: "Setiap hari", xpKey: "harian" },
   { key: "7", label: "7 hari", short: "7D", xpKey: "mingguan" },
   { key: "30", label: "30 hari", short: "30D", xpKey: "bulanan" },
 ];
@@ -157,6 +157,7 @@ function PodiumEntry({
   border,
   username,
   level,
+  clanLevel,
   clanTag,
   clanTagIcon,
   value,
@@ -169,9 +170,9 @@ function PodiumEntry({
   border?: string;
   username?: string;
   level?: number;
+  clanLevel?: number;
   clanTag?: string;
   clanTagIcon?: string;
-  clanName?: string;
   value: string;
   unit: string;
   center?: boolean;
@@ -240,7 +241,7 @@ function PodiumEntry({
           <ClanTag
             icon={clanTagIcon || DEFAULT_CLAN_ICON}
             tag={tag}
-            level={level}
+            level={clanLevel}
             className="shrink-0"
           />
         </span>
@@ -272,6 +273,7 @@ function Podium({
     border?: string;
     username?: string;
     level?: number;
+    clanLevel?: number;
     clanTag?: string;
     clanTagIcon?: string;
     value: string;
@@ -504,6 +506,7 @@ function ClanCard({ onOpen }: { onOpen: () => void }) {
     border: undefined,
     username: c.leaderUsername,
     level: c.level,
+    clanLevel: c.level,
     clanTag: c.tag,
     clanTagIcon: c.tagIcon,
     value: `Lv.${c.level}`,

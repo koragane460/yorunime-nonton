@@ -641,7 +641,7 @@ function useXpPopup() {
   );
 }
 
-function XpPopupHost() {
+export function XpPopupHost() {
   const data = useXpPopup();
   const { user } = useAuth();
 
@@ -715,6 +715,8 @@ type MiniState = {
   isEmbed: boolean;
   /** Detik terakhir dari player utama supaya mini lanjut di posisi sama. */
   startAt?: number;
+  /** Total XP sesi dari player utama, dipakai popup saat mini dijeda. */
+  sessionXp?: number;
 };
 
 let miniListeners: ((s: MiniState | null) => void)[] = [];
@@ -864,8 +866,22 @@ export function MiniPlayerHost() {
             src={state.streamUrl}
             className="pointer-events-none size-full object-contain"
             autoPlay
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
+            onPlay={() => {
+              setPlaying(true);
+              showXpPopup({
+                sessionXp: state.sessionXp ?? 0,
+                amount: 0,
+                event: "Nonton",
+              });
+            }}
+            onPause={() => {
+              setPlaying(false);
+              showXpPopup({
+                sessionXp: state.sessionXp ?? 0,
+                amount: 0,
+                event: "Jeda",
+              });
+            }}
             onTimeUpdate={(e) => {
               miniTime = e.currentTarget.currentTime;
               const c = getMiniCue();

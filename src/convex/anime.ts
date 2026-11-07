@@ -1141,29 +1141,60 @@ export const animeSearch = action({
 /** Katalog A–Z: judul yang benar-benar BERAWALAN dengan huruf terpilih. */
 export const animeByLetter = action({
   args: { letter: v.string(), page: v.optional(v.number()) },
-  handler: async (runCtx, { letter, page = 1 }) => {
+  handler: async (runCtx, { letter }) => {
     const L = letter.trim().toUpperCase().slice(0, 1);
     if (!/^[A-Z]$/.test(L)) return [];
-    const p = Math.max(1, Math.min(8, Math.round(page)));
     return (await cached(
       runCtx,
-      `az:v1:${L}:${p}`,
+      `az:v3:${L}`,
       12 * 60 * 60 * 1000,
       async () => {
-        try {
+        const titleOf = (m: any) =>
+          String(
+            m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
+          ).trim();
+        const pageMedia = async (p: number) => {
           const d = await aniGraphql(
-            `query($s:String,$p:Int){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:false){ ${ANILIST_FIELDS} } } }`,
-            { s: L, p },
+            `query($p:Int){ Page(page:$p, perPage:50){ pageInfo{ lastPage } media(type:ANIME, sort:TITLE_ROMAJI, isAdult:false){ ${ANILIST_FIELDS} } } }`,
+            { p },
           );
-          return (d?.Page?.media ?? [])
-            .filter((m: any) => {
-              if (!m?.idMal) return false;
-              const title = String(
-                m?.title?.romaji ?? m?.title?.english ?? m?.title?.native ?? "",
-              ).trim();
-              return title.toUpperCase().startsWith(L);
-            })
-            .map(anilistCard);
+          return {
+            media: (d?.Page?.media ?? []) as any[],
+            lastPage: Number(d?.Page?.pageInfo?.lastPage ?? 400),
+          };
+        };
+        try {
+          // Cari halaman pertama yang judulnya sudah melewati huruf target.
+          // AniList mengurutkan judul secara alfabetis, jadi binary search
+          // hanya butuh ~9 permintaan, bukan 400 halaman.
+          let lo = 1;
+          let hi = 400;
+          const probe = await pageMedia(1);
+          hi = Math.max(1, Math.min(probe.lastPage, 400));
+          while (lo < hi) {
+            const mid = Math.floor((lo + hi) / 2);
+            const { media } = await pageMedia(mid);
+            const first = titleOf(media[0]).toUpperCase();
+            if (!first || first < L) lo = mid + 1;
+            else hi = mid;
+          }
+          const out: AnimeCard[] = [];
+          const seen = new Set<string>();
+          for (let p = Math.max(1, lo - 1); p <= lo + 4; p++) {
+            const { media } = await pageMedia(p);
+            if (media.length === 0) break;
+            for (const m of media) {
+              if (!m?.idMal) continue;
+              const title = titleOf(m);
+              if (!title.toUpperCase().startsWith(L)) continue;
+              const id = String(m.idMal);
+              if (seen.has(id)) continue;
+              seen.add(id);
+              out.push(anilistCard(m));
+            }
+            if (out.length >= 90) break;
+          }
+          return out;
         } catch {
           return [];
         }

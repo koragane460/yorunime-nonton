@@ -154,7 +154,7 @@ export function YoruVerseHubScreen({
   const { user } = useAuth();
   const navigate = useNavigate();
   const [feature, setFeature] = useState<YoruFeature | null>(initialFeature);
-  const [clanTag] = useState(user?.clanTag);
+  const clanTag = user?.clanTag;
 
   if (feature === "quest") {
     return (

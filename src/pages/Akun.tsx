@@ -181,11 +181,28 @@ const TIER_PARTICLES = [
   { x: 38, y: -6, s: 2, c: "#7FD3F7", d: 0.95 },
 ];
 
+const TIER_SKIN: Record<string, string> = {
+  Bronze: "from-amber-700/25 via-amber-900/10 to-transparent",
+  Silver: "from-slate-300/20 via-slate-500/10 to-transparent",
+  Diamond: "from-cyan-300/22 via-sky-500/10 to-transparent",
+  Emerald: "from-emerald-400/22 via-emerald-700/10 to-transparent",
+  Master: "from-red-500/22 via-red-900/10 to-transparent",
+  Grandmaster: "from-fuchsia-400/22 via-red-600/10 to-transparent",
+  Central: "from-yellow-300/22 via-amber-500/10 to-transparent",
+  Ruby: "from-rose-400/22 via-red-600/10 to-transparent",
+  Ascendant: "from-cyan-200/22 via-fuchsia-300/14 to-transparent",
+};
+
 function AkunTierCard({ level }: { level: number }) {
   const badge = badgeForLevel(level);
   const Icon = badge.icon;
   return (
-    <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(115deg,rgba(255,255,255,.10),rgba(255,255,255,.03)_55%,rgba(0,0,0,.16))] px-3 py-3">
+    <div
+      className={cn(
+        "relative mt-2.5 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br px-3 py-3",
+        TIER_SKIN[badge.name] ?? "from-white/10 via-white/[0.03] to-transparent",
+      )}
+    >
       <span
         aria-hidden
         className="pointer-events-none absolute -right-10 -top-12 size-28 rounded-full bg-white/10 blur-2xl"
@@ -306,7 +323,7 @@ function AkunProfileScreen({
     { label: "History", Icon: HistoryIcon, onClick: () => navigate("/home?panel=history") },
     { label: "Clan", Icon: Shield, onClick: () => navigate("/clan") },
     { label: "YoruVerse", Icon: Sparkles, onClick: () => navigate("/home?panel=yoraverse") },
-    { label: "Toko", Icon: Crown, onClick: () => navigate("/premium") },
+    { label: "Premium", Icon: Crown, onClick: () => navigate("/premium") },
     { label: "Pengaturan", Icon: SettingsIcon, onClick: onSettings },
   ];
 

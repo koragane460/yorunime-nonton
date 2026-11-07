@@ -76,17 +76,11 @@ import {
   AfinitasPromo,
   FeedPromo,
   DonatePromo,
-  GreetingBar,
-  LeaderPodium,
   PillButton,
-  ProfileBar,
   bumpQuestLocal,
   pushRecentSearch,
   readRecentSearch,
 } from "@/components/HomeHead";
-import {
-  LeaderboardScreen as CatalogLeaderboard,
-} from "@/components/leaderboard/LeaderboardScreen";
 import { VoiceCallScreen } from "@/components/VoiceCall";
 import { AfinitasScreen } from "@/components/AfinitasScreen";
 import type { Id } from "@/convex/_generated/dataModel";
