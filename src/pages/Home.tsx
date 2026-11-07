@@ -1195,7 +1195,14 @@ function HomeContent() {
         onHistory={() => navigate("/home?panel=history")}
       />
       <HomePremiumCard onBuy={() => navigate("/premium")} />
-      <ActiveEventCard />
+      <ActiveEventCard
+        onSearch={() => {
+          setSearchGenre(null);
+          setSearchOpenGenres(false);
+          setShowSearch(true);
+        }}
+        onResults={() => navigate("/home?panel=favorites")}
+      />
       <HomeCommunityCard onOpenChat={() => setShowChat(true)} />
       <ClanNobarCards
         onOpenClan={(clanId) =>

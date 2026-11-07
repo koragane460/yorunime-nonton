@@ -183,10 +183,14 @@ export function QuickGenre({
 
   return (
     <>
-      <section className="fade-enter relative mt-5 overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(145deg,#16101d_0%,#0d0b12_55%,#08070b_100%)] p-3">
+      <section className="fade-enter relative mt-5 overflow-hidden rounded-[24px] border border-rose-300/15 bg-[linear-gradient(145deg,#1a1012_0%,#110b0d_55%,#08070b_100%)] p-3">
         <span
           aria-hidden
-          className="pointer-events-none absolute -right-12 -top-14 size-40 rounded-full bg-fuchsia-500/10 blur-3xl"
+          className="pointer-events-none absolute -right-12 -top-14 size-40 rounded-full bg-rose-500/10 blur-3xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-10 -bottom-16 size-32 rounded-full bg-gold/5 blur-3xl"
         />
 
         {/* Satu kotak toggle: Genre kiri, Katalog kanan (dengan ikon). */}
@@ -202,7 +206,12 @@ export function QuickGenre({
                 : "text-white/55 hover:text-white",
             )}
           >
-            <span className="size-1.5 rounded-full bg-fuchsia-400" />
+            <span
+              className={cn(
+                "size-1.5 rounded-full transition",
+                tab === "genre" ? "bg-rose-500" : "bg-rose-400/60",
+              )}
+            />
             Genre
           </button>
           <button

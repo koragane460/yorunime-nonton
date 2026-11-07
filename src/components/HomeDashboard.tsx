@@ -14,6 +14,7 @@ import {
   Play,
   Shield,
   Star,
+  Trophy,
 } from "lucide-react";
 
 type HistoryRow = {
@@ -226,28 +227,132 @@ export function HomePremiumCard({ onBuy }: { onBuy: () => void }) {
   );
 }
 
-/** Event aktif — saat ini belum ada event, jadi tampil empty state. */
-export function ActiveEventCard() {
+function eventCountdown(ms: number) {
+  const total = Math.max(0, ms);
+  const days = Math.floor(total / 86_400_000);
+  const hours = Math.floor((total % 86_400_000) / 3_600_000);
+  if (days > 0) return `${days} hari ${hours} jam`;
+  const minutes = Math.max(1, Math.floor(total / 60_000));
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)} jam ${minutes % 60} mnt`
+    : `${minutes} mnt`;
+}
+
+/** Event aktif — mengikuti status voting karakter yang asli. */
+export function ActiveEventCard({
+  onSearch,
+  onResults,
+}: {
+  onSearch: () => void;
+  onResults: () => void;
+}) {
+  const status = useQuery(api.votes.status, {});
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!status) return null;
+
+  // Status dari server dihitung saat query berjalan. Kalau halaman dibiarkan
+  // terbuka melewati batas waktu, pakai jam lokal supaya kartu tidak tetap
+  // terlihat "Live" sampai ada data lain yang memicu query ulang.
+  const expired = status.endsAt > 0 && now >= status.endsAt;
+  const active = status.state === "active" && !expired;
+  const ended = status.state === "ended" || (status.state === "active" && expired);
+  const total = Math.max(1, status.endsAt - status.startedAt);
+  const pct = active
+    ? Math.min(100, Math.max(3, Math.round(((now - status.startedAt) / total) * 100)))
+    : ended
+      ? 100
+      : 0;
+
   return (
     <section className="fade-enter mt-5">
       <h2 className="yn-sec text-[17px] font-black tracking-tight text-white">
         Event Aktif
       </h2>
-      <div className="relative mt-2 flex items-center gap-3 overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(120deg,rgba(255,210,63,.1),rgba(255,255,255,.04)_52%,rgba(232,72,85,.06))] p-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-gold/25 bg-gold/10 text-gold">
-          <Star className="size-4 fill-current" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[11.5px] font-black text-white">
-            Belum ada event
+      <div
+        className={cn(
+          "relative mt-2 overflow-hidden rounded-[24px] border p-3",
+          active
+            ? "border-gold/25 bg-[linear-gradient(120deg,rgba(255,210,63,.16),rgba(232,72,85,.09)_55%,rgba(255,255,255,.035))]"
+            : ended
+              ? "border-rose-400/20 bg-[linear-gradient(120deg,rgba(232,72,85,.12),rgba(255,210,63,.07)_55%,rgba(255,255,255,.035))]"
+              : "border-white/10 bg-[linear-gradient(120deg,rgba(255,210,63,.1),rgba(255,255,255,.04)_52%,rgba(232,72,85,.06))]",
+        )}
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-12 size-28 rounded-full bg-gold/10 blur-3xl"
+        />
+        <div className="relative flex items-center gap-3">
+          <span
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-2xl border",
+              active
+                ? "border-gold/30 bg-gold/12 text-gold"
+                : "border-rose-300/20 bg-rose-400/10 text-rose-200/80",
+            )}
+          >
+            <Trophy className="size-4" />
           </span>
-          <span className="mt-0.5 block text-[9px] leading-snug text-white/40">
-            Event seru akan muncul di sini.
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-black text-white">
+              <span className="truncate">
+                {active
+                  ? "Vote Karakter Anime"
+                  : ended
+                    ? "Voting karakter selesai"
+                    : "Belum ada event"}
+              </span>
+              {active && (
+                <span className="shrink-0 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-white">
+                  Live
+                </span>
+              )}
+            </span>
+            <span className="mt-0.5 block text-[9px] leading-snug text-white/45">
+              {active
+                ? `Voting berlangsung • sisa ${eventCountdown(status.endsAt - now)}`
+                : ended
+                  ? "Top Vote Character Anime sudah tersedia di Koleksi."
+                  : "Event seru akan muncul di sini."}
+            </span>
           </span>
-        </span>
-        <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white/40">
-          Segera
-        </span>
+          {!active && !ended && (
+            <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white/40">
+              Segera
+            </span>
+          )}
+        </div>
+
+        {(active || ended) && (
+          <div className="relative mt-2.5 flex items-center gap-2">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/25">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#E84855)]"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="shrink-0 text-[8.5px] font-black text-white/40">
+              {pct}%
+            </span>
+          </div>
+        )}
+
+        {(active || ended) && (
+          <button
+            type="button"
+            onClick={active ? onSearch : onResults}
+            className="relative mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.055] py-2 text-[9.5px] font-black text-white/75 transition hover:bg-white/[0.09] active:scale-[0.99]"
+          >
+            {active ? "Cari anime untuk vote" : "Lihat hasil vote"}
+            <ArrowRight className="size-3.5" />
+          </button>
+        )}
       </div>
     </section>
   );
