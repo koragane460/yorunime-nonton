@@ -93,6 +93,17 @@ const schema = defineSchema(
       voteSpent: v.optional(v.number()),
       theme: v.optional(v.string()),
       customColor: v.optional(v.string()),
+      /** Bio singkat di detail akun. */
+      bio: v.optional(v.string()),
+      /** Tanggal lahir YYYY-MM-DD. Setelah disimpan tidak bisa diubah. */
+      birthDate: v.optional(v.string()),
+      /** Bubble status di foto profil: teks + id pola latar. */
+      statusText: v.optional(v.string()),
+      statusBg: v.optional(v.string()),
+      /** Tema UI pilihan setelah login: "glass" | "default". */
+      uiTheme: v.optional(v.string()),
+      /** Id palet warna (0-9) pilihan setelah memilih tema. */
+      uiAccent: v.optional(v.string()),
       /** BUBBLE CHAT (premium): warna latar bubble milik user. */
       bubbleColor: v.optional(v.string()),
       /** BUBBLE CHAT (premium): URL background PNG untuk bubble (bukan gif). */
@@ -496,6 +507,7 @@ const schema = defineSchema(
             x: v.number(),
             y: v.number(),
             scale: v.optional(v.number()),
+            rotate: v.optional(v.number()),
           }),
         ),
       ),
@@ -507,6 +519,7 @@ const schema = defineSchema(
             x: v.number(),
             y: v.number(),
             size: v.number(),
+            rotate: v.optional(v.number()),
           }),
         ),
       ),

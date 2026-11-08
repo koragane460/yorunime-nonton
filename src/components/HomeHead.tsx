@@ -419,7 +419,9 @@ export function DailyQuestRow() {
         <h2 className="text-lg font-bold tracking-tight">Daily Quest</h2>
         <span className="text-[11px] text-muted-foreground">reset 00.00</span>
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      {/* Tiga misi per baris, tiga baris ke bawah — tanpa kotak pembungkus.
+          Pemisah tipis menjaga tetap rapi seperti daftar editorial. */}
+      <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-5">
         {quests.map((q) => {
           const val = Math.min(q.target, q.get(p, store.local));
           const done = q.get(p, store.local) >= q.target;
@@ -427,34 +429,29 @@ export function DailyQuestRow() {
           return (
             <div
               key={q.id}
-              className={cn(
-                "relative flex aspect-square min-w-0 flex-col overflow-hidden rounded-[18px] border p-2 transition",
-                done
-                  ? "border-emerald-400/25 bg-[linear-gradient(145deg,rgba(52,211,153,.16),rgba(255,255,255,.035))]"
-                  : "border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,210,63,.035))]",
-              )}
+              className="relative flex min-h-[94px] min-w-0 flex-col border-t border-white/12 pt-2.5"
             >
               <div className="flex items-center justify-between gap-1">
                 <span
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full border",
+                    "flex size-4 shrink-0 items-center justify-center rounded-full border",
                     done
-                      ? "border-emerald-400/55 bg-emerald-400/20 text-emerald-200"
-                      : "border-white/20 text-transparent",
+                      ? "border-emerald-400/60 bg-emerald-400/18 text-emerald-200"
+                      : "border-white/22 text-transparent",
                   )}
                   aria-hidden
                 >
-                  <Check className="size-3" />
+                  <Check className="size-2.5" strokeWidth={3} />
                 </span>
-                <span className="truncate text-[8px] font-black text-gold-strong">
+                <span className="truncate text-[7.5px] font-black text-gold-strong">
                   +{q.xp} XP
                 </span>
               </div>
-              <p className="mt-1.5 line-clamp-4 min-w-0 text-[9.5px] font-semibold leading-[1.25] text-white/85">
+              <p className="mt-2 line-clamp-3 min-w-0 text-[9.5px] font-semibold leading-[1.28] text-white/82">
                 {q.text}
               </p>
-              <div className="mt-auto pt-1.5">
-                <div className="h-[3px] overflow-hidden rounded-full bg-white/10">
+              <div className="mt-auto pt-2">
+                <div className="h-[2px] overflow-hidden rounded-full bg-white/10">
                   <div
                     className={cn(
                       "h-full rounded-full transition-[width] duration-500",
@@ -463,7 +460,7 @@ export function DailyQuestRow() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="mt-1 flex items-center justify-between text-[8px] font-bold tabular-nums text-white/40">
+                <p className="mt-1 flex items-center justify-between text-[7.5px] font-bold tabular-nums text-white/38">
                   <span>
                     {val}/{q.target}
                   </span>

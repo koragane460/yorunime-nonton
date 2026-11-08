@@ -8,6 +8,7 @@ import { usernameColor } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
+  Check,
   Clapperboard,
   Gem,
   MessageSquare,
@@ -187,44 +188,66 @@ export function ContinueWatchingCard({
   );
 }
 
-/** Kartu ajakan Premium — tiket kaca berwarna, bukan banner diskon generik. */
+/** Kartu Premium editorial: foil emas di atas kertas gelap, tanpa pelangi
+ *  gradien. Terasa seperti undangan klub, bukan banner iklan. */
 export function HomePremiumCard({ onBuy }: { onBuy: () => void }) {
   return (
     <button
       type="button"
       onClick={onBuy}
-      className="fade-enter group relative mt-3 w-full overflow-hidden rounded-[26px] p-px text-left transition active:scale-[0.99]"
+      className="fade-enter group relative mt-3 w-full overflow-hidden rounded-[24px] border border-[#D8B86E]/35 bg-[linear-gradient(135deg,#1c1710_0%,#100e0c_58%,#1a130b_100%)] p-3.5 text-left shadow-[0_26px_58px_-40px_rgba(0,0,0,1)] transition active:scale-[0.99]"
     >
-      <span aria-hidden className="absolute inset-0 rounded-[26px] bg-[conic-gradient(from_150deg,#FFD23F,#E84855_26%,#7C6CFF_53%,#1CA7EC_76%,#FFD23F)] opacity-80" />
-      <span className="relative flex items-center gap-3 overflow-hidden rounded-[25px] bg-[linear-gradient(115deg,#25151c_0%,#1a1223_48%,#121b26_100%)] p-3">
-        <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-[#7C6CFF]/20 blur-3xl" />
-        <span aria-hidden className="pointer-events-none absolute -left-8 bottom-0 size-24 rounded-full bg-gold/10 blur-2xl" />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#E8C77A,transparent)]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-16 size-40 rounded-full bg-[#D8B86E]/10 blur-3xl"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-[4.4rem] w-px bg-[linear-gradient(180deg,transparent,rgba(216,184,110,.25),transparent)]"
+      />
 
-        <span className="relative grid size-[54px] shrink-0 place-items-center rounded-[18px] border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,210,63,.18)_42%,rgba(232,72,85,.18))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.4)]">
-          <Gem className="relative size-6 drop-shadow-[0_2px_4px_rgba(0,0,0,.4)]" strokeWidth={1.9} />
-          <Sparkles className="absolute -right-1 -top-1 size-3.5 text-[#FFE9A3]" />
+      <span className="relative flex items-center gap-3">
+        <span className="relative flex size-12 shrink-0 flex-col items-center justify-center rounded-[15px] border border-[#D8B86E]/40 bg-[#0d0b09] text-[#F1D48D] shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
+          <span className="font-display text-[17px] font-black leading-none tracking-[-0.04em]">
+            Y+
+          </span>
+          <span className="mt-1 text-[5.5px] font-black uppercase tracking-[0.2em] text-[#F1D48D]/55">
+            Premium
+          </span>
         </span>
 
-        <span className="relative min-w-0 flex-1">
+        <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FFE9A3]">
+            <span className="text-[8px] font-black uppercase tracking-[0.23em] text-[#E8C77A]">
               Yoru Premium
             </span>
-            <span className="rounded-full border border-white/15 bg-white/[0.08] px-1.5 py-0.5 text-[7.5px] font-black text-white/60">
-              Rp5.000
-            </span>
+            <span className="size-1 rounded-full bg-[#E8C77A]/50" />
+            <span className="text-[8px] font-bold text-white/35">Tanpa iklan</span>
           </span>
-          <span className="mt-0.5 block truncate text-[13.5px] font-black leading-tight text-white">
-            Nonton bebas, tanpa iklan
+          <span className="mt-1 block truncate font-display text-[15px] font-black leading-tight tracking-[-0.02em] text-[#FFF6DF]">
+            Nonton lebih tenang.
           </span>
-          <span className="mt-1 flex items-center gap-1 text-[8.5px] font-semibold text-white/45">
-            <span className="size-1 rounded-full bg-emerald-300" />
-            1080p · manga · border eksklusif
+          <span className="mt-1 flex items-center gap-1.5 text-[8px] font-semibold text-white/40">
+            <Check className="size-2.5 text-[#E8C77A]" strokeWidth={3} />
+            1080p
+            <span className="size-0.5 rounded-full bg-white/25" />
+            Manga
+            <span className="size-0.5 rounded-full bg-white/25" />
+            Border eksklusif
           </span>
         </span>
 
-        <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-[0_8px_18px_-10px_rgba(255,255,255,.8)] transition group-hover:rotate-6">
-          <ArrowUpRight className="size-4" strokeWidth={2.4} />
+        <span className="relative flex shrink-0 flex-col items-end gap-1.5 pl-1">
+          <span className="font-display text-[13px] font-black leading-none text-[#F4D58B]">
+            Rp5<span className="text-[8px] font-bold text-[#F4D58B]/65">rb</span>
+          </span>
+          <span className="flex size-8 items-center justify-center rounded-full border border-[#D8B86E]/45 bg-[#D8B86E]/10 text-[#F1D48D] transition group-hover:bg-[#D8B86E]/20">
+            <ArrowUpRight className="size-3.5" strokeWidth={2.4} />
+          </span>
         </span>
       </span>
     </button>
@@ -465,7 +488,7 @@ export function HomeCommunityCard({ onOpenChat }: { onOpenChat: () => void }) {
         <button
           type="button"
           onClick={onOpenChat}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#E84855_0%,#C04BFF_48%,#1CA7EC_100%)] py-2.5 text-[11px] font-black text-white shadow-[0_12px_24px_-16px_rgba(192,75,255,.9)] transition hover:brightness-110 active:scale-[0.99]"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#0E7490_0%,#1CA7EC_100%)] py-2.5 text-[11px] font-black text-white shadow-[0_12px_24px_-16px_rgba(14,116,144,.85)] transition hover:brightness-110 active:scale-[0.99]"
         >
           Buka Chat
           <ArrowRight className="size-4" strokeWidth={2.4} />
@@ -594,7 +617,7 @@ export function ClanNobarCards({
         <button
           type="button"
           onClick={() => onOpenClan(clan?._id)}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(110deg,#FFD23F,#FF8A3D_52%,#34D399)] py-2 text-[9.5px] font-black text-black shadow-[0_10px_20px_-15px_rgba(255,210,63,.9)] transition hover:brightness-105 active:scale-[0.98]"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(110deg,#FFD23F,#F08A3D)] py-2 text-[9.5px] font-black text-black shadow-[0_10px_20px_-15px_rgba(255,210,63,.9)] transition hover:brightness-105 active:scale-[0.98]"
         >
           Buka Clan
           <ArrowRight className="size-3.5" strokeWidth={2.7} />
@@ -633,7 +656,7 @@ export function ClanNobarCards({
         <button
           type="button"
           onClick={onOpenNobar}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(110deg,#1CA7EC,#7C6CFF_56%,#E84855)] py-2 text-[9.5px] font-black text-white shadow-[0_10px_20px_-15px_rgba(28,167,236,.95)] transition hover:brightness-110 active:scale-[0.98]"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(110deg,#3B82F6,#7C3AED)] py-2 text-[9.5px] font-black text-white shadow-[0_10px_20px_-15px_rgba(59,130,246,.9)] transition hover:brightness-110 active:scale-[0.98]"
         >
           Gabung nobar
           <ArrowRight className="size-3.5" strokeWidth={2.7} />

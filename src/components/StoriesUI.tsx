@@ -106,7 +106,7 @@ const STICKER_PACKS: { name: string; items: string[] }[] = [
 
 /* ============================== tipe data ============================== */
 
-type Picked = { file: File; url: string; kind: "image" | "video" };
+export type Picked = { file: File; url: string; kind: "image" | "video" };
 
 type TextLayer = {
   id: string;
@@ -118,9 +118,17 @@ type TextLayer = {
   x: number;
   y: number;
   scale: number;
+  rotate: number;
 };
 
-type StickerLayer = { id: string; emoji: string; x: number; y: number; size: number };
+type StickerLayer = {
+  id: string;
+  emoji: string;
+  x: number;
+  y: number;
+  size: number;
+  rotate: number;
+};
 
 type CropState = { aspect: string; zoom: number };
 
@@ -186,9 +194,9 @@ export function StoryRing({
       onClick={onClick}
       aria-label="Lihat story"
       className={cn(
-        "relative shrink-0 rounded-full p-[2px] transition",
+        "relative shrink-0 rounded-full p-[3px] transition",
         hasStory && !seen
-          ? "bg-gradient-to-tr from-blue-800 via-blue-600 to-sky-400"
+          ? "bg-[linear-gradient(135deg,#15803D,#22C55E_52%,#A3E635)] shadow-[0_0_0_1px_rgba(74,222,128,.25)]"
           : hasStory
             ? "bg-gradient-to-tr from-zinc-600 to-zinc-400"
             : "bg-transparent",
@@ -562,6 +570,7 @@ export function StoryEditor({
                         x: t.x,
                         y: t.y,
                         scale: t.scale,
+                        rotate: t.rotate,
                       }))
                     : undefined,
                 stickers:
@@ -571,6 +580,7 @@ export function StoryEditor({
                         x: s.x,
                         y: s.y,
                         size: s.size,
+                        rotate: s.rotate,
                       }))
                     : undefined,
               })
@@ -645,6 +655,7 @@ export function StoryEditor({
       x: 0.5,
       y: 0.42,
       scale: 1,
+      rotate: 0,
     };
     setEdit(current.url, { texts: [...edit.texts, layer] });
     setSel({ kind: "text", id: layer.id });
@@ -676,6 +687,7 @@ export function StoryEditor({
       x: 0.5 + (Math.random() * 0.16 - 0.08),
       y: 0.5 + (Math.random() * 0.16 - 0.08),
       size: 0.18,
+      rotate: 0,
     };
     setEdit(current.url, { stickers: [...edit.stickers, layer] });
     setSel({ kind: "sticker", id: layer.id });
@@ -796,7 +808,7 @@ export function StoryEditor({
               fontFamily: fontCss(t.font),
               textShadow: t.outline ? OUTLINE_SHADOW : "none",
               background: t.bg ? "rgba(0,0,0,0.55)" : "transparent",
-              transform: `translate(-50%, -50%) scale(${t.scale})`,
+              transform: `translate(-50%, -50%) scale(${t.scale}) rotate(${t.rotate ?? 0}deg)`,
             }}
           >
             {t.text}
@@ -816,7 +828,7 @@ export function StoryEditor({
               left: `${s.x * 100}%`,
               top: `${s.y * 100}%`,
               fontSize: `${s.size * 100}px`,
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%) rotate(${s.rotate ?? 0}deg)`,
             }}
           >
             {s.emoji}
@@ -980,6 +992,18 @@ export function StoryEditor({
                     >
                       A-
                     </button>
+                    <label className="ml-auto flex items-center gap-1.5 rounded-full border border-white/25 px-2 py-1 text-[9px] font-bold text-white/55">
+                      Rotasi
+                      <input
+                        type="range"
+                        min={-180}
+                        max={180}
+                        step={1}
+                        value={selText.rotate ?? 0}
+                        onChange={(e) => updateSelText({ rotate: Number(e.target.value) })}
+                        className="w-16 accent-sky-400"
+                      />
+                    </label>
                   </div>
                   <p className="text-[10px] text-white/45">
                     Geser teks di pratinjau untuk memindahkannya.
@@ -1030,6 +1054,29 @@ export function StoryEditor({
                   </div>
                 )}
               </div>
+              {selSticker && (
+                <label className="flex items-center gap-2 rounded-full border border-white/20 px-3 py-1 text-[9px] font-bold text-white/55">
+                  Rotasi stiker
+                  <input
+                    type="range"
+                    min={-180}
+                    max={180}
+                    step={1}
+                    value={selSticker.rotate ?? 0}
+                    onChange={(e) => {
+                      if (!current) return;
+                      setEdit(current.url, {
+                        stickers: edit.stickers.map((s) =>
+                          s.id === selSticker.id
+                            ? { ...s, rotate: Number(e.target.value) }
+                            : s,
+                        ),
+                      });
+                    }}
+                    className="w-28 accent-sky-400"
+                  />
+                </label>
+              )}
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {STICKER_PACKS.map((p, i) => (
                   <button
@@ -1337,8 +1384,15 @@ type StoryItem = {
     x: number;
     y: number;
     scale?: number;
+    rotate?: number;
   }[];
-  stickers?: { emoji: string; x: number; y: number; size: number }[];
+  stickers?: {
+    emoji: string;
+    x: number;
+    y: number;
+    size: number;
+    rotate?: number;
+  }[];
   mediaVol?: number;
   musicVol?: number;
   createdAt: number;
@@ -1355,9 +1409,12 @@ type StoryItem = {
  */
 export function StoryViewer({
   userId,
+  initialUserId,
   onClose,
 }: {
   userId?: string;
+  /** Mulai dari story user tertentu (mis. kartu status teman). */
+  initialUserId?: string;
   onClose: () => void;
 }) {
   const feed = useQuery(api.stories.allStories, {}) as
@@ -1381,6 +1438,20 @@ export function StoryViewer({
   const active = groups[group];
   const currentStory = active?.stories?.[idx];
   const viewingOwn = !!userId && active?.userId === userId;
+  const initialGroup = useMemo(
+    () =>
+      initialUserId
+        ? groups.findIndex((g) => String(g.userId) === String(initialUserId))
+        : -1,
+    [groups, initialUserId],
+  );
+  const jumpedRef = useRef(false);
+  useEffect(() => {
+    if (jumpedRef.current || initialGroup < 0) return;
+    jumpedRef.current = true;
+    setGroup(initialGroup);
+    setIdx(0);
+  }, [initialGroup]);
 
   // Daftar penonton hanya untuk story milik sendiri.
   const viewers = useQuery(
@@ -1612,7 +1683,7 @@ export function StoryViewer({
               fontFamily: fontCss(t.font),
               textShadow: t.outline ? OUTLINE_SHADOW : "none",
               background: t.bg ? "rgba(0,0,0,0.55)" : "transparent",
-              transform: `translate(-50%, -50%) scale(${t.scale ?? 1})`,
+              transform: `translate(-50%, -50%) scale(${t.scale ?? 1}) rotate(${t.rotate ?? 0}deg)`,
             }}
           >
             {t.text}
@@ -1628,19 +1699,12 @@ export function StoryViewer({
               left: `${s.x * 100}%`,
               top: `${s.y * 100}%`,
               fontSize: `${s.size * 100}px`,
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%) rotate(${s.rotate ?? 0}deg)`,
             }}
           >
             {s.emoji}
           </span>
         ))}
-
-        {/* Caption story lama (sebelum ada lapisan teks). */}
-        {currentStory.caption && (
-          <p className="pointer-events-none absolute left-0 right-0 top-1/3 px-6 text-center text-lg font-black text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.9)]">
-            {currentStory.caption}
-          </p>
-        )}
 
         {(currentStory.music || (currentStory.musicKey && currentStory.musicKey !== "none")) && (
           <span className="absolute left-3 bottom-20 flex max-w-[70%] items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white">
@@ -1664,6 +1728,28 @@ export function StoryViewer({
           aria-label="Berikutnya"
           className="absolute inset-y-0 right-0 w-2/3"
         />
+      </div>
+
+      {/* Footer bergaya penampil story: caption + kolom balas + reaksi. */}
+      <div className="shrink-0 border-t border-white/10 bg-black/55 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 backdrop-blur-xl">
+        {currentStory.caption && (
+          <p className="mb-2 text-center text-[13px] font-semibold leading-snug text-white [text-shadow:0_2px_8px_rgba(0,0,0,.8)]">
+            {currentStory.caption}
+          </p>
+        )}
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 min-w-0 flex-1 items-center rounded-full border border-white/15 bg-white/[0.07] px-3 text-[11px] text-white/45">
+            Balas status…
+          </div>
+          {["❤️", "😂", "👍"].map((emoji) => (
+            <span
+              key={emoji}
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-[16px]"
+            >
+              {emoji}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Daftar penonton story sendiri */}

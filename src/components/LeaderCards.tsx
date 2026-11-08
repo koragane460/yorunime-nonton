@@ -317,6 +317,188 @@ function Podium({
   );
 }
 
+function GrandPlace({
+  entry,
+  place,
+  onOpen,
+}: {
+  entry?: {
+    rank: number;
+    image?: string;
+    border?: string;
+    username?: string;
+    level?: number;
+    clanLevel?: number;
+    clanTag?: string;
+    clanTagIcon?: string;
+    value: string;
+    unit: string;
+    userId?: string;
+  };
+  place: 1 | 2 | 3;
+  onOpen?: (id?: string) => void;
+}) {
+  if (!entry) return <div className="min-w-0 flex-1" />;
+  const heights = { 1: 190, 2: 136, 3: 104 } as const;
+  const skin =
+    place === 1
+      ? {
+          front: "linear-gradient(180deg,#F7D77D 0%,#D6A331 38%,#8B5E13 100%)",
+          top: "linear-gradient(90deg,#FFF1B8,#E9BE54)",
+          side: "#7A4E0B",
+          text: "text-[#3B2604]",
+        }
+      : place === 2
+        ? {
+            front: "linear-gradient(180deg,#DFE7F1 0%,#9EABBC 42%,#5B6677 100%)",
+            top: "linear-gradient(90deg,#F2F6FA,#B8C3D1)",
+            side: "#47515F",
+            text: "text-white",
+          }
+        : {
+            front: "linear-gradient(180deg,#E6A578 0%,#B8683E 44%,#6F3B24 100%)",
+            top: "linear-gradient(90deg,#F3C6A6,#C98255)",
+            side: "#5A2F1B",
+            text: "text-white",
+          };
+  const tag = cleanTag(entry.clanTag);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen?.(entry.userId)}
+      className={cn(
+        "relative flex min-w-0 flex-1 flex-col items-center justify-end text-center transition active:scale-[0.99]",
+        place === 1 && "z-20",
+      )}
+    >
+      <span className="relative mb-2 flex flex-col items-center">
+        {place === 1 && <ParticleBurst />}
+        {place === 1 && (
+          <Crown
+            className="absolute -top-7 left-1/2 z-20 size-7 -translate-x-1/2 text-[#FFE58A] drop-shadow-[0_0_10px_rgba(255,210,63,.8)]"
+            fill="currentColor"
+            aria-hidden
+          />
+        )}
+        <span className="relative">
+          <span
+            aria-hidden
+            className={cn(
+              "absolute inset-0 rounded-full blur-xl",
+              place === 1 ? "bg-gold-strong/30" : "bg-white/10",
+            )}
+          />
+          <FramedAvatar
+            border={entry.border}
+            src={entry.image}
+            seed={entry.username}
+            className={cn(
+              "relative z-10 shrink-0 rounded-full ring-2",
+              place === 1
+                ? "size-24 ring-[#FFE58A]/80"
+                : place === 2
+                  ? "size-[78px] ring-white/40"
+                  : "size-[72px] ring-[#E8A273]/50",
+            )}
+          />
+        </span>
+        <span className="mt-1.5 max-w-full truncate text-[12px] font-black leading-tight text-white">
+          {entry.username?.trim() || "user"}
+        </span>
+        {entry.level !== undefined && (
+          <LevelBadge level={entry.level} className="mt-0.5 origin-top scale-[0.76]" />
+        )}
+        {tag && (
+          <ClanTag
+            icon={entry.clanTagIcon || DEFAULT_CLAN_ICON}
+            tag={tag}
+            level={entry.clanLevel}
+            className="mt-1 scale-90"
+          />
+        )}
+        <span className="mt-1.5 rounded-md border border-white/18 bg-black/30 px-2 py-0.5 font-display text-[12px] font-black leading-none text-white/90 backdrop-blur-sm">
+          {entry.value}
+          <span className="ml-1 text-[7px] uppercase opacity-55">{entry.unit}</span>
+        </span>
+      </span>
+
+      {/* Blok podium 3D: muka depan, tutup atas, dan sisi kanan. */}
+      <div
+        className="relative w-[96%]"
+        style={{ height: heights[place], filter: "drop-shadow(0 18px 20px rgba(0,0,0,.5))" }}
+      >
+        <div
+          className="absolute inset-x-0 bottom-0 top-[11px] overflow-hidden rounded-t-[16px] border border-white/25"
+          style={{ background: skin.front }}
+        >
+          <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.22),transparent_34%,rgba(0,0,0,.24))]" />
+          <span
+            className={cn(
+              "absolute inset-0 flex items-center justify-center font-display text-[86px] font-black leading-none opacity-[0.13]",
+              skin.text,
+            )}
+          >
+            {place}
+          </span>
+          <span className="absolute inset-x-3 top-2.5 h-px bg-white/35" />
+        </div>
+        <span
+          aria-hidden
+          className="absolute inset-x-[2px] top-0 h-[15px] rounded-t-[12px]"
+          style={{
+            background: skin.top,
+            transform: "skewX(-42deg)",
+            transformOrigin: "bottom left",
+          }}
+        />
+        <span
+          aria-hidden
+          className="absolute bottom-[2px] right-0 top-[10px] w-[9px] rounded-r-[3px]"
+          style={{ background: skin.side }}
+        />
+        <span
+          className={cn(
+            "absolute inset-x-0 bottom-2 text-center font-display text-[11px] font-black uppercase tracking-[0.22em] opacity-55",
+            skin.text,
+          )}
+        >
+          {place === 1 ? "Juara" : place === 2 ? "Runner up" : "Ketiga"}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function GrandPodium({
+  entries,
+  onOpen,
+}: {
+  entries: {
+    rank: number;
+    image?: string;
+    border?: string;
+    username?: string;
+    level?: number;
+    clanLevel?: number;
+    clanTag?: string;
+    clanTagIcon?: string;
+    value: string;
+    unit: string;
+    userId?: string;
+  }[];
+  onOpen?: (id?: string) => void;
+}) {
+  const byRank = new Map(entries.map((e) => [e.rank, e]));
+  return (
+    <div className="relative flex h-full items-end justify-between gap-1 px-0.5 pb-1 [perspective:900px]">
+      <GrandPlace entry={byRank.get(2)} place={2} onOpen={onOpen} />
+      <GrandPlace entry={byRank.get(1)} place={1} onOpen={onOpen} />
+      <GrandPlace entry={byRank.get(3)} place={3} onOpen={onOpen} />
+    </div>
+  );
+}
+
 function PeriodTabs({
   period,
   onChange,
@@ -679,9 +861,9 @@ function LeaderOverlay({
               {mode === "xp" ? "XP" : "Give"}
             </span>
           </div>
-          <div className="relative mt-1 flex min-h-[286px] flex-col px-1 pb-1">
+          <div className="relative mt-1 flex min-h-[402px] flex-col px-1 pb-1">
             {podiumEntries.length > 0 ? (
-              <Podium entries={podiumEntries} onOpen={openProfile} />
+              <GrandPodium entries={podiumEntries} onOpen={openProfile} />
             ) : (
               <p className="flex flex-1 items-center justify-center py-8 text-center text-xs text-white/50">
                 Belum ada data untuk periode ini.

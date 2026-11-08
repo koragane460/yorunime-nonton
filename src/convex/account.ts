@@ -145,6 +145,10 @@ export const getPublicProfile = query({
       username: u.username,
       image: u.image,
       bannerUrl: u.bannerUrl,
+      bio: u.bio ?? "",
+      birthDate: u.birthDate,
+      statusText: u.statusText ?? "",
+      statusBg: u.statusBg ?? "aurora",
       profileDecor: u.profileDecor ?? null,
       introStyle: u.introStyle ?? null,
       socials: u.socials ?? {},
@@ -254,10 +258,13 @@ export const updateProfile = mutation({
     username: v.optional(v.string()),
     image: v.optional(v.string()),
     bannerUrl: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    birthDate: v.optional(v.string()),
   },
-  handler: async (ctx, { username, image, bannerUrl }) => {
+  handler: async (ctx, { username, image, bannerUrl, bio, birthDate }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
+    const me = await ctx.db.get(userId);
     const patch: Record<string, unknown> = {};
     if (username !== undefined) {
       const clean = username.trim().replace(/[^a-zA-Z0-9_]/g, "");
@@ -271,12 +278,33 @@ export const updateProfile = mutation({
       patch.username = clean;
     }
     if (image !== undefined) patch.image = image;
+    if (bio !== undefined) {
+      const cleanBio = bio.trim();
+      if (cleanBio.length > 160) throw new Error("Bio maksimal 160 karakter");
+      patch.bio = cleanBio || undefined;
+    }
+    if (birthDate !== undefined) {
+      const cleanDate = birthDate.trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate))
+        throw new Error("Format tanggal lahir tidak valid");
+      const [y, m, d] = cleanDate.split("-").map(Number);
+      const stamp = new Date(Date.UTC(y, m - 1, d));
+      if (
+        stamp.getUTCFullYear() !== y ||
+        stamp.getUTCMonth() !== m - 1 ||
+        stamp.getUTCDate() !== d ||
+        stamp.getTime() > Date.now()
+      )
+        throw new Error("Tanggal lahir tidak valid");
+      if (me?.birthDate && me.birthDate !== cleanDate)
+        throw new Error("Tanggal lahir sudah ditetapkan dan tidak bisa diubah");
+      patch.birthDate = cleanDate;
+    }
     if (bannerUrl !== undefined) {
       // Gambar fullscreen akun (banner) hanya untuk Premium — kecuali
       // sedang MELEPAS (string kosong), itu selalu boleh.
       if (bannerUrl.trim() !== "") {
-        const u = await ctx.db.get(userId);
-        if ((u?.premiumUntil ?? 0) <= Date.now())
+        if ((me?.premiumUntil ?? 0) <= Date.now())
           throw new Error("Fitur ini khusus Premium");
       }
       patch.bannerUrl = bannerUrl;
@@ -327,6 +355,10 @@ export const updateSettings = mutation({
     defaultSpeed: v.optional(v.number()),
     theme: v.optional(v.string()),
     customColor: v.optional(v.string()),
+    /** Tema UI hasil onboarding: "glass" | "default". */
+    uiTheme: v.optional(v.string()),
+    /** Id palet warna hasil onboarding ("0"-"9"). */
+    uiAccent: v.optional(v.string()),
     /** Animasi intro profil: "awan" | "gagak" | "none". */
     introStyle: v.optional(v.string()),
   },
@@ -350,6 +382,25 @@ export const updateSettings = mutation({
  * REWARDS PENGATURAN — klaim sekali per akun, dapat 5000 Sacret.
  * Dipakai tombol "Klaim" di layar Akun → blok Rewards.
  */
+export const updateStatusBubble = mutation({
+  args: {
+    text: v.string(),
+    bg: v.optional(v.string()),
+  },
+  handler: async (ctx, { text, bg }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk");
+    const clean = text.trim();
+    if (clean.length > 140)
+      throw new Error("Pesan bubble maksimal 140 karakter");
+    await ctx.db.patch(userId, {
+      statusText: clean || undefined,
+      statusBg: bg ?? "aurora",
+    });
+    return await ctx.db.get(userId);
+  },
+});
+
 export const claimSettingReward = mutation({
   args: {},
   handler: async (ctx) => {

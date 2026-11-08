@@ -242,20 +242,30 @@ function parseVtt(text: string): Cue[] {
     const lines = block.split("\n").filter((l) => l.trim() !== "");
     const timing = lines.find((l) => l.includes("-->"));
     if (!timing) continue;
-    const body = lines
+    const rawLines = lines
       .slice(lines.indexOf(timing) + 1)
-      .join(" ")
-      .replace(/<[^>]+>/g, "")
-      .trim();
+      .map((line) => line.replace(/<[^>]+>/g, "").trim())
+      .filter(Boolean);
+    const body = rawLines.join(" ").trim();
     if (!body) continue;
     const [a, b] = timing.split("-->");
     if (!a || !b) continue;
     const s = tsToSec(a);
     const e = tsToSec(b);
     if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) continue;
-    // Teks dibungkus manual: maksimal 6 kata per baris (maks ~28 karakter)
-    // supaya subtitle tersusun lurus rapi, sisanya turun ke baris berikutnya.
-    out.push({ s, e: Math.max(e, s + CUE_MIN) + CUE_TAIL, t: wrapCue(body) });
+    // Dua baris sumber yang pendek biasanya dua pembicara. Tandai dengan
+    // pemisah khusus supaya baris pertama bisa dinaikkan ke atas player,
+    // tanpa memecah dialog panjang yang cuma terbungkus wrapCue().
+    const twoSpeakers =
+      rawLines.length === 2 &&
+      rawLines.every((line) => line.replace(/^-\s*/, "").length <= 58);
+    out.push({
+      s,
+      e: Math.max(e, s + CUE_MIN) + CUE_TAIL,
+      t: twoSpeakers
+        ? rawLines.map((line) => line.replace(/^-\s*/, "")).join("\u0001")
+        : wrapCue(body),
+    });
   }
   return out;
 }
@@ -1041,9 +1051,23 @@ function WatchContent() {
     const hits = cues
       .filter((c) => c.s <= t && t <= c.e)
       .sort((a, b) => b.s - a.s);
-    const text = hits[0]?.t ?? "";
+    let text = hits[0]?.t ?? "";
+    let extra = hits.slice(1).map((c) => c.t).join("\n");
+
+    // Dua pembicara dalam satu cue: baris pertama naik ke atas, baris kedua
+    // tetap di bawah. Keduanya berasal dari cue yang sama, jadi hilangnya
+    // selalu bersamaan.
+    const speakerLines = text
+      .split("\u0001")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (speakerLines.length === 2) {
+      extra = [speakerLines[0], extra].filter(Boolean).join("\n");
+      text = speakerLines[1];
+    }
+
     setActiveCue(text);
-    setTopCue(hits.slice(1).map((c) => c.t).join("\n"));
+    setTopCue(extra);
     // CC diteruskan ke mini player supaya teks subtitle ikut kelihatan.
     setMiniCue(text);
   }, [currentTime, cues]);
@@ -3152,50 +3176,43 @@ function WatchContent() {
         </div>
       )}
 
-      {/* Like | dislike menyatu jadi SATU pill (garis pembatas tegak di
-          tengah, dua sisanya sama-sama bisa dipencet) + Favorite tanpa
-          angka + Laporkan. Semua tombol memakai KETEBALAN border yang sama
-          (2px, tidak berlebihan) dan state tekan yang CLEAN — tanpa ring /
-          glow mencolok di pinggir. */}
-      {/* Aksi panjang ke samping dengan sudut rounded; border tipis dan
-          teks "strong" (bukan bold tebal). Kalau ruang sempit, baris kedua
-          (Donate/Laporkan/Bagikan) otomatis turun ke bawah. */}
-      {/* Aksi ringkas: 4 per baris, sisanya turun ke bawah. */}
-      <div className="grid w-full grid-cols-4 gap-1.5 px-3 pt-2">
-        <button
-          onClick={() => {
-            void toggleLike({ animeId, value: 1 }).catch(() => {});
-          }}
-          aria-label="Like"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[9px] font-bold transition active:scale-95",
-            likeStats?.liked
-              ? "border-white/25 bg-white/15 text-white"
-              : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
-          )}
-        >
-          <ThumbsUp className={cn("size-4", likeStats?.liked && "fill-current")} aria-hidden />
-          <span className="tabular-nums">
-            Like {(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}
-          </span>
-        </button>
-        <button
-          onClick={() => {
-            void toggleLike({ animeId, value: -1 }).catch(() => {});
-          }}
-          aria-label="Tidak suka"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[9px] font-bold transition active:scale-95",
-            likeStats?.disliked
-              ? "border-white/25 bg-white/15 text-white"
-              : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
-          )}
-        >
-          <ThumbsDown className={cn("size-4", likeStats?.disliked && "fill-current")} aria-hidden />
-          <span className="tabular-nums">
-            Dislike {(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}
-          </span>
-        </button>
+      {/* Satu baris: suka/tidak suka menyatu, lalu Favorit · Donate · Lapor ·
+          Bagikan dalam tombol kecil yang tetap muat di layar 360px. */}
+      <div className="flex w-full items-stretch gap-1.5 px-3 pt-2">
+        <div className="flex min-w-0 flex-1 overflow-hidden rounded-xl border border-white/12 bg-white/[0.04]">
+          <button
+            onClick={() => {
+              void toggleLike({ animeId, value: 1 }).catch(() => {});
+            }}
+            aria-label="Like"
+            className={cn(
+              "flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-2 text-[9px] font-bold transition active:scale-95",
+              likeStats?.liked
+                ? "bg-white/15 text-white"
+                : "text-white/55 hover:bg-white/[0.06] hover:text-white/85",
+            )}
+          >
+            <ThumbsUp className={cn("size-4 shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
+            <span className="tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
+          </button>
+          <span aria-hidden className="my-1.5 w-px shrink-0 bg-white/12" />
+          <button
+            onClick={() => {
+              void toggleLike({ animeId, value: -1 }).catch(() => {});
+            }}
+            aria-label="Tidak suka"
+            className={cn(
+              "flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-2 text-[9px] font-bold transition active:scale-95",
+              likeStats?.disliked
+                ? "bg-white/15 text-white"
+                : "text-white/55 hover:bg-white/[0.06] hover:text-white/85",
+            )}
+          >
+            <ThumbsDown className={cn("size-4 shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
+            <span className="tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
+          </button>
+        </div>
+
         <button
           onClick={() => {
             void toggleFav({
@@ -3206,31 +3223,34 @@ function WatchContent() {
               status: (detailReady ? detailData.status : D.status) ?? undefined,
             }).catch(() => {});
           }}
+          aria-label="Favorit"
           className={cn(
-            "flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[9px] font-bold transition active:scale-95",
+            "flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[7.5px] font-bold transition active:scale-95",
             isFav
               ? "border-white/25 bg-white/15 text-white"
               : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
           )}
         >
           <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
-          Favorite
+          Favorit
         </button>
         <a
           href="https://sociabuzz.com/yorunime/donate"
           target="_blank"
           rel="noreferrer"
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[9px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          aria-label="Donate"
+          className="flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7.5px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
         >
           <Coffee className="size-4 shrink-0" aria-hidden />
           Donate
         </a>
         <button
           onClick={() => setReportOpen(true)}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[9px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          aria-label="Laporkan"
+          className="flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7.5px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
         >
           <Flag className="size-4 shrink-0" aria-hidden />
-          Laporkan
+          Lapor
         </button>
         <button
           onClick={() => {
@@ -3248,7 +3268,8 @@ function WatchContent() {
               .then(() => toast.success("Tautan disalin — siap dibagikan"))
               .catch(() => toast.error("Gagal membagikan tautan"));
           }}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[9px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          aria-label="Bagikan"
+          className="flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7.5px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
         >
           <Share2 className="size-4" />
           Bagikan
@@ -3288,8 +3309,8 @@ function WatchContent() {
       {/* Info — poster + judul + tag, lalu 4 kotak alat, lalu sinopsis. */}
       <div className="w-full p-3">
         <div className="flex items-start gap-3">
-          {/* Poster LEBIH BESAR (w-[108px]) dengan badge rating di sudut kanan
-              atas, jadi tidak ada ruang hitam kosong di sekelilingnya. */}
+          {/* Status menempel di kiri atas poster; rating di kanan bawah.
+              Keduanya jadi bagian dari artwork, bukan chip terpisah. */}
           <div className="relative w-[108px] shrink-0 self-start">
             <div className="aspect-[2/3] w-full overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
               {D.image && (
@@ -3302,19 +3323,35 @@ function WatchContent() {
                   className="size-full object-cover"
                 />
               )}
-            </div>
-          </div>
-
-          <div className="min-w-0 flex-1 pl-1">
-            {/* Rating · tipe · musim · status tayang — semua kotak rounded
-                berjejer DI KANAN poster (tidak menimpa gambarnya). */}
-            <div className="flex flex-wrap items-center gap-1.5">
+              {(D.status === "Ongoing" ||
+                D.status === "Completed" ||
+                D.status === "Upcoming") && (
+                <span
+                  className={cn(
+                    "absolute left-1.5 top-1.5 rounded-md border px-1.5 py-0.5 text-[7.5px] font-black uppercase tracking-[0.08em] shadow-[0_4px_10px_rgba(0,0,0,.55)] backdrop-blur-md",
+                    D.status === "Ongoing"
+                      ? "border-sky-300/50 bg-sky-950/70 text-sky-100"
+                      : D.status === "Completed"
+                        ? "border-emerald-300/45 bg-emerald-950/65 text-emerald-100"
+                        : "border-amber-300/45 bg-amber-950/65 text-amber-100",
+                  )}
+                >
+                  {D.status}
+                </span>
+              )}
               {typeof D.score === "number" && D.score > 0 && (
-                <span className="flex items-center gap-1 rounded-md border border-[#FFD23F]/55 bg-[#FFD23F]/12 px-1.5 py-0.5 text-[9px] font-black text-[#FFD23F]">
+                <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-md border border-[#FFD23F]/55 bg-[#171006]/80 px-1.5 py-0.5 text-[9px] font-black text-[#FFD23F] shadow-[0_4px_10px_rgba(0,0,0,.7)] backdrop-blur-md">
                   <Star className="size-2.5 fill-[#FFD23F]" aria-hidden />
                   {Number(D.score).toFixed(1)}
                 </span>
               )}
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 pl-1">
+            {/* Tipe & musim tetap di kanan poster. Rating/status sudah pindah
+                ke poster agar judul lebih lega. */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {D.type && (
                 <span className="rounded-md border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/70">
                   {String(D.type)}
@@ -3323,11 +3360,6 @@ function WatchContent() {
               {D.seasonLabel && (
                 <span className="rounded-md border border-[#1CA7EC]/40 bg-[#1CA7EC]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#7fd3f7]">
                   {String(D.seasonLabel)}
-                </span>
-              )}
-              {D.status === "Ongoing" && (
-                <span className="rounded-md border border-[#1CA7EC]/45 bg-[#1CA7EC]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#7fd3f7]">
-                  Ongoing
                 </span>
               )}
               {updateDay && (

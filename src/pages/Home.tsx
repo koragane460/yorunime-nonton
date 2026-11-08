@@ -914,13 +914,6 @@ function HomeContent() {
     items: CatalogCard[];
   } | null>(null);
   const [updateFirst, setUpdateFirst] = useState(true);
-  // Warna acak untuk zona di atas "Season Ini" — dipilih sekali per mount.
-  const seasonAura = useMemo(() => {
-    const h1 = Math.floor(Math.random() * 360);
-    const h2 = (h1 + 70 + Math.floor(Math.random() * 150)) % 360;
-    return `linear-gradient(180deg, hsla(${h1},72%,55%,.25) 0%, hsla(${h2},68%,46%,.16) 34%, rgba(7,11,19,.82) 72%, var(--background) 100%)`;
-  }, []);
-
   const hero = useAction(api.anime.animeOngoing);
   // Donghua ikut rotasi hero banner supaya bukan hanya anime yang tampil.
   const heroDonghua = useAction(api.sanka.donghuaLatestCards);
@@ -1177,6 +1170,9 @@ function HomeContent() {
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   return (
     <div className="pb-8">
+      {/* Warna Home adalah SATU warna solid dari kartu akun sampai Season
+          Ini. Tidak ada gradasi atau zona kecil yang terputus. */}
+      <div className="relative -mx-4 rounded-b-[30px] bg-[var(--home-tint,#17131f)] px-4 pb-7">
       <AccountHeader
         onSearch={() => {
           setSearchGenre(null);
@@ -1230,17 +1226,10 @@ function HomeContent() {
       {/* LEADERBOARD langsung di bawah Quick Genre/Katalog. */}
       <LeaderCards />
 
-      {/* ZONA WARNA di antara Leaderboard dan "Season Ini" — gradasi acak
-          yang melebur ke warna latar, bukan blok warna terpisah. */}
-      <div className="relative -mx-4 mt-5">
-        <div
-          aria-hidden
-          className="h-44"
-          style={{ background: seasonAura }}
-        />
-        <div className="relative -mt-10 px-4">
-          <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
-        </div>
+      {/* Season Ini masih di dalam permukaan warna Home yang sama. */}
+      <div className="mt-5">
+        <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      </div>
       </div>
 
       {/* SPOTLIGHT menjadi penutup editorial setelah Season Ini. */}
@@ -3046,14 +3035,14 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
           </h1>
           <span aria-hidden className="ml-auto size-9" />
         </div>
-        {/* Tab tanpa background — jarak konsisten, teks lebih besar. */}
-        <div className="flex gap-9 px-4">
+        {/* Tiga tab berjarak sama: Chat kiri, Clan tengah, Teman kanan. */}
+        <div className="grid grid-cols-3 px-4">
           {(["chat", "clan", "teman"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "relative -mb-px border-b-2 pb-2 text-[14px] font-black transition",
+                "relative -mb-px border-b-2 pb-2 text-center text-[14px] font-black transition",
                 tab === t
                   ? "border-white text-white"
                   : "border-transparent text-white/40 hover:text-white/70",

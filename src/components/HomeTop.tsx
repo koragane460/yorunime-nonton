@@ -97,7 +97,7 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="relative flex h-[72px] min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
+        className="relative flex h-[78px] min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
         <span
@@ -135,19 +135,23 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
         <LevelRing level={level} xp={xp} />
       </button>
 
-      <button
-        type="button"
-        onClick={onSearch}
-        aria-label="Cari anime"
-        className="flex size-[60px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.095] text-white/88 shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition hover:bg-white/[0.15] hover:text-white active:scale-95"
-      >
-        <Search className="size-[26px]" />
-      </button>
-      <NotifButton
-        sizeClassName="size-[60px]"
-        className="rounded-full border border-white/20 bg-white/[0.095] shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl hover:bg-white/[0.15] hover:text-white"
-        iconClassName="size-[26px]"
-      />
+      {/* Rel vertikal: notifikasi di atas, pencarian di bawah. Kartu akun
+          jadi selebar mungkin dan username tidak terpotong. */}
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <NotifButton
+          sizeClassName="size-9"
+          className="rounded-xl border border-white/18 bg-white/[0.085] shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl hover:bg-white/[0.14] hover:text-white"
+          iconClassName="size-[17px]"
+        />
+        <button
+          type="button"
+          onClick={onSearch}
+          aria-label="Cari anime"
+          className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/18 bg-white/[0.085] text-white/88 shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl transition hover:bg-white/[0.14] hover:text-white active:scale-95"
+        >
+          <Search className="size-[17px]" />
+        </button>
+      </div>
     </header>
   );
 }

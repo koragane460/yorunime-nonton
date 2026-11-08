@@ -46,7 +46,13 @@ import {
   StoryEditor,
   StoryRing,
   StoryViewer,
+  type Picked,
 } from "@/components/StoriesUI";
+import {
+  ProfileStatusBubble,
+  StatusBubbleEditor,
+  StatusTray,
+} from "@/components/ProfileStatus";
 import {
   Ban,
   Bell,
@@ -83,6 +89,8 @@ import {
   Pencil,
   Gem,
   ShoppingBag,
+  Share2,
+  Cake,
 } from "lucide-react";
 import { TierIcon } from "@/components/TierIcon";
 import { cn } from "@/lib/utils";
@@ -144,11 +152,10 @@ function AkunContent() {
   if (params.get("tab") === "settings") {
     return (
       <>
-        <SettingsMinimal
+        <SettingsScreen
           onClose={() => navigate("/akun")}
           onSignOut={signOut}
           onOpenCs={() => setCsOpen(true)}
-          onOpenProfile={() => navigate("/akun")}
         />
         {csOpen && <CsChatScreen onClose={() => setCsOpen(false)} />}
       </>
@@ -394,6 +401,10 @@ function AkunProfileScreen({
   const navigate = useNavigate();
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const [editOpen, setEditOpen] = useState(false);
+  const [bubbleOpen, setBubbleOpen] = useState(false);
+  const [storyComposer, setStoryComposer] = useState(false);
+  const [storyItems, setStoryItems] = useState<Picked[] | null>(null);
+  const [storyView, setStoryView] = useState<string | null>(null);
   if (!user) return null;
 
   const level = user.level ?? 1;
@@ -404,6 +415,31 @@ function AkunProfileScreen({
     Math.ceil(((user.premiumUntil ?? 0) - Date.now()) / 86_400_000),
   );
   const clanTag = user.clanTag;
+
+  const shareAccount = async () => {
+    const url = `${window.location.origin}/akun?user=${user._id}`;
+    const nav = navigator as Navigator & {
+      share?: (d: ShareData) => Promise<void>;
+    };
+    if (nav.share) {
+      try {
+        await nav.share({
+          title: `${user.username ?? "user"} di YoruNime`,
+          text: "Lihat profil YoruNime-ku",
+          url,
+        });
+        return;
+      } catch {
+        return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Tautan akun disalin");
+    } catch {
+      toast.error("Gagal membagikan akun");
+    }
+  };
 
   const ACTIONS: {
     label: string;
@@ -447,7 +483,12 @@ function AkunProfileScreen({
         </button>
       </header>
 
-      <section className="relative mt-3 overflow-hidden rounded-[30px] border border-white/12 bg-[linear-gradient(155deg,#202737_0%,#171c27_46%,#11151d_100%)] p-4 shadow-[0_28px_60px_-42px_rgba(0,0,0,.95)]">
+      <StatusTray
+        onView={(uid) => setStoryView(uid)}
+        onCompose={() => setStoryComposer(true)}
+      />
+
+      <section className="relative mt-2 overflow-hidden rounded-[30px] border border-white/12 bg-[linear-gradient(155deg,#202737_0%,#171c27_46%,#11151d_100%)] p-4 shadow-[0_28px_60px_-42px_rgba(0,0,0,.95)]">
         <span
           aria-hidden
           className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-[#FFD23F]/10 blur-3xl"
@@ -462,11 +503,12 @@ function AkunProfileScreen({
             {displayId(user.seqId, user._id)}
           </span>
           <button
-            onClick={() => setEditOpen(true)}
-            aria-label="Ubah foto dan username"
+            onClick={() => void shareAccount()}
+            aria-label="Bagikan akun"
+            title="Bagikan akun"
             className="flex size-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-white/75 transition hover:text-white active:scale-95"
           >
-            <Pencil className="size-4" />
+            <Share2 className="size-4" />
           </button>
         </div>
 
@@ -480,12 +522,19 @@ function AkunProfileScreen({
               seed={user.username}
               className="relative size-[96px] rounded-full ring-2 ring-[#202737]"
             />
+            <ProfileStatusBubble
+              text={user.statusText}
+              bg={user.statusBg}
+              seed={user._id}
+              onClick={() => setBubbleOpen(true)}
+              className="absolute -right-12 -top-4"
+            />
             <button
               onClick={() => setEditOpen(true)}
               aria-label="Ganti foto"
               className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border-2 border-[#1b2130] bg-gold text-black transition active:scale-90"
             >
-              <Camera className="size-3.5" strokeWidth={2.4} />
+              <Pencil className="size-3.5" strokeWidth={2.4} />
             </button>
           </span>
 
@@ -516,15 +565,32 @@ function AkunProfileScreen({
           </div>
 
           <div className="mt-3 w-full text-left">
+            {/* Kotak bio di ATAS kartu tier/tag. Kotak level lama dihapus. */}
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="flex min-h-[58px] w-full flex-col justify-center rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-2.5 text-left transition hover:border-white/22 hover:bg-white/[0.075] active:scale-[0.995]"
+            >
+              <span className="text-[8.5px] font-black uppercase tracking-[0.18em] text-white/32">
+                Bio
+              </span>
+              <span
+                className={cn(
+                  "mt-0.5 line-clamp-2 text-[10.5px] leading-snug",
+                  user.bio?.trim() ? "font-medium text-white/72" : "text-white/30",
+                )}
+              >
+                {user.bio?.trim() || "Tulis bio mu..."}
+              </span>
+            </button>
             <AkunTierCard level={level} />
-            <AkunLevelCard level={level} xp={xp} />
           </div>
 
           <button
             onClick={() => setEditOpen(true)}
             className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.055] py-2 text-[11px] font-black text-white/75 transition hover:bg-white/[0.09] active:scale-[0.99]"
           >
-            <Camera className="size-3.5 text-gold" />
+            <Pencil className="size-3.5 text-gold" />
             Ubah foto &amp; username
           </button>
         </div>
@@ -591,6 +657,36 @@ function AkunProfileScreen({
       </div>
 
       {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
+      {bubbleOpen && (
+        <StatusBubbleEditor
+          initialText={user.statusText}
+          initialBg={user.statusBg}
+          onClose={() => setBubbleOpen(false)}
+        />
+      )}
+      {storyComposer && (
+        <StoryComposer
+          onClose={() => setStoryComposer(false)}
+          onPicked={(items) => {
+            setStoryComposer(false);
+            setStoryItems(items);
+          }}
+        />
+      )}
+      {storyItems && (
+        <StoryEditor
+          items={storyItems}
+          onClose={() => setStoryItems(null)}
+          onPosted={() => setStoryItems(null)}
+        />
+      )}
+      {storyView && (
+        <StoryViewer
+          userId={storyView === String(user._id) ? user._id : undefined}
+          initialUserId={storyView}
+          onClose={() => setStoryView(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1166,6 +1262,26 @@ function SettingsScreen({
       {/* ===== KARTU IDENTITAS BARU ===== */}
       <ProfileOverviewCard user={user} onEdit={() => setEditOpen(true)} />
 
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event("yn-open-theme"))}
+        className="flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,210,63,.035))] p-3 text-left transition hover:border-white/25 active:scale-[0.995]"
+      >
+        <span
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-gold"
+          style={{ background: "color-mix(in srgb, var(--ui-a, #FFD23F) 16%, transparent)" }}
+        >
+          <Palette className="size-[18px]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12.5px] font-black">Tema &amp; warna</span>
+          <span className="mt-0.5 block text-[10px] text-white/40">
+            Ganti Glassmorphism/Default dan palet seluruh aplikasi
+          </span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-white/30" />
+      </button>
+
       {/* ===== KOTAK KATEGORI — permintaan: pengaturan jadi kumpulan kotak
           per kategori, tiap kotak berisi deretan tombol toggle on/off. ===== */}
       <SettingsBox
@@ -1548,6 +1664,10 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const updateProfile = useMutation(api.account.updateProfile);
   const [name, setName] = useState(user?.username ?? "");
+  const [bio, setBio] = useState(user?.bio ?? "");
+  const [birthDay, setBirthDay] = useState(user?.birthDate?.split("-")[2] ?? "");
+  const [birthMonth, setBirthMonth] = useState(user?.birthDate?.split("-")[1] ?? "");
+  const [birthYear, setBirthYear] = useState(user?.birthDate?.split("-")[0] ?? "");
   const [busyPhoto, setBusyPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -1556,7 +1676,21 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
   if (!user) return null;
 
   const clean = name.trim();
-  const changed = clean !== (user.username ?? "");
+  const birthLocked = !!user.birthDate;
+  const birthComplete = !!(birthDay && birthMonth && birthYear);
+  const birthTouched = !!(birthDay || birthMonth || birthYear);
+  const birthChanged =
+    !birthLocked &&
+    birthComplete &&
+    `${birthYear}-${birthMonth}-${birthDay}` !== (user.birthDate ?? "");
+  const bioChanged = bio.trim() !== (user.bio ?? "");
+  const changed =
+    clean !== (user.username ?? "") || bioChanged || birthChanged;
+  const yearNow = new Date().getFullYear();
+  const daysInMonth = (() => {
+    if (!birthMonth || !birthYear) return 31;
+    return new Date(Number(birthYear), Number(birthMonth), 0).getDate();
+  })();
 
   const pickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -1583,6 +1717,10 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
       setErr("Username minimal 3 karakter");
       return;
     }
+    if (birthTouched && !birthComplete) {
+      setErr("Lengkapi tanggal, bulan, dan tahun lahir");
+      return;
+    }
     if (!changed) {
       onClose();
       return;
@@ -1590,11 +1728,17 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
     setSaving(true);
     setErr("");
     try {
-      await updateProfile({ username: clean });
-      toast.success("Username diperbarui ✨");
+      await updateProfile({
+        username: clean !== (user.username ?? "") ? clean : undefined,
+        bio: bioChanged ? bio.trim() : undefined,
+        birthDate: birthChanged
+          ? `${birthYear}-${birthMonth}-${birthDay}`
+          : undefined,
+      });
+      toast.success("Profil diperbarui ✨");
       onClose();
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan username");
+      setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan profil");
     } finally {
       setSaving(false);
     }
@@ -1606,7 +1750,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-black text-white">Ubah Profil</p>
           <p className="text-[10px] text-white/40">
-            Foto dan username akunmu
+            Foto, username, bio &amp; tanggal lahir
           </p>
         </div>
         <button
@@ -1637,7 +1781,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
               className="size-[104px] rounded-full ring-2 ring-gold/35"
             />
             <span className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full border-2 border-[#121722] bg-gold text-black shadow-lg">
-              <Camera className="size-3.5" strokeWidth={2.4} />
+              <Pencil className="size-3.5" strokeWidth={2.4} />
             </span>
           </button>
           <button
@@ -1679,6 +1823,109 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         <p className="mt-1.5 text-[10px] leading-snug text-white/35">
           3–20 karakter, hanya huruf, angka, dan garis bawah (_).
         </p>
+
+        <label className="mt-4 block text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
+          Bio
+        </label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value.slice(0, 160))}
+          rows={3}
+          placeholder="Edit bio mu..."
+          className="mt-1.5 w-full resize-none rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[12px] leading-relaxed text-white outline-none placeholder:text-white/25 focus:border-gold/50"
+        />
+        <div className="mt-1 flex justify-end text-[9px] font-semibold text-white/25">
+          {bio.length}/160
+        </div>
+
+        <label className="mt-3 flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
+          <Cake className="size-3.5 text-gold/80" />
+          Tanggal lahir
+        </label>
+        {birthLocked ? (
+          <div className="mt-1.5 flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+            <span className="text-[12px] font-bold text-white/75">
+              {new Date(`${user.birthDate}T00:00:00`).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[8px] font-bold text-white/35">
+              Terkunci
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="mt-1.5 grid grid-cols-[1fr_1.4fr_1.15fr] gap-1.5">
+              <label className="relative">
+                <span className="sr-only">Hari</span>
+                <select
+                  value={birthDay}
+                  onChange={(e) => setBirthDay(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-white/15 bg-black/30 px-2 text-center text-[11px] font-bold text-white outline-none focus:border-gold/50"
+                >
+                  <option value="">Tgl</option>
+                  {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={String(d).padStart(2, "0")}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="relative">
+                <span className="sr-only">Bulan</span>
+                <select
+                  value={birthMonth}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setBirthMonth(next);
+                    const max = next
+                      ? new Date(Number(birthYear || yearNow), Number(next), 0).getDate()
+                      : 31;
+                    if (Number(birthDay) > max) setBirthDay("");
+                  }}
+                  className="h-10 w-full appearance-none rounded-xl border border-white/15 bg-black/30 px-2 text-center text-[11px] font-bold text-white outline-none focus:border-gold/50"
+                >
+                  <option value="">Bulan</option>
+                  {[
+                    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+                  ].map((m, i) => (
+                    <option key={m} value={String(i + 1).padStart(2, "0")}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="relative">
+                <span className="sr-only">Tahun</span>
+                <select
+                  value={birthYear}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setBirthYear(next);
+                    const max = birthMonth
+                      ? new Date(Number(next), Number(birthMonth), 0).getDate()
+                      : 31;
+                    if (Number(birthDay) > max) setBirthDay("");
+                  }}
+                  className="h-10 w-full appearance-none rounded-xl border border-white/15 bg-black/30 px-2 text-center text-[11px] font-bold text-white outline-none focus:border-gold/50"
+                >
+                  <option value="">Tahun</option>
+                  {Array.from({ length: yearNow - 1899 }, (_, i) => yearNow - i).map((y) => (
+                    <option key={y} value={String(y)}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p className="mt-1.5 flex items-center gap-1 text-[9px] leading-snug text-amber-200/50">
+              Tanggal lahir hanya bisa disimpan satu kali dan tidak bisa diubah.
+            </p>
+          </>
+        )}
 
         {err && (
           <p className="mt-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-[10.5px] font-semibold text-red-300">
@@ -2487,11 +2734,18 @@ function FullScreen({
           >
             <StripBackIcon />
           </button>
-          <h1 className="min-w-0 truncate text-[17px] font-bold tracking-tight">
+          <h1 className="min-w-0 flex-1 truncate text-[16px] font-black text-white">
             {title}
           </h1>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/55"
+          >
+            <X className="size-4" />
+          </button>
         </div>
-        <div className="space-y-3">{children}</div>
+        {children}
       </div>
     </div>
   );

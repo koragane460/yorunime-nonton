@@ -23,6 +23,8 @@ import {
   Heart,
   LogIn,
   PawPrint,
+  Pencil,
+  Cake,
   RefreshCw,
   Send,
   Sparkles,
@@ -321,7 +323,7 @@ export function ProfileSheet({
                     aria-label="Ganti photo profile"
                     className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-sky-400 text-sky-950 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.6)] transition active:scale-90"
                   >
-                    <Camera className="size-3.5" aria-hidden />
+                    <Pencil className="size-3.5" aria-hidden />
                   </button>
                 )}
               </div>
@@ -396,6 +398,27 @@ export function ProfileSheet({
                 </span>
               ) : null}
             </div>
+
+            {/* BIO — memakai ruang kosong di bawah ringkasan profil. */}
+            {profile.bio?.trim() ? (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left">
+                <p className="text-[8.5px] font-black uppercase tracking-[0.18em] text-white/30">
+                  Bio
+                </p>
+                <p className="mt-1 whitespace-pre-line text-[11.5px] leading-relaxed text-white/72">
+                  {profile.bio}
+                </p>
+                {profile.birthDate && (
+                  <p className="mt-2 flex items-center gap-1.5 text-[9px] font-semibold text-white/32">
+                    <Cake className="size-3" />
+                    {new Date(`${profile.birthDate}T00:00:00`).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </p>
+                )}
+              </div>
+            ) : null}
 
             {/* Urutan lama (username di tengah + chips) sudah pindah ke
                 baris atas kotak ini. */}

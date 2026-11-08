@@ -51,19 +51,19 @@ const BOXES: {
   Icon: LucideIcon;
   tone: string;
 }[] = [
-  { key: "quest", label: "Quest", hint: "Misi harian", Icon: ListChecks, tone: "from-amber-400/55 via-orange-500/28 to-rose-500/18" },
-  { key: "sticker", label: "Shop Sticker", hint: "Pack chat", Icon: Sticker, tone: "from-violet-500/55 via-purple-500/28 to-sky-500/18" },
-  { key: "nobar", label: "Nobar", hint: "Nonton bareng", Icon: Clapperboard, tone: "from-sky-400/55 via-cyan-500/28 to-indigo-500/18" },
-  { key: "voice", label: "Voice", hint: "Room suara", Icon: Mic, tone: "from-emerald-400/55 via-teal-500/28 to-cyan-500/18" },
-  { key: "feed", label: "Feed", hint: "Konten teman", Icon: Newspaper, tone: "from-rose-400/55 via-pink-500/28 to-amber-500/18" },
-  { key: "baca", label: "Baca", hint: "Manga & manhwa", Icon: BookOpen, tone: "from-orange-400/55 via-amber-500/28 to-emerald-500/18" },
-  { key: "history", label: "History", hint: "Yang ditonton", Icon: History, tone: "from-cyan-400/55 via-sky-500/28 to-violet-500/18" },
-  { key: "download", label: "Download", hint: "Tersimpan", Icon: Download, tone: "from-blue-400/55 via-indigo-500/28 to-fuchsia-500/18" },
-  { key: "clan", label: "Clan", hint: "Grup kamu", Icon: Shield, tone: "from-amber-300/50 via-yellow-500/28 to-emerald-500/18" },
-  { key: "music", label: "Music", hint: "Player & playlist", Icon: Music, tone: "from-fuchsia-500/55 via-purple-500/28 to-rose-500/18" },
-  { key: "pet", label: "YoruPet", hint: "Peliharaanmu", Icon: Bone, tone: "from-lime-400/50 via-emerald-500/28 to-teal-500/18" },
-  { key: "title", label: "Title", hint: "Gelar profile", Icon: Award, tone: "from-indigo-400/55 via-blue-500/28 to-cyan-500/18" },
-  { key: "shop", label: "Shop", hint: "Border & cosmetic", Icon: ShoppingBag, tone: "from-orange-400/55 via-rose-500/28 to-fuchsia-500/18" },
+  { key: "quest", label: "Quest", hint: "Misi harian", Icon: ListChecks, tone: "linear-gradient(140deg, #7C3A1D, #C2872E)" },
+  { key: "sticker", label: "Shop Sticker", hint: "Pack chat", Icon: Sticker, tone: "linear-gradient(140deg, #4C2A85, #7C4DBA)" },
+  { key: "nobar", label: "Nobar", hint: "Nonton bareng", Icon: Clapperboard, tone: "linear-gradient(140deg, #145C78, #2A8FBA)" },
+  { key: "voice", label: "Voice", hint: "Room suara", Icon: Mic, tone: "linear-gradient(140deg, #1D5B4A, #3A8B74)" },
+  { key: "feed", label: "Feed", hint: "Konten teman", Icon: Newspaper, tone: "linear-gradient(140deg, #6B2D43, #A84B66)" },
+  { key: "baca", label: "Baca", hint: "Manga & manhwa", Icon: BookOpen, tone: "linear-gradient(140deg, #6E4623, #A77A3B)" },
+  { key: "history", label: "History", hint: "Yang ditonton", Icon: History, tone: "linear-gradient(140deg, #1F4A63, #3F7593)" },
+  { key: "download", label: "Download", hint: "Tersimpan", Icon: Download, tone: "linear-gradient(140deg, #2B3E7A, #5368B5)" },
+  { key: "clan", label: "Clan", hint: "Grup kamu", Icon: Shield, tone: "linear-gradient(140deg, #6D521F, #A98437)" },
+  { key: "music", label: "Music", hint: "Player & playlist", Icon: Music, tone: "linear-gradient(140deg, #6B2860, #9A4A86)" },
+  { key: "pet", label: "YoruPet", hint: "Peliharaanmu", Icon: Bone, tone: "linear-gradient(140deg, #355A2C, #5C8A45)" },
+  { key: "title", label: "Title", hint: "Gelar profile", Icon: Award, tone: "linear-gradient(140deg, #2D3D78, #5569A8)" },
+  { key: "shop", label: "Shop", hint: "Border & cosmetic", Icon: ShoppingBag, tone: "linear-gradient(140deg, #6B3A24, #A65D3B)" },
 ];
 
 export function PanelHub({
@@ -151,19 +151,21 @@ export function PanelHub({
               <button
                 key={key}
                 onClick={() => onPick(key)}
-                className={cn(
-                  "group relative flex aspect-square min-h-[96px] flex-col items-center justify-center overflow-hidden rounded-[20px] border border-white/15 bg-gradient-to-br p-2 text-center",
-                  tone,
-                  "shadow-[inset_0_1px_0_rgba(255,255,255,.18)] transition hover:border-white/35 active:scale-[0.96]",
-                )}
+                className="group relative flex aspect-square min-h-[96px] flex-col items-center justify-center overflow-hidden rounded-[20px] border border-white/18 p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.16)] transition hover:border-white/40 active:scale-[0.96]"
+                style={{ background: tone }}
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -right-6 -top-7 size-16 rounded-full bg-white/12 blur-2xl"
+                  className="pointer-events-none absolute -right-6 -top-7 size-16 rounded-full bg-white/15 blur-2xl"
                 />
-                <span className="relative flex size-[42px] items-center justify-center rounded-2xl border border-white/15 bg-white/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.22)] transition group-hover:scale-105 group-hover:bg-white/20">
-                  <Icon className="size-6" strokeWidth={1.85} />
-                </span>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.10),transparent_46%,rgba(255,255,255,.035))]"
+                />
+                <Icon
+                  className="relative size-7 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,.28)] transition group-hover:scale-105"
+                  strokeWidth={1.8}
+                />
                 <span className="relative mt-1.5 block w-full truncate text-[12px] font-black leading-tight text-white">
                   {label}
                 </span>

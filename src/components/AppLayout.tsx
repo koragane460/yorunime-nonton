@@ -53,6 +53,12 @@ import {
   type YoruFeature,
 } from "@/components/YoruVerseHub";
 import { PanelHub, type PanelKey } from "@/components/PanelHub";
+import { ThemeOnboarding } from "@/components/ThemeOnboarding";
+import {
+  applyUiTheme,
+  readStoredUiTheme,
+  type SavedUiTheme,
+} from "@/lib/ui-theme";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -84,6 +90,9 @@ export function AppLayout({
   // BottomNav (dan dirinya sendiri) unmount.
   const [navPanel, setNavPanel] = useState<TopPanel>(null);
   const [topPanel, setTopPanel] = useState<TopPanel>(null);
+  // Tema visual wajib dipilih sekali setelah login. Preferensi tersimpan di
+  // perangkat + akun, jadi tidak muncul lagi di kunjungan berikutnya.
+  const [uiTheme, setUiTheme] = useState<SavedUiTheme | null>(null);
   // PANEL (tombol tengah nav) — sheet setinggi 60% layar. Isinya profil +
   // kotak Feed · Baca · History · Download · Clan · Music · YoruPet · Title
   // · Shop (Feed & Baca sudah digabung jadi tombol ini, permintaan user).
@@ -196,6 +205,24 @@ export function AppLayout({
     if (user) void ensure();
   }, [user, ensure]);
 
+  useEffect(() => {
+    const openTheme = () => setUiTheme(null);
+    window.addEventListener("yn-open-theme", openTheme);
+    return () => window.removeEventListener("yn-open-theme", openTheme);
+  }, []);
+
+  const serverTheme = (user as any)?.uiTheme as string | undefined;
+  const serverAccent = (user as any)?.uiAccent as string | undefined;
+  useEffect(() => {
+    if (!user) {
+      setUiTheme(null);
+      return;
+    }
+    const saved = readStoredUiTheme(user._id, serverTheme, serverAccent);
+    if (saved) applyUiTheme(saved);
+    setUiTheme(saved);
+  }, [user?._id, serverTheme, serverAccent]);
+
   // PRESENCE — penanda "online" tiap 30 detik selama aplikasi terbuka.
   // Dipakai angka N online di kotak Chat Global Home (hitungan beneran).
   const heartbeat = useMutation(api.presence.heartbeat);
@@ -235,6 +262,15 @@ export function AppLayout({
       {/* LATAR HOME KUSTOM — gambar 9:16 dari galeri (Pengaturan › Ganti
           Home Screen). Fixed, di belawah semua konten (z negatif). */}
       <HomeBgLayer />
+      {user && !uiTheme && (
+        <ThemeOnboarding
+          userId={user._id}
+          onDone={(choice) => {
+            applyUiTheme(choice);
+            setUiTheme(choice);
+          }}
+        />
+      )}
       {/* Panel akun hanya muncul di Home dan TIDAK saat layar Koleksi (Favorit)
           terbuka. Dulu panel ini tetap tampil di atas layar Koleksi sehingga
           terlihat seperti layar yang salah - tombol Favorit di navigasi
