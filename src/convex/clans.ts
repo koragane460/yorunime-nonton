@@ -291,7 +291,7 @@ export const topClans = query({
         b.diamonds - a.diamonds,
     );
     const out = [];
-    for (const clan of clans.slice(0, Math.max(1, Math.min(5, limit)))) {
+    for (const clan of clans.slice(0, Math.max(1, Math.min(10, limit)))) {
       const [leader, members] = await Promise.all([
         ctx.db.get(clan.leaderId),
         ctx.db

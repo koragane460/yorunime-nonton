@@ -2069,17 +2069,8 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-[#0a0714]">
-      {/* Latar ungu-emas: bintik berkelip, orb gradasi, dan ranting sakura
-          emas di kiri & kanan atas (gaya referensi). */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1.3px)] [background-size:26px_26px] opacity-20" />
-        <span className="absolute -left-24 top-8 size-72 rounded-full bg-fuchsia-600/25 blur-3xl" />
-        <span className="absolute -right-24 bottom-20 size-72 rounded-full bg-violet-600/25 blur-3xl" />
-        <BlossomBranch id="ycl-l" className="absolute left-0 top-0 h-24 w-40" />
-        <BlossomBranch id="ycl-r" className="absolute right-0 top-0 h-24 w-40" flip />
-      </div>
-      <div className="relative w-full p-3">
+    <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-[#0b0a0f]">
+      <div className="relative mx-auto w-full max-w-lg p-3">
         <div className="mb-3 mt-3 flex items-center gap-3">
           <button
             onClick={onDone}
@@ -2098,8 +2089,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
 
         <div className="space-y-4">
           {/* ===== KOTAK PREVIEW — kartu ungu + aksen sudut emas ===== */}
-          <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-3 shadow-[0_18px_40px_-24px_rgba(168,85,247,0.6)]">
-            <GoldCorners />
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3">
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
               — PREVIEW —
             </p>
@@ -2146,8 +2136,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               emas, persis gaya referensi. ===== */}
           <div className="grid grid-cols-2 gap-2.5">
             {/* KIRI — photo profile + nama clan */}
-            <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-3">
-              <GoldCorners />
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-center text-[11px] font-black text-white/85">
                 Ganti photo profile
               </p>
@@ -2237,8 +2226,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </div>
 
             {/* KANAN — tag clan + pilihan warna background tag */}
-            <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-3">
-              <GoldCorners />
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-center text-[11px] font-black text-white/85">
                 Isi tag clan
               </p>
@@ -2289,8 +2277,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           </div>
 
           {/* ===== KOTAK ICON TAG CLAN ===== */}
-          <div className="relative overflow-hidden rounded-[6px] border border-white/12 bg-gradient-to-b from-white/[0.07] to-white/[0.02] px-3 pb-3 pt-3">
-            <GoldCorners />
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] px-3 pb-3 pt-3">
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
               — ICON TAG CLAN —
             </p>

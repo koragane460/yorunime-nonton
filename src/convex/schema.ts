@@ -1207,6 +1207,8 @@ const schema = defineSchema(
       ),
       privacy: v.union(v.literal("all"), v.literal("teman")),
       likes: v.array(v.id("users")),
+      /** Simpan/favorit — terpisah dari like. */
+      favorites: v.optional(v.array(v.id("users"))),
       views: v.number(),
       createdAt: v.number(),
     })

@@ -411,8 +411,8 @@ export function VoiceChatSheet({
                   <div
                     className={`mt-1 w-fit max-w-full rounded-2xl px-3 py-2 text-[12px] leading-snug ${
                       mine
-                        ? "bubble-mine yn-tail-r"
-                        : "bubble-other yn-tail-l"
+                        ? "bubble-mine"
+                        : "bubble-other"
                     }`}
                   >
                     <span className="whitespace-pre-wrap break-words">{m.text}</span>

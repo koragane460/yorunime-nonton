@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, Grid3X3, Search, Star, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, Grid3X3, Search, Star, X } from "lucide-react";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -183,84 +183,64 @@ export function QuickGenre({
 
   return (
     <>
-      <section className="fade-enter relative mt-5 overflow-hidden rounded-[22px] border border-rose-300/15 bg-[linear-gradient(120deg,#1c1014_0%,#140d13_55%,#12101a_100%)] p-2.5">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-12 -top-14 size-40 rounded-full bg-rose-500/10 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -left-10 -bottom-16 size-32 rounded-full bg-gold/5 blur-3xl"
-        />
-
-        <div className="relative flex items-stretch gap-2">
-          {/* Dua tombol kecil bertumpuk di kiri — bukan bar panjang. */}
-          <div className="flex w-[74px] shrink-0 flex-col gap-1 rounded-[16px] border border-white/10 bg-white/[0.055] p-1">
-            <button
-              type="button"
-              onClick={() => setTab("genre")}
-              aria-pressed={tab === "genre"}
-              className={cn(
-                "flex h-7 items-center justify-center gap-1 rounded-[11px] text-[9px] font-black transition active:scale-[0.97]",
-                tab === "genre"
-                  ? "bg-gold-strong text-black shadow-[0_8px_16px_-10px_rgba(255,210,63,.9)]"
-                  : "text-white/50 hover:text-white",
-              )}
-            >
-              <span
-                className={cn(
-                  "size-1.5 rounded-full transition",
-                  tab === "genre" ? "bg-rose-600" : "bg-rose-400/60",
-                )}
-              />
-              Genre
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("catalog")}
-              aria-pressed={tab === "catalog"}
-              className={cn(
-                "flex h-7 items-center justify-center gap-1 rounded-[11px] text-[9px] font-black transition active:scale-[0.97]",
-                tab === "catalog"
-                  ? "bg-gold-strong text-black shadow-[0_8px_16px_-10px_rgba(255,210,63,.9)]"
-                  : "text-white/50 hover:text-white",
-              )}
-            >
-              <Grid3X3 className="size-3" />
-              Katalog
-            </button>
-          </div>
-
-          <div className="relative flex min-w-0 flex-1 items-center">
-            {tab === "genre" ? (
-              <div className="thin-scroll flex w-full gap-1.5 overflow-x-auto px-0.5 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {genres.map((g) => (
-                  <button
-                    key={g.id}
-                    onClick={() => onOpenGenre(g.id)}
-                    className="shrink-0 whitespace-nowrap rounded-full border border-rose-400/50 bg-rose-500/[0.07] px-3 py-1.5 text-[10px] font-bold text-white/75 transition hover:border-rose-300/80 hover:bg-rose-500/15 hover:text-white active:scale-[0.97]"
-                  >
-                    {g.name}
-                  </button>
-                ))}
-                {genres.length === 0 && (
-                  <span className="px-2 text-[10px] text-white/35">Memuat…</span>
-                )}
-              </div>
-            ) : (
-              <div className="thin-scroll flex w-full gap-1.5 overflow-x-auto px-0.5 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {LETTERS.map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLetter(l)}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-gold-strong/30 bg-gold-strong/[0.09] font-display text-[11px] font-black text-gold-strong transition hover:border-gold-strong/70 hover:bg-gold-strong/25 active:scale-95"
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
+      <section className="fade-enter mt-5">
+        <div className="flex items-center justify-between gap-2">
+          {/* Katalog di kiri atas, mengarah ke samping, tanpa kotak latar. */}
+          <button
+            type="button"
+            onClick={() => setTab("catalog")}
+            aria-pressed={tab === "catalog"}
+            className={cn(
+              "inline-flex items-center gap-2 text-[13px] font-black transition active:opacity-60",
+              tab === "catalog" ? "text-white" : "text-white/45 hover:text-white/80",
             )}
-          </div>
+          >
+            <Grid3X3 className="size-4" strokeWidth={2.6} />
+            Katalog
+            <ArrowRight className="size-4" strokeWidth={2.6} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("genre")}
+            aria-pressed={tab === "genre"}
+            className={cn(
+              "text-[11px] font-black transition",
+              tab === "genre" ? "text-white" : "text-white/40 hover:text-white/75",
+            )}
+          >
+            Genre
+          </button>
+        </div>
+
+        <div className="mt-2.5">
+          {tab === "genre" ? (
+            <div className="thin-scroll flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {genres.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => onOpenGenre(g.id)}
+                  className="shrink-0 whitespace-nowrap rounded-full border border-rose-400/45 bg-rose-500/[0.07] px-4 py-2.5 text-[12px] font-bold text-white/80 transition hover:border-rose-300/80 hover:bg-rose-500/15 hover:text-white active:scale-[0.97]"
+                >
+                  {g.name}
+                </button>
+              ))}
+              {genres.length === 0 && (
+                <span className="px-2 text-[11px] text-white/35">Memuat…</span>
+              )}
+            </div>
+          ) : (
+            <div className="thin-scroll flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {LETTERS.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLetter(l)}
+                  className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] font-display text-[12px] font-black text-[var(--ui-c)] transition hover:bg-white/[0.09] active:scale-95"
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

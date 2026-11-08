@@ -781,7 +781,7 @@ export function ChatPanel({
           return (
             <div key={m._id} className="w-full">
             <div
-              className={cn("flex w-full items-end gap-2 border-0", mine && "flex-row-reverse")}
+              className={cn("flex w-full items-end gap-1 border-0", mine && "flex-row-reverse")}
             >
               {/* Klik avatar → detail akun */}
               <button onClick={() => onOpenProfile?.(m.userId)} aria-label={`Profil ${m.username}`}>
@@ -813,7 +813,7 @@ export function ChatPanel({
                     // pesan pendek maupun panjang tetap satu ukuran kotak.
                     // Ekor gelembung: pesan sendiri ke kanan bawah, pesan
                     // orang lain ke kiri bawah (bentuk ikon Collection).
-                    "flex w-fit max-w-full flex-col rounded-md px-3 py-2",
+                    "flex w-fit max-w-full flex-col rounded-2xl px-3 py-2",
                     // Pesan yang isinya cuma foto: bubble dibuat transparan
                     // supaya tidak ada kotak hitam di belakang fotonya.
                     // Ekor HANYA dipasang di bubble yang punya warna latar;
@@ -822,8 +822,8 @@ export function ChatPanel({
                       (m.imageUrl || m.sticker || m.feedPostId) && !m.text
                           ? "border-transparent bg-transparent px-1 pb-1 pt-0 shadow-none"
                           : mine
-                              ? "bubble-mine yn-tail-r"
-                              : "bubble-other yn-tail-l",
+                              ? "bubble-mine"
+                              : "bubble-other",
                     blinkId === m._id && "reply-blink",
                   )}
                 >
@@ -919,6 +919,11 @@ export function ChatPanel({
                       mine && "flex-row-reverse",
                     )}
                   >
+                    <span className="chat-typing" aria-hidden>
+                      <i />
+                      <i />
+                      <i />
+                    </span>
                     <span>{new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
                     <button
                       aria-label="Reply"

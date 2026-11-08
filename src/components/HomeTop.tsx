@@ -6,7 +6,6 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
-import { NotifButton } from "@/components/NotifButton";
 import { greetingOf, fmtShort } from "@/components/HomeHead";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { xpForLevel } from "@/lib/level";
@@ -16,7 +15,6 @@ import {
   Heart,
   Megaphone,
   Play,
-  Search,
   Share2,
   Star,
   Tv,
@@ -82,10 +80,9 @@ function LevelRing({ level, xp }: { level: number; xp: number }) {
 }
 
 /**
- * HEADER HOME — satu pil kaca (glassmorphism) berisi foto, sapaan, username,
- * tag level + clan, dan cincin XP. Di kanannya dua tombol bulat kaca untuk
- * pencarian dan notifikasi. Tanpa tonjolan/tab. */
-export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
+ * HEADER HOME — satu pil kaca berisi foto, sapaan, username, level + clan,
+ * dan cincin XP. Search/notif tinggal di navigasi bawah, bukan di sini. */
+export function AccountHeader() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const level = user?.level ?? 1;
@@ -94,26 +91,6 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
 
   return (
     <header className="fade-enter flex w-full flex-col gap-2 pt-1">
-      {/* Rel utilitas di ATAS navigasi: notifikasi di atas, pencarian di bawah.
-          Sengaja tidak lagi menempel di kanan pil akun. */}
-      <div className="flex justify-end">
-        <div className="flex shrink-0 flex-col gap-1.5">
-          <NotifButton
-            sizeClassName="size-8"
-            className="rounded-xl border border-white/16 bg-white/[0.075] shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.16)] backdrop-blur-2xl hover:bg-white/[0.14] hover:text-white"
-            iconClassName="size-4"
-          />
-          <button
-            type="button"
-            onClick={onSearch}
-            aria-label="Cari anime"
-            className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-white/16 bg-white/[0.075] text-white/88 shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.16)] backdrop-blur-2xl transition hover:bg-white/[0.14] hover:text-white active:scale-95"
-          >
-            <Search className="size-4" strokeWidth={2.5} />
-          </button>
-        </div>
-      </div>
-
       <button
         type="button"
         onClick={() => navigate("/akun")}

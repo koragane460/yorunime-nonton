@@ -7,9 +7,14 @@ import { StripBackIcon } from "@/components/StripBack";
 import {
   Check,
   ChevronLeft,
+  ChevronRight,
+  Crown,
+  Gift,
   Loader2,
+  Percent,
   QrCode,
   ShieldCheck,
+  Sparkles,
   Upload,
   Zap,
 } from "lucide-react";
@@ -304,6 +309,113 @@ function Hero() {
   );
 }
 
+/** Banner promo tiga panel, mengikuti referensi: Flash Sale · Premium · Lainnya. */
+function PremiumPromoBanner() {
+  const scrollToPlans = () =>
+    document.getElementById("paket-premium")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-[20px] border border-white/15 bg-[#07080d] shadow-[0_24px_60px_-32px_rgba(0,0,0,.9)]">
+      <div className="grid grid-cols-3">
+        {/* FLASH SALE */}
+        <div className="relative flex min-h-[168px] flex-col overflow-hidden bg-[linear-gradient(125deg,#2a0308_0%,#4b0810_48%,#1a0206_100%)] px-2.5 py-3">
+          <span className="pointer-events-none absolute -left-8 -top-10 size-24 rounded-full bg-[#ff304f]/20 blur-2xl" />
+          <span className="pointer-events-none absolute -right-8 top-8 h-20 w-40 rotate-[28deg] bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)]" />
+          <span className="relative flex w-fit items-center gap-1 rounded-full bg-[#ff2f4f] px-2 py-1 text-[8px] font-black text-white shadow-[0_8px_18px_-10px_rgba(255,47,79,.9)]">
+            <Percent className="size-2.5" strokeWidth={3} /> 50% OFF
+          </span>
+          <div className="relative mt-2 flex flex-1 items-center gap-1.5">
+            <span className="relative grid size-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(145deg,#ff6076,#d61232)] text-white shadow-[0_10px_18px_-10px_rgba(255,40,70,.9)]">
+              <Percent className="size-6" strokeWidth={3} />
+              <span className="absolute -inset-2 rounded-full border border-[#ff6b81]/35" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-black leading-none tracking-tight text-white">
+                Flash <span className="text-[#ff6f86]">Sale</span>
+              </span>
+              <span className="mt-1 block text-[7px] font-medium leading-snug text-white/55">
+                Penawaran spesial untukmu!
+              </span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={scrollToPlans}
+            className="relative mt-auto flex items-center justify-center gap-1 rounded-full border border-[#ff536b]/65 bg-black/20 px-2 py-1.5 text-[8px] font-bold text-white transition active:scale-95"
+          >
+            Beli Sekarang <ChevronRight className="size-2.5" strokeWidth={3} />
+          </button>
+          <Sparkles className="pointer-events-none absolute right-3 top-14 size-2 text-[#ff9bac]/60" />
+        </div>
+
+        {/* PREMIUM */}
+        <div className="relative flex min-h-[168px] flex-col overflow-hidden border-x border-white/12 bg-[linear-gradient(125deg,#2a1a00_0%,#4b3000_44%,#241600_100%)] px-2.5 py-3">
+          <span className="pointer-events-none absolute left-1/2 top-1 h-32 w-32 -translate-x-1/2 rounded-full bg-[#ffc928]/18 blur-2xl" />
+          <span className="pointer-events-none absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-[#ffd75e]/70 to-transparent" />
+          <span className="relative z-10 mx-auto flex w-fit items-center gap-1 rounded-full bg-[#e1af1e] px-2 py-1 text-[8px] font-black text-[#332100]">
+            <Sparkles className="size-2.5" strokeWidth={3} /> Premium
+          </span>
+          <div className="relative mt-1.5 flex flex-1 flex-col items-center text-center">
+            <span className="relative grid size-12 place-items-center text-[#ffd23f]">
+              <Crown className="relative z-10 size-11 drop-shadow-[0_4px_10px_rgba(255,202,40,.55)]" fill="currentColor" strokeWidth={1.2} />
+              <span className="absolute -inset-2 rounded-full border border-[#ffd75e]/35" />
+              <span className="absolute -inset-4 rounded-full border border-[#ffd75e]/15" />
+            </span>
+            <span className="mt-1 text-[15px] font-black leading-none tracking-tight text-white">
+              Premium
+            </span>
+            <span className="mt-1 max-w-[8rem] text-[7px] font-medium leading-snug text-white/55">
+              Nikmati fitur eksklusif dengan Premium!
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={scrollToPlans}
+            className="relative mt-auto flex items-center justify-center gap-1 rounded-full border border-[#ffd75e]/65 bg-black/20 px-2 py-1.5 text-[8px] font-bold text-white transition active:scale-95"
+          >
+            Upgrade Sekarang <ChevronRight className="size-2.5" strokeWidth={3} />
+          </button>
+          <Sparkles className="pointer-events-none absolute left-4 top-16 size-2 text-[#ffe29a]/60" />
+          <Sparkles className="pointer-events-none absolute right-4 top-7 size-2 text-[#ffe29a]/50" />
+        </div>
+
+        {/* LAINNYA */}
+        <div className="relative flex min-h-[168px] flex-col overflow-hidden bg-[linear-gradient(125deg,#04142a_0%,#092a55_50%,#03101f_100%)] px-2.5 py-3">
+          <span className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-[#2b7fff]/20 blur-2xl" />
+          <span className="relative flex w-fit items-center gap-1 rounded-full bg-[#1f6fe5] px-2 py-1 text-[8px] font-black text-white">
+            <Gift className="size-2.5" strokeWidth={3} /> Lainnya
+          </span>
+          <div className="relative mt-2 flex flex-1 items-center gap-1.5">
+            <span className="relative grid size-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(145deg,#6fb6ff,#2f6fce)] text-white shadow-[0_10px_18px_-10px_rgba(47,111,206,.9)]">
+              <Gift className="size-6" strokeWidth={2.4} />
+              <span className="absolute -inset-2 rounded-full border border-[#79baff]/35" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-black leading-none tracking-tight text-white">
+                Lainnya
+              </span>
+              <span className="mt-1 block text-[7px] font-medium leading-snug text-white/55">
+                Temukan lebih banyak penawaran!
+              </span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={scrollToPlans}
+            className="relative mt-auto flex items-center justify-center gap-1 rounded-full border border-[#79baff]/65 bg-black/20 px-2 py-1.5 text-[8px] font-bold text-white transition active:scale-95"
+          >
+            Lihat Semua <ChevronRight className="size-2.5" strokeWidth={3} />
+          </button>
+          <Sparkles className="pointer-events-none absolute right-3 top-16 size-2 text-[#a7d4ff]/60" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Plans() {
   const plans = useQuery(api.payments.premiumPlans, {}) as Plan[] | undefined;
   const config = useQuery(api.payments.manualConfig, {});
@@ -412,8 +524,10 @@ function Plans() {
 
   return (
     <section className="mt-6">
+      <PremiumPromoBanner />
+
       {/* TINGKATAN PREMIUM — Basic / Plus / VIP, batas fiturnya beda. */}
-      <h2 className="text-[13px] font-bold text-gold">Tingkatan Premium</h2>
+      <h2 className="mt-5 text-[13px] font-bold text-gold">Tingkatan Premium</h2>
       <div className="mt-2 space-y-2">
         {TIER_INFO.map((t) => {
           const active = tier === t.id;
@@ -475,7 +589,7 @@ function Plans() {
         })}
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-2">
+      <div id="paket-premium" className="mt-5 flex items-center justify-between gap-2">
         <h2 className="text-[13px] font-bold text-gold">Paket</h2>
         <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-white/60">
           {tierInfo.label} · Rp{tierInfo.monthly.toLocaleString("id-ID")}/30 hari

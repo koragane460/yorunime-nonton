@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Star as StarIcon,
   Award as AwardIcon,
+  Search as SearchIcon,
 } from "lucide-react";
 // Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
 // bahasa bentuk dengan iOS (garis tipis, sudut membulat, varian fill saat aktif).
@@ -1210,10 +1211,10 @@ function BottomNav({
         className="nav-bar fixed inset-x-0 bottom-0 z-40"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
       >
-        <div className="mx-auto w-full max-w-[27rem] px-3">
+        <div className="mx-auto w-full max-w-[31rem] px-2.5">
           <div
             className={cn(
-              "relative grid grid-cols-5 gap-0.5 rounded-[30px] border p-1.5",
+              "relative grid grid-cols-7 gap-0.5 rounded-[28px] border p-1",
               "border-white/16 bg-[linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.055)_46%,rgba(255,210,63,.07))]",
               "shadow-[0_20px_48px_-26px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.2)]",
               "backdrop-blur-2xl backdrop-saturate-150",
@@ -1264,12 +1265,11 @@ function BottomNav({
                   it.dim
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
                     : it.label
-                }
-                className={cn(
-                  "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-[22px] pb-1.5 pt-2 transition-all duration-200",
-                  active &&
-                    "bg-white/[0.11] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.16)]",
-                )}
+                }                  className={cn(
+                    "nav-item relative z-10 flex min-w-0 select-none flex-col items-center justify-center rounded-[20px] pb-1.5 pt-2 transition-all duration-200",
+                    active &&
+                      "bg-white/[0.11] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.16)]",
+                  )}
               >
                 {/* Isi tombol (ikon + label). PANEL sekarang memakai gaya
                     yang sama dengan tab lain — tidak lagi kotak emas
@@ -1278,7 +1278,7 @@ function BottomNav({
                 <Icon
                   strokeWidth={2.2}
                   className={cn(
-                    "size-[23px] md:size-[26px] transition-colors duration-200",
+                    "size-[20px] md:size-[23px] transition-colors duration-200",
                     active
                       ? "text-white"
                       : it.dim
@@ -1290,7 +1290,7 @@ function BottomNav({
                     Akun). Muncul untuk SEMUA tombol; yang aktif lebih terang. */}
                 <span
                   className={cn(
-                    "mt-1 max-w-full truncate px-0.5 text-[9.5px] leading-none transition-colors duration-200",
+                    "mt-1 max-w-full truncate px-0.5 text-[8px] leading-none transition-colors duration-200",
                     active
                       ? "font-semibold text-white"
                       : it.dim
@@ -1304,6 +1304,25 @@ function BottomNav({
               </button>
             );
             })}
+
+            {/* Search & Notif tinggal DI NAVIGASI BAWAH, bukan di header. */}
+            <button
+              type="button"
+              onClick={() => navigate(`/home?search=${Date.now()}`)}
+              aria-label="Cari anime"
+              className="nav-item relative z-10 flex min-w-0 flex-col items-center justify-center rounded-[20px] pb-1.5 pt-2 text-white/55 transition hover:text-white active:scale-95"
+            >
+              <SearchIcon className="size-[20px] md:size-[23px]" strokeWidth={2.2} />
+              <span className="mt-1 text-[8px] font-medium leading-none">Cari</span>
+            </button>
+            <div className="nav-item relative z-10 flex min-w-0 flex-col items-center justify-center rounded-[20px] pb-1 pt-1.5 text-white/55">
+              <NotifButton
+                sizeClassName="size-7"
+                iconClassName="size-[19px]"
+                className="text-current"
+              />
+              <span className="mt-0.5 text-[8px] font-medium leading-none">Notif</span>
+            </div>
           </div>
         </div>
       </nav>

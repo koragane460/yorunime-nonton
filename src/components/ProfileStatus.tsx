@@ -184,7 +184,7 @@ export function StatusBubbleEditor({
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-4">
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-0.5">
           <span className="relative shrink-0">
             <span className="absolute -inset-2 rounded-full bg-white/18 blur-xl" />
             <img

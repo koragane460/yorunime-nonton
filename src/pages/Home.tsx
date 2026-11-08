@@ -68,8 +68,6 @@ import { toast } from "sonner";
 import { StickerStore } from "@/components/StickerStore";
 import { AccountHeader, Spotlight } from "@/components/HomeTop";
 import {
-  ActiveEventCard,
-  ClanNobarCards,
   ContinueWatchingCard,
   HomeCommunityCard,
   HomePremiumCard,
@@ -77,7 +75,6 @@ import {
 import { LeaderCards } from "@/components/LeaderCards";
 import { QuickGenre } from "@/components/QuickGenre";
 import { GenreScreen } from "@/components/GenreScreen";
-import { NobarCatalogScreen } from "@/components/NobarCatalogScreen";
 import {
   AfinitasPromo,
   FeedPromo,
@@ -881,10 +878,9 @@ function HomeContent() {
   const [showTopAnime, setShowTopAnime] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSticker, setShowSticker] = useState(false);
-  // Layar NOBAR — dibuka dari kotak "Nobar" di baris Chat/Voice Home.
-  const [showNobar, setShowNobar] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
+
   // Layar VOICE CALL (daftar room → buat room → panggilan). + popup Afinitas
   // yang dibuka dari slide promosi di hero banner.
   const [showVoice, setShowVoice] = useState(false);
@@ -904,6 +900,15 @@ function HomeContent() {
   // panel pilihan genre multi-select langsung terbuka. Tombol Cari biasa
   // tidak menyalakan flag ini.
   const [searchOpenGenres, setSearchOpenGenres] = useState(false);
+
+  // Tombol Search di navigasi bawah membuka layar pencarian lewat query,
+  // supaya tetap bekerja dari halaman mana pun.
+  useEffect(() => {
+    if (!params.get("search")) return;
+    setSearchGenre(null);
+    setSearchOpenGenres(false);
+    setShowSearch(true);
+  }, [params]);
   // LAYAR GENRE fullscreen — dibuka dari kotak genre di Home (permintaan:
   // Home hanya menampilkan kotak rounded berisi nama genre saja).
   const [genreScreen, setGenreScreen] = useState<string | null>(null);
@@ -1173,13 +1178,7 @@ function HomeContent() {
       {/* Warna Home adalah SATU warna solid dari kartu akun sampai Season
           Ini. Tidak ada gradasi atau zona kecil yang terputus. */}
       <div className="relative -mx-4 rounded-b-[30px] bg-[var(--home-tint,#17131f)] px-4 pb-7">
-      <AccountHeader
-        onSearch={() => {
-          setSearchGenre(null);
-          setSearchOpenGenres(false);
-          setShowSearch(true);
-        }}
-      />
+      <AccountHeader />
 
       {/* Lanjut nonton → premium → event → komunitas → clan/nobar. */}
       <ContinueWatchingCard
@@ -1196,23 +1195,11 @@ function HomeContent() {
         }}
       />
       <HomePremiumCard onBuy={() => navigate("/premium")} />
-      <ActiveEventCard
-        onSearch={() => {
-          setSearchGenre(null);
-          setSearchOpenGenres(false);
-          setShowSearch(true);
-        }}
-        onResults={() => navigate("/home?panel=favorites")}
-      />
       <HomeCommunityCard onOpenChat={() => setShowChat(true)} />
-      <ClanNobarCards
-        onOpenClan={(clanId) =>
-          navigate(clanId ? `/clan?clan=${clanId}` : "/clan")
-        }
-        onOpenNobar={() => setShowNobar(true)}
-      />
 
-      {/* QUICK GENRE — tombol Genre/Katalog menyatu + genre geser. */}
+      {/* Leaderboard langsung di bawah Global Chat, lalu Genre & Katalog. */}
+      <LeaderCards />
+
       {!loading && genreList.length > 0 && (
         <QuickGenre
           genres={genreList}
@@ -1222,9 +1209,6 @@ function HomeContent() {
           }
         />
       )}
-
-      {/* LEADERBOARD langsung di bawah Quick Genre/Katalog. */}
-      <LeaderCards />
 
       {/* Season Ini masih di dalam permukaan warna Home yang sama. */}
       <div className="mt-5">
@@ -1423,34 +1407,6 @@ function HomeContent() {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto bg-black/35">
             <StickerStore />
-          </div>
-        </div>
-      )}
-      {showNobar && (
-        <div
-          className="screen-enter fixed inset-0 z-[55] flex flex-col bg-[#08070c]"
-          style={{
-            backgroundImage:
-              "radial-gradient(80% 50% at 14% 0%, color-mix(in srgb, var(--ui-a) 18%, transparent), transparent 72%), radial-gradient(60% 42% at 100% 30%, color-mix(in srgb, var(--ui-c) 8%, transparent), transparent 76%)",
-          }}
-        >
-          <div className="yn-bar flex items-center gap-3 border-b border-white/10 px-4 py-3">
-            <button
-              onClick={() => setShowNobar(false)}
-              aria-label="Kembali"
-              className="flex size-10 items-center justify-center rounded-xl bg-white/[0.06] transition active:scale-95"
-            >
-              <ChevronLeft className="size-4" strokeWidth={2.6} />
-            </button>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] font-black uppercase tracking-[0.22em] text-white/35">
-                Nonton bareng
-              </span>
-              <h1 className="yn-title truncate text-lg tracking-tight">NOBAR</h1>
-            </div>
-          </div>
-          <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-            <NobarCatalogScreen onClose={() => setShowNobar(false)} />
           </div>
         </div>
       )}

@@ -203,44 +203,22 @@ function VoiceHomeScreen({
           </button>
         </div>
 
-        {/* SATU KOTAK PREMIUM: judul + status + tombol create, rata tengah. */}
-        <div className="voice-hero relative mt-2 overflow-hidden rounded-3xl border p-5 text-center">
-          <span aria-hidden className="absolute inset-x-10 top-px h-px" style={{ background: "linear-gradient(90deg, transparent, var(--ui-c), transparent)" }} />
-          {/* Hiasan halus: taburan titik + ornamen sudut — BUKAN blur besar
-              yang menyilaukan. */}
-          <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.2px)] [background-size:24px_24px] opacity-70" />
-          <span aria-hidden className="absolute left-3 top-3 size-3 rounded-tl-md border-l-2 border-t-2 border-white/25" />
-          <span aria-hidden className="absolute right-3 top-3 size-3 rounded-tr-md border-r-2 border-t-2 border-white/25" />
-          <span
-            aria-hidden
-            className="relative mx-auto flex h-12 items-center gap-1.5 rounded-2xl border border-white/15 bg-black/25 px-4"
-          >
-            {/* Equalizer hidup — warnanya mengikuti tema. */}
-            {[10, 22, 16, 28, 14, 24, 12].map((h, i) => (
-              <span
-                key={i}
-                className="w-1.5 rounded-full"
-                style={{
-                  height: h,
-                  background: "var(--ui-c, #FFD23F)",
-                  animation: `eq-bar 1s ${i * 0.12}s ease-in-out infinite alternate`,
-                }}
-              />
-            ))}
-          </span>
-          <h1 className="relative mt-3 yn-title text-xl text-white">
-            YoruNime Voice Call Room
-          </h1>
-          <div className="relative mt-1.5 flex items-center justify-center gap-2 text-[11px]">
-            <span className="text-white/50">pilih room untuk join</span>
-            <span className="text-white/25">•</span>
-            <span className="voice-soft inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-black">
-              <span className="size-1.5 animate-pulse rounded-full" style={{ background: "var(--ui-c)" }} />
-              {list.length} room online
+        {/* Header ringkas — tanpa equalizer/ornamen besar. */}
+        <div className="voice-hero relative mt-2 rounded-2xl border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg font-black tracking-tight text-white">
+                Voice Room
+              </h1>
+              <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-white/45">
+                <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+                {list.length} room online · pilih untuk join
+              </p>
+            </div>
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--ui-c)]">
+              <Mic className="size-5" />
             </span>
           </div>
-
-          {/* Tombol buat room */}
           <button
             onClick={() => {
               if (!user) {
@@ -249,15 +227,9 @@ function VoiceHomeScreen({
               }
               onCreate();
             }}
-            className="voice-primary relative mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black transition active:scale-[0.98]"
+            className="voice-primary relative mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[12px] font-black transition active:scale-[0.98]"
           >
-            <span className="flex size-6 items-center justify-center rounded-full bg-black/15">
-              <Plus className="size-4" strokeWidth={2.7} />
-            </span>
-            Buat Voice Room
-            <span className="rounded-full bg-black/15 px-2 py-0.5 text-[10px] font-black tracking-wider">
-              GRATIS
-            </span>
+            <Plus className="size-4" strokeWidth={2.7} /> Buat Voice Room
           </button>
         </div>
 
@@ -398,17 +370,7 @@ function CreateRoomScreen({
   };
 
   return (
-    <div
-      className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-[#08070c]"
-      style={{
-        backgroundImage:
-          "radial-gradient(80% 55% at 50% 0%, color-mix(in srgb, var(--ui-a) 18%, transparent), transparent 74%), radial-gradient(60% 44% at 100% 100%, color-mix(in srgb, var(--ui-c) 7%, transparent), transparent 76%)",
-      }}
-    >
-      {/* Latar premium: aurora warna tema + taburan bintik. */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1.2px)] [background-size:26px_26px] opacity-60" />
-      </div>
+    <div className="screen-enter fixed inset-0 z-[70] overflow-y-auto bg-[#0b0a0f]">
       {/* Form dibuat lebih ke TENGAH (turun dari atas, tetap rata tengah
           horizontal lewat max-w-md). */}
       <div className="relative mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-3 pb-16 pt-10">
@@ -428,38 +390,20 @@ function CreateRoomScreen({
           </svg>
         </button>
 
-        {/* Kepala layar — medallion mic, TANPA ornamen garis berlian. */}
-        <div className="mt-4 flex flex-col items-center text-center">
-          <span className="voice-soft relative flex size-16 items-center justify-center rounded-full border">
-            <Mic className="size-7" />
-            <span
-              aria-hidden
-              className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-[#0a0d12]"
-              style={{ background: "var(--ui-c)" }}
-            />
+        <div className="mt-1 flex items-center gap-2.5">
+          <span className="grid size-9 place-items-center rounded-xl border border-white/10 bg-white/[0.04]">
+            <Mic className="size-4" />
           </span>
-          <h1 className="mt-3 text-2xl tracking-tight text-white yn-title">
-            Buat{" "}
-            <span style={{ color: "var(--ui-c)" }}>Voice Room</span>
-          </h1>
-          <p className="mt-1 text-[11px] font-semibold text-white/50">
-            Atur nama, jenis, kuota & privasi room kamu
-          </p>
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-white">Buat Voice Room</h1>
+            <p className="text-[10.5px] text-white/40">
+              Nama, jenis, kuota & privasi room
+            </p>
+          </div>
         </div>
 
-        <div className="relative mt-4 overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(165deg,rgba(20,32,28,.92)_0%,rgba(13,15,22,.94)_60%,rgba(9,10,15,.96)_100%)] p-4 backdrop-blur-xl">
-          <span
-            aria-hidden
-            className="absolute inset-x-8 top-0 h-px"
-            style={{ background: "linear-gradient(90deg, transparent, var(--ui-c), transparent)" }}
-          />
-          {/* Nama room */}
-          <p className="flex items-center gap-2 text-[13px] font-black text-white/85">
-            <span className="voice-soft flex size-5 items-center justify-center rounded-md text-[10px] font-black ring-1 ring-white/10">
-              01
-            </span>
-            Nama room
-          </p>
+        <div className="relative mt-4 rounded-2xl border border-white/10 bg-[#121116] p-4">
+          <p className="text-[12px] font-bold text-white/75">Nama room</p>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -468,13 +412,7 @@ function CreateRoomScreen({
             className="mt-1.5 w-full rounded-xl border border-white/12 bg-black/45 px-3 py-3 text-sm outline-none placeholder:text-white/30"
           />
 
-          {/* Room type */}
-          <p className="mt-4 flex items-center gap-2 text-[13px] font-black text-white/85">
-            <span className="voice-soft flex size-5 items-center justify-center rounded-md text-[10px] font-black ring-1 ring-white/10">
-              02
-            </span>
-            Room Type
-          </p>
+          <p className="mt-4 text-[12px] font-bold text-white/75">Tipe room</p>
           <button
             onClick={() => setTypeOpen((v) => !v)}
             className="mt-1.5 flex w-full items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-3 py-2.5 text-left"
@@ -533,13 +471,7 @@ function CreateRoomScreen({
             )}
           </AnimatePresence>
 
-          {/* Max user */}
-          <p className="mt-4 flex items-center gap-2 text-[13px] font-black text-white/85">
-            <span className="voice-soft flex size-5 items-center justify-center rounded-md text-[10px] font-black ring-1 ring-white/10">
-              03
-            </span>
-            Max user
-          </p>
+          <p className="mt-4 text-[12px] font-bold text-white/75">Maksimal user</p>
           <div className="mt-1.5 flex items-center justify-between rounded-xl border border-white/15 bg-black/40 px-2.5 py-2">
             <button
               onClick={() => setMax((v) => Math.max(1, v - 1))}
@@ -563,13 +495,7 @@ function CreateRoomScreen({
             Maksimal 10 orang, minimal 1
           </p>
 
-          {/* Privasi room */}
-          <p className="mt-4 flex items-center gap-2 text-[13px] font-black text-white/85">
-            <span className="voice-soft flex size-5 items-center justify-center rounded-md text-[10px] font-black ring-1 ring-white/10">
-              04
-            </span>
-            Privasi Room
-          </p>
+          <p className="mt-4 text-[12px] font-bold text-white/75">Privasi room</p>
           <div className="mt-1.5 space-y-2">
             <PrivacyBox
               active={privacy === "public"}
@@ -596,19 +522,14 @@ function CreateRoomScreen({
             </p>
           </div>
 
-          {/* Tombol buat — kotak luar menyatu, kotak dalam di tengah. */}
-          <div className="voice-soft mt-4 rounded-2xl border p-2">
-            <button
-              onClick={() => void submit()}
-              disabled={busy}
-              className="voice-primary flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black transition active:scale-[0.98] disabled:opacity-60"
-            >
-              <span className="flex size-6 items-center justify-center rounded-full bg-black/15">
-                <Mic className="size-3.5" />
-              </span>
-              {busy ? "Membuat…" : "Buat Voice Room"}
-            </button>
-          </div>
+          <button
+            onClick={() => void submit()}
+            disabled={busy}
+            className="voice-primary mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black transition active:scale-[0.98] disabled:opacity-60"
+          >
+            <Mic className="size-4" />
+            {busy ? "Membuat…" : "Buat Voice Room"}
+          </button>
         </div>
       </div>
     </div>

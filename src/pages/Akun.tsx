@@ -396,6 +396,111 @@ function TierLadder({ level, xp }: { level: number; xp: number }) {
   );
 }
 
+/** Kartu premium akun: hitung mundur hari/jam/menit/detik + partikel. */
+function AkunPremiumCard({
+  premium,
+  until,
+  unlimited,
+  onOpen,
+}: {
+  premium: boolean;
+  until: number;
+  unlimited: boolean;
+  onOpen: () => void;
+}) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const ms = unlimited ? Number.POSITIVE_INFINITY : Math.max(0, until - now);
+  const days = unlimited ? "∞" : String(Math.floor(ms / 86_400_000)).padStart(2, "0");
+  const hours = unlimited
+    ? "∞"
+    : String(Math.floor((ms % 86_400_000) / 3_600_000)).padStart(2, "0");
+  const minutes = unlimited
+    ? "∞"
+    : String(Math.floor((ms % 3_600_000) / 60_000)).padStart(2, "0");
+  const seconds = unlimited
+    ? "∞"
+    : String(Math.floor((ms % 60_000) / 1000)).padStart(2, "0");
+  const units = [
+    [days, "Hari"],
+    [hours, "Jam"],
+    [minutes, "Menit"],
+    [seconds, "Detik"],
+  ];
+
+  return (
+    <button
+      onClick={onOpen}
+      className="premium-account-card relative mt-2.5 flex w-full flex-col overflow-hidden rounded-[24px] border border-[#ffd86a]/35 p-3.5 text-left transition active:scale-[0.99]"
+    >
+      <span aria-hidden className="premium-card-pattern absolute inset-0" />
+      <span aria-hidden className="premium-card-glare absolute -inset-y-16 -left-1/3 w-1/2 rotate-[18deg]" />
+      {[
+        [12, 18, 3, "0s"],
+        [78, 8, 2, "0.8s"],
+        [26, 70, 2.5, "1.4s"],
+        [90, 58, 2, "0.4s"],
+        [54, 22, 1.8, "1.9s"],
+        [40, 86, 2.2, "1.1s"],
+        [68, 76, 3, "0.2s"],
+        [8, 54, 2, "2.3s"],
+      ].map(([x, y, s, d], i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="premium-card-spark absolute rounded-full bg-[#ffe7a1]"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: s,
+            height: s,
+            animationDelay: String(d),
+          }}
+        />
+      ))}
+
+      <span className="relative flex items-start justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <span className="grid size-9 place-items-center rounded-xl border border-[#ffdf8b]/35 bg-[#ffd23f]/12 text-[#ffdf8b]">
+            <Gem className="size-[18px]" strokeWidth={2.4} />
+          </span>
+          <span>
+            <span className="block text-[13px] font-black tracking-tight text-white">
+              {premium ? "Yoru Premium aktif" : "Beli Yoru Premium"}
+            </span>
+            <span className="mt-0.5 block text-[9px] font-medium text-white/48">
+              XP 2× · 1080p · tanpa iklan
+            </span>
+          </span>
+        </span>
+        <span className="rounded-full bg-[#ffd23f] px-2.5 py-1 text-[9px] font-black text-black">
+          {premium ? "Perpanjang" : "Pilih paket"}
+        </span>
+      </span>
+
+      <span className="relative mt-3 grid grid-cols-4 gap-1.5">
+        {units.map(([value, label]) => (
+          <span
+            key={label}
+            className="rounded-xl border border-white/12 bg-black/30 py-2 text-center backdrop-blur-md"
+          >
+            <span className="block font-mono text-[16px] font-black leading-none text-[#fff1bd]">
+              {value}
+            </span>
+            <span className="mt-1 block text-[7px] font-black uppercase tracking-[0.1em] text-white/38">
+              {label}
+            </span>
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+}
+
 function AkunProfileScreen({
   onClose,
   onSettings,
@@ -419,10 +524,6 @@ function AkunProfileScreen({
   const level = user.level ?? 1;
   const xp = user.xp ?? 0;
   const premium = (user.premiumUntil ?? 0) > Date.now() || !!user.unlimitedPremium;
-  const premiumDays = Math.max(
-    0,
-    Math.ceil(((user.premiumUntil ?? 0) - Date.now()) / 86_400_000),
-  );
   const clanTag = user.clanTag;
 
   const shareAccount = async () => {
@@ -636,26 +737,12 @@ function AkunProfileScreen({
         ))}
       </div>
 
-      {/* Beli / perpanjang Premium */}
-      <button
-        onClick={() => navigate("/premium")}
-        className="relative mt-2.5 flex w-full items-center gap-3 overflow-hidden rounded-[24px] border border-gold/35 bg-[linear-gradient(115deg,rgba(255,210,63,.18),rgba(232,72,85,.08)_55%,rgba(255,255,255,.03))] p-3.5 text-left transition active:scale-[0.99]"
-      >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/35 bg-gold/15 text-gold">
-          <Gem className="size-5" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[13px] font-black text-white">
-            {premium ? `Premium aktif · ${premiumDays} hari` : "Beli Premium"}
-          </span>
-          <span className="mt-0.5 block text-[10px] leading-snug text-white/50">
-            XP nonton 2× lipat tiap 2 menit, 1080p, tanpa iklan. Mulai Rp5.000.
-          </span>
-        </span>
-        <span className="shrink-0 rounded-full bg-gold px-3 py-1.5 text-[10px] font-black text-black">
-          {premium ? "Perpanjang" : "Pilih paket"}
-        </span>
-      </button>
+      <AkunPremiumCard
+        premium={premium}
+        until={user.premiumUntil ?? 0}
+        unlimited={!!user.unlimitedPremium}
+        onOpen={() => navigate("/premium")}
+      />
 
       {/* Aksi cepat — 3 per baris, kotak kecil. */}
       <div className="mt-2.5 grid grid-cols-3 gap-2">

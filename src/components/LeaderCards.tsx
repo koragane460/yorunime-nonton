@@ -1080,29 +1080,219 @@ function ClanOverlay({ onClose }: { onClose: () => void }) {
   );
 }
 
+type HomeBoard = "xp" | "clan" | "give";
+
+const HOME_BOARDS: { key: HomeBoard; label: string }[] = [
+  { key: "xp", label: "TOP LEADERBOARD XP" },
+  { key: "clan", label: "TOP CLAN" },
+  { key: "give", label: "TOP GIVE PREMIUM" },
+];
+
+/** Papan peringkat ringkas di Home: 5 besar kiri, 5 berikutnya kanan. */
 export function LeaderCards() {
-  const [open, setOpen] = useState<null | { kind: "xp" | "give"; period: Period } | null>(
-    null,
+  const navigate = useNavigate();
+  const [board, setBoard] = useState<HomeBoard>("xp");
+  const [period, setPeriod] = useState<Period>("1");
+  const xpRows = useQuery(api.xp.leaderboard, {
+    period: xpKeyOf(period),
+    limit: 10,
+  }) as XpRow[] | undefined;
+  const giveRows = useQuery(api.account.topGive, {
+    limit: 10,
+    period,
+  }) as GiveRow[] | undefined;
+  const clanRows = useQuery(api.clans.topClans, { limit: 10 }) as
+    | ClanRow[]
+    | undefined;
+
+  const xpByUser = new Map(
+    (xpRows ?? []).map((r) => [String(r.userId ?? ""), r.xp ?? 0]),
   );
-  const [clanOpen, setClanOpen] = useState(false);
+  const giveByUser = new Map(
+    (giveRows ?? []).map((r) => [String(r.userId ?? ""), r.days ?? 0]),
+  );
+  const clanXpByTag = new Map(
+    (clanRows ?? []).map((c) => [c.tag.toUpperCase(), c.totalXp]),
+  );
+
+  const rows: HomeBoardRow[] =
+    board === "xp"
+      ? (xpRows ?? []).map((r) => {
+          const give = giveByUser.get(String(r.userId ?? "")) ?? 0;
+          const clanXp = clanXpByTag.get((r.clanTag ?? "").toUpperCase());
+          return {
+            key: String(r.userId ?? r.rank),
+            rank: r.rank,
+            username: r.username,
+            image: r.image,
+            border: r.avatarBorder,
+            value: `${fmtShort(r.xp ?? 0)} XP`,
+            sub: `${r.clanTag ? `[${r.clanTag}]` : "Tanpa clan"}${clanXp ? ` · Clan ${fmtShort(clanXp)}` : ""} · Give ${give} hari`,
+            onClick: () =>
+              r.userId && navigate(`/akun?user=${r.userId}`),
+          };
+        })
+      : board === "give"
+        ? (giveRows ?? []).map((r, i) => {
+            const xp = xpByUser.get(String(r.userId ?? "")) ?? r.xp ?? 0;
+            const clanXp = clanXpByTag.get((r.clanTag ?? "").toUpperCase());
+            return {
+              key: String(r.userId ?? i),
+              rank: i + 1,
+              username: r.username,
+              image: r.image,
+              border: r.avatarBorder,
+              value: `${r.days ?? 0} hari`,
+              sub: `${fmtShort(xp)} XP${clanXp ? ` · Clan ${fmtShort(clanXp)}` : ""}`,
+              onClick: () =>
+                r.userId && navigate(`/akun?user=${r.userId}`),
+            };
+          })
+        : (clanRows ?? []).map((c, i) => ({
+            key: c._id,
+            rank: i + 1,
+            username: c.name,
+            image: c.avatarUrl ?? c.leaderImage,
+            value: `${fmtShort(c.totalXp)} XP`,
+            sub: `[${c.tag}] · Lv.${c.level} · ${c.leaderUsername}`,
+            onClick: () => navigate(`/clan?clan=${c._id}`),
+          }));
+
+  const left = rows.slice(0, 5);
+  const right = rows.slice(5, 10);
+  const activeIndex = HOME_BOARDS.findIndex((b) => b.key === board);
 
   return (
-    <>
-      <section className="fade-enter mt-5">
-        <div className="thin-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <XpGiveCard mode="xp" onOpen={(period) => setOpen({ kind: "xp", period })} />
-          <XpGiveCard mode="give" onOpen={(period) => setOpen({ kind: "give", period })} />
-          <ClanCard onOpen={() => setClanOpen(true)} />
+    <section className="fade-enter relative mt-5 overflow-hidden rounded-[22px] border border-white/10 bg-[#16151b] p-3 pr-2.5">
+      {/* Indikator posisi papan — tiga garis kecil di kanan atas. */}
+      <span
+        aria-hidden
+        className="absolute right-3 top-3 flex items-center gap-1"
+      >
+        {HOME_BOARDS.map((b, i) => (
+          <span
+            key={b.key}
+            className={cn(
+              "h-[3px] rounded-full transition-all",
+              i === activeIndex
+                ? "w-4 bg-[var(--ui-c)]"
+                : "w-1.5 bg-white/18",
+            )}
+          />
+        ))}
+      </span>
+
+      <div className="flex items-center justify-center gap-2 pr-8">
+        <span
+          className="flex size-8 shrink-0 items-center justify-center rounded-xl text-black"
+          style={{ background: "var(--ui-c, #FFD23F)" }}
+        >
+          <Trophy className="size-[17px]" strokeWidth={2.6} />
+        </span>
+        <div className="thin-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {HOME_BOARDS.map((b) => (
+            <button
+              key={b.key}
+              type="button"
+              onClick={() => setBoard(b.key)}
+              className={cn(
+                "shrink-0 rounded-lg px-1.5 py-1 text-[8px] font-black tracking-[0.02em] transition",
+                board === b.key
+                  ? "bg-white/[0.1] text-white"
+                  : "text-white/38 hover:text-white/70",
+              )}
+            >
+              {b.label}
+            </button>
+          ))}
         </div>
-      </section>
-      {open && (
-        <LeaderOverlay
-          mode={open.kind}
-          initialPeriod={open.period}
-          onClose={() => setOpen(null)}
-        />
-      )}
-      {clanOpen && <ClanOverlay onClose={() => setClanOpen(false)} />}
-    </>
+      </div>
+
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        {PERIODS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => setPeriod(p.key)}
+            className={cn(
+              "rounded-lg border py-1.5 text-[10px] font-black transition",
+              period === p.key
+                ? "border-transparent text-black"
+                : "border-white/10 bg-white/[0.035] text-white/50",
+            )}
+            style={
+              period === p.key
+                ? { background: "var(--ui-c, #FFD23F)" }
+                : undefined
+            }
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-0">
+        <div className="min-w-0 pr-2">
+          <HomeBoardColumn rows={left} />
+        </div>
+        <div className="min-w-0 border-l border-white/10 pl-2">
+          <HomeBoardColumn rows={right} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type HomeBoardRow = {
+  key: string;
+  rank: number;
+  username?: string;
+  image?: string;
+  border?: string;
+  value: string;
+  sub: string;
+  onClick: () => void;
+};
+
+function HomeBoardColumn({ rows }: { rows: HomeBoardRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <p className="flex min-h-[172px] items-center justify-center px-2 text-center text-[10px] leading-relaxed text-white/30">
+        Belum ada data untuk periode ini.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-1">
+      {rows.map((r) => (
+        <button
+          key={r.key}
+          type="button"
+          onClick={r.onClick}
+          className="flex w-full min-w-0 items-center gap-1.5 rounded-xl px-1 py-1.5 text-left transition hover:bg-white/[0.045] active:scale-[0.99]"
+        >
+          <span className="w-4 shrink-0 text-[11px] font-black tabular-nums text-white/35">
+            #{r.rank}
+          </span>
+          <FramedAvatar
+            border={r.border}
+            src={r.image}
+            seed={r.username}
+            className="size-7 shrink-0 rounded-full"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[10.5px] font-black leading-tight text-white/88">
+              {r.username?.trim() || "user"}
+            </span>
+            <span className="mt-0.5 block truncate text-[8px] font-semibold leading-tight text-white/32">
+              {r.sub}
+            </span>
+          </span>
+          <span className="shrink-0 text-[9px] font-black tabular-nums text-[var(--ui-c)]">
+            {r.value}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }

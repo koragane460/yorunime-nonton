@@ -47,6 +47,8 @@ async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
     privacy: p.privacy,
     likeCount: (p.likes ?? []).length,
     liked: viewer ? (p.likes ?? []).includes(viewer) : false,
+    favoriteCount: (p.favorites ?? []).length,
+    favorited: viewer ? (p.favorites ?? []).includes(viewer) : false,
     commentCount: (
       await ctx.db
         .query("feedComments")
@@ -221,6 +223,22 @@ export const toggleLike = mutation({
     if (liked) likes.push(userId);
     await ctx.db.patch(postId, { likes });
     return { liked, likeCount: likes.length };
+  },
+});
+
+/** Simpan / hapus simpanan post (ikon pita di rail Feed). */
+export const toggleFavorite = mutation({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    const p = await ctx.db.get(postId);
+    if (!p) throw new Error("Post tidak ada");
+    const favorites = (p.favorites ?? []).filter((l) => l !== userId);
+    const favorited = favorites.length === (p.favorites ?? []).length;
+    if (favorited) favorites.push(userId);
+    await ctx.db.patch(postId, { favorites });
+    return { favorited, favoriteCount: favorites.length };
   },
 });
 

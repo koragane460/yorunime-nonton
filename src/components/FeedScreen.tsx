@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bookmark,
   Check,
   ChevronLeft,
   Eye,
@@ -18,6 +19,7 @@ import {
   Lock,
   MessageCircle,
   Music,
+  Play,
   Plus,
   Send,
   Share2,
@@ -69,6 +71,8 @@ type Post = {
   privacy: "all" | "teman";
   likeCount: number;
   liked: boolean;
+  favoriteCount: number;
+  favorited: boolean;
   commentCount: number;
   views: number;
   createdAt: number;
@@ -113,36 +117,37 @@ function RightRail({
   onFollow,
   onLike,
   onComment,
+  onFavorite,
   onShare,
+  onOpenProfile,
 }: {
   p: Post;
   following: boolean;
   onFollow: () => void;
   onLike: () => void;
   onComment: () => void;
+  onFavorite: () => void;
   onShare: () => void;
+  onOpenProfile: () => void;
 }) {
   return (
-    <div className="absolute right-2 top-[34%] z-20 flex flex-col items-center gap-7">
-      {/* Foto profil + tombol + (hanya untuk orang lain) */}
-      <div className="relative">
-        <Avatar src={p.image ?? undefined} seed={p.username} className="size-14 ring-2 ring-white/60" />
-        {!p.isMe && (
+    <div className="absolute right-2 top-[31%] z-20 flex flex-col items-center gap-6">
+      {/* Foto profil + Follow. Tombol merah muda HILANG total setelah follow. */}
+      <div className="flex flex-col items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          aria-label={`Buka profil ${p.username}`}
+          className="transition active:scale-95"
+        >
+          <Avatar src={p.image ?? undefined} seed={p.username} className="size-14 ring-2 ring-white/60" />
+        </button>
+        {!p.isMe && !following && (
           <button
             onClick={onFollow}
-            aria-label={following ? "Berhenti mengikuti" : "Ikuti"}
-            className={cn(
-              "absolute -bottom-2 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center rounded-full border-2 border-black/70 transition active:scale-90",
-              following ? "bg-white text-black" : "bg-primary text-primary-foreground",
-            )}
+            className="rounded-full bg-rose-400 px-3 py-1 text-[10px] font-black text-white shadow-[0_8px_18px_-10px_rgba(244,63,94,.9)] transition active:scale-90"
           >
-            {/* Pas dicentang: tampilkan CENTANG dulu sejenak, lalu bulatan
-                tombolnya menghilang (tinggal ikon centang polos). */}
-            {following ? (
-              <Check className="size-4" />
-            ) : (
-              <Plus className="size-3.5" />
-            )}
+            Follow
           </button>
         )}
       </div>
@@ -163,20 +168,29 @@ function RightRail({
         <span className="text-xs font-black text-white drop-shadow">{p.commentCount}</span>
       </button>
 
+      {/* Favorit bentuk pita, jumlah di bawah. */}
+      <button onClick={onFavorite} className="flex flex-col items-center gap-1.5 transition active:scale-90">
+        <Bookmark
+          className={cn(
+            "size-8 drop-shadow",
+            p.favorited ? "fill-white text-white" : "text-white",
+          )}
+          strokeWidth={2.3}
+        />
+        <span className="text-xs font-black text-white drop-shadow">
+          {p.favoriteCount}
+        </span>
+      </button>
+
       <button onClick={onShare} className="flex flex-col items-center gap-1.5 transition active:scale-90">
         <Share2 className="size-8 text-white drop-shadow" />
         <span className="text-xs font-black text-white drop-shadow">Bagikan</span>
       </button>
 
-      {/* KASET LAGU — di bawah Bagikan. BENTUK KASET BULAT (asli kaset)
-          dengan sampul foto lagu; kalau suara asli pakai foto profile
-          user yang juga BULAT. */}
+      {/* Musik minimal: cakram berputar + label pendek. */}
       {(p.music || p.kind === "video") && (
-        <div className="flex flex-col items-center gap-1">
-          <span className="relative flex size-14 items-center justify-center">
-            {/* Badan kaset bundar. */}
-            <span className="absolute inset-0 rounded-full border border-white/45 bg-black/85 shadow-[0_8px_18px_-10px_rgba(0,0,0,.95)]" />
-            {/* Sampul foto — BULAT, di tengah. */}
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="relative grid size-12 place-items-center overflow-hidden rounded-full border border-white/35 bg-black/55 shadow-[0_10px_24px_-14px_rgba(0,0,0,.95)]">
             <img
               src={
                 p.music
@@ -184,18 +198,81 @@ function RightRail({
                   : p.image || p.imageUrl || undefined
               }
               alt=""
-              className="relative z-10 size-9 rounded-full object-cover ring-2 ring-white/60"
+              className={cn(
+                "size-full rounded-full object-cover opacity-90",
+                p.music && "animate-[spin_8s_linear_infinite]",
+              )}
             />
-            {/* Dua rol kaset kecil kiri-kanan (beneran kaset). */}
-            <span className="absolute left-1.5 top-1/2 z-20 size-2.5 -translate-y-1/2 rounded-full border border-white/70 bg-black/85" />
-            <span className="absolute right-1.5 top-1/2 z-20 size-2.5 -translate-y-1/2 rounded-full border border-white/70 bg-black/85" />
-            <Music className="absolute -right-0.5 -top-0.5 z-20 size-3.5 text-white/85 drop-shadow" />
+            <span className="absolute size-3 rounded-full border border-white/60 bg-black/75" />
+            <Music className="absolute -right-0.5 -top-0.5 size-3.5 text-white drop-shadow" />
           </span>
-          <span className="max-w-[64px] truncate text-[9px] font-black text-white drop-shadow">
+          <span className="max-w-[62px] truncate text-[8px] font-bold text-white/80 drop-shadow">
             {p.music?.title ?? "Suara asli"}
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Video Feed tanpa UI player bawaan: ketuk untuk play/pause. */
+function FeedVideo({
+  src,
+  poster,
+  volume,
+}: {
+  src: string;
+  poster?: string;
+  volume: number;
+}) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.volume = Math.max(0, Math.min(1, volume));
+    void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, [src, volume]);
+
+  const toggle = () => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.paused) {
+      void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    } else {
+      el.pause();
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <div className="absolute inset-0">
+      <video
+        ref={ref}
+        src={src}
+        poster={poster}
+        className="h-full w-full object-cover"
+        autoPlay
+        loop
+        playsInline
+        controls={false}
+        disablePictureInPicture
+        onClick={toggle}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? "Pause video" : "Putar video"}
+        className={cn(
+          "absolute left-1/2 top-1/2 z-10 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/35 text-white backdrop-blur-md transition-all duration-200 active:scale-90",
+          playing ? "size-0 opacity-0" : "size-16 opacity-100",
+        )}
+      >
+        <Play className="size-7 translate-x-px fill-current" strokeWidth={1.5} />
+      </button>
     </div>
   );
 }
@@ -209,6 +286,7 @@ function PostView({
   onFollow,
   onLike,
   onComment,
+  onFavorite,
   onShare,
   onOpenProfile,
   children,
@@ -218,6 +296,7 @@ function PostView({
   onFollow: () => void;
   onLike: () => void;
   onComment: () => void;
+  onFavorite: () => void;
   onShare: () => void;
   onOpenProfile: () => void;
   children?: ReactNode;
@@ -246,19 +325,10 @@ function PostView({
     >
       {p.kind === "video" && p.imageUrl ? (
         <>
-          <video
+          <FeedVideo
             src={p.imageUrl}
             poster={p.thumbUrl ?? undefined}
-            className="h-full w-full object-cover"
-            autoPlay
-            loop
-            playsInline
-            controls
-            ref={(el) => {
-              if (!el) return;
-              // Volume suara asli video diatur hasil mix di editor post.
-              el.volume = Math.max(0, Math.min(1, (p.audio?.videoVol ?? 100) / 100));
-            }}
+            volume={(p.audio?.videoVol ?? 100) / 100}
           />
           {/* Backsound musik — diputar seiring video (loop). */}
           {p.music?.audioUrl && (
@@ -333,17 +403,6 @@ function PostView({
         </p>
       )}
 
-      {/* Foto pembuat di tengah-atas (hanya konten orang lain) */}
-      {!p.isMe && (
-        <button
-          onClick={onOpenProfile}
-          aria-label={`Buka profil ${p.username}`}
-          className="absolute left-1/2 top-4 z-20 -translate-x-1/2 transition active:scale-95"
-        >
-          <Avatar src={p.image ?? undefined} seed={p.username} className="size-14 ring-2 ring-white/70" />
-        </button>
-      )}
-
       <CaptionBlock p={p} />
       <RightRail
         p={p}
@@ -351,7 +410,9 @@ function PostView({
         onFollow={onFollow}
         onLike={onLike}
         onComment={onComment}
+        onFavorite={onFavorite}
         onShare={onShare}
+        onOpenProfile={onOpenProfile}
       />
       {children}
     </div>
@@ -1544,6 +1605,7 @@ export function FeedScreen() {
   const navigate = useNavigate();
   const posts = useQuery(api.feed.listFeed, { limit: 50 }) as Post[] | undefined;
   const toggleLike = useMutation(api.feed.toggleLike);
+  const toggleFavorite = useMutation(api.feed.toggleFavorite);
   const addView = useMutation(api.feed.addView);
   const toggleFollow = useMutation(api.feed.toggleFollow);
 
@@ -1606,6 +1668,7 @@ export function FeedScreen() {
               p={p}
               onVisible={onVisible}
               onLike={() => void toggleLike({ postId: p.postId }).catch(() => {})}
+              onFavorite={() => void toggleFavorite({ postId: p.postId }).catch(() => {})}
               onFollow={() => void toggleFollow({ targetId: p.userId }).catch(() => {})}
               onComment={() => setCommentOn(p.postId)}
               onShare={() => setShareOn(p)}
@@ -1631,6 +1694,7 @@ function PostShell({
   p,
   onVisible,
   onLike,
+  onFavorite,
   onFollow,
   onComment,
   onShare,
@@ -1639,6 +1703,7 @@ function PostShell({
   p: Post;
   onVisible: (p: Post) => void;
   onLike: () => void;
+  onFavorite: () => void;
   onFollow: () => void;
   onComment: () => void;
   onShare: () => void;
@@ -1662,6 +1727,7 @@ function PostShell({
         onFollow={onFollow}
         onLike={onLike}
         onComment={onComment}
+        onFavorite={onFavorite}
         onShare={onShare}
         onOpenProfile={onOpenProfile}
       />
@@ -1684,6 +1750,7 @@ export function FeedPostOverlay({
   onOpenProfile?: (userId: Id<"users">) => void;
 }) {
   const toggleLike = useMutation(api.feed.toggleLike);
+  const toggleFavorite = useMutation(api.feed.toggleFavorite);
   const toggleFollow = useMutation(api.feed.toggleFollow);
   const [i, setI] = useState(index);
   const [commentOn, setCommentOn] = useState<Id<"feedPosts"> | null>(null);
@@ -1704,6 +1771,7 @@ export function FeedPostOverlay({
         following={!!following}
         onFollow={() => void toggleFollow({ targetId: p.userId }).catch(() => {})}
         onLike={() => void toggleLike({ postId: p.postId }).catch(() => {})}
+        onFavorite={() => void toggleFavorite({ postId: p.postId }).catch(() => {})}
         onComment={() => setCommentOn(p.postId)}
         onShare={() => setShareOn(p)}
         onOpenProfile={() => onOpenProfile?.(p.userId)}

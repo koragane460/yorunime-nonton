@@ -1,22 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
+import { ClanTag } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
-import { usernameColor } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
-  Check,
   Clapperboard,
-  Gem,
+  Crown,
+  Gift,
   MessageSquare,
+  Percent,
   Play,
   Shield,
   Sparkles,
   Trophy,
-  ArrowUpRight,
 } from "lucide-react";
 
 type HistoryRow = {
@@ -75,7 +74,7 @@ export function ContinueWatchingCard({
       <button
         type="button"
         onClick={() => onOpen(last)}
-        className="group relative flex h-[112px] w-full items-center overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0f17] p-3 text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
+        className="group relative flex h-[112px] w-full items-center overflow-hidden rounded-[24px] border border-white/10 bg-[#1b1a20] p-3 text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
       >
         {/* Lingkaran dekoratif besar supaya kotak tidak terasa polos. */}
         <span
@@ -117,19 +116,18 @@ export function ContinueWatchingCard({
         </span>
 
         <span className="relative flex min-w-0 flex-1 flex-col pl-3.5 pr-2">
-          <span className="line-clamp-2 text-[14.5px] font-black leading-tight tracking-[-0.01em] text-white">
+          <span
+            className="text-[7.5px] font-black uppercase tracking-[0.18em]"
+            style={{ color: "var(--ui-c, #FFD23F)" }}
+          >
+            Lanjutkan
+          </span>
+          <span className="mt-1 line-clamp-2 text-[14.5px] font-black leading-tight tracking-[-0.01em] text-white">
             {last.animeTitle}
           </span>
           <span className="mt-1.5 truncate text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/45">
             Epsd {last.episode} · {minutes} menit
           </span>
-        </span>
-
-        <span
-          className="absolute right-3 top-2.5 text-[7.5px] font-black uppercase tracking-[0.18em]"
-          style={{ color: "var(--ui-c, #FFD23F)" }}
-        >
-          Lanjutkan
         </span>
 
         <span
@@ -143,54 +141,91 @@ export function ContinueWatchingCard({
   );
 }
 
-/** Kartu Premium editorial: foil emas di atas kertas gelap, tanpa pelangi
- *  gradien. Terasa seperti undangan klub, bukan banner iklan. */
+/** Banner beli premium tiga panel, mengikuti referensi. */
 export function HomePremiumCard({ onBuy }: { onBuy: () => void }) {
+  const panels = [
+    {
+      badge: "50% OFF",
+      title: "Flash Sale",
+      desc: "Penawaran spesial untukmu!",
+      button: "Beli Sekarang",
+      Icon: Percent,
+      bg: "linear-gradient(125deg,#2a0308 0%,#4b0810 48%,#1a0206 100%)",
+      accent: "#ff6076",
+      border: "#ff536b",
+      badgeBg: "#ff2f4f",
+    },
+    {
+      badge: "Premium",
+      title: "Premium",
+      desc: "Nikmati fitur eksklusif!",
+      button: "Upgrade Sekarang",
+      Icon: Crown,
+      bg: "linear-gradient(125deg,#2a1a00 0%,#4b3000 44%,#241600 100%)",
+      accent: "#ffd23f",
+      border: "#ffd75e",
+      badgeBg: "#e1af1e",
+    },
+    {
+      badge: "Lainnya",
+      title: "Lainnya",
+      desc: "Temukan lebih banyak!",
+      button: "Lihat Semua",
+      Icon: Gift,
+      bg: "linear-gradient(125deg,#04142a 0%,#092a55 50%,#03101f 100%)",
+      accent: "#6fb6ff",
+      border: "#79baff",
+      badgeBg: "#1f6fe5",
+    },
+  ] as const;
+
   return (
-    <button
-      type="button"
-      onClick={onBuy}
-      className="fade-enter group relative mt-3 w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#0a0a0c] p-3.5 text-left shadow-[0_24px_48px_-34px_rgba(0,0,0,1)] transition active:scale-[0.99]"
-    >
-      {/* Watermark Y besar — bukan badge kecil, mengikuti referensi. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-1 -top-16 select-none font-display text-[154px] font-black leading-none tracking-[-0.12em] text-white/[0.035]"
-      >
-        Y
-      </span>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-[8rem] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,.12),transparent)]"
-      />
-
-      <span className="relative flex items-center gap-3">
-        <span className="min-w-0 flex-1">
-          <span className="text-[8px] font-black uppercase tracking-[0.24em] text-[#E8C77A]">
-            Yoru Premium
-          </span>
-          <span className="mt-1 block truncate font-display text-[16px] font-black leading-tight tracking-[-0.02em] text-white">
-            Nonton lebih tenang.
-          </span>
-          <span className="mt-1.5 flex items-center gap-1.5 text-[8.5px] font-semibold text-white/45">
-            <Check className="size-2.5 text-[#E8C77A]" strokeWidth={3} />
-            Tanpa iklan
-            <span className="size-0.5 rounded-full bg-white/25" />
-            1080p
-            <span className="size-0.5 rounded-full bg-white/25" />
-            Manga
-          </span>
-        </span>
-
-        <span
-          className="relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[10px] font-black text-black shadow-[0_12px_24px_-16px_rgba(0,0,0,.9)] transition group-hover:brightness-105"
-          style={{ background: "var(--ui-c, #FFD23F)" }}
-        >
-          Coba Rp5.000
-          <ArrowUpRight className="size-3.5" strokeWidth={2.8} />
-        </span>
-      </span>
-    </button>
+    <div className="fade-enter mt-3 overflow-hidden rounded-[20px] border border-white/12 bg-[#07080d] shadow-[0_22px_50px_-32px_rgba(0,0,0,.95)]">
+      <div className="grid grid-cols-3">
+        {panels.map((p, i) => (
+          <button
+            key={p.title}
+            type="button"
+            onClick={onBuy}
+            className={cn(
+              "relative flex min-h-[146px] flex-col overflow-hidden px-2 py-2.5 text-left transition active:brightness-110",
+              i > 0 && "border-l border-white/12",
+            )}
+            style={{ background: p.bg }}
+          >
+            <span
+              className="relative z-10 w-fit rounded-full px-1.5 py-0.5 text-[7px] font-black"
+              style={{ background: p.badgeBg, color: i === 1 ? "#332100" : "#fff" }}
+            >
+              {p.badge}
+            </span>
+            <span
+              className="relative z-10 mt-1.5 grid size-9 place-items-center rounded-xl text-white"
+              style={{ background: `color-mix(in srgb, ${p.accent} 28%, #111)` }}
+            >
+              <p.Icon className="size-5" fill={i === 1 ? "currentColor" : "none"} strokeWidth={2.3} />
+            </span>
+            <span className="relative z-10 mt-1.5 text-[12px] font-black leading-none tracking-tight text-white">
+              {p.title.split(" ").map((w, wi) => (
+                <span key={w} style={{ color: wi === 1 ? p.accent : undefined }}>
+                  {w}{wi === 0 && p.title.includes(" ") ? " " : ""}
+                </span>
+              ))}
+            </span>
+            <span className="relative z-10 mt-1 text-[6.5px] font-medium leading-snug text-white/55">
+              {p.desc}
+            </span>
+            <span
+              className="relative z-10 mt-auto flex items-center justify-center gap-0.5 rounded-full border px-1.5 py-1 text-[7px] font-bold text-white"
+              style={{ borderColor: `${p.border}aa` }}
+            >
+              {p.button} <ArrowRight className="size-2" strokeWidth={3} />
+            </span>
+            <Sparkles className="pointer-events-none absolute right-2 top-9 size-2" style={{ color: p.accent }} />
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -337,103 +372,40 @@ export function ActiveEventCard({
   );
 }
 
-type ChatRow = {
-  _id: string;
-  username: string;
-  image?: string;
-  premium?: boolean;
-  text?: string;
-  premiumGive?: unknown;
-};
-
-/** Kartu Global Chat Home — 3 pesan yang berganti setiap 1 menit. */
+/** Kartu Global Chat Home — persegi panjang, ikon polos, garis pemisah. */
 export function HomeCommunityCard({ onOpenChat }: { onOpenChat: () => void }) {
-  const msgs = useQuery(api.chat.listMessages, {
-    kind: "global",
-    channel: "scg1",
-    limit: 12,
-  }) as ChatRow[] | undefined;
   const online = useQuery(api.presence.onlineCount, {});
-  const [idx, setIdx] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => setIdx((v) => v + 1), 60_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const visible = useMemo(() => {
-    const list = (msgs ?? []).slice(-9);
-    if (list.length === 0) return [];
-    return Array.from({ length: Math.min(3, list.length) }, (_, i) => {
-      return list[(idx + i) % list.length];
-    });
-  }, [msgs, idx]);
 
   return (
-    <section className="fade-enter mt-5">
-      <h2 className="yn-sec text-[17px] font-black tracking-tight text-white">
-        Komunitas
-      </h2>
-      <div className="mt-2 overflow-hidden rounded-[26px] border border-white/12 bg-[linear-gradient(140deg,rgba(28,167,236,.10),rgba(255,255,255,.045)_48%,rgba(123,216,143,.07))] p-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-400/12 text-emerald-200">
-            <MessageSquare className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[13px] font-black text-white">
+    <section className="fade-enter mt-3">
+      <button
+        type="button"
+        onClick={onOpenChat}
+        className="flex w-full items-stretch gap-3 rounded-[20px] border border-white/10 bg-white/[0.045] px-4 py-3.5 text-left transition active:scale-[0.995]"
+      >
+        <span className="flex shrink-0 items-center justify-center self-center text-[var(--ui-c)]">
+          <MessageSquare className="size-7" strokeWidth={2.5} />
+        </span>
+        <span
+          aria-hidden
+          className="w-px shrink-0 self-stretch bg-white/12"
+        />
+        <span className="flex min-w-0 flex-1 flex-col justify-center">
+          <span className="flex items-center gap-2">
+            <span className="text-[15px] font-black tracking-tight text-white">
               Global Chat
-              <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.8)]" />
-            </p>
-            <p className="text-[9px] font-semibold text-white/40">
-              Obrolan komunitas YoruNime
-            </p>
-          </div>
-          <span className="shrink-0 rounded-full bg-emerald-500 px-2.5 py-1 text-[9px] font-black text-white">
-            {online ?? 0} Online
+            </span>
+            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-300/85">
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              {online ?? 0} online
+            </span>
           </span>
-        </div>
-
-        <div className="mt-3 space-y-2.5">
-          {visible.length > 0 ? (
-            visible.map((m, i) => (
-              <div key={`${m._id}-${idx}-${i}`} className="flex min-w-0 items-center gap-2">
-                <Avatar
-                  src={m.image}
-                  seed={m.username}
-                  className="size-7 shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="flex min-w-0 items-center gap-1 text-[10px] font-bold leading-tight">
-                    <span className={cn("truncate", usernameColor(m.username))}>
-                      {m.username}
-                    </span>
-                    {m.premium && <BlueCheck className="size-3 shrink-0" />}
-                    <span className="shrink-0 text-white/65">:</span>
-                    <span className="min-w-0 flex-1 truncate font-medium text-white/55">
-                      {m.premiumGive ? "Give premium" : m.text || "[foto]"}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="py-2 text-center text-[10px] text-white/35">
-              {msgs === undefined
-                ? "Memuat chat…"
-                : "Belum ada chat — jadi yang pertama!"}
-            </p>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={onOpenChat}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#0E7490_0%,#1CA7EC_100%)] py-2.5 text-[11px] font-black text-white shadow-[0_12px_24px_-16px_rgba(14,116,144,.85)] transition hover:brightness-110 active:scale-[0.99]"
-        >
-          Buka Chat
-          <ArrowRight className="size-4" strokeWidth={2.4} />
-        </button>
-      </div>
+          <span className="mt-0.5 truncate text-[10.5px] font-medium text-white/38">
+            Ngobrol dengan orang yang sedang online
+          </span>
+        </span>
+        <ArrowRight className="size-4 shrink-0 self-center text-white/25" />
+      </button>
     </section>
   );
 }

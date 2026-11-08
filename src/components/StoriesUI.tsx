@@ -1714,6 +1714,7 @@ export function StoryViewer({
   const [replyBusy, setReplyBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   const groups = useMemo(() => feed ?? [], [feed]);
   const active = groups[group];
@@ -1751,6 +1752,46 @@ export function StoryViewer({
     api.storage.getUrl,
     currentStory ? { storageId: currentStory.storageId } : "skip",
   );
+
+  // Story berikutnya dipanaskan diam-diam selagi yang sekarang diputar.
+  // Video tidak perlu menunggu query URL + buffering dari nol saat user
+  // menekan layar; gambar berikutnya juga sudah masuk cache browser.
+  const nextStory = useMemo(() => {
+    const list = groups[group]?.stories ?? [];
+    if (idx + 1 < list.length) return list[idx + 1];
+    const nextGroup = groups[group + 1];
+    return nextGroup?.stories?.[0];
+  }, [groups, group, idx]);
+  const nextUrl = useQuery(
+    api.storage.getUrl,
+    nextStory ? { storageId: nextStory.storageId } : "skip",
+  );
+  useEffect(() => {
+    if (!nextUrl || !nextStory) return;
+    if (nextStory.mediaType === "image") {
+      const img = new Image();
+      img.src = nextUrl;
+      return;
+    }
+    const v = document.createElement("video");
+    v.preload = "auto";
+    v.muted = true;
+    v.playsInline = true;
+    v.src = nextUrl;
+    v.style.display = "none";
+    document.body.appendChild(v);
+    v.load();
+    return () => {
+      v.pause();
+      v.removeAttribute("src");
+      v.load();
+      v.remove();
+    };
+  }, [nextUrl, nextStory]);
+
+  useEffect(() => {
+    setVideoReady(false);
+  }, [currentStory?._id]);
 
   // Reset kalau feed berubah bentuk.
   useEffect(() => {
@@ -1873,8 +1914,8 @@ export function StoryViewer({
   }
 
   const list = active.stories;
-  // Status selalu tampil fullscreen TANPA terpotong. Crop/zoom dari editor
-  // tidak dipakai di penampil supaya seluruh foto/video terlihat utuh.
+  // Media mengisi SELURUH layar (cover), termasuk area di belakang header dan
+  // footer. Tidak ada lagi kotak/letterbox setengah layar.
   const mediaStyle = undefined;
 
   const sendReply = async (text: string) => {
@@ -1917,11 +1958,16 @@ export function StoryViewer({
         ref={(el) => {
           if (el) el.volume = Math.min(1, Math.max(0, currentStory.mediaVol ?? 1));
         }}
+        key={currentStory._id}
         src={url}
         autoPlay
         playsInline
         preload="auto"
         controls={false}
+        onCanPlay={() => setVideoReady(true)}
+        onLoadedData={() => setVideoReady(true)}
+        onWaiting={() => setVideoReady(false)}
+        onPlaying={() => setVideoReady(true)}
         onTimeUpdate={(e) => {
           const v = e.currentTarget;
           if (Number.isFinite(v.duration) && v.duration > 0) {
@@ -1941,60 +1987,71 @@ export function StoryViewer({
     );
 
   return createPortal(
-    <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-black">
-      {/* Bar progres */}
-      <div className="flex gap-1 px-3 pt-3">
-        {list.map((s, i) => (
-          <span key={s._id} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/25">
-            <span
-              className="block h-full rounded-full bg-white"
-              style={{ width: i < idx ? "100%" : i === idx ? `${progress}%` : "0%" }}
-            />
+    <div className="screen-enter fixed inset-0 z-[80] overflow-hidden bg-black">
+      {/* Media mengisi seluruh layar; header/footer mengapung di atasnya. */}
+      <div className="absolute inset-0 z-0">{renderMedia("size-full object-cover")}</div>
+      {currentStory.mediaType === "video" && !videoReady && url && (
+        <div className="absolute inset-0 z-[2] grid place-items-center bg-black/20">
+          <span className="flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-[11px] font-bold text-white/80 backdrop-blur-md">
+            <Loader2 className="size-4 animate-spin" /> Menyiapkan video…
           </span>
-        ))}
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5">
-        <StoryRing image={active.userImage} seed={active.username} size={34} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-bold text-white">{active.username}</p>
-          <p className="flex items-center gap-1 text-[10px] text-white/60">
-            {Math.max(1, Math.round((Date.now() - currentStory.createdAt) / 3600000))} jam lalu
-            {currentStory.privacy === "teman" && (
-              <span className="ml-1 rounded-full bg-white/15 px-1.5 py-0.5 text-[8px] font-bold">
-                TEMAN
-              </span>
-            )}
-            {currentStory.privacy === "diri" && (
-              <span className="ml-1 rounded-full bg-white/15 px-1.5 py-0.5 text-[8px] font-bold">
-                PRIBADI
-              </span>
-            )}
-          </p>
         </div>
-        {viewingOwn && (
+      )}
+
+      {/* Bar progres + header mengapung di atas media. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-[linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,.28)_68%,transparent)] pb-10">
+        <div className="pointer-events-auto flex gap-1 px-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
+          {list.map((s, i) => (
+            <span key={s._id} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/25">
+              <span
+                className="block h-full rounded-full bg-white"
+                style={{ width: i < idx ? "100%" : i === idx ? `${progress}%` : "0%" }}
+              />
+            </span>
+          ))}
+        </div>
+
+        <div className="pointer-events-auto flex items-center gap-3 px-3 pb-2.5 pt-3">
+          <StoryRing image={active.userImage} seed={active.username} size={44} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-black leading-tight text-white">
+              {active.username}
+            </p>
+            <p className="mt-0.5 flex items-center gap-1 text-[11.5px] font-semibold text-white/72">
+              {Math.max(1, Math.round((Date.now() - currentStory.createdAt) / 3600000))} jam lalu
+              {currentStory.privacy === "teman" && (
+                <span className="ml-1 rounded-full bg-white/15 px-1.5 py-0.5 text-[8px] font-bold">
+                  TEMAN
+                </span>
+              )}
+              {currentStory.privacy === "diri" && (
+                <span className="ml-1 rounded-full bg-white/15 px-1.5 py-0.5 text-[8px] font-bold">
+                  PRIBADI
+                </span>
+              )}
+            </p>
+          </div>
+          {viewingOwn && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Hapus story"
+              className="flex size-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md"
+            >
+              <Trash2 className="size-[18px]" />
+            </button>
+          )}
           <button
-            onClick={() => setConfirmDelete(true)}
-            aria-label="Hapus story"
-            className="rounded-full bg-white/15 p-2 text-white"
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md"
           >
-            <Trash2 className="size-4" />
+            <X className="size-[18px]" />
           </button>
-        )}
-        <button
-          onClick={onClose}
-          aria-label="Tutup"
-          className="rounded-full bg-white/15 p-2 text-white"
-        >
-          <X className="size-4" />
-        </button>
+        </div>
       </div>
 
-      {/* Media + lapisan + zona ketuk kiri/kanan. Media SELALU object-contain
-          di seluruh layar supaya foto/video tidak terpotong. */}
-      <div className="relative flex-1 overflow-hidden">
-        <div className="absolute inset-0">{renderMedia("size-full object-contain")}</div>
+      {/* Lapisan teks/stiker + zona ketuk. */}
+      <div className="absolute inset-0 z-10 overflow-hidden">
 
         {/* Teks dari penyunting */}
         {currentStory.texts?.map((t, i) => (
@@ -2049,19 +2106,18 @@ export function StoryViewer({
         <button
           onClick={prev}
           aria-label="Sebelumnya"
-          className="absolute inset-y-0 left-0 w-1/3"
+          className="absolute inset-y-0 left-0 z-10 w-1/3"
         />
         <button
           onClick={next}
           aria-label="Berikutnya"
-          className="absolute inset-y-0 right-0 w-2/3"
+          className="absolute inset-y-0 right-0 z-10 w-2/3"
         />
       </div>
 
-      {/* Footer: pemilik hanya mendapat tombol "Lihat" besar di tengah bawah.
-          Balasan & reaksi HANYA untuk story orang lain, dan balasannya masuk
-          ke DM pemilik story. */}
-      <div className="shrink-0 border-t border-white/10 bg-black/55 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 backdrop-blur-xl">
+      {/* Footer mengapung di bawah media. Pemilik hanya mendapat ikon mata +
+          jumlah penonton, tanpa latar tombol. */}
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-[linear-gradient(0deg,rgba(0,0,0,.82),rgba(0,0,0,.36)_62%,transparent)] px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-12">
         {currentStory.caption && (
           <p className="mb-2 text-center text-[13px] font-semibold leading-snug text-white [text-shadow:0_2px_8px_rgba(0,0,0,.8)]">
             {currentStory.caption}
@@ -2071,10 +2127,10 @@ export function StoryViewer({
           <button
             type="button"
             onClick={() => setShowViewers(true)}
-            className="mx-auto flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.09] text-[15px] font-black text-white transition active:scale-[0.98]"
+            className="mx-auto flex items-center justify-center gap-2 py-2 text-[17px] font-black text-white transition active:scale-[0.96]"
           >
-            <Eye className="size-5" strokeWidth={2.6} />
-            Lihat {viewers?.length ?? 0}
+            <Eye className="size-[22px]" strokeWidth={2.8} />
+            <span className="tabular-nums">{viewers?.length ?? 0}</span>
           </button>
         ) : (
           <div className="flex items-center gap-2">
