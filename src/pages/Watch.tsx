@@ -564,7 +564,6 @@ function WatchContent() {
   const [activeCue, setActiveCue] = useState<string>("");
   // Cue kedua yang tumpang tindih (mis. terjemahan tambahan) dipisah ke atas
   // supaya tidak menumpuk dengan dialog utama di bawah.
-  const [topCue, setTopCue] = useState<string>("");
   // Subtitle Indonesia native (kalau HLS MegaPlay menyediakan track ID)
   // INI HANYA UNTUK INFORMASI. Player tidak memakai track native ini —
   // player digambar sendiri supaya subtitle milik USER (overlay dari
@@ -1041,33 +1040,27 @@ function WatchContent() {
   useEffect(() => {
     if (cues.length === 0) {
       setActiveCue("");
-      setTopCue("");
       setMiniCue("");
       return;
     }
     const t = currentTime;
-    // Prioritaskan cue yang mulai paling akhir; cue lain yang masih aktif
-    // adalah terjemahan/teks tambahan dan dipindah ke overlay paling atas.
+    // Prioritaskan cue yang mulai paling akhir. Semua baris tetap di bawah
+    // player — tidak ada subtitle yang dipindah ke atas video.
     const hits = cues
       .filter((c) => c.s <= t && t <= c.e)
       .sort((a, b) => b.s - a.s);
     let text = hits[0]?.t ?? "";
-    let extra = hits.slice(1).map((c) => c.t).join("\n");
 
-    // Dua pembicara dalam satu cue: baris pertama naik ke atas, baris kedua
-    // tetap di bawah. Keduanya berasal dari cue yang sama, jadi hilangnya
-    // selalu bersamaan.
+    // Dua pembicara dalam satu cue tetap tampil di bawah sebagai dua baris.
     const speakerLines = text
       .split("\u0001")
       .map((line) => line.trim())
       .filter(Boolean);
     if (speakerLines.length === 2) {
-      extra = [speakerLines[0], extra].filter(Boolean).join("\n");
-      text = speakerLines[1];
+      text = speakerLines.join("\n");
     }
 
     setActiveCue(text);
-    setTopCue(extra);
     // CC diteruskan ke mini player supaya teks subtitle ikut kelihatan.
     setMiniCue(text);
   }, [currentTime, cues]);
@@ -2535,15 +2528,8 @@ function WatchContent() {
           </div>
         )}
 
-        {/* Terjemahan/cue tambahan ditempatkan di paling atas player agar
-            tidak bergabung dengan dialog utama di bawah. */}
-        {topCue && !bakedSubs && (
-          <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-4">
-            <p className="yn-subtitle max-w-[min(86%,38rem)] whitespace-pre-line break-words text-center text-[10px] text-white/90 sm:text-[11px]">
-              {topCue}
-            </p>
-          </div>
-        )}
+        {/* Subtitle hanya di bawah player. Tidak ada lagi teks terjemahan
+            yang menempel di paling atas video. */}
 
         {/* Notifikasi kecepatan: gaya sama dengan subtitle — kotak hitam
             transparan, di tengah atas, hilang sendiri setelah 1,4 detik. */}
@@ -3176,10 +3162,10 @@ function WatchContent() {
         </div>
       )}
 
-      {/* Satu baris: suka/tidak suka menyatu, lalu Favorit · Donate · Lapor ·
-          Bagikan dalam tombol kecil yang tetap muat di layar 360px. */}
-      <div className="flex w-full items-stretch gap-1.5 px-3 pt-2">
-        <div className="flex min-w-0 flex-1 overflow-hidden rounded-xl border border-white/12 bg-white/[0.04]">
+      {/* Satu baris horizontal: Like/Dislike menyatu, lalu Favorit · Donate ·
+          Lapor · Bagikan. Semua memakai flex agar tidak pernah turun baris. */}
+      <div className="flex w-full items-stretch gap-1 px-3 pt-2">
+        <div className="flex min-w-0 flex-[1.35] overflow-hidden rounded-xl border border-white/12 bg-white/[0.04]">
           <button
             onClick={() => {
               void toggleLike({ animeId, value: 1 }).catch(() => {});
@@ -3225,13 +3211,13 @@ function WatchContent() {
           }}
           aria-label="Favorit"
           className={cn(
-            "flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[7.5px] font-bold transition active:scale-95",
+            "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[7px] font-bold transition active:scale-95",
             isFav
               ? "border-white/25 bg-white/15 text-white"
               : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
           )}
         >
-          <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
+          <Heart className={cn("size-[15px] shrink-0", isFav && "fill-current")} aria-hidden />
           Favorit
         </button>
         <a
@@ -3239,18 +3225,18 @@ function WatchContent() {
           target="_blank"
           rel="noreferrer"
           aria-label="Donate"
-          className="flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7.5px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
         >
-          <Coffee className="size-4 shrink-0" aria-hidden />
+          <Coffee className="size-[15px] shrink-0" aria-hidden />
           Donate
         </a>
         <button
           onClick={() => setReportOpen(true)}
           aria-label="Laporkan"
-          className="flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7.5px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
         >
-          <Flag className="size-4 shrink-0" aria-hidden />
-          Lapor
+          <Flag className="size-[15px] shrink-0" aria-hidden />
+          Laporkan
         </button>
         <button
           onClick={() => {
@@ -3269,9 +3255,9 @@ function WatchContent() {
               .catch(() => toast.error("Gagal membagikan tautan"));
           }}
           aria-label="Bagikan"
-          className="flex w-[43px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7.5px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
         >
-          <Share2 className="size-4" />
+          <Share2 className="size-[15px] shrink-0" />
           Bagikan
         </button>
       </div>
@@ -3327,21 +3313,25 @@ function WatchContent() {
                 D.status === "Completed" ||
                 D.status === "Upcoming") && (
                 <span
-                  className={cn(
-                    "absolute left-1.5 top-1.5 rounded-md border px-1.5 py-0.5 text-[7.5px] font-black uppercase tracking-[0.08em] shadow-[0_4px_10px_rgba(0,0,0,.55)] backdrop-blur-md",
-                    D.status === "Ongoing"
-                      ? "border-sky-300/50 bg-sky-950/70 text-sky-100"
-                      : D.status === "Completed"
-                        ? "border-emerald-300/45 bg-emerald-950/65 text-emerald-100"
-                        : "border-amber-300/45 bg-amber-950/65 text-amber-100",
-                  )}
+                  className="absolute left-0 top-0 rounded-br-lg px-1.5 py-0.5 text-[7.5px] font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_10px_rgba(0,0,0,.45)]"
+                  style={{
+                    background:
+                      D.status === "Ongoing"
+                        ? "var(--ui-a, #1CA7EC)"
+                        : D.status === "Completed"
+                          ? "color-mix(in srgb, var(--ui-c, #FFD23F) 72%, #1f2937)"
+                          : "var(--ui-d, #D98E3A)",
+                  }}
                 >
                   {D.status}
                 </span>
               )}
               {typeof D.score === "number" && D.score > 0 && (
-                <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-md border border-[#FFD23F]/55 bg-[#171006]/80 px-1.5 py-0.5 text-[9px] font-black text-[#FFD23F] shadow-[0_4px_10px_rgba(0,0,0,.7)] backdrop-blur-md">
-                  <Star className="size-2.5 fill-[#FFD23F]" aria-hidden />
+                <span
+                  className="absolute bottom-0 right-0 flex items-center gap-1 rounded-tl-lg px-1.5 py-0.5 text-[9px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,.5)]"
+                  style={{ background: "var(--ui-a, #1CA7EC)" }}
+                >
+                  <Star className="size-2.5 fill-white" aria-hidden />
                   {Number(D.score).toFixed(1)}
                 </span>
               )}

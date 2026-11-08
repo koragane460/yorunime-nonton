@@ -409,10 +409,10 @@ export function VoiceChatSheet({
                   {m.bot && bot?.kind === "np" && <NowPlayingCard d={bot} />}
                   {/* Bubble — TANPA outline, abu-abu polos */}
                   <div
-                    className={`mt-1 w-fit max-w-full rounded-2xl px-3 py-2 text-[12px] leading-snug text-white/90 ${
+                    className={`mt-1 w-fit max-w-full rounded-2xl px-3 py-2 text-[12px] leading-snug ${
                       mine
-                        ? "bubble-mine rounded-tr-md bg-gradient-to-b from-indigo-500/70 to-indigo-700/70 text-white"
-                        : "bubble-other rounded-tl-md bg-white/12"
+                        ? "bubble-mine yn-tail-r"
+                        : "bubble-other yn-tail-l"
                     }`}
                   >
                     <span className="whitespace-pre-wrap break-words">{m.text}</span>

@@ -91,6 +91,7 @@ import {
   ShoppingBag,
   Share2,
   Cake,
+  Plus,
 } from "lucide-react";
 import { TierIcon } from "@/components/TierIcon";
 import { cn } from "@/lib/utils";
@@ -101,6 +102,12 @@ import {
 import { toast } from "sonner";
 import { SacretIcon } from "@/components/lstream-ui";
 import type { Id } from "@/convex/_generated/dataModel";
+import {
+  activateSavedAccount,
+  readSavedAccounts,
+  saveCurrentAccount,
+  type SavedAccount,
+} from "@/lib/account-sessions";
 
 export default function Akun() {
   return (
@@ -405,6 +412,7 @@ function AkunProfileScreen({
   const [storyComposer, setStoryComposer] = useState(false);
   const [storyItems, setStoryItems] = useState<Picked[] | null>(null);
   const [storyView, setStoryView] = useState<string | null>(null);
+  const [switchOpen, setSwitchOpen] = useState(false);
   if (!user) return null;
 
   const level = user.level ?? 1;
@@ -539,9 +547,17 @@ function AkunProfileScreen({
           </span>
 
           <div className="mt-2.5 flex min-w-0 max-w-full items-center gap-1.5">
-            <h2 className="truncate font-display text-[22px] font-black leading-tight text-white">
-              {user.username ?? "user"}
-            </h2>
+            <button
+              type="button"
+              onClick={() => setSwitchOpen(true)}
+              className="flex min-w-0 max-w-full items-center gap-1.5 rounded-full py-0.5 pl-1 pr-2 transition active:scale-[0.98]"
+              aria-label="Ganti akun"
+            >
+              <h2 className="truncate font-display text-[22px] font-black leading-tight text-white">
+                {user.username ?? "user"}
+              </h2>
+              <ChevronRight className="size-4 shrink-0 text-white/45" strokeWidth={2.6} />
+            </button>
             {premium && <BlueCheck className="size-4 shrink-0" />}
           </div>
           <p className="mt-0.5 max-w-full truncate text-[11px] font-medium text-white/40">
@@ -657,6 +673,9 @@ function AkunProfileScreen({
       </div>
 
       {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
+      {switchOpen && (
+        <AccountSwitcherSheet onClose={() => setSwitchOpen(false)} />
+      )}
       {bubbleOpen && (
         <StatusBubbleEditor
           initialText={user.statusText}
@@ -1659,6 +1678,196 @@ function ProfileOverviewCard({
   );
 }
 
+/* ==================================================== ganti akun ======= */
+
+/** Sheet GANTI AKUN — akun yang tersimpan di perangkat bisa benar-benar
+ *  ditukar (JWT + refresh token disimpan per akun), lalu reload ke /home. */
+function AccountSwitcherSheet({ onClose }: { onClose: () => void }) {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const unreadQuery = useQuery(
+    api.moderation.myUnreadCount,
+    user ? {} : "skip",
+  );
+  const unread = unreadQuery ?? 0;
+  const [accounts, setAccounts] = useState<SavedAccount[]>(() =>
+    readSavedAccounts(),
+  );
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!user || unreadQuery === undefined) return;
+    const list = saveCurrentAccount(
+      {
+        _id: String(user._id),
+        username: user.username,
+        image: user.image,
+        bannerUrl: user.bannerUrl,
+      },
+      unread,
+    );
+    setAccounts(list);
+  }, [user?._id, user?.username, user?.image, user?.bannerUrl, unread, unreadQuery]);
+
+  if (!user) return null;
+
+  const others = accounts.filter((a) => a.id !== String(user._id));
+  const rows = [
+    {
+      id: String(user._id),
+      username: user.username ?? "user",
+      image: user.image,
+      unread,
+      current: true,
+    },
+    ...others.map((a) => ({ ...a, current: false })),
+  ];
+
+  const switchTo = (id: string) => {
+    if (busy || id === String(user._id)) return;
+    setErr("");
+    setBusy(id);
+    saveCurrentAccount(
+      {
+        _id: String(user._id),
+        username: user.username,
+        image: user.image,
+        bannerUrl: user.bannerUrl,
+      },
+      unread,
+    );
+    if (!activateSavedAccount(id)) {
+      setBusy(null);
+      setErr("Sesi akun itu sudah kedaluwarsa. Masuk ulang lewat Tambahkan Akun.");
+    }
+  };
+
+  const addAccount = async () => {
+    if (busy) return;
+    setBusy("add");
+    setErr("");
+    saveCurrentAccount(
+      {
+        _id: String(user._id),
+        username: user.username,
+        image: user.image,
+        bannerUrl: user.bannerUrl,
+      },
+      unread,
+    );
+    try {
+      await signOut();
+      navigate("/auth?returnTo=/home&add=1", { replace: true });
+    } catch {
+      setBusy(null);
+      setErr("Gagal membuka layar login. Coba lagi.");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[96] flex items-end justify-center bg-black/55 p-3 pb-5"
+      onClick={() => !busy && onClose()}
+      role="dialog"
+      aria-modal
+    >
+      <div
+        className="pop-enter w-full max-w-sm overflow-hidden rounded-[28px] border border-white/12 bg-[#111018] shadow-[0_-24px_60px_-28px_rgba(0,0,0,1)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="h-px w-full bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent)]" />
+        <div className="flex items-center gap-2.5 px-4 pb-2.5 pt-4">
+          <h2 className="min-w-0 flex-1 text-[13px] font-black uppercase tracking-[0.18em] text-white/80">
+            Ganti Akun
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex size-7 items-center justify-center rounded-full bg-white/[0.07] text-white/50"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <div className="mx-4 h-px bg-white/10" />
+
+        <div className="thin-scroll max-h-[52dvh] space-y-1.5 overflow-y-auto px-3 py-3">
+          {rows.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => switchTo(a.id)}
+              disabled={!!busy || a.current}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.99]",
+                a.current
+                  ? "border-white/16 bg-white/[0.07]"
+                  : "border-transparent hover:border-white/12 hover:bg-white/[0.045]",
+              )}
+            >
+              <FramedAvatar
+                src={a.image}
+                seed={a.username}
+                className="size-11 shrink-0 rounded-full"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[16px] font-black leading-tight text-white">
+                  {a.username}
+                </span>
+                <span className="mt-0.5 block text-[9.5px] font-semibold text-white/35">
+                  {a.current ? "Akun aktif" : "Ketuk untuk berpindah"}
+                </span>
+              </span>
+              {a.unread > 0 && (
+                <span className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-[#E84855] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">
+                  {Math.min(a.unread, 99)}+
+                </span>
+              )}
+              {a.current && (
+                <Check className="size-4 shrink-0" style={{ color: "var(--ui-c)" }} strokeWidth={3} />
+              )}
+              {busy === a.id && (
+                <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-white" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {err && (
+          <p className="mx-4 mb-2 rounded-xl border border-rose-400/25 bg-rose-500/10 px-2.5 py-2 text-[10px] font-semibold leading-snug text-rose-200">
+            {err}
+          </p>
+        )}
+
+        <div className="px-3 pb-4">
+          <button
+            type="button"
+            onClick={() => void addAccount()}
+            disabled={!!busy}
+            className="flex w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.035] px-3 py-2.5 text-left transition hover:bg-white/[0.07] active:scale-[0.99] disabled:opacity-50"
+          >
+            <span
+              className="grid size-11 shrink-0 place-items-center rounded-full text-black"
+              style={{ background: "var(--ui-c, #FFD23F)" }}
+            >
+              <Plus className="size-5" strokeWidth={3} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-black text-white">
+                Tambahkan Akun
+              </span>
+              <span className="mt-0.5 block text-[9.5px] font-semibold text-white/35">
+                Masuk dengan akun YoruNime lain
+              </span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ======================================================= sheet edit ==== */
 function EditIdentitySheet({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
@@ -1764,9 +1973,9 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
       </header>
 
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-5 py-6">
+        <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-start px-5 pb-6 pt-4">
           {/* Foto di atas, tombol ganti foto bulat kecil. */}
-        <div className="mt-5 flex flex-col items-center">
+        <div className="mt-2 flex flex-col items-center">
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -1778,7 +1987,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
               border={user.avatarBorder}
               src={user.image}
               seed={user.username}
-              className="size-[104px] rounded-full ring-2 ring-gold/35"
+              className="size-[92px] rounded-full ring-2 ring-gold/35"
             />
             <span className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full border-2 border-[#121722] bg-gold text-black shadow-lg">
               <Pencil className="size-3.5" strokeWidth={2.4} />
@@ -1838,7 +2047,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
           {bio.length}/160
         </div>
 
-        <label className="mt-3 flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
+        <label className="mt-4 flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
           <Cake className="size-3.5 text-gold/80" />
           Tanggal lahir
         </label>

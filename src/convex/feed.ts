@@ -349,6 +349,9 @@ export const listComments = query({
         userId: c.userId,
         username: u?.username ?? "user",
         image: u?.image ?? null,
+        // Banner akun dipakai sebagai latar kartu komentar. Ini TERPISAH dari
+        // foto profil; jangan pernah memakai avatar sebagai banner.
+        bannerUrl: u?.bannerUrl ?? null,
         // Metadata biar sheet komentar bisa tampil seperti chat:
         // centang biru, clan tag, tag level berikon.
         level: u?.level ?? 1,

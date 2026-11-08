@@ -1427,21 +1427,29 @@ function HomeContent() {
         </div>
       )}
       {showNobar && (
-        <div className="screen-enter fixed inset-0 z-[55] flex flex-col bg-background">
+        <div
+          className="screen-enter fixed inset-0 z-[55] flex flex-col bg-[#08070c]"
+          style={{
+            backgroundImage:
+              "radial-gradient(80% 50% at 14% 0%, color-mix(in srgb, var(--ui-a) 18%, transparent), transparent 72%), radial-gradient(60% 42% at 100% 30%, color-mix(in srgb, var(--ui-c) 8%, transparent), transparent 76%)",
+          }}
+        >
           <div className="yn-bar flex items-center gap-3 border-b border-white/10 px-4 py-3">
             <button
               onClick={() => setShowNobar(false)}
               aria-label="Kembali"
               className="flex size-10 items-center justify-center rounded-xl bg-white/[0.06] transition active:scale-95"
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft className="size-4" strokeWidth={2.6} />
             </button>
             <div className="min-w-0 flex-1">
-              <span className="yn-eyebrow text-[9px]">Nonton</span>
-              <h1 className="yn-title truncate text-lg">Nobar</h1>
+              <span className="text-[8px] font-black uppercase tracking-[0.22em] text-white/35">
+                Nonton bareng
+              </span>
+              <h1 className="yn-title truncate text-lg tracking-tight">NOBAR</h1>
             </div>
           </div>
-          <div className="thin-scroll min-h-0 flex-1 overflow-y-auto bg-black/35 p-4">
+          <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
             <NobarCatalogScreen onClose={() => setShowNobar(false)} />
           </div>
         </div>
@@ -2616,24 +2624,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
 
   return (
     <div className="screen-enter fixed inset-0 z-50 overflow-y-auto bg-background">
-      <div className="w-full p-3">
-        {/* Header pencarian: hanya tombol kembali + judul. Tanpa eyebrow,
-            tanpa ikon kaca di kanan, tanpa aksen emas. */}
-        <div className="mb-4 mt-3 flex items-center gap-3">
-          <button
-            onClick={onClose}
-            aria-label="Kembali"
-            className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] transition hover:border-white/30 active:scale-95"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="yn-title text-[1.35rem] leading-tight text-white">
-              Cari Anime, Donghua, Film
-            </h1>
-          </div>
-        </div>
-
+      <div className="w-full px-3 pb-5 pt-1">
         {/* Input + tombol Cari — netral, tanpa border/aksen kuning. */}
         <div className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-card px-4 py-3 focus-within:border-white/25">
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -2663,9 +2654,17 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           )}
           <button
             onClick={() => void doSearch()}
-            className="px-3 py-1 text-xs font-bold text-white"
+            className="px-2 py-1 text-xs font-bold text-white"
           >
             Cari
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup pencarian"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/55 transition hover:text-white active:scale-95"
+          >
+            <X className="size-3.5" strokeWidth={2.6} />
           </button>
         </div>
 

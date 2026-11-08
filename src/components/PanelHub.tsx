@@ -145,7 +145,7 @@ export function PanelHub({
           </div>
         </div>
 
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5">
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)]">
           <div className="grid grid-cols-3 gap-2">
             {BOXES.map(({ key, label, hint, Icon, tone }) => (
               <button
@@ -164,7 +164,7 @@ export function PanelHub({
                 />
                 <Icon
                   className="relative size-7 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,.28)] transition group-hover:scale-105"
-                  strokeWidth={1.8}
+                  strokeWidth={2.4}
                 />
                 <span className="relative mt-1.5 block w-full truncate text-[12px] font-black leading-tight text-white">
                   {label}

@@ -55,7 +55,7 @@ export function ThemeOnboarding({
           background: `radial-gradient(60% 48% at 50% 0%, ${palette.colors[0]}42 0%, transparent 72%), radial-gradient(42% 38% at 100% 100%, ${palette.colors[2]}1f 0%, transparent 74%)`,
         }}
       />
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-6 pt-7">
+      <div className="relative mx-auto flex h-dvh w-full max-w-md flex-col overflow-hidden px-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-6">
         <div className="flex items-center justify-between">
           <span className="inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.24em] text-white/45">
             <span className="size-1.5 rounded-full" style={{ background: palette.colors[2] }} />
@@ -74,7 +74,7 @@ export function ThemeOnboarding({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -34 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-1 flex-col"
+              className="thin-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-1"
             >
               <div className="mt-9">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[9px] font-black text-white/60">
@@ -135,7 +135,7 @@ export function ThemeOnboarding({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-              className="flex min-h-0 flex-1 flex-col"
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
             >
               <button
                 type="button"
@@ -160,7 +160,7 @@ export function ThemeOnboarding({
                 </p>
               </div>
 
-              <div className="thin-scroll -mx-1 mt-4 min-h-0 flex-1 space-y-1.5 overflow-y-auto px-1 pb-3">
+              <div className="thin-scroll -mx-1 mt-3 min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-1 pb-4">
                 {THEME_PALETTES.map((p) => {
                   const active = p.id === accent;
                   return (
@@ -170,10 +170,10 @@ export function ThemeOnboarding({
                       onClick={() => setAccent(p.id)}
                       aria-pressed={active}
                       className={cn(
-                        "group flex w-full items-center gap-3 rounded-2xl border p-2 text-left transition active:scale-[0.99]",
+                        "group flex w-full items-center gap-3 rounded-2xl border border-transparent p-2 text-left transition active:scale-[0.99]",
                         active
-                          ? "border-white/35 bg-white/[0.09]"
-                          : "border-white/8 bg-white/[0.035] hover:border-white/18",
+                          ? "bg-white/[0.105]"
+                          : "bg-white/[0.035] hover:bg-white/[0.065]",
                       )}
                     >
                       <span className="grid size-6 shrink-0 place-items-center rounded-full border border-white/10 bg-black/20 font-display text-[9px] font-black text-white/40">
@@ -187,7 +187,7 @@ export function ThemeOnboarding({
                         <span className="mb-1 block truncate text-[10px] font-bold text-white/65">
                           {p.name}
                         </span>
-                        <span className="flex h-5 w-full overflow-hidden rounded-full border border-white/10">
+                        <span className="flex h-5 w-full overflow-hidden rounded-full">
                           {p.colors.map((c, i) => (
                             <span
                               key={`${p.id}-${i}`}
@@ -202,7 +202,7 @@ export function ThemeOnboarding({
                 })}
               </div>
 
-              <div className="shrink-0 border-t border-white/10 bg-[#08070c]/90 pt-3">
+              <div className="shrink-0 border-t border-white/10 bg-[#08070c]/95 pt-3">
                 <button
                   type="button"
                   onClick={() => void finish()}
@@ -247,8 +247,8 @@ function ThemeChoiceCard({
       className={cn(
         "relative overflow-hidden rounded-[22px] border p-2 text-left transition active:scale-[0.99]",
         active
-          ? "border-white/55 bg-white/[0.08] shadow-[0_20px_45px_-30px_rgba(0,0,0,1)]"
-          : "border-white/10 bg-white/[0.03] hover:border-white/25",
+          ? "border-white/35 bg-white/[0.08] shadow-[0_20px_45px_-30px_rgba(0,0,0,1)]"
+          : "border-white/8 bg-white/[0.025] hover:border-white/18",
       )}
     >
       {active && (
@@ -259,31 +259,58 @@ function ThemeChoiceCard({
           <Check className="size-3" strokeWidth={3} />
         </span>
       )}
-      <div className="relative h-[196px] overflow-hidden rounded-[16px] border border-white/10 bg-[#0b0a11] p-2">
+      <div
+        className={cn(
+          "relative h-[196px] overflow-hidden rounded-[18px] p-2",
+          kind === "glass"
+            ? "border border-white/16 bg-[#0b0a11]"
+            : "border border-white/8 bg-[#08080b]",
+        )}
+      >
         <span
           aria-hidden
           className="absolute inset-0"
           style={{
             background:
               kind === "glass"
-                ? `radial-gradient(circle at 18% 10%, ${colors[0]}50, transparent 48%), radial-gradient(circle at 92% 78%, ${colors[2]}2e, transparent 55%)`
-                : `linear-gradient(180deg, ${colors[1]}24, #08070c 72%)`,
+                ? `radial-gradient(circle at 14% 8%, ${colors[0]}66, transparent 46%), radial-gradient(circle at 94% 82%, ${colors[2]}3d, transparent 55%), linear-gradient(155deg, rgba(255,255,255,.08), transparent 48%)`
+                : `linear-gradient(180deg, ${colors[1]}12, #08080b 66%)`,
           }}
         />
+        {kind === "glass" ? (
+          <span
+            aria-hidden
+            className="absolute left-3 top-14 size-16 rounded-full blur-2xl"
+            style={{ background: `${colors[2]}33` }}
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="absolute inset-x-2 top-[42px] h-px"
+            style={{ background: `linear-gradient(90deg, transparent, ${colors[2]}88, transparent)` }}
+          />
+        )}
         <div className="relative flex items-center gap-1.5">
-          <span className="size-5 rounded-full border border-white/20 bg-white/10" />
+          <span
+            className={cn(
+              "size-5 border border-white/20",
+              kind === "glass" ? "rounded-full bg-white/10" : "rounded-[7px] bg-white/[0.08]",
+            )}
+          />
           <span className="h-1.5 w-12 rounded-full bg-white/20" />
-          <span className="ml-auto size-3 rounded-full bg-white/12" />
+          <span className="ml-auto text-[6px] font-black uppercase tracking-[0.12em] text-white/35">
+            {kind === "glass" ? "Blur" : "Solid"}
+          </span>
         </div>
         <div
           className={cn(
-            "relative mt-6 rounded-xl border p-2",
+            "relative mt-5 rounded-xl p-2",
             kind === "glass"
-              ? "border-white/20 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-md"
-              : "border-white/8 bg-[#121019]",
+              ? "border border-white/22 bg-white/[0.11] shadow-[inset_0_1px_0_rgba(255,255,255,.24),0_10px_22px_-18px_#000] backdrop-blur-md"
+              : "border border-white/10 bg-[#15131c] shadow-[0_10px_22px_-18px_#000]",
           )}
         >
-          <span className="block h-1.5 w-10 rounded-full bg-white/25" />
+          <span className="block h-1.5 w-10 rounded-full bg-white/30" />
           <span className="mt-1.5 block h-1 w-16 rounded-full bg-white/12" />
           <span
             className="mt-2.5 block h-4 w-12 rounded-full"
@@ -295,15 +322,22 @@ function ThemeChoiceCard({
             <span
               key={i}
               className={cn(
-                "h-10 rounded-lg border",
+                "h-10 rounded-lg",
                 kind === "glass"
-                  ? "border-white/15 bg-white/[0.07] backdrop-blur-sm"
-                  : "border-white/6 bg-[#16131d]",
+                  ? "border border-white/18 bg-white/[0.085] backdrop-blur-sm"
+                  : "border border-white/8 bg-[#17151e]",
               )}
             />
           ))}
         </div>
-        <div className="absolute inset-x-2 bottom-2 flex h-6 items-center justify-around rounded-full border border-white/15 bg-black/35 backdrop-blur-md">
+        <div
+          className={cn(
+            "absolute inset-x-2 bottom-2 flex h-6 items-center justify-around rounded-full",
+            kind === "glass"
+              ? "border border-white/18 bg-black/35 backdrop-blur-md"
+              : "border border-white/10 bg-[#17151f]",
+          )}
+        >
           {[0, 1, 2, 3].map((i) => (
             <span
               key={i}

@@ -135,7 +135,7 @@ function FeatureChrome({
           <X className="size-4" />
         </button>
       </header>
-      <div className="thin-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="thin-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         {children}
       </div>
     </div>
@@ -181,7 +181,19 @@ export function YoruVerseHubScreen({
     );
   }
   if (feature === "nobar") {
-    return <NobarCatalogScreen onClose={onClose} />;
+    // Dulu Nobar dikembalikan tanpa chrome, jadi kotak Panel terasa tidak
+    // berfungsi: tidak ada tombol kembali dan konten tidak punya scroll.
+    return (
+      <FeatureChrome
+        title="Nobar"
+        subtitle="Nonton bareng teman"
+        onBack={onClose}
+      >
+        <div className="px-4 pb-10 pt-3">
+          <NobarCatalogScreen onClose={onClose} />
+        </div>
+      </FeatureChrome>
+    );
   }
   if (feature === "voice") {
     return <VoiceCallScreen onClose={onClose} />;

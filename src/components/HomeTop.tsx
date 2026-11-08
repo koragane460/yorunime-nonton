@@ -93,11 +93,31 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
 
   return (
-    <header className="fade-enter flex w-full items-center gap-2 pt-2">
+    <header className="fade-enter flex w-full flex-col gap-2 pt-1">
+      {/* Rel utilitas di ATAS navigasi: notifikasi di atas, pencarian di bawah.
+          Sengaja tidak lagi menempel di kanan pil akun. */}
+      <div className="flex justify-end">
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <NotifButton
+            sizeClassName="size-8"
+            className="rounded-xl border border-white/16 bg-white/[0.075] shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.16)] backdrop-blur-2xl hover:bg-white/[0.14] hover:text-white"
+            iconClassName="size-4"
+          />
+          <button
+            type="button"
+            onClick={onSearch}
+            aria-label="Cari anime"
+            className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-white/16 bg-white/[0.075] text-white/88 shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.16)] backdrop-blur-2xl transition hover:bg-white/[0.14] hover:text-white active:scale-95"
+          >
+            <Search className="size-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="relative flex h-[78px] min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
+        className="yn-account-pill relative flex h-[72px] w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
         <span
@@ -134,24 +154,6 @@ export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
         </span>
         <LevelRing level={level} xp={xp} />
       </button>
-
-      {/* Rel vertikal: notifikasi di atas, pencarian di bawah. Kartu akun
-          jadi selebar mungkin dan username tidak terpotong. */}
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <NotifButton
-          sizeClassName="size-9"
-          className="rounded-xl border border-white/18 bg-white/[0.085] shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl hover:bg-white/[0.14] hover:text-white"
-          iconClassName="size-[17px]"
-        />
-        <button
-          type="button"
-          onClick={onSearch}
-          aria-label="Cari anime"
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/18 bg-white/[0.085] text-white/88 shadow-[0_12px_28px_-20px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-2xl transition hover:bg-white/[0.14] hover:text-white active:scale-95"
-        >
-          <Search className="size-[17px]" />
-        </button>
-      </div>
     </header>
   );
 }

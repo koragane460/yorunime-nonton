@@ -431,9 +431,30 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
               </p>
             )}
             {list?.map((c: any) => (
-              <div key={c.commentId} className="flex items-start gap-2.5 px-0.5">
-                <Avatar src={c.image} seed={c.username} className="size-8 shrink-0 ring-1 ring-white/15" />
-                <div className="min-w-0 flex-1">
+              <div
+                key={c.commentId}
+                className="relative flex items-start gap-2.5 overflow-hidden rounded-2xl px-2 py-2"
+              >
+                {c.bannerUrl && (
+                  <>
+                    <img
+                      src={c.bannerUrl}
+                      alt=""
+                      className="pointer-events-none absolute inset-0 size-full object-cover"
+                      loading="lazy"
+                    />
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 bg-black/62"
+                    />
+                  </>
+                )}
+                <Avatar
+                  src={c.image}
+                  seed={c.username}
+                  className="relative size-8 shrink-0 ring-1 ring-white/15"
+                />
+                <div className="relative min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-[13px] font-black text-white">
                       {c.username}
@@ -784,21 +805,36 @@ export function CreatePostSheet({ onClose }: { onClose: () => void }) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const url = await upload({});
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": mime },
-          body: b,
+        // Pakai XHR, sama seperti upload Story. Fetch streaming untuk video
+        // besar sering berhenti sebagai "Failed to fetch" di tengah jalan,
+        // sementara XHR mengirim body utuh dan memberi status yang jelas.
+        const storageId = await new Promise<string>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", url);
+          xhr.setRequestHeader("Content-Type", mime);
+          xhr.onload = () => {
+            if (xhr.status < 200 || xhr.status >= 300) {
+              reject(new Error(`server menolak (${xhr.status})`));
+              return;
+            }
+            try {
+              const data = JSON.parse(xhr.responseText) as {
+                storageId?: string;
+              };
+              if (!data.storageId) {
+                reject(new Error("respons server tidak lengkap"));
+                return;
+              }
+              resolve(data.storageId);
+            } catch {
+              reject(new Error("respons server tidak valid"));
+            }
+          };
+          xhr.onerror = () => reject(new Error("jaringan bermasalah"));
+          xhr.ontimeout = () => reject(new Error("unggahan melewati batas waktu"));
+          xhr.send(b);
         });
-        if (!res.ok) {
-          lastErr = `server menolak (${res.status})`;
-          continue;
-        }
-        const data = (await res.json()) as { storageId?: string };
-        if (!data.storageId) {
-          lastErr = "respons server tidak lengkap";
-          continue;
-        }
-        return data.storageId;
+        return storageId;
       } catch (e) {
         lastErr = e instanceof Error ? e.message : String(e);
         // Tunggu sebentar sebelum coba lagi (koneksi pulih).

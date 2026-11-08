@@ -590,19 +590,13 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.45 }}
-                    style={{
-                      // Bentuk TAJAM atas & bawah (pacman/ribbon lancip),
-                      // bukan datar di atas.
-                      clipPath:
-                        "polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%)",
-                    }}
                     className={cn(
-                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-t-2xl border px-1 pb-6 pt-4 backdrop-blur-[2px]",
+                      "relative flex w-full min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[22px] px-2 pb-5 pt-4",
                       rank === 1
-                        ? "h-28 border-amber-200/60 bg-[linear-gradient(to_top,#f59e0b_0%,rgba(245,158,11,.42)_45%,rgba(251,191,36,.10)_100%)]"
+                        ? "h-28 bg-amber-500 shadow-[0_16px_30px_-20px_rgba(245,158,11,.9)]"
                         : rank === 2
-                          ? "h-20 border-zinc-300/45 bg-[linear-gradient(to_top,#cbd5e1_0%,rgba(203,213,225,.32)_50%,rgba(255,255,255,.06)_100%)]"
-                          : "h-16 border-amber-600/50 bg-[linear-gradient(to_top,#b45309_0%,rgba(180,83,9,.38)_50%,rgba(251,146,60,.08)_100%)]",
+                          ? "h-20 bg-slate-400 shadow-[0_14px_28px_-20px_rgba(148,163,184,.8)]"
+                          : "h-16 bg-orange-700 shadow-[0_14px_28px_-20px_rgba(194,65,12,.8)]",
                     )}
                   >
                     {/* Angka rank besar semi-transparan di dasar blok */}
@@ -617,16 +611,7 @@ export function LeaderPodium({ onSeeAll }: { onSeeAll: () => void }) {
                     <p className="relative w-full truncate px-1 text-center text-[10px] font-black leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.6)]">
                       {e?.username ?? "-"}
                     </p>
-                    <p
-                      className={cn(
-                        "relative w-full truncate px-1 text-center text-[10px] font-black leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.55)]",
-                        rank === 1
-                          ? "text-amber-50"
-                          : rank === 2
-                            ? "text-zinc-900"
-                            : "text-orange-50",
-                      )}
-                    >
+                    <p className="relative w-full truncate px-1 text-center text-[10px] font-black leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.55)]">
                       {e?.value ?? "-"}
                     </p>
                   </motion.div>

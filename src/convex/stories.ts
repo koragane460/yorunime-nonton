@@ -16,8 +16,8 @@ import { mutation, query } from "./_generated/server";
 
 /** Umur story: 24 jam. */
 const STORY_TTL_MS = 24 * 3600 * 1000;
-/** Batas ukuran media yang diterima (25 MB, cukup untuk video pendek). */
-export const MAX_STORY_BYTES = 25 * 1024 * 1024;
+/** Batas aman upload status, disamakan dengan Feed (Convex: POST timeout 2 menit). */
+export const MAX_STORY_BYTES = 100 * 1024 * 1024;
 
 /** Apakah `a` dan `b` berteman (baris friendships bisa di dua arah). */
 async function isFriend(ctx: any, a: any, b: any): Promise<boolean> {
@@ -245,6 +245,10 @@ export const markViewed = mutation({
   handler: async (ctx, { storyId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return { ok: false as const };
+    // Pemilik tidak boleh masuk daftar penonton miliknya sendiri.
+    const story = await ctx.db.get(storyId);
+    if (!story) return { ok: false as const };
+    if (story.userId === userId) return { ok: true as const, already: true };
     const existing = await ctx.db
       .query("storyViews")
       .withIndex("storyId_user", (q) =>

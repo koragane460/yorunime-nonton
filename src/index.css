@@ -3211,3 +3211,148 @@ a {
   }
 }
 
+/* ======================================================================
+ * 5) IKON LEBIH KUAT + BUBBLE CHAT PUTIH + DIFERENSIASI TEMA
+ * ====================================================================== */
+/* Semua ikon Lucide memakai stroke yang lebih tegas dan konsisten. Ini
+ * berlaku global, termasuk ikon kecil di header, panel, dan pengaturan. */
+svg.lucide {
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Tema Default: permukaan solid dan tanpa blur. Tema Glass tetap memakai
+ * kaca berwarna; perbedaannya harus terasa jelas, bukan cuma nama. */
+[data-ui-theme="default"] .yn-app-bg {
+  background-color: #08070d !important;
+  background-image: none !important;
+  background-attachment: scroll !important;
+}
+[data-ui-theme="default"] [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-ui-theme="default"] .yn-account-pill {
+  background: #15131b !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px -30px #000 !important;
+}
+[data-ui-theme="default"] .bg-card,
+[data-ui-theme="default"] .yn-panel {
+  background-color: #111017 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+[data-ui-theme="default"] .nav-bar > div > div {
+  background: #15131b !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 18px 42px -24px #000 !important;
+}
+
+[data-ui-theme="glass"] .yn-account-pill {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--ui-a) 22%, rgba(255,255,255,.08)), rgba(255,255,255,.055)) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  backdrop-filter: blur(28px) saturate(1.45) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 22px 46px -30px #000 !important;
+}
+[data-ui-theme="glass"] .nav-bar > div > div {
+  background: linear-gradient(135deg, rgba(255,255,255,.18), color-mix(in srgb, var(--ui-a) 15%, rgba(255,255,255,.055))) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  backdrop-filter: blur(26px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.4) !important;
+}
+
+/* Bubble chat (semua chat non-komentar): putih, teks hitam, ekor menempel
+ * rapi di dasar bubble. clip-path chamfer lama dimatikan supaya bentuknya
+ * tidak terlihat seperti sudut terpotong. */
+.bubble-mine,
+.bubble-other,
+[data-ui-theme="glass"] .bubble-mine,
+[data-ui-theme="glass"] .bubble-other {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  color: #17151b !important;
+  border-radius: 17px !important;
+  box-shadow: 0 12px 24px -20px rgba(0, 0, 0, 0.65) !important;
+  clip-path: none !important;
+}
+.bubble-mine.yn-tail-r {
+  border-bottom-right-radius: 5px !important;
+}
+.bubble-other.yn-tail-l {
+  border-bottom-left-radius: 5px !important;
+}
+.bubble-mine span,
+.bubble-mine p,
+.bubble-mine div,
+.bubble-mine button,
+.bubble-mine a,
+.bubble-other span,
+.bubble-other p,
+.bubble-other div,
+.bubble-other button,
+.bubble-other a {
+  color: inherit !important;
+}
+.bubble-mine .text-muted-foreground,
+.bubble-other .text-muted-foreground {
+  color: rgba(23, 21, 27, 0.5) !important;
+}
+.bubble-mine .bubble-reply,
+.bubble-other .bubble-reply {
+  background-color: rgba(0, 0, 0, 0.055) !important;
+  border-left: 2px solid rgba(0, 0, 0, 0.18) !important;
+  color: rgba(23, 21, 27, 0.7) !important;
+}
+.bubble-mine.yn-tail-r::after,
+.msg-in.yn-tail-r::after,
+.msg-own.yn-tail-r::after,
+.bubble-other.yn-tail-l::after,
+.msg-other.yn-tail-l::after {
+  background-color: #ffffff !important;
+  width: 10px;
+  height: 12px;
+  bottom: 0;
+}
+.bubble-mine.yn-tail-r::after {
+  right: -7px;
+}
+.bubble-other.yn-tail-l::after {
+  left: -7px;
+}
+
+/* Kartu Voice/Nobar memakai warna tema yang sedang aktif, bukan emerald
+ * hardcoded, supaya tetap nyambung dengan Home setelah ganti palet. */
+.voice-hero,
+.nobar-hero {
+  background:
+    radial-gradient(80% 90% at 16% 0%, color-mix(in srgb, var(--ui-a) 32%, transparent), transparent 72%),
+    linear-gradient(160deg, color-mix(in srgb, var(--ui-b) 42%, #0a0d12), #090a0f 68%);
+  border-color: color-mix(in srgb, var(--ui-c) 26%, transparent);
+}
+.voice-room-card {
+  background:
+    radial-gradient(90% 100% at 100% 0%, color-mix(in srgb, var(--ui-a) 16%, transparent), transparent 62%),
+    #0b0d13;
+  border-color: color-mix(in srgb, var(--ui-c) 20%, transparent);
+}
+.voice-room-card:hover {
+  border-color: color-mix(in srgb, var(--ui-c) 42%, transparent);
+}
+.voice-primary {
+  background: linear-gradient(180deg, var(--ui-c), var(--ui-d));
+  color: #100d08;
+  box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--ui-c) 70%, transparent);
+}
+.voice-primary:hover {
+  filter: brightness(1.05);
+}
+.voice-soft {
+  background: color-mix(in srgb, var(--ui-c) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ui-c) 28%, transparent);
+  color: var(--ui-c);
+}
+
+

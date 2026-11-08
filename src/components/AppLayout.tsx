@@ -421,7 +421,7 @@ function AccountPanel({
           onClick={() => goto("/akun?tab=settings")}
           className="flex size-11 items-center justify-center rounded-xl border border-white/15 bg-black/45 text-white backdrop-blur-sm transition hover:border-foreground"
         >
-          <Settings className="size-5" strokeWidth={1.7} />
+          <Settings className="size-5" strokeWidth={2.4} />
         </button>
         <NotifButton />
       </div>
@@ -1234,9 +1234,9 @@ function BottomNav({
                 : base === "/home"
                   ? location.pathname === "/home" || location.pathname === "/"
                   : base !== "" && location.pathname.startsWith(base);
-            // Ikon SELALU pakai varian outline, aktif maupun tidak — bobotnya
-            // persis sama, jadi tombol tidak mendadak "tebel" saat dipencet.
-            const Icon = it.icon;
+            // Saat aktif, ikon memakai varian terisi agar konsisten dengan
+            // gaya "filled tebal" di seluruh aplikasi.
+            const Icon = active && it.iconFill ? it.iconFill : it.icon;
             return (
               <button
                 key={it.path || `panel-${it.label}`}
@@ -1268,29 +1268,22 @@ function BottomNav({
                 className={cn(
                   "nav-item relative z-10 flex select-none flex-col items-center justify-center rounded-[22px] pb-1.5 pt-2 transition-all duration-200",
                   active &&
-                    "bg-white/[0.095] text-gold-strong shadow-[inset_0_1px_0_rgba(255,255,255,.16)]",
-                  // Tombol PANEL: satu-satunya tombol dengan permukaan emas.
-                  it.hub &&
-                    "z-20 -translate-y-4 rounded-[20px] border border-[#FFE58A]/70 bg-[linear-gradient(155deg,#FFF0B0,#FFD23F_54%,#F3A712)] px-2 pb-2 pt-2 text-black shadow-[0_14px_28px_-14px_rgba(255,210,63,.65),inset_0_1px_0_rgba(255,255,255,.55)]",
+                    "bg-white/[0.11] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.16)]",
                 )}
               >
-                {/* Isi tombol (ikon + label). */}
+                {/* Isi tombol (ikon + label). PANEL sekarang memakai gaya
+                    yang sama dengan tab lain — tidak lagi kotak emas
+                    menonjol atau naik keluar dari navigasi. */}
                 <span className="flex flex-col items-center">
                 <Icon
-                  strokeWidth={1.7}
+                  strokeWidth={2.2}
                   className={cn(
-                    // 5 kolom: ikon dibuat besar supaya jelas dan mudah
-                    // ditekan di HP, tapi garisnya TIPIS (strokeWidth 1.7)
-                    // supaya tidak terlihat tebel dan berat.
-                    "size-[24px] md:size-[27px] transition-colors duration-200",
-                    it.hub && "size-[28px] text-black md:size-[30px]",
+                    "size-[23px] md:size-[26px] transition-colors duration-200",
                     active
-                      ? "text-gold-strong"
-                      : it.hub
-                        ? "text-black"
-                        : it.dim
-                          ? "text-zinc-700"
-                          : "text-zinc-500",
+                      ? "text-white"
+                      : it.dim
+                        ? "text-zinc-700"
+                        : "text-zinc-500",
                   )}
                 />
                 {/* Teks label di bawah ikon (Home, Jadwal, Gacha, Subscribe,
@@ -1298,14 +1291,11 @@ function BottomNav({
                 <span
                   className={cn(
                     "mt-1 max-w-full truncate px-0.5 text-[9.5px] leading-none transition-colors duration-200",
-                    it.hub && "font-black tracking-wide text-black/80",
                     active
-                      ? "font-semibold text-gold-strong"
-                      : it.hub
-                        ? "font-black text-black/80"
-                        : it.dim
-                          ? "font-medium text-zinc-700"
-                          : "font-medium text-zinc-500",
+                      ? "font-semibold text-white"
+                      : it.dim
+                        ? "font-medium text-zinc-700"
+                        : "font-medium text-zinc-500",
                   )}
                 >
                   {it.label}

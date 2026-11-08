@@ -82,6 +82,7 @@ export function ProfileStatusBubble({
   onClick,
   className,
   clamp = true,
+  wide = false,
 }: {
   text?: string;
   bg?: string;
@@ -89,6 +90,8 @@ export function ProfileStatusBubble({
   onClick: () => void;
   className?: string;
   clamp?: boolean;
+  /** Versi besar untuk pratinjau editor. */
+  wide?: boolean;
 }) {
   const message = text?.trim() || randomStatusGreeting(seed);
   return (
@@ -97,25 +100,23 @@ export function ProfileStatusBubble({
       onClick={onClick}
       aria-label="Buka status bubble"
       className={cn(
-        "group relative z-20 max-w-[132px] rounded-[15px] rounded-br-[4px] border border-white/18 bg-[#171220]/94 px-2.5 py-1.5 text-left shadow-[0_12px_28px_-16px_rgba(0,0,0,.95)] backdrop-blur-xl transition hover:border-white/35 active:scale-95",
+        "group relative z-20 rounded-[16px] rounded-br-[5px] border border-black/10 bg-white px-3 py-2 text-left text-[#17151b] shadow-[0_12px_28px_-16px_rgba(0,0,0,.55)] transition hover:border-black/20 active:scale-95",
+        wide ? "max-w-[168px]" : "max-w-[132px]",
         className,
       )}
     >
       <span
         className={cn(
-          "text-[8.5px] font-semibold leading-snug text-white/78",
-          clamp && "line-clamp-2",
+          "font-semibold leading-snug text-[#17151b]",
+          wide ? "text-[11px]" : "text-[8.5px]",
+          clamp && !wide && "line-clamp-2",
         )}
       >
         {message}
       </span>
       <span
         aria-hidden
-        className="absolute -bottom-[5px] right-3 size-2.5 rotate-45 rounded-[1px] border-b border-r border-white/18 bg-[#171220]"
-      />
-      <span
-        aria-hidden
-        className="absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"
+        className="absolute -bottom-[5px] right-3 size-2.5 rotate-45 rounded-[1px] bg-white"
       />
     </button>
   );
@@ -138,6 +139,7 @@ export function StatusBubbleEditor({
   );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [bgOpen, setBgOpen] = useState(false);
   const pattern = statusBackground(bg);
   const shown = text.trim() || randomStatusGreeting(user?._id ?? "");
 
@@ -156,34 +158,39 @@ export function StatusBubbleEditor({
   };
 
   return (
-    <div className="screen-enter fixed inset-0 z-[96] flex flex-col bg-[#07060b] text-white">
-      <header className="flex items-center gap-2 px-4 pb-2 pt-4">
+    <div
+      className="screen-enter fixed inset-0 z-[96] flex flex-col overflow-hidden text-white"
+      style={{ background: pattern.css }}
+    >
+      {/* Latar pola benar-benar memenuhi seluruh layar editor. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.18),transparent_36%,rgba(0,0,0,.72))]"
+      />
+
+      <header className="relative flex items-center gap-2 px-4 pb-2 pt-[max(env(safe-area-inset-top),1rem)]">
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-black">Status bubble</p>
-          <p className="text-[9.5px] text-white/38">Tulisan kecil di foto profilmu</p>
+          <p className="text-[9.5px] text-white/55">Tulisan kecil di foto profilmu</p>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Tutup"
-          className="flex size-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/60"
+          className="flex size-8 items-center justify-center rounded-full border border-white/15 bg-black/25 text-white/70 backdrop-blur-md"
         >
           <X className="size-4" />
         </button>
       </header>
 
-      <div
-        className="relative mx-4 mt-1 flex min-h-[250px] flex-1 flex-col items-center justify-center overflow-hidden rounded-[26px] border border-white/12"
-        style={{ background: pattern.css }}
-      >
-        <span className="absolute inset-0 bg-black/18" />
-        <div className="relative flex items-center">
-          <span className="relative">
-            <span className="absolute -inset-1.5 rounded-full bg-white/15 blur-md" />
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-4">
+        <div className="flex items-center justify-center gap-3">
+          <span className="relative shrink-0">
+            <span className="absolute -inset-2 rounded-full bg-white/18 blur-xl" />
             <img
               src={user?.image ?? ""}
               alt=""
-              className="relative size-[112px] rounded-full border-[3px] border-white/55 object-cover shadow-[0_20px_44px_-18px_rgba(0,0,0,.9)]"
+              className="relative size-[124px] rounded-full border-[3px] border-white/70 object-cover shadow-[0_24px_50px_-20px_rgba(0,0,0,.95)]"
             />
           </span>
           <ProfileStatusBubble
@@ -192,74 +199,109 @@ export function StatusBubbleEditor({
             seed={user?._id}
             onClick={() => undefined}
             clamp={false}
-            className="pointer-events-none absolute -right-[116px] -top-3 max-h-[180px] w-[128px] overflow-y-auto bg-[#171220]/96 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            wide
+            className="pointer-events-none max-h-[150px] w-[168px] overflow-hidden"
           />
         </div>
-        <p className="relative mt-5 text-[9px] font-bold uppercase tracking-[0.22em] text-white/55">
+        <span className="mt-5 rounded-full bg-black/22 px-3 py-1 text-[8px] font-black uppercase tracking-[0.24em] text-white/70 backdrop-blur-sm">
           Pratinjau
-        </p>
+        </span>
       </div>
 
-      <div className="shrink-0 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
-        <label className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
-          Pesan bubble
-        </label>
-        <div className="mt-1.5 flex items-end gap-2 rounded-2xl border border-white/12 bg-white/[0.055] p-2 focus-within:border-white/30">
+      <div className="relative shrink-0 bg-[linear-gradient(180deg,transparent,rgba(5,4,8,.86)_24%,rgba(5,4,8,.96))] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-6">
+        <div className="flex items-end gap-2 rounded-2xl border border-white/15 bg-black/28 p-2 backdrop-blur-md focus-within:border-white/35">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, 140))}
             rows={2}
             placeholder="Tulis status mu…"
-            className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-1.5 py-1 text-[12px] leading-relaxed outline-none placeholder:text-white/25"
+            className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-1.5 py-1 text-[12px] leading-relaxed outline-none placeholder:text-white/30"
           />
-          <span className="shrink-0 pb-1 text-[8.5px] font-bold text-white/28">
+          <span className="shrink-0 pb-1 text-[8.5px] font-bold text-white/35">
             {text.length}/140
           </span>
         </div>
 
-        <div className="mt-3">
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
-            Latar
-          </p>
-          <div className="thin-scroll mt-1.5 flex gap-2 overflow-x-auto pb-1">
-            {STATUS_BACKGROUNDS.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setBg(b.id)}
-                aria-pressed={bg === b.id}
-                className={cn(
-                  "relative size-11 shrink-0 overflow-hidden rounded-xl border-2 transition active:scale-95",
-                  bg === b.id ? "border-white" : "border-white/10",
-                )}
-                style={{ background: b.css }}
-              >
-                {bg === b.id && (
-                  <span className="absolute inset-0 grid place-items-center bg-black/20">
-                    <Check className="size-4 drop-shadow" strokeWidth={3} />
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {err && (
-          <p className="mt-2 rounded-xl border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-semibold text-rose-200">
+          <p className="mt-2 rounded-xl border border-rose-400/25 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-rose-100">
             {err}
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={() => void post()}
-          disabled={busy}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--ui-c,#FFD23F)] py-3 text-[12px] font-black text-black transition active:scale-[0.99] disabled:opacity-55"
-        >
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-          {busy ? "Memposting…" : "Posting"}
-        </button>
+        <div className="mt-2.5 grid grid-cols-[1fr_1.6fr] gap-2">
+          <button
+            type="button"
+            onClick={() => setBgOpen(true)}
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-white/18 bg-white/[0.08] py-3 text-[11px] font-black text-white/85 backdrop-blur-md active:scale-[0.99]"
+          >
+            <span
+              aria-hidden
+              className="size-4 rounded-full border border-white/30"
+              style={{ background: pattern.css }}
+            />
+            Ganti latar
+          </button>
+          <button
+            type="button"
+            onClick={() => void post()}
+            disabled={busy}
+            className="flex items-center justify-center gap-2 rounded-2xl py-3 text-[12px] font-black text-black transition active:scale-[0.99] disabled:opacity-55"
+            style={{ background: "var(--ui-c, #FFD23F)" }}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {busy ? "Memposting…" : "Posting"}
+          </button>
+        </div>
       </div>
+
+      {/* Pemilih latar via tombol: panel tersendiri, tile rata tanpa tepi
+          putih terang. */}
+      {bgOpen && (
+        <div className="fixed inset-0 z-[97] flex items-end bg-black/45">
+          <button
+            aria-label="Tutup pilihan latar"
+            className="absolute inset-0"
+            onClick={() => setBgOpen(false)}
+          />
+          <div className="pop-enter relative w-full rounded-t-[28px] border-t border-white/12 bg-[#100e16] p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
+            <div className="mx-auto mb-3 h-1 w-11 rounded-full bg-white/20" />
+            <div className="flex items-center justify-between pb-3">
+              <p className="text-[13px] font-black text-white">Pilih latar</p>
+              <button
+                type="button"
+                onClick={() => setBgOpen(false)}
+                aria-label="Tutup"
+                className="text-white/45"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {STATUS_BACKGROUNDS.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => {
+                    setBg(b.id);
+                    setBgOpen(false);
+                  }}
+                  aria-pressed={bg === b.id}
+                  className="relative aspect-square overflow-hidden rounded-2xl transition active:scale-95"
+                  style={{ background: b.css }}
+                >
+                  {bg === b.id && (
+                    <span className="absolute inset-0 grid place-items-center bg-black/20">
+                      <span className="grid size-6 place-items-center rounded-full bg-white text-black">
+                        <Check className="size-3.5" strokeWidth={3.5} />
+                      </span>
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

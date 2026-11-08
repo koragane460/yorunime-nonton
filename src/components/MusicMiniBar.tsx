@@ -3,7 +3,9 @@
 // Musik. Ketuk pil → melebar jadi kartu berisi kaset berputar, sampul,
 // judul, progres, dan kontrol play/prev/next.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   ChevronDown,
   ChevronUp,
@@ -18,12 +20,61 @@ import { useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import { fmtTime, useMusicPlayer } from "@/components/MusicPlayer";
 
+type LyricLine = { t?: number; text: string };
+
 export function MusicMiniBar() {
   const p = useMusicPlayer();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const fetchLyrics = useAction(api.music.lyrics);
+  const [lines, setLines] = useState<LyricLine[]>([]);
+
+  useEffect(() => {
+    const t = p.track;
+    setLines([]);
+    if (!t?.title) return;
+    let alive = true;
+    void fetchLyrics({
+      artist: t.artist ?? "",
+      track: t.title,
+      durationSec: Math.max(1, Math.round(p.duration || 30)),
+    })
+      .then((r: any) => {
+        if (!alive) return;
+        const synced: LyricLine[] = r?.synced?.length
+          ? r.synced.map((x: any) => ({ t: Number(x.t), text: String(x.text) }))
+          : [];
+        const plain: LyricLine[] = r?.plain?.length
+          ? r.plain.map((text: string) => ({ text }))
+          : [];
+        setLines(synced.length ? synced : plain);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+    // Jangan refetch tiap detik; durasi hanya dipakai sebagai perkiraan awal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.track?.title, p.track?.artist, fetchLyrics]);
+
   if (!p.track) return null;
   if (p.screenOpen || location.pathname.startsWith("/nonton")) return null;
+
+  let lyricIdx = -1;
+  if (lines.length > 0) {
+    if (lines[0].t !== undefined) {
+      for (let i = 0; i < lines.length; i += 1) {
+        if ((lines[i].t ?? 0) <= p.position) lyricIdx = i;
+        else break;
+      }
+    } else {
+      lyricIdx = Math.min(
+        lines.length - 1,
+        Math.floor((p.position / Math.max(1, p.duration)) * lines.length),
+      );
+    }
+  }
+  const lyric = lyricIdx >= 0 ? lines[lyricIdx]?.text : null;
 
   const pct =
     p.duration > 0 ? Math.min(1, Math.max(0, p.position / p.duration)) : 0;
@@ -40,7 +91,7 @@ export function MusicMiniBar() {
     );
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-2 z-[70] flex justify-center px-3">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[70] flex justify-center px-3 pt-[max(env(safe-area-inset-top),0.3rem)]">
       <div
         className={cn(
           "pointer-events-auto overflow-hidden border border-white/12 bg-black/95 text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl transition-all duration-300",
@@ -91,7 +142,14 @@ export function MusicMiniBar() {
                 <p className="mt-0.5 truncate text-[10px] text-white/50">
                   {p.track.artist}
                 </p>
-                <div className="mt-1.5 flex items-center gap-1">
+                <p
+                  key={`${lyricIdx}-${lyric ?? ""}`}
+                  className="yn-fade-line mt-0.5 truncate text-[10px] font-semibold italic"
+                  style={{ color: "var(--ui-c, #FFD23F)" }}
+                >
+                  {lyric ?? "♪"}
+                </p>
+                <div className="mt-1 flex items-center gap-1">
                   <span className="flex items-end gap-0.5" aria-hidden>
                     {[0, 1, 2, 3].map((i) => (
                       <span
@@ -210,8 +268,17 @@ export function MusicMiniBar() {
                   />
                 ))}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
-                {p.track.title}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[11px] font-bold leading-tight">
+                  {p.track.title}
+                </span>
+                <span
+                  key={`${lyricIdx}-${lyric ?? ""}`}
+                  className="yn-fade-line block truncate text-[8px] font-semibold italic leading-tight"
+                  style={{ color: "var(--ui-c, #FFD23F)" }}
+                >
+                  {lyric ?? p.track.artist}
+                </span>
               </span>
             </button>
             <button

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, BlueCheck, ClanTag } from "@/components/lstream-ui";
@@ -15,7 +15,6 @@ import {
   Play,
   Shield,
   Sparkles,
-  Star,
   Trophy,
   ArrowUpRight,
 } from "lucide-react";
@@ -31,28 +30,6 @@ type HistoryRow = {
   durationSec?: number;
   updatedAt: number;
 };
-
-function watchedLabel(ts: number) {
-  const d = new Date(ts);
-  const now = new Date();
-  const sameDay =
-    d.getDate() === now.getDate() &&
-    d.getMonth() === now.getMonth() &&
-    d.getFullYear() === now.getFullYear();
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const isYesterday =
-    d.getDate() === yesterday.getDate() &&
-    d.getMonth() === yesterday.getMonth() &&
-    d.getFullYear() === yesterday.getFullYear();
-  const day = sameDay ? "Hari ini" : isYesterday ? "Kemarin" : d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-  const time = d.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  return `Ditonton • ${day} ${time}`;
-}
 
 /**
  * Kartu "lanjut nonton" di bawah pil profil Home.
@@ -73,63 +50,24 @@ export function ContinueWatchingCard({
     api.activities.myHistory,
     user ? {} : "skip",
   ) as HistoryRow[] | undefined;
-  const detail = useAction(api.anime.animeDetail);
-  const [score, setScore] = useState<number | undefined>(undefined);
   const last = rows?.[0];
-
-  useEffect(() => {
-    let alive = true;
-    setScore(undefined);
-    if (!last) return;
-    void detail({ id: last.animeId, title: last.animeTitle })
-      .then((d: any) => {
-        if (alive && typeof d?.score === "number") setScore(d.score);
-      })
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [detail, last?.animeId, last?.animeTitle]);
+  void onHistory;
+  void onDiscover;
 
   if (rows === undefined) return null;
-  if (!last) {
-    return (
-      <section className="fade-enter mt-3">
-        <div className="relative flex h-[94px] items-center gap-3 overflow-hidden rounded-[24px] border border-white/12 bg-[linear-gradient(115deg,rgba(28,167,236,.1),rgba(255,255,255,.045)_48%,rgba(255,210,63,.08))] p-3 text-left">
-          <span aria-hidden className="pointer-events-none absolute -left-8 -top-10 size-28 rounded-full bg-sky-400/10 blur-3xl" />
-          <span className="relative flex h-[62px] w-[68px] shrink-0 items-center justify-center">
-            <span className="absolute left-1 top-1.5 h-[50px] w-[42px] -rotate-[15deg] rounded-lg border border-white/10 bg-[linear-gradient(150deg,#243247,#121722)]" />
-            <span className="absolute right-1 top-1 h-[54px] w-[43px] rotate-[12deg] rounded-lg border border-white/10 bg-[linear-gradient(150deg,#302338,#15121d)]" />
-            <span className="relative flex h-[56px] w-[45px] items-center justify-center rounded-lg border border-white/18 bg-[linear-gradient(150deg,#15324a,#0c1723)] text-sky-200 shadow-lg">
-              <Play className="size-4 fill-current" />
-            </span>
-          </span>
-          <span className="relative min-w-0 flex-1">
-            <span className="block text-[13px] font-black text-white">
-              Belum ada riwayat nonton
-            </span>
-            <span className="mt-0.5 block text-[10px] leading-snug text-white/45">
-              Mulai satu episode — progres, episode, dan menitnya muncul di sini.
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={onDiscover ?? onHistory}
-            className="relative shrink-0 rounded-full bg-[linear-gradient(110deg,#1CA7EC,#7C6CFF_55%,#E84855)] px-3 py-2 text-[9px] font-black text-white shadow-[0_10px_20px_-14px_rgba(28,167,236,.9)] active:scale-95"
-          >
-            Mulai
-          </button>
-        </div>
-      </section>
-    );
-  }
+  // Permintaan: kalau riwayat kosong, JANGAN tampilkan placeholder apa pun.
+  if (!last) return null;
 
   const duration =
     last.durationSec && last.durationSec > 0 ? last.durationSec : 1440;
   const progress = Math.max(0, last.progressSec ?? 0);
-  const pct = Math.min(100, Math.round((progress / Math.max(1, duration)) * 100));
-  const minutes = Math.floor(
-    (progress > 0 ? progress : (last.minutesWatched ?? 0) * 60) / 60,
+  const pct = Math.min(
+    100,
+    Math.round((progress / Math.max(1, duration)) * 100),
+  );
+  const minutes = Math.max(
+    1,
+    Math.floor((progress > 0 ? progress : (last.minutesWatched ?? 0) * 60) / 60),
   );
 
   return (
@@ -137,51 +75,68 @@ export function ContinueWatchingCard({
       <button
         type="button"
         onClick={() => onOpen(last)}
-        className="group relative flex h-[116px] w-full items-stretch overflow-hidden rounded-[24px] border border-white/12 bg-[linear-gradient(115deg,rgba(28,167,236,.15),rgba(255,255,255,.045)_44%,rgba(232,72,85,.09))] p-2.5 text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
+        className="group relative flex h-[112px] w-full items-center overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0f17] p-3 text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
       >
-        <span aria-hidden className="pointer-events-none absolute -right-9 -top-12 size-32 rounded-full bg-sky-400/10 blur-3xl" />
-        <span className="relative ml-1 flex w-[82px] shrink-0 items-center justify-center">
-          <span className="relative h-[94px] w-[68px] -rotate-[4deg] overflow-hidden rounded-[18px] border border-white/18 bg-black shadow-[0_16px_26px_-18px_rgba(0,0,0,1)] transition duration-300 group-hover:-rotate-[2deg]">
-            {last.animeImage ? (
-              <img src={last.animeImage} alt="" className="size-full object-cover" />
-            ) : (
-              <span className="flex size-full items-center justify-center text-white/30">
-                <Play className="size-6" />
-              </span>
-            )}
-            <span className="absolute left-0 top-0 rounded-br-xl bg-gold-strong px-1.5 py-0.5 text-[8px] font-black text-black">
-              Ep {last.episode}
+        {/* Lingkaran dekoratif besar supaya kotak tidak terasa polos. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -bottom-24 left-10 size-48 rounded-full border border-white/[0.06]"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-14 -top-20 size-52 rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, color-mix(in srgb, var(--ui-a) 16%, transparent), transparent 68%)",
+          }}
+        />
+
+        <span className="relative h-[88px] w-[68px] shrink-0 overflow-hidden rounded-[15px] border border-white/12 bg-black">
+          {last.animeImage ? (
+            <img
+              src={last.animeImage}
+              alt=""
+              className="size-full object-cover"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center text-white/30">
+              <Play className="size-6" />
             </span>
-            <span className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,.9))] px-1.5 pb-1.5 pt-5">
-              <span className="block h-[3px] overflow-hidden rounded-full bg-white/25">
-                <span className="block h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#7FD3F7)]" style={{ width: `${Math.max(3, pct)}%` }} />
-              </span>
-              <span className="mt-1 flex items-center justify-between text-[7.5px] font-black text-white/80">
-                <span>{minutes > 0 ? `${minutes} mnt` : "Baru mulai"}</span>
-                <span>{pct}%</span>
-              </span>
+          )}
+          <span className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,.85))] px-1.5 pb-1.5 pt-5">
+            <span className="block h-[3px] overflow-hidden rounded-full bg-white/25">
+              <span
+                className="block h-full rounded-full"
+                style={{
+                  width: `${Math.max(3, pct)}%`,
+                  background: "var(--ui-c, #FFD23F)",
+                }}
+              />
             </span>
           </span>
         </span>
 
-        <span className="relative flex min-w-0 flex-1 flex-col py-0.5 pl-2.5">
-          <span className="line-clamp-2 text-[13.5px] font-black leading-tight tracking-[-0.01em] text-white">
+        <span className="relative flex min-w-0 flex-1 flex-col pl-3.5 pr-2">
+          <span className="line-clamp-2 text-[14.5px] font-black leading-tight tracking-[-0.01em] text-white">
             {last.animeTitle}
           </span>
-          <span className="mt-1 flex items-center gap-1.5 text-[9px] font-semibold text-white/45">
-            <Play className="size-2.5 shrink-0 text-sky-300" />
-            <span className="truncate">{watchedLabel(last.updatedAt)}</span>
+          <span className="mt-1.5 truncate text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/45">
+            Epsd {last.episode} · {minutes} menit
           </span>
-          <span className="mt-2.5 flex items-center gap-2">
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[8.5px] font-black text-amber-200">
-              <Star className="size-2.5 fill-current" />
-              {typeof score === "number" ? score.toFixed(1) : "—"}
-            </span>
-            <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-full bg-white/12">
-              <span className="block h-full rounded-full bg-[linear-gradient(90deg,#7FD3F7,#FFD23F)]" style={{ width: `${Math.max(3, pct)}%` }} />
-            </span>
-            <span className="shrink-0 text-[8.5px] font-black text-sky-100">{pct}%</span>
-          </span>
+        </span>
+
+        <span
+          className="absolute right-3 top-2.5 text-[7.5px] font-black uppercase tracking-[0.18em]"
+          style={{ color: "var(--ui-c, #FFD23F)" }}
+        >
+          Lanjutkan
+        </span>
+
+        <span
+          className="relative m-0.5 grid size-11 shrink-0 place-items-center rounded-full text-black shadow-[0_10px_24px_-12px_rgba(0,0,0,.9)] transition group-hover:scale-105"
+          style={{ background: "var(--ui-c, #FFD23F)" }}
+        >
+          <Play className="size-[18px] translate-x-px fill-current" />
         </span>
       </button>
     </section>
@@ -195,59 +150,44 @@ export function HomePremiumCard({ onBuy }: { onBuy: () => void }) {
     <button
       type="button"
       onClick={onBuy}
-      className="fade-enter group relative mt-3 w-full overflow-hidden rounded-[24px] border border-[#D8B86E]/35 bg-[linear-gradient(135deg,#1c1710_0%,#100e0c_58%,#1a130b_100%)] p-3.5 text-left shadow-[0_26px_58px_-40px_rgba(0,0,0,1)] transition active:scale-[0.99]"
+      className="fade-enter group relative mt-3 w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#0a0a0c] p-3.5 text-left shadow-[0_24px_48px_-34px_rgba(0,0,0,1)] transition active:scale-[0.99]"
     >
+      {/* Watermark Y besar — bukan badge kecil, mengikuti referensi. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#E8C77A,transparent)]"
-      />
+        className="pointer-events-none absolute -right-1 -top-16 select-none font-display text-[154px] font-black leading-none tracking-[-0.12em] text-white/[0.035]"
+      >
+        Y
+      </span>
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-10 -top-16 size-40 rounded-full bg-[#D8B86E]/10 blur-3xl"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-[4.4rem] w-px bg-[linear-gradient(180deg,transparent,rgba(216,184,110,.25),transparent)]"
+        className="pointer-events-none absolute inset-y-0 right-[6.7rem] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,.12),transparent)]"
       />
 
       <span className="relative flex items-center gap-3">
-        <span className="relative flex size-12 shrink-0 flex-col items-center justify-center rounded-[15px] border border-[#D8B86E]/40 bg-[#0d0b09] text-[#F1D48D] shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
-          <span className="font-display text-[17px] font-black leading-none tracking-[-0.04em]">
-            Y+
-          </span>
-          <span className="mt-1 text-[5.5px] font-black uppercase tracking-[0.2em] text-[#F1D48D]/55">
-            Premium
-          </span>
-        </span>
-
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-1.5">
-            <span className="text-[8px] font-black uppercase tracking-[0.23em] text-[#E8C77A]">
-              Yoru Premium
-            </span>
-            <span className="size-1 rounded-full bg-[#E8C77A]/50" />
-            <span className="text-[8px] font-bold text-white/35">Tanpa iklan</span>
+          <span className="text-[8px] font-black uppercase tracking-[0.24em] text-[#E8C77A]">
+            Yoru Premium
           </span>
-          <span className="mt-1 block truncate font-display text-[15px] font-black leading-tight tracking-[-0.02em] text-[#FFF6DF]">
+          <span className="mt-1 block truncate font-display text-[16px] font-black leading-tight tracking-[-0.02em] text-white">
             Nonton lebih tenang.
           </span>
-          <span className="mt-1 flex items-center gap-1.5 text-[8px] font-semibold text-white/40">
+          <span className="mt-1.5 flex items-center gap-1.5 text-[8.5px] font-semibold text-white/45">
             <Check className="size-2.5 text-[#E8C77A]" strokeWidth={3} />
+            Tanpa iklan
+            <span className="size-0.5 rounded-full bg-white/25" />
             1080p
             <span className="size-0.5 rounded-full bg-white/25" />
             Manga
-            <span className="size-0.5 rounded-full bg-white/25" />
-            Border eksklusif
           </span>
         </span>
 
-        <span className="relative flex shrink-0 flex-col items-end gap-1.5 pl-1">
-          <span className="font-display text-[13px] font-black leading-none text-[#F4D58B]">
-            Rp5<span className="text-[8px] font-bold text-[#F4D58B]/65">rb</span>
-          </span>
-          <span className="flex size-8 items-center justify-center rounded-full border border-[#D8B86E]/45 bg-[#D8B86E]/10 text-[#F1D48D] transition group-hover:bg-[#D8B86E]/20">
-            <ArrowUpRight className="size-3.5" strokeWidth={2.4} />
-          </span>
+        <span
+          className="relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[10px] font-black text-black shadow-[0_12px_24px_-16px_rgba(0,0,0,.9)] transition group-hover:brightness-105"
+          style={{ background: "var(--ui-c, #FFD23F)" }}
+        >
+          Coba Rp5.000
+          <ArrowUpRight className="size-3.5" strokeWidth={2.8} />
         </span>
       </span>
     </button>

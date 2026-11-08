@@ -13,9 +13,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { avatarFallback } from "@/lib/lstream";
 import type { MusicTrack } from "@/convex/music";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import {
   Camera,
@@ -520,8 +523,16 @@ export function StoryEditor({
   const uploadOne = useCallback(
     (it: Picked, onProgress: (p: number) => void) =>
       new Promise<void>(async (resolve, reject) => {
-        if (it.file.size > 25 * 1024 * 1024) {
-          reject(new Error("Ukuran melebihi 25 MB. Potong videonya lebih pendek."));
+        // Batas mengikuti Convex: file tidak dibatasi ukuran oleh storage,
+        // tetapi POST request punya timeout 2 menit. 100 MB adalah batas aman
+        // yang sama dengan Feed supaya foto/video status tidak ditolak lebih
+        // awal daripada Feed.
+        if (it.file.size > 100 * 1024 * 1024) {
+          reject(
+            new Error(
+              "Ukuran melebihi 100 MB. Potong videonya lebih pendek lalu coba lagi.",
+            ),
+          );
           return;
         }
         try {
@@ -726,8 +737,53 @@ export function StoryEditor({
   const selSticker =
     sel?.kind === "sticker" ? edit.stickers.find((s) => s.id === sel.id) : null;
 
+  /** Buka layar tulis penuh. Kalau belum ada teks terpilih, buat lapisan
+   *  kosong dulu supaya kontrol warna/font sudah bisa dipakai saat menulis. */
+  const beginTextTool = () => {
+    if (!current) return;
+    if (selText) {
+      setTool("teks");
+      return;
+    }
+    const layer: TextLayer = {
+      id: `t${Date.now()}`,
+      text: textDraft,
+      color: "#ffffff",
+      outline: true,
+      bg: false,
+      font: "modern",
+      x: 0.5,
+      y: 0.42,
+      scale: 1,
+      rotate: 0,
+    };
+    setEdit(current.url, { texts: [...edit.texts, layer] });
+    setSel({ kind: "text", id: layer.id });
+    setTextDraft("");
+    setTool("teks");
+  };
+
+  /** Selesai menulis: buang lapisan yang benar-benar kosong, lalu tutup
+   *  layar tulis tanpa menyembunyikan pratinjau. */
+  const commitTextTool = () => {
+    if (current && sel?.kind === "text") {
+      const layer = edit.texts.find((t) => t.id === sel.id);
+      if (layer && !layer.text.trim()) {
+        setEdit(current.url, {
+          texts: edit.texts.filter((t) => t.id !== sel.id),
+        });
+        setSel(null);
+      }
+    }
+    setTool(null);
+  };
+
   const mediaClass = "size-full object-contain";
   const mediaStyle = { transform: `scale(${edit.crop.zoom})` } as const;
+  // Salinan TIDAK dipersempit untuk kondisi render panel lama. Dengan begitu
+  // isi panel lama tetap lolos typecheck, sementara teks & stiker selalu
+  // memakai layar penuh baru di bawah ini.
+  const legacyTool: Tool = tool;
   const mediaEl = (cls: string) =>
     current.kind === "image" ? (
       <img src={current.url} alt="" className={cls} style={mediaStyle} />
@@ -867,7 +923,13 @@ export function StoryEditor({
           {TOOLS.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTool((v) => (v === t.id ? null : t.id))}
+              onClick={() => {
+                if (t.id === "teks") {
+                  beginTextTool();
+                  return;
+                }
+                setTool((v) => (v === t.id ? null : t.id));
+              }}
               aria-label={t.label}
               className={cn(
                 "flex size-10 items-center justify-center rounded-full border backdrop-blur-sm transition active:scale-95",
@@ -881,9 +943,221 @@ export function StoryEditor({
           ))}
         </div>
 
-        {/* Panel alat: kartu MELAYANG di atas media (menempel di samping
-            kolom tombol kanan), bukan panel yang meluncur dari bawah. */}
-        {tool && (
+        {/* LAYAR TULIS FULLSCREEN — teks ditulis di area besar, kontrol
+            menempel di atas keyboard. Bukan panel kecil di bawah lagi. */}
+        {tool === "teks" && (
+          <div className="absolute inset-0 z-30 flex flex-col bg-black/60 backdrop-blur-[2px]">
+            <div className="flex items-center gap-2 px-3 pt-3">
+              <button
+                type="button"
+                onClick={commitTextTool}
+                className="rounded-full bg-black/45 p-2 text-white"
+                aria-label="Tutup editor teks"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <p className="text-[12px] font-black text-white/85">Tulis teks</p>
+              <button
+                type="button"
+                onClick={commitTextTool}
+                className="ml-auto rounded-full bg-white px-4 py-1.5 text-[11px] font-black text-black"
+              >
+                Selesai
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center px-4">
+              <textarea
+                autoFocus
+                value={selText?.text ?? textDraft}
+                onChange={(e) =>
+                  selText
+                    ? updateSelText({ text: e.target.value.slice(0, 120) })
+                    : setTextDraft(e.target.value.slice(0, 120))
+                }
+                maxLength={120}
+                rows={3}
+                placeholder="Tulis apa yang kamu pikirkan…"
+                className="max-h-[42dvh] w-full resize-none bg-transparent text-center text-[32px] font-black leading-tight text-white outline-none placeholder:text-white/30"
+                style={{
+                  fontFamily: selText ? fontCss(selText.font) : fontCss("modern"),
+                  color: selText?.color ?? "#fff",
+                  textShadow: selText?.outline === false ? "none" : OUTLINE_SHADOW,
+                }}
+              />
+            </div>
+            <div className="shrink-0 border-t border-white/12 bg-black/65 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3">
+              {selText ? (
+                <div className="thin-scroll flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
+                  {TEXT_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-label={`Warna ${c}`}
+                      onClick={() => updateSelText({ color: c })}
+                      className={cn(
+                        "size-7 shrink-0 rounded-full",
+                        selText.color === c ? "ring-2 ring-white" : "",
+                      )}
+                      style={{ background: c }}
+                    />
+                  ))}
+                  <span className="h-5 w-px shrink-0 bg-white/20" />
+                  {FONTS.slice(0, 3).map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => updateSelText({ font: f.id })}
+                      style={{ fontFamily: f.css }}
+                      className={cn(
+                        "shrink-0 rounded-full px-3 py-1 text-[10px] font-bold",
+                        selText.font === f.id
+                          ? "bg-white text-black"
+                          : "bg-white/10 text-white/70",
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => updateSelText({ outline: !selText.outline })}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1 text-[10px] font-bold",
+                      selText.outline
+                        ? "bg-white text-black"
+                        : "bg-white/10 text-white/70",
+                    )}
+                  >
+                    Outline
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSelText({ bg: !selText.bg })}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1 text-[10px] font-bold",
+                      selText.bg
+                        ? "bg-white text-black"
+                        : "bg-white/10 text-white/70",
+                    )}
+                  >
+                    Latar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateSelText({ scale: Math.min(2, selText.scale + 0.15) })
+                    }
+                    className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-[10px] font-black text-white/70"
+                  >
+                    A+
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateSelText({ scale: Math.max(0.6, selText.scale - 0.15) })
+                    }
+                    className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-[10px] font-black text-white/70"
+                  >
+                    A-
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removeSel}
+                    className="shrink-0 rounded-full bg-red-500/20 px-3 py-1 text-[10px] font-bold text-red-200"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-white/45">
+                  Ketik teks, lalu atur warna, font, dan ukuran dari sini.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STICKER FULLSCREEN — overlay abu-abu 40%, tanpa panel kecil. */}
+        {tool === "stiker" && (
+          <div className="absolute inset-0 z-30 flex flex-col bg-black/40 backdrop-blur-[2px]">
+            <div className="flex items-center gap-2 px-3 pt-3">
+              <button
+                type="button"
+                onClick={() => setTool(null)}
+                className="rounded-full bg-black/45 p-2 text-white"
+                aria-label="Tutup stiker"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <p className="text-[12px] font-black text-white/85">Stiker</p>
+              {selSticker && (
+                <button
+                  type="button"
+                  onClick={removeSel}
+                  className="ml-auto rounded-full bg-red-500/20 px-3 py-1.5 text-[10px] font-bold text-red-200"
+                >
+                  Hapus stiker
+                </button>
+              )}
+            </div>
+            {selSticker && (
+              <div className="mt-2 flex items-center gap-3 px-4">
+                <span className="text-[9px] font-bold text-white/60">Ukuran</span>
+                <input
+                  type="range"
+                  min={0.08}
+                  max={0.4}
+                  step={0.01}
+                  value={selSticker.size}
+                  onChange={(e) => {
+                    if (!current) return;
+                    setEdit(current.url, {
+                      stickers: edit.stickers.map((s) =>
+                        s.id === selSticker.id
+                          ? { ...s, size: Number(e.target.value) }
+                          : s,
+                      ),
+                    });
+                  }}
+                  className="min-w-0 flex-1 accent-white"
+                />
+              </div>
+            )}
+            <div className="mt-2 flex gap-2 overflow-x-auto px-4 pb-2">
+              {STICKER_PACKS.map((p, i) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => setPackIdx(i)}
+                  className={cn(
+                    "shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold",
+                    packIdx === i
+                      ? "bg-white text-black"
+                      : "bg-white/10 text-white/70",
+                  )}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+            <div className="thin-scroll grid min-h-0 flex-1 grid-cols-6 content-start gap-2 overflow-y-auto px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+              {STICKER_PACKS[packIdx].items.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => addSticker(emoji)}
+                  className="flex aspect-square items-center justify-center rounded-2xl bg-white/[0.08] text-3xl transition hover:bg-white/20 active:scale-90"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Panel alat lain (pangkas / musik / suara / privasi): kartu melayang
+            di atas media. Teks & stiker punya layar penuhnya sendiri. */}
+        {tool && legacyTool !== "teks" && legacyTool !== "stiker" && (
           <div className="thin-scroll absolute bottom-3 left-2 right-14 z-20 max-h-[55%] touch-auto overflow-y-auto rounded-2xl border border-white/15 bg-[#12101a]/95 p-3 shadow-2xl backdrop-blur-sm">
           {/* ------------------------------ TEKS ------------------------------ */}
           {tool === "teks" && (
@@ -1428,16 +1702,25 @@ export function StoryViewer({
     | undefined;
   const markViewed = useMutation(api.stories.markViewed);
   const removeStory = useMutation(api.stories.removeStory);
+  const purgeExpired = useMutation(api.stories.purgeExpired);
+  const sendDm = useMutation(api.chat.sendMessage);
+  const { user: me } = useAuth();
 
   const [group, setGroup] = useState(0);
   const [idx, setIdx] = useState(0);
   const [showViewers, setShowViewers] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [replyText, setReplyText] = useState("");
+  const [replyBusy, setReplyBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const groups = useMemo(() => feed ?? [], [feed]);
   const active = groups[group];
   const currentStory = active?.stories?.[idx];
-  const viewingOwn = !!userId && active?.userId === userId;
+  const viewingOwn =
+    (!!userId && active?.userId === userId) ||
+    (!!me && !!active && String(active.userId) === String(me._id));
   const initialGroup = useMemo(
     () =>
       initialUserId
@@ -1502,21 +1785,33 @@ export function StoryViewer({
     }
   }, [group, idx]);
 
-  // Tandai dilihat.
+  // Tandai dilihat — JANGAN mencatat pemilik sebagai penonton dirinya sendiri.
   useEffect(() => {
-    if (!currentStory) return;
+    if (!currentStory || viewingOwn) return;
     void markViewed({ storyId: currentStory._id as never }).catch(() => {});
-  }, [currentStory, markViewed]);
+  }, [currentStory, markViewed, viewingOwn]);
 
-  // Progres bar: gambar 5 detik, video mengikuti durasinya.
-  // PENTING untuk performa: state hanya diupdate 4x per detik (bukan 60ms
-  // sekali = 16x per detik). Setiap update merender ulang seluruh viewer,
-  // jadi interval rapat itu yang membuat story terasa berat di HP kentang.
+  // Story kedaluwarsa dibersihkan dari storage secara berkala (maks. sekali
+  // per 6 jam per perangkat). Tampilan sudah difilter 24 jam di server.
   useEffect(() => {
-    if (!currentStory) return;
-    const dur = currentStory.mediaType === "video" ? 15000 : 5000;
+    try {
+      const last = Number(localStorage.getItem("yn:story-purge") ?? 0);
+      if (Date.now() - last < 6 * 3600_000) return;
+      localStorage.setItem("yn:story-purge", String(Date.now()));
+    } catch {
+      /* mode privat */
+    }
+    void purgeExpired({}).catch(() => {});
+  }, [purgeExpired]);
+
+  // Gambar tampil 5 detik. Video TIDAK memakai timer tetap: progresnya
+  // diambil dari timeupdate elemen video dan baru lanjut saat `ended`, jadi
+  // durasi asli selalu dihormati dan tidak ada lompatan ganda.
+  useEffect(() => {
+    if (!currentStory || currentStory.mediaType !== "image") return;
     setProgress(0);
     const t0 = Date.now();
+    const dur = 5000;
     const timer = window.setInterval(() => {
       const p = Math.min(100, ((Date.now() - t0) / dur) * 100);
       setProgress(p);
@@ -1524,6 +1819,11 @@ export function StoryViewer({
     }, 250);
     return () => window.clearInterval(timer);
   }, [currentStory, next]);
+
+  // Reset balasan ketika pindah story.
+  useEffect(() => {
+    setReplyText("");
+  }, [currentStory?._id]);
 
   // Lagu latar story diputar sesuai volume yang disimpan.
   const musicUrl = currentStory?.music?.audioUrl;
@@ -1541,6 +1841,22 @@ export function StoryViewer({
     };
   }, [musicUrl, musicVol]);
 
+  if (feed === undefined) {
+    return createPortal(
+      <div className="screen-enter fixed inset-0 z-[80] flex flex-col items-center justify-center gap-3 bg-black">
+        <Loader2 className="size-7 animate-spin text-white/70" />
+        <p className="text-sm font-semibold text-white/70">Memuat story…</p>
+        <button
+          onClick={onClose}
+          className="rounded-full border border-white/25 px-4 py-1.5 text-xs font-bold text-white/70"
+        >
+          Tutup
+        </button>
+      </div>,
+      document.body,
+    );
+  }
+
   if (!active || !currentStory) {
     return createPortal(
       <div className="screen-enter fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black">
@@ -1557,16 +1873,44 @@ export function StoryViewer({
   }
 
   const list = active.stories;
-  const aspect = aspectOf(currentStory.crop?.aspect);
-  const zoom = currentStory.crop?.zoom ?? 1;
-  const mediaStyle = { transform: `scale(${zoom})` } as const;
+  // Status selalu tampil fullscreen TANPA terpotong. Crop/zoom dari editor
+  // tidak dipakai di penampil supaya seluruh foto/video terlihat utuh.
+  const mediaStyle = undefined;
+
+  const sendReply = async (text: string) => {
+    const t = text.trim();
+    if (!t || replyBusy || viewingOwn) return;
+    setReplyBusy(true);
+    try {
+      await sendDm({
+        kind: "dm",
+        peerId: active.userId as Id<"users">,
+        text: t.slice(0, 240),
+      });
+      setReplyText("");
+      toast.success(`Balasan terkirim ke DM ${active.username}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim balasan");
+    } finally {
+      setReplyBusy(false);
+    }
+  };
 
   const renderMedia = (cls: string) =>
     currentStory.mediaType === "image" ? (
       url ? (
-        <img src={url} alt="" className={cls} style={mediaStyle} />
+        <img
+          src={url}
+          alt=""
+          loading="eager"
+          decoding="async"
+          className={cls}
+          style={mediaStyle}
+        />
       ) : (
-        <div className="size-full animate-pulse bg-white/5" />
+        <div className="flex size-full items-center justify-center bg-black">
+          <Loader2 className="size-7 animate-spin text-white/55" />
+        </div>
       )
     ) : url ? (
       <video
@@ -1576,12 +1920,24 @@ export function StoryViewer({
         src={url}
         autoPlay
         playsInline
+        preload="auto"
         controls={false}
+        onTimeUpdate={(e) => {
+          const v = e.currentTarget;
+          if (Number.isFinite(v.duration) && v.duration > 0) {
+            setProgress(
+              Math.min(100, Math.max(0, (v.currentTime / v.duration) * 100)),
+            );
+          }
+        }}
+        onEnded={next}
         className={cls}
         style={mediaStyle}
       />
     ) : (
-      <div className="size-full animate-pulse bg-white/5" />
+      <div className="flex size-full items-center justify-center bg-black">
+        <Loader2 className="size-7 animate-spin text-white/55" />
+      </div>
     );
 
   return createPortal(
@@ -1618,31 +1974,13 @@ export function StoryViewer({
           </p>
         </div>
         {viewingOwn && (
-          <>
-            <button
-              onClick={() => setShowViewers((v) => !v)}
-              aria-label="Siapa yang melihat"
-              className="rounded-full bg-white/15 p-2 text-white"
-            >
-              <Eye className="size-4" />
-            </button>
-            <button
-              onClick={() => {
-                void removeStory({ storyId: currentStory._id as never })
-                  .then(() => {
-                    toast.success("Story dihapus");
-                    next();
-                  })
-                  .catch((e: unknown) =>
-                    toast.error(e instanceof Error ? e.message : "Gagal hapus"),
-                  );
-              }}
-              aria-label="Hapus story"
-              className="rounded-full bg-white/15 p-2 text-white"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            aria-label="Hapus story"
+            className="rounded-full bg-white/15 p-2 text-white"
+          >
+            <Trash2 className="size-4" />
+          </button>
         )}
         <button
           onClick={onClose}
@@ -1653,20 +1991,10 @@ export function StoryViewer({
         </button>
       </div>
 
-      {/* Media + lapisan + zona ketuk kiri/kanan */}
+      {/* Media + lapisan + zona ketuk kiri/kanan. Media SELALU object-contain
+          di seluruh layar supaya foto/video tidak terpotong. */}
       <div className="relative flex-1 overflow-hidden">
-        {aspect?.ratio ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="relative overflow-hidden"
-              style={{ aspectRatio: aspect.ratio, width: aspect.width }}
-            >
-              {renderMedia("size-full object-cover")}
-            </div>
-          </div>
-        ) : (
-          renderMedia("size-full object-contain")
-        )}
+        <div className="absolute inset-0">{renderMedia("size-full object-contain")}</div>
 
         {/* Teks dari penyunting */}
         {currentStory.texts?.map((t, i) => (
@@ -1730,56 +2058,196 @@ export function StoryViewer({
         />
       </div>
 
-      {/* Footer bergaya penampil story: caption + kolom balas + reaksi. */}
+      {/* Footer: pemilik hanya mendapat tombol "Lihat" besar di tengah bawah.
+          Balasan & reaksi HANYA untuk story orang lain, dan balasannya masuk
+          ke DM pemilik story. */}
       <div className="shrink-0 border-t border-white/10 bg-black/55 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 backdrop-blur-xl">
         {currentStory.caption && (
           <p className="mb-2 text-center text-[13px] font-semibold leading-snug text-white [text-shadow:0_2px_8px_rgba(0,0,0,.8)]">
             {currentStory.caption}
           </p>
         )}
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 min-w-0 flex-1 items-center rounded-full border border-white/15 bg-white/[0.07] px-3 text-[11px] text-white/45">
-            Balas status…
+        {viewingOwn ? (
+          <button
+            type="button"
+            onClick={() => setShowViewers(true)}
+            className="mx-auto flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.09] text-[15px] font-black text-white transition active:scale-[0.98]"
+          >
+            <Eye className="size-5" strokeWidth={2.6} />
+            Lihat {viewers?.length ?? 0}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-1 rounded-full border border-white/15 bg-white/[0.07] pl-3 pr-1">
+              <input
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value.slice(0, 240))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void sendReply(replyText);
+                }}
+                placeholder={`Balas status ${active.username}…`}
+                className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:text-white/40"
+              />
+              <button
+                type="button"
+                onClick={() => void sendReply(replyText)}
+                disabled={replyBusy || !replyText.trim()}
+                className="grid size-8 shrink-0 place-items-center rounded-full text-black disabled:opacity-40"
+                style={{ background: "var(--ui-c, #FFD23F)" }}
+                aria-label="Kirim balasan ke DM"
+              >
+                {replyBusy ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <ChevronRight className="size-4" strokeWidth={3} />
+                )}
+              </button>
+            </div>
+            {["❤️", "😂", "👍"].map((emoji) => (
+              <button
+                type="button"
+                key={emoji}
+                onClick={() => void sendReply(emoji)}
+                disabled={replyBusy}
+                className="grid size-10 shrink-0 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-[17px] transition active:scale-90 disabled:opacity-50"
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
-          {["❤️", "😂", "👍"].map((emoji) => (
-            <span
-              key={emoji}
-              className="grid size-9 shrink-0 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-[16px]"
-            >
-              {emoji}
-            </span>
-          ))}
-        </div>
+        )}
       </div>
 
-      {/* Daftar penonton story sendiri */}
-      {showViewers && viewingOwn && (
-        <div className="max-h-64 overflow-y-auto border-t border-white/15 bg-black/90 px-3 py-3">
-          <p className="mb-2 text-[11px] font-bold text-white">
-            Dilihat {viewers?.length ?? 0} orang
-          </p>
-          {(viewers ?? []).length === 0 ? (
-            <p className="py-3 text-center text-[11px] text-white/50">
-              Belum ada yang melihat.
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {(viewers ?? []).map((v) => (
-                <div key={v.userId} className="flex items-center gap-2.5">
-                  <img
-                    src={v.userImage || ""}
-                    alt=""
-                    className="size-8 rounded-full bg-white/10 object-cover"
-                  />
-                  <span className="truncate text-xs font-semibold text-white">
-                    {v.username}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* DAFTAR PENONTON — sheet 50% layar, tanpa blur, animasi dari bawah. */}
+      <AnimatePresence>
+        {showViewers && viewingOwn && (
+          <div className="fixed inset-0 z-[95] flex items-end bg-black/45">
+            <button
+              aria-label="Tutup daftar penonton"
+              className="absolute inset-0"
+              onClick={() => setShowViewers(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+              className="relative flex h-[50dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-white/12 bg-[#100e16] pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+            >
+              <div className="flex items-center gap-2 px-4 pb-2 pt-3">
+                <div className="mx-auto h-1 w-11 rounded-full bg-white/20" />
+              </div>
+              <div className="flex items-baseline justify-between px-4 pb-2">
+                <p className="text-[14px] font-black text-white">
+                  Dilihat {viewers?.length ?? 0}
+                </p>
+                <button
+                  onClick={() => setShowViewers(false)}
+                  aria-label="Tutup"
+                  className="text-white/45"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3">
+                {(viewers ?? []).length === 0 ? (
+                  <p className="py-10 text-center text-[12px] text-white/45">
+                    Belum ada yang melihat.
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {(viewers ?? []).map((v) => (
+                      <div
+                        key={v.userId}
+                        className="flex items-center gap-3 rounded-2xl px-2 py-2"
+                      >
+                        <img
+                          src={v.userImage || avatarFallback(v.username)}
+                          alt=""
+                          className="size-10 rounded-full bg-white/10 object-cover"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">
+                          {v.username}
+                        </span>
+                        <span className="shrink-0 text-[9px] text-white/30">
+                          {new Date(v.at).toLocaleTimeString("id-ID", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* KONFIRMASI HAPUS — popup minimalis, bukan langsung menghapus. */}
+      <AnimatePresence>
+        {confirmDelete && viewingOwn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[96] flex items-center justify-center bg-black/60 p-5"
+            onClick={() => !deleting && setConfirmDelete(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[19rem] overflow-hidden rounded-[26px] border border-white/12 bg-[#14121b] p-4"
+            >
+              <div className="mx-auto grid size-11 place-items-center rounded-full bg-rose-500/15 text-rose-300">
+                <Trash2 className="size-5" />
+              </div>
+              <p className="mt-3 text-center text-[15px] font-black text-white">
+                Hapus story ini?
+              </p>
+              <p className="mt-1 text-center text-[11px] leading-relaxed text-white/45">
+                Story akan hilang dari profil dan feed temanmu.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="rounded-xl border border-white/12 py-2.5 text-[12px] font-bold text-white/70"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleting(true);
+                    void removeStory({ storyId: currentStory._id as never })
+                      .then(() => {
+                        toast.success("Story dihapus");
+                        setConfirmDelete(false);
+                        setDeleting(false);
+                        next();
+                      })
+                      .catch((e: unknown) => {
+                        setDeleting(false);
+                        toast.error(
+                          e instanceof Error ? e.message : "Gagal hapus",
+                        );
+                      });
+                  }}
+                  className="rounded-xl bg-rose-500 py-2.5 text-[12px] font-black text-white disabled:opacity-60"
+                >
+                  {deleting ? "Menghapus…" : "Hapus"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>,
     document.body,
   );

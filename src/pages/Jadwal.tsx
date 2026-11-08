@@ -376,10 +376,12 @@ function JadwalContent() {
   }
 
   return (
-    <div className="py-3">
+    <div className="pb-40 pt-2">
       {/* Judul ditengah + garis pembatas di bawahnya; teks kecil di
           bawah judul dihapus (permintaan user). */}
-      <h1 className="text-center text-lg font-bold">Jadwal Rilis</h1>
+      <h1 className="text-center text-[17px] font-black uppercase tracking-[0.18em]">
+        Jadwal Tayang
+      </h1>
       <div className="mt-2 mb-3 h-px w-full bg-white/15" aria-hidden />
 
       {/* Pilih hari: tulisan hari + angka tanggal sesuai tanggal berjalan.
@@ -629,7 +631,7 @@ function JadwalContent() {
 
       {/* DUA TOMBOL HARI — kotak rounded sama ukuran, berdampingan di
           kanan bawah. Kiri = hari sebelumnya, kanan = hari berikutnya. */}
-      <div className="fixed inset-x-3 bottom-24 z-30 flex items-center justify-between">
+      <div className="fixed inset-x-3 bottom-[calc(5.4rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between">
         <button
           onClick={() => {
             setDay((d) => (d + 6) % 7);
@@ -657,7 +659,7 @@ function JadwalContent() {
       {/* "Lihat semua" menampilkan seluruh rilis hari itu. "Kembali ke
           atas" tetap ada setelah semua rilis dibuka. */}
       {list.length > 8 && (
-        <div className="mt-5 flex items-center justify-between gap-3 pb-6">
+        <div className="mt-5 flex items-center justify-between gap-3 pb-8">
           {!showAll ? (
             <button
               onClick={() => {

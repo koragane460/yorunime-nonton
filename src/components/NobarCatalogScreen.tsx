@@ -72,15 +72,17 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
       {/* ------- SATU KOTAK: judul Nobar + Buat/Join digabung ---------- */}
       {/* Tanpa glow/gradien ungu: hanya permukaan netral + aksen palet
           (Sky untuk Buat Room, Harvest untuk Join Room). */}
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]">
+      <div className="nobar-hero overflow-hidden rounded-[28px] border">
         {/* Hero — ikon teman + judul, MENYATU dengan kotak aksi di bawah. */}
         <div className="flex flex-col items-center border-b border-white/10 px-4 py-6 text-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl border border-[#1CA7EC]/30 bg-[#1CA7EC]/12">
-            <Users className="size-7 text-[#7fd3f7]" aria-hidden />
+          <span className="voice-soft flex size-14 items-center justify-center rounded-2xl border">
+            <Users className="size-7" aria-hidden />
           </span>
-          <p className="mt-2.5 text-xl font-black leading-none text-[#FFFAF0]">Nobar</p>
+          <p className="mt-2.5 text-2xl font-black leading-none tracking-tight text-[#FFFAF0]">
+            Nobar
+          </p>
           <p className="mt-1.5 text-xs text-white/55">
-            nonton bareng temenmu agar makin asik
+            Nonton bareng teman, satu layar satu cerita.
           </p>
         </div>
 
@@ -92,8 +94,8 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
               onClick={() => setCreating(true)}
               className="flex flex-col items-center gap-2 border-r border-white/12 py-4 transition hover:bg-white/[0.06] active:scale-[0.98]"
             >
-              <span className="flex size-10 items-center justify-center rounded-xl border border-[#1CA7EC]/35 bg-[#1CA7EC]/15">
-                <Video className="size-5 text-[#1CA7EC]" aria-hidden />
+              <span className="voice-soft flex size-10 items-center justify-center rounded-xl border">
+                <Video className="size-5" aria-hidden />
               </span>
               <span className="text-sm font-extrabold text-white">Buat Room</span>
             </button>
@@ -101,8 +103,8 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
               onClick={() => setJoinOpen((v) => !v)}
               className="flex flex-col items-center gap-2 py-4 transition hover:bg-white/[0.06] active:scale-[0.98]"
             >
-              <span className="flex size-10 items-center justify-center rounded-xl border border-[#FFD23F]/35 bg-[#FFD23F]/12">
-                <LogIn className="size-5 text-[#FFD23F]" aria-hidden />
+              <span className="flex size-10 items-center justify-center rounded-xl border border-white/18 bg-white/[0.07] text-white/80">
+                <LogIn className="size-5" aria-hidden />
               </span>
               <span className="text-sm font-extrabold text-white">Join Room</span>
             </button>
@@ -118,7 +120,7 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           aria-pressed={scope === "publik"}
           className={
             scope === "publik"
-              ? "flex items-center justify-center gap-1.5 rounded-xl border border-[#1CA7EC] bg-[#1CA7EC]/18 px-3 py-2.5 text-xs font-black text-white transition active:scale-[0.98]"
+              ? "voice-soft flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-black transition active:scale-[0.98]"
               : "flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-xs font-black text-white/55 transition hover:text-white active:scale-[0.98]"
           }
         >
@@ -130,7 +132,7 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           aria-pressed={scope === "clan"}
           className={
             scope === "clan"
-              ? "flex items-center justify-center gap-1.5 rounded-xl border border-[#FFD23F] bg-[#FFD23F]/15 px-3 py-2.5 text-xs font-black text-white transition active:scale-[0.98]"
+              ? "flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/[0.12] px-3 py-2.5 text-xs font-black text-white transition active:scale-[0.98]"
               : "flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-xs font-black text-white/55 transition hover:text-white active:scale-[0.98]"
           }
         >
@@ -183,7 +185,7 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => void joinFound()}
               disabled={!found || busy}
-              className="flex flex-[2] items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-xs font-black text-white transition active:scale-[0.98] disabled:opacity-45"
+              className="voice-primary flex flex-[2] items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black transition active:scale-[0.98] disabled:opacity-45"
             >
               {busy ? <Loader2 className="size-3.5 animate-spin" /> : <LogIn className="size-3.5" />}
               Join
@@ -274,7 +276,7 @@ function RoomCard({
   onJoin: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] transition hover:border-white/25">
+    <div className="voice-room-card overflow-hidden rounded-2xl border transition">
       <div className="flex gap-3 p-3">
         <div className="relative shrink-0">
           {room.animeImage ? (
@@ -336,7 +338,7 @@ function RoomCard({
         <button
           disabled={busy}
           onClick={onJoin}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-black text-white transition active:scale-[0.99] disabled:opacity-50"
+          className="voice-primary flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition active:scale-[0.99] disabled:opacity-50"
         >
           <Play className="size-3" />
           {room.joined ? "Masuk Lagi" : "Join"}

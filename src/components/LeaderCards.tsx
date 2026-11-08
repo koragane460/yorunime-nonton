@@ -423,13 +423,14 @@ function GrandPlace({
         </span>
       </span>
 
-      {/* Blok podium 3D: muka depan, tutup atas, dan sisi kanan. */}
+      {/* Blok podium: tutup atas penuh + muka depan menyatu. Tidak ada
+          sisi belakang, skew, atau celah yang bisa memperlihatkan latar. */}
       <div
-        className="relative w-[96%]"
+        className="relative w-full"
         style={{ height: heights[place], filter: "drop-shadow(0 18px 20px rgba(0,0,0,.5))" }}
       >
         <div
-          className="absolute inset-x-0 bottom-0 top-[11px] overflow-hidden rounded-t-[16px] border border-white/25"
+          className="absolute inset-x-0 bottom-0 top-0 overflow-hidden rounded-t-[18px]"
           style={{ background: skin.front }}
         >
           <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.22),transparent_34%,rgba(0,0,0,.24))]" />
@@ -443,19 +444,15 @@ function GrandPlace({
           </span>
           <span className="absolute inset-x-3 top-2.5 h-px bg-white/35" />
         </div>
+        {/* Tutup atas menutup penuh lingkar podium, tanpa sudut menggantung. */}
         <span
           aria-hidden
-          className="absolute inset-x-[2px] top-0 h-[15px] rounded-t-[12px]"
-          style={{
-            background: skin.top,
-            transform: "skewX(-42deg)",
-            transformOrigin: "bottom left",
-          }}
+          className="absolute inset-x-0 top-0 h-[13px] rounded-t-[18px]"
+          style={{ background: skin.top }}
         />
         <span
           aria-hidden
-          className="absolute bottom-[2px] right-0 top-[10px] w-[9px] rounded-r-[3px]"
-          style={{ background: skin.side }}
+          className="absolute inset-x-0 top-[13px] h-px bg-black/20"
         />
         <span
           className={cn(
@@ -491,7 +488,7 @@ function GrandPodium({
 }) {
   const byRank = new Map(entries.map((e) => [e.rank, e]));
   return (
-    <div className="relative flex h-full items-end justify-between gap-1 px-0.5 pb-1 [perspective:900px]">
+    <div className="relative flex h-full items-end justify-between gap-0 px-0 pb-1">
       <GrandPlace entry={byRank.get(2)} place={2} onOpen={onOpen} />
       <GrandPlace entry={byRank.get(1)} place={1} onOpen={onOpen} />
       <GrandPlace entry={byRank.get(3)} place={3} onOpen={onOpen} />

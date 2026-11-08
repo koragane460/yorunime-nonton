@@ -241,14 +241,21 @@ export function ProfileSheet({
           {/* Banner paling atas (panjang) */}
           <div className="relative">
             <div className="relative">
-              {/* Banner FULLSCREEN besar & tajam: foto dari Pengaturan
-                  (premium) atau foto profile sebagai fallback. HD (1200px). */}
-              {/* Banner NORMAL (tanpa blur) — foto tampil tajam apa adanya. */}
-              <img
-                src={profile.bannerUrl ?? profile.image ?? ""}
-                alt=""
-                className="h-64 w-full object-cover"
-              />
+              {/* Banner FULLSCREEN besar & tajam. JANGAN pernah memakai foto
+                  profil sebagai pengganti: foto profil dan banner adalah dua
+                  aset terpisah. Kalau belum ada banner, pakai latar dekoratif. */}
+              {profile.bannerUrl ? (
+                <img
+                  src={profile.bannerUrl}
+                  alt=""
+                  className="h-64 w-full object-cover"
+                />
+              ) : (
+                <div
+                  aria-hidden
+                  className="h-64 w-full bg-[radial-gradient(65%_80%_at_20%_0%,color-mix(in_srgb,var(--ui-a)_32%,transparent),transparent_72%),linear-gradient(150deg,#161421,#0b0c12_55%,#141018)]"
+                />
+              )}
               {/* Bilah sambung warna tipis di bawah banner */}
               <div aria-hidden className="yn-banner-fade" />
             </div>
@@ -372,12 +379,12 @@ export function ProfileSheet({
                 kotak ID/tag level/teman. */}
             <div className="mt-2 flex flex-wrap items-center justify-start gap-2 text-left">
               {profile.xpRank ? (
-                <span className="inline-flex items-center gap-1 rounded-lg border border-yellow-400/45 bg-yellow-400/10 px-2 py-1 text-[11px] font-black text-yellow-200">
+                <span className="inline-flex items-center gap-1 rounded-xl border-0 bg-yellow-400/20 px-2.5 py-1 text-[11px] font-black text-yellow-100">
                   <Zap className="size-3" aria-hidden /> Top XP {profile.xpRank}
                 </span>
               ) : null}
               {profile.giverRank ? (
-                <span className="inline-flex items-center gap-1 rounded-lg border border-rose-400/45 bg-rose-400/10 px-2 py-1 text-[11px] font-black text-rose-200">
+                <span className="inline-flex items-center gap-1 rounded-xl border-0 bg-rose-400/20 px-2.5 py-1 text-[11px] font-black text-rose-100">
                   <Gift className="size-3" aria-hidden /> Top Give{" "}
                   {profile.giverRank}
                 </span>
@@ -1016,7 +1023,11 @@ export function ProfileSheet({
 
       {/* Story pemilik profil */}
       {viewStory && (
-        <StoryViewer userId={undefined} onClose={() => setViewStory(false)} />
+        <StoryViewer
+          userId={isMe ? userId : undefined}
+          initialUserId={userId}
+          onClose={() => setViewStory(false)}
+        />
       )}
 
       {/* POP-UP DAFTAR TIER TAG LEVEL (tap chip "Lv.") — ikon material,

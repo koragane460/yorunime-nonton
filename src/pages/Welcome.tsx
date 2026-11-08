@@ -71,14 +71,6 @@ const DEV_KEY = "yorunime_device_accounts";
  */
 const ONBOARD_KEY = "yorunime_onboarded_v1";
 
-function readOnboarded(): boolean {
-  try {
-    return localStorage.getItem(ONBOARD_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function saveOnboarded() {
   try {
     localStorage.setItem(ONBOARD_KEY, "1");
@@ -408,15 +400,27 @@ function WelcomeFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, updatePending, reopened, isAuthenticated]);
 
-  // Bagian login ada di slide ke-3 pada SATU halaman scroll. Kalau user
-  // sudah pernah onboard (atau auto-login gagal), langsung geser ke sana.
+  // Bagian login ada di slide ke-3 pada SATU halaman scroll. Jangan pernah
+  // auto-scroll hanya karena user sudah pernah onboard — welcome harus selalu
+  // mulai dari slide pertama. Scroll ke login hanya saat memang diminta
+  // (mis. percobaan auto-login gagal).
   useEffect(() => {
-    if (stage !== "onboard") return;
-    if (!focusLogin && !readOnboarded()) return;
+    if (stage !== "onboard" || !focusLogin) return;
     const t = setTimeout(() => {
       loginRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
     }, 120);
     return () => clearTimeout(t);
+  }, [stage, focusLogin]);
+
+  // Selalu mulai dari Welcome slide 1 saat layar onboard dibuka. Ini juga
+  // menetralkan scroll restoration browser yang dulu bisa langsung
+  // menaruh user di bagian login.
+  useEffect(() => {
+    if (stage !== "onboard" || focusLogin) return;
+    const t = window.setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [stage, focusLogin]);
 
   /** Tandai onboard selesai begitu user sudah masuk area login. */
