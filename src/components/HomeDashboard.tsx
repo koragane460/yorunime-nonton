@@ -161,7 +161,7 @@ export function HomePremiumCard({ onBuy }: { onBuy: () => void }) {
       </span>
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-[6.7rem] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,.12),transparent)]"
+        className="pointer-events-none absolute inset-y-0 right-[8rem] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,.12),transparent)]"
       />
 
       <span className="relative flex items-center gap-3">

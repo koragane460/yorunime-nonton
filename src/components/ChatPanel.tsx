@@ -1252,14 +1252,14 @@ function FeedShareCard({ postId }: { postId: string }) {
 
   if (p === undefined) {
     return (
-      <div className="mt-1 flex h-44 w-36 items-center justify-center rounded-xl bg-black/40 text-[10px] text-white/45">
+      <div className="bubble-embed mt-1 flex h-44 w-36 items-center justify-center rounded-xl bg-black/40 text-[10px] text-white/45">
         Memuat konten…
       </div>
     );
   }
   if (p === null) {
     return (
-      <div className="mt-1 flex h-24 w-44 flex-col items-center justify-center gap-1 rounded-xl bg-black/40 px-3 text-center text-[10px] text-white/50">
+      <div className="bubble-embed mt-1 flex h-24 w-44 flex-col items-center justify-center gap-1 rounded-xl bg-black/40 px-3 text-center text-[10px] text-white/50">
         <span className="font-bold text-white/70">Konten tidak tersedia</span>
         Mungkin sudah dihapus atau privat.
       </div>
@@ -1273,7 +1273,7 @@ function FeedShareCard({ postId }: { postId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative mt-1 block h-48 w-36 overflow-hidden rounded-xl bg-[#141922] text-left transition active:scale-[0.98]"
+        className="bubble-embed relative mt-1 block h-48 w-36 overflow-hidden rounded-xl bg-[#141922] text-left transition active:scale-[0.98]"
       >
         {thumb ? (
           <img src={thumb} alt="" className="size-full object-cover" />
@@ -1302,7 +1302,7 @@ function FeedShareCard({ postId }: { postId: string }) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[120] flex flex-col bg-black">
+        <div className="bubble-embed fixed inset-0 z-[120] flex flex-col bg-black">
           <div className="flex items-center gap-2 px-3 pb-2 pt-3">
             <button
               type="button"

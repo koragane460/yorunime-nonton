@@ -205,7 +205,7 @@ function VoiceHomeScreen({
 
         {/* SATU KOTAK PREMIUM: judul + status + tombol create, rata tengah. */}
         <div className="voice-hero relative mt-2 overflow-hidden rounded-3xl border p-5 text-center">
-          <span aria-hidden className="absolute inset-x-10 top-px h-px bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent" />
+          <span aria-hidden className="absolute inset-x-10 top-px h-px" style={{ background: "linear-gradient(90deg, transparent, var(--ui-c), transparent)" }} />
           {/* Hiasan halus: taburan titik + ornamen sudut — BUKAN blur besar
               yang menyilaukan. */}
           <span aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1.2px)] [background-size:24px_24px] opacity-70" />
@@ -293,7 +293,7 @@ function VoiceHomeScreen({
                   key={r._id}
                   className="voice-room-card relative overflow-hidden rounded-3xl border p-4 transition duration-300 hover:-translate-y-0.5"
                 >
-                  <span aria-hidden className="absolute inset-x-10 top-px h-px bg-gradient-to-r from-transparent via-emerald-300/50 to-transparent" />
+                  <span aria-hidden className="absolute inset-x-10 top-px h-px" style={{ background: "linear-gradient(90deg, transparent, var(--ui-c), transparent)" }} />
                   <div className="relative flex items-center gap-3">
                     <span
                       className={cn(
@@ -1747,7 +1747,7 @@ function InviteScreen({
           </div>
           {/* Kotak 1 — INVITE USER + MAX USER */}
           <div className="voice-room-card relative overflow-hidden rounded-3xl border p-4">
-            <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/50 to-transparent" />
+            <span aria-hidden className="absolute inset-x-8 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--ui-c), transparent)" }} />
             <div className="relative flex items-center gap-2">
               <span className="voice-soft flex size-9 items-center justify-center rounded-xl border">
                 <Users className="size-4" />
@@ -1758,13 +1758,13 @@ function InviteScreen({
               </span>
             </div>
             <p className="relative mt-2.5 text-xs font-bold text-white/75">
-              Max User : <span className="text-sky-300">{count}</span>/{max}
+              Max User : <span style={{ color: "var(--ui-c)" }}>{count}</span>/{max}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/15">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-gold to-gold-strong transition-[width] duration-500"
-                  style={{ width: `${pct}%` }}
+                  className="h-full rounded-full transition-[width] duration-500"
+                  style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--ui-c), var(--ui-d))" }}
                 />
               </div>
               {/* Kotak kecil untuk ubah total max. */}

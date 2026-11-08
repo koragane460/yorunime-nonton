@@ -280,6 +280,9 @@ export const viewers = query({
       .take(500);
     const out = [];
     for (const v of views) {
+      // Baris lama dari versi sebelumnya bisa saja mencatat pemilik sebagai
+      // penonton. Jangan tampilkan pemilik di daftar penontonnya sendiri.
+      if (v.userId === story.userId) continue;
       const u: any = await ctx.db.get(v.userId);
       if (!u) continue;
       out.push({

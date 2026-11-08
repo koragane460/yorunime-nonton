@@ -3284,20 +3284,12 @@ svg.lucide {
 .bubble-other.yn-tail-l {
   border-bottom-left-radius: 5px !important;
 }
-.bubble-mine span,
-.bubble-mine p,
-.bubble-mine div,
-.bubble-mine button,
-.bubble-mine a,
-.bubble-other span,
-.bubble-other p,
-.bubble-other div,
-.bubble-other button,
-.bubble-other a {
+.bubble-mine :is(span, p, div, button, a):not(.title-shine, .title-shine *, .clan-tag *, .level-badge, .level-badge *, .bubble-embed, .bubble-embed *),
+.bubble-other :is(span, p, div, button, a):not(.title-shine, .title-shine *, .clan-tag *, .level-badge, .level-badge *, .bubble-embed, .bubble-embed *) {
   color: inherit !important;
 }
-.bubble-mine .text-muted-foreground,
-.bubble-other .text-muted-foreground {
+.bubble-mine .text-muted-foreground:not(.bubble-embed *),
+.bubble-other .text-muted-foreground:not(.bubble-embed *) {
   color: rgba(23, 21, 27, 0.5) !important;
 }
 .bubble-mine .bubble-reply,

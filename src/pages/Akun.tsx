@@ -104,6 +104,7 @@ import { SacretIcon } from "@/components/lstream-ui";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   activateSavedAccount,
+  clearActiveSession,
   readSavedAccounts,
   saveCurrentAccount,
   type SavedAccount,
@@ -1683,8 +1684,7 @@ function ProfileOverviewCard({
 /** Sheet GANTI AKUN — akun yang tersimpan di perangkat bisa benar-benar
  *  ditukar (JWT + refresh token disimpan per akun), lalu reload ke /home. */
 function AccountSwitcherSheet({ onClose }: { onClose: () => void }) {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const unreadQuery = useQuery(
     api.moderation.myUnreadCount,
     user ? {} : "skip",
@@ -1743,11 +1743,11 @@ function AccountSwitcherSheet({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const addAccount = async () => {
+  const addAccount = () => {
     if (busy) return;
     setBusy("add");
     setErr("");
-    saveCurrentAccount(
+    const saved = saveCurrentAccount(
       {
         _id: String(user._id),
         username: user.username,
@@ -1756,13 +1756,15 @@ function AccountSwitcherSheet({ onClose }: { onClose: () => void }) {
       },
       unread,
     );
-    try {
-      await signOut();
-      navigate("/auth?returnTo=/home&add=1", { replace: true });
-    } catch {
+    if (!saved.some((a) => a.id === String(user._id))) {
       setBusy(null);
-      setErr("Gagal membuka layar login. Coba lagi.");
+      setErr("Sesi akun ini belum siap. Muat ulang lalu coba lagi.");
+      return;
     }
+    // Jangan signOut: itu mencabut sesi server akun yang baru disimpan.
+    // Cukup kosongkan sesi lokal, lalu buka login dengan reload penuh.
+    clearActiveSession();
+    window.location.replace("/auth?returnTo=/home&add=1");
   };
 
   return (

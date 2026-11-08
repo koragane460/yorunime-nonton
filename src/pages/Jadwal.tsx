@@ -656,31 +656,30 @@ function JadwalContent() {
         </button>
       </div>
 
-      {/* "Lihat semua" menampilkan seluruh rilis hari itu. "Kembali ke
-          atas" tetap ada setelah semua rilis dibuka. */}
-      {list.length > 8 && (
-        <div className="mt-5 flex items-center justify-between gap-3 pb-8">
-          {!showAll ? (
-            <button
-              onClick={() => {
-                setShowAll(true);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className="text-left text-xs font-bold text-primary transition hover:text-primary/80"
-            >
-              {`Lihat semua (${list.length} rilis hari ini)`}
-            </button>
-          ) : (
-            <span />
-          )}
+      {/* "Lihat selengkapnya" menampilkan seluruh rilis hari itu. Area bawah
+          sengaja tinggi supaya kedua tombol ini tidak tertutup tombol hari
+          yang fixed maupun navigasi bawah. */}
+      <div className="mt-5 flex items-center justify-between gap-3 pb-2">
+        {list.length > 8 && !showAll ? (
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="ml-auto shrink-0 text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+            onClick={() => {
+              setShowAll(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="text-left text-xs font-bold text-primary transition hover:text-primary/80"
           >
-            Kembali ke atas
+            Lihat selengkapnya
           </button>
-        </div>
-      )}
+        ) : (
+          <span />
+        )}
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="ml-auto shrink-0 text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+        >
+          Kembali ke atas
+        </button>
+      </div>
     </div>
   );
 }

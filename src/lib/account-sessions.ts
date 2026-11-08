@@ -161,6 +161,28 @@ export function activateSavedAccount(accountId: string): boolean {
   return true;
 }
 
+/**
+ * Kosongkan sesi yang sedang aktif TANPA memanggil signOut ke server.
+ * signOut Convex Auth mencabut refresh token sesi itu, sehingga akun yang
+ * baru saja disimpan tidak bisa dibuka lagi. Dengan hanya menghapus kunci
+ * auth lokal lalu reload, sesi tersimpan tetap valid untuk berpindah balik.
+ */
+export function clearActiveSession() {
+  if (!canUseStorage()) return;
+  const keys: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i) ?? "";
+    if (key.startsWith("__convexAuth")) keys.push(key);
+  }
+  for (const key of keys) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      /* abaikan */
+    }
+  }
+}
+
 export function removeSavedAccount(accountId: string) {
   writeSavedAccounts(readSavedAccounts().filter((a) => a.id !== accountId));
 }

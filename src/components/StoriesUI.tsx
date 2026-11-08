@@ -2121,7 +2121,13 @@ export function StoryViewer({
       {/* DAFTAR PENONTON — sheet 50% layar, tanpa blur, animasi dari bawah. */}
       <AnimatePresence>
         {showViewers && viewingOwn && (
-          <div className="fixed inset-0 z-[95] flex items-end bg-black/45">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[95] flex items-end bg-black/45"
+          >
             <button
               aria-label="Tutup daftar penonton"
               className="absolute inset-0"
@@ -2181,7 +2187,7 @@ export function StoryViewer({
                 )}
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

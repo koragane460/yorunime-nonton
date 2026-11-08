@@ -395,7 +395,7 @@ export function LevelBadge({ level, className }: { level: number; className?: st
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center gap-1 overflow-hidden rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white/95",
+        "level-badge relative inline-flex shrink-0 items-center gap-1 overflow-hidden rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white/95",
         className,
       )}
     >
