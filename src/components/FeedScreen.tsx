@@ -49,10 +49,14 @@ import {
   Home,
   UserRound,
   Grid3X3,
+  Bell,
+  ChevronRight,
+  MoreHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { ChatPanel } from "@/components/ChatPanel";
+import { StoryRing, StoryViewer } from "@/components/StoriesUI";
 
 /** Waktu relatif singkat — "baru", "5 mnt", "2 jam", "3 hr". */
 function timeAgo(ts: number): string {
@@ -64,6 +68,64 @@ function timeAgo(ts: number): string {
   return `${Math.floor(s / 2592000)} bln`;
 }
 
+/** Angka ringkas gaya TikTok: 6,8 rb · 2,3 jt. */
+function fmtCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} jt`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(".", ",")} rb`;
+  return String(n);
+}
+
+/* Sembunyikan konten tanpa menunggu server — dipakai aksi "Tidak tertarik"
+   dan "Stop rekomendasi". Event lokal membuat feed langsung berubah. */
+const FEED_HIDDEN_POSTS = "yn:feed-hidden-posts";
+const FEED_HIDDEN_AUTHORS = "yn:feed-hidden-authors";
+const FEED_FILTER_EVENT = "yn-feed-filter";
+function readIdList(key: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+function hideFeedPost(postId: string) {
+  const next = Array.from(new Set([...readIdList(FEED_HIDDEN_POSTS), postId]));
+  try {
+    window.localStorage.setItem(FEED_HIDDEN_POSTS, JSON.stringify(next));
+  } catch {
+    /* mode privat */
+  }
+  window.dispatchEvent(new Event(FEED_FILTER_EVENT));
+}
+function hideFeedAuthor(authorId: string) {
+  const next = Array.from(new Set([...readIdList(FEED_HIDDEN_AUTHORS), authorId]));
+  try {
+    window.localStorage.setItem(FEED_HIDDEN_AUTHORS, JSON.stringify(next));
+  } catch {
+    /* mode privat */
+  }
+  window.dispatchEvent(new Event(FEED_FILTER_EVENT));
+}
+
+/** Clipboard dengan fallback untuk browser/preview yang tidak memberi izin. */
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.appendChild(input);
+    input.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(input);
+    if (!ok) throw new Error("clipboard tidak tersedia");
+  }
+}
+
 type Post = {
   postId: Id<"feedPosts">;
   userId: Id<"users">;
@@ -71,6 +133,8 @@ type Post = {
   caption: string;
   imageUrl: string | null;
   thumbUrl: string | null;
+  imageStorageId?: string | null;
+  thumbStorageId?: string | null;
   level?: number;
   clanTag?: string;
   clanTagIcon?: string;
@@ -115,6 +179,19 @@ type Reposter = {
   createdAt: number;
 };
 
+type FeedActivity = {
+  _id: string;
+  type: "like" | "favorite" | "comment" | "repost" | "follow";
+  userId: string;
+  username: string;
+  image: string | null;
+  postId: Id<"feedPosts"> | null;
+  caption: string;
+  cover: string | null;
+  detail?: string;
+  createdAt: number;
+};
+
 /* ------------------------------------------------------------------ *
  *  BAGIAN BAWAH KIRI — username + caption
  * ------------------------------------------------------------------ */
@@ -127,12 +204,12 @@ function CaptionBlock({
 }) {
   const repostCount = p.repostCount ?? 0;
   return (
-    <div className="pointer-events-auto absolute bottom-0 left-0 right-16 z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-16 pt-16">
+    <div className="pointer-events-auto absolute bottom-0 left-0 right-[68px] z-20 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-4 pb-[6.6rem] pt-20">
       {repostCount > 0 && (
         <button
           type="button"
           onClick={onOpenReposters}
-          className="mb-2 flex max-w-full items-center gap-2 rounded-xl bg-white px-2 py-1 text-left text-[#17151b] shadow-[0_10px_24px_-18px_rgba(0,0,0,.9)]"
+          className="mb-2.5 flex max-w-full items-center gap-2.5 rounded-2xl bg-white px-2.5 py-1.5 text-left text-[#17151b] shadow-[0_14px_30px_-18px_rgba(0,0,0,.95)]"
         >
           <span className="flex -space-x-2">
             {(p.reposters ?? []).slice(0, 2).map((r) => (
@@ -140,27 +217,27 @@ function CaptionBlock({
                 key={String(r.userId)}
                 src={r.image ?? undefined}
                 seed={r.username}
-                className="size-5 rounded-full ring-2 ring-white"
+                className="size-7 rounded-full ring-2 ring-white"
               />
             ))}
           </span>
-          <span className="truncate text-[9.5px] font-black leading-none">
+          <span className="truncate text-[12px] font-black leading-none">
             {repostCount > 1 ? `${repostCount} ` : ""}Memosting ulang
           </span>
         </button>
       )}
-      <div className="flex items-center gap-1.5">
-        <p className="yn-title min-w-0 truncate text-[1.35rem] leading-tight text-white drop-shadow">
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 truncate text-[1.55rem] font-black leading-tight text-white [text-shadow:0_2px_2px_rgba(0,0,0,.95),0_0_16px_rgba(0,0,0,.8)]">
           {p.username}
         </p>
         {p.isFriend && (
-          <span className="shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[7.5px] font-black leading-none text-black">
+          <span className="shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[8px] font-black leading-none text-black shadow">
             Teman Anda
           </span>
         )}
       </div>
       {p.caption && (
-        <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-[16px] font-semibold leading-snug text-white/95">
+        <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-[16px] font-semibold leading-snug text-white [text-shadow:0_2px_6px_rgba(0,0,0,.9)]">
           {p.caption}
         </p>
       )}
@@ -200,7 +277,7 @@ function RightRail({
   onOpenProfile: () => void;
 }) {
   return (
-    <div className="absolute right-2 top-[31%] z-20 flex flex-col items-center gap-6">
+    <div className="absolute bottom-[4.7rem] right-2 z-20 flex flex-col items-center justify-end gap-3.5">
       {/* Foto profil + Follow. Tombol merah muda HILANG total setelah follow. */}
       <div className="flex flex-col items-center gap-1.5">
         <button
@@ -209,7 +286,7 @@ function RightRail({
           aria-label={`Buka profil ${p.username}`}
           className="transition active:scale-95"
         >
-          <Avatar src={p.image ?? undefined} seed={p.username} className="size-14 ring-2 ring-white/60" />
+          <Avatar src={p.image ?? undefined} seed={p.username} className="size-12 ring-2 ring-white/60" />
         </button>
         {!p.isMe && !following && (
           <button
@@ -261,7 +338,7 @@ function RightRail({
       {/* Musik minimal: cakram berputar + label pendek. */}
       {(p.music || p.kind === "video") && (
         <div className="flex flex-col items-center gap-1.5">
-          <span className="relative grid size-12 place-items-center overflow-hidden rounded-full border border-white/35 bg-black/55 shadow-[0_10px_24px_-14px_rgba(0,0,0,.95)]">
+          <span className="relative grid size-11 place-items-center overflow-hidden rounded-full border border-white/35 bg-black/55 shadow-[0_10px_24px_-14px_rgba(0,0,0,.95)]">
             <img
               src={
                 p.music
@@ -277,7 +354,7 @@ function RightRail({
             <span className="absolute size-3 rounded-full border border-white/60 bg-black/75" />
             <Music className="absolute -right-0.5 -top-0.5 size-3.5 text-white drop-shadow" />
           </span>
-          <span className="max-w-[62px] truncate text-[8px] font-bold text-white/80 drop-shadow">
+          <span className="max-w-[62px] truncate text-[8px] font-bold text-white/85 drop-shadow">
             {p.music?.title ?? "Suara asli"}
           </span>
         </div>
@@ -291,38 +368,83 @@ function FeedVideo({
   src,
   poster,
   volume,
+  musicUrl,
+  musicVolume,
   onDoubleTap,
 }: {
   src: string;
   poster?: string;
   volume: number;
+  musicUrl?: string;
+  musicVolume?: number;
   onDoubleTap: () => void;
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const lastTap = useRef(0);
   const tapTimer = useRef<number | null>(null);
 
+  // Video hanya berbunyi saat benar-benar terlihat. Dengan begini video di
+  // post lain tidak ikut memutar audio di belakang dan scroll terasa ringan.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.volume = Math.max(0, Math.min(1, volume));
-    void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  }, [src, volume]);
+    if (audioRef.current) {
+      audioRef.current.volume = Math.max(0, Math.min(1, musicVolume ?? 1));
+    }
+    const play = () => {
+      const media = [el, audioRef.current].filter(Boolean) as HTMLMediaElement[];
+      for (const m of media) {
+        void m.play().catch(() => {
+          // Browser kadang menolak autoplay bersuara. Video tetap diputar
+          // (senyap), lalu suara dinyalakan pada ketukan pertama.
+          if (m === el) {
+            el.muted = true;
+            void el.play().catch(() => {});
+          }
+        });
+      }
+    };
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) play();
+        else {
+          el.pause();
+          audioRef.current?.pause();
+        }
+      },
+      { threshold: 0.55 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [src, musicUrl, volume, musicVolume]);
 
   const toggle = () => {
     const el = ref.current;
     if (!el) return;
     if (el.paused) {
       void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      void audioRef.current?.play().catch(() => {});
     } else {
       el.pause();
+      audioRef.current?.pause();
       setPlaying(false);
     }
   };
 
   /** Satu ketuk = pause/play, dua ketuk cepat = love (tidak ikut pause). */
   const tap = () => {
+    const el = ref.current;
+    // Ketukan pertama setelah autoplay senyap = nyalakan suara.
+    if (el?.muted) {
+      el.muted = false;
+      void el.play().catch(() => {});
+      void audioRef.current?.play().catch(() => {});
+      setPlaying(true);
+      return;
+    }
     const now = Date.now();
     if (now - lastTap.current < 340) {
       if (tapTimer.current) window.clearTimeout(tapTimer.current);
@@ -345,15 +467,28 @@ function FeedVideo({
         src={src}
         poster={poster}
         className="h-full w-full object-cover"
-        autoPlay
         loop
         playsInline
+        preload="metadata"
         controls={false}
         disablePictureInPicture
         onClick={tap}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
       />
+      {musicUrl && (
+        <audio
+          ref={audioRef}
+          src={musicUrl}
+          loop
+          preload="none"
+          onLoadedMetadata={() => {
+            if (audioRef.current) {
+              audioRef.current.volume = Math.max(0, Math.min(1, musicVolume ?? 1));
+            }
+          }}
+        />
+      )}
       <button
         type="button"
         onClick={tap}
@@ -401,17 +536,16 @@ function PostView({
   const lastTap = useRef(0);
   const tapTimer = useRef<number | null>(null);
   const popHearts = (x = 50, y = 55) => {
-    const now = Date.now();
-    const batch = Array.from({ length: 4 }, (_, i) => ({
-      id: now + i,
-      x: x + (i - 1.5) * 7 + Math.random() * 3,
-      y: y + (i % 2 === 0 ? -4 : 4),
-      tilt: (i - 1.5) * 12,
-    }));
-    setHearts((prev) => [...prev, ...batch]);
+    const heart = {
+      id: Date.now() + Math.random(),
+      x: Math.max(12, Math.min(88, x)),
+      y: Math.max(12, Math.min(78, y)),
+      tilt: (x - 50) * 0.18,
+    };
+    setHearts((prev) => [...prev, heart]);
     window.setTimeout(() => {
-      setHearts((prev) => prev.filter((h) => !batch.some((b) => b.id === h.id)));
-    }, 850);
+      setHearts((prev) => prev.filter((h) => h.id !== heart.id));
+    }, 900);
   };
   const mediaTap = (x: number, y: number, videoToggle: () => void) => {
     const now = Date.now();
@@ -485,31 +619,20 @@ function PostView({
             src={p.imageUrl}
             poster={p.thumbUrl ?? undefined}
             volume={(p.audio?.videoVol ?? 100) / 100}
+            musicUrl={p.music?.audioUrl}
+            musicVolume={(p.audio?.musicVol ?? 100) / 100}
             onDoubleTap={() => {
               onDoubleLike();
               popHearts(52, 54);
             }}
           />
-          {/* Backsound musik — diputar seiring video (loop). */}
-          {p.music?.audioUrl && (
-            <audio
-              src={p.music.audioUrl}
-              autoPlay
-              loop
-              ref={(el) => {
-                if (!el) return;
-                el.volume = Math.max(
-                  0,
-                  Math.min(1, (p.audio?.musicVol ?? 100) / 100),
-                );
-              }}
-            />
-          )}
         </>
       ) : p.imageUrl ? (
         <img
           src={p.imageUrl}
           alt={p.caption}
+          loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover"
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
@@ -597,13 +720,13 @@ function PostView({
           <motion.span
             key={h.id}
             initial={{ opacity: 0, scale: 0.4, y: 0 }}
-            animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.15, 1, 0.9], y: -90 }}
+            animate={{ opacity: [0, 1, 1, 0], scale: [0.35, 1.35, 1.15, 0.95], y: -110 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.85, ease: "easeOut" }}
-            className="pointer-events-none absolute z-30 text-rose-500 drop-shadow-[0_6px_12px_rgba(0,0,0,.5)]"
+            transition={{ duration: 0.88, ease: "easeOut" }}
+            className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 text-rose-500 drop-shadow-[0_10px_20px_rgba(0,0,0,.55)]"
             style={{ left: `${h.x}%`, top: `${h.y}%`, rotate: `${h.tilt}deg` }}
           >
-            <Heart className="size-10 fill-current" />
+            <Heart className="size-[108px] fill-current" strokeWidth={1.2} />
           </motion.span>
         ))}
       </AnimatePresence>
@@ -847,7 +970,11 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
   const friends = useQuery(api.friends.listFriends, {});
   const send = useMutation(api.chat.sendMessage);
   const toggleRepost = useMutation(api.feed.toggleRepost);
+  const addStory = useMutation(api.stories.addStory);
+  const getUploadUrl = useMutation(api.storage.getUploadUrl);
   const [picker, setPicker] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
   const [reposted, setReposted] = useState(!!p.reposted);
   const [busy, setBusy] = useState(false);
 
@@ -868,7 +995,83 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
       toast.success(next ? "Konten diposting ulang" : "Posting ulang dibatalkan");
     } catch (e) {
       setReposted(!next);
-      toast.error(e instanceof Error ? e.message : "Gagal repost");
+      toast.error(e instanceof Error ? e.message : "Gagal repost");  } finally {
+    setBusy(false);
+  }
+};
+
+  const makeStory = async () => {
+    setBusy(true);
+    try {
+      let storageId = p.imageStorageId ?? "";
+      let mediaType: "image" | "video" = p.kind === "video" ? "video" : "image";
+      // Post teks/musik tanpa media tetap bisa jadi story: render kartu
+      // bergradasi berisi caption + username, lalu unggah seperti foto biasa.
+      if (!storageId) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1080;
+        canvas.height = 1920;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Canvas tidak tersedia");
+        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
+        grad.addColorStop(0, "#191126");
+        grad.addColorStop(0.55, "#10131a");
+        grad.addColorStop(1, "#08080c");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1080, 1920);
+        ctx.fillStyle = "rgba(255,255,255,.08)";
+        ctx.beginPath();
+        ctx.arc(880, 300, 330, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 68px sans-serif";
+        const words = (p.caption || p.music?.title || "Konten YoruNime").split(" ");
+        const lines: string[] = [];
+        let line = "";
+        for (const word of words) {
+          const test = line ? `${line} ${word}` : word;
+          if (ctx.measureText(test).width > 840 && line) {
+            lines.push(line);
+            line = word;
+          } else line = test;
+        }
+        if (line) lines.push(line);
+        const shown = lines.slice(0, 6);
+        const startY = 960 - ((shown.length - 1) * 86) / 2;
+        shown.forEach((l, idx) => ctx.fillText(l, 540, startY + idx * 86));
+        ctx.fillStyle = "rgba(255,255,255,.7)";
+        ctx.font = "700 42px sans-serif";
+        ctx.fillText(`@${p.username}`, 540, 1680);
+        ctx.fillStyle = "rgba(255,255,255,.35)";
+        ctx.font = "600 30px sans-serif";
+        ctx.fillText("YoruNime Feed", 540, 1740);
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9),
+        );
+        if (!blob) throw new Error("Gagal membuat gambar story");
+        const uploadUrl = await getUploadUrl({});
+        const res = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": "image/jpeg" },
+          body: blob,
+        });
+        if (!res.ok) throw new Error("Gagal mengunggah story");
+        const data = (await res.json()) as { storageId?: string };
+        if (!data.storageId) throw new Error("Unggahan story tidak lengkap");
+        storageId = data.storageId;
+        mediaType = "image";
+      }
+      await addStory({
+        storageId,
+        mediaType,
+        caption: p.caption || undefined,
+        privacy: "all",
+      });
+      toast.success("Konten ditambahkan ke story");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal membuat story");
     } finally {
       setBusy(false);
     }
@@ -912,8 +1115,7 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
             label="Salin tautan"
             bg="linear-gradient(145deg,#a78bfa,#7c3aed)"
             onClick={() => {
-              void navigator.clipboard
-                .writeText(link)
+              void copyText(link)
                 .then(() => toast.success("Tautan disalin"))
                 .catch(() => toast.error("Gagal menyalin"));
             }}
@@ -937,12 +1139,59 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
         </div>
 
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ShareAction icon={<Flag className="size-5" />} label="Laporkan" bg="#3a3a42" onClick={() => toast.success("Laporan dikirim")} />
-          <ShareAction icon={<EyeOff className="size-5" />} label="Tidak tertarik" bg="#34343b" onClick={() => { toast.success("Konten ini tidak akan sering muncul"); onClose(); }} />
-          <ShareAction icon={<ImageIcon className="size-5" />} label="Jadikan story" bg="#3d3a49" onClick={() => toast.success("Konten ditambahkan ke story")} />
-          <ShareAction icon={<CircleSlash2 className="size-5" />} label="Stop rekomendasi" bg="#3a3a42" onClick={() => toast.success("Rekomendasi dihentikan")} />
+          <ShareAction
+            icon={<Flag className="size-5" />}
+            label="Laporkan"
+            bg="#3a3a42"
+            onClick={() => setReporting(true)}
+          />
+          <ShareAction
+            icon={<EyeOff className="size-5" />}
+            label="Tidak tertarik"
+            bg="#34343b"
+            onClick={() => {
+              hideFeedPost(String(p.postId));
+              toast.success("Konten disembunyikan dari feed");
+              onClose();
+            }}
+          />
+          <ShareAction
+            icon={<ImageIcon className="size-5" />}
+            label="Jadikan story"
+            bg="#3d3a49"
+            onClick={() => void makeStory()}
+          />
+          <ShareAction
+            icon={<CircleSlash2 className="size-5" />}
+            label="Stop rekomendasi"
+            bg="#3a3a42"
+            onClick={() => {
+              hideFeedAuthor(String(p.userId));
+              toast.success(`Konten dari ${p.username} tidak direkomendasikan lagi`);
+              onClose();
+            }}
+          />
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {reporting && (
+          <ReportPostSheet
+            postId={p.postId}
+            onClose={() => setReporting(false)}
+            onDone={() => {
+              setReported(true);
+              setReporting(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {reported && (
+        <span className="pointer-events-none absolute inset-x-0 bottom-[52%] mx-auto w-fit rounded-full bg-white/12 px-3 py-1.5 text-[10px] font-bold text-white/80">
+          Laporan terkirim
+        </span>
+      )}
 
       <AnimatePresence>
         {picker && (
@@ -958,6 +1207,111 @@ function ShareSheet({ p, onClose }: { p: Post; onClose: () => void }) {
           />
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function ReportPostSheet({
+  postId,
+  onClose,
+  onDone,
+}: {
+  postId: Id<"feedPosts">;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const report = useMutation(api.feed.reportPost);
+  const [reason, setReason] = useState("Konten tidak pantas");
+  const [detail, setDetail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const reasons = [
+    "Konten tidak pantas",
+    "Spam atau penipuan",
+    "Ujaran kebencian",
+    "Pelanggaran hak cipta",
+  ];
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await report({ postId, reason, detail: detail.trim() || undefined });
+      toast.success("Laporan terkirim ke moderator");
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengirim laporan");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 60 }}
+        animate={{ y: 0 }}
+        exit={{ y: 60 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full rounded-t-[28px] border-t border-white/12 bg-[#10131a] p-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
+      >
+        <span aria-hidden className="mx-auto mb-3 block h-1 w-10 rounded-full bg-white/20" />
+        <div className="flex items-center gap-2">
+          <span className="grid size-9 place-items-center rounded-full bg-rose-500/15 text-rose-300">
+            <Flag className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-black text-white">Laporkan konten</p>
+            <p className="text-[10px] text-white/40">Pilih alasan yang paling sesuai</p>
+          </div>
+          <button onClick={onClose} aria-label="Tutup" className="p-1 text-white/45">
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="mt-3 space-y-1.5">
+          {reasons.map((r) => (
+            <button
+              key={r}
+              onClick={() => setReason(r)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[12px] font-bold transition",
+                reason === r
+                  ? "border-rose-400/45 bg-rose-500/12 text-white"
+                  : "border-white/10 bg-white/[0.04] text-white/60",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid size-4 place-items-center rounded-full border",
+                  reason === r ? "border-rose-300 bg-rose-400 text-black" : "border-white/25",
+                )}
+              >
+                {reason === r && <Check className="size-2.5" strokeWidth={4} />}
+              </span>
+              {r}
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+          rows={2}
+          maxLength={200}
+          placeholder="Tambahkan detail (opsional)…"
+          className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-[12px] text-white outline-none placeholder:text-white/30 focus-visible:ring-0"
+        />
+        <button
+          onClick={() => void submit()}
+          disabled={busy}
+          className="mt-3 w-full rounded-xl bg-rose-500 py-3 text-[12px] font-black text-white transition active:scale-[0.99] disabled:opacity-50"
+        >
+          {busy ? "Mengirim…" : "Kirim laporan"}
+        </button>
+      </motion.div>
     </motion.div>
   );
 }
@@ -2078,18 +2432,45 @@ function readFeedSeen(): Record<FeedTab, number> {
 export function FeedScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const posts = useQuery(api.feed.listFeed, { limit: 100 }) as Post[] | undefined;
+  const [view, setView] = useState<"feed" | "explore" | "inbox">("feed");
+  const postsQuery = useQuery(api.feed.listFeed, { limit: 30 }) as Post[] | undefined;
   const toggleLike = useMutation(api.feed.toggleLike);
   const toggleFavorite = useMutation(api.feed.toggleFavorite);
   const addView = useMutation(api.feed.addView);
   const toggleFollow = useMutation(api.feed.toggleFollow);
   const friends = useQuery(api.friends.listFriends, user ? {} : "skip") as
-    | { userId: string }[]
+    | { userId: string; username: string; image?: string | null; premium?: boolean; level?: number }[]
     | undefined;
   const following = useQuery(
     api.feed.followList,
     user ? { userId: user._id, mode: "following" as const } : "skip",
-  ) as { userId: string }[] | undefined;
+  ) as { userId: string; username?: string; image?: string | null }[] | undefined;
+  const followers = useQuery(
+    api.feed.followList,
+    user && view === "inbox"
+      ? { userId: user._id, mode: "followers" as const }
+      : "skip",
+  ) as { userId: string; username: string; image: string | null; level?: number }[] | undefined;
+  const activities = useQuery(
+    api.feed.activityFeed,
+    user && view === "inbox" ? { limit: 50 } : "skip",
+  ) as FeedActivity[] | undefined;
+  const unread = useQuery(
+    api.moderation.myUnreadCount,
+    user ? {} : "skip",
+  ) as number | undefined;
+  const storyGroups = useQuery(
+    api.stories.allStories,
+    view === "inbox" ? {} : "skip",
+  ) as
+    | {
+        userId: string;
+        username: string;
+        userImage?: string;
+        hasUnseen?: boolean;
+        stories: { _id: string }[];
+      }[]
+    | undefined;
 
   const [tab, setTab] = useState<FeedTab>("home");
   const [creating, setCreating] = useState(false);
@@ -2104,7 +2485,40 @@ export function FeedScreen() {
   } | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [seenTabs, setSeenTabs] = useState(() => readFeedSeen());
+  const [hiddenPosts, setHiddenPosts] = useState<Set<string>>(
+    () => new Set(readIdList(FEED_HIDDEN_POSTS)),
+  );
+  const [hiddenAuthors, setHiddenAuthors] = useState<Set<string>>(
+    () => new Set(readIdList(FEED_HIDDEN_AUTHORS)),
+  );
+  const [storyOpen, setStoryOpen] = useState<string | null>(null);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [chatWith, setChatWith] = useState<{ id: Id<"users">; name: string } | null>(null);
+  const [sharedPostId] = useState<Id<"feedPosts"> | null>(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get("post");
+      return id ? (id as Id<"feedPosts">) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [sharedClosed, setSharedClosed] = useState(false);
+  const sharedPost = useQuery(
+    api.feed.postById,
+    sharedPostId ? { postId: sharedPostId } : "skip",
+  ) as Post | null | undefined;
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const refresh = () => {
+      setHiddenPosts(new Set(readIdList(FEED_HIDDEN_POSTS)));
+      setHiddenAuthors(new Set(readIdList(FEED_HIDDEN_AUTHORS)));
+      setView("feed");
+    };
+    window.addEventListener(FEED_FILTER_EVENT, refresh);
+    return () => window.removeEventListener(FEED_FILTER_EVENT, refresh);
+  }, []);
 
   const friendIds = useMemo(
     () => new Set((friends ?? []).map((f) => String(f.userId))),
@@ -2114,17 +2528,20 @@ export function FeedScreen() {
     () => new Set((following ?? []).map((f) => String(f.userId))),
     [following],
   );
-
-  const friendPosts = (posts ?? []).filter((p) => friendIds.has(String(p.userId)));
-  const followingPosts = (posts ?? []).filter((p) =>
-    followingIds.has(String(p.userId)),
+  const posts = (postsQuery ?? []).filter(
+    (p) =>
+      !hiddenPosts.has(String(p.postId)) &&
+      !hiddenAuthors.has(String(p.userId)),
   );
+
+  const friendPosts = posts.filter((p) => friendIds.has(String(p.userId)));
+  const followingPosts = posts.filter((p) => followingIds.has(String(p.userId)));
   const shown =
     tab === "friends"
       ? friendPosts
       : tab === "following"
         ? followingPosts
-        : (posts ?? []);
+        : posts;
 
   const dotFor = (t: FeedTab) => {
     if (t === tab) return false;
@@ -2156,48 +2573,50 @@ export function FeedScreen() {
     { key: "home", label: "Beranda", Icon: Home },
     { key: "explore", label: "Explore", Icon: Compass },
     { key: "create", label: "Buat", Icon: Plus },
-    { key: "chat", label: "Chat", Icon: MessageSquare },
+    { key: "chat", label: "Kotak Masuk", Icon: MessageSquare },
     { key: "account", label: "Akun", Icon: UserRound },
   ] as const;
 
   return (
     <div className="fixed inset-0 z-[60] bg-black">
-      {/* Tiga tab beranda feed: Teman · Beranda · Mengikuti. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-1 bg-gradient-to-b from-black/80 via-black/35 to-transparent px-2 pb-10 pt-[max(env(safe-area-inset-top),0.8rem)]">
-        <button
-          onClick={() => navigate("/home")}
-          aria-label="Keluar feed mode"
-          className="pointer-events-auto flex size-8 shrink-0 items-center justify-center text-white/70 transition active:scale-90"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        {([
-          ["friends", "Teman"],
-          ["home", "Beranda"],
-          ["following", "Mengikuti"],
-        ] as const).map(([key, label]) => (
+      {/* Beranda feed — tab atas hanya muncul di tampilan feed. */}
+      {view === "feed" && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-0 bg-gradient-to-b from-black/90 via-black/45 to-transparent px-1.5 pb-8 pt-[max(env(safe-area-inset-top),0.35rem)]">
           <button
-            key={key}
-            onClick={() => openTab(key)}
-            className={cn(
-              "pointer-events-auto relative flex-1 py-1 text-center text-[12px] font-black transition",
-              tab === key ? "text-white" : "text-white/45",
-            )}
+            onClick={() => navigate("/home")}
+            aria-label="Keluar feed mode"
+            className="pointer-events-auto flex size-8 shrink-0 items-center justify-center text-white/80 transition active:scale-90"
           >
-            {label}
-            {dotFor(key) && (
-              <span className="absolute right-[18%] top-0.5 size-1.5 rounded-full bg-rose-500/75" />
-            )}
+            <ChevronLeft className="size-5" />
           </button>
-        ))}
-      </div>
+          {([
+            ["friends", "Teman"],
+            ["home", "Beranda"],
+            ["following", "Mengikuti"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => openTab(key)}
+              className={cn(
+                "pointer-events-auto relative flex-1 py-1 text-center text-[15px] font-black tracking-tight transition",
+                tab === key ? "text-white" : "text-white/48",
+              )}
+            >
+              {label}
+              {dotFor(key) && (
+                <span className="absolute right-[14%] top-0.5 size-1.5 rounded-full bg-rose-500/80" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {!posts && (
+      {view === "feed" && !postsQuery && (
         <div className="flex h-full items-center justify-center text-sm text-white/60">
           Memuat feed…
         </div>
       )}
-      {posts && shown.length === 0 && (
+      {view === "feed" && postsQuery && shown.length === 0 && (
         <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
           <Users className="size-9 text-white/35" />
           <p className="text-sm font-bold text-white/65">
@@ -2216,7 +2635,7 @@ export function FeedScreen() {
         </div>
       )}
 
-      {shown.length > 0 && (
+      {view === "feed" && shown.length > 0 && (
         <div
           ref={scrollRef}
           className="feed-mode-scroll thin-scroll h-full overflow-y-auto overscroll-y-contain"
@@ -2225,10 +2644,11 @@ export function FeedScreen() {
             <PostShell
               key={String(p.postId)}
               p={p}
+              following={followingIds.has(String(p.userId))}
               onVisible={onVisible}
               onLike={() => toggleLike({ postId: p.postId })}
               onFavorite={() => toggleFavorite({ postId: p.postId })}
-              onFollow={() => void toggleFollow({ targetId: p.userId }).catch(() => {})}
+              onFollow={() => toggleFollow({ targetId: p.userId })}
               onComment={() => setCommentOn(p.postId)}
               onShare={() => setShareOn(p)}
               onOpenProfile={() =>
@@ -2245,18 +2665,43 @@ export function FeedScreen() {
         </div>
       )}
 
+      {view === "explore" && <ExplorePanel posts={posts} onBack={() => setView("feed")} />}
+
+      {view === "inbox" && (
+        <InboxPanel
+          friends={friends ?? []}
+          activities={activities ?? []}
+          unread={unread ?? 0}
+          followers={followers ?? []}
+          stories={(storyGroups ?? []).filter(
+            (g) =>
+              friendIds.has(String(g.userId)) || followingIds.has(String(g.userId)),
+          )}
+          onBack={() => setView("feed")}
+          onStory={setStoryOpen}
+          onActivity={() => setActivityOpen(true)}
+          onFollowers={() => setFollowersOpen(true)}
+          onChat={(userId, name) => setChatWith({ id: userId as Id<"users">, name })}
+        />
+      )}
+
       {/* Navigasi bawah Feed Mode — full lebar, label di bawah ikon. */}
       <nav className="absolute inset-x-0 bottom-0 z-50 flex items-stretch border-t border-white/10 bg-[#0b0c11]/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 backdrop-blur-xl">
         {navItems.map(({ key, label, Icon }) => {
-          const active = key === "home";
+          const active =
+            (key === "home" && view === "feed") ||
+            (key === "explore" && view === "explore") ||
+            (key === "chat" && view === "inbox");
           return (
             <button
               key={key}
               type="button"
               onClick={() => {
-                if (key === "home") scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-                else if (key === "explore") navigate("/catalog");
-                else if (key === "chat") navigate("/home?chat=1");
+                if (key === "home") {
+                  if (view === "feed") scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                  else setView("feed");
+                } else if (key === "explore") setView("explore");
+                else if (key === "chat") setView("inbox");
                 else if (key === "account") {
                   if (user)
                     setDetailOwner({
@@ -2264,24 +2709,29 @@ export function FeedScreen() {
                       username: user.username ?? "user",
                       image: user.image ?? null,
                       isMe: true,
-                      full: false,
+                      full: true,
                     });
                 } else setCreating(true);
               }}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-1 transition active:scale-95",
+                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-1 transition active:scale-95",
                 active ? "text-white" : "text-white/45",
               )}
             >
               <span
                 className={cn(
-                  "grid size-6 place-items-center rounded-full",
+                  "relative grid size-6 place-items-center rounded-full",
                   key === "create" && "size-8 bg-[var(--ui-c)] text-black shadow-[0_8px_20px_-10px_rgba(0,0,0,.9)]",
                 )}
               >
                 <Icon className={cn(key === "create" ? "size-4" : "size-5")} strokeWidth={2.2} />
+                {key === "chat" && ((activities?.length ?? 0) > 0 || (unread ?? 0) > 0) && (
+                  <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-rose-500 ring-2 ring-[#0b0c11]" />
+                )}
               </span>
-              <span className="text-[8px] font-bold leading-none">{label}</span>
+              <span className="whitespace-nowrap text-[8px] font-bold leading-none">
+                {label}
+              </span>
             </button>
           );
         })}
@@ -2294,20 +2744,598 @@ export function FeedScreen() {
         {detailOwner && (
           <FeedContentSheet
             owner={detailOwner}
-            allPosts={posts ?? []}
+            allPosts={posts}
             onClose={() => setDetailOwner(null)}
+            onCreate={() => {
+              setDetailOwner(null);
+              setCreating(true);
+            }}
           />
         )}
       </AnimatePresence>
+
+      {storyOpen && (
+        <StoryViewer
+          initialUserId={storyOpen}
+          onClose={() => setStoryOpen(null)}
+        />
+      )}
+
+      {activityOpen && (
+        <ActivityFullScreen
+          activities={activities ?? []}
+          onClose={() => setActivityOpen(false)}
+        />
+      )}
+
+      {followersOpen && (
+        <FollowersFullScreen
+          followers={followers ?? []}
+          onClose={() => setFollowersOpen(false)}
+          onChat={(userId, name) => {
+            setFollowersOpen(false);
+            setChatWith({ id: userId as Id<"users">, name });
+          }}
+        />
+      )}
+
+      {chatWith && (
+        <DmSheet
+          peerId={chatWith.id}
+          username={chatWith.name}
+          onClose={() => setChatWith(null)}
+        />
+      )}
+
+      {sharedPost && !sharedClosed && (
+        <FeedPostOverlay
+          posts={[sharedPost]}
+          index={0}
+          onClose={() => {
+            setSharedClosed(true);
+            try {
+              window.history.replaceState({}, "", "/feed");
+            } catch {
+              /* history diblokir */
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
 
-/** Detail akun versi konten — bukan fullscreen dan tidak bisa pindah ke profil. */
+/* ------------------------------------------------------------------ *
+ *  EXPLORE — grid dua kolom ala halaman Jelajahi
+ * ------------------------------------------------------------------ */
+type ExploreItem = {
+  id: string;
+  title: string;
+  image: string | null;
+  author: string;
+  authorImage: string | null;
+  likes: number;
+  score?: number;
+  kind: string;
+  post: Post | null;
+};
+
+function ExplorePanel({ posts, onBack }: { posts: Post[]; onBack: () => void }) {
+  const navigate = useNavigate();
+  const top = useAction(api.anime.animeTop);
+  const [anime, setAnime] = useState<
+    { id: string; title: string; image?: string; score?: number }[]
+  >([]);
+  const [query, setQuery] = useState("");
+  const [term, setTerm] = useState("");
+  const [cat, setCat] = useState<"all" | "photo" | "video" | "music" | "anime">("all");
+  const [opened, setOpened] = useState<{ posts: Post[]; index: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    top({ limit: 24 })
+      .then((r: any) => {
+        if (alive) setAnime((r ?? []).filter((a: any) => a?.image));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const feedItems: ExploreItem[] = posts.map((p) => ({
+    id: String(p.postId),
+    title: p.caption || (p.kind === "video" ? "Video baru" : "Konten baru"),
+    image: p.thumbUrl ?? p.imageUrl ?? p.music?.cover ?? null,
+    author: p.username,
+    authorImage: p.image,
+    likes: p.likeCount,
+    kind: p.kind,
+    post: p,
+  }));
+  const animeItems: ExploreItem[] = anime.map((a) => ({
+    id: `anime:${a.id}`,
+    title: a.title,
+    image: a.image ?? null,
+    author: "Anime & Komik",
+    authorImage: null,
+    likes: 0,
+    score: a.score,
+    kind: "anime",
+    post: null,
+  }));
+  const items = [...feedItems, ...animeItems].filter((it) => {
+    if (cat === "photo" && it.kind !== "image") return false;
+    if (cat === "video" && it.kind !== "video") return false;
+    if (cat === "music" && it.kind !== "music") return false;
+    if (cat === "anime" && it.kind !== "anime") return false;
+    const q = term.trim().toLowerCase();
+    return !q || `${it.title} ${it.author}`.toLowerCase().includes(q);
+  });
+  const categories = [
+    ["all", "Semua"],
+    ["photo", "Foto"],
+    ["video", "Video"],
+    ["music", "Musik"],
+    ["anime", "Anime & Komik"],
+  ] as const;
+
+  return (
+    <div className="absolute inset-0 z-10 overflow-y-auto bg-[#0b0c11] pb-[calc(env(safe-area-inset-bottom)+4.6rem)]">
+      <div className="sticky top-0 z-20 bg-[#0b0c11]/95 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.65rem)] backdrop-blur-xl">
+        <div className="flex items-center gap-2 rounded-xl bg-[#24252b] px-3 py-2.5">
+          <Search className="size-5 shrink-0 text-white/70" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && setTerm(query)}
+            placeholder="Temukan topik baru"
+            className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/55"
+          />
+          {query && (
+            <button
+              onClick={() => {
+                setQuery("");
+                setTerm("");
+              }}
+              aria-label="Hapus pencarian"
+              className="text-white/45"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setTerm(query)}
+            className="shrink-0 border-l border-white/15 pl-2.5 text-[14px] font-black text-white"
+          >
+            Cari
+          </button>
+        </div>
+        <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {categories.map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setCat(key)}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition",
+                cat === key
+                  ? "border-white/20 bg-[#34353b] text-white"
+                  : "border-white/10 bg-[#25262c] text-white/60",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-2 pt-2">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-5 py-16 text-center">
+            <Compass className="size-8 text-white/25" />
+            <p className="text-[12px] font-bold text-white/45">
+              Tidak ada konten untuk pencarian ini.
+            </p>
+            <button
+              onClick={() => {
+                setQuery("");
+                setTerm("");
+                setCat("all");
+              }}
+              className="text-[11px] font-black text-[var(--ui-c)]"
+            >
+              Tampilkan semua
+            </button>
+          </div>
+        ) : (
+          <div className="columns-2 gap-2.5 [column-fill:_balance]">
+            {items.map((it, index) => (
+              <button
+                key={it.id}
+                onClick={() => {
+                  if (it.post) {
+                    const nextPosts = posts;
+                    setOpened({
+                      posts: nextPosts,
+                      index: nextPosts.findIndex((p) => p.postId === it.post!.postId),
+                    });
+                  } else {
+                    const id = it.id.replace(/^anime:/, "");
+                    navigate(`/home?pilih=${encodeURIComponent(id)}&judul=${encodeURIComponent(it.title)}`);
+                  }
+                }}
+                className="mb-2.5 block w-full break-inside-avoid overflow-hidden rounded-lg bg-[#15161b] text-left transition active:scale-[0.99]"
+              >
+                <div
+                  className={cn(
+                    "relative w-full overflow-hidden bg-[#24252b]",
+                    index % 3 === 0 ? "aspect-[3/4]" : index % 3 === 1 ? "aspect-[4/5]" : "aspect-square",
+                  )}
+                >
+                  {it.image ? (
+                    <img
+                      src={it.image}
+                      alt={it.title}
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,#30323c,#131419)] px-3 text-center text-[13px] font-black text-white/80">
+                      {it.title}
+                    </div>
+                  )}
+                  <span className="absolute right-2 top-2 grid size-7 place-items-center rounded-md bg-black/55 text-white/90 backdrop-blur-sm">
+                    <Bookmark className="size-3.5" />
+                  </span>
+                  {it.kind === "video" && (
+                    <span className="absolute left-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[8px] font-black text-white">
+                      VIDEO
+                    </span>
+                  )}
+                </div>
+                <div className="px-1.5 pb-2 pt-1.5">
+                  <p className="line-clamp-2 text-[13px] font-bold leading-snug text-white">
+                    {it.title}
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <Avatar
+                      src={it.authorImage ?? undefined}
+                      seed={it.author}
+                      className="size-6"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-white/60">
+                      {it.author}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-0.5 text-[9px] font-bold text-white/55">
+                      {it.kind === "anime" ? (
+                        <>★ {it.score?.toFixed(1) ?? "—"}</>
+                      ) : (
+                        <><Heart className="size-3" /> {fmtCount(it.likes)}</>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {opened && opened.index >= 0 && (
+        <FeedPostOverlay
+          posts={opened.posts}
+          index={opened.index}
+          onClose={() => setOpened(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ *  KOTAK MASUK — story, aktivitas, pengikut, chat teman
+ * ------------------------------------------------------------------ */
+function InboxPanel({
+  friends,
+  activities,
+  unread,
+  followers,
+  stories,
+  onBack,
+  onStory,
+  onActivity,
+  onFollowers,
+  onChat,
+}: {
+  friends: { userId: string; username: string; image?: string | null; premium?: boolean }[];
+  activities: FeedActivity[];
+  unread: number;
+  followers: { userId: string; username: string; image: string | null }[];
+  stories: {
+    userId: string;
+    username: string;
+    userImage?: string;
+    hasUnseen?: boolean;
+    stories: { _id: string }[];
+  }[];
+  onBack: () => void;
+  onStory: (userId: string) => void;
+  onActivity: () => void;
+  onFollowers: () => void;
+  onChat: (userId: string, name: string) => void;
+}) {
+  const preview = activities.slice(0, 3);
+  const newFollowers = followers.slice(0, 3);
+  const storyItems = stories.filter((s) => s.stories.length > 0).slice(0, 12);
+  return (
+    <div className="absolute inset-0 z-10 overflow-y-auto bg-[#0b0c11] pb-[calc(env(safe-area-inset-bottom)+4.7rem)]">
+      <div className="sticky top-0 z-20 flex items-center bg-[#0b0c11]/95 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.7rem)] backdrop-blur-xl">
+        <button
+          onClick={onBack}
+          aria-label="Kembali ke feed"
+          className="grid size-8 place-items-center text-white/80"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center gap-1.5">
+          <span className="text-[16px] font-black text-white">Kotak Masuk</span>
+          <span className="size-1.5 rounded-full bg-white/25" />
+          {(activities.length > 0 || unread > 0) && (
+            <span className="size-1.5 rounded-full bg-rose-500" />
+          )}
+        </div>
+        <span className="ml-auto size-8" />
+      </div>
+
+      {storyItems.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {storyItems.map((s) => (
+            <div
+              key={s.userId}
+              role="button"
+              tabIndex={0}
+              onClick={() => onStory(s.userId)}
+              onKeyDown={(e) => e.key === "Enter" && onStory(s.userId)}
+              className="flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5"
+            >
+              <StoryRing
+                image={s.userImage}
+                seed={s.username}
+                size={62}
+                hasStory
+                seen={!s.hasUnseen}
+                onClick={() => onStory(s.userId)}
+              />
+              <span className="w-full truncate text-center text-[10px] font-semibold text-white/70">
+                {s.username}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-2 px-3 pt-2">
+        <button
+          onClick={onActivity}
+          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition active:scale-[0.99]"
+        >
+          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[var(--ui-c)]/15 text-[var(--ui-c)] ring-1 ring-[var(--ui-c)]/25">
+            <Bell className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2 text-[13px] font-black text-white">
+              Aktivitas
+              {(activities.length > 0 || unread > 0) && <span className="size-1.5 rounded-full bg-rose-500" />}
+            </span>
+            {preview.length === 0 ? (
+              <span className="mt-0.5 block truncate text-[11px] text-white/40">
+                Belum ada aktivitas baru
+              </span>
+            ) : (
+              preview.map((a) => (
+                <span
+                  key={a._id}
+                  className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-white/50"
+                >
+                  <span className="truncate">{a.username} {activityText(a)}</span>
+                </span>
+              ))
+            )}
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-white/30" />
+        </button>
+
+        <button
+          onClick={onFollowers}
+          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition active:scale-[0.99]"
+        >
+          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-sky-400/12 text-sky-300 ring-1 ring-sky-400/25">
+            <Users className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-black text-white">Pengikut</span>
+            <span className="mt-0.5 block truncate text-[11px] text-white/45">
+              {newFollowers.length === 0
+                ? "Belum ada yang mengikuti kamu"
+                : `${newFollowers.map((f) => f.username).join(", ")} mulai mengikuti kamu`}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-white/30" />
+        </button>
+      </div>
+
+      <div className="mt-3 px-3">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121318]">
+          <div className="flex items-center justify-between border-b border-white/8 px-3 py-2.5">
+            <p className="text-[12px] font-black text-white">Chat Teman</p>
+            <span className="text-[9px] font-bold text-white/30">{friends.length} teman</span>
+          </div>
+          {friends.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[11px] text-white/35">
+              Belum punya teman. Tambahkan teman dari halaman Teman.
+            </p>
+          ) : (
+            friends.map((f) => (
+              <button
+                key={f.userId}
+                onClick={() => onChat(f.userId, f.username)}
+                className="flex w-full items-center gap-3 border-b border-white/6 px-3 py-2.5 text-left transition last:border-b-0 active:bg-white/[0.04]"
+              >
+                <Avatar src={f.image ?? undefined} seed={f.username} className="size-11" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-bold text-white">
+                    {f.username}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[10px] text-white/35">
+                    Ketuk untuk mulai chat
+                  </span>
+                </span>
+                <span className="rounded-full bg-white/8 px-3 py-1.5 text-[9px] font-black text-white/70">
+                  Chat
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function activityText(a: FeedActivity): string {
+  switch (a.type) {
+    case "like":
+      return "menyukai video kamu";
+    case "favorite":
+      return "menyimpan konten kamu";
+    case "comment":
+      return a.detail ? `mengomentari: ${a.detail}` : "mengomentari konten kamu";
+    case "repost":
+      return "memosting ulang konten kamu";
+    case "follow":
+      return "mulai mengikuti kamu";
+    default:
+      return "berinteraksi dengan konten kamu";
+  }
+}
+
+function ActivityFullScreen({
+  activities,
+  onClose,
+}: {
+  activities: FeedActivity[];
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] flex flex-col bg-[#0b0c11] text-white"
+    >
+      <div className="flex items-center gap-2 border-b border-white/8 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.7rem)]">
+        <button onClick={onClose} aria-label="Tutup" className="grid size-9 place-items-center text-white/75">
+          <ChevronLeft className="size-5" />
+        </button>
+        <h2 className="text-[16px] font-black">Aktivitas</h2>
+      </div>
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2">
+        {activities.length === 0 && (
+          <p className="py-16 text-center text-[12px] text-white/35">Belum ada aktivitas.</p>
+        )}
+        {activities.map((a) => (
+          <div
+            key={a._id}
+            className="flex items-center gap-3 border-b border-white/6 py-3 last:border-b-0"
+          >
+            <div className="relative shrink-0">
+              <Avatar src={a.image ?? undefined} seed={a.username} className="size-12" />
+              <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full border-2 border-[#0b0c11] bg-white/15">
+                {a.type === "follow" ? (
+                  <UserPlus className="size-3" />
+                ) : a.type === "comment" ? (
+                  <MessageCircle className="size-3" />
+                ) : a.type === "repost" ? (
+                  <Repeat2 className="size-3" />
+                ) : (
+                  <Heart className={cn("size-3", a.type === "like" && "fill-rose-400 text-rose-400")} />
+                )}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] leading-snug text-white/80">
+                <span className="font-black text-white">{a.username}</span>{" "}
+                {activityText(a)}
+              </p>
+              <p className="mt-0.5 text-[10px] text-white/35">{timeAgo(a.createdAt)}</p>
+            </div>
+            {a.cover ? (
+              <img src={a.cover} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
+            ) : a.postId ? (
+              <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-white/8 text-white/40">
+                <MessageSquare className="size-4" />
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function FollowersFullScreen({
+  followers,
+  onClose,
+  onChat,
+}: {
+  followers: { userId: string; username: string; image: string | null }[];
+  onClose: () => void;
+  onChat: (userId: string, name: string) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] flex flex-col bg-[#0b0c11] text-white"
+    >
+      <div className="flex items-center gap-2 border-b border-white/8 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.7rem)]">
+        <button onClick={onClose} aria-label="Tutup" className="grid size-9 place-items-center text-white/75">
+          <ChevronLeft className="size-5" />
+        </button>
+        <h2 className="text-[16px] font-black">Pengikut</h2>
+      </div>
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2">
+        {followers.length === 0 && (
+          <p className="py-16 text-center text-[12px] text-white/35">Belum ada pengikut.</p>
+        )}
+        {followers.map((f) => (
+          <div key={f.userId} className="flex items-center gap-3 border-b border-white/6 py-3 last:border-b-0">
+            <Avatar src={f.image ?? undefined} seed={f.username} className="size-12" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-black text-white">{f.username}</p>
+              <p className="mt-0.5 text-[10px] text-white/35">Mengikuti kamu</p>
+            </div>
+            <button
+              onClick={() => onChat(f.userId, f.username)}
+              className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black text-white/75"
+            >
+              Kirim pesan
+            </button>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+/** Detail akun penuh dari Feed — header profil, statistik, bio, tab, grid. */
 function FeedContentSheet({
   owner,
   allPosts,
   onClose,
+  onCreate,
 }: {
   owner: {
     _id: Id<"users">;
@@ -2318,12 +3346,40 @@ function FeedContentSheet({
   };
   allPosts: Post[];
   onClose: () => void;
+  onCreate?: () => void;
 }) {
+  const navigate = useNavigate();
   const mine = owner.isMe;
+  const profile = useQuery(api.account.getPublicProfile, { userId: owner._id }) as
+    | {
+        username?: string;
+        image?: string;
+        bio?: string;
+        premium?: boolean;
+        level?: number;
+      }
+    | null
+    | undefined;
+  const counts = useQuery(api.feed.followCounts, { userId: owner._id }) as
+    | { following: number; followers: number; likes: number }
+    | undefined;
+  const ownerPosts = useQuery(api.feed.userPosts, { userId: owner._id }) as
+    | Post[]
+    | undefined;
+  const isFollowing = useQuery(
+    api.feed.isFollowing,
+    mine ? "skip" : { targetId: owner._id },
+  ) as boolean | undefined;
+  const toggleFollow = useMutation(api.feed.toggleFollow);
+  const [followed, setFollowed] = useState(!!isFollowing);
+  const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState<"post" | "like" | "favorite" | "repost" | "private">("post");
   const [opened, setOpened] = useState<number | null>(null);
+  useEffect(() => setFollowed(!!isFollowing), [isFollowing]);
 
-  const base = allPosts.filter((p) => String(p.userId) === String(owner?._id));
+  const username = profile?.username ?? owner.username;
+  const image = profile?.image ?? owner.image;
+  const base = ownerPosts ?? allPosts.filter((p) => String(p.userId) === String(owner._id));
   const list =
     filter === "like"
       ? allPosts.filter((p) => p.liked)
@@ -2350,52 +3406,234 @@ function FeedContentSheet({
         ["repost", "Repost", Repeat2],
       ] as const);
 
+  const doFollow = () => {
+    const next = !followed;
+    setFollowed(next);
+    void toggleFollow({ targetId: owner._id }).catch(() => setFollowed(!next));
+  };
+
+  const copyProfile = async () => {
+    try {
+      await copyText(`${window.location.origin}/akun?user=${String(owner._id)}`);
+      toast.success("Tautan profil disalin");
+    } catch {
+      toast.error("Gagal menyalin tautan");
+    }
+    setMenu(false);
+  };
+
   return (
     <motion.div
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
       exit={{ y: "100%" }}
-      transition={{ duration: 0.26, ease: "easeOut" }}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-[90] flex flex-col overflow-hidden border-t border-white/12 bg-[#111319] text-white",
-        owner.full ? "top-0 rounded-none" : "top-[9%] rounded-t-[28px]",
-      )}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+      className="fixed inset-0 z-[90] flex flex-col overflow-hidden bg-[#0b0b0e] text-white"
     >
-      <div className="flex items-center gap-2 px-4 pt-3">
-        <button onClick={onClose} aria-label="Tutup" className="p-1 text-white/65">
-          <ChevronLeft className="size-5" />
-        </button>
-        <Avatar src={owner.image ?? undefined} seed={owner.username} className="size-9" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-black">{owner?.username ?? "user"}</p>
-          <p className="text-[9px] text-white/35">Detail konten</p>
-        </div>
-      </div>
-      <div className="thin-scroll mt-3 flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {tabs.map(([key, label, Icon]) => (
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="flex items-center px-4 pt-[max(env(safe-area-inset-top),0.8rem)]">
           <button
-            key={key}
-            onClick={() => setFilter(key)}
+            onClick={onClose}
+            aria-label="Kembali"
+            className="grid size-9 place-items-center text-white/90 transition active:scale-90"
+          >
+            <ChevronLeft className="size-6" />
+          </button>
+          <span className="flex-1" />
+          {!mine && (
+            <button
+              onClick={doFollow}
+              aria-label="Ikuti"
+              className="grid size-9 place-items-center text-white/85 transition active:scale-90"
+            >
+              <UserPlus className="size-5" />
+            </button>
+          )}
+          <button
+            onClick={() => setMenu((v) => !v)}
+            aria-label="Menu profil"
+            className="grid size-9 place-items-center text-white/85 transition active:scale-90"
+          >
+            <MoreHorizontal className="size-5" />
+          </button>
+        </div>
+
+        {menu && (
+          <div className="absolute right-4 top-14 z-20 w-48 overflow-hidden rounded-2xl border border-white/12 bg-[#16161c] p-1 shadow-2xl">
+            <button
+              onClick={() => void copyProfile()}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[11px] font-bold text-white/75 transition hover:bg-white/8"
+            >
+              <Link2 className="size-3.5" /> Salin tautan profil
+            </button>
+            {!mine && (
+              <button
+                onClick={() => {
+                  doFollow();
+                  setMenu(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[11px] font-bold text-white/75 transition hover:bg-white/8"
+              >
+                <UserPlus className="size-3.5" /> {followed ? "Berhenti mengikuti" : "Ikuti akun"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col items-center px-5 pt-1">
+          <div className="relative">
+            <Avatar
+              src={image ?? undefined}
+              seed={username}
+              className="size-[104px] ring-4 ring-white/75"
+            />
+            {mine && onCreate && (
+              <button
+                onClick={onCreate}
+                aria-label="Tambah konten"
+                className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full border-2 border-[#0b0b0e] bg-[#00c8ff] text-white shadow-lg transition active:scale-90"
+              >
+                <Plus className="size-4" strokeWidth={3} />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-center justify-center gap-2">
+            {mine ? (
+              <button
+                onClick={() => {
+                  onClose();
+                  navigate("/akun");
+                }}
+                className="rounded-lg bg-white/12 px-5 py-2 text-[13px] font-black text-white transition active:scale-95"
+              >
+                Edit
+              </button>
+            ) : (
+              <button
+                onClick={doFollow}
+                className={cn(
+                  "rounded-lg px-5 py-2 text-[13px] font-black transition active:scale-95",
+                  followed
+                    ? "bg-white/12 text-white"
+                    : "bg-[#fe2c55] text-white",
+                )}
+              >
+                {followed ? "Mengikuti" : "Ikuti"}
+              </button>
+            )}
+            <button
+              onClick={() => void copyProfile()}
+              aria-label="Bagikan profil"
+              className="grid size-9 place-items-center rounded-lg bg-white/12 text-white"
+            >
+              <Share2 className="size-4" />
+            </button>
+          </div>
+
+          <p className="mt-2 text-[13px] font-semibold text-white/55">@{username}</p>
+
+          <div className="mt-3 grid w-full max-w-[330px] grid-cols-3 divide-x divide-white/15 text-center">
+            {[
+              [fmtCount(counts?.following ?? 0), "Mengikuti"],
+              [fmtCount(counts?.followers ?? 0), "Pengikut"],
+              [fmtCount(counts?.likes ?? 0), "Suka"],
+            ].map(([value, label]) => (
+              <div key={label} className="px-2">
+                <p className="text-[17px] font-black leading-tight text-white">{value}</p>
+                <p className="text-[11px] text-white/48">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              if (mine) {
+                onClose();
+                navigate("/akun");
+              }
+            }}
             className={cn(
-              "relative flex shrink-0 items-center gap-1.5 px-3 pb-2.5 text-[10px] font-black transition",
-              filter === key ? "text-white" : "text-white/38",
+              "mt-3 max-w-full truncate rounded-full px-4 py-1.5 text-[12px] font-semibold",
+              profile?.bio?.trim()
+                ? "bg-transparent text-white/78"
+                : "bg-white/10 text-white/35",
             )}
           >
-            <Icon className="size-3.5" />
-            {label}
-            {filter === key && (
-              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[var(--ui-c)]" />
-            )}
+            {profile?.bio?.trim() || (mine ? "+ Tambahkan bio" : "Belum ada bio")}
           </button>
-        ))}
-      </div>
-      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-6">
-        {list.length === 0 ? (
-          <p className="py-14 text-center text-[11px] text-white/30">Belum ada konten di bagian ini.</p>
-        ) : (
-          <ContentGrid posts={list as any} onOpen={(i) => setOpened(i)} />
+
+          <div className="mt-3 flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              onClick={() => {
+                onClose();
+                navigate("/premium");
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-bold text-white/80"
+            >
+              <span className="grid size-4 place-items-center rounded-full border border-rose-400 text-[8px] font-black text-rose-400">P</span>
+              Reward
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                navigate("/akun?tab=settings");
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-bold text-white/80"
+            >
+              <span className="text-rose-400">◈</span> Pesanan Anda
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto border-b border-white/10 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabs.map(([key, label, Icon]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              aria-label={label}
+              title={label}
+              className={cn(
+                "relative grid min-w-11 place-items-center px-2 pb-2.5 pt-1 transition",
+                filter === key ? "text-white" : "text-white/35",
+              )}
+            >
+              <Icon className="size-[21px]" strokeWidth={1.8} />
+              {filter === key && (
+                <span className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-white" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {mine && onCreate && (
+          <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg bg-white/[0.07] px-3 py-2.5">
+            <Plus className="size-5 shrink-0 text-white/85" />
+            <p className="min-w-0 flex-1 truncate text-[12px] font-bold text-white/75">
+              Unggah momen untuk mengosongkan galeri
+            </p>
+            <button
+              onClick={onCreate}
+              className="shrink-0 rounded-full bg-white px-4 py-1.5 text-[11px] font-black text-black"
+            >
+              Unggah
+            </button>
+          </div>
         )}
+
+        <div className="px-3 pb-6 pt-2">
+          {!ownerPosts && !allPosts.length ? (
+            <p className="py-12 text-center text-[11px] text-white/30">Memuat konten…</p>
+          ) : list.length === 0 ? (
+            <p className="py-14 text-center text-[11px] text-white/30">
+              Belum ada konten di bagian ini.
+            </p>
+          ) : (
+            <ContentGrid posts={list as any} onOpen={(i) => setOpened(i)} />
+          )}
+        </div>
       </div>
+
       {opened !== null && list[opened] && (
         <FeedPostOverlay
           posts={list}
@@ -2411,6 +3649,7 @@ function FeedContentSheet({
 /** Balikan `isFollowing` per pembuat — dipanggil dari dalam daftar. */
 function PostShell({
   p,
+  following,
   onVisible,
   onLike,
   onFavorite,
@@ -2420,26 +3659,26 @@ function PostShell({
   onOpenProfile,
 }: {
   p: Post;
+  following: boolean;
   onVisible: (p: Post) => void;
   onLike: () => Promise<unknown>;
   onFavorite: () => Promise<unknown>;
-  onFollow: () => void;
+  onFollow: () => Promise<unknown> | void;
   onComment: () => void;
   onShare: () => void;
   onOpenProfile: () => void;
 }) {
-  const following = useQuery(
-    api.feed.isFollowing,
-    p.isMe ? "skip" : { targetId: p.userId },
-  ) as boolean | undefined;
+  const holderRef = useRef<HTMLDivElement | null>(null);
   const [like, setLike] = useState({ liked: p.liked, count: p.likeCount });
   const [fav, setFav] = useState({ favorited: p.favorited, count: p.favoriteCount });
+  const [followed, setFollowed] = useState(following);
   const [repostOn, setRepostOn] = useState(false);
 
   useEffect(() => {
     setLike({ liked: p.liked, count: p.likeCount });
     setFav({ favorited: p.favorited, count: p.favoriteCount });
   }, [p.liked, p.likeCount, p.favorited, p.favoriteCount]);
+  useEffect(() => setFollowed(following), [following]);
 
   const doLike = () => {
     const next = { liked: !like.liked, count: like.count + (like.liked ? -1 : 1) };
@@ -2462,14 +3701,31 @@ function PostShell({
     );
   };
 
+  const doFollow = () => {
+    const next = !followed;
+    setFollowed(next);
+    void Promise.resolve(onFollow()).catch(() => setFollowed(!next));
+  };
+
+  // View baru dihitung saat post benar-benar terlihat di layar, bukan saat
+  // seluruh daftar dirender. Ini menghemat puluhan mutation saat feed dibuka.
   useEffect(() => {
-    onVisible(p);
+    const el = holderRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) onVisible(p);
+      },
+      { threshold: 0.6 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.postId]);
 
   return (
     <>
-      <div className="h-full w-full snap-start">
+      <div ref={holderRef} className="h-full w-full snap-start">
         <PostView
           p={{
             ...p,
@@ -2478,8 +3734,8 @@ function PostShell({
             favorited: fav.favorited,
             favoriteCount: fav.count,
           }}
-          following={!!following}
-          onFollow={onFollow}
+          following={followed}
+          onFollow={doFollow}
           onLike={doLike}
           onDoubleLike={doDoubleLike}
           onComment={onComment}
@@ -2517,6 +3773,7 @@ export function FeedPostOverlay({
   const [commentOn, setCommentOn] = useState<Id<"feedPosts"> | null>(null);
   const [shareOn, setShareOn] = useState<Post | null>(null);
   const [repostOn, setRepostOn] = useState(false);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
 
   const p = posts[i];
   const following = useQuery(
@@ -2527,7 +3784,24 @@ export function FeedPostOverlay({
   if (!p) return null;
 
   return (
-    <div className="fixed inset-0 z-[95] bg-black">
+    <div
+      className="fixed inset-0 z-[95] bg-black"
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        swipe.current = { x: t.clientX, y: t.clientY };
+      }}
+      onTouchEnd={(e) => {
+        const s = swipe.current;
+        swipe.current = null;
+        if (!s) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - s.x;
+        const dy = t.clientY - s.y;
+        if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+        if (dx < 0) setI((v) => Math.min(posts.length - 1, v + 1));
+        else setI((v) => Math.max(0, v - 1));
+      }}
+    >
       <PostView
         p={p}
         following={!!following}
@@ -2550,24 +3824,21 @@ export function FeedPostOverlay({
           <ChevronLeft className="size-5" />
         </button>
         {posts.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
-            <button
-              onClick={() => setI((v) => Math.max(0, v - 1))}
-              disabled={i === 0}
-              className="rounded-full border border-white/25 bg-black/50 px-3 py-1.5 text-[11px] font-black text-white disabled:opacity-30"
-            >
-              Sebelumnya
-            </button>
-            <span className="text-[11px] font-black text-white/70">
-              {i + 1}/{posts.length}
-            </span>
-            <button
-              onClick={() => setI((v) => Math.min(posts.length - 1, v + 1))}
-              disabled={i === posts.length - 1}
-              className="rounded-full border border-white/25 bg-black/50 px-3 py-1.5 text-[11px] font-black text-white disabled:opacity-30"
-            >
-              Berikutnya
-            </button>
+          <div className="pointer-events-none absolute bottom-[5.7rem] left-1/2 z-30 flex max-w-[70%] -translate-x-1/2 flex-wrap items-center justify-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5 backdrop-blur-sm">
+            {posts.slice(0, 10).map((item, di) => (
+              <span
+                key={String(item.postId)}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-200",
+                  di === i % 10 ? "w-5 bg-white" : "w-1.5 bg-white/35",
+                )}
+              />
+            ))}
+            {posts.length > 10 && (
+              <span className="ml-1 text-[9px] font-bold text-white/60">
+                {i + 1}/{posts.length}
+              </span>
+            )}
           </div>
         )}
         {/* Jumlah views — pojok kiri bawah kotak */}
@@ -2663,6 +3934,11 @@ export function ContentGrid({
               }}
             >
               {p.overlay.text}
+            </span>
+          )}
+          {(p.thumbUrl || p.imageUrl || p.cover) && (
+            <span className="absolute right-1 top-1 grid size-6 place-items-center rounded-md bg-black/55 text-white/90 backdrop-blur-sm">
+              <ImageIcon className="size-3.5" />
             </span>
           )}
           <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-black text-white">

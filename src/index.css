@@ -3401,7 +3401,7 @@ svg.lucide {
 
 /* Feed Mode: geser pelan per konten, tidak melompati beberapa post. */
 .feed-mode-scroll {
-  scroll-snap-type: y proximity;
+  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
@@ -3409,6 +3409,11 @@ svg.lucide {
 .feed-mode-scroll > * {
   scroll-snap-align: start;
   scroll-snap-stop: always;
+}
+/* Beri browser ruang menggambar hanya satu layar penuh; mengurangi jank
+   saat daftar feed panjang. */
+.feed-mode-scroll > * {
+  contain: layout paint style;
 }
 
 

@@ -77,6 +77,8 @@ async function decorate(
     caption: p.caption ?? "",
     imageUrl,
     thumbUrl,
+    imageStorageId: p.imageStorageId ?? null,
+    thumbStorageId: p.thumbStorageId ?? null,
     music: p.music ?? null,
     overlay: p.overlay ?? null,
     audio: p.audio ?? null,
@@ -332,6 +334,150 @@ export const toggleRepost = mutation({
     }
     await ctx.db.insert("feedReposts", { postId, userId, createdAt: Date.now() });
     return { reposted: true };
+  },
+});
+
+/**
+ * Aktivitas terbaru untuk pemilik konten: like, favorit, komentar, repost,
+ * dan pengikut baru. Dipakai halaman Kotak Masuk di Feed Mode.
+ */
+export const activityFeed = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 40 }) => {
+    const viewer = await meOr(ctx);
+    if (!viewer) return [];
+    const posts = await ctx.db
+      .query("feedPosts")
+      .withIndex("by_user", (q) => q.eq("userId", viewer as any))
+      .order("desc")
+      .take(24);
+    const events: any[] = [];
+
+    for (const p of posts) {
+      let cover: string | null = null;
+      const mediaId = p.thumbStorageId ?? p.imageStorageId;
+      if (mediaId) {
+        try {
+          cover = await ctx.storage.getUrl(mediaId);
+        } catch {
+          cover = null;
+        }
+      }
+      const pushEvent = async (
+        type: string,
+        uid: string,
+        createdAt: number,
+        detail?: string,
+      ) => {
+        if (String(uid) === String(viewer)) return;
+        const u: any = await ctx.db.get(uid as any);
+        events.push({
+          _id: `${type}:${p._id}:${uid}:${createdAt}`,
+          type,
+          userId: uid,
+          username: u?.username ?? "user",
+          image: u?.image ?? null,
+          postId: p._id,
+          caption: (p.caption ?? "").slice(0, 90),
+          cover,
+          detail,
+          createdAt,
+        });
+      };
+
+      for (const uid of p.likes ?? []) {
+        await pushEvent("like", String(uid), p.createdAt);
+      }
+      for (const uid of p.favorites ?? []) {
+        await pushEvent("favorite", String(uid), p.createdAt);
+      }
+      const reposts = await ctx.db
+        .query("feedReposts")
+        .withIndex("by_post", (q) => q.eq("postId", p._id))
+        .order("desc")
+        .take(10);
+      for (const r of reposts) {
+        await pushEvent("repost", String(r.userId), r.createdAt);
+      }
+      const comments = await ctx.db
+        .query("feedComments")
+        .withIndex("by_post", (q) => q.eq("postId", p._id))
+        .order("desc")
+        .take(10);
+      for (const c of comments) {
+        await pushEvent(
+          "comment",
+          String(c.userId),
+          c.createdAt,
+          c.text?.slice(0, 100),
+        );
+      }
+    }
+
+    const followers = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q) => q.eq("followingId", viewer as any))
+      .order("desc")
+      .take(30);
+    for (const f of followers) {
+      const u: any = await ctx.db.get(f.followerId);
+      events.push({
+        _id: `follow:${f._id}`,
+        type: "follow",
+        userId: f.followerId,
+        username: u?.username ?? "user",
+        image: u?.image ?? null,
+        postId: null,
+        caption: "",
+        cover: null,
+        detail: undefined,
+        createdAt: f.createdAt,
+      });
+    }
+
+    events.sort((a, b) => b.createdAt - a.createdAt);
+    return events.slice(0, Math.min(limit, 100));
+  },
+});
+
+/** Laporkan konten Feed → catat laporan + notifikasi ke moderator. */
+export const reportPost = mutation({
+  args: {
+    postId: v.id("feedPosts"),
+    reason: v.string(),
+    detail: v.optional(v.string()),
+  },
+  handler: async (ctx, { postId, reason, detail }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    const post = await ctx.db.get(postId);
+    if (!post) throw new Error("Konten tidak ditemukan");
+    const reporter: any = await ctx.db.get(userId);
+    await ctx.db.insert("contentReports", {
+      reporterId: userId,
+      feedPostId: postId,
+      targetUserId: post.userId,
+      reason,
+      detail,
+      text: post.caption || `[${post.kind}]`,
+      createdAt: Date.now(),
+    });
+    const users = await ctx.db.query("users").collect();
+    for (const s of users) {
+      const isDev =
+        s.role === "admin" || s.staffRole === "dev" || s.staffRole === "creator";
+      const isMod = isDev || s.staffRole === "mod";
+      if (!isMod) continue;
+      await ctx.db.insert("notifications", {
+        userId: s._id,
+        type: "report",
+        title: `Laporan konten Feed: ${reason}`,
+        body: `${reporter?.username ?? "Seseorang"} melaporkan: "${(post.caption ?? `[${post.kind}]`).slice(0, 80)}"`,
+        refUserId: post.userId,
+        createdAt: Date.now(),
+      });
+    }
+    return { ok: true };
   },
 });
 

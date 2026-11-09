@@ -861,6 +861,8 @@ const schema = defineSchema(
       animeTitle: v.optional(v.string()),
       /** Laporan komentar anime (tombol Laporkan di kartu komentar). */
       commentId: v.optional(v.id("animeComments")),
+      /** Laporan konten Feed (tombol Laporkan di sheet bagikan). */
+      feedPostId: v.optional(v.id("feedPosts")),
       /** Pemilik komentar/pesan yang dilaporkan (untuk tindak lanjut). */
       targetUserId: v.optional(v.id("users")),
       reason: v.string(),
