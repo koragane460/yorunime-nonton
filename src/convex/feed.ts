@@ -83,6 +83,8 @@ async function decorate(
     overlay: p.overlay ?? null,
     audio: p.audio ?? null,
     privacy: p.privacy,
+    allowComments: p.allowComments !== false,
+    allowReuse: p.allowReuse !== false,
     likeCount: (p.likes ?? []).length,
     liked: viewer ? (p.likes ?? []).includes(viewer) : false,
     favoriteCount: (p.favorites ?? []).length,
@@ -125,7 +127,13 @@ export const listFeed = query({
       .take(Math.min(limit ?? 50, 100));
     const out = [];
     for (const p of rows) {
-      if (p.privacy === "teman" && p.userId !== viewer) continue;
+      if (p.privacy === "private" && p.userId !== viewer) continue;
+      if (
+        p.privacy === "teman" &&
+        p.userId !== viewer &&
+        !friendIds.has(String(p.userId))
+      )
+        continue;
       out.push(await decorate(ctx, p, viewer, friendIds));
     }
     return out;
@@ -139,8 +147,15 @@ export const postById = query({
     const p = await ctx.db.get(postId);
     if (!p) return null;
     const viewer = await meOr(ctx);
-    if (p.privacy === "teman" && p.userId !== viewer) return null;
-    const d = await decorate(ctx, p, viewer, await friendIdsFor(ctx, viewer));
+    const friendIds = await friendIdsFor(ctx, viewer);
+    if (p.privacy === "private" && p.userId !== viewer) return null;
+    if (
+      p.privacy === "teman" &&
+      p.userId !== viewer &&
+      !friendIds.has(String(p.userId))
+    )
+      return null;
+    const d = await decorate(ctx, p, viewer, friendIds);
     return { ...d, cover: d.thumbUrl ?? d.music?.cover ?? null };
   },
 });
@@ -158,7 +173,13 @@ export const userPosts = query({
       .take(100);
     const out = [];
     for (const p of rows) {
-      if (p.privacy === "teman" && p.userId !== viewer) continue;
+      if (p.privacy === "private" && p.userId !== viewer) continue;
+      if (
+        p.privacy === "teman" &&
+        p.userId !== viewer &&
+        !friendIds.has(String(p.userId))
+      )
+        continue;
       const d = await decorate(ctx, p, viewer, friendIds);
       // Bentuknya SAMA dengan listFeed supaya overlay post bisa dipakai
       // langsung dari grid Konten di profil.
@@ -220,7 +241,11 @@ export const createPost = mutation({
         videoVol: v.number(),
       }),
     ),
-    privacy: v.union(v.literal("all"), v.literal("teman")),
+    privacy: v.union(
+      v.literal("all"),
+      v.literal("teman"),
+      v.literal("private"),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -237,6 +262,8 @@ export const createPost = mutation({
       overlay: args.overlay,
       audio: args.audio,
       privacy: args.privacy,
+      allowComments: true,
+      allowReuse: true,
       likes: [],
       views: 0,
       createdAt: Date.now(),
@@ -481,13 +508,83 @@ export const reportPost = mutation({
   },
 });
 
-/** Tambah 1 view saat post dibuka (dipanggil sekali per pembukaan). */
+/** Tambah 1 view + simpan penonton unik untuk sheet "Dilihat oleh". */
 export const addView = mutation({
   args: { postId: v.id("feedPosts") },
   handler: async (ctx, { postId }) => {
     const p = await ctx.db.get(postId);
     if (!p) return { ok: false };
+    const userId = await meOr(ctx);
+    if (userId) {
+      const seen = await ctx.db
+        .query("feedViews")
+        .withIndex("by_pair", (q) =>
+          q.eq("postId", postId).eq("userId", userId as any),
+        )
+        .first();
+      if (!seen) {
+        await ctx.db.insert("feedViews", {
+          postId,
+          userId: userId as any,
+          createdAt: Date.now(),
+        });
+      }
+    }
     await ctx.db.patch(postId, { views: (p.views ?? 0) + 1 });
+    return { ok: true };
+  },
+});
+
+/** Daftar penonton satu konten (terbaru di atas). */
+export const postViewers = query({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const post = await ctx.db.get(postId);
+    const viewer = await meOr(ctx);
+    if (!post || !viewer || String(post.userId) !== String(viewer)) return [];
+    const rows = await ctx.db
+      .query("feedViews")
+      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .order("desc")
+      .take(200);
+    const out = [];
+    for (const row of rows) {
+      const u: any = await ctx.db.get(row.userId);
+      if (!u) continue;
+      out.push({
+        userId: row.userId,
+        username: u.username ?? "user",
+        image: u.image ?? null,
+        premium: (u.premiumUntil ?? 0) > Date.now(),
+        createdAt: row.createdAt,
+      });
+    }
+    return out;
+  },
+});
+
+/** Ubah siapa yang bisa menonton, izin komentar, dan izin penggunaan ulang. */
+export const updatePostSettings = mutation({
+  args: {
+    postId: v.id("feedPosts"),
+    privacy: v.optional(
+      v.union(v.literal("all"), v.literal("teman"), v.literal("private")),
+    ),
+    allowComments: v.optional(v.boolean()),
+    allowReuse: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { postId, privacy, allowComments, allowReuse }) => {
+    const userId = await meOr(ctx);
+    if (!userId) throw new Error("Belum masuk akun");
+    const p = await ctx.db.get(postId);
+    if (!p) throw new Error("Post tidak ada");
+    if (String(p.userId) !== String(userId))
+      throw new Error("Hanya pemilik konten yang bisa mengubah privasi");
+    const patch: Record<string, unknown> = {};
+    if (privacy !== undefined) patch.privacy = privacy;
+    if (allowComments !== undefined) patch.allowComments = allowComments;
+    if (allowReuse !== undefined) patch.allowReuse = allowReuse;
+    if (Object.keys(patch).length) await ctx.db.patch(postId, patch);
     return { ok: true };
   },
 });
@@ -591,6 +688,7 @@ export const followCounts = query({
 export const listComments = query({
   args: { postId: v.id("feedPosts") },
   handler: async (ctx, { postId }) => {
+    const viewer = await meOr(ctx);
     const rows = await ctx.db
       .query("feedComments")
       .withIndex("by_post", (q) => q.eq("postId", postId))
@@ -619,9 +717,27 @@ export const listComments = query({
         premium: (u?.premiumUntil ?? 0) > Date.now(),
         parentId: c.parentId ?? null,
         replyTo: c.replyTo ?? null,
+        likeCount: (c.likes ?? []).length,
+        liked: viewer ? (c.likes ?? []).includes(viewer as any) : false,
       });
     }
     return out;
+  },
+});
+
+/** Like / batal like satu komentar. */
+export const toggleCommentLike = mutation({
+  args: { commentId: v.id("feedComments") },
+  handler: async (ctx, { commentId }) => {
+    const viewer = await meOr(ctx);
+    if (!viewer) throw new Error("Belum masuk akun");
+    const c = await ctx.db.get(commentId);
+    if (!c) throw new Error("Komentar tidak ada");
+    const likes = (c.likes ?? []).filter((id) => String(id) !== String(viewer));
+    const liked = likes.length === (c.likes ?? []).length;
+    if (liked) likes.push(viewer as any);
+    await ctx.db.patch(commentId, { likes });
+    return { liked, likeCount: likes.length };
   },
 });
 
@@ -640,6 +756,8 @@ export const addComment = mutation({
     if (!t) throw new Error("Komentar kosong");
     const p = await ctx.db.get(postId);
     if (!p) throw new Error("Post tidak ada");
+    if (p.allowComments === false)
+      throw new Error("Pemilik konten menonaktifkan komentar");
     if (parentId) {
       const parent = await ctx.db.get(parentId);
       if (!parent || parent.postId !== postId)

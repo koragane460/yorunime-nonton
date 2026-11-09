@@ -51,12 +51,24 @@ import {
   Grid3X3,
   Bell,
   ChevronRight,
+  ChevronDown,
   MoreHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { ChatPanel } from "@/components/ChatPanel";
 import { StoryRing, StoryViewer } from "@/components/StoriesUI";
+import { FeedCommentSheet } from "@/components/FeedCommentSheet";
+import {
+  FeedPrivacySheet,
+  FeedViewersSheet,
+} from "@/components/FeedSettingsSheets";
+import { FeedEditProfileSheet } from "@/components/FeedEditProfile";
+import {
+  TierPinnedBadge,
+  TierRewardsSheet,
+  currentTierId,
+} from "@/components/FeedTierBadges";
 
 /** Waktu relatif singkat — "baru", "5 mnt", "2 jam", "3 hr". */
 function timeAgo(ts: number): string {
@@ -154,7 +166,9 @@ type Post = {
     color?: string;
   } | null;
   audio?: { musicVol: number; videoVol: number } | null;
-  privacy: "all" | "teman";
+  privacy: "all" | "teman" | "private";
+  allowComments?: boolean;
+  allowReuse?: boolean;
   likeCount: number;
   liked: boolean;
   favoriteCount: number;
@@ -198,46 +212,68 @@ type FeedActivity = {
 function CaptionBlock({
   p,
   onOpenReposters,
+  onOpenViewers,
+  onOpenPrivacy,
 }: {
   p: Post;
   onOpenReposters: () => void;
+  onOpenViewers?: () => void;
+  onOpenPrivacy?: () => void;
 }) {
   const repostCount = p.repostCount ?? 0;
   return (
-    <div className="pointer-events-auto absolute bottom-0 left-0 right-[68px] z-20 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-4 pb-[6.6rem] pt-20">
+    <div className="pointer-events-auto absolute bottom-0 left-0 right-[68px] z-20 px-4 pb-[5.7rem] pt-3">
       {repostCount > 0 && (
         <button
           type="button"
           onClick={onOpenReposters}
-          className="mb-2.5 flex max-w-full items-center gap-2.5 rounded-2xl bg-white px-2.5 py-1.5 text-left text-[#17151b] shadow-[0_14px_30px_-18px_rgba(0,0,0,.95)]"
+          className="mb-1.5 flex max-w-full items-center gap-1.5 rounded-xl bg-white px-2 py-1 text-left text-[#17151b] shadow-[0_10px_24px_-16px_rgba(0,0,0,.9)]"
         >
-          <span className="flex -space-x-2">
+          <span className="flex -space-x-1.5">
             {(p.reposters ?? []).slice(0, 2).map((r) => (
               <Avatar
                 key={String(r.userId)}
                 src={r.image ?? undefined}
                 seed={r.username}
-                className="size-7 rounded-full ring-2 ring-white"
+                className="size-5 rounded-full ring-2 ring-white"
               />
             ))}
           </span>
-          <span className="truncate text-[12px] font-black leading-none">
+          <span className="truncate text-[10px] font-black leading-none">
             {repostCount > 1 ? `${repostCount} ` : ""}Memosting ulang
           </span>
         </button>
       )}
       <div className="flex items-center gap-2">
-        <p className="min-w-0 truncate text-[1.55rem] font-black leading-tight text-white [text-shadow:0_2px_2px_rgba(0,0,0,.95),0_0_16px_rgba(0,0,0,.8)]">
+        <p className="min-w-0 truncate text-[17px] font-black leading-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,.95),0_0_10px_rgba(0,0,0,.7)]">
           {p.username}
         </p>
         {p.isFriend && (
-          <span className="shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[8px] font-black leading-none text-black shadow">
+          <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[7px] font-black leading-none text-black shadow">
             Teman Anda
           </span>
         )}
       </div>
+      {p.isMe && (
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onOpenViewers}
+            className="flex items-center gap-1 rounded-full bg-black/38 px-2 py-1 text-[9px] font-black text-white/85 backdrop-blur-sm transition active:scale-95"
+          >
+            <Eye className="size-3" /> {p.views} penayangan
+          </button>
+          <button
+            type="button"
+            onClick={onOpenPrivacy}
+            className="rounded-full bg-black/38 px-2.5 py-1 text-[9px] font-black text-white/85 backdrop-blur-sm transition active:scale-95"
+          >
+            Pengaturan Privasi
+          </button>
+        </div>
+      )}
       {p.caption && (
-        <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-[16px] font-semibold leading-snug text-white [text-shadow:0_2px_6px_rgba(0,0,0,.9)]">
+        <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-[14px] font-semibold leading-snug text-white [text-shadow:0_2px_5px_rgba(0,0,0,.9)]">
           {p.caption}
         </p>
       )}
@@ -518,6 +554,8 @@ function PostView({
   onOpenProfile,
   onOpenReposters,
   onDoubleLike,
+  onOpenViewers,
+  onOpenPrivacy,
   children,
 }: {
   p: Post;
@@ -530,6 +568,8 @@ function PostView({
   onOpenProfile: () => void;
   onOpenReposters: () => void;
   onDoubleLike: () => void;
+  onOpenViewers?: () => void;
+  onOpenPrivacy?: () => void;
   children?: ReactNode;
 }) {
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number; tilt: number }[]>([]);
@@ -704,7 +744,12 @@ function PostView({
         </p>
       )}
 
-      <CaptionBlock p={p} onOpenReposters={onOpenReposters} />
+      <CaptionBlock
+        p={p}
+        onOpenReposters={onOpenReposters}
+        onOpenViewers={onOpenViewers}
+        onOpenPrivacy={onOpenPrivacy}
+      />
       <RightRail
         p={p}
         following={following}
@@ -2429,6 +2474,17 @@ function readFeedSeen(): Record<FeedTab, number> {
   return { friends: 0, home: 0, following: 0 };
 }
 
+const INBOX_SEEN_KEY = "yn:feed-inbox-seen-ids";
+function readInboxSeenIds(): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(INBOX_SEEN_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
 export function FeedScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -2453,12 +2509,8 @@ export function FeedScreen() {
   ) as { userId: string; username: string; image: string | null; level?: number }[] | undefined;
   const activities = useQuery(
     api.feed.activityFeed,
-    user && view === "inbox" ? { limit: 50 } : "skip",
+    user ? { limit: 50 } : "skip",
   ) as FeedActivity[] | undefined;
-  const unread = useQuery(
-    api.moderation.myUnreadCount,
-    user ? {} : "skip",
-  ) as number | undefined;
   const storyGroups = useQuery(
     api.stories.allStories,
     view === "inbox" ? {} : "skip",
@@ -2474,8 +2526,10 @@ export function FeedScreen() {
 
   const [tab, setTab] = useState<FeedTab>("home");
   const [creating, setCreating] = useState(false);
-  const [commentOn, setCommentOn] = useState<Id<"feedPosts"> | null>(null);
+  const [commentOn, setCommentOn] = useState<Post | null>(null);
   const [shareOn, setShareOn] = useState<Post | null>(null);
+  const [viewersOn, setViewersOn] = useState<Post | null>(null);
+  const [privacyOn, setPrivacyOn] = useState<Post | null>(null);
   const [detailOwner, setDetailOwner] = useState<{
     _id: Id<"users">;
     username: string;
@@ -2485,6 +2539,12 @@ export function FeedScreen() {
   } | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [seenTabs, setSeenTabs] = useState(() => readFeedSeen());
+  const [inboxSeenIds, setInboxSeenIds] = useState(readInboxSeenIds);
+  const [inboxSnapshot, setInboxSnapshot] = useState({
+    activity: 0,
+    followers: 0,
+  });
+  const inboxMarked = useRef(false);
   const [hiddenPosts, setHiddenPosts] = useState<Set<string>>(
     () => new Set(readIdList(FEED_HIDDEN_POSTS)),
   );
@@ -2519,6 +2579,36 @@ export function FeedScreen() {
     window.addEventListener(FEED_FILTER_EVENT, refresh);
     return () => window.removeEventListener(FEED_FILTER_EVENT, refresh);
   }, []);
+
+  // Dot merah hanya baru. Saat Kotak Masuk dibuka, angka sesi tetap terlihat
+  // di baris, tetapi penanda belum-dibaca langsung dibersihkan.
+  useEffect(() => {
+    if (view !== "inbox") {
+      inboxMarked.current = false;
+      return;
+    }
+    if (!activities || inboxMarked.current) return;
+    inboxMarked.current = true;
+    const fresh = activities.filter((a) => !inboxSeenIds.has(a._id));
+    setInboxSnapshot({
+      activity: fresh.length,
+      followers: fresh.filter((a) => a.type === "follow").length,
+    });
+    const next = new Set(inboxSeenIds);
+    for (const a of activities) next.add(a._id);
+    const trimmed = new Set(Array.from(next).slice(-400));
+    setInboxSeenIds(trimmed);
+    try {
+      window.localStorage.setItem(INBOX_SEEN_KEY, JSON.stringify([...trimmed]));
+    } catch {
+      /* mode privat */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, activities]);
+
+  const inboxUnread = (activities ?? []).filter(
+    (a) => !inboxSeenIds.has(a._id),
+  ).length;
 
   const friendIds = useMemo(
     () => new Set((friends ?? []).map((f) => String(f.userId))),
@@ -2590,9 +2680,9 @@ export function FeedScreen() {
             <ChevronLeft className="size-5" />
           </button>
           {([
-            ["friends", "Teman"],
-            ["home", "Beranda"],
             ["following", "Mengikuti"],
+            ["friends", "Teman"],
+            ["home", "Saran"],
           ] as const).map(([key, label]) => (
             <button
               key={key}
@@ -2604,10 +2694,20 @@ export function FeedScreen() {
             >
               {label}
               {dotFor(key) && (
-                <span className="absolute right-[14%] top-0.5 size-1.5 rounded-full bg-rose-500/80" />
+                <span className="absolute right-[12%] top-0.5 size-1.5 rounded-full bg-rose-500/80" />
+              )}
+              {tab === key && (
+                <span className="absolute -bottom-0.5 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-white" />
               )}
             </button>
           ))}
+          <button
+            onClick={() => setView("explore")}
+            aria-label="Cari konten"
+            className="pointer-events-auto grid size-8 shrink-0 place-items-center text-white/90 transition active:scale-90"
+          >
+            <Search className="size-5" strokeWidth={2.4} />
+          </button>
         </div>
       )}
 
@@ -2649,7 +2749,7 @@ export function FeedScreen() {
               onLike={() => toggleLike({ postId: p.postId })}
               onFavorite={() => toggleFavorite({ postId: p.postId })}
               onFollow={() => toggleFollow({ targetId: p.userId })}
-              onComment={() => setCommentOn(p.postId)}
+              onComment={() => setCommentOn(p)}
               onShare={() => setShareOn(p)}
               onOpenProfile={() =>
                 setDetailOwner({
@@ -2660,6 +2760,8 @@ export function FeedScreen() {
                   full: true,
                 })
               }
+              onOpenViewers={() => setViewersOn(p)}
+              onOpenPrivacy={() => setPrivacyOn(p)}
             />
           ))}
         </div>
@@ -2671,13 +2773,16 @@ export function FeedScreen() {
         <InboxPanel
           friends={friends ?? []}
           activities={activities ?? []}
-          unread={unread ?? 0}
+          unread={inboxUnread}
+          activityUnread={inboxSnapshot.activity}
+          followerUnread={inboxSnapshot.followers}
           followers={followers ?? []}
           stories={(storyGroups ?? []).filter(
             (g) =>
               friendIds.has(String(g.userId)) || followingIds.has(String(g.userId)),
           )}
           onBack={() => setView("feed")}
+          onCreate={() => setCreating(true)}
           onStory={setStoryOpen}
           onActivity={() => setActivityOpen(true)}
           onFollowers={() => setFollowersOpen(true)}
@@ -2725,7 +2830,7 @@ export function FeedScreen() {
                 )}
               >
                 <Icon className={cn(key === "create" ? "size-4" : "size-5")} strokeWidth={2.2} />
-                {key === "chat" && ((activities?.length ?? 0) > 0 || (unread ?? 0) > 0) && (
+                {key === "chat" && inboxUnread > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-rose-500 ring-2 ring-[#0b0c11]" />
                 )}
               </span>
@@ -2739,8 +2844,21 @@ export function FeedScreen() {
 
       <AnimatePresence>
         {creating && <CreatePostSheet onClose={() => setCreating(false)} />}
-        {commentOn && <CommentSheet postId={commentOn} onClose={() => setCommentOn(null)} />}
+        {commentOn && <FeedCommentSheet post={commentOn} onClose={() => setCommentOn(null)} />}
         {shareOn && <ShareSheet p={shareOn} onClose={() => setShareOn(null)} />}
+        {viewersOn && (
+          <FeedViewersSheet
+            postId={viewersOn.postId}
+            count={viewersOn.views}
+            onClose={() => setViewersOn(null)}
+          />
+        )}
+        {privacyOn && (
+          <FeedPrivacySheet
+            post={privacyOn}
+            onClose={() => setPrivacyOn(null)}
+          />
+        )}
         {detailOwner && (
           <FeedContentSheet
             owner={detailOwner}
@@ -3040,9 +3158,12 @@ function InboxPanel({
   friends,
   activities,
   unread,
+  activityUnread,
+  followerUnread,
   followers,
   stories,
   onBack,
+  onCreate,
   onStory,
   onActivity,
   onFollowers,
@@ -3051,6 +3172,8 @@ function InboxPanel({
   friends: { userId: string; username: string; image?: string | null; premium?: boolean }[];
   activities: FeedActivity[];
   unread: number;
+  activityUnread: number;
+  followerUnread: number;
   followers: { userId: string; username: string; image: string | null }[];
   stories: {
     userId: string;
@@ -3060,36 +3183,36 @@ function InboxPanel({
     stories: { _id: string }[];
   }[];
   onBack: () => void;
+  onCreate: () => void;
   onStory: (userId: string) => void;
   onActivity: () => void;
   onFollowers: () => void;
   onChat: (userId: string, name: string) => void;
 }) {
-  const preview = activities.slice(0, 3);
-  const newFollowers = followers.slice(0, 3);
+  const preview = activities.slice(0, 1);
+  const newFollowers = followers.slice(0, 1);
   const storyItems = stories.filter((s) => s.stories.length > 0).slice(0, 12);
   return (
     <div className="absolute inset-0 z-10 overflow-y-auto bg-[#0b0c11] pb-[calc(env(safe-area-inset-bottom)+4.7rem)]">
-      <div className="sticky top-0 z-20 flex items-center bg-[#0b0c11]/95 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.7rem)] backdrop-blur-xl">
+      <div className="sticky top-0 z-20 flex items-center bg-[#0b0c11] px-3 pb-2 pt-[max(env(safe-area-inset-top),0.7rem)]">
         <button
-          onClick={onBack}
-          aria-label="Kembali ke feed"
-          className="grid size-8 place-items-center text-white/80"
+          onClick={onCreate}
+          aria-label="Buat konten"
+          className="grid size-8 place-items-center rounded-full border border-white/70 text-white/90 transition active:scale-90"
         >
-          <ChevronLeft className="size-5" />
+          <Plus className="size-5" />
         </button>
         <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center gap-1.5">
-          <span className="text-[16px] font-black text-white">Kotak Masuk</span>
+          <span className="text-[17px] font-black tracking-tight text-white">Kotak Masuk</span>
           <span className="size-1.5 rounded-full bg-white/25" />
-          {(activities.length > 0 || unread > 0) && (
-            <span className="size-1.5 rounded-full bg-rose-500" />
-          )}
+          {unread > 0 && <span className="size-1.5 rounded-full bg-rose-500" />}
+          <ChevronDown className="size-3.5 text-white/35" />
         </div>
         <span className="ml-auto size-8" />
       </div>
 
       {storyItems.length > 0 && (
-        <div className="flex gap-3 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-3 overflow-x-auto px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {storyItems.map((s) => (
             <div
               key={s.userId}
@@ -3097,17 +3220,17 @@ function InboxPanel({
               tabIndex={0}
               onClick={() => onStory(s.userId)}
               onKeyDown={(e) => e.key === "Enter" && onStory(s.userId)}
-              className="flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5"
+              className="flex w-[78px] shrink-0 cursor-pointer flex-col items-center gap-1.5"
             >
               <StoryRing
                 image={s.userImage}
                 seed={s.username}
-                size={62}
+                size={72}
                 hasStory
                 seen={!s.hasUnseen}
                 onClick={() => onStory(s.userId)}
               />
-              <span className="w-full truncate text-center text-[10px] font-semibold text-white/70">
+              <span className="w-full truncate text-center text-[10.5px] font-semibold text-white/78">
                 {s.username}
               </span>
             </div>
@@ -3115,89 +3238,91 @@ function InboxPanel({
         </div>
       )}
 
-      <div className="space-y-2 px-3 pt-2">
+      <div className="mt-1">
         <button
           onClick={onActivity}
-          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition active:scale-[0.99]"
+          className="flex w-full items-center gap-3 px-3 py-3 text-left transition active:bg-white/[0.035]"
         >
-          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[var(--ui-c)]/15 text-[var(--ui-c)] ring-1 ring-[var(--ui-c)]/25">
-            <Bell className="size-5" />
+          <span className="grid size-[54px] shrink-0 place-items-center rounded-full bg-[#f43f6b] text-white shadow-[0_8px_22px_-14px_rgba(244,63,107,.8)]">
+            <Bell className="size-6 fill-white/20" strokeWidth={2.2} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-2 text-[13px] font-black text-white">
+            <span className="flex items-center gap-2 text-[15px] font-black text-white">
               Aktivitas
-              {(activities.length > 0 || unread > 0) && <span className="size-1.5 rounded-full bg-rose-500" />}
             </span>
             {preview.length === 0 ? (
-              <span className="mt-0.5 block truncate text-[11px] text-white/40">
+              <span className="mt-0.5 block truncate text-[12px] text-white/48">
                 Belum ada aktivitas baru
               </span>
             ) : (
               preview.map((a) => (
                 <span
                   key={a._id}
-                  className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-white/50"
+                  className="mt-0.5 flex items-center gap-1 truncate text-[12px] text-white/48"
                 >
                   <span className="truncate">{a.username} {activityText(a)}</span>
                 </span>
               ))
             )}
           </span>
-          <ChevronRight className="size-4 shrink-0 text-white/30" />
+          {activityUnread > 0 && (
+            <span className="grid min-w-6 shrink-0 place-items-center rounded-full bg-[#f43f6b] px-1.5 py-0.5 text-[10px] font-black text-white">
+              {activityUnread > 99 ? "99+" : activityUnread}
+            </span>
+          )}
         </button>
 
         <button
           onClick={onFollowers}
-          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition active:scale-[0.99]"
+          className="flex w-full items-center gap-3 px-3 py-3 text-left transition active:bg-white/[0.035]"
         >
-          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-sky-400/12 text-sky-300 ring-1 ring-sky-400/25">
-            <Users className="size-5" />
+          <span className="grid size-[54px] shrink-0 place-items-center rounded-full bg-[#249ee8] text-white shadow-[0_8px_22px_-14px_rgba(36,158,232,.8)]">
+            <Users className="size-6" strokeWidth={2.2} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-black text-white">Pengikut</span>
-            <span className="mt-0.5 block truncate text-[11px] text-white/45">
+            <span className="block text-[15px] font-black text-white">Pengikut baru</span>
+            <span className="mt-0.5 block truncate text-[12px] text-white/48">
               {newFollowers.length === 0
                 ? "Belum ada yang mengikuti kamu"
                 : `${newFollowers.map((f) => f.username).join(", ")} mulai mengikuti kamu`}
             </span>
           </span>
-          <ChevronRight className="size-4 shrink-0 text-white/30" />
+          {followerUnread > 0 ? (
+            <span className="grid min-w-6 shrink-0 place-items-center rounded-full bg-[#f43f6b] px-1.5 py-0.5 text-[10px] font-black text-white">
+              {followerUnread > 99 ? "99+" : followerUnread}
+            </span>
+          ) : (
+            <ChevronRight className="size-4 shrink-0 text-white/30" />
+          )}
         </button>
       </div>
 
-      <div className="mt-3 px-3">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121318]">
-          <div className="flex items-center justify-between border-b border-white/8 px-3 py-2.5">
-            <p className="text-[12px] font-black text-white">Chat Teman</p>
-            <span className="text-[9px] font-bold text-white/30">{friends.length} teman</span>
-          </div>
-          {friends.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[11px] text-white/35">
-              Belum punya teman. Tambahkan teman dari halaman Teman.
-            </p>
-          ) : (
-            friends.map((f) => (
-              <button
-                key={f.userId}
-                onClick={() => onChat(f.userId, f.username)}
-                className="flex w-full items-center gap-3 border-b border-white/6 px-3 py-2.5 text-left transition last:border-b-0 active:bg-white/[0.04]"
-              >
-                <Avatar src={f.image ?? undefined} seed={f.username} className="size-11" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12.5px] font-bold text-white">
-                    {f.username}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[10px] text-white/35">
-                    Ketuk untuk mulai chat
-                  </span>
+      <div className="mt-1 bg-[#17181e] pb-2">
+        {friends.length === 0 ? (
+          <p className="px-4 py-8 text-center text-[11px] text-white/35">
+            Belum punya teman. Tambahkan teman dari halaman Teman.
+          </p>
+        ) : (
+          friends.map((f) => (
+            <button
+              key={f.userId}
+              onClick={() => onChat(f.userId, f.username)}
+              className="flex w-full items-center gap-3 border-b border-white/[0.045] px-3 py-2.5 text-left transition last:border-b-0 active:bg-white/[0.04]"
+            >
+              <Avatar src={f.image ?? undefined} seed={f.username} className="size-12" />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 truncate text-[13px] font-bold text-white">
+                  {f.username}
+                  {f.premium && <BlueCheck className="size-3.5 shrink-0" />}
                 </span>
-                <span className="rounded-full bg-white/8 px-3 py-1.5 text-[9px] font-black text-white/70">
-                  Chat
+                <span className="mt-0.5 block truncate text-[11px] text-white/38">
+                  Ketuk untuk mulai chat
                 </span>
-              </button>
-            ))
-          )}
-        </div>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-white/22" />
+            </button>
+          ))
+        )}
       </div>
     </div>
   );
@@ -3220,6 +3345,48 @@ function activityText(a: FeedActivity): string {
   }
 }
 
+const ACTIVITY_FILTERS = [
+  ["all", "Semua aktivitas"],
+  ["like", "Suka"],
+  ["comment", "Komentar"],
+  ["favorite", "Favorit"],
+  ["repost", "Repost"],
+  ["follow", "Pengikut"],
+] as const;
+
+type ActivityFilter = (typeof ACTIVITY_FILTERS)[number][0];
+
+function ActivityBadge({ type }: { type: FeedActivity["type"] }) {
+  const style =
+    type === "like"
+      ? "bg-[#ff3d74] text-white"
+      : type === "comment"
+        ? "bg-[#249ee8] text-white"
+        : type === "repost"
+          ? "bg-[#f4b51c] text-white"
+          : type === "follow"
+            ? "bg-[#19b58a] text-white"
+            : "bg-[#f59e0b] text-white";
+  return (
+    <span
+      className={cn(
+        "absolute -bottom-0.5 -right-0.5 grid size-[19px] place-items-center rounded-full border-2 border-[#0b0c11]",
+        style,
+      )}
+    >
+      {type === "follow" ? (
+        <UserPlus className="size-2.5" strokeWidth={3} />
+      ) : type === "comment" ? (
+        <MessageCircle className="size-2.5 fill-current" strokeWidth={2} />
+      ) : type === "repost" ? (
+        <Repeat2 className="size-2.5" strokeWidth={2.7} />
+      ) : (
+        <Heart className="size-2.5 fill-current" strokeWidth={2} />
+      )}
+    </span>
+  );
+}
+
 function ActivityFullScreen({
   activities,
   onClose,
@@ -3227,6 +3394,11 @@ function ActivityFullScreen({
   activities: FeedActivity[];
   onClose: () => void;
 }) {
+  const [filter, setFilter] = useState<ActivityFilter>("all");
+  const [picking, setPicking] = useState(false);
+  const list = activities.filter((a) => filter === "all" || a.type === filter);
+  const label = ACTIVITY_FILTERS.find(([key]) => key === filter)?.[1] ?? "Semua aktivitas";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -3234,49 +3406,76 @@ function ActivityFullScreen({
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[110] flex flex-col bg-[#0b0c11] text-white"
     >
-      <div className="flex items-center gap-2 border-b border-white/8 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.7rem)]">
-        <button onClick={onClose} aria-label="Tutup" className="grid size-9 place-items-center text-white/75">
-          <ChevronLeft className="size-5" />
+      <div className="relative flex items-center px-3 pb-3 pt-[max(env(safe-area-inset-top),0.7rem)]">
+        <button onClick={onClose} aria-label="Tutup" className="grid size-9 place-items-center text-white/85">
+          <ChevronLeft className="size-6" />
         </button>
-        <h2 className="text-[16px] font-black">Aktivitas</h2>
-      </div>
-      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2">
-        {activities.length === 0 && (
-          <p className="py-16 text-center text-[12px] text-white/35">Belum ada aktivitas.</p>
+        <button
+          type="button"
+          onClick={() => setPicking((v) => !v)}
+          className="absolute inset-x-0 mx-auto flex w-fit items-center gap-1 text-[17px] font-black"
+        >
+          {filter === "all" ? "Semua aktivitas" : label}
+          <ChevronDown className={cn("size-4 transition", picking && "rotate-180")} />
+        </button>
+        <span className="ml-auto size-9" />
+        {picking && (
+          <div className="absolute left-1/2 top-12 z-30 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/12 bg-[#1a1b21] p-1 shadow-2xl">
+            {ACTIVITY_FILTERS.map(([key, text]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setFilter(key);
+                  setPicking(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[11px] font-bold",
+                  filter === key ? "bg-white/10 text-white" : "text-white/55",
+                )}
+              >
+                {key === "all" ? "Semua aktivitas" : text}
+                {filter === key && <span className="size-1.5 rounded-full bg-[#f43f6b]" />}
+              </button>
+            ))}
+          </div>
         )}
-        {activities.map((a) => (
+      </div>
+
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-[max(env(safe-area-inset-bottom),1rem)]">
+        <p className="mb-1 mt-1 text-[12px] font-semibold text-white/65">Baru</p>
+        {list.length === 0 && (
+          <p className="py-16 text-center text-[12px] text-white/35">
+            Belum ada aktivitas di bagian ini.
+          </p>
+        )}
+        {list.map((a) => (
           <div
             key={a._id}
-            className="flex items-center gap-3 border-b border-white/6 py-3 last:border-b-0"
+            className="flex items-center gap-3 border-b border-white/[0.045] py-3 last:border-b-0"
           >
             <div className="relative shrink-0">
-              <Avatar src={a.image ?? undefined} seed={a.username} className="size-12" />
-              <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full border-2 border-[#0b0c11] bg-white/15">
-                {a.type === "follow" ? (
-                  <UserPlus className="size-3" />
-                ) : a.type === "comment" ? (
-                  <MessageCircle className="size-3" />
-                ) : a.type === "repost" ? (
-                  <Repeat2 className="size-3" />
-                ) : (
-                  <Heart className={cn("size-3", a.type === "like" && "fill-rose-400 text-rose-400")} />
-                )}
-              </span>
+              <Avatar src={a.image ?? undefined} seed={a.username} className="size-[46px]" />
+              <ActivityBadge type={a.type} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] leading-snug text-white/80">
-                <span className="font-black text-white">{a.username}</span>{" "}
-                {activityText(a)}
+              <p className="truncate text-[14px] font-semibold leading-tight text-white">
+                {a.username}
               </p>
-              <p className="mt-0.5 text-[10px] text-white/35">{timeAgo(a.createdAt)}</p>
+              <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-white/78">
+                {activityText(a)}{" "}
+                <span className="text-white/35">{timeAgo(a.createdAt)} lalu</span>
+              </p>
             </div>
             {a.cover ? (
-              <img src={a.cover} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
+              <img src={a.cover} alt="" className="size-[48px] shrink-0 rounded-lg object-cover" />
             ) : a.postId ? (
-              <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-white/8 text-white/40">
+              <span className="grid size-[48px] shrink-0 place-items-center rounded-lg bg-white/8 text-white/40">
                 <MessageSquare className="size-4" />
               </span>
-            ) : null}
+            ) : (
+              <span className="size-[48px] shrink-0 rounded-lg bg-white/[0.035]" />
+            )}
           </div>
         ))}
       </div>
@@ -3357,6 +3556,7 @@ function FeedContentSheet({
         bio?: string;
         premium?: boolean;
         level?: number;
+        pinnedTierBadge?: string | null;
       }
     | null
     | undefined;
@@ -3375,6 +3575,10 @@ function FeedContentSheet({
   const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState<"post" | "like" | "favorite" | "repost" | "private">("post");
   const [opened, setOpened] = useState<number | null>(null);
+  const [viewersOn, setViewersOn] = useState<Post | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  const pinTier = useMutation(api.account.setPinnedTierBadge);
   useEffect(() => setFollowed(!!isFollowing), [isFollowing]);
 
   const username = profile?.username ?? owner.username;
@@ -3390,7 +3594,7 @@ function FeedContentSheet({
               mine ? p.reposted : (p.reposterIds ?? []).includes(String(owner._id)),
             )
           : filter === "private"
-            ? base.filter((p) => p.privacy === "teman")
+            ? base.filter((p) => p.privacy === "private" || p.privacy === "teman")
             : base;
 
   const tabs = mine
@@ -3501,10 +3705,7 @@ function FeedContentSheet({
           <div className="mt-3 flex items-center justify-center gap-2">
             {mine ? (
               <button
-                onClick={() => {
-                  onClose();
-                  navigate("/akun");
-                }}
+                onClick={() => setEditOpen(true)}
                 className="rounded-lg bg-white/12 px-5 py-2 text-[13px] font-black text-white transition active:scale-95"
               >
                 Edit
@@ -3532,6 +3733,11 @@ function FeedContentSheet({
           </div>
 
           <p className="mt-2 text-[13px] font-semibold text-white/55">@{username}</p>
+          {profile?.pinnedTierBadge && (
+            <div className="mt-1.5">
+              <TierPinnedBadge badgeId={profile.pinnedTierBadge} />
+            </div>
+          )}
 
           <div className="mt-3 grid w-full max-w-[330px] grid-cols-3 divide-x divide-white/15 text-center">
             {[
@@ -3548,10 +3754,7 @@ function FeedContentSheet({
 
           <button
             onClick={() => {
-              if (mine) {
-                onClose();
-                navigate("/akun");
-              }
+              if (mine) setEditOpen(true);
             }}
             className={cn(
               "mt-3 max-w-full truncate rounded-full px-4 py-1.5 text-[12px] font-semibold",
@@ -3563,30 +3766,21 @@ function FeedContentSheet({
             {profile?.bio?.trim() || (mine ? "+ Tambahkan bio" : "Belum ada bio")}
           </button>
 
-          <div className="mt-3 flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-3 flex w-full pb-1">
             <button
-              onClick={() => {
-                onClose();
-                navigate("/premium");
-              }}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-bold text-white/80"
+              onClick={() => setRewardsOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-300/18 bg-[linear-gradient(120deg,rgba(246,200,53,.16),rgba(255,255,255,.05))] px-3 py-2 text-[11px] font-bold text-amber-100/85"
             >
               <span className="grid size-4 place-items-center rounded-full border border-rose-400 text-[8px] font-black text-rose-400">P</span>
               Reward
             </button>
-            <button
-              onClick={() => {
-                onClose();
-                navigate("/akun?tab=settings");
-              }}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-bold text-white/80"
-            >
-              <span className="text-rose-400">◈</span> Pesanan Anda
-            </button>
           </div>
         </div>
 
-        <div className="mt-3 flex gap-2 overflow-x-auto border-b border-white/10 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          className="mt-3 grid border-b border-white/10 px-2"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        >
           {tabs.map(([key, label, Icon]) => (
             <button
               key={key}
@@ -3594,13 +3788,13 @@ function FeedContentSheet({
               aria-label={label}
               title={label}
               className={cn(
-                "relative grid min-w-11 place-items-center px-2 pb-2.5 pt-1 transition",
+                "relative flex flex-col items-center justify-center px-2 pb-2.5 pt-1 transition",
                 filter === key ? "text-white" : "text-white/35",
               )}
             >
               <Icon className="size-[21px]" strokeWidth={1.8} />
               {filter === key && (
-                <span className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-white" />
+                <span className="absolute inset-x-[28%] bottom-0 h-0.5 rounded-full bg-white" />
               )}
             </button>
           ))}
@@ -3629,7 +3823,13 @@ function FeedContentSheet({
               Belum ada konten di bagian ini.
             </p>
           ) : (
-            <ContentGrid posts={list as any} onOpen={(i) => setOpened(i)} />
+            <ContentGrid
+              posts={list as any}
+              onOpen={(i) => setOpened(i)}
+              onOpenViewers={
+                mine ? (i) => setViewersOn(list[i] ?? null) : undefined
+              }
+            />
           )}
         </div>
       </div>
@@ -3640,6 +3840,31 @@ function FeedContentSheet({
           index={opened}
           onClose={() => setOpened(null)}
           onOpenProfile={() => undefined}
+        />
+      )}
+      {viewersOn && (
+        <FeedViewersSheet
+          postId={viewersOn.postId}
+          count={viewersOn.views}
+          onClose={() => setViewersOn(null)}
+        />
+      )}
+      {editOpen && <FeedEditProfileSheet onClose={() => setEditOpen(false)} />}
+      {rewardsOpen && (
+        <TierRewardsSheet
+          followers={counts?.followers ?? 0}
+          likes={counts?.likes ?? 0}
+          pinned={profile?.pinnedTierBadge}
+          onPin={async (badgeId) => {
+            try {
+              await pinTier({ badgeId });
+              toast.success("Tier badge dipasang");
+              setRewardsOpen(false);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Gagal memasang badge");
+            }
+          }}
+          onClose={() => setRewardsOpen(false)}
         />
       )}
     </motion.div>
@@ -3657,6 +3882,8 @@ function PostShell({
   onComment,
   onShare,
   onOpenProfile,
+  onOpenViewers,
+  onOpenPrivacy,
 }: {
   p: Post;
   following: boolean;
@@ -3667,6 +3894,8 @@ function PostShell({
   onComment: () => void;
   onShare: () => void;
   onOpenProfile: () => void;
+  onOpenViewers?: () => void;
+  onOpenPrivacy?: () => void;
 }) {
   const holderRef = useRef<HTMLDivElement | null>(null);
   const [like, setLike] = useState({ liked: p.liked, count: p.likeCount });
@@ -3743,6 +3972,8 @@ function PostShell({
           onShare={onShare}
           onOpenProfile={onOpenProfile}
           onOpenReposters={() => setRepostOn(true)}
+          onOpenViewers={onOpenViewers}
+          onOpenPrivacy={onOpenPrivacy}
         />
       </div>
       <AnimatePresence>
@@ -3770,9 +4001,11 @@ export function FeedPostOverlay({
   const toggleFavorite = useMutation(api.feed.toggleFavorite);
   const toggleFollow = useMutation(api.feed.toggleFollow);
   const [i, setI] = useState(index);
-  const [commentOn, setCommentOn] = useState<Id<"feedPosts"> | null>(null);
+  const [commentOn, setCommentOn] = useState<Post | null>(null);
   const [shareOn, setShareOn] = useState<Post | null>(null);
   const [repostOn, setRepostOn] = useState(false);
+  const [viewersOn, setViewersOn] = useState<Post | null>(null);
+  const [privacyOn, setPrivacyOn] = useState<Post | null>(null);
   const swipe = useRef<{ x: number; y: number } | null>(null);
 
   const p = posts[i];
@@ -3811,10 +4044,12 @@ export function FeedPostOverlay({
         onDoubleLike={() => {
           if (!p.liked) void toggleLike({ postId: p.postId }).catch(() => {});
         }}
-        onComment={() => setCommentOn(p.postId)}
+        onComment={() => setCommentOn(p)}
         onShare={() => setShareOn(p)}
         onOpenProfile={() => onOpenProfile?.(p.userId)}
         onOpenReposters={() => setRepostOn(true)}
+        onOpenViewers={() => setViewersOn(p)}
+        onOpenPrivacy={() => setPrivacyOn(p)}
       >
         <button
           onClick={onClose}
@@ -3841,17 +4076,34 @@ export function FeedPostOverlay({
             )}
           </div>
         )}
-        {/* Jumlah views — pojok kiri bawah kotak */}
-        <span className="absolute left-3 top-16 z-30 flex items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2.5 py-1 text-[10px] font-black text-white/85 backdrop-blur">
+        {/* Jumlah views — bisa dibuka sebagai daftar penonton untuk konten sendiri. */}
+        <button
+          type="button"
+          onClick={() => p.isMe && setViewersOn(p)}
+          className="absolute left-3 top-16 z-30 flex items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2.5 py-1 text-[10px] font-black text-white/85 backdrop-blur transition active:scale-95"
+        >
           <Eye className="size-3" aria-hidden />
           {p.views}
-        </span>
+        </button>
       </PostView>
 
       <AnimatePresence>
-        {commentOn && <CommentSheet postId={commentOn} onClose={() => setCommentOn(null)} />}
+        {commentOn && <FeedCommentSheet post={commentOn} onClose={() => setCommentOn(null)} />}
         {shareOn && <ShareSheet p={shareOn} onClose={() => setShareOn(null)} />}
         {repostOn && <RepostersSheet p={p} onClose={() => setRepostOn(false)} />}
+        {viewersOn && (
+          <FeedViewersSheet
+            postId={viewersOn.postId}
+            count={viewersOn.views}
+            onClose={() => setViewersOn(null)}
+          />
+        )}
+        {privacyOn && (
+          <FeedPrivacySheet
+            post={privacyOn}
+            onClose={() => setPrivacyOn(null)}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -3861,6 +4113,7 @@ export function FeedPostOverlay({
 export function ContentGrid({
   posts,
   onOpen,
+  onOpenViewers,
 }: {
   posts: {
     postId: Id<"feedPosts">;
@@ -3881,6 +4134,7 @@ export function ContentGrid({
     views: number;
   }[];
   onOpen: (index: number) => void;
+  onOpenViewers?: (index: number) => void;
 }) {
   if (posts.length === 0) {
     return (
@@ -3936,12 +4190,19 @@ export function ContentGrid({
               {p.overlay.text}
             </span>
           )}
-          {(p.thumbUrl || p.imageUrl || p.cover) && (
+          {p.kind === "image" && (p.thumbUrl || p.imageUrl || p.cover) && (
             <span className="absolute right-1 top-1 grid size-6 place-items-center rounded-md bg-black/55 text-white/90 backdrop-blur-sm">
               <ImageIcon className="size-3.5" />
             </span>
           )}
-          <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-black text-white">
+          <span
+            onClick={(e) => {
+              if (!onOpenViewers) return;
+              e.stopPropagation();
+              onOpenViewers(i);
+            }}
+            className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-black text-white"
+          >
             <Eye className="size-2.5" aria-hidden />
             {p.views}
           </span>

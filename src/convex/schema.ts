@@ -95,6 +95,8 @@ const schema = defineSchema(
       customColor: v.optional(v.string()),
       /** Bio singkat di detail akun. */
       bio: v.optional(v.string()),
+      /** Badge tier Feed yang disematkan di bawah username (khusus Feed). */
+      pinnedTierBadge: v.optional(v.string()),
       /** Tanggal lahir YYYY-MM-DD. Setelah disimpan tidak bisa diubah. */
       birthDate: v.optional(v.string()),
       /** Bubble status di foto profil: teks + id pola latar. */
@@ -1207,7 +1209,14 @@ const schema = defineSchema(
           videoVol: v.number(),
         }),
       ),
-      privacy: v.union(v.literal("all"), v.literal("teman")),
+      privacy: v.union(
+        v.literal("all"),
+        v.literal("teman"),
+        v.literal("private"),
+      ),
+      /** Izin komentar dan penggunaan ulang konten (duet/story). */
+      allowComments: v.optional(v.boolean()),
+      allowReuse: v.optional(v.boolean()),
       likes: v.array(v.id("users")),
       /** Simpan/favorit — terpisah dari like. */
       favorites: v.optional(v.array(v.id("users"))),
@@ -1216,6 +1225,15 @@ const schema = defineSchema(
     })
       .index("by_created", ["createdAt"])
       .index("by_user", ["userId", "createdAt"]),
+
+    /** Penonton unik per konten — dipakai sheet "Dilihat oleh". */
+    feedViews: defineTable({
+      postId: v.id("feedPosts"),
+      userId: v.id("users"),
+      createdAt: v.number(),
+    })
+      .index("by_post", ["postId", "createdAt"])
+      .index("by_pair", ["postId", "userId"]),
 
     /** Repost feed — satu user hanya bisa repost satu post sekali. */
     feedReposts: defineTable({
@@ -1236,6 +1254,8 @@ const schema = defineSchema(
       /** Balasan: id komentar induk + nama yang dibalas (untuk "@nama"). */
       parentId: v.optional(v.id("feedComments")),
       replyTo: v.optional(v.string()),
+      /** Like komentar — disimpan supaya jumlahnya konsisten. */
+      likes: v.optional(v.array(v.id("users"))),
     })
       .index("by_post", ["postId", "createdAt"])
       .index("by_user", ["userId"]),

@@ -3416,4 +3416,29 @@ svg.lucide {
   contain: layout paint style;
 }
 
+/* Tier badge Feed: kilau logam bergerak pelan + orbit cahaya. Sengaja
+   memakai gradient, bukan partikel, supaya terasa seperti medali asli. */
+.yn-tier-sheen {
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.02) 38%, rgba(255,255,255,.72) 50%, rgba(255,255,255,.03) 62%, transparent 80%);
+  transform: translateX(-140%) skewX(-18deg);
+  animation: yn-tier-sheen 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes yn-tier-sheen {
+  0%, 32% { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
+  46% { opacity: .95; }
+  68%, 100% { transform: translateX(160%) skewX(-18deg); opacity: 0; }
+}
+.yn-tier-orbit {
+  animation: yn-tier-orbit 12s linear infinite;
+  pointer-events: none;
+}
+@keyframes yn-tier-orbit {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yn-tier-sheen,
+  .yn-tier-orbit { animation: none; }
+}
+
 

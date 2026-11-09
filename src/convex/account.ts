@@ -146,6 +146,7 @@ export const getPublicProfile = query({
       image: u.image,
       bannerUrl: u.bannerUrl,
       bio: u.bio ?? "",
+      pinnedTierBadge: u.pinnedTierBadge ?? null,
       birthDate: u.birthDate,
       statusText: u.statusText ?? "",
       statusBg: u.statusBg ?? "aurora",
@@ -250,6 +251,21 @@ export const updateSocials = mutation({
     if (f !== undefined) next.facebook = f;
     await ctx.db.patch(userId, { socials: next });
     return next;
+  },
+});
+
+export const setPinnedTierBadge = mutation({
+  args: { badgeId: v.union(v.string(), v.null()) },
+  handler: async (ctx, { badgeId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const clean = badgeId?.trim() || null;
+    if (clean && !/^(followers|likes):([1-9]|1\d|20)$/.test(clean))
+      throw new Error("Badge tier tidak valid");
+    await ctx.db.patch(userId, {
+      pinnedTierBadge: clean ?? undefined,
+    });
+    return { badgeId: clean };
   },
 });
 
