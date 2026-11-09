@@ -70,14 +70,13 @@ import { AccountHeader, Spotlight } from "@/components/HomeTop";
 import {
   ContinueWatchingCard,
   HomeCommunityCard,
-  HomePremiumCard,
 } from "@/components/HomeDashboard";
 import { LeaderCards } from "@/components/LeaderCards";
+import { PremiumPromoBanner } from "@/components/PremiumPromoBanner";
 import { QuickGenre } from "@/components/QuickGenre";
 import { GenreScreen } from "@/components/GenreScreen";
 import {
   AfinitasPromo,
-  FeedPromo,
   DonatePromo,
   PillButton,
   bumpQuestLocal,
@@ -904,6 +903,7 @@ function HomeContent() {
   // Tombol Search di navigasi bawah membuka layar pencarian lewat query,
   // supaya tetap bekerja dari halaman mana pun.
   useEffect(() => {
+    if (params.get("chat")) setShowChat(true);
     if (!params.get("search")) return;
     setSearchGenre(null);
     setSearchOpenGenres(false);
@@ -1194,7 +1194,10 @@ function HomeContent() {
           setShowSearch(true);
         }}
       />
-      <HomePremiumCard onBuy={() => navigate("/premium")} />
+      <PremiumPromoBanner
+        className="mt-3"
+        onAction={() => navigate("/premium")}
+      />
       <HomeCommunityCard onOpenChat={() => setShowChat(true)} />
 
       {/* Leaderboard langsung di bawah Global Chat, lalu Genre & Katalog. */}
@@ -1233,7 +1236,6 @@ function HomeContent() {
             onOpen={() => (user ? setAfinitas(true) : toast.info("Login dulu ya"))}
             images={heroItems.slice(0, 2).map((h) => h.image).filter(Boolean)}
           />,
-          <FeedPromo key="feed" onOpen={() => navigate("/feed")} />,
           <DonatePromo key="donate" />,
         ]}
       />
@@ -1550,7 +1552,6 @@ function HomeFooter() {
   const navigate = useNavigate();
   // Hanya rute yang benar-benar ada di router + link donate resmi.
   const routes = [
-    { label: "Feed", to: "/feed" },
     { label: "Baca Komik", to: "/baca" },
     { label: "Film", to: "/film" },
     { label: "Clan", to: "/clan" },
@@ -2608,12 +2609,6 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
               <X className="size-4 text-muted-foreground" />
             </button>
           )}
-          <button
-            onClick={() => void doSearch()}
-            className="px-2 py-1 text-xs font-bold text-white"
-          >
-            Cari
-          </button>
           <button
             type="button"
             onClick={onClose}

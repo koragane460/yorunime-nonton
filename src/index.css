@@ -3399,4 +3399,16 @@ svg.lucide {
   color: var(--ui-c);
 }
 
+/* Feed Mode: geser pelan per konten, tidak melompati beberapa post. */
+.feed-mode-scroll {
+  scroll-snap-type: y proximity;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.feed-mode-scroll > * {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
 

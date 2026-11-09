@@ -1093,6 +1093,7 @@ export function LeaderCards() {
   const navigate = useNavigate();
   const [board, setBoard] = useState<HomeBoard>("xp");
   const [period, setPeriod] = useState<Period>("1");
+  const [openBoard, setOpenBoard] = useState<HomeBoard | null>(null);
   const xpRows = useQuery(api.xp.leaderboard, {
     period: xpKeyOf(period),
     limit: 10,
@@ -1105,57 +1106,37 @@ export function LeaderCards() {
     | ClanRow[]
     | undefined;
 
-  const xpByUser = new Map(
-    (xpRows ?? []).map((r) => [String(r.userId ?? ""), r.xp ?? 0]),
-  );
-  const giveByUser = new Map(
-    (giveRows ?? []).map((r) => [String(r.userId ?? ""), r.days ?? 0]),
-  );
-  const clanXpByTag = new Map(
-    (clanRows ?? []).map((c) => [c.tag.toUpperCase(), c.totalXp]),
-  );
-
   const rows: HomeBoardRow[] =
     board === "xp"
-      ? (xpRows ?? []).map((r) => {
-          const give = giveByUser.get(String(r.userId ?? "")) ?? 0;
-          const clanXp = clanXpByTag.get((r.clanTag ?? "").toUpperCase());
-          return {
-            key: String(r.userId ?? r.rank),
-            rank: r.rank,
+      ? (xpRows ?? []).map((r) => ({
+          key: String(r.userId ?? r.rank),
+          rank: r.rank,
+          username: r.username,
+          image: r.image,
+          border: r.avatarBorder,
+          level: r.level ?? 1,
+          value: `${fmtShort(r.xp ?? 0)} XP`,
+          onClick: () => setOpenBoard("xp"),
+        }))
+      : board === "give"
+        ? (giveRows ?? []).map((r, i) => ({
+            key: String(r.userId ?? i),
+            rank: i + 1,
             username: r.username,
             image: r.image,
             border: r.avatarBorder,
-            value: `${fmtShort(r.xp ?? 0)} XP`,
-            sub: `${r.clanTag ? `[${r.clanTag}]` : "Tanpa clan"}${clanXp ? ` · Clan ${fmtShort(clanXp)}` : ""} · Give ${give} hari`,
-            onClick: () =>
-              r.userId && navigate(`/akun?user=${r.userId}`),
-          };
-        })
-      : board === "give"
-        ? (giveRows ?? []).map((r, i) => {
-            const xp = xpByUser.get(String(r.userId ?? "")) ?? r.xp ?? 0;
-            const clanXp = clanXpByTag.get((r.clanTag ?? "").toUpperCase());
-            return {
-              key: String(r.userId ?? i),
-              rank: i + 1,
-              username: r.username,
-              image: r.image,
-              border: r.avatarBorder,
-              value: `${r.days ?? 0} hari`,
-              sub: `${fmtShort(xp)} XP${clanXp ? ` · Clan ${fmtShort(clanXp)}` : ""}`,
-              onClick: () =>
-                r.userId && navigate(`/akun?user=${r.userId}`),
-            };
-          })
+            level: r.level ?? 1,
+            value: `${r.days ?? 0} hari`,
+            onClick: () => setOpenBoard("give"),
+          }))
         : (clanRows ?? []).map((c, i) => ({
             key: c._id,
             rank: i + 1,
             username: c.name,
             image: c.avatarUrl ?? c.leaderImage,
+            level: c.level,
             value: `${fmtShort(c.totalXp)} XP`,
-            sub: `[${c.tag}] · Lv.${c.level} · ${c.leaderUsername}`,
-            onClick: () => navigate(`/clan?clan=${c._id}`),
+            onClick: () => setOpenBoard("clan"),
           }));
 
   const left = rows.slice(0, 5);
@@ -1163,7 +1144,8 @@ export function LeaderCards() {
   const activeIndex = HOME_BOARDS.findIndex((b) => b.key === board);
 
   return (
-    <section className="fade-enter relative mt-5 overflow-hidden rounded-[22px] border border-white/10 bg-[#16151b] p-3 pr-2.5">
+    <>
+    <section className="fade-enter relative mt-2.5 overflow-hidden rounded-[22px] border border-white/10 bg-[#16151b] p-3 pr-2.5">
       {/* Indikator posisi papan — tiga garis kecil di kanan atas. */}
       <span
         aria-hidden
@@ -1235,11 +1217,21 @@ export function LeaderCards() {
         <div className="min-w-0 pr-2">
           <HomeBoardColumn rows={left} />
         </div>
-        <div className="min-w-0 border-l border-white/10 pl-2">
+        <div className="relative min-w-0 pl-2">
+          <span aria-hidden className="absolute inset-y-2 left-0 w-px bg-white/10" />
           <HomeBoardColumn rows={right} />
         </div>
       </div>
+
     </section>
+      {openBoard === "xp" && (
+        <LeaderOverlay mode="xp" initialPeriod={period} onClose={() => setOpenBoard(null)} />
+      )}
+      {openBoard === "give" && (
+        <LeaderOverlay mode="give" initialPeriod={period} onClose={() => setOpenBoard(null)} />
+      )}
+      {openBoard === "clan" && <ClanOverlay onClose={() => setOpenBoard(null)} />}
+    </>
   );
 }
 
@@ -1250,18 +1242,12 @@ type HomeBoardRow = {
   image?: string;
   border?: string;
   value: string;
-  sub: string;
+  level: number;
   onClick: () => void;
 };
 
 function HomeBoardColumn({ rows }: { rows: HomeBoardRow[] }) {
-  if (rows.length === 0) {
-    return (
-      <p className="flex min-h-[172px] items-center justify-center px-2 text-center text-[10px] leading-relaxed text-white/30">
-        Belum ada data untuk periode ini.
-      </p>
-    );
-  }
+  if (rows.length === 0) return null;
   return (
     <div className="space-y-1">
       {rows.map((r) => (
@@ -1284,8 +1270,8 @@ function HomeBoardColumn({ rows }: { rows: HomeBoardRow[] }) {
             <span className="block truncate text-[10.5px] font-black leading-tight text-white/88">
               {r.username?.trim() || "user"}
             </span>
-            <span className="mt-0.5 block truncate text-[8px] font-semibold leading-tight text-white/32">
-              {r.sub}
+            <span className="mt-0.5 block origin-left scale-[0.72]">
+              <LevelBadge level={r.level} />
             </span>
           </span>
           <span className="shrink-0 text-[9px] font-black tabular-nums text-[var(--ui-c)]">

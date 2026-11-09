@@ -30,6 +30,7 @@ import {
 } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { displayId, usernameColor } from "@/lib/lstream";
+import { PremiumPromoBanner as SharedPremiumPromoBanner } from "@/components/PremiumPromoBanner";
 
 type Plan = { id: string; label: string; days: number; price: number; sacret?: number };
 type TierId = "basic" | "plus" | "vip";
@@ -524,7 +525,14 @@ function Plans() {
 
   return (
     <section className="mt-6">
-      <PremiumPromoBanner />
+      <SharedPremiumPromoBanner
+        onAction={() =>
+          document.getElementById("paket-premium")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          })
+        }
+      />
 
       {/* TINGKATAN PREMIUM — Basic / Plus / VIP, batas fiturnya beda. */}
       <h2 className="mt-5 text-[13px] font-bold text-gold">Tingkatan Premium</h2>

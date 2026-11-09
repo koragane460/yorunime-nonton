@@ -100,8 +100,8 @@ export function ProfileStatusBubble({
       onClick={onClick}
       aria-label="Buka status bubble"
       className={cn(
-        "group relative z-20 rounded-[16px] rounded-br-[5px] border border-black/10 bg-white px-3 py-2 text-left text-[#17151b] shadow-[0_12px_28px_-16px_rgba(0,0,0,.55)] transition hover:border-black/20 active:scale-95",
-        wide ? "max-w-[168px]" : "max-w-[132px]",
+        "group relative z-20 rounded-[18px] border border-black/10 bg-white px-3.5 py-2.5 text-left text-[#17151b] shadow-[0_12px_28px_-16px_rgba(0,0,0,.55)] transition hover:border-black/20 active:scale-95",
+        wide ? "max-w-[260px]" : "max-w-[200px]",
         className,
       )}
     >
@@ -114,10 +114,6 @@ export function ProfileStatusBubble({
       >
         {message}
       </span>
-      <span
-        aria-hidden
-        className="absolute -bottom-[5px] right-3 size-2.5 rotate-45 rounded-[1px] bg-white"
-      />
     </button>
   );
 }
@@ -160,19 +156,16 @@ export function StatusBubbleEditor({
   return (
     <div
       className="screen-enter fixed inset-0 z-[96] flex flex-col overflow-hidden text-white"
-      style={{ background: pattern.css }}
+      style={{ backgroundImage: pattern.css, backgroundColor: "#0b0810" }}
     >
-      {/* Latar pola benar-benar memenuhi seluruh layar editor. */}
+      {/* Latar pola benar-benar menutup layar; tidak ada halaman lain yang
+          kelihatan lewat bagian gradient yang transparan. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.18),transparent_36%,rgba(0,0,0,.72))]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.12),transparent_38%,rgba(0,0,0,.55))]"
       />
 
-      <header className="relative flex items-center gap-2 px-4 pb-2 pt-[max(env(safe-area-inset-top),1rem)]">
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-black">Status bubble</p>
-          <p className="text-[9.5px] text-white/55">Tulisan kecil di foto profilmu</p>
-        </div>
+      <div className="relative flex justify-end px-4 pt-[max(env(safe-area-inset-top),1rem)]">
         <button
           type="button"
           onClick={onClose}
@@ -181,54 +174,42 @@ export function StatusBubbleEditor({
         >
           <X className="size-4" />
         </button>
-      </header>
+      </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-4">
-        <div className="flex items-center justify-center gap-0.5">
-          <span className="relative shrink-0">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-6">
+        <div className="flex w-full max-w-[352px] items-center justify-center gap-0">
+          <span className="relative z-20 shrink-0">
             <span className="absolute -inset-2 rounded-full bg-white/18 blur-xl" />
             <img
               src={user?.image ?? ""}
               alt=""
-              className="relative size-[124px] rounded-full border-[3px] border-white/70 object-cover shadow-[0_24px_50px_-20px_rgba(0,0,0,.95)]"
+              className="relative size-[112px] rounded-full border-[3px] border-white/70 object-cover shadow-[0_24px_50px_-20px_rgba(0,0,0,.95)]"
             />
           </span>
-          <ProfileStatusBubble
-            text={shown}
-            bg={bg}
-            seed={user?._id}
-            onClick={() => undefined}
-            clamp={false}
-            wide
-            className="pointer-events-none max-h-[150px] w-[168px] overflow-hidden"
-          />
+          <div className="relative z-10 -ml-2 min-h-[110px] flex-1 rounded-[22px] bg-white px-3.5 py-3 text-[#17151b] shadow-[0_22px_50px_-22px_rgba(0,0,0,.9)]">
+            <textarea
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value.slice(0, 140))}
+              rows={3}
+              placeholder={shown}
+              className="h-[74px] w-full resize-none bg-transparent text-[12.5px] font-semibold leading-snug text-[#17151b] outline-none placeholder:text-black/45"
+            />
+            <span className="absolute bottom-2 right-3 text-[8px] font-bold text-black/30">
+              {text.length}/140
+            </span>
+          </div>
         </div>
-        <span className="mt-5 rounded-full bg-black/22 px-3 py-1 text-[8px] font-black uppercase tracking-[0.24em] text-white/70 backdrop-blur-sm">
-          Pratinjau
-        </span>
       </div>
 
-      <div className="relative shrink-0 bg-[linear-gradient(180deg,transparent,rgba(5,4,8,.86)_24%,rgba(5,4,8,.96))] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-6">
-        <div className="flex items-end gap-2 rounded-2xl border border-white/15 bg-black/28 p-2 backdrop-blur-md focus-within:border-white/35">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value.slice(0, 140))}
-            rows={2}
-            placeholder="Tulis status mu…"
-            className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-1.5 py-1 text-[12px] leading-relaxed outline-none placeholder:text-white/30"
-          />
-          <span className="shrink-0 pb-1 text-[8.5px] font-bold text-white/35">
-            {text.length}/140
-          </span>
-        </div>
-
+      <div className="relative shrink-0 bg-[linear-gradient(180deg,transparent,rgba(5,4,8,.76)_24%,rgba(5,4,8,.92))] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-6">
         {err && (
-          <p className="mt-2 rounded-xl border border-rose-400/25 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-rose-100">
+          <p className="mb-2 rounded-xl border border-rose-400/25 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-rose-100">
             {err}
           </p>
         )}
 
-        <div className="mt-2.5 grid grid-cols-[1fr_1.6fr] gap-2">
+        <div className="grid grid-cols-[1fr_1.6fr] gap-2">
           <button
             type="button"
             onClick={() => setBgOpen(true)}
@@ -346,12 +327,6 @@ export function StatusTray({
 
   return (
     <div className="fade-enter mt-3">
-      <div className="mb-1.5 flex items-center justify-between px-0.5">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
-          Status
-        </p>
-        <p className="text-[8.5px] font-medium text-white/25">24 jam</p>
-      </div>
       <div className="thin-scroll flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="w-[68px] shrink-0 text-center">
           <div className="relative mx-auto w-fit">

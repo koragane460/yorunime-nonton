@@ -1215,6 +1215,16 @@ const schema = defineSchema(
       .index("by_created", ["createdAt"])
       .index("by_user", ["userId", "createdAt"]),
 
+    /** Repost feed — satu user hanya bisa repost satu post sekali. */
+    feedReposts: defineTable({
+      postId: v.id("feedPosts"),
+      userId: v.id("users"),
+      createdAt: v.number(),
+    })
+      .index("by_post", ["postId", "createdAt"])
+      .index("by_user", ["userId", "createdAt"])
+      .index("by_pair", ["postId", "userId"]),
+
     /** Komentar pada post Feed. */
     feedComments: defineTable({
       postId: v.id("feedPosts"),

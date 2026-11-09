@@ -381,10 +381,10 @@ export function HomeCommunityCard({ onOpenChat }: { onOpenChat: () => void }) {
       <button
         type="button"
         onClick={onOpenChat}
-        className="flex w-full items-stretch gap-3 rounded-[20px] border border-white/10 bg-white/[0.045] px-4 py-3.5 text-left transition active:scale-[0.995]"
+        className="flex w-full items-stretch gap-2.5 rounded-[18px] border border-white/10 bg-[#16151b] px-3 py-2.5 text-left transition active:scale-[0.995]"
       >
         <span className="flex shrink-0 items-center justify-center self-center text-[var(--ui-c)]">
-          <MessageSquare className="size-7" strokeWidth={2.5} />
+          <MessageSquare className="size-6" strokeWidth={2.4} />
         </span>
         <span
           aria-hidden
@@ -392,19 +392,19 @@ export function HomeCommunityCard({ onOpenChat }: { onOpenChat: () => void }) {
         />
         <span className="flex min-w-0 flex-1 flex-col justify-center">
           <span className="flex items-center gap-2">
-            <span className="text-[15px] font-black tracking-tight text-white">
+            <span className="text-[13px] font-black tracking-tight text-white">
               Global Chat
             </span>
-            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-300/85">
+            <span className="flex items-center gap-1 text-[8px] font-bold text-emerald-300/85">
               <span className="size-1.5 rounded-full bg-emerald-400" />
               {online ?? 0} online
             </span>
           </span>
-          <span className="mt-0.5 truncate text-[10.5px] font-medium text-white/38">
+          <span className="mt-0.5 truncate text-[9px] font-medium text-white/35">
             Ngobrol dengan orang yang sedang online
           </span>
         </span>
-        <ArrowRight className="size-4 shrink-0 self-center text-white/25" />
+        <ArrowRight className="size-3.5 shrink-0 self-center text-white/22" />
       </button>
     </section>
   );

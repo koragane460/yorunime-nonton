@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { ArrowRight, ChevronLeft, Grid3X3, Search, Star, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, Grid3X3, LayoutGrid, Search, Star, X } from "lucide-react";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -183,32 +183,38 @@ export function QuickGenre({
 
   return (
     <>
-      <section className="fade-enter mt-5">
-        <div className="flex items-center justify-between gap-2">
-          {/* Katalog di kiri atas, mengarah ke samping, tanpa kotak latar. */}
-          <button
-            type="button"
-            onClick={() => setTab("catalog")}
-            aria-pressed={tab === "catalog"}
-            className={cn(
-              "inline-flex items-center gap-2 text-[13px] font-black transition active:opacity-60",
-              tab === "catalog" ? "text-white" : "text-white/45 hover:text-white/80",
-            )}
-          >
-            <Grid3X3 className="size-4" strokeWidth={2.6} />
-            Katalog
-            <ArrowRight className="size-4" strokeWidth={2.6} />
-          </button>
+      <section className="fade-enter mt-5 rounded-[22px] border border-white/8 bg-white/[0.022] p-3">
+        {/* Satu kotak kecil di kiri atas berisi dua tombol: Genre & Katalog.
+            Tombol yang aktif berubah jadi kapsul pekat. */}
+        <div className="inline-flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
           <button
             type="button"
             onClick={() => setTab("genre")}
             aria-pressed={tab === "genre"}
             className={cn(
-              "text-[11px] font-black transition",
-              tab === "genre" ? "text-white" : "text-white/40 hover:text-white/75",
+              "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.97]",
+              tab === "genre"
+                ? "bg-white text-black shadow-[0_4px_12px_-6px_rgba(0,0,0,.8)]"
+                : "text-white/48 hover:text-white/80",
             )}
           >
+            <LayoutGrid className="size-3.5" strokeWidth={2.6} />
             Genre
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("catalog")}
+            aria-pressed={tab === "catalog"}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.97]",
+              tab === "catalog"
+                ? "bg-white text-black shadow-[0_4px_12px_-6px_rgba(0,0,0,.8)]"
+                : "text-white/48 hover:text-white/80",
+            )}
+          >
+            <Grid3X3 className="size-3.5" strokeWidth={2.6} />
+            Katalog
+            <ArrowRight className="size-3" strokeWidth={2.8} />
           </button>
         </div>
 

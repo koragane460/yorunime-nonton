@@ -94,7 +94,7 @@ export function AccountHeader() {
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="yn-account-pill relative flex h-[72px] w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
+        className="yn-account-pill relative flex h-[62px] w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-1.5 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
         <span
@@ -105,14 +105,14 @@ export function AccountHeader() {
           border={(user as any)?.avatarBorder}
           src={user?.image}
           seed={user?.username}
-          className="relative size-[52px] shrink-0"
+          className="relative size-[46px] shrink-0"
         />
         <span className="relative min-w-0 flex-1">
           <span className="block truncate text-[9px] font-black uppercase tracking-[0.17em] text-white/60">
             {greetingOf()}
           </span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1">
-            <span className="truncate text-[17px] font-black leading-tight tracking-[-0.02em] text-white">
+            <span className="truncate text-[15.5px] font-black leading-tight tracking-[-0.02em] text-white">
               {user?.username ?? "user"}
             </span>
             {premium && <BlueCheck className="size-3.5 shrink-0" />}
@@ -129,7 +129,9 @@ export function AccountHeader() {
             )}
           </span>
         </span>
-        <LevelRing level={level} xp={xp} />
+        <span className="-mr-0.5 shrink-0 scale-[0.82]">
+          <LevelRing level={level} xp={xp} />
+        </span>
       </button>
     </header>
   );

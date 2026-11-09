@@ -104,11 +104,13 @@ function FeatureChrome({
   title,
   subtitle,
   onBack,
+  plain = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   onBack: () => void;
+  plain?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -121,19 +123,25 @@ function FeatureChrome({
         >
           <ChevronLeft className="size-5" />
         </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-black text-white">{title}</h1>
-          {subtitle && (
-            <p className="truncate text-[10px] text-white/45">{subtitle}</p>
-          )}
-        </div>
-        <button
-          onClick={onBack}
-          aria-label="Tutup"
-          className="flex size-9 shrink-0 items-center justify-center text-white/55 transition active:scale-90"
-        >
-          <X className="size-4" />
-        </button>
+        {!plain && (
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-black text-white">{title}</h1>
+            {subtitle && (
+              <p className="truncate text-[10px] text-white/45">{subtitle}</p>
+            )}
+          </div>
+        )}
+        {plain ? (
+          <span className="flex-1" />
+        ) : (
+          <button
+            onClick={onBack}
+            aria-label="Tutup"
+            className="flex size-9 shrink-0 items-center justify-center text-white/55 transition active:scale-90"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </header>
       <div className="thin-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         {children}
@@ -159,8 +167,8 @@ export function YoruVerseHubScreen({
   if (feature === "quest") {
     return (
       <FeatureChrome
+        plain
         title="Quest"
-        subtitle="Misi harian · reset 00.00"
         onBack={onClose}
       >
         <div className="px-4 pb-10">

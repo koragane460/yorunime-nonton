@@ -414,44 +414,37 @@ export function DailyQuestRow() {
   }, [progress, store.day]);
 
   return (
-    <section className="fade-enter mt-5">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-bold tracking-tight">Daily Quest</h2>
-        <span className="text-[11px] text-muted-foreground">reset 00.00</span>
-      </div>
-      {/* Tiga misi per baris, tiga baris ke bawah — tanpa kotak pembungkus.
-          Pemisah tipis menjaga tetap rapi seperti daftar editorial. */}
-      <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-5">
+    <section className="fade-enter mt-1">
+      {/* Satu quest satu baris panjang ke samping — tanpa kotak dan tanpa
+          judul halaman. */}
+      <div className="divide-y divide-white/10">
         {quests.map((q) => {
           const val = Math.min(q.target, q.get(p, store.local));
           const done = q.get(p, store.local) >= q.target;
           const pct = Math.min(100, Math.round((val / Math.max(1, q.target)) * 100));
           return (
-            <div
-              key={q.id}
-              className="relative flex min-h-[94px] min-w-0 flex-col border-t border-white/12 pt-2.5"
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span
-                  className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded-full border",
-                    done
-                      ? "border-emerald-400/60 bg-emerald-400/18 text-emerald-200"
-                      : "border-white/22 text-transparent",
-                  )}
-                  aria-hidden
-                >
-                  <Check className="size-2.5" strokeWidth={3} />
-                </span>
-                <span className="truncate text-[7.5px] font-black text-gold-strong">
-                  +{q.xp} XP
-                </span>
-              </div>
-              <p className="mt-2 line-clamp-3 min-w-0 text-[9.5px] font-semibold leading-[1.28] text-white/82">
-                {q.text}
-              </p>
-              <div className="mt-auto pt-2">
-                <div className="h-[2px] overflow-hidden rounded-full bg-white/10">
+            <div key={q.id} className="flex min-w-0 items-center gap-3 py-4">
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full border",
+                  done
+                    ? "border-emerald-400/55 bg-emerald-400/15 text-emerald-300"
+                    : "border-white/18 bg-white/[0.035] text-transparent",
+                )}
+                aria-hidden
+              >
+                <Check className="size-4" strokeWidth={3} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="min-w-0 text-[12.5px] font-bold leading-snug text-white/85">
+                    {q.text}
+                  </p>
+                  <span className="shrink-0 text-[10px] font-black text-gold-strong">
+                    +{q.xp} XP
+                  </span>
+                </div>
+                <div className="mt-2 h-[2px] overflow-hidden rounded-full bg-white/10">
                   <div
                     className={cn(
                       "h-full rounded-full transition-[width] duration-500",
@@ -460,11 +453,9 @@ export function DailyQuestRow() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="mt-1 flex items-center justify-between text-[7.5px] font-bold tabular-nums text-white/38">
-                  <span>
-                    {val}/{q.target}
-                  </span>
-                  <span>{done ? "Selesai" : `${pct}%`}</span>
+                <p className="mt-1 flex items-center justify-between text-[9px] font-bold tabular-nums text-white/38">
+                  <span>{done ? "Selesai" : `${val}/${q.target}`}</span>
+                  <span>{done ? "100%" : `${pct}%`}</span>
                 </p>
               </div>
             </div>

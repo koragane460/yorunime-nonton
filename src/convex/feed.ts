@@ -15,8 +15,29 @@ async function meOr(ctx: QueryCtx) {
   }
 }
 
+/** Semua id teman viewer — dipakai untuk label "Teman Anda" di feed. */
+async function friendIdsFor(ctx: QueryCtx, viewer: string | null) {
+  if (!viewer) return new Set<string>();
+  const a = await ctx.db
+    .query("friendships")
+    .withIndex("userA", (q) => q.eq("userA", viewer as any))
+    .collect();
+  const b = await ctx.db
+    .query("friendships")
+    .withIndex("userB", (q) => q.eq("userB", viewer as any))
+    .collect();
+  return new Set(
+    [...a, ...b].map((f) => String(f.userA === viewer ? f.userB : f.userA)),
+  );
+}
+
 /** Gabungkan info user + URL gambar untuk satu post. */
-async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
+async function decorate(
+  ctx: QueryCtx,
+  p: any,
+  viewer: string | null,
+  friendIds?: Set<string>,
+) {
   const u: any = await ctx.db.get(p.userId);
   let imageUrl: string | null = null;
   if (p.imageStorageId) {
@@ -33,6 +54,21 @@ async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
     } catch {
       thumbUrl = null;
     }
+  }
+  const repostRows = await ctx.db
+    .query("feedReposts")
+    .withIndex("by_post", (q) => q.eq("postId", p._id))
+    .order("desc")
+    .take(50);
+  const reposters = [];
+  for (const r of repostRows.slice(0, 2)) {
+    const u: any = await ctx.db.get(r.userId);
+    reposters.push({
+      userId: r.userId,
+      username: u?.username ?? "user",
+      image: u?.image ?? null,
+      createdAt: r.createdAt,
+    });
   }
   return {
     postId: p._id,
@@ -63,6 +99,14 @@ async function decorate(ctx: QueryCtx, p: any, viewer: string | null) {
     clanTag: u?.clanTag,
     premium: (u?.premiumUntil ?? 0) > Date.now(),
     isMe: viewer !== null && viewer === p.userId,
+    isFriend:
+      viewer !== null &&
+      viewer !== p.userId &&
+      !!friendIds?.has(String(p.userId)),
+    repostCount: repostRows.length,
+    reposted: viewer ? repostRows.some((r) => String(r.userId) === viewer) : false,
+    reposterIds: repostRows.map((r) => String(r.userId)),
+    reposters,
   };
 }
 
@@ -71,6 +115,7 @@ export const listFeed = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
     const viewer = await meOr(ctx);
+    const friendIds = await friendIdsFor(ctx, viewer);
     const rows = await ctx.db
       .query("feedPosts")
       .withIndex("by_created", (q) => q)
@@ -79,7 +124,7 @@ export const listFeed = query({
     const out = [];
     for (const p of rows) {
       if (p.privacy === "teman" && p.userId !== viewer) continue;
-      out.push(await decorate(ctx, p, viewer));
+      out.push(await decorate(ctx, p, viewer, friendIds));
     }
     return out;
   },
@@ -93,7 +138,7 @@ export const postById = query({
     if (!p) return null;
     const viewer = await meOr(ctx);
     if (p.privacy === "teman" && p.userId !== viewer) return null;
-    const d = await decorate(ctx, p, viewer);
+    const d = await decorate(ctx, p, viewer, await friendIdsFor(ctx, viewer));
     return { ...d, cover: d.thumbUrl ?? d.music?.cover ?? null };
   },
 });
@@ -103,6 +148,7 @@ export const userPosts = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const viewer = await meOr(ctx);
+    const friendIds = await friendIdsFor(ctx, viewer);
     const rows = await ctx.db
       .query("feedPosts")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -111,7 +157,7 @@ export const userPosts = query({
     const out = [];
     for (const p of rows) {
       if (p.privacy === "teman" && p.userId !== viewer) continue;
-      const d = await decorate(ctx, p, viewer);
+      const d = await decorate(ctx, p, viewer, friendIds);
       // Bentuknya SAMA dengan listFeed supaya overlay post bisa dipakai
       // langsung dari grid Konten di profil.
       out.push({ ...d, cover: d.thumbUrl ?? d.music?.cover ?? null });
@@ -239,6 +285,53 @@ export const toggleFavorite = mutation({
     if (favorited) favorites.push(userId);
     await ctx.db.patch(postId, { favorites });
     return { favorited, favoriteCount: favorites.length };
+  },
+});
+
+/** Daftar yang memposting ulang + tombol batalkan untuk diri sendiri. */
+export const listReposters = query({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const viewer = await meOr(ctx);
+    const rows = await ctx.db
+      .query("feedReposts")
+      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .order("desc")
+      .take(100);
+    const out = [];
+    for (const r of rows) {
+      const u: any = await ctx.db.get(r.userId);
+      out.push({
+        userId: r.userId,
+        username: u?.username ?? "user",
+        image: u?.image ?? null,
+        premium: (u?.premiumUntil ?? 0) > Date.now(),
+        createdAt: r.createdAt,
+        isMe: viewer === r.userId,
+      });
+    }
+    return { reposters: out, mine: out.some((r) => r.isMe), count: out.length };
+  },
+});
+
+/** Repost / batalkan repost. */
+export const toggleRepost = mutation({
+  args: { postId: v.id("feedPosts") },
+  handler: async (ctx, { postId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Belum masuk akun");
+    const p = await ctx.db.get(postId);
+    if (!p) throw new Error("Post tidak ada");
+    const existing = await ctx.db
+      .query("feedReposts")
+      .withIndex("by_pair", (q) => q.eq("postId", postId).eq("userId", userId))
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { reposted: false };
+    }
+    await ctx.db.insert("feedReposts", { postId, userId, createdAt: Date.now() });
+    return { reposted: true };
   },
 });
 

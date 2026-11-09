@@ -92,7 +92,9 @@ import {
   Share2,
   Cake,
   Plus,
+  ArrowLeftRight,
 } from "lucide-react";
+import { FeedModeSwitch } from "@/components/FeedModeSwitch";
 import { TierIcon } from "@/components/TierIcon";
 import { cn } from "@/lib/utils";
 import {
@@ -574,9 +576,7 @@ function AkunProfileScreen({
         >
           <StripBackIcon />
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-[19px] font-black tracking-tight">
-          Akun
-        </h1>
+        <span className="min-w-0 flex-1" />
         <button
           onClick={onOpenCs}
           aria-label="Customer service"
@@ -637,7 +637,7 @@ function AkunProfileScreen({
               bg={user.statusBg}
               seed={user._id}
               onClick={() => setBubbleOpen(true)}
-              className="absolute -right-12 -top-4"
+              className="absolute -right-10 -top-5 w-[190px] max-w-[190px]"
             />
             <button
               onClick={() => setEditOpen(true)}
@@ -1184,6 +1184,8 @@ function SettingsScreen({
   const navigate = useNavigate();
   // Pintasan layar Notifikasi dari Pengaturan (fitur baru).
   const [showNotif, setShowNotif] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [feedSwitch, setFeedSwitch] = useState(false);
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
   // Shop border: beli pakai Sacret + pasang/lepas bingkai foto profile.
@@ -1243,6 +1245,48 @@ function SettingsScreen({
   const panelLevel: "dev" | "mod" | "none" =
     access?.level === "dev" ? "dev" : access?.level === "mod" ? "mod" : "none";
   if (!user) return null;
+
+  if (!settingsOpen) {
+    return (
+      <div className="pb-28 pt-4">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onClose}
+            aria-label="Kembali"
+            className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
+          >
+            <StripBackIcon />
+          </button>
+          <button
+            onClick={onOpenCs}
+            aria-label="Customer service"
+            className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.045] text-white/55"
+          >
+            <Headset className="size-4" />
+          </button>
+        </div>
+        <h1 className="mt-7 px-1 text-[34px] font-black tracking-tight text-white/35">
+          Akun
+        </h1>
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          className="mt-4 flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-[#16151b] p-4 text-left transition active:scale-[0.995]"
+        >
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.055] text-white/65">
+            <SettingsIcon className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-black text-white">Pengaturan akun</span>
+            <span className="mt-0.5 block text-[10.5px] text-white/35">
+              Tampilan, notifikasi, privasi & lainnya
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-white/25" />
+        </button>
+      </div>
+    );
+  }
 
   const ownedBorders = user.ownedBorders ?? [];
   const equippedBorder = user.avatarBorder ?? "none";
@@ -1351,23 +1395,38 @@ function SettingsScreen({
   };
 
   return (
-    <div className="space-y-2.5 pb-28 pt-3">
-      {/* Header halaman — TIDAK fullscreen, navbar bawah tetap terlihat. */}
+    <div className="fixed inset-0 z-[90] space-y-2.5 overflow-y-auto bg-background px-4 pb-24 pt-3">
+      {/* Fullscreen pengaturan: hanya tombol kembali + daftar tombol. */}
       <div className="flex items-center gap-2.5">
         <button
-          onClick={onClose}
+          onClick={() => setSettingsOpen(false)}
           aria-label="Kembali"
           className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
         >
           <StripBackIcon />
         </button>
-        <h1 className="min-w-0 truncate text-[19px] font-black tracking-tight">
-          Pengaturan Akun
+        <h1 className="min-w-0 flex-1 truncate text-[19px] font-black tracking-tight">
+          Pengaturan
         </h1>
       </div>
 
-      {/* ===== KARTU IDENTITAS BARU ===== */}
-      <ProfileOverviewCard user={user} onEdit={() => setEditOpen(true)} />
+      {/* Pintu masuk Feed Mode — transisi fullscreen saat ditekan. */}
+      <button
+        type="button"
+        onClick={() => setFeedSwitch(true)}
+        className="flex w-full items-center gap-3 rounded-3xl border border-[var(--ui-c)]/25 bg-[var(--ui-c)]/[0.07] p-3.5 text-left transition active:scale-[0.995]"
+      >
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--ui-c)]/15 text-[var(--ui-c)]">
+          <ArrowLeftRight className="size-[18px]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12.5px] font-black text-white">Feed Mode</span>
+          <span className="mt-0.5 block text-[10px] text-white/40">
+            Beralih dari halaman utama ke beranda feed
+          </span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-white/30" />
+      </button>
 
       <button
         type="button"
@@ -1584,6 +1643,7 @@ function SettingsScreen({
 
       {/* Pintasan layar Notifikasi (overlay dari Pengaturan). */}
       {showNotif && <NotifScreen onClose={() => setShowNotif(false)} />}
+      {feedSwitch && <FeedModeSwitch onClose={() => setFeedSwitch(false)} />}
 
       {/* Sheet edit identitas: foto + username dalam satu tempat. */}
       {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
@@ -2044,25 +2104,19 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="screen-enter fixed inset-0 z-[95] flex flex-col bg-[#0b0e15]">
-      <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-black text-white">Ubah Profil</p>
-          <p className="text-[10px] text-white/40">
-            Foto, username, bio &amp; tanggal lahir
-          </p>
-        </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end px-4 pt-[max(env(safe-area-inset-top),0.9rem)]">
         <button
           type="button"
           onClick={onClose}
           aria-label="Tutup"
-          className="flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-white/60 transition hover:text-white"
+          className="pointer-events-auto flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-white/60 backdrop-blur transition hover:text-white"
         >
           <X className="size-4" />
         </button>
-      </header>
+      </div>
 
       <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-start px-5 pb-6 pt-4">
+        <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-5 pb-10 pt-16">
           {/* Foto di atas, tombol ganti foto bulat kecil. */}
         <div className="mt-2 flex flex-col items-center">
           <button
@@ -2350,6 +2404,7 @@ const PREF_PRIVASI: readonly PrefItem[] = [
   { key: "showClan", label: "Tampilkan clan", desc: "Tampilkan clan kamu di profil", def: true },
   { key: "dmStranger", label: "Pesan orang asing", desc: "Izinkan pesan dari yang bukan teman" },
   { key: "showEmail", label: "Email publik", desc: "Tampilkan email di halaman profil" },
+  { key: "hideBirthday", label: "Sembunyikan ulang tahun", desc: "Tanggal lahir tidak tampil di profil" },
   { key: "searchable", label: "Bisa dicari", desc: "Izinkan orang lain menemukan profilmu", def: true },
 ];
 
