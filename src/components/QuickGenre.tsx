@@ -230,9 +230,13 @@ export function QuickGenre({
                   {g.name}
                 </button>
               ))}
-              {genres.length === 0 && (
-                <span className="px-2 text-[11px] text-white/35">Memuat…</span>
-              )}
+              {genres.length === 0 &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="skeleton h-9 w-20 shrink-0 rounded-full"
+                  />
+                ))}
             </div>
           ) : (
             <div className="thin-scroll flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

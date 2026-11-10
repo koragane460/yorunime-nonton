@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { NotifButton } from "@/components/NotifButton";
 import { BlueCheck, ClanTag, LevelBadge } from "@/components/lstream-ui";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { greetingOf, fmtShort } from "@/components/HomeHead";
@@ -15,6 +16,7 @@ import {
   Heart,
   Megaphone,
   Play,
+  Search,
   Share2,
   Star,
   Tv,
@@ -82,7 +84,7 @@ function LevelRing({ level, xp }: { level: number; xp: number }) {
 /**
  * HEADER HOME — satu pil kaca berisi foto, sapaan, username, level + clan,
  * dan cincin XP. Search/notif tinggal di navigasi bawah, bukan di sini. */
-export function AccountHeader() {
+export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const level = user?.level ?? 1;
@@ -90,11 +92,11 @@ export function AccountHeader() {
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
 
   return (
-    <header className="fade-enter flex w-full flex-col gap-2 pt-1">
+    <header className="fade-enter flex w-full flex-col gap-2.5 pt-1">
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="yn-account-pill relative flex h-[62px] w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-1.5 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
+        className="yn-account-pill relative flex h-[72px] w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
         <span
@@ -105,7 +107,7 @@ export function AccountHeader() {
           border={(user as any)?.avatarBorder}
           src={user?.image}
           seed={user?.username}
-          className="relative size-[46px] shrink-0"
+          className="relative size-[54px] shrink-0"
         />
         <span className="relative min-w-0 flex-1">
           <span className="block truncate text-[9px] font-black uppercase tracking-[0.17em] text-white/60">
@@ -129,10 +131,34 @@ export function AccountHeader() {
             )}
           </span>
         </span>
-        <span className="-mr-0.5 shrink-0 scale-[0.82]">
+        <span className="-mr-0.5 shrink-0 scale-[0.88]">
           <LevelRing level={level} xp={xp} />
         </span>
       </button>
+
+      {/* Pencarian + notifikasi tinggal di Home, bukan di navigasi bawah. */}
+      <div className="flex items-stretch gap-2">
+        <button
+          type="button"
+          onClick={() => onSearch?.()}
+          className="group flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#24232b] px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,.07)] transition hover:border-white/18 hover:bg-[#2a2932] active:scale-[0.995]"
+        >
+          <Search className="size-[18px] shrink-0 text-white/45 transition group-hover:text-white/70" />
+          <span className="truncate text-[12px] font-semibold text-white/45 transition group-hover:text-white/65">
+            Cari Anime Disini
+          </span>
+          <span className="ml-auto hidden rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[8px] font-black text-white/25 sm:inline">
+            Cari
+          </span>
+        </button>
+        <div className="relative shrink-0">
+          <NotifButton
+            sizeClassName="size-12"
+            iconClassName="size-[19px]"
+            className="rounded-2xl border border-white/15 bg-white/[0.085] text-white/80 shadow-[0_12px_30px_-24px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.16)] backdrop-blur-xl hover:bg-white/[0.13]"
+          />
+        </div>
+      </div>
     </header>
   );
 }

@@ -70,6 +70,11 @@ const QUALITY_INFO: Record<string, string> = {
   "1080p": "Full HD+. Detail paling tajam, khusus Premium.",
 };
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+/** Cache hasil resolve lintas-mount: keluar ke Home lalu masuk lagi ke
+ * episode yang sama tidak memanggil server sumber sekali lagi. */
+const DIRECT_CACHE = new Map<string, any>();
+const DIRECT_CACHE_MAX = 60;
 /** Warna teks tiap resolusi di popup Kualitas — makin tinggi makin "premium". */
 const QUALITY_COLOR: Record<string, string> = {
   "144p": "text-zinc-400",
@@ -439,7 +444,7 @@ function WatchContent() {
   const hlsRef = useRef<Hls | null>(null);
   // Cache hasil resolve per episode supaya ganti episode tidak nunggu
   // pencarian server lagi (langsung pakai URL yang sudah ada).
-  const resolvedRef = useRef<Map<string, any>>(new Map());
+  const resolvedRef = useRef<Map<string, any>>(DIRECT_CACHE);
   // Kalau user pindah episode saat video masih diputar, episode baru langsung
   // autoplay — tidak perlu mencet pause/play lagi.
   const autoplayNextRef = useRef(false);
@@ -1466,7 +1471,13 @@ function WatchContent() {
       }
       resolveDonghua({ slug: sk[1], source: detailData?.source })
         .then((d: any) => {
-          if (d?.ok) resolvedRef.current.set(skKey, d);
+          if (d?.ok) {
+            resolvedRef.current.set(skKey, d);
+            if (resolvedRef.current.size > DIRECT_CACHE_MAX) {
+              const oldest = resolvedRef.current.keys().next().value;
+              if (oldest) resolvedRef.current.delete(oldest);
+            }
+          }
           applySanka(d);
         })
         .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
@@ -1548,7 +1559,13 @@ function WatchContent() {
       fast: isPremium,
     })
       .then((d: any) => {
-        if (d?.ok) resolvedRef.current.set(key, d);
+        if (d?.ok) {
+          resolvedRef.current.set(key, d);
+          if (resolvedRef.current.size > DIRECT_CACHE_MAX) {
+            const oldest = resolvedRef.current.keys().next().value;
+            if (oldest) resolvedRef.current.delete(oldest);
+          }
+        }
         applyData(d);
       })
       .catch((e: any) => setDirectErr(e?.message ?? "Gagal memuat episode"));
@@ -2172,15 +2189,22 @@ function WatchContent() {
 
   if (!detailData)
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-1.5 text-center text-sm text-muted-foreground">
-        <span>Memuat…</span>
-        {/* Room nobar: nunggu detail anime dari server, makanya butuh
-            waktu — kasih tahu biar tidak dianggap macet. */}
-        {roomId && (
-          <span className="text-xs text-muted-foreground/70">
-            Memuat kotak nobar memerlukan 1-10 detik, sabar ya…
-          </span>
-        )}
+      <div className="w-full animate-pulse space-y-3 p-3">
+        <div className="skeleton aspect-video w-full rounded-2xl" />
+        <div className="flex gap-3">
+          <div className="skeleton h-36 w-24 shrink-0 rounded-2xl" />
+          <div className="min-w-0 flex-1 space-y-2 pt-1">
+            <div className="skeleton h-5 w-4/5 rounded-full" />
+            <div className="skeleton h-3 w-1/3 rounded-full" />
+            <div className="flex gap-1.5 pt-1">
+              <div className="skeleton h-6 w-16 rounded-full" />
+              <div className="skeleton h-6 w-20 rounded-full" />
+            </div>
+            <div className="skeleton h-2.5 w-full rounded-full" />
+            <div className="skeleton h-2.5 w-11/12 rounded-full" />
+            <div className="skeleton h-2.5 w-3/4 rounded-full" />
+          </div>
+        </div>
       </div>
     );
 
@@ -2308,9 +2332,7 @@ function WatchContent() {
               ) : (
                 <>
                   <Loader2 className="size-8 animate-spin text-white/80" />
-                  <p className="mt-2 text-xs text-white/80">
-                    Memuat episode {currentEp ? currentEp.number : ""}...
-                  </p>
+                  <div className="mt-3 skeleton h-2.5 w-24 rounded-full" aria-hidden />
                 </>
               )}
             </div>
@@ -2368,12 +2390,9 @@ function WatchContent() {
                   {videoHolding ? Math.ceil((holdUntil - nowTick) / 1000) : ""}
                 </span>
               </div>
-              <p className="mt-3 text-xs font-semibold text-white">
-                {videoHolding ? "Menyiapkan video..." : "Memuat episode..."}
-              </p>
               {!isPremiumUser && (
-                <p className="mt-1 text-[11px] text-white/55">
-                  Member premium langsung masuk tanpa hitungan
+                <p className="mt-3 text-[10px] font-medium text-white/40">
+                  Premium tanpa hitungan
                 </p>
               )}
             </div>
@@ -2655,15 +2674,14 @@ function WatchContent() {
           !uiLocked &&
           sourceType !== "embed" &&
           !!streamUrl &&
-          (isHost || !room) && (
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
-            isFs
-              ? "bg-gradient-to-t from-black/70 via-transparent to-black/40 px-6 py-4"
-              : "bg-gradient-to-t from-black/80 via-transparent to-black/50",
-          )}
-        >
+          (isHost || !room) && (          <div
+            className={cn(
+              "yn-controls-in pointer-events-none absolute inset-0 z-20 flex flex-col justify-between",
+              isFs
+                ? "bg-gradient-to-t from-black/70 via-transparent to-black/40 px-6 py-4"
+                : "bg-gradient-to-t from-black/80 via-transparent to-black/50",
+            )}
+          >
           <div
             className={cn(
               "pointer-events-auto flex items-center gap-2",
@@ -3164,40 +3182,37 @@ function WatchContent() {
 
       {/* Satu baris horizontal: Like/Dislike menyatu, lalu Favorit · Donate ·
           Lapor · Bagikan. Semua memakai flex agar tidak pernah turun baris. */}
-      <div className="flex w-full items-stretch gap-1 px-3 pt-2">
-        <div className="flex min-w-0 flex-[1.35] overflow-hidden rounded-xl border border-white/12 bg-white/[0.04]">
-          <button
-            onClick={() => {
-              void toggleLike({ animeId, value: 1 }).catch(() => {});
-            }}
-            aria-label="Like"
-            className={cn(
-              "flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-2 text-[9px] font-bold transition active:scale-95",
-              likeStats?.liked
-                ? "bg-white/15 text-white"
-                : "text-white/55 hover:bg-white/[0.06] hover:text-white/85",
-            )}
-          >
-            <ThumbsUp className={cn("size-4 shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
-            <span className="tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
-          </button>
-          <span aria-hidden className="my-1.5 w-px shrink-0 bg-white/12" />
-          <button
-            onClick={() => {
-              void toggleLike({ animeId, value: -1 }).catch(() => {});
-            }}
-            aria-label="Tidak suka"
-            className={cn(
-              "flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-2 text-[9px] font-bold transition active:scale-95",
-              likeStats?.disliked
-                ? "bg-white/15 text-white"
-                : "text-white/55 hover:bg-white/[0.06] hover:text-white/85",
-            )}
-          >
-            <ThumbsDown className={cn("size-4 shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
-            <span className="tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
-          </button>
-        </div>
+      <div className="thin-scroll flex w-full items-center gap-1.5 overflow-x-auto px-3 pb-0.5 pt-2">
+        <button
+          onClick={() => {
+            void toggleLike({ animeId, value: 1 }).catch(() => {});
+          }}
+          aria-label="Like"
+          className={cn(
+            "flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-[10px] font-bold transition active:scale-95",
+            likeStats?.liked
+              ? "border-white/25 bg-white/15 text-white"
+              : "border-white/12 bg-white/[0.04] text-white/60 hover:bg-white/[0.07] hover:text-white/85",
+          )}
+        >
+          <ThumbsUp className={cn("size-[14px] shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
+          <span className="tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
+        </button>
+        <button
+          onClick={() => {
+            void toggleLike({ animeId, value: -1 }).catch(() => {});
+          }}
+          aria-label="Tidak suka"
+          className={cn(
+            "flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-[10px] font-bold transition active:scale-95",
+            likeStats?.disliked
+              ? "border-white/25 bg-white/15 text-white"
+              : "border-white/12 bg-white/[0.04] text-white/60 hover:bg-white/[0.07] hover:text-white/85",
+          )}
+        >
+          <ThumbsDown className={cn("size-[14px] shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
+          <span className="tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
+        </button>
 
         <button
           onClick={() => {
@@ -3211,13 +3226,13 @@ function WatchContent() {
           }}
           aria-label="Favorit"
           className={cn(
-            "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 text-[7px] font-bold transition active:scale-95",
+            "flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-[10px] font-bold transition active:scale-95",
             isFav
               ? "border-white/25 bg-white/15 text-white"
-              : "border-white/12 bg-white/[0.04] text-white/55 hover:bg-white/[0.07]",
+              : "border-white/12 bg-white/[0.04] text-white/60 hover:bg-white/[0.07]",
           )}
         >
-          <Heart className={cn("size-[15px] shrink-0", isFav && "fill-current")} aria-hidden />
+          <Heart className={cn("size-[14px] shrink-0", isFav && "fill-current")} aria-hidden />
           Favorit
         </button>
         <a
@@ -3225,17 +3240,17 @@ function WatchContent() {
           target="_blank"
           rel="noreferrer"
           aria-label="Donate"
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 text-[10px] font-bold text-white/60 transition hover:bg-white/[0.07] active:scale-95"
         >
-          <Coffee className="size-[15px] shrink-0" aria-hidden />
+          <Coffee className="size-[14px] shrink-0" aria-hidden />
           Donate
         </a>
         <button
           onClick={() => setReportOpen(true)}
           aria-label="Laporkan"
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 text-[10px] font-bold text-white/60 transition hover:bg-white/[0.07] active:scale-95"
         >
-          <Flag className="size-[15px] shrink-0" aria-hidden />
+          <Flag className="size-[14px] shrink-0" aria-hidden />
           Laporkan
         </button>
         <button
@@ -3255,9 +3270,9 @@ function WatchContent() {
               .catch(() => toast.error("Gagal membagikan tautan"));
           }}
           aria-label="Bagikan"
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/12 bg-white/[0.04] py-1.5 text-[7px] font-bold text-white/55 transition hover:bg-white/[0.07] active:scale-95"
+          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 text-[10px] font-bold text-white/60 transition hover:bg-white/[0.07] active:scale-95"
         >
-          <Share2 className="size-[15px] shrink-0" />
+          <Share2 className="size-[14px] shrink-0" />
           Bagikan
         </button>
       </div>
@@ -3638,6 +3653,7 @@ function WatchContent() {
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
               comments={shownComments}
               meId={user?._id}
+              bannerUrl={detailReady ? detailData.banner || detailData.image : D.banner || D.image}
               onOpenImage={(url) => setZoomImage(url)}
               onSeek={(seconds) => {
                 const v = videoRef.current;

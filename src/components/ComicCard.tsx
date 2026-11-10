@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { Eye, Star } from "lucide-react";
+import { Eye, Loader2, Star } from "lucide-react";
 
 export type ComicItem = {
   slug: string;
@@ -282,7 +282,13 @@ export function ComicBrowseRow({
               disabled={busy || page >= 8}
               className="rounded-full border border-border bg-black/55 px-4 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur-md transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
             >
-              {busy ? "Memuat…" : page >= 8 ? "Semua item sudah tampil" : "Muat lebih banyak"}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" aria-label="Memuat" />
+              ) : page >= 8 ? (
+                "Semua item sudah tampil"
+              ) : (
+                "Muat lebih banyak"
+              )}
             </button>
           </div>
         </>

@@ -505,7 +505,7 @@ function FeedVideo({
         className="h-full w-full object-cover"
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
         controls={false}
         disablePictureInPicture
         onClick={tap}
@@ -846,7 +846,19 @@ function CommentSheet({ postId, onClose }: { postId: Id<"feedPosts">; onClose: (
             Komentar
           </p>
           <div className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto pb-2 pt-1">
-            {!list && <p className="py-6 text-center text-xs text-zinc-500">Memuat…</p>}
+            {!list && (
+              <div className="space-y-3 py-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex gap-2.5">
+                    <div className="skeleton size-8 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="skeleton h-3 w-1/3 rounded-full" />
+                      <div className="skeleton h-2.5 w-4/5 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {list?.length === 0 && (
               <p className="py-6 text-center text-xs text-zinc-500">
                 Belum ada komentar — jadi yang pertama.
@@ -4166,7 +4178,7 @@ export function ContentGrid({
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
               className="h-full w-full object-cover transition group-hover:scale-105"
             />
           ) : (

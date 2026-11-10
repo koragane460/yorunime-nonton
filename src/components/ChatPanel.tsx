@@ -919,11 +919,6 @@ export function ChatPanel({
                       mine && "flex-row-reverse",
                     )}
                   >
-                    <span className="chat-typing" aria-hidden>
-                      <i />
-                      <i />
-                      <i />
-                    </span>
                     <span>{new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
                     <button
                       aria-label="Reply"

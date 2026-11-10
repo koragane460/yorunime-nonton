@@ -128,10 +128,20 @@ export function PremiumPromoBanner({
               "relative flex min-h-[142px] flex-col overflow-hidden px-2.5 py-2.5 text-left transition active:brightness-110",
               i === 1 && "z-10",
             )}
-            style={{ background: p.bg }}
           >
+            {/* Bidang warnanya sendiri yang miring — bukan sekadar garis
+                dekoratif. Konten tetap tegak supaya teks tidak ikut miring. */}
             <span
-              className="relative z-10 flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[7.5px] font-black"
+              aria-hidden
+              className="absolute inset-y-[-8%] -left-3 -right-3 -skew-x-[7deg] border-x border-white/15"
+              style={{ background: p.bg }}
+            />
+            <span
+              aria-hidden
+              className="absolute inset-y-0 left-0 w-px bg-black/35"
+              style={{ left: i === 0 ? 0 : -1 }}
+            />
+            <span className="relative z-10 flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[7.5px] font-black"
               style={{ background: p.badgeBg, color: p.textOnBadge }}
             >
               {p.badge}
@@ -179,27 +189,17 @@ export function PremiumPromoBanner({
 
             <span
               aria-hidden
-              className="pointer-events-none absolute right-2 top-8 size-1 rounded-full"
+              className="pointer-events-none absolute right-2 top-8 z-10 size-1 rounded-full"
               style={{ background: p.accent, opacity: 0.55 }}
             />
             <span
               aria-hidden
-              className="pointer-events-none absolute left-2 top-[58px] size-[3px] rounded-full"
+              className="pointer-events-none absolute left-2 top-[58px] z-10 size-[3px] rounded-full"
               style={{ background: p.accent, opacity: 0.35 }}
             />
           </button>
         ))}
       </div>
-
-      {/* Garis pemisah miring, bukan garis lurus biasa. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-[-12%] left-1/3 w-px origin-center rotate-[7deg] bg-white/25"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-[-12%] left-2/3 w-px origin-center rotate-[7deg] bg-white/25"
-      />
     </div>
   );
 }

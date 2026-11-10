@@ -15,6 +15,7 @@ import {
   Heart,
   ImagePlus,
   Loader2,
+  MessageCircle,
   MoreVertical,
   Pin,
   Reply,
@@ -126,10 +127,13 @@ export function CommentsSection({
   onDeleted,
   onOpenImage,
   onSeek,
+  bannerUrl,
 }: {
   animeId: string;
   comments: CommentT[] | undefined;
   meId?: string;
+  /** Banner anime di belakang kolom komentar Nonton. */
+  bannerUrl?: string;
   onSend: (payload: CommentPayload, replyToId?: string) => Promise<void>;
   /** Dipanggil setelah server menghapus komentar, supaya daftar langsung bersih. */
   onDeleted?: (id: string) => void;
@@ -285,7 +289,8 @@ export function CommentsSection({
     <div className="px-3">
       {/* ---------- KEPALA: judul + jumlah (kiri), filter (kanan) ---------- */}
       <div className="relative flex items-center justify-between gap-2">
-        <div className="flex items-baseline gap-1.5">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="size-[18px] text-white/85" strokeWidth={2.25} aria-hidden />
           <h2 className="text-base font-black tracking-tight">Komentar</h2>
           <span className="text-[11px] font-bold text-white/40">
             {(all.length ?? 0).toLocaleString("id-ID")}
@@ -329,8 +334,21 @@ export function CommentsSection({
       </div>
 
       {/* ---------- KOLOM KOMENTAR ---------- */}
-      <div className="mt-2.5 rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-transparent p-2.5 shadow-[0_0_24px_-16px] shadow-[#1CA7EC]">
-        <div className="flex items-start gap-2">
+      <div className="relative mt-2.5 overflow-hidden rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-transparent p-2.5 shadow-[0_0_24px_-16px] shadow-[#1CA7EC]">
+        {bannerUrl && (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.42]"
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(8,11,17,.86),rgba(8,11,17,.58)_52%,rgba(8,11,17,.82))]"
+            />
+          </>
+        )}
+        <div className="relative flex items-start gap-2">
           {/* Foto profil user yang sedang menulis komentar. */}
           <Avatar
             src={user?.image}
@@ -350,7 +368,7 @@ export function CommentsSection({
                     : "Tulis komentar…"
               }
               disabled={muted}
-              className="h-10 w-full rounded-full border border-white/10 bg-black/25 px-3.5 text-[13px] outline-none transition focus:border-[#1CA7EC]/50 disabled:opacity-50"
+              className="h-10 w-full rounded-full border border-white/15 bg-black/40 px-3.5 text-[13px] text-white outline-none backdrop-blur-md transition placeholder:text-white/35 focus:border-[#1CA7EC]/60 focus:bg-black/50 disabled:opacity-50"
             />
 
             {/* Pratinjau gambar + sticker yang akan dikirim. */}
@@ -429,9 +447,9 @@ export function CommentsSection({
                 className="flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-white/55 transition hover:text-white disabled:opacity-40"
               >
                 {uploading ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-[17px] animate-spin" />
                 ) : (
-                  <ImagePlus className="size-4" />
+                  <ImagePlus className="size-[17px]" strokeWidth={2.2} />
                 )}
               </button>
               <button
@@ -445,7 +463,7 @@ export function CommentsSection({
                     : "bg-white/10 text-white/35",
                 )}
               >
-                <Send className="size-4" />
+                <Send className="size-[17px]" strokeWidth={2.15} />
               </button>
             </div>
 
@@ -548,9 +566,18 @@ export function CommentsSection({
       {/* ---------- DAFTAR KOMENTAR ---------- */}
       <div className="mt-3 space-y-2">
         {comments === undefined && (
-          <p className="py-6 text-center text-xs text-muted-foreground">
-            Memuat…
-          </p>
+          <div className="space-y-2.5 py-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex gap-2.5 rounded-2xl border border-white/6 bg-white/[0.025] p-3">
+                <div className="skeleton size-8 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="skeleton h-3 w-1/3 rounded-full" />
+                  <div className="skeleton h-2.5 w-4/5 rounded-full" />
+                  <div className="skeleton h-2.5 w-3/5 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
         {comments && comments.length === 0 && (
           <p className="py-6 text-center text-xs text-muted-foreground">

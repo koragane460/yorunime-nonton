@@ -66,7 +66,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { StickerStore } from "@/components/StickerStore";
-import { AccountHeader, Spotlight } from "@/components/HomeTop";
+import { AccountHeader } from "@/components/HomeTop";
 import {
   ContinueWatchingCard,
   HomeCommunityCard,
@@ -76,8 +76,6 @@ import { PremiumPromoBanner } from "@/components/PremiumPromoBanner";
 import { QuickGenre } from "@/components/QuickGenre";
 import { GenreScreen } from "@/components/GenreScreen";
 import {
-  AfinitasPromo,
-  DonatePromo,
   PillButton,
   bumpQuestLocal,
   pushRecentSearch,
@@ -131,6 +129,11 @@ type AnimeCardT = CatalogCard & {
   episodes?: number;
   timeLabel?: string;
 };
+
+/** Cache pencarian lintas-mount: kata kunci yang sama (tanpa peduli huruf
+ * besar/kecil) tidak memanggil katalog lagi. */
+const SEARCH_CACHE = new Map<string, AnimeCardT[]>();
+const SEARCH_CACHE_MAX = 60;
 
 /** Cegah error satu useQuery membunuh seluruh halaman. */
 class QueryBoundary extends Component<
@@ -857,7 +860,13 @@ function BrowseRow({
               disabled={busy || page >= 6}
               className="rounded-full border border-border bg-black/55 px-4 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur-md transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
             >
-              {busy ? "Memuat…" : page >= 6 ? "Semua item sudah tampil" : "Muat lebih banyak"}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" aria-label="Memuat" />
+              ) : page >= 6 ? (
+                "Semua item sudah tampil"
+              ) : (
+                "Muat lebih banyak"
+              )}
             </button>
           </div>
         </>
@@ -1175,10 +1184,10 @@ function HomeContent() {
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   return (
     <div className="pb-8">
-      {/* Warna Home adalah SATU warna solid dari kartu akun sampai Season
-          Ini. Tidak ada gradasi atau zona kecil yang terputus. */}
-      <div className="relative -mx-4 rounded-b-[30px] bg-[var(--home-tint,#17131f)] px-4 pb-7">
-      <AccountHeader />
+      {/* Warna Home hanya menemani kartu akun sampai judul Season Ini,
+          lalu memudar menjadi gradien di ujungnya. */}
+      <div className="yn-home-tint relative -mx-4 rounded-b-[32px] px-4 pb-7">
+      <AccountHeader onSearch={() => setShowSearch(true)} />
 
       {/* Lanjut nonton → premium → event → komunitas → clan/nobar. */}
       <ContinueWatchingCard
@@ -1213,33 +1222,11 @@ function HomeContent() {
         />
       )}
 
-      {/* Season Ini masih di dalam permukaan warna Home yang sama. */}
+      {/* Season Ini menutup permukaan warna Home sebelum gradien memudar. */}
       <div className="mt-5">
         <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
       </div>
       </div>
-
-      {/* SPOTLIGHT menjadi penutup editorial setelah Season Ini. */}
-      <Spotlight
-        items={todayList.length > 0 ? todayList : topList}
-        viewsOf={viewCountFor}
-        onPick={(id, title, source) => openAnime(id, title, (source as any) ?? "anilist")}
-      />
-
-      <div className="mt-5 flex items-baseline justify-between">
-        <h2 className="text-lg font-bold tracking-tight">Promosi &amp; Dukungan</h2>
-      </div>
-      <PromoCarousel
-        slides={[
-          <AfinitasPromo
-            key="afinitas"
-            onOpen={() => (user ? setAfinitas(true) : toast.info("Login dulu ya"))}
-            images={heroItems.slice(0, 2).map((h) => h.image).filter(Boolean)}
-          />,
-          <DonatePromo key="donate" />,
-        ]}
-      />
-
 
 
       {/* 6c) MANGA TERBARU & POPULER — kartu geser ke kanan; "Lihat
@@ -1820,7 +1807,25 @@ function PodiumCard({
 function LeaderboardList({ period }: { period: string }) {
   const data = useQuery(api.xp.leaderboard, { period, limit: 100 });
   if (!data)
-    return <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>;
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 items-end gap-2 px-2 pt-4">
+          <div className="skeleton h-24 rounded-2xl" />
+          <div className="skeleton h-32 rounded-2xl" />
+          <div className="skeleton h-20 rounded-2xl" />
+        </div>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2.5 px-1 py-1.5">
+            <div className="skeleton size-9 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="skeleton h-3 w-2/5 rounded-full" />
+              <div className="skeleton h-2 w-1/4 rounded-full" />
+            </div>
+            <div className="skeleton h-3 w-12 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
   const [t1, t2, t3, ...rest] = data;
   return (
     <div className="space-y-2">
@@ -1832,12 +1837,10 @@ function LeaderboardList({ period }: { period: string }) {
       {/* Juara 1-3: podium + outline berputar tetap ada, dan dibungkus SATU
           kotak latar supaya tiga besar itu terbaca sebagai satu grup. */}
       {data.length > 0 && (
-        <div className="rounded-2xl border border-white/12 bg-white/[0.05] p-3">
-          <div className="grid grid-cols-3 items-end gap-2">
-            {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-20" />}
-            {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-28" />}
-            {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-16" />}
-          </div>
+        <div className="grid grid-cols-3 items-end gap-2 px-2 pb-3 pt-2">
+          {t2 && <PodiumCard rank={2} username={t2.username} image={t2.image} xp={t2.xp} height="h-20" />}
+          {t1 && <PodiumCard rank={1} username={t1.username} image={t1.image} xp={t1.xp} height="h-28" />}
+          {t3 && <PodiumCard rank={3} username={t3.username} image={t3.image} xp={t3.xp} height="h-16" />}
         </div>
       )}
       {/* Top 4-50: tampilan SAMA seperti baris di hero banner (nomor kiri,
@@ -1866,7 +1869,20 @@ function LeaderboardList({ period }: { period: string }) {
 function TopGiveList() {
   const data = useQuery(api.account.topGive, { limit: 50 });
   if (!data)
-    return <p className="py-8 text-center text-sm text-muted-foreground">Memuat…</p>;
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2.5 rounded-2xl px-1 py-2">
+            <div className="skeleton size-9 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="skeleton h-3 w-2/5 rounded-full" />
+              <div className="skeleton h-2 w-1/3 rounded-full" />
+            </div>
+            <div className="skeleton h-3 w-12 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
   if (data.length === 0)
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -2475,6 +2491,20 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
     bumpQuestLocal("search");
     pushRecentSearch(query);
     setRecent(readRecentSearch());
+    const qn = query.trim().toLowerCase();
+    const cacheKey = `${qn}|${adult ? 1 : 0}`;
+    const cached = SEARCH_CACHE.get(cacheKey);
+    if (cached) {
+      setResults(
+        media === "donghua"
+          ? cached.filter((m) => m.source === "sanka")
+          : media === "film"
+            ? cached.filter((m) => m.source === "film")
+            : cached.filter((m) => m.source !== "sanka" && m.source !== "film"),
+      );
+      setSearching(false);
+      return;
+    }
     try {
       // Pencarian mencakup anime DAN donghua: dua katalog AniList diambil
       // bersamaan lalu digabung, donghua tidak diprioritaskan tapi tetap
@@ -2510,7 +2540,6 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       // Cari film: kalau query COCOK dengan judul film tapi TIDAK cocok
       // dengan judul anime/donghua mana pun → hasilnya FILM SAJA
       // (permintaan: "search film hasilnya ya film, tanpa campuran").
-      const qn = query.trim().toLowerCase();
       const filmHits = (filmRes ?? []).filter((f) =>
         String(f.title ?? "").toLowerCase().includes(qn),
       );
@@ -2548,6 +2577,11 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             : merged.filter(
                 (m) => m.source !== "sanka" && m.source !== "film",
               );
+      SEARCH_CACHE.set(cacheKey, merged);
+      if (SEARCH_CACHE.size > SEARCH_CACHE_MAX) {
+        const oldest = SEARCH_CACHE.keys().next().value;
+        if (oldest) SEARCH_CACHE.delete(oldest);
+      }
       setResults(filtered);
     } catch {
       setResults([]);
@@ -3661,7 +3695,7 @@ function AnimeDetailScreen({
           {/* Banner: background anime full lebar sampai pinggir (kesamping panjang)
               — diperpanjang sedikit ke bawah (permintaan pemilik). */}
           <div
-            className="relative h-96 w-full shrink-0 overflow-hidden bg-cover bg-center"
+            className="relative h-80 w-full shrink-0 overflow-hidden bg-cover bg-center"
             style={
               detail.image
                 ? {
@@ -3687,7 +3721,7 @@ function AnimeDetailScreen({
 dalam banner dan tampak KEpotong/setengah. `onError` mengganti
               poster gagal muat (403 dsb.) dengan kotak judul, jadi tidak
               pernah ada area kosong tanpa render. */}
-          <div className="-mt-14 flex flex-col items-center text-center">
+          <div className="-mt-24 flex flex-col items-center text-center">
             {/* Kotak poster: TANPA bilah hitam atas/bawah (object-cover),
                 plus garis tipis + pendar biru supaya kotaknya jelas terlihat
                 di atas latar hitam. */}
@@ -3710,6 +3744,25 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                   className="absolute inset-0 size-full rounded-2xl object-cover"
                 />
               )}
+              {detail.status && (
+                <span
+                  className="absolute left-0 top-0 rounded-br-xl px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-white shadow-[0_6px_16px_rgba(0,0,0,.55)]"
+                  style={{
+                    background:
+                      detail.status === "Completed"
+                        ? "color-mix(in srgb, var(--ui-c, #FFD23F) 70%, #1f2937)"
+                        : "var(--ui-a, #1CA7EC)",
+                  }}
+                >
+                  {detail.status}
+                </span>
+              )}
+              {typeof detail.score === "number" && detail.score > 0 && (
+                <span className="absolute bottom-0 right-0 flex items-center gap-1 rounded-tl-xl px-2 py-1 text-[10px] font-black text-white shadow-[0_6px_16px_rgba(0,0,0,.55)]" style={{ background: "var(--ui-a, #1CA7EC)" }}>
+                  <Star className="size-2.5 fill-white" aria-hidden />
+                  {Number(detail.score).toFixed(1)}
+                </span>
+              )}
             </div>
             <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">
               {detail.title}
@@ -3721,20 +3774,6 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
               </p>
             )}
             <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-              <span
-                className={cn(
-                  "inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold",
-                  // Teks PUTIH (permintaan) — bg biru dinaikkan tingkat
-                  // gelapnya supaya kontras tetap aman.
-                  detail.status === "Completed"
-                    ? "bg-sky-700 text-white"
-                    : detail.status === "OVA" || detail.status === "Movie"
-                      ? "bg-sky-700/90 text-white"
-                      : "bg-sky-600 text-white",
-                )}
-              >
-                {detail.status ?? "Ongoing"}
-              </span>
               {/* Jadwal update — hanya judul ONGOING. Sejajar + ukuran sama
                   dengan tag status; ikon kalender + teks kuning lembut. */}
               {detail.status === "Ongoing" && updateDay && (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router";
-import { CheckCheck, Megaphone, MessageSquare, ArrowRight } from "lucide-react";
+import { CheckCheck, Megaphone, ArrowRight } from "lucide-react";
 import {
   BellIcon,
   ChevronLeftIcon,
@@ -10,8 +10,8 @@ import {
 import { StripBackIcon } from "@/components/StripBack";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, BlueCheck } from "@/components/lstream-ui";
-import { STAFF_BADGE, timeAgo } from "@/lib/lstream";
+import { Avatar } from "@/components/lstream-ui";
+import { timeAgo } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -89,10 +89,6 @@ function NotifSheet({
 
   const notifs = useQuery(api.moderation.myNotifications, user ? {} : "skip");
   const announcements = useQuery(api.moderation.activeAnnouncements, {});
-  const friendComments = useQuery(
-    api.activities.myFriendsComments,
-    user ? {} : "skip",
-  );
 
   const markRead = useMutation(api.activities.markNotificationsRead);
   const prune = useMutation(api.moderation.pruneMyNotifications);
@@ -108,8 +104,7 @@ function NotifSheet({
 
   const list = notifs ?? [];
   const news = announcements ?? [];
-  const comments = friendComments ?? [];
-  const empty = list.length === 0 && comments.length === 0 && news.length === 0;
+  const empty = list.length === 0 && news.length === 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -137,39 +132,39 @@ function NotifSheet({
             </span>
             <p className="text-sm font-bold">Belum ada notifikasi</p>
             <p className="max-w-[16rem] text-xs leading-relaxed text-muted-foreground">
-              Broadcast developer, ajakan Afinitas, dan komentar teman akan
+              Pengumuman, ajakan Afinitas, dan pemberitahuan penting akan
               muncul di sini.
             </p>
           </div>
         ) : (
-          <div className="space-y-2.5 px-4 pt-3">
+          <div className="space-y-2.5 px-4 pb-4 pt-3">
             {news.length > 0 && (
               <>
-                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+                <p className="flex items-center gap-1.5 px-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
                   <Megaphone className="size-3" /> Pengumuman
                 </p>
                 {news.map((a: any) => (
                   <div
                     key={a._id}
-                    className="overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-400/[0.12] to-transparent p-3"
+                    className="overflow-hidden rounded-[22px] border border-amber-200/15 bg-amber-300/[0.035] p-3.5"
                   >
                     <div className="flex gap-3">
-                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-200">
+                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl border border-amber-200/15 bg-amber-300/10 text-amber-200/80">
                         <Megaphone className="size-4" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="min-w-0 flex-1 truncate text-[13px] font-bold">
+                          <p className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-white/90">
                             Pengumuman YoruNime
                           </p>
-                          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                          <span className="shrink-0 text-[9px] font-medium text-white/30">
                             {timeAgo(a.createdAt)}
                           </span>
                         </div>
-                        <p className="mt-1 whitespace-pre-line text-[12.5px] leading-snug text-zinc-200">
+                        <p className="mt-1.5 whitespace-pre-line text-[12px] leading-relaxed text-white/65">
                           {a.message}
                         </p>
-                        <p className="mt-1 text-[10px] text-white/35">
+                        <p className="mt-1.5 text-[9px] font-medium text-white/25">
                           dari {a.authorName}
                         </p>
                       </div>
@@ -177,6 +172,11 @@ function NotifSheet({
                   </div>
                 ))}
               </>
+            )}
+            {list.length > 0 && (
+              <p className="flex items-center gap-1.5 px-0.5 pt-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+                Aktivitas
+              </p>
             )}
             {list.map((n: any, i: number) => {
               // Ajakan/hasil Afinitas → langsung ke layar Afinitas KAMU.
@@ -192,14 +192,14 @@ function NotifSheet({
                   type="button"
                   onClick={handleOpen}
                   className={cn(
-                    "block w-full overflow-hidden rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+                    "block w-full overflow-hidden rounded-[20px] border p-3 text-left transition hover:bg-white/[0.055] active:scale-[0.995]",
                     n.type === "premiumClaim"
-                      ? "border-amber-500/40 bg-gradient-to-r from-amber-500/[0.12] to-transparent"
+                      ? "border-amber-200/20 bg-amber-300/[0.045]"
                       : isAffinity
-                        ? "border-pink-400/45 bg-gradient-to-r from-pink-500/[0.16] to-transparent shadow-[0_0_18px_-10px_rgba(236,72,153,.8)]"
+                        ? "border-pink-200/18 bg-pink-300/[0.04]"
                         : i === 0
-                          ? "border-primary/50 bg-primary/10"
-                          : "border-white/10 bg-white/[0.05]",
+                          ? "border-white/16 bg-white/[0.065]"
+                          : "border-white/8 bg-white/[0.03]",
                     isAffinity && "cursor-pointer",
                   )}
                 >
@@ -251,7 +251,7 @@ function NotifSheet({
                         </span>
                       </div>
                       {n.body && (
-                        <p className="mt-1 text-[12.5px] leading-snug text-zinc-300">
+                        <p className="mt-1 text-[11.5px] leading-relaxed text-white/55">
                           {n.body}
                         </p>
                       )}
@@ -267,54 +267,11 @@ function NotifSheet({
               );
             })}
 
-            {comments.length > 0 && (
-              <>
-                <p className="flex items-center gap-1.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <MessageSquare className="size-3" /> Komentar teman
-                </p>
-                {comments.map((c: any) => (
-                  <button
-                    key={c._id}
-                    onClick={() => {
-                      onOpenChange(false);
-                      navigate(`/?pilih=${c.animeId.split("__")[0]}`);
-                    }}
-                    className="block w-full overflow-hidden rounded-2xl border border-border/70 bg-secondary/30 text-left transition hover:border-foreground/40"
-                  >
-                    {c.bannerUrl && (
-                      <div
-                        className="h-7 w-full bg-cover bg-center opacity-70"
-                        style={{ backgroundImage: `url(${c.bannerUrl})` }}
-                      />
-                    )}
-                    <div className="flex gap-2.5 p-2.5">
-                      <Avatar src={c.image} seed={c.username} className="size-8" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <p className="truncate text-xs font-bold">{c.username}</p>
-                          {c.premium && <BlueCheck className="size-3.5" />}
-                          {c.staffRole && STAFF_BADGE[c.staffRole] && (
-                            <span className="truncate text-[10px] text-muted-foreground">
-                              {STAFF_BADGE[c.staffRole].name}
-                            </span>
-                          )}
-                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                            {timeAgo(c.createdAt)}
-                          </span>
-                        </div>
-                        <p className="line-clamp-2 text-sm text-zinc-300">
-                          {c.text}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </>
+            {!empty && (
+              <p className="flex items-center justify-center gap-1.5 pt-3 text-[9.5px] text-white/25">
+                <CheckCheck className="size-3" /> Semua notifikasi sudah dibaca
+              </p>
             )}
-
-            <p className="flex items-center justify-center gap-1.5 pt-3 text-[10px] text-muted-foreground">
-              <CheckCheck className="size-3" /> Semua notifikasi sudah dibaca
-            </p>
           </div>
         )}
       </SheetContent>

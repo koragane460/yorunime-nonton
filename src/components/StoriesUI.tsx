@@ -1884,14 +1884,26 @@ export function StoryViewer({
 
   if (feed === undefined) {
     return createPortal(
-      <div className="screen-enter fixed inset-0 z-[80] flex flex-col items-center justify-center gap-3 bg-black">
-        <Loader2 className="size-7 animate-spin text-white/70" />
-        <p className="text-sm font-semibold text-white/70">Memuat story…</p>
+      <div className="screen-enter fixed inset-0 z-[80] overflow-hidden bg-[#0b0b10]">
+        <div className="skeleton absolute inset-0 rounded-none opacity-40" />
+        <div className="absolute inset-x-0 top-0 flex gap-1 p-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <span key={i} className="skeleton h-0.5 flex-1 rounded-full" />
+          ))}
+        </div>
+        <div className="absolute inset-x-0 top-6 flex items-center gap-2 p-3">
+          <div className="skeleton size-9 rounded-full" />
+          <div className="space-y-1.5">
+            <div className="skeleton h-3 w-24 rounded-full" />
+            <div className="skeleton h-2 w-14 rounded-full" />
+          </div>
+        </div>
         <button
           onClick={onClose}
-          className="rounded-full border border-white/25 px-4 py-1.5 text-xs font-bold text-white/70"
+          aria-label="Tutup"
+          className="absolute right-3 top-8 z-10 grid size-9 place-items-center rounded-full bg-black/45 text-white backdrop-blur"
         >
-          Tutup
+          <X className="size-4" />
         </button>
       </div>,
       document.body,
@@ -1991,10 +2003,8 @@ export function StoryViewer({
       {/* Media mengisi seluruh layar; header/footer mengapung di atasnya. */}
       <div className="absolute inset-0 z-0">{renderMedia("size-full object-cover")}</div>
       {currentStory.mediaType === "video" && !videoReady && url && (
-        <div className="absolute inset-0 z-[2] grid place-items-center bg-black/20">
-          <span className="flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-[11px] font-bold text-white/80 backdrop-blur-md">
-            <Loader2 className="size-4 animate-spin" /> Menyiapkan video…
-          </span>
+        <div className="pointer-events-none absolute inset-0 z-[2] grid place-items-center bg-black/15">
+          <Loader2 className="size-7 animate-spin text-white/65" />
         </div>
       )}
 

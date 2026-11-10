@@ -3263,70 +3263,79 @@ svg.lucide {
   -webkit-backdrop-filter: blur(26px) saturate(1.4) !important;
 }
 
-/* Bubble chat (semua chat non-komentar): putih, teks hitam, ekor menempel
- * rapi di dasar bubble. clip-path chamfer lama dimatikan supaya bentuknya
- * tidak terlihat seperti sudut terpotong. */
+/* Home: warna hanya menemani header + Season Ini, lalu memudar menjadi
+ * gradien transparan sebelum konten berikutnya. */
+.yn-home-tint {
+  background: linear-gradient(
+    180deg,
+    var(--home-tint, #17131f) 0%,
+    var(--home-tint, #17131f) 76%,
+    color-mix(in srgb, var(--home-tint, #17131f) 72%, transparent) 89%,
+    transparent 100%
+  );
+}
+
+/* Kontrol player muncul lembut — tap pertama hanya membuka UI, tidak
+ * memicu tombol episode berikutnya. */
+.yn-controls-in {
+  animation: yn-controls-in 0.22s ease-out both;
+}
+@keyframes yn-controls-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Bubble chat global kembali ke gaya gelap sebelumnya: pesan sendiri
+ * teal-slate, pesan orang lain plum-abu. Bukan putih. */
 .bubble-mine,
 .bubble-other,
 [data-ui-theme="glass"] .bubble-mine,
 [data-ui-theme="glass"] .bubble-other {
-  background-color: #ffffff !important;
-  background-image: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  color: #17151b !important;
-  border-radius: 20px !important;
-  box-shadow: 0 12px 24px -20px rgba(0, 0, 0, 0.65) !important;
+  color: #f7f5f2 !important;
+  border-radius: 18px !important;
   clip-path: none !important;
+  background-image: none !important;
+}
+.bubble-mine,
+[data-ui-theme="glass"] .bubble-mine {
+  background-color: #29404a !important;
+  border: 1px solid rgba(148, 214, 214, 0.18) !important;
+  box-shadow: 0 12px 24px -20px rgba(0, 0, 0, 0.85) !important;
+}
+.bubble-other,
+[data-ui-theme="glass"] .bubble-other {
+  background-color: #2b2938 !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  box-shadow: 0 12px 24px -20px rgba(0, 0, 0, 0.85) !important;
 }
 
-/* Tiga titik animasi di kiri bawah bubble chat. */
-.chat-typing {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  color: currentColor;
-  opacity: 0.42;
-}
-.chat-typing i {
-  display: block;
-  width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: currentColor;
-  animation: chatDot 0.9s ease-in-out infinite;
-}
-.chat-typing i:nth-child(2) {
-  animation-delay: 0.12s;
-}
-.chat-typing i:nth-child(3) {
-  animation-delay: 0.24s;
-}
-@keyframes chatDot {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
-  30% { transform: translateY(-3px); opacity: 1; }
-}
 .bubble-mine :is(span, p, div, button, a):not(.title-shine, .title-shine *, .clan-tag *, .level-badge, .level-badge *, .bubble-embed, .bubble-embed *),
 .bubble-other :is(span, p, div, button, a):not(.title-shine, .title-shine *, .clan-tag *, .level-badge, .level-badge *, .bubble-embed, .bubble-embed *) {
   color: inherit !important;
 }
 .bubble-mine .text-muted-foreground:not(.bubble-embed *),
 .bubble-other .text-muted-foreground:not(.bubble-embed *) {
-  color: rgba(23, 21, 27, 0.5) !important;
+  color: rgba(247, 245, 242, 0.55) !important;
 }
 .bubble-mine .bubble-reply,
 .bubble-other .bubble-reply {
-  background-color: rgba(0, 0, 0, 0.055) !important;
-  border-left: 2px solid rgba(0, 0, 0, 0.18) !important;
-  color: rgba(23, 21, 27, 0.7) !important;
+  background-color: rgba(255, 255, 255, 0.07) !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.24) !important;
+  color: rgba(247, 245, 242, 0.78) !important;
 }
 .bubble-mine.yn-tail-r::after,
 .msg-in.yn-tail-r::after,
-.msg-own.yn-tail-r::after,
+.msg-own.yn-tail-r::after {
+  background-color: #29404a !important;
+  width: 9px;
+  height: 11px;
+  bottom: 0;
+}
 .bubble-other.yn-tail-l::after,
 .msg-other.yn-tail-l::after {
-  background-color: #ffffff !important;
-  width: 10px;
-  height: 12px;
+  background-color: #2b2938 !important;
+  width: 9px;
+  height: 11px;
   bottom: 0;
 }
 .bubble-mine.yn-tail-r::after {

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { Check, Gem, Plus, Search, Sticker, X } from "lucide-react";
+import { Check, Gem, Plus, Sticker, X } from "lucide-react";
 
 type Category = "pack" | "anime" | "random";
 
@@ -59,7 +59,6 @@ export function StickerStore() {
   const createPack = useMutation(api.stickers.createPack);
 
   const [cat, setCat] = useState<Category>("pack");
-  const [q, setQ] = useState("");
   const [preview, setPreview] = useState<Pack | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -73,15 +72,10 @@ export function StickerStore() {
   const [uStickers, setUStickers] = useState("");
   const [uBusy, setUBusy] = useState(false);
 
-  const packs = useMemo(() => {
-    const list = shop?.packs ?? [];
-    const needle = q.trim().toLowerCase();
-    return list.filter(
-      (p) =>
-        p.category === cat &&
-        (!needle || p.title.toLowerCase().includes(needle)),
-    );
-  }, [shop?.packs, cat, q]);
+  const packs = useMemo(
+    () => (shop?.packs ?? []).filter((p) => p.category === cat),
+    [shop?.packs, cat],
+  );
 
   // Sticker INDIVIDU yang sudah dibeli (untuk status "sudah punya").
   const ownedStickers = useMemo(
@@ -170,53 +164,42 @@ export function StickerStore() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Header: judul + TOTAL SACRET di kanan atas. */}
-      <div className="flex items-center gap-2 px-4 pb-2">
-        <Sticker className="size-4 shrink-0 text-violet-300" />
+      {/* Header bersih: tanpa kolom pencarian dan tanpa saldo di atas. */}
+      <div className="flex items-center gap-3 px-4 pb-3 pt-1">
+        <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl border border-violet-300/25 bg-[linear-gradient(145deg,rgba(167,139,250,.24),rgba(88,28,135,.28))] text-violet-100 shadow-[inset_0_1px_0_rgba(255,255,255,.14)]">
+          <span aria-hidden className="absolute -right-3 -top-4 size-10 rounded-full bg-violet-300/20 blur-xl" />
+          <Sticker className="relative size-5" />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-white">Toko Sticker</p>
-          <p className="text-[10px] text-white/45">
-            Beli pack, langsung masuk sheet chat
+          <p className="text-[16px] font-black tracking-tight text-white">Toko Sticker</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-white/45">
+            Pilih pack, bayar sekali, langsung dipakai di chat
           </p>
         </div>
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-300/35 bg-amber-400/10 px-2.5 py-1 text-[11px] font-black text-amber-200">
-          <Gem className="size-3.5" />
-          {shop?.unlimited ? "∞" : rupiah(shop?.sacret ?? 0)}
-        </span>
         {shop?.canUpload && (
           <button
             type="button"
             onClick={() => setUploadOpen((v) => !v)}
             aria-label="Upload sticker"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/75 transition hover:text-white"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/75 transition hover:text-white active:scale-95"
           >
             {uploadOpen ? <X className="size-4" /> : <Plus className="size-4" />}
           </button>
         )}
       </div>
 
-      {/* Pencarian + kategori. */}
       <div className="px-4">
-        <div className="flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-3 py-2">
-          <Search className="size-4 shrink-0 text-white/40" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Cari sticker…"
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/35"
-          />
-        </div>
-        <div className="mt-2 flex gap-1.5">
+        <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
           {CATS.map((c) => (
             <button
               key={c.key}
               type="button"
               onClick={() => setCat(c.key)}
               className={cn(
-                "flex-1 rounded-xl border px-2 py-1.5 text-[11px] font-bold transition",
+                "flex-1 rounded-xl px-2 py-2 text-[11px] font-black transition active:scale-[0.98]",
                 cat === c.key
-                  ? "border-white/35 bg-white/[0.12] text-white"
-                  : "border-white/10 bg-white/[0.03] text-white/50 hover:text-white/80",
+                  ? "bg-white text-[#17131f] shadow-[0_6px_16px_-10px_rgba(0,0,0,.9)]"
+                  : "text-white/45 hover:bg-white/[0.05] hover:text-white/80",
               )}
             >
               {c.label}
@@ -291,47 +274,66 @@ export function StickerStore() {
       )}
 
       {/* DAFTAR PACK. */}
-      <div className="thin-scroll mt-2 min-h-0 flex-1 overflow-y-auto px-4 pb-6">
+      <div className="thin-scroll mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-6">
         {!shop && (
-          <p className="py-10 text-center text-xs text-white/40">
-            Memuat toko sticker…
-          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="overflow-hidden rounded-[22px] border border-white/8 bg-white/[0.03] p-1.5">
+                <div className="skeleton aspect-[1.18/1] w-full rounded-[17px]" />
+                <div className="skeleton mt-2.5 h-3 w-2/3 rounded-full" />
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="skeleton h-3 w-12 rounded-full" />
+                  <div className="skeleton h-6 w-12 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
         {shop && packs.length === 0 && (
-          <p className="py-10 text-center text-xs text-white/40">
-            Belum ada sticker di kategori ini.
-          </p>
+          <div className="rounded-3xl border border-dashed border-white/12 bg-white/[0.025] px-5 py-12 text-center">
+            <Sticker className="mx-auto size-6 text-white/25" />
+            <p className="mt-2 text-[12px] font-bold text-white/55">Belum ada sticker di kategori ini</p>
+            <p className="mt-1 text-[10px] text-white/30">Coba kategori lain atau kembali lagi nanti.</p>
+          </div>
         )}
 
         {cat === "pack" ? (
-          <div className="grid grid-cols-2 gap-2.5">
-            {packs.map((p) => (
+          <div className="grid grid-cols-2 gap-3">
+            {packs.map((p, index) => (
               <div
                 key={p.key}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+                className="group relative overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.025))] p-1.5 shadow-[0_18px_35px_-30px_rgba(0,0,0,.95)] transition hover:border-white/18"
               >
                 <button
                   type="button"
                   onClick={() => setPreview(p)}
-                  className="grid w-full grid-cols-3 gap-0.5 bg-black/45 p-1.5"
+                  className={cn(
+                    "relative grid w-full grid-cols-3 gap-1 overflow-hidden rounded-[18px] p-2",
+                    index % 2 === 0
+                      ? "bg-[linear-gradient(145deg,rgba(139,92,246,.22),rgba(24,20,38,.55))]"
+                      : "bg-[linear-gradient(145deg,rgba(251,191,36,.18),rgba(38,29,16,.58))]",
+                  )}
                   aria-label={`Preview ${p.title}`}
                 >
+                  <span aria-hidden className="pointer-events-none absolute -right-6 -top-8 size-20 rounded-full bg-white/10 blur-2xl" />
                   {p.stickers.slice(0, 6).map((s, i) => (
                     <span
                       key={`${s}-${i}`}
-                      className="flex aspect-square items-center justify-center rounded-lg bg-white/[0.04] text-xl leading-none"
+                      className="relative flex aspect-square items-center justify-center rounded-xl border border-white/[0.055] bg-black/15 text-[22px] leading-none shadow-[inset_0_1px_0_rgba(255,255,255,.06)]"
                     >
                       {s}
                     </span>
                   ))}
+                  <span className="absolute bottom-2 left-2 rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.12em] text-white/65 backdrop-blur">
+                    {p.stickers.length} sticker
+                  </span>
                 </button>
-                {/* Kotak hitam: judul + harga + tombol beli. */}
-                <div className="bg-black px-2 py-2">
-                  <p className="truncate text-[11px] font-black text-white">
+                <div className="px-1.5 pb-1 pt-2">
+                  <p className="truncate text-[12px] font-black text-white">
                     {p.title}
                   </p>
-                  <div className="mt-1 flex items-center justify-between gap-1">
-                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-200">
+                  <div className="mt-2 flex items-center justify-between gap-1.5">
+                    <span className="flex items-center gap-1 text-[10px] font-black text-amber-200/90">
                       <Gem className="size-3" />
                       {rupiah(p.price)}
                     </span>
@@ -340,10 +342,10 @@ export function StickerStore() {
                       disabled={p.owned || busyKey === p.key}
                       onClick={() => void doBuy(p)}
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-black transition",
+                        "rounded-full px-2.5 py-1 text-[9.5px] font-black transition active:scale-95",
                         p.owned
-                          ? "bg-white/10 text-white/40"
-                          : "bg-amber-400 text-black hover:brightness-105 active:scale-95",
+                          ? "bg-white/8 text-white/35"
+                          : "bg-white text-black shadow-[0_6px_16px_-9px_rgba(0,0,0,.9)] hover:brightness-105",
                       )}
                     >
                       {p.owned
@@ -355,9 +357,9 @@ export function StickerStore() {
                   </div>
                 </div>
                 {p.owned && (
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <span className="-rotate-[18deg] rounded-md border-2 border-emerald-300/80 px-2 py-0.5 text-[11px] font-black uppercase tracking-widest text-emerald-200">
-                      DIBELI
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                    <span className="-rotate-[14deg] rounded-lg border border-emerald-300/70 bg-emerald-950/40 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-200">
+                      Dibeli
                     </span>
                   </span>
                 )}

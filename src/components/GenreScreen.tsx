@@ -229,13 +229,13 @@ export function GenreScreen({
           <h2 className="yn-sec text-lg">
             {results ? `Hasil "${q.trim()}"` : `Genre ${name}`}
           </h2>
-          <span className="text-[11px] font-bold text-white/45">
-            {loading || searching
-              ? "Memuat…"
-              : loadingAll
-                ? `${list.length}+ judul`
-                : `${list.length} judul`}
-          </span>
+          {loading || searching ? (
+            <span className="skeleton h-2.5 w-16 rounded-full" aria-hidden />
+          ) : (
+            <span className="text-[11px] font-bold text-white/45">
+              {loadingAll ? `${list.length}+ judul` : `${list.length} judul`}
+            </span>
+          )}
         </div>
 
         {/* GRID 3 PER BARIS — poster, judul, rating, views. */}

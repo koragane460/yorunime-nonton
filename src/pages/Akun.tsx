@@ -1185,6 +1185,9 @@ function SettingsScreen({
   // Pintasan layar Notifikasi dari Pengaturan (fitur baru).
   const [showNotif, setShowNotif] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsPage, setSettingsPage] = useState<
+    "menu" | "akun" | "nonton" | "notifikasi" | "tampilan" | "chat" | "privasi" | "unduhan" | "lainnya"
+  >("menu");
   const [feedSwitch, setFeedSwitch] = useState(false);
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
@@ -1270,7 +1273,10 @@ function SettingsScreen({
         </h1>
         <button
           type="button"
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => {
+            setSettingsPage("menu");
+            setSettingsOpen(true);
+          }}
           className="mt-4 flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-[#16151b] p-4 text-left transition active:scale-[0.995]"
         >
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.055] text-white/65">
@@ -1394,259 +1400,455 @@ function SettingsScreen({
     }
   };
 
+  const pageMeta: Record<
+    typeof settingsPage,
+    { title: string; desc: string }
+  > = {
+    menu: { title: "Pengaturan", desc: "Pilih kategori pengaturan" },
+    akun: { title: "Akun", desc: "Profil, Feed Mode, dan sesi akun" },
+    nonton: { title: "Nonton", desc: "Player dan episode" },
+    notifikasi: { title: "Notifikasi", desc: "Jenis pemberitahuan yang masuk" },
+    tampilan: { title: "Tampilan", desc: "Tema, warna, dan banner profil" },
+    chat: { title: "Chat", desc: "Pesan, sticker, dan tanda dibaca" },
+    privasi: { title: "Privasi", desc: "Visibilitas dan daftar blokir" },
+    unduhan: { title: "Unduhan & Kuota", desc: "Penyimpanan dan penghemat data" },
+    lainnya: { title: "Lainnya", desc: "Bantuan, sosial media, dan akun" },
+  };
+  const meta = pageMeta[settingsPage];
+  const goBack = () => {
+    if (settingsPage !== "menu") {
+      setSettingsPage("menu");
+      return;
+    }
+    setSettingsOpen(false);
+  };
+  const menuCards: {
+    key: Exclude<typeof settingsPage, "menu">;
+    title: string;
+    desc: string;
+    icon: React.ReactNode;
+    tone: string;
+  }[] = [
+    {
+      key: "akun",
+      title: "Akun",
+      desc: "Profil, Feed Mode, dan sesi akun",
+      icon: <SettingsIcon className="size-[18px]" />,
+      tone: "border-sky-300/20 bg-[linear-gradient(135deg,rgba(56,189,248,.12),rgba(255,255,255,.025))] text-sky-200",
+    },
+    {
+      key: "nonton",
+      title: "Nonton",
+      desc: "Player dan episode",
+      icon: <Play className="size-[18px]" />,
+      tone: "border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,.12),rgba(255,255,255,.025))] text-amber-200",
+    },
+    {
+      key: "notifikasi",
+      title: "Notifikasi",
+      desc: "Jenis pemberitahuan yang masuk",
+      icon: <Bell className="size-[18px]" />,
+      tone: "border-rose-300/20 bg-[linear-gradient(135deg,rgba(251,113,133,.12),rgba(255,255,255,.025))] text-rose-200",
+    },
+    {
+      key: "tampilan",
+      title: "Tampilan",
+      desc: "Tema, warna, dan banner profil",
+      icon: <Palette className="size-[18px]" />,
+      tone: "border-violet-300/20 bg-[linear-gradient(135deg,rgba(167,139,250,.12),rgba(255,255,255,.025))] text-violet-200",
+    },
+    {
+      key: "chat",
+      title: "Chat",
+      desc: "Pesan, sticker, dan tanda dibaca",
+      icon: <MessageSquare className="size-[18px]" />,
+      tone: "border-cyan-300/20 bg-[linear-gradient(135deg,rgba(34,211,238,.12),rgba(255,255,255,.025))] text-cyan-200",
+    },
+    {
+      key: "privasi",
+      title: "Privasi",
+      desc: "Visibilitas dan daftar blokir",
+      icon: <Shield className="size-[18px]" />,
+      tone: "border-emerald-300/20 bg-[linear-gradient(135deg,rgba(52,211,153,.12),rgba(255,255,255,.025))] text-emerald-200",
+    },
+    {
+      key: "unduhan",
+      title: "Unduhan & Kuota",
+      desc: "Penyimpanan dan penghemat data",
+      icon: <Download className="size-[18px]" />,
+      tone: "border-indigo-300/20 bg-[linear-gradient(135deg,rgba(129,140,248,.12),rgba(255,255,255,.025))] text-indigo-200",
+    },
+    {
+      key: "lainnya",
+      title: "Lainnya",
+      desc: "Bantuan, sosial media, dan akun",
+      icon: <Headset className="size-[18px]" />,
+      tone: "border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.02))] text-white/65",
+    },
+  ];
+
   return (
-    <div className="fixed inset-0 z-[90] space-y-2.5 overflow-y-auto bg-background px-4 pb-24 pt-3">
-      {/* Fullscreen pengaturan: hanya tombol kembali + daftar tombol. */}
-      <div className="flex items-center gap-2.5">
-        <button
-          onClick={() => setSettingsOpen(false)}
-          aria-label="Kembali"
-          className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
-        >
-          <StripBackIcon />
-        </button>
-        <h1 className="min-w-0 flex-1 truncate text-[19px] font-black tracking-tight">
-          Pengaturan
-        </h1>
-      </div>
-
-      {/* Pintu masuk Feed Mode — transisi fullscreen saat ditekan. */}
-      <button
-        type="button"
-        onClick={() => setFeedSwitch(true)}
-        className="flex w-full items-center gap-3 rounded-3xl border border-[var(--ui-c)]/25 bg-[var(--ui-c)]/[0.07] p-3.5 text-left transition active:scale-[0.995]"
-      >
-        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--ui-c)]/15 text-[var(--ui-c)]">
-          <ArrowLeftRight className="size-[18px]" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[12.5px] font-black text-white">Feed Mode</span>
-          <span className="mt-0.5 block text-[10px] text-white/40">
-            Beralih dari halaman utama ke beranda feed
-          </span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-white/30" />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => window.dispatchEvent(new Event("yn-open-theme"))}
-        className="flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,210,63,.035))] p-3 text-left transition hover:border-white/25 active:scale-[0.995]"
-      >
-        <span
-          className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-gold"
-          style={{ background: "color-mix(in srgb, var(--ui-a, #FFD23F) 16%, transparent)" }}
-        >
-          <Palette className="size-[18px]" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[12.5px] font-black">Tema &amp; warna</span>
-          <span className="mt-0.5 block text-[10px] text-white/40">
-            Ganti Glassmorphism/Default dan palet seluruh aplikasi
-          </span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-white/30" />
-      </button>
-
-      {/* ===== KOTAK KATEGORI — permintaan: pengaturan jadi kumpulan kotak
-          per kategori, tiap kotak berisi deretan tombol toggle on/off. ===== */}
-      <SettingsBox
-        icon={<Play className="size-[18px]" />}
-        title="Nonton"
-        desc="Perilaku player & pemutaran otomatis"
-        items={PREF_NONTON}
-        value={watchPrefs}
-        onToggle={toggleWatch}
-      />
-      <SettingsBox
-        icon={<Bell className="size-[18px]" />}
-        title="Notifikasi"
-        desc="Feed, episode anime, chat teman & clan"
-        items={PREF_NOTIF}
-        value={notifPrefs}
-        onToggle={toggleNotif}
-      />
-      <SettingsBox
-        icon={<Palette className="size-[18px]" />}
-        title="Tampilan"
-        desc="Tema, animasi & kenyamanan layar"
-        items={PREF_TAMPILAN}
-        value={tampilanPrefs}
-        onToggle={toggleTampilan}
-      />
-      {/* BANNER PROFIL — dikembalikan ke Pengaturan, menyatu di kotak
-          kategori Tampilan (bukan lagi terpisah dari ganti photo profil). */}
-      <div className="rounded-3xl border border-violet-400/15 bg-gradient-to-br from-violet-400/[0.08] via-card to-card p-3">
-        <div className="mb-2.5 flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/15">
-            <Palette className="size-[18px] text-violet-300" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-black leading-tight">Banner Profil</p>
-            <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground">
-              Tampil di detail akun fullscreen · khusus Premium
-            </p>
-          </div>
-          {isPremium && (
-            <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-black text-gold">
-              PREMIUM
-            </span>
-          )}
-        </div>
-        <div className="relative mb-2 h-20 overflow-hidden rounded-xl bg-white/[0.04]">
-          {banner ? (
-            <img src={banner} alt="" className="size-full object-cover" />
-          ) : (
-            <span className="flex size-full items-center justify-center text-[10px] text-white/35">
-              Belum ada banner
-            </span>
-          )}
-          <span className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/60 to-transparent" />
-        </div>
-        <input
-          ref={bannerInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = "";
-            if (!f) return;
-            if (!isPremium) {
-              setErr("Banner profil khusus akun Premium");
-              return;
-            }
-            setBusyBanner(true);
-            void (async () => {
-              try {
-                const small = await shrinkBanner(f);
-                await updateProfile({ bannerUrl: small });
-                setBanner(small);
-                setErr("");
-              } catch (e2) {
-                setErr(e2 instanceof Error ? e2.message : "Gagal mengganti banner");
-              } finally {
-                setBusyBanner(false);
-              }
-            })();
-          }}
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={() => bannerInputRef.current?.click()}
-            disabled={busyBanner}
-            className="flex-1 rounded-xl bg-sky-300 py-2 text-[11px] font-black text-sky-950 transition active:scale-[0.98] disabled:opacity-50"
-          >
-            {busyBanner ? "Memproses…" : "Ganti banner"}
-          </button>
-          {banner && (
+    <div className="fixed inset-0 z-[90] bg-background">
+      <div className="thin-scroll h-full overflow-y-auto px-4 pb-28 pt-3">
+        <div className="sticky top-0 z-20 -mx-4 border-b border-white/10 bg-background/95 px-4 py-2.5 backdrop-blur-xl">
+          <div className="flex items-center gap-2.5">
             <button
-              onClick={() => {
-                setBanner("");
-                setErr("");
-                void updateProfile({ bannerUrl: "" }).catch((e2) =>
-                  setErr(e2 instanceof Error ? e2.message : "Gagal melepas banner"),
-                );
-              }}
-              className="rounded-xl border border-white/15 px-3 py-2 text-[11px] font-bold text-white/60"
+              onClick={goBack}
+              aria-label={settingsPage === "menu" ? "Tutup pengaturan" : "Kembali ke menu pengaturan"}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.045] text-foreground/80 transition active:scale-95"
             >
-              Lepas
+              <StripBackIcon />
             </button>
-          )}
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-[16px] font-black tracking-tight text-white">
+                {meta.title}
+              </h1>
+              <p className="truncate text-[9.5px] font-medium text-white/35">
+                {meta.desc}
+              </p>
+            </div>
+            {settingsPage !== "menu" && (
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-white/35">
+                {settingsPage}
+              </span>
+            )}
+          </div>
         </div>
+
+        {settingsPage === "menu" && (
+          <div className="mt-3 space-y-2">
+            {menuCards.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setSettingsPage(item.key)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-[22px] border p-3 text-left transition hover:brightness-110 active:scale-[0.995]",
+                  item.tone,
+                )}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-black/15">
+                  {item.icon}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-black text-white">
+                    {item.title}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] leading-snug text-white/40">
+                    {item.desc}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-white/30" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {settingsPage === "akun" && (
+          <div className="mt-3 space-y-2">
+            <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.025))] p-3.5">
+              <div className="flex items-center gap-3">
+                <FramedAvatar
+                  border={user.avatarBorder}
+                  src={user.image}
+                  seed={user.username}
+                  className="size-12 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-black text-white">
+                    {user.username ?? "user"}
+                  </p>
+                  <p className="truncate text-[10px] text-white/40">
+                    {user.email ?? user.name ?? "Akun YoruNime"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  className="shrink-0 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-[10px] font-black text-white/75 transition active:scale-95"
+                >
+                  Edit profil
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFeedSwitch(true)}
+              className="flex w-full items-center gap-3 rounded-[22px] border border-[var(--ui-c)]/25 bg-[var(--ui-c)]/[0.07] p-3 text-left transition active:scale-[0.995]"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--ui-c)]/15 text-[var(--ui-c)]">
+                <ArrowLeftRight className="size-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-black text-white">Feed Mode</span>
+                <span className="mt-0.5 block text-[10px] text-white/40">
+                  Beralih ke beranda Feed
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-white/30" />
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await onSignOut();
+                navigate("/home");
+              }}
+              className="flex w-full items-center gap-2.5 rounded-[22px] border border-red-500/35 bg-red-500/[0.08] p-3 text-[12px] font-semibold text-red-300 transition hover:bg-red-500/15 active:scale-[0.99]"
+            >
+              <LogOut className="size-4 shrink-0" /> Keluar dari akun
+            </button>
+          </div>
+        )}
+
+        {settingsPage === "nonton" && (
+          <div className="mt-3">
+            <SettingsBox
+              icon={<Play className="size-[18px]" />}
+              title="Nonton"
+              desc="Perilaku player & pemutaran otomatis"
+              items={PREF_NONTON}
+              value={watchPrefs}
+              onToggle={toggleWatch}
+              openAll
+            />
+          </div>
+        )}
+
+        {settingsPage === "notifikasi" && (
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowNotif(true)}
+              className="flex w-full items-center gap-3 rounded-[22px] border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,.1),rgba(255,255,255,.025))] p-3 text-left transition active:scale-[0.995]"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-amber-400/15 text-amber-200">
+                <Bell className="size-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-black text-white">Buka pusat notifikasi</span>
+                <span className="mt-0.5 block text-[10px] text-white/40">
+                  Lihat pengumuman dan pemberitahuan terbaru
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-white/30" />
+            </button>
+            <SettingsBox
+              icon={<Bell className="size-[18px]" />}
+              title="Notifikasi"
+              desc="Feed, episode anime, chat teman & clan"
+              items={PREF_NOTIF}
+              value={notifPrefs}
+              onToggle={toggleNotif}
+              openAll
+            />
+          </div>
+        )}
+
+        {settingsPage === "tampilan" && (
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("yn-open-theme"))}
+              className="flex w-full items-center gap-3 rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,210,63,.035))] p-3 text-left transition hover:border-white/25 active:scale-[0.995]"
+            >
+              <span
+                className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-gold"
+                style={{ background: "color-mix(in srgb, var(--ui-a, #FFD23F) 16%, transparent)" }}
+              >
+                <Palette className="size-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-black text-white">Tema &amp; warna</span>
+                <span className="mt-0.5 block text-[10px] text-white/40">
+                  Glassmorphism, Default, dan palet aplikasi
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-white/30" />
+            </button>
+            <SettingsBox
+              icon={<Palette className="size-[18px]" />}
+              title="Tampilan"
+              desc="Tema, animasi & kenyamanan layar"
+              items={PREF_TAMPILAN}
+              value={tampilanPrefs}
+              onToggle={toggleTampilan}
+              openAll
+            />
+            <div className="rounded-3xl border border-violet-400/15 bg-gradient-to-br from-violet-400/[0.08] via-card to-card p-3">
+              <div className="mb-2.5 flex items-center gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/15">
+                  <Palette className="size-[18px] text-violet-300" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-black leading-tight">Banner Profil</p>
+                  <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground">
+                    Tampil di detail akun fullscreen · khusus Premium
+                  </p>
+                </div>
+                {isPremium && (
+                  <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-black text-gold">
+                    PREMIUM
+                  </span>
+                )}
+              </div>
+              <div className="relative mb-2 h-20 overflow-hidden rounded-xl bg-white/[0.04]">
+                {banner ? (
+                  <img src={banner} alt="" className="size-full object-cover" />
+                ) : (
+                  <span className="flex size-full items-center justify-center text-[10px] text-white/35">
+                    Belum ada banner
+                  </span>
+                )}
+                <span className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/60 to-transparent" />
+              </div>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  if (!isPremium) {
+                    setErr("Banner profil khusus akun Premium");
+                    return;
+                  }
+                  setBusyBanner(true);
+                  void (async () => {
+                    try {
+                      const small = await shrinkBanner(f);
+                      await updateProfile({ bannerUrl: small });
+                      setBanner(small);
+                      setErr("");
+                    } catch (e2) {
+                      setErr(e2 instanceof Error ? e2.message : "Gagal mengganti banner");
+                    } finally {
+                      setBusyBanner(false);
+                    }
+                  })();
+                }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={busyBanner}
+                  className="flex-1 rounded-xl bg-sky-300 py-2 text-[11px] font-black text-sky-950 transition active:scale-[0.98] disabled:opacity-50"
+                >
+                  {busyBanner ? "Memproses…" : "Ganti banner"}
+                </button>
+                {banner && (
+                  <button
+                    onClick={() => {
+                      setBanner("");
+                      setErr("");
+                      void updateProfile({ bannerUrl: "" }).catch((e2) =>
+                        setErr(e2 instanceof Error ? e2.message : "Gagal melepas banner"),
+                      );
+                    }}
+                    className="rounded-xl border border-white/15 px-3 py-2 text-[11px] font-bold text-white/60"
+                  >
+                    Lepas
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {settingsPage === "chat" && (
+          <div className="mt-3">
+            <SettingsBox
+              icon={<MessageSquare className="size-[18px]" />}
+              title="Chat"
+              desc="Pesan, sticker & cara mengetik"
+              items={PREF_CHAT}
+              value={chatPrefs}
+              onToggle={toggleChat}
+              openAll
+            />
+          </div>
+        )}
+
+        {settingsPage === "privasi" && (
+          <div className="mt-3 space-y-2">
+            <SettingsBox
+              icon={<Shield className="size-[18px]" />}
+              title="Privasi"
+              desc="Siapa yang bisa melihat & menghubungimu"
+              items={PREF_PRIVASI}
+              value={privasiPrefs}
+              onToggle={togglePrivasi}
+              openAll
+            />
+            <button
+              onClick={() => setShowBlocked(true)}
+              className="w-full rounded-[22px] border border-border bg-card p-3 text-left transition hover:border-foreground/40"
+            >
+              <span className="flex items-center gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E84855]/15">
+                  <Ban className="size-[18px] text-[#E84855]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-bold">Daftar Blokir</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    {blockedUsers?.length
+                      ? `${blockedUsers.length} pengguna diblokir · ketuk untuk kelola`
+                      : "Belum ada pengguna yang diblokir"}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </span>
+            </button>
+          </div>
+        )}
+
+        {settingsPage === "unduhan" && (
+          <div className="mt-3">
+            <SettingsBox
+              icon={<Download className="size-[18px]" />}
+              title="Unduhan & Kuota"
+              desc="Mengelola unduhan & penghemat data"
+              items={PREF_UNDUHAN}
+              value={unduhanPrefs}
+              onToggle={toggleUnduhan}
+              openAll
+            />
+          </div>
+        )}
+
+        {settingsPage === "lainnya" && (
+          <div className="mt-3 space-y-2">
+            {panelLevel !== "none" && <StaffPanel level={panelLevel} />}
+            <BlockTitle>Tautan Media Sosial</BlockTitle>
+            <SocialLinkBoxes />
+            <BlockTitle>Bantuan</BlockTitle>
+            <button
+              onClick={onOpenCs}
+              className="flex w-full items-center gap-2.5 rounded-[22px] border border-border bg-card p-3 text-left transition hover:border-foreground/40"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+                <Headset className="size-[18px] text-primary" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold">Customer Service</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  Hubungi tim YoruNime
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+            <div className="flex items-center gap-2.5 rounded-[22px] border border-white/10 bg-card p-3 text-[12px]">
+              <Mail className="size-4 shrink-0 text-primary" /> Lstreamsupport@gmail.com
+            </div>
+          </div>
+        )}
+
+        {showBlocked && <BlockedList onClose={() => setShowBlocked(false)} />}
+        {showNotif && <NotifScreen onClose={() => setShowNotif(false)} />}
+        {feedSwitch && <FeedModeSwitch onClose={() => setFeedSwitch(false)} />}
+        {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
       </div>
-
-      <SettingsBox
-        icon={<MessageSquare className="size-[18px]" />}
-        title="Chat"
-        desc="Pesan, sticker & cara mengetik"
-        items={PREF_CHAT}
-        value={chatPrefs}
-        onToggle={toggleChat}
-      />
-      <SettingsBox
-        icon={<Shield className="size-[18px]" />}
-        title="Privasi"
-        desc="Siapa yang bisa melihat & menghubungimu"
-        items={PREF_PRIVASI}
-        value={privasiPrefs}
-        onToggle={togglePrivasi}
-      />
-      {/* DAFTAR HITAM — kelola user yang diblokir dari komentar & chat. */}
-      <button
-        onClick={() => setShowBlocked(true)}
-        className="w-full rounded-2xl border border-border bg-card p-3 text-left transition hover:border-foreground/40"
-      >
-        <span className="flex items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E84855]/15">
-            <Ban className="size-[18px] text-[#E84855]" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-bold">Daftar Blokir</span>
-            <span className="block text-[11px] text-muted-foreground">
-              {blockedUsers?.length
-                ? `${blockedUsers.length} pengguna diblokir · ketuk untuk kelola`
-                : "Belum ada pengguna yang diblokir"}
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </span>
-      </button>
-      <SettingsBox
-        icon={<Download className="size-[18px]" />}
-        title="Unduhan & Kuota"
-        desc="Mengelola unduhan & penghemat data"
-        items={PREF_UNDUHAN}
-        value={unduhanPrefs}
-        onToggle={toggleUnduhan}
-      />
-        {panelLevel !== "none" && <StaffPanel level={panelLevel} />}
-
-      {/* TAUTAN MEDIA SOSIAL — di atas Customer Service. */}
-      <BlockTitle>Tautan Media Sosial</BlockTitle>
-      <SocialLinkBoxes />
-
-      {/* CS + email + log out */}
-      <BlockTitle>Lainnya</BlockTitle>
-      <div className="space-y-2">
-        <button
-          onClick={onOpenCs}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/40"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-            <Headset className="size-[18px] text-primary" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-semibold">CS</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Customer service YoruNime
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </button>
-        <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-card p-3 text-[13px]">
-          <Mail className="size-4 shrink-0 text-primary" /> Lstreamsupport@gmail.com
-        </div>
-        <button
-          onClick={async () => {
-            await onSignOut();
-            navigate("/home");
-          }}
-          className="flex w-full items-center gap-2.5 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[13px] font-semibold text-red-300 transition hover:border-red-400 hover:bg-red-500/20 active:scale-[0.99]"
-        >
-          <LogOut className="size-4 shrink-0" /> Log out dari akun
-        </button>
-      </div>
-
-      {/* DAFTAR BLOKIR (layar penuh dari Pengaturan). */}
-      {showBlocked && <BlockedList onClose={() => setShowBlocked(false)} />}
-
-      {/* Pintasan layar Notifikasi (overlay dari Pengaturan). */}
-      {showNotif && <NotifScreen onClose={() => setShowNotif(false)} />}
-      {feedSwitch && <FeedModeSwitch onClose={() => setFeedSwitch(false)} />}
-
-      {/* Sheet edit identitas: foto + username dalam satu tempat. */}
-      {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
     </div>
   );
 }
@@ -2500,6 +2702,7 @@ function SettingsBox({
   value,
   onToggle,
   compact = false,
+  openAll = false,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -2509,8 +2712,10 @@ function SettingsBox({
   onToggle: (key: string) => void;
   /** Tampilan minimalis: hanya 3 toggle, tanpa tombol "lihat lainnya". */
   compact?: boolean;
+  /** Sub-layar kategori menampilkan seluruh toggle sekaligus. */
+  openAll?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openAll);
   const tone = SETTINGS_TONES[title] ?? {
     card: "border-border bg-card",
     chip: "bg-primary/15 text-primary",

@@ -218,7 +218,21 @@ export function BlockedList({ onClose }: { onClose: () => void }) {
 
         {/* DAFTAR */}
         {rows === undefined ? (
-          <p className="py-8 text-center text-xs text-white/40">Memuat…</p>
+          <div className="mt-2 space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2.5 rounded-2xl border border-white/8 bg-white/[0.025] p-2.5"
+              >
+                <div className="skeleton size-10 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="skeleton h-3 w-1/3 rounded-full" />
+                  <div className="skeleton h-2 w-1/5 rounded-full" />
+                </div>
+                <div className="skeleton h-7 w-16 rounded-full" />
+              </div>
+            ))}
+          </div>
         ) : shown.length === 0 ? (
           <p className="py-10 text-center text-[12px] text-white/40">
             {q

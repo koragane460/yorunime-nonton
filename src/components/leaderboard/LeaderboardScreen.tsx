@@ -175,16 +175,31 @@ function XpView() {
           </button>
         ))}
       </div>
-      {!data && <p className="py-8 text-center text-sm text-white/50">Memuat…</p>}
+      {!data && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 items-end gap-2 px-2 pt-4">
+            <div className="skeleton h-24 rounded-2xl" />
+            <div className="skeleton h-32 rounded-2xl" />
+            <div className="skeleton h-20 rounded-2xl" />
+          </div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2.5 px-1 py-1.5">
+              <div className="skeleton size-9 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="skeleton h-3 w-2/5 rounded-full" />
+                <div className="skeleton h-2 w-1/4 rounded-full" />
+              </div>
+              <div className="skeleton h-3 w-12 rounded-full" />
+            </div>
+          ))}
+        </div>
+      )}
       {data?.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada data XP periode ini</p>}
       {data && data.length > 0 && (
-        <div className="mb-3 rounded-3xl border border-gold/30 bg-card p-3">
-          <span aria-hidden className="absolute" />
-          <div className="relative grid grid-cols-3 items-end gap-2">
-            {t2 && <Podium {...t2} rank={2} />}
-            {t1 && <Podium {...t1} rank={1} />}
-            {t3 && <Podium {...t3} rank={3} />}
-          </div>
+        <div className="relative mb-3 grid grid-cols-3 items-end gap-2 px-2 pb-3 pt-2">
+          {t2 && <Podium {...t2} rank={2} />}
+          {t1 && <Podium {...t1} rank={1} />}
+          {t3 && <Podium {...t3} rank={3} />}
         </div>
       )}
       <div className="space-y-1.5">
@@ -201,7 +216,21 @@ function XpView() {
 /* ------------------------------------------------------ Give view ---- */
 function GiveView() {
   const data = useQuery(api.account.topGive, { limit: 50 });
-  if (!data) return <p className="py-8 text-center text-sm text-white/50">Memuat…</p>;
+  if (!data)
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2.5 rounded-2xl px-1 py-2">
+            <div className="skeleton size-9 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="skeleton h-3 w-2/5 rounded-full" />
+              <div className="skeleton h-2 w-1/3 rounded-full" />
+            </div>
+            <div className="skeleton h-3 w-12 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
   if (data.length === 0)
     return <p className="py-8 text-center text-sm text-white/50">Belum ada yang bagi premium — jadilah yang pertama!</p>;
   return (
@@ -228,7 +257,21 @@ function ClanView() {
   const navigate = useNavigate();
   const clans = useQuery(api.clans.listClans, {});
   const shown = (clans ?? []).slice(0, 100);
-  if (!clans) return <p className="py-8 text-center text-sm text-white/50">Memuat…</p>;
+  if (!clans)
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+            <div className="skeleton size-8 rounded-xl" />
+            <div className="skeleton size-9 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="skeleton h-3 w-1/2 rounded-full" />
+              <div className="skeleton h-2 w-1/4 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] font-black text-amber-200">
