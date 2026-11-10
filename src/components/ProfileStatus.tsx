@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Check, Loader2, LockKeyhole, Plus, Send, Sparkles, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { Avatar } from "@/components/lstream-ui";
 import { StoryRing } from "@/components/StoriesUI";
 import { cn } from "@/lib/utils";
 
@@ -101,28 +102,23 @@ export function ProfileStatusBubble({
       onClick={onClick}
       aria-label="Buka status bubble"
       className={cn(
-        "group relative z-20 overflow-visible rounded-[22px] border border-white/65 bg-[linear-gradient(160deg,#ffffff_0%,#f6f4f8_100%)] px-3.5 py-2.5 text-left text-[#17151b] shadow-[0_16px_34px_-18px_rgba(0,0,0,.7),inset_0_1px_0_rgba(255,255,255,.9)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-18px_rgba(0,0,0,.8)] active:scale-95",
+        "group relative z-20 overflow-visible rounded-[22px] border border-white/25 px-3.5 py-2.5 text-left text-white shadow-[0_16px_34px_-18px_rgba(0,0,0,.85),inset_0_1px_0_rgba(255,255,255,.16)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-18px_rgba(0,0,0,.9)] active:scale-95",
         wide ? "max-w-[270px]" : "max-w-[200px]",
         className,
       )}
+      style={{ backgroundImage: pattern.css, backgroundColor: "#17131f" }}
     >
       <span
         aria-hidden
-        className="absolute -left-1.5 top-1/2 size-3 -translate-y-1/2 rotate-45 rounded-[3px] border-b border-l border-white/70 bg-[#fbfafc]"
+        className="absolute -left-1.5 top-1/2 size-3 -translate-y-1/2 rotate-45 rounded-[3px] border-b border-l border-white/20"
+        style={{ backgroundImage: pattern.css, backgroundColor: "#17131f" }}
       />
+      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[21px] bg-black/20" />
       <span className="relative flex items-start gap-2">
-        <span
-          aria-hidden
-          className={cn(
-            "shrink-0 rounded-full border border-black/10 shadow-sm",
-            wide ? "mt-0.5 size-5" : "mt-0.5 size-3.5",
-          )}
-          style={{ background: pattern.css }}
-        />
         <span className="min-w-0 flex-1">
           <span
             className={cn(
-              "block font-semibold leading-snug text-[#17151b]",
+              "block font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.55)]",
               wide ? "text-[11.5px]" : "text-[8.5px]",
               clamp && !wide && "line-clamp-2",
             )}
@@ -131,7 +127,7 @@ export function ProfileStatusBubble({
           </span>
           <span
             className={cn(
-              "mt-1 flex items-center gap-1 font-black uppercase tracking-[0.14em] text-black/30",
+              "mt-1 flex items-center gap-1 font-black uppercase tracking-[0.14em] text-white/55",
               wide ? "text-[7px]" : "text-[5.5px]",
             )}
           >
@@ -181,8 +177,7 @@ export function StatusBubbleEditor({
 
   return (
     <div
-      className="screen-enter fixed inset-0 z-[96] flex flex-col overflow-hidden text-white"
-      style={{ backgroundImage: pattern.css, backgroundColor: "#0b0810" }}
+      className="screen-enter fixed inset-0 z-[96] flex flex-col overflow-hidden bg-[#0b0810] text-white"
     >
       {/* Latar pola benar-benar menutup layar; tidak ada halaman lain yang
           kelihatan lewat bagian gradient yang transparan. */}
@@ -227,10 +222,10 @@ export function StatusBubbleEditor({
             <div className="relative flex flex-col items-center">
               <span className="absolute -inset-3 rounded-full border border-white/18" />
               <span className="absolute -inset-1 rounded-full bg-white/20 blur-xl" />
-              <img
-                src={user?.image ?? ""}
-                alt=""
-                className="relative size-[112px] rounded-full border-[3px] border-white/80 object-cover shadow-[0_24px_50px_-20px_rgba(0,0,0,.95)]"
+              <Avatar
+                src={user?.image}
+                seed={user?.username ?? "user"}
+                className="relative size-[112px] rounded-full border-[3px] border-white/80 shadow-[0_24px_50px_-20px_rgba(0,0,0,.95)]"
               />
               <span className="relative mt-3 inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-white/60 backdrop-blur-md">
                 <LockKeyhole className="size-2.5" /> Posisi terkunci
@@ -239,12 +234,17 @@ export function StatusBubbleEditor({
           </div>
 
           {/* Bubble di KANAN foto. */}
-          <div className="absolute right-0 top-[58%] z-10 w-[72%] min-h-[112px] rounded-[26px] border border-white/70 bg-[linear-gradient(155deg,#ffffff_0%,#f4f1f7_100%)] px-4 py-3.5 text-[#17151b] shadow-[0_26px_60px_-22px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.9)]">
+          <div
+            className="absolute right-0 top-[58%] z-10 min-h-[112px] w-[72%] rounded-[26px] border border-white/30 px-4 py-3.5 text-white shadow-[0_26px_60px_-22px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.18)]"
+            style={{ backgroundImage: pattern.css, backgroundColor: "#17131f" }}
+          >
             <span
               aria-hidden
-              className="absolute -left-2 top-5 size-4 rotate-45 rounded-[4px] border-b border-l border-white/80 bg-white"
+              className="absolute -left-2 top-5 size-4 rotate-45 rounded-[4px] border-b border-l border-white/25"
+              style={{ backgroundImage: pattern.css, backgroundColor: "#17131f" }}
             />
-            <span className="flex items-center gap-1 text-[7.5px] font-black uppercase tracking-[0.16em] text-black/35">
+            <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[25px] bg-black/20" />
+            <span className="relative flex items-center gap-1 text-[7.5px] font-black uppercase tracking-[0.16em] text-white/55">
               <Sparkles className="size-2.5" /> Kabar hari ini
             </span>
             <textarea
@@ -253,9 +253,9 @@ export function StatusBubbleEditor({
               onChange={(e) => setText(e.target.value.slice(0, 140))}
               rows={3}
               placeholder={shown}
-              className="mt-1 h-[66px] w-full resize-none bg-transparent text-[12.5px] font-semibold leading-snug text-[#17151b] outline-none placeholder:text-black/40"
+              className="relative mt-1 h-[66px] w-full resize-none bg-transparent text-[12.5px] font-semibold leading-snug text-white outline-none placeholder:text-white/45"
             />
-            <span className="absolute bottom-2.5 right-3 text-[8px] font-bold text-black/30">
+            <span className="absolute bottom-2.5 right-3 text-[8px] font-bold text-white/40">
               {text.length}/140
             </span>
           </div>
@@ -280,7 +280,7 @@ export function StatusBubbleEditor({
               className="size-4 rounded-full border border-white/30"
               style={{ background: pattern.css }}
             />
-            Ganti latar
+            Ganti background
           </button>
           <button
             type="button"
@@ -307,7 +307,7 @@ export function StatusBubbleEditor({
           <div className="pop-enter relative w-full rounded-t-[28px] border-t border-white/12 bg-[#100e16] p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
             <div className="mx-auto mb-3 h-1 w-11 rounded-full bg-white/20" />
             <div className="flex items-center justify-between pb-3">
-              <p className="text-[13px] font-black text-white">Pilih latar</p>
+              <p className="text-[13px] font-black text-white">Pilih background bubble</p>
               <button
                 type="button"
                 onClick={() => setBgOpen(false)}

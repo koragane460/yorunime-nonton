@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { useFastChat } from "@/hooks/use-fast-chat";
 import { AppLayout, useHideNavOnMount } from "@/components/AppLayout";
-import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge, clanNameClass } from "@/components/lstream-ui";
+import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, LevelBadge, TitleBadge, clanNameClass, PosterStatusBadge, PosterRatingBadge } from "@/components/lstream-ui";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
@@ -2255,8 +2255,10 @@ function SearchResultRow({
             <Star className="size-4 opacity-40" aria-hidden />
           </div>
         )}
+        <PosterStatusBadge status={item.status} />
+        <PosterRatingBadge score={item.score} />
         {isDonghua && (
-          <span className="absolute left-0.5 top-0.5 rounded border border-black/40 bg-zinc-800/80 px-1 py-0.5 text-[9px] font-semibold text-zinc-200">
+          <span className="absolute right-0 top-0 rounded-bl-lg bg-zinc-800/90 px-1.5 py-1 text-[9px] font-black text-zinc-100 shadow">
             DH
           </span>
         )}
@@ -2282,23 +2284,9 @@ function SearchResultRow({
             {synopsis}
           </p>
         )}
-        {/* Baris 1 — skor & status. */}
-        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
-          {typeof item.score === "number" && item.score > 0 && (
-            <span className="flex items-center gap-1">
-              <Star className="size-3.5 text-gold-strong" aria-hidden />
-              {item.score.toFixed(1)}
-            </span>
-          )}
-          {item.status && (
-            <span className="flex items-center gap-1">
-              <Play className="size-3.5" aria-hidden />
-              {item.status}
-            </span>
-          )}
-        </div>
-        {/* Baris 2 — tipe & jumlah nonton, lurus dalam dua kolom. */}
-        <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+        {/* Baris 1 — tipe & jumlah nonton. Status/rating sudah menempel pada
+            poster dengan komponen yang sama seperti Home & Watch. */}
+        <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           <span className="flex min-w-0 items-center gap-1">
             <Tv className="size-3.5 shrink-0" aria-hidden />
             <span className="truncate">
@@ -3744,25 +3732,8 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                   className="absolute inset-0 size-full rounded-2xl object-cover"
                 />
               )}
-              {detail.status && (
-                <span
-                  className="absolute left-0 top-0 rounded-br-xl px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-white shadow-[0_6px_16px_rgba(0,0,0,.55)]"
-                  style={{
-                    background:
-                      detail.status === "Completed"
-                        ? "color-mix(in srgb, var(--ui-c, #FFD23F) 70%, #1f2937)"
-                        : "var(--ui-a, #1CA7EC)",
-                  }}
-                >
-                  {detail.status}
-                </span>
-              )}
-              {typeof detail.score === "number" && detail.score > 0 && (
-                <span className="absolute bottom-0 right-0 flex items-center gap-1 rounded-tl-xl px-2 py-1 text-[10px] font-black text-white shadow-[0_6px_16px_rgba(0,0,0,.55)]" style={{ background: "var(--ui-a, #1CA7EC)" }}>
-                  <Star className="size-2.5 fill-white" aria-hidden />
-                  {Number(detail.score).toFixed(1)}
-                </span>
-              )}
+              <PosterStatusBadge status={detail.status} size="lg" />
+              <PosterRatingBadge score={detail.score} size="lg" />
             </div>
             <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">
               {detail.title}

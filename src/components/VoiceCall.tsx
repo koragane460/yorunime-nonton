@@ -16,8 +16,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Clapperboard,
   Coffee,
   Copy,
@@ -203,21 +205,30 @@ function VoiceHomeScreen({
           </button>
         </div>
 
-        {/* Header ringkas — tanpa equalizer/ornamen besar. */}
-        <div className="voice-hero relative mt-2 rounded-2xl border p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-lg font-black tracking-tight text-white">
-                Voice Room
-              </h1>
-              <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-white/45">
-                <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-                {list.length} room online · pilih untuk join
+        {/* Header ringkas — satu panel bersih, aksi utama di bawah. */}
+        <div className="relative mt-2 overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.022))] p-4">
+          <span
+            aria-hidden
+            className="absolute -right-10 -top-12 size-36 rounded-full bg-[var(--ui-a)]/12 blur-3xl"
+          />
+          <div className="relative flex items-center gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/12 bg-[var(--ui-a)]/15 text-[var(--ui-c)]">
+              <Mic className="size-[21px]" strokeWidth={2.2} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-[17px] font-black tracking-tight text-white">
+                  Voice Room
+                </h1>
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[8.5px] font-black text-emerald-200">
+                  <span className="size-1.5 rounded-full bg-emerald-400" />
+                  {list.length} aktif
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-[10.5px] text-white/45">
+                Ngobrol, nobar, atau main bareng teman.
               </p>
             </div>
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--ui-c)]">
-              <Mic className="size-5" />
-            </span>
           </div>
           <button
             onClick={() => {
@@ -227,9 +238,15 @@ function VoiceHomeScreen({
               }
               onCreate();
             }}
-            className="voice-primary relative mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[12px] font-black transition active:scale-[0.98]"
+            className="relative mt-4 flex h-11 w-full items-center justify-between rounded-2xl border border-white/12 bg-white/[0.06] px-3.5 text-left transition hover:border-white/20 hover:bg-white/[0.09] active:scale-[0.99]"
           >
-            <Plus className="size-4" strokeWidth={2.7} /> Buat Voice Room
+            <span className="flex items-center gap-2.5 text-[12px] font-black text-white">
+              <span className="grid size-6 place-items-center rounded-full bg-[var(--ui-c)] text-black">
+                <Plus className="size-3.5" strokeWidth={3} />
+              </span>
+              Buat Voice Room
+            </span>
+            <ChevronRight className="size-4 text-white/35" />
           </button>
         </div>
 
@@ -263,27 +280,26 @@ function VoiceHomeScreen({
               return (
                 <div
                   key={r._id}
-                  className="voice-room-card relative overflow-hidden rounded-3xl border p-4 transition duration-300 hover:-translate-y-0.5"
+                  className="voice-room-card relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.028] p-3.5 transition duration-300 hover:bg-white/[0.045]"
                 >
-                  <span aria-hidden className="absolute inset-x-10 top-px h-px" style={{ background: "linear-gradient(90deg, transparent, var(--ui-c), transparent)" }} />
-                  <div className="relative flex items-center gap-3">
+                  <div className="relative flex items-center gap-2.5">
                     <span
                       className={cn(
-                        "flex size-14 shrink-0 items-center justify-center rounded-2xl border",
+                        "flex size-11 shrink-0 items-center justify-center rounded-xl border",
                         m.cls,
                       )}
                     >
-                      <m.Icon className="size-7" />
+                      <m.Icon className="size-[21px]" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-lg tracking-tight yn-title">{r.name}</p>
-                      <p className="truncate text-[11px] font-bold text-white/55">{m.label}</p>
+                      <p className="truncate text-[14px] font-black tracking-tight text-white">{r.name}</p>
+                      <p className="mt-0.5 truncate text-[10px] font-semibold text-white/45">{m.label}</p>
                     </div>
                     <button
                       onClick={() => void join(r)}
                       disabled={locked || full}
                       className={cn(
-                        "shrink-0 rounded-full px-5 py-2.5 text-xs font-black transition active:scale-95",
+                        "shrink-0 rounded-full px-4 py-2 text-[10.5px] font-black transition active:scale-95",
                         locked || full
                           ? "cursor-not-allowed bg-white/10 text-white/35"
                           : "voice-primary",
@@ -293,28 +309,26 @@ function VoiceHomeScreen({
                     </button>
                   </div>
 
-                  {/* Garis pembatas agak pudar */}
-                  <div className="relative my-3 h-px w-full bg-gradient-to-r from-white/20 via-white/8 to-transparent" />
+                  <div className="relative my-2.5 h-px w-full bg-white/8" />
 
-                  {/* Foto member di KIRI, jumlah user menyusul (pill). */}
-                  <div className="relative flex items-center gap-2.5">
-                    <div className="flex -space-x-2.5">
+                  <div className="relative flex items-center gap-2">
+                    <div className="flex -space-x-2">
                       {(r.previews ?? []).map((p, i) => (
                         <Avatar
                           key={`${p.userId}-${i}`}
                           src={p.image}
                           seed={p.username}
-                          className="size-9 ring-2 ring-[#0b1018]"
+                          className="size-7 ring-2 ring-[#0b1018]"
                         />
                       ))}
                       {(r.previews ?? []).length === 0 && (
-                        <span className="flex size-9 items-center justify-center rounded-full bg-white/10 ring-2 ring-[#0b1018]">
-                          <Users className="size-4 text-white/50" />
+                        <span className="flex size-7 items-center justify-center rounded-full bg-white/10 ring-2 ring-[#0b1018]">
+                          <Users className="size-3.5 text-white/50" />
                         </span>
                       )}
                     </div>
-                    <span className="voice-soft rounded-full border px-2.5 py-1 text-[11px] font-black">
-                      {r.count}/{r.maxUsers} User
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9.5px] font-bold text-white/55">
+                      {r.count}/{r.maxUsers} user
                     </span>
                   </div>
                 </div>
@@ -349,11 +363,9 @@ function CreateRoomScreen({
   const createMut = useMutation(api.voice.createRoom);
   const [name, setName] = useState("");
   const [type, setType] = useState<RoomType>("casual");
-  const [typeOpen, setTypeOpen] = useState(false);
   const [max, setMax] = useState(10);
   const [privacy, setPrivacy] = useState<"public" | "private">("public");
   const [busy, setBusy] = useState(false);
-  const m = TYPE_META[type];
 
   const submit = async () => {
     if (busy) return;
@@ -402,7 +414,7 @@ function CreateRoomScreen({
           </div>
         </div>
 
-        <div className="relative mt-4 rounded-2xl border border-white/10 bg-[#121116] p-4">
+        <div className="relative mt-4 overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(160deg,#151319,#100f13)] p-3.5 shadow-[0_24px_60px_-42px_rgba(0,0,0,.95)]">
           <p className="text-[12px] font-bold text-white/75">Nama room</p>
           <input
             value={name}
@@ -412,90 +424,60 @@ function CreateRoomScreen({
             className="mt-1.5 w-full rounded-xl border border-white/12 bg-black/45 px-3 py-3 text-sm outline-none placeholder:text-white/30"
           />
 
-          <p className="mt-4 text-[12px] font-bold text-white/75">Tipe room</p>
-          <button
-            onClick={() => setTypeOpen((v) => !v)}
-            className="mt-1.5 flex w-full items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-3 py-2.5 text-left"
-          >
-            <span className={cn("flex size-6 items-center justify-center rounded-md border", m.cls)}>
-              <m.Icon className="size-3.5" />
-            </span>
-            <span className="flex-1 text-sm font-semibold">{m.label}</span>
-            <ChevronDown
-              className={cn(
-                "size-4 text-white/50 transition-transform duration-300",
-                typeOpen && "rotate-180",
-              )}
-            />
-          </button>
-          {/* Pilihan muncul MELUNCUR ke bawah (animasi height). */}
-          <AnimatePresence initial={false}>
-            {typeOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.28, ease: "easeOut" }}
-                className="overflow-hidden"
-              >
-                <div className="mt-2 space-y-1.5 rounded-xl border border-white/10 bg-black/30 p-2">
-                  {TYPE_OPTIONS.map((o) => {
-                    const om = TYPE_META[o.key];
-                    const on = o.key === type;
-                    return (
-                      <button
-                        key={o.key}
-                        onClick={() => {
-                          setType(o.key);
-                          setTypeOpen(false);
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition",
-                          on ? "bg-white/12 font-bold" : "hover:bg-white/6",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "flex size-6 items-center justify-center rounded-md border",
-                            om.cls,
-                          )}
-                        >
-                          <om.Icon className="size-3.5" />
-                        </span>
-                        {o.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <p className="mt-4 text-[11px] font-black uppercase tracking-[0.12em] text-white/55">Tipe room</p>
+          <div className="mt-1.5 grid grid-cols-2 gap-2">
+            {TYPE_OPTIONS.map((o) => {
+              const om = TYPE_META[o.key];
+              const on = o.key === type;
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => setType(o.key)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border px-2.5 py-2.5 text-left text-[11.5px] font-bold transition active:scale-[0.98]",
+                    on
+                      ? "border-[var(--ui-c)]/55 bg-[var(--ui-c)]/12 text-white"
+                      : "border-white/10 bg-black/30 text-white/60 hover:border-white/20 hover:text-white/85",
+                  )}
+                >
+                  <span className={cn("flex size-7 items-center justify-center rounded-lg border", om.cls)}>
+                    <om.Icon className="size-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                  {on && <Check className="size-3.5 shrink-0 text-[var(--ui-c)]" strokeWidth={3} />}
+                </button>
+              );
+            })}
+          </div>
 
-          <p className="mt-4 text-[12px] font-bold text-white/75">Maksimal user</p>
-          <div className="mt-1.5 flex items-center justify-between rounded-xl border border-white/15 bg-black/40 px-2.5 py-2">
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/55">
+              Maksimal user
+            </p>
+            <span className="text-[10px] font-bold text-white/35">1–10 orang</span>
+          </div>
+          <div className="mt-1.5 flex h-11 items-center justify-between rounded-xl border border-white/10 bg-black/35 px-2">
             <button
               onClick={() => setMax((v) => Math.max(1, v - 1))}
               aria-label="Kurangi max user"
-              className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-white/10 transition active:scale-90 disabled:opacity-40"
+              className="flex size-8 items-center justify-center rounded-lg border border-white/12 bg-white/[0.06] transition active:scale-90 disabled:opacity-30"
               disabled={max <= 1}
             >
               <Minus className="size-4" />
             </button>
-            <span className="text-sm font-black tabular-nums">{max}</span>
+            <span className="text-[13px] font-black tabular-nums text-white">{max} orang</span>
             <button
               onClick={() => setMax((v) => Math.min(10, v + 1))}
               aria-label="Tambah max user"
-              className="flex size-8 items-center justify-center rounded-full border border-white/20 bg-white/10 transition active:scale-90 disabled:opacity-40"
+              className="flex size-8 items-center justify-center rounded-lg border border-white/12 bg-white/[0.06] transition active:scale-90 disabled:opacity-30"
               disabled={max >= 10}
             >
               <Plus className="size-4" />
             </button>
           </div>
-          <p className="mt-1 text-[10px] text-white/40">
-            Maksimal 10 orang, minimal 1
-          </p>
 
-          <p className="mt-4 text-[12px] font-bold text-white/75">Privasi room</p>
+          <p className="mt-4 text-[11px] font-black uppercase tracking-[0.12em] text-white/55">Privasi room</p>
           <div className="mt-1.5 space-y-2">
             <PrivacyBox
               active={privacy === "public"}
@@ -513,19 +495,17 @@ function CreateRoomScreen({
             />
           </div>
 
-          <div className="mt-3 flex items-start gap-2">
-            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-white/25 text-white/60">
-              <Info className="size-3" />
-            </span>
-            <p className="text-[10px] leading-snug text-white/50">
-              Join ketika room di private hanya bisa saat join melalui link.
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-white/8 bg-white/[0.025] px-2.5 py-2">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-white/40" />
+            <p className="text-[9.5px] leading-snug text-white/40">
+              Room private hanya bisa dimasuki lewat link undangan.
             </p>
           </div>
 
           <button
             onClick={() => void submit()}
             disabled={busy}
-            className="voice-primary mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-black transition active:scale-[0.98] disabled:opacity-60"
+            className="voice-primary mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[12px] font-black transition active:scale-[0.98] disabled:opacity-60"
           >
             <Mic className="size-4" />
             {busy ? "Membuat…" : "Buat Voice Room"}

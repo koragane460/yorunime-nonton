@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { getAntiLag } from "@/lib/antilag";
 import { api } from "@/convex/_generated/api";
-import { Avatar, BlueCheck, ClanTag, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, ClanTag, CrystalIcon, LevelBadge, RedMark, TitleBadge } from "@/components/lstream-ui";
 import { BlurBanner } from "@/components/BlurBanner";
 import { StripBackIcon } from "@/components/StripBack";
 import { SocialLinkBoxes } from "@/components/SocialLinks";
@@ -13,7 +13,6 @@ import {
   Award,
   Camera,
   ChevronLeft,
-  Gem,
   Gift,
   MessageCircle,
   Play,
@@ -58,6 +57,7 @@ import {
   FollowButton,
 } from "@/components/FeedScreen";
 import { ProfileDecor } from "@/components/ProfileDecor";
+import { ProfileStatusBubble, StatusBubbleEditor } from "@/components/ProfileStatus";
 
 type Tab = "komen" | "history" | "favorite";
 
@@ -179,6 +179,7 @@ export function ProfileSheet({
   const updateProfile = useMutation(api.account.updateProfile);
   const refreshPhotoMut = useMutation(api.account.refreshPhoto);
   const [photoSheet, setPhotoSheet] = useState(false);
+  const [bubbleOpen, setBubbleOpen] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
   const [busyRefresh, setBusyRefresh] = useState(false);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
@@ -299,11 +300,14 @@ export function ProfileSheet({
                 kotak ID/level/teman. */}
           </div>
 
-          {/* KOTAK ISI di bawah banner — FULL lebar tanpa celah,
-              warna SOLID (tanpa transparan/blur), naik ke atas,
-              sudut atas ROUND (pojok kanan & kiri). */}
-          <div className="relative -mt-20">
-            <div className="rounded-3xl border border-white/10 bg-[#0c111b] p-4 text-center">
+          {/* Batas banner → isi memakai gradien, tanpa lengkungan/tepi.
+              Konten menyatu mulus dengan banner di belakangnya. */}
+          <div className="relative -mt-14">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 -top-20 h-20 bg-gradient-to-b from-transparent via-[#0c111b]/80 to-[#0c111b]"
+            />
+            <div className="relative bg-[#0c111b] p-4 text-center">
             {/* Baris atas: foto profile BESAR di kiri, username + chips di
                 kanan (rata kiri, bukan tengah lagi). */}
             <div className="flex items-start gap-3.5 text-left">
@@ -321,6 +325,15 @@ export function ProfileSheet({
                     className="rounded-full bg-background p-[2px]"
                   />
                 </div>
+                {/* Bubble status kecil di kanan-atas foto, tidak menabrak
+                    banner dan tidak menutupi username. */}
+                <ProfileStatusBubble
+                  text={profile.statusText}
+                  bg={profile.statusBg}
+                  seed={String(profile._id)}
+                  onClick={() => isMe && setBubbleOpen(true)}
+                  className="absolute left-[54px] -top-4 w-[106px] max-w-[106px]"
+                />
                 {/* Tombol kamera bulat KECIL di foto (hanya profil sendiri)
                     → sheet Ganti / Refresh photo. */}
                 {isMe && (
@@ -550,7 +563,7 @@ export function ProfileSheet({
                     title="Give Premium"
                     className="flex w-12 shrink-0 items-center justify-center rounded-full bg-[#FFD23F] text-[#241c02] transition active:scale-95"
                   >
-                    <Gem className="size-5" />
+                    <CrystalIcon className="size-5" />
                   </button>
                 )}
               </div>
@@ -932,6 +945,14 @@ export function ProfileSheet({
         </div>
       )}
 
+      {isMe && bubbleOpen && (
+        <StatusBubbleEditor
+          initialText={profile?.statusText}
+          initialBg={profile?.statusBg ?? undefined}
+          onClose={() => setBubbleOpen(false)}
+        />
+      )}
+
       {/* SHEET PHOTO PROFILE — dibuka tombol kamera di bawah foto (profil
           sendiri). Tombol PERTAMA di atas: "Ganti photo profile" (buka
           galeri, tanpa tulisan "dari galeri"); tombol KEDUA di bawah:
@@ -1200,7 +1221,7 @@ function GivePremiumDialog({
       >
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3">
           <span className="flex size-9 items-center justify-center rounded-xl bg-amber-300/15 text-amber-200">
-            <Gem className="size-4.5" />
+            <CrystalIcon className="size-4.5" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-black text-white">Give Premium</p>

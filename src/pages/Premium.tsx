@@ -8,7 +8,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Crown,
   Gift,
   Loader2,
   Percent,
@@ -24,6 +23,7 @@ import {
   Avatar,
   BlueCheck,
   ClanTag,
+  CrystalIcon,
   LevelBadge,
   SacretIcon,
   TitleBadge,
@@ -361,7 +361,7 @@ function PremiumPromoBanner() {
           </span>
           <div className="relative mt-1.5 flex flex-1 flex-col items-center text-center">
             <span className="relative grid size-12 place-items-center text-[#ffd23f]">
-              <Crown className="relative z-10 size-11 drop-shadow-[0_4px_10px_rgba(255,202,40,.55)]" fill="currentColor" strokeWidth={1.2} />
+              <CrystalIcon className="relative z-10 size-11 drop-shadow-[0_4px_10px_rgba(255,202,40,.55)]" strokeWidth={1.2} />
               <span className="absolute -inset-2 rounded-full border border-[#ffd75e]/35" />
               <span className="absolute -inset-4 rounded-full border border-[#ffd75e]/15" />
             </span>

@@ -334,20 +334,7 @@ export function CommentsSection({
       </div>
 
       {/* ---------- KOLOM KOMENTAR ---------- */}
-      <div className="relative mt-2.5 overflow-hidden rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-transparent p-2.5 shadow-[0_0_24px_-16px] shadow-[#1CA7EC]">
-        {bannerUrl && (
-          <>
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.42]"
-              style={{ backgroundImage: `url(${bannerUrl})` }}
-            />
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(8,11,17,.86),rgba(8,11,17,.58)_52%,rgba(8,11,17,.82))]"
-            />
-          </>
-        )}
+      <div className="relative mt-2.5 overflow-hidden rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-[#141a24] via-[#10151d] to-[#0b0f15] p-2.5 shadow-[0_0_24px_-16px] shadow-[#1CA7EC]">
         <div className="relative flex items-start gap-2">
           {/* Foto profil user yang sedang menulis komentar. */}
           <Avatar
@@ -356,20 +343,37 @@ export function CommentsSection({
             className="mt-0.5 size-8 shrink-0 ring-1 ring-white/15"
           />
           <div className="min-w-0 flex-1">
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && void send()}
-              placeholder={
-                muted
-                  ? "Kamu sedang dimute…"
-                  : replyTo
-                    ? `Balas @${replyTo.username}…`
-                    : "Tulis komentar…"
-              }
-              disabled={muted}
-              className="h-10 w-full rounded-full border border-white/15 bg-black/40 px-3.5 text-[13px] text-white outline-none backdrop-blur-md transition placeholder:text-white/35 focus:border-[#1CA7EC]/60 focus:bg-black/50 disabled:opacity-50"
-            />
+            {/* Banner anime HANYA di kolom komentar, bukan menutupi seluruh
+                kotak composer. Lapisan gelap menjaga teks tetap terbaca. */}
+            <div className="relative overflow-hidden rounded-full border border-white/15 bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] focus-within:border-[#1CA7EC]/70">
+              {bannerUrl && (
+                <>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${bannerUrl})` }}
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(7,10,15,.9),rgba(7,10,15,.6)_55%,rgba(7,10,15,.84))]"
+                  />
+                </>
+              )}
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void send()}
+                placeholder={
+                  muted
+                    ? "Kamu sedang dimute…"
+                    : replyTo
+                      ? `Balas @${replyTo.username}…`
+                      : "Tulis komentar…"
+                }
+                disabled={muted}
+                className="relative h-10 w-full bg-transparent px-3.5 text-[13px] font-medium text-white outline-none placeholder:text-white/45 disabled:opacity-50"
+              />
+            </div>
 
             {/* Pratinjau gambar + sticker yang akan dikirim. */}
             {(image || sticker) && (
@@ -408,26 +412,26 @@ export function CommentsSection({
                 onClick={() => setStickerOpen((v) => !v)}
                 aria-label="Sticker"
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-full transition",
+                  "flex size-8 items-center justify-center rounded-full border transition",
                   stickerOpen
-                    ? "bg-[#1CA7EC]/20 text-[#7fd3f7]"
-                    : "bg-white/[0.06] text-white/55 hover:text-white",
+                    ? "border-[#1CA7EC]/55 bg-[#1CA7EC]/25 text-[#9fe3ff]"
+                    : "border-white/12 bg-white/[0.075] text-white/70 hover:border-white/25 hover:text-white",
                 )}
               >
-                <Smile className="size-4" />
+                <Smile className="size-[17px]" strokeWidth={2.3} />
               </button>
               <button
                 onClick={() => setSpoiler((v) => !v)}
                 aria-pressed={spoiler}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-full transition",
+                  "flex size-8 items-center justify-center rounded-full border transition",
                   spoiler
-                    ? "bg-[#E84855]/25 text-[#ff9aa3]"
-                    : "bg-white/[0.06] text-white/55 hover:text-white",
+                    ? "border-[#E84855]/55 bg-[#E84855]/28 text-[#ffb0b6]"
+                    : "border-white/12 bg-white/[0.075] text-white/70 hover:border-white/25 hover:text-white",
                 )}
                 aria-label="Tandai spoiler"
               >
-                <EyeOff className="size-4" />
+                <EyeOff className="size-[17px]" strokeWidth={2.3} />
               </button>
               <span
                 className={cn(
@@ -444,12 +448,12 @@ export function CommentsSection({
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading || muted}
                 aria-label="Kirim gambar"
-                className="flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-white/55 transition hover:text-white disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.075] text-white/70 transition hover:border-white/25 hover:text-white disabled:opacity-40"
               >
                 {uploading ? (
                   <Loader2 className="size-[17px] animate-spin" />
                 ) : (
-                  <ImagePlus className="size-[17px]" strokeWidth={2.2} />
+                  <ImagePlus className="size-[17px]" strokeWidth={2.35} />
                 )}
               </button>
               <button

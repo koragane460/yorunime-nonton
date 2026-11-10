@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { FramedAvatar } from "@/components/FramedAvatar";
-import { BlueCheck, LevelBadge } from "@/components/lstream-ui";
+import { BlueCheck, CrystalIcon, LevelBadge, SacretIcon } from "@/components/lstream-ui";
 import { displayId } from "@/lib/lstream";
 import { cn } from "@/lib/utils";
 import {
@@ -9,7 +9,6 @@ import {
   BookOpen,
   Clapperboard,
   Download,
-  Gem,
   History,
   ListChecks,
   Mic,
@@ -119,7 +118,7 @@ export function PanelHub({
         <div className="mx-4 mb-2.5 grid grid-cols-2 gap-2 rounded-[22px] bg-gradient-to-r from-sky-400/20 via-cyan-400/10 to-amber-400/20 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,.14)]">
           <div className="flex items-center gap-2.5">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sky-400/15 text-sky-300">
-              <Gem className="size-5" />
+              <SacretIcon className="size-5" />
             </span>
             <span className="min-w-0">
               <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">
@@ -132,7 +131,7 @@ export function PanelHub({
           </div>
           <div className="flex items-center gap-2.5">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-300">
-              <Gem className="size-5" />
+              <CrystalIcon className="size-5" />
             </span>
             <span className="min-w-0">
               <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">

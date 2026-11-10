@@ -3,6 +3,7 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { ArrowLeft, Search, Star, Eye } from "lucide-react";
+import { PosterRatingBadge, PosterStatusBadge } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
 
 type GenreCard = {
@@ -260,16 +261,8 @@ export function GenreScreen({
                   loading="lazy"
                   className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
                 />
-                {/* SATU kotak netral: status + rating. Tidak berubah warna. */}
-                <span className="absolute left-1 top-1 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white backdrop-blur-sm">
-                  {status}
-                  {score > 0 && (
-                    <span className="inline-flex items-center gap-0.5 text-amber-300">
-                      <Star className="size-2 fill-amber-300" />
-                      {score.toFixed(1)}
-                    </span>
-                  )}
-                </span>
+                <PosterStatusBadge status={status} />
+                <PosterRatingBadge score={score} />
               </div>
               <p className="mt-1.5 line-clamp-2 text-[11px] font-bold leading-tight text-white/90">
                 {c.title}

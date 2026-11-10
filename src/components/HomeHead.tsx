@@ -413,38 +413,55 @@ export function DailyQuestRow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, store.day]);
 
+  const doneCount = quests.filter(
+    (q) => q.get(p, store.local) >= q.target,
+  ).length;
   return (
     <section className="fade-enter mt-1">
-      {/* Satu quest satu baris panjang ke samping — tanpa kotak dan tanpa
-          judul halaman. */}
-      <div className="divide-y divide-white/10">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/55">
+          Misi hari ini
+        </p>
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-black text-white/50">
+          {doneCount}/{quests.length} selesai
+        </span>
+      </div>
+      <div className="space-y-2">
         {quests.map((q) => {
           const val = Math.min(q.target, q.get(p, store.local));
           const done = q.get(p, store.local) >= q.target;
           const pct = Math.min(100, Math.round((val / Math.max(1, q.target)) * 100));
           return (
-            <div key={q.id} className="flex min-w-0 items-center gap-3 py-4">
-              <span
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-full border",
-                  done
-                    ? "border-emerald-400/55 bg-emerald-400/15 text-emerald-300"
-                    : "border-white/18 bg-white/[0.035] text-transparent",
-                )}
-                aria-hidden
-              >
-                <Check className="size-4" strokeWidth={3} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="min-w-0 text-[12.5px] font-bold leading-snug text-white/85">
-                    {q.text}
-                  </p>
-                  <span className="shrink-0 text-[10px] font-black text-gold-strong">
-                    +{q.xp} XP
-                  </span>
-                </div>
-                <div className="mt-2 h-[2px] overflow-hidden rounded-full bg-white/10">
+            <div
+              key={q.id}
+              className={cn(
+                "rounded-2xl border px-3 py-2.5 transition",
+                done
+                  ? "border-emerald-400/20 bg-emerald-400/[0.055]"
+                  : "border-white/8 bg-white/[0.028]",
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={cn(
+                    "grid size-8 shrink-0 place-items-center rounded-full border",
+                    done
+                      ? "border-emerald-400/50 bg-emerald-400/15 text-emerald-300"
+                      : "border-white/15 bg-white/[0.035] text-white/20",
+                  )}
+                  aria-hidden
+                >
+                  <Check className="size-3.5" strokeWidth={3} />
+                </span>
+                <p className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-white/88">
+                  {q.text}
+                </p>
+                <span className="shrink-0 rounded-full bg-gold/12 px-2 py-0.5 text-[9.5px] font-black text-gold-strong">
+                  +{q.xp} XP
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-center gap-2 pl-[42px]">
+                <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/8">
                   <div
                     className={cn(
                       "h-full rounded-full transition-[width] duration-500",
@@ -453,10 +470,9 @@ export function DailyQuestRow() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="mt-1 flex items-center justify-between text-[9px] font-bold tabular-nums text-white/38">
-                  <span>{done ? "Selesai" : `${val}/${q.target}`}</span>
-                  <span>{done ? "100%" : `${pct}%`}</span>
-                </p>
+                <span className="w-8 shrink-0 text-right text-[9px] font-bold tabular-nums text-white/38">
+                  {done ? "✓" : `${val}/${q.target}`}
+                </span>
               </div>
             </div>
           );

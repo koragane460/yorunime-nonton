@@ -13,6 +13,92 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** Kristal premium — dipakai di semua aksi Premium supaya ikonnya tidak
+ *  terlihat seperti diamond generik. */
+export function CrystalIcon({
+  className,
+  strokeWidth = 1.7,
+}: {
+  className?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 2.4 16.7 7l-1.9 7.2L12 21.6l-2.8-7.4L7.3 7 12 2.4Z" fill="currentColor" fillOpacity=".12" />
+      <path d="m7.3 7 4.7 3.1L16.7 7M12 10.1v11.5" />
+      <path d="m18.1 10.4 2 1.8-1.4 4.7-2.1.9M5.9 10.4 3.9 12.2l1.4 4.7 2.1.9" />
+    </svg>
+  );
+}
+
+/** Status poster yang SAMA di Home, pencarian, Watch, dan semua kartu anime. */
+export function PosterStatusBadge({
+  status,
+  size = "sm",
+  className,
+}: {
+  status?: string;
+  size?: "sm" | "lg";
+  className?: string;
+}) {
+  if (!status) return null;
+  const raw = String(status).trim();
+  const label = /tamat|completed|ended|selesai|finish/i.test(raw)
+    ? "Completed"
+    : /ongoing|airing|releasing|tayang/i.test(raw)
+      ? "Ongoing"
+      : /upcoming|not yet|belum/i.test(raw)
+        ? "Upcoming"
+        : raw;
+  return (
+    <span
+      className={cn(
+        "yn-poster-status",
+        size === "lg" && "yn-poster-status--lg",
+        /upcoming|not yet|belum/i.test(raw) && "yn-poster-status--upcoming",
+        className,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** Rating poster: pojok kanan bawah, bentuk & warna sama dengan status. */
+export function PosterRatingBadge({
+  score,
+  size = "sm",
+  className,
+}: {
+  score?: number | string;
+  size?: "sm" | "lg";
+  className?: string;
+}) {
+  const n = Number(score);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return (
+    <span
+      className={cn(
+        "yn-poster-rating",
+        size === "lg" && "yn-poster-rating--lg",
+        className,
+      )}
+    >
+      <Star className="size-2.5 fill-current" aria-hidden />
+      {n.toFixed(1)}
+    </span>
+  );
+}
 import { badgeForLevel, avatarFallback } from "@/lib/lstream";
 import { resolveClanIcon } from "@/lib/clanIcons";
 import { TierIcon } from "@/components/TierIcon";
@@ -166,23 +252,7 @@ export function AnimeCard({
             hanya pojok kanan-bawah, jadi kelihatan nyambung ke sudut poster).
             Badge rank/New ikut bergeser ke kanannya lewat satu flex. */}
         <div className="absolute left-0 top-0 z-10 flex items-start">
-          {status && (
-            <span
-              className={cn(
-                "rounded-none rounded-br-lg px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide",
-                // Teks PUTIH (permintaan) — biru tua supaya kontras.
-                /tamat|completed|ended|selesai|finish/i.test(status)
-                  ? "bg-sky-800 text-white"
-                  : "bg-sky-600 text-white",
-              )}
-            >
-              {/tamat|completed|ended|selesai|finish/i.test(status)
-                ? "Completed"
-                : /ongoing|airing|releasing|tayang/i.test(status)
-                  ? "Ongoing"
-                  : status}
-            </span>
-          )}
+          <PosterStatusBadge status={status} />
           {rank !== undefined && (
             <span className="m-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-primary">
               #{rank}
@@ -194,13 +264,8 @@ export function AnimeCard({
             </span>
           )}
         </div>
-        {/* Rating DIGABUNG ke poster: pojok kanan bawah, gaya rapi. */}
-        {score !== undefined && score > 0 && (
-          <span className="absolute bottom-1.5 right-1.5 z-10 inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-black/75 px-1.5 py-0.5 text-[10px] font-black leading-none text-amber-300 backdrop-blur-sm">
-            <Star className="size-2.5 fill-current" aria-hidden />
-            {score.toFixed(1)}
-          </span>
-        )}
+        {/* Rating memakai komponen yang sama dengan detail & Watch. */}
+        <PosterRatingBadge score={score} />
       </div>
       {!imageOnly && (
         <div className="rounded-b-xl bg-black/55 p-2 backdrop-blur-sm">

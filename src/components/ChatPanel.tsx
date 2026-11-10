@@ -19,7 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Check, ChevronDown, ChevronLeft, Gem, ImagePlus, MoreVertical, Play, Reply, Send, Sticker, Trash2, VolumeX, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Loader2, MoreVertical, Play, Reply, Send, ShieldCheck, Sticker, Trash2, VolumeX, X } from "lucide-react";
+import { CrystalIcon } from "@/components/lstream-ui";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatMsg = {
@@ -97,11 +98,21 @@ function GivePremiumDialog({
   channel?: string;
 }) {
   const { user } = useAuth();
-  const [days, setDays] = useState(1);
+  const [days, setDays] = useState(7);
   const [receivers, setReceivers] = useState(5);
   const [message, setMessage] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+
+  // Setiap dibuka, selalu mulai dari pemilihan paket. Tidak ada aksi terkirim
+  // sebelum user menekan Lanjut lalu Kirim Premium secara eksplisit.
+  useEffect(() => {
+    if (open) {
+      setStep(1);
+      setErr(null);
+    }
+  }, [open]);
   const give = useMutation(api.chat.givePremium);
   const cost = (GIVE_COST[days] ?? days + 1) + receiverCost(receivers);
   const xp = (GIVE_XP[days] ?? days * 200) + Math.max(0, receivers - 5) * 100;
@@ -140,151 +151,166 @@ function GivePremiumDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm gap-0 overflow-hidden border border-amber-400/25 bg-card p-0">
-        {/* Header emas premium — crown di lingkaran lembut, tanpa neon. */}
+      <DialogContent overlayClassName="z-[190]" className="z-[200] max-w-sm gap-0 overflow-hidden border border-amber-400/25 bg-[#121016] p-0">
         <div className="relative border-b border-amber-400/20 bg-gradient-to-b from-amber-500/[0.14] to-transparent px-5 pb-4 pt-5 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15">
-            <Gem className="size-6 text-amber-300" />
+          <span className="mx-auto flex size-12 items-center justify-center rounded-full border border-amber-400/35 bg-amber-500/12 text-amber-300">
+            <CrystalIcon className="size-6" />
           </span>
           <DialogTitle className="mt-2.5 text-lg font-bold text-amber-200">
             Give Premium
           </DialogTitle>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Bagikan hari premium ke member chat ini
+            {step === 1 ? "Pilih paket dan jumlah penerima" : "Periksa lagi sebelum mengirim"}
           </p>
         </div>
         <div className="thin-scroll max-h-[70vh] space-y-4 overflow-y-auto px-5 py-4">
-          <div>
-            <p className="mb-2 text-xs font-semibold text-muted-foreground">Berapa hari</p>
-            <div className="flex flex-wrap gap-1.5">
-              {GIVE_DAYS.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDays(d)}
-                  className={cn(
-                    "flex-1 basis-[calc(25%-0.375rem)] rounded-xl border px-2 py-2 text-sm font-bold transition",
-                    days === d
-                      ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
-                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-amber-400/40 hover:text-foreground",
-                  )}
-                >
-                  {d} hari
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold text-muted-foreground">
-              Untuk berapa orang
-              <span className="ml-1.5 font-normal text-[10px]">
-                (makin banyak, makin mahal)
-              </span>
-            </p>
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2">
-              <button
-                aria-label="Kurangi penerima"
-                disabled={receivers <= 5}
-                onClick={() => setReceivers((r) => Math.max(5, r - 1))}
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lg font-bold text-muted-foreground transition hover:border-amber-400/50 hover:text-foreground disabled:opacity-35"
-              >
-                −
-              </button>
-              <div className="min-w-0 text-center">
-                <p className="text-lg font-black leading-none text-foreground">
-                  {receivers} org
-                </p>
-                <p className="mt-1 text-[10px] text-amber-300/90">
-                  +{receiverCost(receivers)} hari biaya penerima
-                </p>
-              </div>
-              <button
-                aria-label="Tambah penerima"
-                disabled={receivers >= 30}
-                onClick={() => setReceivers((r) => Math.min(30, r + 1))}
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lg font-bold text-muted-foreground transition hover:border-amber-400/50 hover:text-foreground disabled:opacity-35"
-              >
-                +
-              </button>
-            </div>
-            <div className="mt-2 flex gap-1.5">
-              {[5, 15, 20, 30].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setReceivers(r)}
-                  className={cn(
-                    "flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition",
-                    receivers === r
-                      ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
-                      : "border-white/10 text-muted-foreground hover:border-amber-400/40",
-                  )}
-                >
-                  {r} org
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Pesan (opsional, minimal 50 karakter)"
-              rows={3}
-              className="w-full rounded-xl border border-white/12 bg-white/[0.03] p-3 text-sm outline-none focus:border-amber-400/50"
-            />
-            {msgLen > 0 && msgLen < 50 && (
-              <p className="mt-1 text-[11px] font-semibold text-amber-300">
-                Pesan masih {50 - msgLen} karakter kurang — atau kosongkan saja.
-              </p>
-            )}
-          </div>
-          {/* Ringkasan biaya — emas lembut, angka utama besar. */}
-          <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.08] p-3">
-            <div className="flex items-end justify-between gap-2">
+          {step === 1 ? (
+            <>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300/80">
-                  Biaya
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.12em] text-white/55">
+                  Berapa hari
                 </p>
-                <p className="mt-0.5 text-2xl font-black leading-none text-amber-200">
-                  {cost} hari
+                <div className="flex flex-wrap gap-1.5">
+                  {GIVE_DAYS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDays(d)}
+                      className={cn(
+                        "flex-1 basis-[calc(25%-0.375rem)] rounded-xl border px-2 py-2 text-sm font-bold transition",
+                        days === d
+                          ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
+                          : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-amber-400/40 hover:text-foreground",
+                      )}
+                    >
+                      {d} hari
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.12em] text-white/55">
+                  Untuk berapa orang
+                </p>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2">
+                  <button
+                    type="button"
+                    aria-label="Kurangi penerima"
+                    disabled={receivers <= 5}
+                    onClick={() => setReceivers((r) => Math.max(5, r - 1))}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lg font-bold text-muted-foreground transition hover:border-amber-400/50 hover:text-foreground disabled:opacity-35"
+                  >
+                    −
+                  </button>
+                  <div className="min-w-0 text-center">
+                    <p className="text-lg font-black leading-none text-foreground">
+                      {receivers} orang
+                    </p>
+                    <p className="mt-1 text-[10px] text-amber-300/80">
+                      +{receiverCost(receivers)} hari untuk slot
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Tambah penerima"
+                    disabled={receivers >= 30}
+                    onClick={() => setReceivers((r) => Math.min(30, r + 1))}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-lg font-bold text-muted-foreground transition hover:border-amber-400/50 hover:text-foreground disabled:opacity-35"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="mt-2 flex gap-1.5">
+                  {[5, 15, 20, 30].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setReceivers(r)}
+                      className={cn(
+                        "flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition",
+                        receivers === r
+                          ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
+                          : "border-white/10 text-muted-foreground hover:border-amber-400/40",
+                      )}
+                    >
+                      {r} org
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-2.5">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-white/60">
+                  <span>Total biaya</span>
+                  <span className="text-base font-black text-amber-200">{cost} hari</span>
+                </div>
+                <p className="mt-1 text-[10px] text-white/35">
+                  {GIVE_COST[days]} hari dasar + {receiverCost(receivers)} hari slot · +{xp} XP
                 </p>
               </div>
-              <p className="pb-0.5 text-right text-[11px] leading-relaxed text-muted-foreground">
-                {GIVE_COST[days]} hari dasar
-                <br />+ {receiverCost(receivers)} hari × {receivers} penerima
-              </p>
-            </div>
-            <p className="mt-2 border-t border-amber-400/15 pt-2 text-xs font-semibold text-amber-300/90">
-              +{xp} XP untuk kamu
-            </p>
-            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-              Sisa premium kamu:{" "}
-              <span className="font-bold text-white/85">
-                {unlimited ? "Tanpa batas" : `${remaining} hari`}
-              </span>
-            </p>
-          </div>
-          {(err || notEnough) && (
-            <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold leading-snug text-red-200">
-              {err ??
-                `Premium kamu cuma ${remaining} hari, butuh ${cost} hari buat give ini.`}
-            </p>
+              {notEnough && (
+                <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold leading-snug text-red-200">
+                  Premium kamu cuma {remaining} hari, butuh {cost} hari buat paket ini.
+                </p>
+              )}
+              <div className="flex gap-2 pb-1">
+                <Button variant="outline" className="flex-1 border-white/15" onClick={() => onOpenChange(false)}>
+                  Batal
+                </Button>
+                <Button
+                  disabled={notEnough}
+                  className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 font-bold text-black"
+                  onClick={() => setStep(2)}
+                >
+                  Lanjut <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.07] p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-300/70">
+                  Ringkasan
+                </p>
+                <p className="mt-1 text-lg font-black text-white">
+                  Premium {days} hari · {receivers} orang
+                </p>
+                <p className="mt-1 text-[11px] text-white/45">
+                  Biaya {cost} hari · sisa kamu {unlimited ? "tanpa batas" : `${remaining} hari`}
+                </p>
+              </div>
+              <div>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Pesan (opsional, minimal 50 karakter)"
+                  rows={3}
+                  className="w-full rounded-xl border border-white/12 bg-white/[0.03] p-3 text-sm outline-none focus:border-amber-400/50"
+                />
+                {msgLen > 0 && msgLen < 50 && (
+                  <p className="mt-1 text-[11px] font-semibold text-amber-300">
+                    Pesan masih {50 - msgLen} karakter kurang — atau kosongkan saja.
+                  </p>
+                )}
+              </div>
+              {err && (
+                <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold leading-snug text-red-200">
+                  {err}
+                </p>
+              )}
+              <div className="flex gap-2 pb-1">
+                <Button variant="outline" className="flex-1 border-white/15" onClick={() => setStep(1)}>
+                  Kembali
+                </Button>
+                <Button
+                  disabled={!msgOk || busy}
+                  className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 font-bold text-black"
+                  onClick={submit}
+                >
+                  <CrystalIcon className="size-4" /> {busy ? "Mengirim…" : "Kirim Premium"}
+                </Button>
+              </div>
+            </>
           )}
-          <div className="flex gap-2 pb-1">
-            <Button
-              variant="outline"
-              className="flex-1 border-white/15"
-              onClick={() => onOpenChange(false)}
-            >
-              Batal
-            </Button>
-            <Button
-              disabled={!msgOk || notEnough || busy}
-              className="flex-1 bg-gradient-to-b from-amber-400 to-amber-500 font-bold text-black shadow-[0_2px_10px_-4px_rgba(251,191,36,.6)] hover:brightness-105"
-              onClick={submit}
-            >
-              <Gem className="size-4" /> {busy ? "Mengirim…" : "Kirim"}
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -443,42 +469,49 @@ function NsfwScanDialog({
   if (!previewUrl.current) previewUrl.current = URL.createObjectURL(file);
 
   useEffect(() => {
-    let s = 0;
-    let stopped = false;
-    const t = setInterval(() => {
-      s += 1;
-      setProgress((p) => Math.min(100, p + 9));
-      if (s % 3 === 0) setStep((x) => Math.min(x + 1, NSFW_STEPS.length - 1));
-      if (s >= 12) {
-        clearInterval(t);
-        void (async () => {
-          const verdict = await analyzeImageStrict(file);
-          if (stopped) return;
-          if (verdict.ok) {
-            try {
-              const blob = await compressImage(file);
-              onDone(blob);
-            } catch {
-              onCancel(false);
-            }
-          } else {
-            setError(verdict.reason ?? "Gambar ditolak");
-            setProgress(100);
-            setTimeout(() => onReject(verdict.reason ?? "Gambar ditolak"), 1200);
-          }
-        })();
+    let alive = true;
+    const wait = (ms: number) =>
+      new Promise((resolve) => window.setTimeout(resolve, ms));
+    void (async () => {
+      setProgress(12);
+      setStep(0);
+      const verdict = await analyzeImageStrict(file);
+      if (!alive) return;
+      // Beri jeda singkat supaya pemeriksaan keamanan terlihat, bukan kilat
+      // lalu tiba-tiba mengirim tanpa umpan balik.
+      await wait(420);
+      if (!alive) return;
+      setProgress(56);
+      setStep(2);
+      if (!verdict.ok) {
+        setError(verdict.reason ?? "Gambar ditolak");
+        setProgress(100);
+        window.setTimeout(() => {
+          if (alive) onReject(verdict.reason ?? "Gambar ditolak");
+        }, 900);
+        return;
       }
-    }, 160);
+      setStep(3);
+      setProgress(72);
+      try {
+        const blob = await compressImage(file);
+        if (!alive) return;
+        setStep(4);
+        setProgress(94);
+        onDone(blob);
+      } catch {
+        if (alive) onCancel(false);
+      }
+    })();
     return () => {
-      stopped = true;
-      clearInterval(t);
+      alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Dialog open onOpenChange={() => {}}>
-      <DialogContent className="max-w-xs border-foreground/40">
+      <DialogContent overlayClassName="z-[190]" className="z-[200] max-w-xs border-foreground/40 bg-[#121016]">
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-2 text-center">
             <span
@@ -489,7 +522,7 @@ function NsfwScanDialog({
                   : "bg-emerald-500/20 text-emerald-400",
               )}
             >
-              {error ? <X className="size-5" /> : <Check className="size-5" />}
+              {error ? <X className="size-5" /> : <ShieldCheck className="size-5" />}
             </span>
             <span className="text-sm font-medium">
               {error ? "Gambar ditolak" : `${NSFW_STEPS[step]}…`}
@@ -503,6 +536,9 @@ function NsfwScanDialog({
             className="max-h-40 w-full rounded-lg object-cover"
           />
           <Progress value={progress} className="h-2" />
+          <p className="text-center text-[10px] font-semibold text-white/35">
+            Diperiksa sebelum dikirim
+          </p>
           {error && (
             <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-2.5 py-2 text-center text-[11px] font-semibold leading-snug text-red-200">
               {error}
@@ -539,7 +575,7 @@ function ReportDialog({
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xs border-foreground/40">
+      <DialogContent overlayClassName="z-[190]" className="z-[200] max-w-xs border-foreground/40 bg-[#121016]">
         <DialogHeader>
           <DialogTitle className="text-sm">Laporkan pesan</DialogTitle>
         </DialogHeader>
@@ -658,6 +694,7 @@ export function ChatPanel({
   const [giveOpen, setGiveOpen] = useState(false);
   const [stickerOpen, setStickerOpen] = useState(false);
   const [scanFile, setScanFile] = useState<File | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [reportMsg, setReportMsg] = useState<ChatMsg | null>(null);
   // Error ditampilkan LANGSUNG di kolom chat (toaster dimatikan permanen).
   const [sendError, setSendError] = useState<string | null>(null);
@@ -933,10 +970,14 @@ export function ChatPanel({
                     ) : (
                       /* Tombol ":" di pojok pesan → popup lapor */
                       <button
+                        type="button"
                         aria-label="Laporkan pesan"
                         title="Lapor"
-                        onClick={() => setReportMsg(m)}
-                        className="hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReportMsg(m);
+                        }}
+                        className="rounded-full p-0.5 text-white/45 transition hover:bg-white/10 hover:text-white"
                       >
                         <MoreVertical className="size-3.5" />
                       </button>
@@ -979,6 +1020,12 @@ export function ChatPanel({
           <div className="mb-1.5 flex w-fit items-center gap-1.5 rounded-full border border-amber-300/35 bg-amber-400/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-200">
             <span className="size-1.5 animate-pulse rounded-full bg-amber-300" />
             Cooldown chat · {cdLeft}
+          </div>
+        )}
+        {photoBusy && (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/10 px-3 py-2 text-[11px] font-semibold text-sky-100">
+            <Loader2 className="size-3.5 shrink-0 animate-spin" />
+            Memeriksa dan mengirim foto…
           </div>
         )}
         {sendError && (
@@ -1025,7 +1072,7 @@ export function ChatPanel({
             <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
-                disabled={muted}
+                disabled={muted || photoBusy}
                 onClick={() => {
                   if (muted) {
                     setSendError("Kamu sedang dimute — tidak bisa kirim foto");
@@ -1037,7 +1084,7 @@ export function ChatPanel({
                 aria-label="Kirim foto"
                 className="flex size-9 items-center justify-center rounded-full text-sky-300 transition hover:bg-sky-400/15 active:scale-90 disabled:opacity-40"
               >
-                <ImagePlus className="size-4.5" />
+                {photoBusy ? <Loader2 className="size-4.5 animate-spin" /> : <ImagePlus className="size-4.5" />}
               </button>
               {!noPremium && (
                 <button
@@ -1054,7 +1101,7 @@ export function ChatPanel({
                   aria-label="Give premium"
                   className="flex size-9 items-center justify-center rounded-full text-amber-300 transition hover:bg-amber-400/15 active:scale-90 disabled:opacity-40"
                 >
-                  <Gem className="size-[18px]" />
+                  <CrystalIcon className="size-[18px]" />
                 </button>
               )}
               <button
@@ -1162,6 +1209,7 @@ export function ChatPanel({
           file={scanFile}
           onDone={(blob) => {
             setScanFile(null);
+            setPhotoBusy(true);
             void (async () => {
               try {
                 // 1) upload file ke Convex storage
@@ -1185,6 +1233,8 @@ export function ChatPanel({
                     ? `Foto gagal terkirim: ${e.message}`
                     : "Foto gagal terkirim — coba foto yang lebih kecil",
                 );
+              } finally {
+                setPhotoBusy(false);
               }
             })();
           }}
@@ -1385,7 +1435,7 @@ function ClaimButton({
             gray ? "bg-white/10 text-white/35" : "bg-gold/15 text-gold",
           )}
         >
-          <Gem className="size-4" />
+          <CrystalIcon className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
           <p className={cn("truncate text-[11px] font-black", gray ? "text-white/55" : "text-white")}>

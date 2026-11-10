@@ -71,8 +71,8 @@ function DashedNum({ rank }: { rank: number }) {
    kartu gelap keemasan + ornamen sudut, blok medal emas/perak/perunggu
    dengan angka rank besar di dasar blok. */
 function Podium({
-  rank, username, image, xp,
-}: { rank: number; username?: string; image?: string; xp: number }) {
+  rank, username, image, xp, value,
+}: { rank: number; username?: string; image?: string; xp?: number; value?: string }) {
   // Blok podium: warna FLAT (emas / warm white / ember), tanpa gradasi.
   const grad =
     rank === 1
@@ -96,7 +96,9 @@ function Podium({
         )}
       </div>
       <p className="mt-1.5 w-full truncate text-center text-[10px] font-black leading-tight">{username ?? "user"}</p>
-      <p className="text-[9px] leading-tight text-white/70">{xp.toLocaleString("id-ID")} XP</p>
+      <p className="text-[9px] leading-tight text-white/70">
+        {value ?? `${(xp ?? 0).toLocaleString("id-ID")} XP`}
+      </p>
       <div
         style={{
           // Bentuk PERISAI (lancip di bawah) — bukan kotak biasa.
@@ -247,60 +249,60 @@ function GiveView() {
 }
 
 /* ------------------------------------------------------ Clan view ---- */
-function rankChipCls(i: number) {
-  if (i < 3) return "bg-gold text-[#241c02]";
-  if (i < 10) return "bg-[#FFFAF0] text-[#241c02]";
-  return "bg-white/10 text-zinc-300";
-}
-
 function ClanView() {
   const navigate = useNavigate();
   const clans = useQuery(api.clans.listClans, {});
   const shown = (clans ?? []).slice(0, 100);
+  const [t1, t2, t3, ...rest] = shown;
   if (!clans)
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 items-end gap-2 px-2 pt-4">
+          <div className="skeleton h-24 rounded-2xl" />
+          <div className="skeleton h-32 rounded-2xl" />
+          <div className="skeleton h-20 rounded-2xl" />
+        </div>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-            <div className="skeleton size-8 rounded-xl" />
+          <div key={i} className="flex items-center gap-2.5 px-1 py-1.5">
+            <div className="skeleton size-8 rounded-full" />
             <div className="skeleton size-9 rounded-full" />
             <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="skeleton h-3 w-1/2 rounded-full" />
+              <div className="skeleton h-3 w-2/5 rounded-full" />
               <div className="skeleton h-2 w-1/4 rounded-full" />
             </div>
           </div>
         ))}
       </div>
     );
+  const meta = (c: any) =>
+    `Lv.${c.level ?? 1} · ${c.memberCount ?? 0} member`;
   return (
-    <div className="space-y-2">
-      <p className="flex items-center gap-1.5 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] font-black text-amber-200">
-        <Crown className="size-3.5" aria-hidden /> Clan paling kuat — urut dari level & Sacret
-      </p>
+    <>
       {shown.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada clan</p>}
-      {shown.map((c: any, i) => (
-        <button key={c._id} onClick={() => navigate(`/clan?clan=${c._id}`)}
-          className="lb-rise relative flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2.5 text-left transition hover:bg-white/10"
-          style={{ animationDelay: `${Math.min(i, 20) * 35}ms` }}>
-          <span className={cn("flex h-8 min-w-8 items-center justify-center rounded-xl px-1.5 text-sm font-black ring-1 ring-white/40", rankChipCls(i))}>
-            {i === 0 && <Crown className="mr-0.5 size-3.5" aria-hidden />}
-            {i + 1}
-          </span>
-          <Avatar src={c.avatarUrl} seed={c.name} className="size-9 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <p className="truncate text-sm font-semibold">{c.name}</p>
-              <ClanTag icon={c.tagIcon ?? DEFAULT_CLAN_ICON} tag={c.tag} color={c.color} level={c.level}
-                className="shrink-0 scale-[0.72] px-1 py-0 text-[9px]" />
-            </div>
-            <p className="text-xs text-white/60">Lv.{c.level} · {c.memberCount} member</p>
-          </div>
-          <span className="flex shrink-0 items-center gap-1 text-xs font-black text-cyan-300">
-            <Sparkles className="size-3.5" /> {(c.diamonds ?? 0).toLocaleString("id-ID")}
-          </span>
-        </button>
-      ))}
-    </div>
+      {shown.length > 0 && (
+        <div className="relative mb-3 grid grid-cols-3 items-end gap-2 px-2 pb-3 pt-2">
+          {t2 && <Podium username={t2.name} image={t2.avatarUrl} value={meta(t2)} rank={2} />}
+          {t1 && <Podium username={t1.name} image={t1.avatarUrl} value={meta(t1)} rank={1} />}
+          {t3 && <Podium username={t3.name} image={t3.avatarUrl} value={meta(t3)} rank={3} />}
+        </div>
+      )}
+      <div className="space-y-1.5">
+        {rest.map((c: any, i) => (
+          <button key={c._id} type="button" onClick={() => navigate(`/clan?clan=${c._id}`)} className="block w-full text-left">
+            <Row
+              rank={i + 4}
+              username={c.name}
+              image={c.avatarUrl}
+              xp={c.diamonds}
+              suffix={`${meta(c)} · ${(c.diamonds ?? 0).toLocaleString("id-ID")} Sacret`}
+              clanTag={c.tag}
+              clanTagIcon={c.tagIcon ?? DEFAULT_CLAN_ICON}
+              clanNameColor={c.color}
+            />
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 

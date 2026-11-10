@@ -34,7 +34,6 @@ import {
 import {
   DEFAULT_CLAN_ICON,
   PICKABLE_CLAN_ICONS,
-  resolveClanIcon,
 } from "@/lib/clanIcons";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -2003,6 +2002,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   const sacret = (user as any)?.diamonds ?? 0;
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
+  const [description, setDescription] = useState("");
   const [tagIcon, setTagIcon] = useState(DEFAULT_CLAN_ICON);
   const [tagBg, setTagBg] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -2025,9 +2025,6 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   const [ok, setOk] = useState<string | null>(null);
   // Tag yang lolos filter backend: 3-4 huruf/angka (cosmetics dibuang).
   const cleanTag = tag.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  // Ikon tag dipakai di PREVIEW — warnanya mengikuti warna tag yang dipilih
-  // (fallback ke warna bawaan ikonnya).
-  const { Icon: TagIc, tone: tagTone } = resolveClanIcon(tagIcon);
 
   const submit = async () => {
     setErr(null);
@@ -2055,6 +2052,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         tagIcon,
         tagBg: tagBg ?? undefined,
         avatarUrl: avatarUrl.trim(),
+        description: description.trim() || undefined,
       });
       setOk("Clan dibuat — level 1, kumpulkan Sacret bareng!");
       setTimeout(() => {
@@ -2095,38 +2093,35 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </p>
             {/* Isi preview: foto kotak di kiri, nama + pill tag + kotak tag
                 berbingkai emas di kanannya. */}
-            <div className="mt-3 flex items-stretch gap-3">
+            <div className="mt-3 flex items-center gap-3">
               {avatarUrl.trim() ? (
                 <img
                   src={avatarUrl.trim()}
                   alt=""
-                  className="my-auto size-16 shrink-0 rounded-xl border border-gold/50 object-cover"
+                  className="size-16 shrink-0 rounded-2xl border border-white/12 object-cover"
                 />
               ) : (
-                <span className="my-auto flex size-16 shrink-0 items-center justify-center rounded-xl border border-gold/50 bg-[#241640] text-white/75">
+                <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-[#1b1526] text-white/70">
                   <Users className="size-7" />
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold text-violet-300/75">Nama Clan</p>
-                <p className="truncate text-sm font-black text-gold">
+                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-violet-300/60">
+                  Nama Clan
+                </p>
+                <p className="mt-0.5 truncate text-[15px] font-black text-white">
                   {name.trim() || "Nama clan"}
                 </p>
-                <span className="mt-1.5 inline-flex items-center rounded-full border border-gold/45 bg-white/[0.06] px-2 py-0.5 text-[9px] font-bold text-gold/90">
-                  Tag clan
-                </span>
-                <div className="mt-1.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-gold/60 bg-black/45 px-2 py-1">
-                    <TagIc
-                      className="size-3.5"
-                      style={{ color: tagBg ?? tagTone }}
-                      fill="currentColor"
-                      strokeWidth={1.4}
-                    />
-                    <span className="text-[11px] font-black italic tracking-wider text-white">
-                      [{tag.toUpperCase() || "TAG"}]
-                    </span>
-                  </span>
+                {/* Tag memakai komponen ClanTag ASLI — tampilan default saat
+                    clan baru dibuat, bukan chip buatan preview. */}
+                <div className="mt-1.5 min-w-0">
+                  <ClanTag
+                    icon={tagIcon}
+                    tag={(cleanTag || "TAG").toUpperCase()}
+                    bg={tagBg ?? undefined}
+                    level={1}
+                    className="max-w-full"
+                  />
                 </div>
               </div>
             </div>
@@ -2144,11 +2139,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                 htmlFor="clan-avatar-file"
                 className="group relative mx-auto mt-3 block size-16 cursor-pointer"
               >
-                <span
-                  aria-hidden
-                  className="absolute inset-0 rounded-2xl bg-[linear-gradient(160deg,#fbbf24,#f59e0b_50%,#d97706)]"
-                />
-                <span className="absolute inset-[3px] overflow-hidden rounded-[13px] bg-[#241640]">
+                <span className="absolute inset-0 overflow-hidden rounded-2xl border border-white/12 bg-[#1b1526]">
                   {avatarUrl.trim() ? (
                     <img
                       src={avatarUrl.trim()}
@@ -2161,8 +2152,8 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                     </span>
                   )}
                 </span>
-                <span className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-[3px] border-[#1b1133] bg-gradient-to-br from-gold to-amber-600 text-black">
-                  <Camera className="size-3.5" aria-hidden />
+                <span className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full border-2 border-[#1b1133] bg-white text-black shadow-md">
+                  <Camera className="size-3" aria-hidden />
                 </span>
               </label>
               <p className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-violet-200/85">
@@ -2276,6 +2267,24 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             </div>
           </div>
 
+          {/* ===== DESKRIPSI CLAN ===== */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-black text-white/85">Deskripsi clan</p>
+              <span className="text-[9px] font-semibold tabular-nums text-white/30">
+                {description.length}/300
+              </span>
+            </div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value.slice(0, 300))}
+              rows={3}
+              maxLength={300}
+              placeholder="Ceritakan tujuan clan, aturan, atau jam aktif…"
+              className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-[11.5px] leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-gold/50"
+            />
+          </div>
+
           {/* ===== KOTAK ICON TAG CLAN ===== */}
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] px-3 pb-3 pt-3">
             <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
@@ -2295,15 +2304,14 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                       : "border-white/12 hover:border-gold/40",
                   )}
                   style={{
-                    backgroundColor: `${ic.tone}26`,
-                    borderColor: tagIcon === ic.key ? undefined : `${ic.tone}66`,
+                    backgroundColor: "rgba(255,255,255,.025)",
+                    borderColor: tagIcon === ic.key ? undefined : `${ic.tone}55`,
                   }}
                 >
                   <ic.Icon
                     className="size-5"
                     style={{ color: ic.tone }}
-                    fill="currentColor"
-                    strokeWidth={1.4}
+                    strokeWidth={2}
                   />
                 </button>
               ))}

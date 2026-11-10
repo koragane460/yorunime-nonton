@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ComponentType } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -21,6 +21,7 @@ import {
   BlueCheck,
   ClanLevelBar,
   ClanTag,
+  CrystalIcon,
   LevelBadge,
   RedMark,
   TitleBadge,
@@ -87,7 +88,6 @@ import {
   Check,
   BadgeCheck,
   Pencil,
-  Gem,
   ShoppingBag,
   Share2,
   Cake,
@@ -468,7 +468,7 @@ function AkunPremiumCard({
       <span className="relative flex items-start justify-between gap-2">
         <span className="flex items-center gap-2">
           <span className="grid size-9 place-items-center rounded-xl border border-[#ffdf8b]/35 bg-[#ffd23f]/12 text-[#ffdf8b]">
-            <Gem className="size-[18px]" strokeWidth={2.4} />
+            <CrystalIcon className="size-[18px]" strokeWidth={2.4} />
           </span>
           <span>
             <span className="block text-[13px] font-black tracking-tight text-white">
@@ -555,14 +555,14 @@ function AkunProfileScreen({
 
   const ACTIONS: {
     label: string;
-    Icon: LucideIcon;
+    Icon: ComponentType<{ className?: string; strokeWidth?: number }>;
     onClick: () => void;
   }[] = [
     { label: "Favorite", Icon: Heart, onClick: () => navigate("/home?panel=favorites") },
     { label: "History", Icon: HistoryIcon, onClick: () => navigate("/home?panel=history") },
     { label: "Clan", Icon: Shield, onClick: () => navigate("/clan") },
     { label: "Shop", Icon: ShoppingBag, onClick: () => navigate("/home?panel=shop") },
-    { label: "Premium", Icon: Gem, onClick: () => navigate("/premium") },
+    { label: "Premium", Icon: CrystalIcon, onClick: () => navigate("/premium") },
     { label: "Pengaturan", Icon: SettingsIcon, onClick: onSettings },
   ];
 
@@ -637,7 +637,7 @@ function AkunProfileScreen({
               bg={user.statusBg}
               seed={user._id}
               onClick={() => setBubbleOpen(true)}
-              className="absolute -right-10 -top-5 w-[190px] max-w-[190px]"
+              className="absolute left-[40px] -top-7 w-[118px] max-w-[118px]"
             />
             <button
               onClick={() => setEditOpen(true)}
@@ -1989,7 +1989,7 @@ function ProfileOverviewCard({
       <div className="relative mt-2 grid grid-cols-2 gap-2">
         <div className="rounded-2xl border border-gold/20 bg-gold/[0.06] px-3 py-2.5">
           <div className="flex items-center gap-1.5">
-            <Gem className="size-3.5 text-gold" strokeWidth={2.2} />
+            <CrystalIcon className="size-3.5 text-gold" strokeWidth={2.2} />
             <p className="text-[8.5px] font-black uppercase tracking-[0.13em] text-gold/80">
               Sisa Premium
             </p>

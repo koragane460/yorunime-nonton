@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Gem, Lock, Check, MessageCircle } from "lucide-react";
+import { Lock, Check, MessageCircle } from "lucide-react";
+import { CrystalIcon } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -122,7 +123,7 @@ export function BubbleChatScreen() {
           yang punya premium.
         </p>
         <div className="mt-5 flex items-center gap-2 rounded-full bg-amber-400/15 px-4 py-2 ring-1 ring-amber-400/30">
-          <Gem className="size-4 text-amber-300" />
+          <CrystalIcon className="size-4 text-amber-300" />
           <span className="text-xs font-bold text-amber-200">
             Ambil premium untuk buka fitur ini
           </span>

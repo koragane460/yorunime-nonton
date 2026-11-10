@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useConvexAuth } from "convex/react";
 import { CommentsSection, type CommentT } from "@/components/Comments";
-import { SectionTitle } from "@/components/lstream-ui";
+import { PosterRatingBadge, PosterStatusBadge, SectionTitle } from "@/components/lstream-ui";
 import {
   setMiniCue,
   setMiniPlayer,
@@ -75,6 +75,11 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
  * episode yang sama tidak memanggil server sumber sekali lagi. */
 const DIRECT_CACHE = new Map<string, any>();
 const DIRECT_CACHE_MAX = 60;
+/** Detail + daftar episode per judul. Dulu effect detail ikut jalan setiap
+ *  episode berubah, jadi pindah episode selalu menembak ulang server dan
+ *  kadang cepat/kadang lama. Cache ini membuat perpindahan episode instan. */
+const DETAIL_CACHE = new Map<string, any>();
+const DETAIL_CACHE_MAX = 24;
 /** Warna teks tiap resolusi di popup Kualitas — makin tinggi makin "premium". */
 const QUALITY_COLOR: Record<string, string> = {
   "144p": "text-zinc-400",
@@ -1318,6 +1323,18 @@ function WatchContent() {
 
   useEffect(() => {
     if (!animeId) return;
+    const cacheKey = isDonghua ? `donghua:${animeId}` : `anime:${animeId}`;
+    const cached = DETAIL_CACHE.get(cacheKey);
+    if (cached) {
+      setDetailData(cached);
+      if (!epParam && cached.episodeList?.[0]?.id) {
+        navigate(
+          `/nonton?anime=${animeId}&ep=${cached.episodeList[0].id}${isDonghua ? "&donghua=1" : ""}`,
+          { replace: true },
+        );
+      }
+      return;
+    }
     // Donghua: slug-nya milik SankaVollereii, bukan AniList/Jikan, jadi detail
     // anime biasa tidak akan menemukan apa pun. Daftar episodenya diambil dari
     // Sanka lalu dipetakan ke bentuk yang sama dengan detail anime, sehingga
@@ -1342,7 +1359,7 @@ function WatchContent() {
               number: e.number || 1,
               title: e.title ?? "",
             }));
-          setDetailData({
+          const nextDetail = {
             title: d?.title ?? "",
             image: d?.cover ?? d?.poster ?? "",
             synopsis: d?.synopsis ?? "",
@@ -1351,7 +1368,13 @@ function WatchContent() {
             status: d?.status,
             source: d?.source,
             episodeList: list,
-          });
+          };
+          setDetailData(nextDetail);
+          DETAIL_CACHE.set(cacheKey, nextDetail);
+          if (DETAIL_CACHE.size > DETAIL_CACHE_MAX) {
+            const oldest = DETAIL_CACHE.keys().next().value;
+            if (oldest) DETAIL_CACHE.delete(oldest);
+          }
           if (!epParam && list[0]) {
             navigate(`/nonton?anime=${animeId}&ep=${list[0].id}&donghua=1`, {
               replace: true,
@@ -1372,11 +1395,17 @@ function WatchContent() {
         // Detail bisa kosong/error walau stream tetap tersedia. Jangan biarkan
         // judul menjadi "Untitled": pakai judul dari URL atau label netral.
         const fallbackTitle = params.get("judul")?.trim() || "Anime";
-        setDetailData(
-          d?.error
-            ? { ...d, error: true, title: d?.title || fallbackTitle }
-            : { ...d, title: d?.title || fallbackTitle },
-        );
+        const nextDetail = d?.error
+          ? { ...d, error: true, title: d?.title || fallbackTitle }
+          : { ...d, title: d?.title || fallbackTitle };
+        setDetailData(nextDetail);
+        if (!nextDetail.error) {
+          DETAIL_CACHE.set(cacheKey, nextDetail);
+          if (DETAIL_CACHE.size > DETAIL_CACHE_MAX) {
+            const oldest = DETAIL_CACHE.keys().next().value;
+            if (oldest) DETAIL_CACHE.delete(oldest);
+          }
+        }
         // Tanpa parameter episode → langsung buka episode 1.
         if (!epParam) {
           const first = d?.episodeList?.[0]?.id;
@@ -1392,8 +1421,10 @@ function WatchContent() {
           episodeList: [],
         }),
       );
+    // Detail hanya bergantung pada JUDUL, bukan episode. Pindah episode tidak
+    // boleh memicu fetch detail ulang (penyebab loading lama/tidak konsisten).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animeId, epParam, isDonghua]);
+  }, [animeId, isDonghua]);
 
   // Detail anime sudah siap (dipakai sebagai sumber nomor episode & judul).
   const detailReady = !!detailData && !detailData.error;
@@ -3183,36 +3214,40 @@ function WatchContent() {
       {/* Satu baris horizontal: Like/Dislike menyatu, lalu Favorit · Donate ·
           Lapor · Bagikan. Semua memakai flex agar tidak pernah turun baris. */}
       <div className="thin-scroll flex w-full items-center gap-1.5 overflow-x-auto px-3 pb-0.5 pt-2">
-        <button
-          onClick={() => {
-            void toggleLike({ animeId, value: 1 }).catch(() => {});
-          }}
-          aria-label="Like"
-          className={cn(
-            "flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-[10px] font-bold transition active:scale-95",
-            likeStats?.liked
-              ? "border-white/25 bg-white/15 text-white"
-              : "border-white/12 bg-white/[0.04] text-white/60 hover:bg-white/[0.07] hover:text-white/85",
-          )}
-        >
-          <ThumbsUp className={cn("size-[14px] shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
-          <span className="tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
-        </button>
-        <button
-          onClick={() => {
-            void toggleLike({ animeId, value: -1 }).catch(() => {});
-          }}
-          aria-label="Tidak suka"
-          className={cn(
-            "flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-[10px] font-bold transition active:scale-95",
-            likeStats?.disliked
-              ? "border-white/25 bg-white/15 text-white"
-              : "border-white/12 bg-white/[0.04] text-white/60 hover:bg-white/[0.07] hover:text-white/85",
-          )}
-        >
-          <ThumbsDown className={cn("size-[14px] shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
-          <span className="tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
-        </button>
+        {/* Like & Dislike menyatu dalam SATU pil dengan garis pembatas. */}
+        <div className="flex h-8 shrink-0 items-stretch overflow-hidden rounded-full border border-white/14 bg-white/[0.05]">
+          <button
+            onClick={() => {
+              void toggleLike({ animeId, value: 1 }).catch(() => {});
+            }}
+            aria-label="Like"
+            className={cn(
+              "flex items-center justify-center gap-1.5 px-3 text-[10px] font-bold transition active:scale-95",
+              likeStats?.liked
+                ? "bg-white/15 text-white"
+                : "text-white/65 hover:bg-white/[0.07] hover:text-white/90",
+            )}
+          >
+            <ThumbsUp className={cn("size-[14px] shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
+            <span className="tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
+          </button>
+          <span aria-hidden className="my-1.5 w-px shrink-0 bg-white/18" />
+          <button
+            onClick={() => {
+              void toggleLike({ animeId, value: -1 }).catch(() => {});
+            }}
+            aria-label="Tidak suka"
+            className={cn(
+              "flex items-center justify-center gap-1.5 px-3 text-[10px] font-bold transition active:scale-95",
+              likeStats?.disliked
+                ? "bg-white/15 text-white"
+                : "text-white/65 hover:bg-white/[0.07] hover:text-white/90",
+            )}
+          >
+            <ThumbsDown className={cn("size-[14px] shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
+            <span className="tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
+          </button>
+        </div>
 
         <button
           onClick={() => {
@@ -3324,32 +3359,8 @@ function WatchContent() {
                   className="size-full object-cover"
                 />
               )}
-              {(D.status === "Ongoing" ||
-                D.status === "Completed" ||
-                D.status === "Upcoming") && (
-                <span
-                  className="absolute left-0 top-0 rounded-br-lg px-1.5 py-0.5 text-[7.5px] font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_10px_rgba(0,0,0,.45)]"
-                  style={{
-                    background:
-                      D.status === "Ongoing"
-                        ? "var(--ui-a, #1CA7EC)"
-                        : D.status === "Completed"
-                          ? "color-mix(in srgb, var(--ui-c, #FFD23F) 72%, #1f2937)"
-                          : "var(--ui-d, #D98E3A)",
-                  }}
-                >
-                  {D.status}
-                </span>
-              )}
-              {typeof D.score === "number" && D.score > 0 && (
-                <span
-                  className="absolute bottom-0 right-0 flex items-center gap-1 rounded-tl-lg px-1.5 py-0.5 text-[9px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,.5)]"
-                  style={{ background: "var(--ui-a, #1CA7EC)" }}
-                >
-                  <Star className="size-2.5 fill-white" aria-hidden />
-                  {Number(D.score).toFixed(1)}
-                </span>
-              )}
+              <PosterStatusBadge status={D.status} size="lg" />
+              <PosterRatingBadge score={D.score} size="lg" />
             </div>
           </div>
 

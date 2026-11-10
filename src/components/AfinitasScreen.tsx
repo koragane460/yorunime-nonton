@@ -797,11 +797,14 @@ export function AfinitasScreen({
                       >
                         <meta.Icon className="size-[19px]" strokeWidth={2.1} />
                       </span>
-                      <div className="min-w-0 flex-1 text-right">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         <p className="truncate text-[12px] font-black text-white">{meta.label}</p>
-                        <p className="mt-0.5 text-[9px] font-semibold text-white/32">
-                          {members.length}/{total} terhubung
-                        </p>
+                        <span
+                          className="shrink-0 rounded-full border px-1.5 py-0.5 text-[8.5px] font-black tabular-nums"
+                          style={{ borderColor: `${meta.hex}45`, color: meta.hex }}
+                        >
+                          {members.length}/{total}
+                        </span>
                       </div>
                       {members.length < total && (
                         <button

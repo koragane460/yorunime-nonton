@@ -1,11 +1,12 @@
 // YoruNime — MENU: satu layar berisi daftar semua layar aplikasi.
 // Dibuka dari panel tengah (Panel › Menu). Fitur Pintasan sudah dihapus.
 import { useNavigate } from "react-router";
+import type { ComponentType } from "react";
+import { CrystalIcon } from "@/components/lstream-ui";
 import {
   Bookmark,
   Clapperboard,
   Compass,
-  Gem,
   Film,
   Image as ImageIcon,
   Info,
@@ -25,7 +26,7 @@ const DESTINATIONS: {
   path: string;
   label: string;
   hint: string;
-  Icon: typeof Play;
+  Icon: ComponentType<{ className?: string; strokeWidth?: number }>;
 }[] = [
   { path: "/home", label: "Anime", hint: "Beranda & lanjut nonton", Icon: Play },
   { path: "/film", label: "Film", hint: "Film & series", Icon: Film },
@@ -39,7 +40,7 @@ const DESTINATIONS: {
   { path: "/title", label: "Title", hint: "Pasang title", Icon: Tag },
   { path: "/gacha", label: "Gacha", hint: "Mesin hadiah", Icon: Sparkles },
   { path: "/music", label: "Musik", hint: "Putar musik", Icon: Music },
-  { path: "/premium", label: "Premium", hint: "Langganan", Icon: Gem },
+  { path: "/premium", label: "Premium", hint: "Langganan", Icon: CrystalIcon },
   { path: "/info", label: "Info", hint: "Tentang YoruNime", Icon: Info },
   { path: "/akun", label: "Akun", hint: "Profil & pengaturan", Icon: User },
 ];
