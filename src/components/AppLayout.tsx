@@ -146,9 +146,6 @@ export function AppLayout({
         setYvView("pet");
         setYvOpen(true);
         break;
-      case "title":
-        navigate("/title");
-        break;
       case "shop":
         setYvView("shop");
         setYvOpen(true);

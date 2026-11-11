@@ -37,7 +37,6 @@ const DESTINATIONS: {
   { path: "/feed", label: "Feed", hint: "Konten komunitas", Icon: ImageIcon },
   { path: "/clan", label: "Clan", hint: "Clan & nobar bareng", Icon: Users },
   { path: "/catalog", label: "Katalog", hint: "Semua judul", Icon: Clapperboard },
-  { path: "/title", label: "Title", hint: "Pasang title", Icon: Tag },
   { path: "/gacha", label: "Gacha", hint: "Mesin hadiah", Icon: Sparkles },
   { path: "/music", label: "Musik", hint: "Putar musik", Icon: Music },
   { path: "/premium", label: "Premium", hint: "Langganan", Icon: CrystalIcon },

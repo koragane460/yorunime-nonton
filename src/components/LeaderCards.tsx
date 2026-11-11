@@ -11,10 +11,13 @@ import {
   ArrowRight,
   ChevronLeft,
   Crown,
+  Gift,
   Sparkles,
   Trophy,
+  Users,
   X,
 } from "lucide-react";
+import { LeaderboardScreen } from "@/components/leaderboard/LeaderboardScreen";
 
 type XpRow = {
   rank: number;
@@ -1142,10 +1145,41 @@ export function LeaderCards() {
   const left = rows.slice(0, 5);
   const right = rows.slice(5, 10);
   const activeIndex = HOME_BOARDS.findIndex((b) => b.key === board);
+  const accent =
+    board === "xp"
+      ? "var(--ui-a, #8B5CF6)"
+      : board === "give"
+        ? "#FFD23F"
+        : "#4ADE80";
+  const panelBg =
+    board === "xp"
+      ? "linear-gradient(150deg, color-mix(in srgb, var(--ui-a) 20%, #15131d), #121019 68%)"
+      : board === "give"
+        ? "linear-gradient(150deg, rgba(255,210,63,.2), #17130b 68%)"
+        : "linear-gradient(150deg, rgba(74,222,128,.2), #0b1510 68%)";
 
   return (
     <>
-    <section className="fade-enter relative mt-2.5 overflow-hidden rounded-[22px] border border-white/10 bg-[#16151b] p-3 pr-2.5">
+    <section
+      className="fade-enter relative mt-2.5 overflow-hidden rounded-[22px] border border-white/10 p-3 pr-2.5"
+      style={{ background: panelBg, borderColor: `color-mix(in srgb, ${accent} 35%, transparent)` }}
+    >
+      <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        {[Gift, Trophy, Sparkles, Users, Crown].map((Icon, i) => (
+          <Icon
+            key={i}
+            className="board-rise absolute text-white"
+            style={{
+              left: `${8 + i * 20}%`,
+              bottom: `${-10 + (i % 3) * 12}px`,
+              width: 18 + (i % 3) * 9,
+              height: 18 + (i % 3) * 9,
+              opacity: 0.055,
+              animationDelay: `${i * 0.7}s`,
+            }}
+          />
+        ))}
+      </span>
       {/* Indikator posisi papan — tiga garis kecil di kanan atas. */}
       <span
         aria-hidden
@@ -1154,12 +1188,8 @@ export function LeaderCards() {
         {HOME_BOARDS.map((b, i) => (
           <span
             key={b.key}
-            className={cn(
-              "h-[3px] rounded-full transition-all",
-              i === activeIndex
-                ? "w-4 bg-[var(--ui-c)]"
-                : "w-1.5 bg-white/18",
-            )}
+            className={cn("h-[3px] rounded-full transition-all", i === activeIndex ? "w-4" : "w-1.5 bg-white/18")}
+            style={i === activeIndex ? { background: accent } : undefined}
           />
         ))}
       </span>
@@ -1167,7 +1197,7 @@ export function LeaderCards() {
       <div className="flex items-center justify-center gap-2 pr-8">
         <span
           className="flex size-8 shrink-0 items-center justify-center rounded-xl text-black"
-          style={{ background: "var(--ui-c, #FFD23F)" }}
+          style={{ background: accent }}
         >
           <Trophy className="size-[17px]" strokeWidth={2.6} />
         </span>
@@ -1204,7 +1234,7 @@ export function LeaderCards() {
             )}
             style={
               period === p.key
-                ? { background: "var(--ui-c, #FFD23F)" }
+                ? { background: accent }
                 : undefined
             }
           >
@@ -1215,14 +1245,21 @@ export function LeaderCards() {
 
       <div className="mt-3 grid grid-cols-2 gap-0">
         <div className="min-w-0 pr-2">
-          <HomeBoardColumn rows={left} />
+          <HomeBoardColumn rows={left} accent={accent} />
         </div>
         <div className="relative min-w-0 pl-2">
           <span aria-hidden className="absolute inset-y-2 left-0 w-px bg-white/10" />
-          <HomeBoardColumn rows={right} />
+          <HomeBoardColumn rows={right} accent={accent} />
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setOpenBoard(board)}
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/15 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-white/45 transition hover:bg-black/25 hover:text-white/80"
+      >
+        Lihat semua peringkat <ArrowRight className="size-3" />
+      </button>
     </section>
       {openBoard === "xp" && (
         <LeaderOverlay mode="xp" initialPeriod={period} onClose={() => setOpenBoard(null)} />
@@ -1230,7 +1267,11 @@ export function LeaderCards() {
       {openBoard === "give" && (
         <LeaderOverlay mode="give" initialPeriod={period} onClose={() => setOpenBoard(null)} />
       )}
-      {openBoard === "clan" && <ClanOverlay onClose={() => setOpenBoard(null)} />}
+      {openBoard === "clan" && (
+        <div className="fixed inset-0 z-[95] overflow-y-auto bg-[#08070c]">
+          <LeaderboardScreen initialView="clan" onClose={() => setOpenBoard(null)} />
+        </div>
+      )}
     </>
   );
 }
@@ -1246,7 +1287,7 @@ type HomeBoardRow = {
   onClick: () => void;
 };
 
-function HomeBoardColumn({ rows }: { rows: HomeBoardRow[] }) {
+function HomeBoardColumn({ rows, accent }: { rows: HomeBoardRow[]; accent: string }) {
   if (rows.length === 0) return null;
   return (
     <div className="space-y-1">
@@ -1274,7 +1315,7 @@ function HomeBoardColumn({ rows }: { rows: HomeBoardRow[] }) {
               <LevelBadge level={r.level} />
             </span>
           </span>
-          <span className="shrink-0 text-[9px] font-black tabular-nums text-[var(--ui-c)]">
+          <span className="shrink-0 text-[9px] font-black tabular-nums" style={{ color: accent }}>
             {r.value}
           </span>
         </button>

@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 export type YoruFeature = "quest" | "sticker" | "nobar" | "voice";
-type HubView = YoruFeature | "clan" | "shop" | "title" | "pet" | "music";
+type HubView = YoruFeature | "clan" | "shop" | "pet" | "music";
 
 const BOXES: {
   key: HubView;
@@ -76,13 +76,6 @@ const BOXES: {
     Icon: ShoppingBag,
     tone: "from-rose-400/20 via-white/[0.05] to-transparent",
     iconTone: "bg-rose-400/16 text-rose-200",
-  },
-  {
-    key: "title",
-    label: "Title",
-    Icon: Award,
-    tone: "from-indigo-400/20 via-white/[0.05] to-transparent",
-    iconTone: "bg-indigo-400/16 text-indigo-200",
   },
   {
     key: "pet",
@@ -215,11 +208,6 @@ export function YoruVerseHubScreen({
     if (key === "clan") {
       onClose();
       navigate("/clan");
-      return;
-    }
-    if (key === "title") {
-      onClose();
-      navigate("/title");
       return;
     }
     onOpenSub(key);

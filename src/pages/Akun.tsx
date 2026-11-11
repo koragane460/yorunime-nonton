@@ -49,11 +49,7 @@ import {
   StoryViewer,
   type Picked,
 } from "@/components/StoriesUI";
-import {
-  ProfileStatusBubble,
-  StatusBubbleEditor,
-  StatusTray,
-} from "@/components/ProfileStatus";
+import { StatusTray } from "@/components/ProfileStatus";
 import {
   Ban,
   Bell,
@@ -488,12 +484,17 @@ function AkunPremiumCard({
         {units.map(([value, label]) => (
           <span
             key={label}
-            className="rounded-xl border border-white/12 bg-black/30 py-2 text-center backdrop-blur-md"
+            className="rounded-xl border py-2 text-center backdrop-blur-md"
+            style={{
+              borderColor: "color-mix(in srgb, var(--ui-c) 38%, transparent)",
+              background:
+                "linear-gradient(160deg, color-mix(in srgb, var(--ui-a) 20%, rgba(0,0,0,.35)), rgba(0,0,0,.34))",
+            }}
           >
-            <span className="block font-mono text-[16px] font-black leading-none text-[#fff1bd]">
+            <span className="block font-mono text-[16px] font-black leading-none" style={{ color: "var(--ui-c)" }}>
               {value}
             </span>
-            <span className="mt-1 block text-[7px] font-black uppercase tracking-[0.1em] text-white/38">
+            <span className="mt-1 block text-[7px] font-black uppercase tracking-[0.1em] text-white/50">
               {label}
             </span>
           </span>
@@ -516,7 +517,6 @@ function AkunProfileScreen({
   const navigate = useNavigate();
   const stats = useQuery(api.account.profileStats, user ? {} : "skip");
   const [editOpen, setEditOpen] = useState(false);
-  const [bubbleOpen, setBubbleOpen] = useState(false);
   const [storyComposer, setStoryComposer] = useState(false);
   const [storyItems, setStoryItems] = useState<Picked[] | null>(null);
   const [storyView, setStoryView] = useState<string | null>(null);
@@ -631,13 +631,6 @@ function AkunProfileScreen({
               src={user.image}
               seed={user.username}
               className="relative size-[96px] rounded-full ring-2 ring-[#202737]"
-            />
-            <ProfileStatusBubble
-              text={user.statusText}
-              bg={user.statusBg}
-              seed={user._id}
-              onClick={() => setBubbleOpen(true)}
-              className="absolute left-[40px] -top-7 w-[118px] max-w-[118px]"
             />
             <button
               onClick={() => setEditOpen(true)}
@@ -763,13 +756,6 @@ function AkunProfileScreen({
       {editOpen && <EditIdentitySheet onClose={() => setEditOpen(false)} />}
       {switchOpen && (
         <AccountSwitcherSheet onClose={() => setSwitchOpen(false)} />
-      )}
-      {bubbleOpen && (
-        <StatusBubbleEditor
-          initialText={user.statusText}
-          initialBg={user.statusBg}
-          onClose={() => setBubbleOpen(false)}
-        />
       )}
       {storyComposer && (
         <StoryComposer
@@ -1188,6 +1174,9 @@ function SettingsScreen({
   const [settingsPage, setSettingsPage] = useState<
     "menu" | "akun" | "nonton" | "notifikasi" | "tampilan" | "chat" | "privasi" | "unduhan" | "lainnya"
   >("menu");
+  const [settingsPick, setSettingsPick] = useState<
+    "akun" | "nonton" | "notifikasi" | "tampilan" | "chat" | "privasi" | "unduhan" | "lainnya"
+  >("akun");
   const [feedSwitch, setFeedSwitch] = useState(false);
   const update = useMutation(api.account.updateSettings);
   const updateProfile = useMutation(api.account.updateProfile);
@@ -1516,31 +1505,54 @@ function SettingsScreen({
         </div>
 
         {settingsPage === "menu" && (
-          <div className="mt-3 space-y-2">
-            {menuCards.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setSettingsPage(item.key)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-[22px] border p-3 text-left transition hover:brightness-110 active:scale-[0.995]",
-                  item.tone,
-                )}
-              >
-                <span className="grid size-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-black/15">
-                  {item.icon}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-black text-white">
-                    {item.title}
+          <div className="mt-3">
+            {/* KATEGORI terpisah — bukan digabung jadi satu daftar panjang. */}
+            <div className="thin-scroll -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {menuCards.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setSettingsPick(item.key)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9.5px] font-black transition active:scale-95",
+                    settingsPick === item.key
+                      ? "border-white/25 bg-white text-black"
+                      : "border-white/12 bg-white/[0.04] text-white/55",
+                  )}
+                >
+                  <span className="[&_svg]:size-3">{item.icon}</span>
+                  {item.title}
+                </button>
+              ))}
+            </div>
+
+            {(() => {
+              const item = menuCards.find((m) => m.key === settingsPick) ?? menuCards[0];
+              return (
+                <button
+                  type="button"
+                  onClick={() => setSettingsPage(item.key)}
+                  className={cn(
+                    "mt-2 flex w-full items-center gap-3 rounded-[24px] border p-4 text-left transition hover:brightness-110 active:scale-[0.995]",
+                    item.tone,
+                  )}
+                >
+                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-black/15">
+                    {item.icon}
                   </span>
-                  <span className="mt-0.5 block text-[10px] leading-snug text-white/40">
-                    {item.desc}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-black text-white">{item.title}</span>
+                    <span className="mt-0.5 block text-[10px] leading-snug text-white/40">{item.desc}</span>
                   </span>
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-white/30" />
-              </button>
-            ))}
+                  <span className="flex items-center gap-1 rounded-full border border-white/15 bg-black/20 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white/55">
+                    Buka <ChevronRight className="size-3" />
+                  </span>
+                </button>
+              );
+            })()}
+            <p className="px-1 pt-2 text-[9.5px] leading-relaxed text-white/30">
+              Pilih kategori, lalu buka kotaknya. Tiap kategori punya layar penuh dan daftar tombol sendiri.
+            </p>
           </div>
         )}
 

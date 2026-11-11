@@ -51,6 +51,8 @@ import { NobarDock } from "@/components/NobarDock";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const QUALITIES = ["144p", "240p", "360p", "480p", "720p", "1080p"];
+/** Pilihan ringkas di sheet kualitas: 144, 360, 720, 1080. */
+const QUALITY_SHEET = ["144p", "360p", "720p", "1080p"];
 
 /**
  * Jumlah episode yang langsung tampil di grid. Series panjang (ratusan
@@ -589,7 +591,10 @@ function WatchContent() {
   useEffect(() => {
     skippedRef.current = { intro: false, outro: false };
   }, [srcKey]);
-  const bakedSubs = !!currentSrc?.baked;
+  // Subtitle server TIDAK dipakai. Walaupun sumber direct ditandai "baked",
+  // player tetap memuat dan menggambar subtitle YoruNime agar terjemahannya
+  // konsisten. Track native dimatikan di elemen video (lihat onLoadedMetadata).
+  const bakedSubs = false;
   // Notifikasi kecepatan di dalam player (mis. "2x speed") seperti subtitle:
   // muncul sebentar di tengah atas lalu hilang sendiri.
   const [speedNotice, setSpeedNotice] = useState("");
@@ -1644,6 +1649,7 @@ function WatchContent() {
     // berhenti tanpa memasang `src`, jadi layar tetap 0:00. Sekarang src
     // tetap dipasang sebagai percobaan native terakhir.
     let hls: Hls | null = null;
+    let killNativeTracks: (() => void) | null = null;
     if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
@@ -1668,6 +1674,10 @@ function WatchContent() {
         abrEwmaSlowLive: 9.0,
       });
       hlsRef.current = hls;
+      // Jangan pernah pakai subtitle bawaan server. Hanya overlay YoruNime
+      // yang boleh tampil.
+      (hls as any).subtitleDisplay = false;
+      (hls as any).subtitleTrack = -1;
       hls.loadSource(streamUrl);
       hls.attachMedia(v);
       // Pasang level sesuai kualitas yang dipilih begitu manifest terbaca.
@@ -1677,8 +1687,20 @@ function WatchContent() {
       // dianggap "tidak tersedia". Akibatnya tombol kualitas tidak pernah
       // benar-benar mengganti gambar.
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        (hls as any).subtitleDisplay = false;
+        (hls as any).subtitleTrack = -1;
+        Array.from(v.textTracks).forEach((t) => (t.mode = "disabled"));
         setLevels(availableQualities(hls));
         applyLevel(hls, quality);
+      });
+      killNativeTracks = () => {
+        Array.from(v.textTracks).forEach((t) => (t.mode = "disabled"));
+      };
+      v.textTracks.addEventListener("addtrack", killNativeTracks);
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
+        (hls as any).subtitleDisplay = false;
+        (hls as any).subtitleTrack = -1;
+        killNativeTracks?.();
       });
       // Error HLS selalu dicoba dipulihkan dulu sebelum memberi tahu user —
       // seek / ganti menit sering memicu error sementara yang sebenarnya
@@ -1708,6 +1730,8 @@ function WatchContent() {
     }
     return () => {
       hlsRef.current = null;
+      if (killNativeTracks)
+        v.textTracks.removeEventListener("addtrack", killNativeTracks);
       hls?.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2502,6 +2526,17 @@ function WatchContent() {
               }
             }}
             onLoadedMetadata={(e) => {
+              // Buang track subtitle yang dibawa file/HLS — subtitle YoruNime
+              // digambar sendiri oleh player. Pasang juga listener agar track
+              // yang muncul terlambat (mis. native HLS Safari) tetap mati.
+              const vv = e.currentTarget as HTMLVideoElement & { __ynKillTracks?: boolean };
+              const kill = () =>
+                Array.from(vv.textTracks).forEach((t) => (t.mode = "disabled"));
+              kill();
+              if (!vv.__ynKillTracks) {
+                vv.__ynKillTracks = true;
+                vv.textTracks.addEventListener("addtrack", kill);
+              }
               setDuration(e.currentTarget.duration);
               // Buka dari "Lanjutkan": loncat ke menit terakhir.
               const t = Number(params.get("t") ?? 0);
@@ -2937,19 +2972,28 @@ function WatchContent() {
                 di sekitarnya untuk menutup. */}
             {qualityOpen && (
               <div
-                className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 px-6 backdrop-blur-[2px]"
+                className="fixed inset-0 z-[110] flex items-end justify-center bg-black/60 backdrop-blur-[2px]"
                 onClick={() => setQualityOpen(false)}
               >
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="max-h-[55vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/15 bg-black/92 px-3 pb-3 pt-2.5 shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-200 thin-scroll"
+                  className="max-h-[72vh] w-full overflow-y-auto rounded-t-[28px] border-t border-white/15 bg-black/95 px-4 pb-7 pt-3 shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-bottom-4 duration-200 thin-scroll"
                 >
                 <div
                   aria-hidden
-                  className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-white/45"
+                  className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/45"
                 />
+                <div className="mb-2 flex items-end justify-between gap-2 px-1">
+                  <div className="text-left">
+                    <p className="text-[13px] font-black text-white">Kualitas video</p>
+                    <p className="text-[10px] text-white/40">Pilih resolusi, lalu tutup area gelap.</p>
+                  </div>
+                  <span className="font-mono text-[10px] font-black text-[var(--ui-c)]">
+                    {playingRes ? `${playingRes}p` : qualityDraft ?? quality}
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 gap-1.5">
-                  {QUALITIES.map((q, qi) => {
+                  {QUALITY_SHEET.map((q, qi) => {
                     const locked = q === PREMIUM_QUALITY && !isPremium;
                     const active = (qualityDraft ?? quality) === q;
                     return (
@@ -2968,11 +3012,11 @@ function WatchContent() {
                           setQuality(q);
                           setQualityTouched(true);
                           applyQuality(q);
-                          setQualityOpen(false);
+                          // Sheet TETAP terbuka sampai area gelap disentuh.
                         }}
                         style={{ animationDelay: `${qi * 45}ms` }}
                         className={cn(
-          "animate-in fade-in-0 slide-in-from-top-1 rounded-2xl border px-2.5 py-2 text-left transition duration-300",
+          "animate-in fade-in-0 slide-in-from-top-1 rounded-2xl border px-3 py-2.5 text-left transition duration-300",
                           locked
                             ? "cursor-not-allowed border-amber-500/40 bg-amber-500/10"
                             : active
@@ -2980,16 +3024,23 @@ function WatchContent() {
                               : "border-white/12 bg-white/[0.04]",
                         )}
                       >
-                        <span
-                          className={cn(
-                            "block text-[15px] font-black leading-none",
-                            locked ? "text-amber-300" : QUALITY_COLOR[q],
+                        <span className="flex items-center justify-between gap-2">
+                          <span
+                            className={cn(
+                              "block text-[16px] font-black leading-none",
+                              locked ? "text-amber-300" : active ? "text-[var(--ui-c)]" : "text-white",
+                            )}
+                          >
+                            {q}
+                            {q === PREMIUM_QUALITY && !isPremium && " ★"}
+                          </span>
+                          {active && (
+                            <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[8px] font-black text-emerald-300">
+                              Dipakai
+                            </span>
                           )}
-                        >
-                          {q}
-                          {q === PREMIUM_QUALITY && !isPremium && " ★"}
                         </span>
-                        <span className="mt-1.5 block text-[11px] font-semibold leading-tight text-white/60">
+                        <span className="mt-1.5 block text-left text-[11px] font-semibold leading-tight text-white/60">
                           {QUALITY_INFO[q]}
                         </span>
                       </button>
@@ -3664,7 +3715,6 @@ function WatchContent() {
               animeId={epParam ? `${animeId}__ep${epParam}` : animeId}
               comments={shownComments}
               meId={user?._id}
-              bannerUrl={detailReady ? detailData.banner || detailData.image : D.banner || D.image}
               onOpenImage={(url) => setZoomImage(url)}
               onSeek={(seconds) => {
                 const v = videoRef.current;

@@ -113,6 +113,9 @@ function clanPublic(clan: any, memberCount: number) {
     avatarUrl: clan.avatarUrl,
     backgroundUrl: clan.backgroundUrl,
     description: clan.description,
+    joinMode: clan.joinMode ?? "approval",
+    minJoinLevel: clan.minJoinLevel ?? 0,
+    joinCost: clan.joinCost ?? 0,
     announcement: clan.announcement,
     announcementBy: clan.announcementBy,
     announcementRole: clan.announcementRole,
@@ -120,6 +123,7 @@ function clanPublic(clan: any, memberCount: number) {
     diamonds: clan.diamonds,
     level,
     levelProgress: clan.levelProgress,
+    totalXp: totalClanXp(level, clan.levelProgress ?? 0),
     levelCost: levelCost(level),
     claimAmount: claimAmountForLevel(level),
     color,
@@ -337,8 +341,11 @@ export const createClan = mutation({
     tagBg: v.optional(v.string()),
     avatarUrl: v.string(),
     description: v.optional(v.string()),
+    joinMode: v.optional(v.union(v.literal("public"), v.literal("private"), v.literal("approval"))),
+    minJoinLevel: v.optional(v.number()),
+    joinCost: v.optional(v.number()),
   },
-  handler: async (ctx, { name, tag, tagIcon, tagBg, avatarUrl, description }) => {
+  handler: async (ctx, { name, tag, tagIcon, tagBg, avatarUrl, description, joinMode, minJoinLevel, joinCost }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new ConvexError("Not signed in");
     const me = await ctx.db.get(userId);
@@ -379,6 +386,9 @@ export const createClan = mutation({
           : undefined,
       avatarUrl,
       description,
+      joinMode: joinMode ?? "approval",
+      minJoinLevel: Math.max(0, Math.min(200, Math.round(minJoinLevel ?? 0))),
+      joinCost: Math.max(0, Math.min(100_000, Math.round(joinCost ?? 0))),
       leaderId: userId,
       diamonds: 0,
       level: 1,
@@ -404,6 +414,30 @@ export const createClan = mutation({
   },
 });
 
+/** Leader/officer mengubah cara join clan setelah clan dibuat. */
+export const setJoinSettings = mutation({
+  args: {
+    clanId: v.id("clans"),
+    joinMode: v.union(v.literal("public"), v.literal("private"), v.literal("approval")),
+    minJoinLevel: v.number(),
+    joinCost: v.number(),
+  },
+  handler: async (ctx, { clanId, joinMode, minJoinLevel, joinCost }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    const res = await myClan(ctx, userId);
+    if (!res || res.clan._id !== clanId) throw new Error("Bukan clan kamu");
+    if (!["leader", "officer"].includes(res.member.role))
+      throw new Error("Hanya leader/officer");
+    await ctx.db.patch(clanId, {
+      joinMode,
+      minJoinLevel: Math.max(0, Math.min(200, Math.round(minJoinLevel))),
+      joinCost: Math.max(0, Math.min(100_000, Math.round(joinCost))),
+    });
+    return { ok: true };
+  },
+});
+
 /** ID clan yang sedang kita-request (belum diterima) — buat tombol centang. */
 export const myPendingClanId = query({
   args: {},
@@ -425,11 +459,64 @@ export const requestJoin = mutation({
   handler: async (ctx, { clanId }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Not signed in");
+    const me = await ctx.db.get(userId);
+    if (!me) throw new Error("User not found");
+    const clan = await ctx.db.get(clanId);
+    if (!clan) throw new Error("Clan tidak ditemukan");
     const existing = await ctx.db
       .query("clanMembers")
       .withIndex("userId", (q) => q.eq("userId", userId))
       .first();
     if (existing) throw new Error("Kamu sudah punya clan");
+
+    const mode = clan.joinMode ?? "approval";
+    if (mode === "private")
+      throw new Error("Clan privat — hanya bisa masuk lewat undangan leader");
+    const minLevel = clan.minJoinLevel ?? 0;
+    if ((me.level ?? 1) < minLevel)
+      throw new Error(`Minimal level ${minLevel} untuk join clan ini`);
+    const members = await ctx.db
+      .query("clanMembers")
+      .withIndex("clanId", (q) => q.eq("clanId", clanId))
+      .collect();
+    if (members.length >= (clan.memberCap ?? 20))
+      throw new Error("Clan sudah penuh");
+    const cost = Math.max(0, clan.joinCost ?? 0);
+    if (!me.unlimitedSacret && (me.diamonds ?? 0) < cost)
+      throw new Error(
+        `Butuh ${cost.toLocaleString("id-ID")} Sacret untuk join clan ini`,
+      );
+
+    // Publik: langsung jadi member tanpa request. Biaya dipotong sekarang.
+    if (mode === "public") {
+      const oldPending = await ctx.db
+        .query("clanRequests")
+        .withIndex("userId_status", (q) =>
+          q.eq("userId", userId).eq("status", "pending"),
+        )
+        .take(20);
+      for (const p of oldPending) await ctx.db.delete(p._id);
+      await ctx.db.insert("clanMembers", {
+        clanId,
+        userId,
+        role: "member",
+        donatedTotal: 0,
+        donatedToday: 0,
+        lastDonateDay: dayString(),
+        joinedAt: Date.now(),
+      });
+      await ctx.db.patch(userId, {
+        diamonds: me.unlimitedSacret
+          ? (me.diamonds ?? 0)
+          : (me.diamonds ?? 0) - cost,
+        clanTag: clan.tag,
+        clanTagIcon: clan.tagIcon,
+        clanNameColor: "",
+        clanLevel: clan.level ?? 1,
+      });
+      return { requested: false, joined: true };
+    }
+
     const pending = await ctx.db
       .query("clanRequests")
       .withIndex("userId_status", (q) =>
@@ -439,7 +526,7 @@ export const requestJoin = mutation({
     if (pending) {
       if (pending.clanId === clanId) {
         await ctx.db.delete(pending._id);
-        return { requested: false };
+        return { requested: false, joined: false };
       }
       throw new Error(
         "Permintaan di clan sebelumnya masih ada, batalkan untuk request ke clan ini",
@@ -451,7 +538,7 @@ export const requestJoin = mutation({
       status: "pending",
       createdAt: Date.now(),
     });
-    return { requested: true };
+    return { requested: true, joined: false };
   },
 });
 
@@ -487,6 +574,20 @@ export const respondRequest = mutation({
     if (!["leader", "officer"].includes(me.role))
       throw new Error("Hanya leader/officer");
     if (accept) {
+      const clanReq = await ctx.db.get(req.clanId);
+      if (clanReq) {
+        const applicant = await ctx.db.get(req.userId);
+        const minLevel = clanReq.minJoinLevel ?? 0;
+        if ((applicant?.level ?? 1) < minLevel)
+          throw new Error(`Pemohon belum level ${minLevel}`);
+        const cost = Math.max(0, clanReq.joinCost ?? 0);
+        if (
+          cost > 0 &&
+          !applicant?.unlimitedSacret &&
+          (applicant?.diamonds ?? 0) < cost
+        )
+          throw new Error(`Sacret pemohon tidak cukup (${cost})`);
+      }
       const already = await ctx.db
         .query("clanMembers")
         .withIndex("userId", (q) => q.eq("userId", req.userId))
@@ -502,8 +603,14 @@ export const respondRequest = mutation({
           joinedAt: Date.now(),
         });
         const clan = await ctx.db.get(req.clanId);
-        if (clan)
+        if (clan) {
+          const applicant = await ctx.db.get(req.userId);
+          const cost = Math.max(0, clan.joinCost ?? 0);
           await ctx.db.patch(req.userId, {
+            diamonds:
+              cost > 0 && !applicant?.unlimitedSacret
+                ? Math.max(0, (applicant?.diamonds ?? 0) - cost)
+                : applicant?.diamonds,
             clanTag: clan.tag,
             clanTagIcon: clan.tagIcon,
             clanNameColor: "",
@@ -511,6 +618,7 @@ export const respondRequest = mutation({
             // ditentukan tanpa query tabel clans tiap pesan.
             clanLevel: clan.level ?? 1,
           });
+        }
       }
     }
     // Permintaan join clan LAIN otomatis batal begitu user sudah masuk clan

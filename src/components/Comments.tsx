@@ -127,13 +127,10 @@ export function CommentsSection({
   onDeleted,
   onOpenImage,
   onSeek,
-  bannerUrl,
 }: {
   animeId: string;
   comments: CommentT[] | undefined;
   meId?: string;
-  /** Banner anime di belakang kolom komentar Nonton. */
-  bannerUrl?: string;
   onSend: (payload: CommentPayload, replyToId?: string) => Promise<void>;
   /** Dipanggil setelah server menghapus komentar, supaya daftar langsung bersih. */
   onDeleted?: (id: string) => void;
@@ -142,6 +139,8 @@ export function CommentsSection({
   onSeek?: (seconds: number) => void;
 }) {
   const { user } = useAuth();
+  /** Banner AKUN sendiri — bukan banner anime — di balik kolom komentar. */
+  const composerBanner = (user as any)?.bannerUrl as string | undefined;
   const [sort, setSort] = useState<"terbaru" | "populer">("terbaru");
   const [sortOpen, setSortOpen] = useState(false);
   const [text, setText] = useState("");
@@ -334,7 +333,7 @@ export function CommentsSection({
       </div>
 
       {/* ---------- KOLOM KOMENTAR ---------- */}
-      <div className="relative mt-2.5 overflow-hidden rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-[#141a24] via-[#10151d] to-[#0b0f15] p-2.5 shadow-[0_0_24px_-16px] shadow-[#1CA7EC]">
+      <div className="relative mt-2.5 overflow-hidden border-y border-white/10 bg-[#10151d] px-3 py-3">
         <div className="relative flex items-start gap-2">
           {/* Foto profil user yang sedang menulis komentar. */}
           <Avatar
@@ -343,15 +342,15 @@ export function CommentsSection({
             className="mt-0.5 size-8 shrink-0 ring-1 ring-white/15"
           />
           <div className="min-w-0 flex-1">
-            {/* Banner anime HANYA di kolom komentar, bukan menutupi seluruh
-                kotak composer. Lapisan gelap menjaga teks tetap terbaca. */}
+            {/* Banner AKUN user ada di dalam kotak komentar; banner anime
+                tidak lagi dipakai di sini. */}
             <div className="relative overflow-hidden rounded-full border border-white/15 bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] focus-within:border-[#1CA7EC]/70">
-              {bannerUrl && (
+              {composerBanner && (
                 <>
                   <span
                     aria-hidden
                     className="pointer-events-none absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${bannerUrl})` }}
+                    style={{ backgroundImage: `url(${composerBanner})` }}
                   />
                   <span
                     aria-hidden
@@ -567,8 +566,8 @@ export function CommentsSection({
         </div>
       )}
 
-      {/* ---------- DAFTAR KOMENTAR ---------- */}
-      <div className="mt-3 space-y-2">
+      {/* ---------- DAFTAR KOMENTAR (full-bleed kiri/kanan) ---------- */}
+      <div className="-mx-3 mt-3 space-y-0">
         {comments === undefined && (
           <div className="space-y-2.5 py-1">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -860,8 +859,8 @@ function CommentCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/10 bg-white/[0.035] p-2.5",
-        isReply && "bg-white/[0.02]",
+        "border-b border-white/10 px-3 py-3 last:border-b-0",
+        isReply && "bg-transparent",
       )}
     >
       {/* Kepala: avatar · username + centang + level + tag premium · waktu */}

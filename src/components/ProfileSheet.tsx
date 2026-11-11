@@ -16,7 +16,6 @@ import {
   Gift,
   MessageCircle,
   Play,
-  HeartHandshake,
   MessageSquare,
   History as HistoryIcon,
   Heart,
@@ -57,7 +56,6 @@ import {
   FollowButton,
 } from "@/components/FeedScreen";
 import { ProfileDecor } from "@/components/ProfileDecor";
-import { ProfileStatusBubble, StatusBubbleEditor } from "@/components/ProfileStatus";
 
 type Tab = "komen" | "history" | "favorite";
 
@@ -179,7 +177,6 @@ export function ProfileSheet({
   const updateProfile = useMutation(api.account.updateProfile);
   const refreshPhotoMut = useMutation(api.account.refreshPhoto);
   const [photoSheet, setPhotoSheet] = useState(false);
-  const [bubbleOpen, setBubbleOpen] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState(false);
   const [busyRefresh, setBusyRefresh] = useState(false);
   const photoFileRef = useRef<HTMLInputElement | null>(null);
@@ -325,15 +322,6 @@ export function ProfileSheet({
                     className="rounded-full bg-background p-[2px]"
                   />
                 </div>
-                {/* Bubble status kecil di kanan-atas foto, tidak menabrak
-                    banner dan tidak menutupi username. */}
-                <ProfileStatusBubble
-                  text={profile.statusText}
-                  bg={profile.statusBg}
-                  seed={String(profile._id)}
-                  onClick={() => isMe && setBubbleOpen(true)}
-                  className="absolute left-[54px] -top-4 w-[106px] max-w-[106px]"
-                />
                 {/* Tombol kamera bulat KECIL di foto (hanya profil sendiri)
                     → sheet Ganti / Refresh photo. */}
                 {isMe && (
@@ -580,7 +568,11 @@ export function ProfileSheet({
                   onClick={() => setAffinity(true)}
                   className="flex items-center justify-center gap-1.5 rounded-full border border-[#E84855]/60 py-2.5 text-[12px] font-bold text-[#FFFAF0] transition active:scale-[0.98]"
                 >
-                  <HeartHandshake className="size-4" /> Afinitas
+                  <span className="relative mr-0.5 inline-flex">
+                    <Heart className="size-4 fill-current" />
+                    <Sparkles className="absolute -right-1.5 -top-1.5 size-2 text-[#FFD23F]" />
+                  </span>{" "}
+                  Afinitas
                 </button>
               </div>
             </div>
@@ -858,7 +850,7 @@ export function ProfileSheet({
                           `/nonton?anime=${encodeURIComponent(String(c.animeId).split("__ep")[0] ?? "")}&judul=${encodeURIComponent(c.animeTitle ?? "")}`,
                         );
                       }}
-                      className="w-full rounded-xl border border-border/70 bg-secondary/30 p-2.5 text-left"
+                      className="w-full border-b border-white/10 px-4 py-3 text-left last:border-b-0"
                     >
                       {/* SATU baris di atas: foto profile (bulat) + username,
                           centang, title, level pill — rata dalam satu baris,
@@ -945,13 +937,6 @@ export function ProfileSheet({
         </div>
       )}
 
-      {isMe && bubbleOpen && (
-        <StatusBubbleEditor
-          initialText={profile?.statusText}
-          initialBg={profile?.statusBg ?? undefined}
-          onClose={() => setBubbleOpen(false)}
-        />
-      )}
 
       {/* SHEET PHOTO PROFILE — dibuka tombol kamera di bawah foto (profil
           sendiri). Tombol PERTAMA di atas: "Ganti photo profile" (buka

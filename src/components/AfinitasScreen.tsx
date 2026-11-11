@@ -17,13 +17,14 @@ import { StripBackIcon } from "@/components/StripBack";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  HandHeart,
-  Handshake,
+  Gem,
   Heart,
-  HeartHandshake,
   Search,
   Send,
+  ShieldCheck,
+  Sparkles,
   Trophy,
+  UsersRound,
   X,
 } from "lucide-react";
 
@@ -58,21 +59,21 @@ const KIND_META: Record<
     cls: "text-blue-400",
     hex: "#60a5fa",
     ring: "#60a5fa",
-    Icon: Handshake,
+    Icon: ShieldCheck,
   },
   sahabat: {
     label: "Sahabat",
     cls: "text-pink-500",
     hex: "#ec4899",
     ring: "#ec4899",
-    Icon: HeartHandshake,
+    Icon: UsersRound,
   },
   terpercaya: {
     label: "Orang Terpercaya",
     cls: "text-yellow-400",
     hex: "#facc15",
     ring: "#facc15",
-    Icon: HandHeart,
+    Icon: Gem,
   },
 };
 
@@ -284,7 +285,8 @@ export function AfinitasScreen({
     return (
       <svg
         viewBox="0 0 46 16"
-        className={cn("h-4 w-10 text-rose-400", mirror && "-scale-x-100")}
+        className={cn("h-4 min-w-7 flex-1", mirror && "-scale-x-100")}
+        style={{ color: KIND_META[lbKind].hex }}
         fill="none"
         aria-hidden
       >
@@ -359,14 +361,17 @@ export function AfinitasScreen({
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06, duration: 0.3 }}
+                  style={{
+                    borderColor: `${KIND_META[lbKind].hex}55`,
+                    background: `linear-gradient(150deg, ${KIND_META[lbKind].hex}2e, rgba(12,16,24,.94))`,
+                  }}
                   className={cn(
-                    "relative flex items-center gap-2.5 rounded-2xl border py-2.5 pl-7 pr-2.5",
-                    i === 0
-                      ? "border-amber-300/55 bg-[linear-gradient(150deg,rgba(251,191,36,.16),rgba(16,19,26,.92))]"
-                      : "border-white/12 bg-white/[0.05]",
-                    r.isMine && KIND_META[lbKind].cls,
+                    "relative flex items-center gap-2.5 overflow-hidden rounded-2xl border py-2.5 pl-7 pr-2.5",
+                    r.isMine && "ring-1 ring-white/15",
                   )}
                 >
+                  <KindIcon kind={lbKind} className={cn("pointer-events-none absolute -bottom-4 right-3 size-16", KIND_META[lbKind].cls, "opacity-[0.09]")} />
+                  <Sparkles className="board-rise pointer-events-none absolute bottom-0 right-1 size-4 opacity-25" style={{ color: KIND_META[lbKind].hex }} />
                   {/* Medali peringkat — DI LUAR kotak, menempel di tepi
                       kiri supaya isi kotak lega tapi angka tetap jelas. */}
                   <span
@@ -394,15 +399,17 @@ export function AfinitasScreen({
                       {r.partner.username}
                     </p>
                   </div>
-                  {/* Hati di tengah + garis EKG bergerak di kedua sisi */}
-                  <div className="flex shrink-0 items-center gap-1">
+                  {/* Ikon bond tepat di tengah; EKG menjulur ke dua foto. */}
+                  <div className="flex min-w-[92px] flex-1 items-center gap-1">
                     {ecg()}
-                    <KindIcon
-                      kind={lbKind}
-                      className={cn("size-4", KIND_META[lbKind].cls)}
-                    />
-                    <span className="text-[10px] font-black text-white/85">
-                      {r.xp.toLocaleString("id-ID")}
+                    <span className="flex shrink-0 flex-col items-center">
+                      <KindIcon
+                        kind={lbKind}
+                        className={cn("size-4", KIND_META[lbKind].cls)}
+                      />
+                      <span className="text-[9px] font-black text-white/80">
+                        {r.xp.toLocaleString("id-ID")} xp
+                      </span>
                     </span>
                     {ecg(true)}
                   </div>
@@ -440,14 +447,17 @@ export function AfinitasScreen({
             {lb?.slice(3).map((r: any, i: number) => (
               <div
                 key={r.linkId}
+                style={{
+                  borderColor: `${KIND_META[lbKind].hex}38`,
+                  background: `linear-gradient(135deg, ${KIND_META[lbKind].hex}20, rgba(12,16,24,.82))`,
+                }}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-white/[0.05]",
-                  r.isMine
-                    ? "bg-white/[0.06]"
-                    : "",
-                  r.isMine && KIND_META[lbKind].cls,
+                  "relative flex items-center gap-2 overflow-hidden rounded-xl border px-2 py-2 transition hover:brightness-110",
+                  r.isMine && "ring-1 ring-white/15",
                 )}
               >
+                <KindIcon kind={lbKind} className={cn("pointer-events-none absolute -bottom-5 left-1/2 size-20 -translate-x-1/2", KIND_META[lbKind].cls, "opacity-[0.08]")} />
+                <Sparkles className="board-rise pointer-events-none absolute bottom-0 left-3 size-3 opacity-30" style={{ color: KIND_META[lbKind].hex }} />
                 {/* Kiri: foto + username pemilik */}
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="w-5 shrink-0 text-center text-[12px] font-black text-zinc-500">
@@ -462,15 +472,19 @@ export function AfinitasScreen({
                     {r.owner.username}
                   </span>
                 </div>
-                {/* Tengah: ikon jenis + XP di bawahnya */}
-                <div className="flex shrink-0 flex-col items-center px-1">
-                  <KindIcon
-                    kind={lbKind}
-                    className={cn("size-4", KIND_META[lbKind].cls)}
-                  />
-                  <span className="text-[9px] font-black text-zinc-400">
-                    {r.xp.toLocaleString("id-ID")} xp
-                  </span>
+                {/* Tengah: garis EKG dari foto ke ikon, XP di bawah ikon. */}
+                <div className="flex min-w-[100px] flex-1 items-center gap-0.5">
+                  {ecg()}
+                  <div className="flex shrink-0 flex-col items-center">
+                    <KindIcon
+                      kind={lbKind}
+                      className={cn("size-4", KIND_META[lbKind].cls)}
+                    />
+                    <span className="text-[9px] font-black text-white/70">
+                      {r.xp.toLocaleString("id-ID")} xp
+                    </span>
+                  </div>
+                  {ecg(true)}
                 </div>
                 {/* Kanan: username + foto pasangan */}
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
@@ -524,7 +538,7 @@ export function AfinitasScreen({
             >
               <div className="flex items-center gap-2 border-b border-white/10 bg-white/[0.05] px-3.5 py-2.5">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gold-strong/15 text-gold ring-1 ring-gold-strong/45">
-                  <HeartHandshake className="size-4" aria-hidden />
+                  <Sparkles className="size-4" aria-hidden />
                 </span>
                 <p className="min-w-0 flex-1 text-[12px] font-black text-white">
                   Permintaan Masuk
@@ -669,14 +683,12 @@ export function AfinitasScreen({
             >
               <div className="flex flex-col items-center gap-2">
                 <div className="relative">
-                  {/* Bulatan besar di belakang foto: hanya garis tepi. */}
-                  <span className="pointer-events-none absolute -inset-5 rounded-full border border-white/18" />
-                  <span className="pointer-events-none absolute -inset-2.5 rounded-full border border-white/28" />
-                  <span className="absolute -inset-1 rounded-full bg-gradient-to-br from-pink-400/20 via-transparent to-blue-400/18 blur-md" />
+                  {/* SATU ring besar — tidak dobel, tidak menjebak ikon. */}
+                  <span aria-hidden className="absolute -inset-2 rounded-full bg-[conic-gradient(from_180deg,rgba(244,114,182,.55),rgba(96,165,250,.5),rgba(250,204,21,.45),rgba(244,114,182,.55))] blur-[6px] opacity-50" />
                   <Avatar
                     src={target?.image}
                     seed={targetName}
-                    className="relative size-[92px] rounded-full border-2 border-white/65 shadow-[0_16px_40px_-22px_rgba(0,0,0,.95)]"
+                    className="relative size-[124px] rounded-full border-[3px] border-white/60 shadow-[0_18px_50px_-24px_rgba(0,0,0,.98)]"
                   />
                 </div>
                 <p className="max-w-[130px] truncate text-[11px] font-black text-white">
@@ -779,7 +791,7 @@ export function AfinitasScreen({
               Orang Terpercaya. Tiap bagian punya ikon berlingkaran, daftar
               anggota, dan tombol putus di ujung baris. */}
           <div className="mt-5 px-3">
-            <div className="overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.025]">
+            <div>
               {ALL_KINDS.map((kind, sectionIndex) => {
                 const meta = KIND_META[kind];
                 const members = circles[kind] ?? [];
@@ -787,7 +799,7 @@ export function AfinitasScreen({
                 return (
                   <section key={`relation-${kind}`}>
                     {sectionIndex > 0 && <div className="mx-3 h-px bg-white/[0.075]" />}
-                    <div className="flex items-center gap-3 px-3 py-3">
+                    <div className="flex items-center gap-3 px-1 py-3">
                       <span
                         className="grid size-11 shrink-0 place-items-center rounded-full border bg-black/20"
                         style={{
@@ -820,17 +832,17 @@ export function AfinitasScreen({
                       )}
                     </div>
 
-                    <div className="px-3 pb-3">
+                    <div className="px-1 pb-2">
                       {members.length === 0 ? (
-                        <p className="rounded-2xl border border-dashed border-white/8 px-3 py-3 text-center text-[9.5px] font-medium text-white/25">
+                        <p className="px-2 py-1.5 text-[9.5px] font-medium text-white/25">
                           Belum ada {meta.label.toLowerCase()}.
                         </p>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="divide-y divide-white/[0.055]">
                           {members.map((m) => (
                             <div
                               key={String(m.userId)}
-                              className="flex items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.035] px-2.5 py-2"
+                              className="flex items-center gap-2.5 px-2 py-2.5"
                             >
                               <button
                                 type="button"

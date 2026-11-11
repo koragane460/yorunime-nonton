@@ -40,7 +40,6 @@ export type PanelKey =
   | "clan"
   | "music"
   | "pet"
-  | "title"
   | "shop";
 
 const BOXES: {
@@ -61,7 +60,6 @@ const BOXES: {
   { key: "clan", label: "Clan", hint: "Grup kamu", Icon: Shield, tone: "linear-gradient(140deg, #6D521F, #A98437)" },
   { key: "music", label: "Music", hint: "Player & playlist", Icon: Music, tone: "linear-gradient(140deg, #6B2860, #9A4A86)" },
   { key: "pet", label: "YoruPet", hint: "Peliharaanmu", Icon: Bone, tone: "linear-gradient(140deg, #355A2C, #5C8A45)" },
-  { key: "title", label: "Title", hint: "Gelar profile", Icon: Award, tone: "linear-gradient(140deg, #2D3D78, #5569A8)" },
   { key: "shop", label: "Shop", hint: "Border & cosmetic", Icon: ShoppingBag, tone: "linear-gradient(140deg, #6B3A24, #A65D3B)" },
 ];
 

@@ -234,6 +234,12 @@ const schema = defineSchema(
       avatarUrl: v.string(),
       backgroundUrl: v.optional(v.string()),
       description: v.optional(v.string()),
+      /** public = langsung masuk · private = undangan · approval = persetujuan. */
+      joinMode: v.optional(v.union(v.literal("public"), v.literal("private"), v.literal("approval"))),
+      /** Level minimal untuk join (0 = tanpa syarat). */
+      minJoinLevel: v.optional(v.number()),
+      /** Biaya Sacret yang dipotong saat join diterima. */
+      joinCost: v.optional(v.number()),
       /** Pengumuman leader/officer — tampil di kotak besar bawah deskripsi. */
       announcement: v.optional(v.string()),
       /** Author terakhir pengumuman (biar tampil foto+nama+title). */
@@ -1086,6 +1092,8 @@ const schema = defineSchema(
     presences: defineTable({
       userId: v.id("users"),
       at: v.number(),
+      /** Server chat 1–3 — dipilih otomatis saat heartbeat. */
+      server: v.optional(v.number()),
     }).index("at", ["at"]),
 
     /** Sinyal WebRTC (offer/answer/ice) + status mikrofon antar member. */

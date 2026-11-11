@@ -1189,20 +1189,6 @@ function HomeContent() {
       <div className="yn-home-tint relative -mx-4 rounded-b-[32px] px-4 pb-7">
       <AccountHeader onSearch={() => setShowSearch(true)} />
 
-      {/* Lanjut nonton → premium → event → komunitas → clan/nobar. */}
-      <ContinueWatchingCard
-        onOpen={(h) =>
-          navigate(
-            `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(`${h.animeId}__ep${h.episode}`)}&judul=${encodeURIComponent(h.animeTitle)}`,
-          )
-        }
-        onHistory={() => navigate("/home?panel=history")}
-        onDiscover={() => {
-          setSearchGenre(null);
-          setSearchOpenGenres(false);
-          setShowSearch(true);
-        }}
-      />
       <PremiumPromoBanner
         className="mt-3"
         onAction={() => navigate("/premium")}
@@ -1221,6 +1207,21 @@ function HomeContent() {
           }
         />
       )}
+
+      {/* Terakhir ditonton — pindah ke bawah Genre & Quick. */}
+      <ContinueWatchingCard
+        onOpen={(h) =>
+          navigate(
+            `/nonton?anime=${encodeURIComponent(h.animeId)}&ep=${encodeURIComponent(`${h.animeId}__ep${h.episode}`)}&judul=${encodeURIComponent(h.animeTitle)}`,
+          )
+        }
+        onHistory={() => navigate("/home?panel=history")}
+        onDiscover={() => {
+          setSearchGenre(null);
+          setSearchOpenGenres(false);
+          setShowSearch(true);
+        }}
+      />
 
       {/* Season Ini menutup permukaan warna Home sebelum gradien memudar. */}
       <div className="mt-5">
@@ -3100,40 +3101,80 @@ function GlobalChatScreen({ onClose }: { onClose: () => void }) {
                   )}
                 </>
               ) : (
-                /* Keadaan kosong diperbesar: ikon, judul, dan dua tombol yang
-                   kini tersusun ke BAWAH (grid), bukan berdampingan. */
-                <div className="flex flex-1 flex-col items-center justify-center gap-3.5 px-6 text-center">
-                  <span className="flex size-24 items-center justify-center rounded-3xl border border-border bg-card text-muted-foreground shadow-[0_0_40px_-18px] shadow-primary/60">
-                    <svg className="size-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} aria-hidden>
-                      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
-                    </svg>
-                  </span>
-                  <p className="text-lg font-bold">Kamu belum join clan :(</p>
-                  <p className="max-w-xs text-sm text-muted-foreground">
-                    Join clan atau buat clan untuk bergabung
-                  </p>
-                  <div className="mt-2 grid w-full max-w-xs grid-cols-1 gap-2">
-                    <button
-                      onClick={() => {
-                        onClose();
-                        navigate("/clan");
-                      }}
-                      className="yn-btn-warm inline-flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-black tracking-wide"
-                    >
-                      <Users className="size-4" aria-hidden />
-                      Lihat clan
-                    </button>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        navigate("/clan?buat=1");
-                      }}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 py-3 text-sm font-bold tracking-wide text-emerald-300/90 ring-1 ring-emerald-400/15 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-[0.98]"
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      Buat clan
-                    </button>
+                <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-5 py-8 text-center">
+                  <span aria-hidden className="pointer-events-none absolute -left-16 top-10 size-56 rounded-full bg-[var(--ui-a)]/15 blur-3xl" />
+                  <span aria-hidden className="pointer-events-none absolute -right-20 bottom-0 size-64 rounded-full bg-emerald-400/10 blur-3xl" />
+
+                  <div className="relative w-full max-w-[330px] overflow-hidden rounded-[28px] border border-white/12 bg-[linear-gradient(150deg,rgba(255,255,255,.075),rgba(255,255,255,.02))] p-4 text-left shadow-[0_24px_60px_-36px_rgba(0,0,0,.95)]">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-14 shrink-0 place-items-center rounded-2xl border border-emerald-300/30 bg-[linear-gradient(145deg,rgba(52,211,153,.2),rgba(139,92,246,.12))] text-emerald-200">
+                        <svg className="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                          <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
+                          <path d="m9 11 2 2 4-4" />
+                        </svg>
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-black leading-tight text-white">Clan YoruNime</p>
+                        <p className="mt-0.5 text-[10.5px] leading-snug text-white/45">
+                          Satu tag, satu tim, satu ruang chat.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-1.5">
+                      {[
+                        { Icon: Trophy, label: "Level", value: "1–200" },
+                        { Icon: MessageSquare, label: "Chat", value: "Bareng" },
+                        { Icon: Gift, label: "Donasi", value: "Sacret" },
+                      ].map((f) => (
+                        <div key={f.label} className="rounded-xl border border-white/8 bg-black/20 px-1.5 py-2 text-center">
+                          <f.Icon className="mx-auto size-3.5 text-[var(--ui-c)]" />
+                          <p className="mt-1 text-[7px] font-black uppercase tracking-wide text-white/35">{f.label}</p>
+                          <p className="text-[9px] font-black text-white/85">{f.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 space-y-1.5">
+                      <p className="flex items-center gap-2 text-[10px] font-semibold text-white/60">
+                        <Sparkles className="size-3.5 shrink-0 text-gold" /> Tag clan tampil di chat, komentar & leaderboard.
+                      </p>
+                      <p className="flex items-center gap-2 text-[10px] font-semibold text-white/60">
+                        <Users className="size-3.5 shrink-0 text-sky-300" /> Publik, privat, atau pakai persetujuan.
+                      </p>
+                      <p className="flex items-center gap-2 text-[10px] font-semibold text-white/60">
+                        <CrownIcon className="size-3.5 shrink-0 text-emerald-300" /> Naikkan level clan lewat aktivitas member.
+                      </p>
+                    </div>
+
+                    <div className="mt-4 grid gap-2">
+                      <button
+                        onClick={() => {
+                          onClose();
+                          navigate("/clan");
+                        }}
+                        className="yn-btn-warm inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-[12px] font-black tracking-wide"
+                      >
+                        <Users className="size-4" aria-hidden />
+                        Gabung Clan
+                        <ChevronRight className="size-3.5" aria-hidden />
+                      </button>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          navigate("/clan?buat=1");
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 py-2.5 text-[12px] font-black tracking-wide text-emerald-300/90 ring-1 ring-emerald-400/15 transition hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-[0.98]"
+                      >
+                        <Plus className="size-4" aria-hidden />
+                        Buat Clan
+                        <ChevronRight className="size-3.5" aria-hidden />
+                      </button>
+                    </div>
                   </div>
+                  <p className="relative mt-3 text-[9.5px] font-semibold text-white/30">
+                    Belum punya clan? Pilih clan publik atau ajukan persetujuan.
+                  </p>
                 </div>
               )}
 

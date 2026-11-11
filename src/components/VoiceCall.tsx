@@ -194,7 +194,7 @@ function VoiceHomeScreen({
           "radial-gradient(80% 50% at 16% 0%, color-mix(in srgb, var(--ui-a) 20%, transparent), transparent 72%), radial-gradient(60% 40% at 100% 34%, color-mix(in srgb, var(--ui-c) 8%, transparent), transparent 76%)",
       }}
     >
-      <div className="w-full p-3 pb-16">
+      <div className="mx-auto w-full max-w-lg px-4 pb-16 pt-4">
         <div className="mb-4 flex items-center gap-2">
           <button
             onClick={onClose}

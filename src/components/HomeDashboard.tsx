@@ -70,75 +70,58 @@ export function ContinueWatchingCard({
   );
 
   return (
-    <section className="fade-enter mt-3">
-      <button
-        type="button"
-        onClick={() => onOpen(last)}
-        className="group relative flex h-[112px] w-full items-center overflow-hidden rounded-[24px] border border-white/10 bg-[#1b1a20] p-3 text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
-      >
-        {/* Lingkaran dekoratif besar supaya kotak tidak terasa polos. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -bottom-24 left-10 size-48 rounded-full border border-white/[0.06]"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-14 -top-20 size-52 rounded-full"
-          style={{
-            background:
-              "radial-gradient(circle, color-mix(in srgb, var(--ui-a) 16%, transparent), transparent 68%)",
-          }}
-        />
-
-        <span className="relative h-[88px] w-[68px] shrink-0 overflow-hidden rounded-[15px] border border-white/12 bg-black">
-          {last.animeImage ? (
-            <img
-              src={last.animeImage}
-              alt=""
-              className="size-full object-cover"
-            />
-          ) : (
-            <span className="flex size-full items-center justify-center text-white/30">
-              <Play className="size-6" />
-            </span>
-          )}
-          <span className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,.85))] px-1.5 pb-1.5 pt-5">
-            <span className="block h-[3px] overflow-hidden rounded-full bg-white/25">
+    <section className="fade-enter mt-5">
+      <h2 className="text-[15px] font-black tracking-tight text-white">Terakhir ditonton</h2>
+      <div className="mt-2 w-[88%] max-w-[430px]">
+        <button
+          type="button"
+          onClick={() => onOpen(last)}
+          className="group relative block w-full overflow-hidden rounded-2xl border border-white/12 bg-black text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
+        >
+          <span className="block aspect-[16/9] w-full">
+            {last.animeImage ? (
+              <img
+                src={last.animeImage}
+                alt=""
+                className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
+              />
+            ) : (
+              <span className="flex size-full items-center justify-center text-white/30">
+                <Play className="size-7" />
+              </span>
+            )}
+          </span>
+          <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.45),transparent_38%,rgba(0,0,0,.78))]" />
+          <span className="absolute left-2 top-2 rounded-lg border border-white/15 bg-black/60 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
+            Eps {last.episode}
+          </span>
+          <span className="absolute inset-x-0 bottom-0 px-2 pb-2">
+            <span className="block h-1.5 overflow-hidden rounded-full bg-white/25">
               <span
                 className="block h-full rounded-full"
                 style={{
                   width: `${Math.max(3, pct)}%`,
-                  background: "var(--ui-c, #FFD23F)",
+                  background: "linear-gradient(90deg, var(--ui-a), var(--ui-c, #FFD23F))",
                 }}
               />
             </span>
           </span>
-        </span>
-
-        <span className="relative flex min-w-0 flex-1 flex-col pl-3.5 pr-2">
-          <span
-            className="text-[7.5px] font-black uppercase tracking-[0.18em]"
-            style={{ color: "var(--ui-c, #FFD23F)" }}
-          >
-            Lanjutkan
-          </span>
-          <span className="mt-1 line-clamp-2 text-[14.5px] font-black leading-tight tracking-[-0.01em] text-white">
-            {last.animeTitle}
-          </span>
-          <span className="mt-1.5 truncate text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/45">
-            Epsd {last.episode} · {minutes} menit
-          </span>
-        </span>
-
-        <span
-          className="relative m-0.5 grid size-11 shrink-0 place-items-center rounded-full text-black shadow-[0_10px_24px_-12px_rgba(0,0,0,.9)] transition group-hover:scale-105"
-          style={{ background: "var(--ui-c, #FFD23F)" }}
-        >
-          <Play className="size-[18px] translate-x-px fill-current" />
-        </span>
-      </button>
+        </button>
+        <p className="mt-2 line-clamp-1 text-[13px] font-black text-white">
+          {last.animeTitle}
+        </p>
+        <p className="mt-0.5 font-mono text-[10px] font-semibold text-white/45">
+          {clockOf(progress)}/{clockOf(duration)} · {minutes} menit
+        </p>
+      </div>
     </section>
   );
+}
+
+/** "16.45" dari detik — gaya jam kecil di kartu terakhir ditonton. */
+function clockOf(sec?: number): string {
+  const s = Math.max(0, Math.floor(sec ?? 0));
+  return `${Math.floor(s / 60)}.${String(s % 60).padStart(2, "0")}`;
 }
 
 /** Banner beli premium tiga panel, mengikuti referensi. */

@@ -252,7 +252,13 @@ function GiveView() {
 function ClanView() {
   const navigate = useNavigate();
   const clans = useQuery(api.clans.listClans, {});
-  const shown = (clans ?? []).slice(0, 100);
+  const [period, setPeriod] = useState<"harian" | "mingguan" | "bulanan">("harian");
+  const sorted = [...(clans ?? [])].sort((a: any, b: any) =>
+    period === "harian"
+      ? (b.diamonds ?? 0) - (a.diamonds ?? 0)
+      : (b.totalXp ?? 0) - (a.totalXp ?? 0),
+  );
+  const shown = sorted.slice(0, 100);
   const [t1, t2, t3, ...rest] = shown;
   if (!clans)
     return (
@@ -276,14 +282,36 @@ function ClanView() {
     );
   const meta = (c: any) =>
     `Lv.${c.level ?? 1} · ${c.memberCount ?? 0} member`;
+  const score = (c: any) =>
+    period === "harian"
+      ? `${(c.diamonds ?? 0).toLocaleString("id-ID")} Sacret`
+      : `${(c.totalXp ?? 0).toLocaleString("id-ID")} XP`;
   return (
     <>
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+        {([
+          ["harian", "Setiap hari"],
+          ["mingguan", "7 Hari"],
+          ["bulanan", "30 Hari"],
+        ] as const).map(([p, label]) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={cn(
+              "rounded-xl py-2 text-[11px] font-black transition",
+              period === p ? "bg-[#4ADE80] text-[#07210f]" : "text-white/55 hover:bg-white/10 hover:text-white",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {shown.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada clan</p>}
       {shown.length > 0 && (
         <div className="relative mb-3 grid grid-cols-3 items-end gap-2 px-2 pb-3 pt-2">
-          {t2 && <Podium username={t2.name} image={t2.avatarUrl} value={meta(t2)} rank={2} />}
-          {t1 && <Podium username={t1.name} image={t1.avatarUrl} value={meta(t1)} rank={1} />}
-          {t3 && <Podium username={t3.name} image={t3.avatarUrl} value={meta(t3)} rank={3} />}
+          {t2 && <Podium username={t2.name} image={t2.avatarUrl} value={`${meta(t2)} · ${score(t2)}`} rank={2} />}
+          {t1 && <Podium username={t1.name} image={t1.avatarUrl} value={`${meta(t1)} · ${score(t1)}`} rank={1} />}
+          {t3 && <Podium username={t3.name} image={t3.avatarUrl} value={`${meta(t3)} · ${score(t3)}`} rank={3} />}
         </div>
       )}
       <div className="space-y-1.5">
@@ -294,7 +322,7 @@ function ClanView() {
               username={c.name}
               image={c.avatarUrl}
               xp={c.diamonds}
-              suffix={`${meta(c)} · ${(c.diamonds ?? 0).toLocaleString("id-ID")} Sacret`}
+              suffix={`${meta(c)} · ${score(c)}`}
               clanTag={c.tag}
               clanTagIcon={c.tagIcon ?? DEFAULT_CLAN_ICON}
               clanNameColor={c.color}

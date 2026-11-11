@@ -72,7 +72,13 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
       {/* ------- SATU KOTAK: judul Nobar + Buat/Join digabung ---------- */}
       {/* Tanpa glow/gradien ungu: hanya permukaan netral + aksen palet
           (Sky untuk Buat Room, Harvest untuk Join Room). */}
-      <div className="nobar-hero overflow-hidden rounded-[28px] border">
+      <div
+        className="nobar-hero overflow-hidden rounded-[28px] border border-white/12"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(139,92,246,.2), rgba(14,20,32,.94) 48%, rgba(28,167,236,.12))",
+        }}
+      >
         {/* Hero — ikon teman + judul, MENYATU dengan kotak aksi di bawah. */}
         <div className="flex flex-col items-center border-b border-white/10 px-4 py-6 text-center">
           <span className="voice-soft flex size-14 items-center justify-center rounded-2xl border">
@@ -92,18 +98,18 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.02]">
             <button
               onClick={() => setCreating(true)}
-              className="flex flex-col items-center gap-2 border-r border-white/12 py-4 transition hover:bg-white/[0.06] active:scale-[0.98]"
+              className="flex flex-col items-center gap-2 border-r border-white/12 bg-[linear-gradient(160deg,rgba(56,189,248,.14),rgba(255,255,255,.015))] py-4 transition hover:brightness-110 active:scale-[0.98]"
             >
-              <span className="voice-soft flex size-10 items-center justify-center rounded-xl border">
+              <span className="flex size-10 items-center justify-center rounded-xl border border-sky-300/30 bg-sky-400/12 text-sky-200">
                 <Video className="size-5" aria-hidden />
               </span>
               <span className="text-sm font-extrabold text-white">Buat Room</span>
             </button>
             <button
               onClick={() => setJoinOpen((v) => !v)}
-              className="flex flex-col items-center gap-2 py-4 transition hover:bg-white/[0.06] active:scale-[0.98]"
+              className="flex flex-col items-center gap-2 bg-[linear-gradient(160deg,rgba(255,210,63,.12),rgba(255,255,255,.015))] py-4 transition hover:brightness-110 active:scale-[0.98]"
             >
-              <span className="flex size-10 items-center justify-center rounded-xl border border-white/18 bg-white/[0.07] text-white/80">
+              <span className="flex size-10 items-center justify-center rounded-xl border border-amber-300/30 bg-amber-400/12 text-amber-200">
                 <LogIn className="size-5" aria-hidden />
               </span>
               <span className="text-sm font-extrabold text-white">Join Room</span>
@@ -113,18 +119,18 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
 
       </div>
 
-      {/* Filter room — dua kotak kecil, hanya ikon + teks. Publik default. */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* Filter room — kecil, rata kiri, tidak memenuhi lebar layar. */}
+      <div className="flex items-center gap-1.5">
         <button
           onClick={() => setScope("publik")}
           aria-pressed={scope === "publik"}
           className={
             scope === "publik"
-              ? "voice-soft flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-black transition active:scale-[0.98]"
-              : "flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-xs font-black text-white/55 transition hover:text-white active:scale-[0.98]"
+              ? "voice-soft flex w-auto items-center gap-1 rounded-full border px-2.5 py-1.5 text-[10px] font-black transition active:scale-[0.98]"
+              : "flex w-auto items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1.5 text-[10px] font-black text-white/55 transition hover:text-white active:scale-[0.98]"
           }
         >
-          <Globe className="size-4 shrink-0 text-[#7fd3f7]" aria-hidden />
+          <Globe className="size-3 shrink-0 text-[#7fd3f7]" aria-hidden />
           Publik
         </button>
         <button
@@ -132,11 +138,11 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           aria-pressed={scope === "clan"}
           className={
             scope === "clan"
-              ? "flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/[0.12] px-3 py-2.5 text-xs font-black text-white transition active:scale-[0.98]"
-              : "flex items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-xs font-black text-white/55 transition hover:text-white active:scale-[0.98]"
+              ? "flex w-auto items-center gap-1 rounded-full border border-white/20 bg-white/[0.12] px-2.5 py-1.5 text-[10px] font-black text-white transition active:scale-[0.98]"
+              : "flex w-auto items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1.5 text-[10px] font-black text-white/55 transition hover:text-white active:scale-[0.98]"
           }
         >
-          <Users className="size-4 shrink-0 text-[#FFD23F]" aria-hidden />
+          <Users className="size-3 shrink-0 text-[#FFD23F]" aria-hidden />
           Clan
         </button>
       </div>

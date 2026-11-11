@@ -21,6 +21,8 @@ import {
   Star,
   Tv,
   ChevronRight,
+  Server as ServerIcon,
+  Sparkles,
 } from "lucide-react";
 import type { CardT } from "@/components/CatalogRows";
 
@@ -84,57 +86,136 @@ function LevelRing({ level, xp }: { level: number; xp: number }) {
 /**
  * HEADER HOME — satu pil kaca berisi foto, sapaan, username, level + clan,
  * dan cincin XP. Search/notif tinggal di navigasi bawah, bukan di sini. */
+/** Topik obrolan Yoru-chan — berganti lembut tiap beberapa detik. */
+const YORU_TOPICS = [
+  "Hari ini maraton anime apa?",
+  "Jangan lupa klaim quest harian.",
+  "Episode baru udah rilis — cek jadwal!",
+  "Cari teman nobar? Buka Voice Room.",
+  "Naikkan level clan bareng temanmu.",
+];
+
+function YoruChibiChat() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setI((v) => (v + 1) % YORU_TOPICS.length), 5200);
+    return () => window.clearInterval(t);
+  }, []);
+  return (
+    <div className="mt-3 flex flex-col items-center">
+      <span className="h-px w-1/2 bg-gradient-to-r from-transparent via-white/18 to-transparent" />
+      <div className="mt-2 flex max-w-[310px] items-center gap-2">
+        <span className="relative shrink-0">
+          <svg width="58" height="64" viewBox="0 0 58 64" aria-hidden>
+            <ellipse cx="29" cy="60" rx="18" ry="4" fill="rgba(0,0,0,.45)" />
+            <path d="M14 60c1-18 7-27 15-27s14 9 15 27" fill="#2b2338" />
+            <path d="M18 59c1-13 5-21 11-21s10 8 11 21" fill="#FFFAF0" opacity=".92" />
+            <circle cx="29" cy="29" r="19" fill="#f6d2b8" />
+            <path d="M10 28c0-14 8-22 19-22s19 8 19 22c-4-4-7-8-8-12-5 6-17 7-23 3-2 4-4 7-7 9z" fill="#6d4a8f" />
+            <path d="M12 25c-4 14-3 25 2 33l7-7c-4-7-5-15-3-23z" fill="#563a77" />
+            <path d="M46 25c4 14 3 25-2 33l-7-7c4-7 5-15 3-23z" fill="#563a77" />
+            <ellipse cx="22" cy="30" rx="3" ry="4" fill="#24182f" />
+            <ellipse cx="36" cy="30" rx="3" ry="4" fill="#24182f" />
+            <circle cx="23" cy="28.5" r="1" fill="#fff" />
+            <circle cx="37" cy="28.5" r="1" fill="#fff" />
+            <ellipse cx="18" cy="36" rx="3" ry="1.5" fill="#f08aa0" opacity=".55" />
+            <ellipse cx="40" cy="36" rx="3" ry="1.5" fill="#f08aa0" opacity=".55" />
+            <path d="M26 37c2 2 4 2 6 0" stroke="#8d5261" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            <path d="M23 16c4-3 9-3 13 0" stroke="#FFD23F" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <circle cx="18" cy="18" r="2" fill="#FFD23F" />
+          </svg>
+          <span className="absolute -right-0.5 top-5 size-2 rounded-full bg-emerald-400 ring-2 ring-[#14131a]" />
+        </span>
+        <div className="relative min-w-0 flex-1 rounded-2xl rounded-bl-sm border border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.035))] px-3 py-2 text-left shadow-[0_12px_30px_-24px_rgba(0,0,0,.95)]">
+          <p className="text-[8px] font-black uppercase tracking-[0.16em] text-[var(--ui-c)]">Yoru-chan</p>
+          <p key={i} className="animate-in fade-in slide-in-from-right-2 mt-0.5 text-[10.5px] font-semibold leading-snug text-white/70">
+            {YORU_TOPICS[i]}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AccountHeader({ onSearch }: { onSearch?: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const level = user?.level ?? 1;
   const xp = user?.xp ?? 0;
   const premium = ((user as any)?.premiumUntil ?? 0) > Date.now();
+  const serverInfo = useQuery(api.presence.myServer, {});
+  const need = Math.max(1, xpForLevel(level));
+  const inLevel = Math.max(0, Math.min(xp, need));
+  const xpPct = Math.max(3, Math.min(100, (inLevel / need) * 100));
 
   return (
     <header className="fade-enter flex w-full flex-col gap-2.5 pt-1">
       <button
         type="button"
         onClick={() => navigate("/akun")}
-        className="yn-account-pill relative flex h-[72px] w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-full border border-white/20 bg-white/[0.095] p-2 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
+        className="yn-account-pill relative flex w-full min-w-0 flex-col overflow-hidden rounded-[26px] border border-white/20 bg-white/[0.095] px-3 pb-3 pt-5 text-left shadow-[0_20px_50px_-28px_rgba(0,0,0,.98),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl transition active:scale-[0.985]"
         aria-label="Buka akun"
       >
         <span
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,.14),transparent_38%,rgba(127,211,247,.08)_72%,rgba(255,210,63,.1))]"
         />
-        <FramedAvatar
-          border={(user as any)?.avatarBorder}
-          src={user?.image}
-          seed={user?.username}
-          className="relative size-[54px] shrink-0"
-        />
-        <span className="relative min-w-0 flex-1">
-          <span className="block truncate text-[9px] font-black uppercase tracking-[0.17em] text-white/60">
-            {greetingOf()}
-          </span>
-          <span className="mt-0.5 flex min-w-0 items-center gap-1">
-            <span className="truncate text-[15.5px] font-black leading-tight tracking-[-0.02em] text-white">
-              {user?.username ?? "user"}
+        <span className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 items-center gap-1 rounded-b-xl border border-t-0 border-white/15 bg-[#17151f]/90 px-3 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-white/70 shadow-[0_8px_18px_-12px_rgba(0,0,0,.9)] backdrop-blur-md">
+          <ServerIcon className="size-2.5 text-[var(--ui-c)]" />
+          Server {serverInfo?.server ?? "…"}
+        </span>
+        <div className="relative flex w-full min-w-0 items-center gap-2.5">
+          <FramedAvatar
+            border={(user as any)?.avatarBorder}
+            src={user?.image}
+            seed={user?.username}
+            className="relative size-[58px] shrink-0"
+          />
+          <span className="relative min-w-0 flex-1">
+            <span className="block truncate text-[9px] font-black uppercase tracking-[0.17em] text-white/60">
+              {greetingOf()}
             </span>
-            {premium && <BlueCheck className="size-3.5 shrink-0" />}
+            <span className="mt-0.5 flex min-w-0 items-center gap-1">
+              <span className="truncate text-[15.5px] font-black leading-tight tracking-[-0.02em] text-white">
+                {user?.username ?? "user"}
+              </span>
+              {premium && <BlueCheck className="size-3.5 shrink-0" />}
+            </span>
+            <span className="mt-1 flex min-w-0 items-center gap-1">
+              <LevelBadge level={level} className="origin-left scale-[0.9]" />
+              {user?.clanTag && (
+                <ClanTag
+                  icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
+                  tag={user.clanTag}
+                  level={user.clanLevel}
+                  className="max-w-[54px] origin-left scale-[0.82] overflow-hidden"
+                />
+              )}
+            </span>
           </span>
-          <span className="mt-1 flex min-w-0 items-center gap-1">
-            <LevelBadge level={level} className="origin-left scale-[0.9]" />
-            {user?.clanTag && (
-              <ClanTag
-                icon={user.clanTagIcon ?? DEFAULT_CLAN_ICON}
-                tag={user.clanTag}
-                level={user.clanLevel}
-                className="max-w-[54px] origin-left scale-[0.82] overflow-hidden"
-              />
-            )}
+          <ChevronRight className="size-4 shrink-0 text-white/25" />
+        </div>
+
+        <div className="relative mt-2.5 flex w-full items-center gap-2">
+          <span className="shrink-0 text-[8.5px] font-black uppercase tracking-[0.13em] text-white/45">
+            Exp
           </span>
-        </span>
-        <span className="-mr-0.5 shrink-0 scale-[0.88]">
-          <LevelRing level={level} xp={xp} />
-        </span>
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full border border-white/10 bg-black/35">
+            <span
+              className="block h-full rounded-full transition-[width] duration-700"
+              style={{
+                width: `${xpPct}%`,
+                background: "linear-gradient(90deg, var(--ui-a), var(--ui-c))",
+              }}
+            />
+          </div>
+          <span className="shrink-0 font-mono text-[9px] font-black tabular-nums text-white/60">
+            {fmtShort(inLevel)}/{fmtShort(need)}
+          </span>
+        </div>
       </button>
+
+      <YoruChibiChat />
 
       {/* Pencarian + notifikasi tinggal di Home, bukan di navigasi bawah. */}
       <div className="flex items-stretch gap-2">

@@ -7,11 +7,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Crown,
+  Globe,
+  Lock,
   LogIn,
   Plus,
   Search,
   Settings,
   Shield,
+  ShieldCheck,
   ShoppingBag,
   Tag as TagIcon,
   Timer,
@@ -270,9 +273,11 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
     try {
       const r: any = await requestJoin({ clanId: clanId as never });
       toast.success(
-        r?.requested
-          ? "Permintaan gabung dikirim — tunggu dibuka leader"
-          : "Permintaan dibatalkan",
+        r?.joined
+          ? "Kamu langsung gabung clan ini 🎉"
+          : r?.requested
+            ? "Permintaan gabung dikirim — tunggu dibuka leader"
+            : "Permintaan dibatalkan",
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal gabung");
@@ -603,7 +608,19 @@ export function ClanRow({
               : "yn-btn-warm disabled:opacity-50",
         )}
       >
-        {c.isMine ? "Milikmu" : c.isRequested ? "Batalkan Request" : busy ? "…" : loggedIn ? "Join Clan" : "Login untuk Join"}
+        {c.isMine
+          ? "Milikmu"
+          : c.isRequested
+            ? "Batalkan Request"
+            : busy
+              ? "…"
+              : !loggedIn
+                ? "Login untuk Join"
+                : c.joinMode === "private"
+                  ? "Privat · Undangan"
+                  : c.joinMode === "public"
+                    ? "Gabung Clan"
+                    : "Request Join"}
       </button>
 
       {/* Member/Donate TIDAK ditampilkan di daftar — hanya ada di detail
@@ -813,16 +830,24 @@ function ClanDetailScreen({
   // Tombol REQUEST JOIN di bawah kotak clan — jalan walau layar dibuka
   // langsung lewat ?clan=<id> (tanpa onJoin dari daftar).
   const requestJoinMut = useMutation(api.clans.requestJoin);
+  const setJoinSettingsMut = useMutation(api.clans.setJoinSettings);
   const [joinBusy, setJoinBusy] = useState(false);
+  const [joinEditOpen, setJoinEditOpen] = useState(false);
+  const [joinModeDraft, setJoinModeDraft] = useState<"public" | "private" | "approval">("public");
+  const [minLevelDraft, setMinLevelDraft] = useState(0);
+  const [joinCostDraft, setJoinCostDraft] = useState(0);
+  const [joinSaving, setJoinSaving] = useState(false);
   const doRequestJoin = async () => {
     if (joinBusy) return;
     setJoinBusy(true);
     try {
       const r: any = await requestJoinMut({ clanId: clanId as never });
       toast.success(
-        r?.requested
-          ? "Permintaan gabung dikirim — tunggu dibuka leader"
-          : "Permintaan dibatalkan",
+        r?.joined
+          ? "Kamu langsung gabung clan ini 🎉"
+          : r?.requested
+            ? "Permintaan gabung dikirim — tunggu dibuka leader"
+            : "Permintaan dibatalkan",
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal gabung");
@@ -844,6 +869,30 @@ function ClanDetailScreen({
   const c = detail.clan;
   const isMember = !!detail.myRole;
   const canManage = detail.myRole === "leader" || detail.myRole === "officer";
+  const openJoinEdit = () => {
+    setJoinModeDraft(((c as any).joinMode ?? "approval") as "public" | "private" | "approval");
+    setMinLevelDraft((c as any).minJoinLevel ?? 0);
+    setJoinCostDraft((c as any).joinCost ?? 0);
+    setJoinEditOpen(true);
+  };
+  const saveJoinRules = async () => {
+    if (joinSaving) return;
+    setJoinSaving(true);
+    try {
+      await setJoinSettingsMut({
+        clanId: clanId as never,
+        joinMode: joinModeDraft,
+        minJoinLevel: minLevelDraft,
+        joinCost: joinCostDraft,
+      });
+      toast.success("Aturan join clan disimpan");
+      setJoinEditOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan aturan");
+    } finally {
+      setJoinSaving(false);
+    }
+  };
   const pending = (detail.requests ?? []) as any[];
   // Permintaan join yang masih menunggu — tombol berubah jadi "Batalkan
   // Request" (hijau) dan tetap bisa dipencet, sama seperti di daftar clan.
@@ -965,6 +1014,103 @@ function ClanDetailScreen({
             )}
           </div>
 
+          {/* ATURAN JOIN — selalu terlihat di detail clan. */}
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+            <div className="rounded-xl border border-emerald-300/25 bg-emerald-400/[0.07] px-2 py-2 text-center">
+              <Globe className="mx-auto size-3.5 text-emerald-300" />
+              <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Mode</p>
+              <p className="text-[10px] font-black text-white">
+                {(c as any).joinMode === "private" ? "Private" : (c as any).joinMode === "public" ? "Publik" : "ACC"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-sky-300/25 bg-sky-400/[0.07] px-2 py-2 text-center">
+              <ShieldCheck className="mx-auto size-3.5 text-sky-300" />
+              <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Min. level</p>
+              <p className="text-[10px] font-black text-white">{(c as any).minJoinLevel ?? 0}</p>
+            </div>
+            <div className="rounded-xl border border-gold/25 bg-gold/[0.07] px-2 py-2 text-center">
+              <SacretIcon className="mx-auto size-3.5 text-gold" />
+              <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Biaya</p>
+              <p className="text-[10px] font-black text-white">{((c as any).joinCost ?? 0).toLocaleString("id-ID")}</p>
+            </div>
+          </div>
+          <p className="mt-1.5 rounded-lg border border-white/8 bg-white/[0.025] px-2.5 py-1.5 text-[9.5px] leading-snug text-white/40">
+            {(c as any).joinMode === "private"
+              ? "Clan privat: hanya bisa masuk lewat undangan leader/officer."
+              : (c as any).joinMode === "public"
+                ? "Clan publik: siapa pun bisa langsung masuk tanpa persetujuan."
+                : "Clan persetujuan: permintaan join harus di-ACC leader/officer."}
+          </p>
+          {canManage && (
+            <button
+              type="button"
+              onClick={openJoinEdit}
+              className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/[0.08] py-2 text-[10px] font-black text-gold transition active:scale-[0.98]"
+            >
+              Atur aturan join <ChevronRight className="size-3" />
+            </button>
+          )}
+
+          {joinEditOpen && (
+            <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/70 p-0" onClick={() => setJoinEditOpen(false)}>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full rounded-t-[28px] border-t border-white/15 bg-[#101017] px-4 pb-7 pt-4"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black text-white">Aturan join clan</p>
+                  <button onClick={() => setJoinEditOpen(false)} aria-label="Tutup" className="grid size-8 place-items-center rounded-full bg-white/[0.06] text-white/60">
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  {([
+                    { key: "public", label: "Publik", desc: "Langsung masuk tanpa persetujuan", Icon: Globe, color: "text-emerald-300 border-emerald-300/40 bg-emerald-400/10" },
+                    { key: "private", label: "Private", desc: "Hanya lewat undangan leader", Icon: Lock, color: "text-rose-300 border-rose-300/40 bg-rose-400/10" },
+                    { key: "approval", label: "Persetujuan", desc: "Request harus di-ACC leader/officer", Icon: ShieldCheck, color: "text-sky-300 border-sky-300/40 bg-sky-400/10" },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.key}
+                      onClick={() => setJoinModeDraft(m.key)}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left",
+                        joinModeDraft === m.key ? m.color : "border-white/10 bg-white/[0.03] text-white/55",
+                      )}
+                    >
+                      <m.Icon className="size-4 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11px] font-black text-white">{m.label}</span>
+                        <span className="block text-[9px] text-white/40">{m.desc}</span>
+                      </span>
+                      <span className={cn("size-2 rounded-full", joinModeDraft === m.key ? "bg-current" : "bg-white/10")} />
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+                    <p className="text-[8.5px] font-black uppercase text-white/40">Minimal level</p>
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <button onClick={() => setMinLevelDraft((v) => Math.max(0, v - 1))} className="grid size-7 place-items-center rounded-lg border border-white/12 text-white/70">−</button>
+                      <span className="font-mono text-sm font-black text-gold">{minLevelDraft}</span>
+                      <button onClick={() => setMinLevelDraft((v) => Math.min(200, v + 1))} className="grid size-7 place-items-center rounded-lg border border-white/12 text-white/70">+</button>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+                    <p className="text-[8.5px] font-black uppercase text-white/40">Biaya masuk</p>
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <button onClick={() => setJoinCostDraft((v) => Math.max(0, v - 500))} className="grid size-7 place-items-center rounded-lg border border-white/12 text-white/70">−</button>
+                      <span className="font-mono text-[11px] font-black text-gold">{joinCostDraft.toLocaleString("id-ID")}</span>
+                      <button onClick={() => setJoinCostDraft((v) => Math.min(100000, v + 500))} className="grid size-7 place-items-center rounded-lg border border-white/12 text-white/70">+</button>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => void saveJoinRules()} disabled={joinSaving} className="yn-btn-warm mt-3 w-full rounded-xl py-2.5 text-xs font-black disabled:opacity-50">
+                  {joinSaving ? "Menyimpan…" : "Simpan aturan"}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Bar level dalam kotak satu baris, level di kiri */}
           <div className="mt-2.5 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
             <span className="shrink-0 text-[11px] font-black">Lv.{c.level}</span>
@@ -1060,7 +1206,15 @@ function ClanDetailScreen({
                 : "yn-btn-warm",
             )}
           >
-            {busy || joinBusy ? "…" : isRequested ? "Batalkan Request" : "Request Join"}
+            {busy || joinBusy
+              ? "…"
+              : isRequested
+                ? "Batalkan Request"
+                : (c as any).joinMode === "private"
+                  ? "Privat · Undangan"
+                  : (c as any).joinMode === "public"
+                    ? "Gabung Clan"
+                    : "Request Join"}
           </button>
         )}
 
@@ -2003,6 +2157,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [description, setDescription] = useState("");
+  const [joinMode, setJoinMode] = useState<"public" | "private" | "approval">("public");
+  const [minLevel, setMinLevel] = useState(1);
+  const [joinCost, setJoinCost] = useState(0);
   const [tagIcon, setTagIcon] = useState(DEFAULT_CLAN_ICON);
   const [tagBg, setTagBg] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -2053,6 +2210,9 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         tagBg: tagBg ?? undefined,
         avatarUrl: avatarUrl.trim(),
         description: description.trim() || undefined,
+        joinMode,
+        minJoinLevel: minLevel,
+        joinCost,
       });
       setOk("Clan dibuat — level 1, kumpulkan Sacret bareng!");
       setTimeout(() => {
@@ -2079,8 +2239,8 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           </button>
           <div>
             <h1 className="text-lg yn-title">Buat Clan</h1>
-            <p className="text-[11px] text-violet-300/85">
-              Bikin tim bareng teman — biaya 1.000 Sacret
+            <p className="text-[11px] text-violet-300/75">
+              Identitas, aturan join, dan biaya.
             </p>
           </div>
         </div>
@@ -2088,8 +2248,8 @@ function CreateClan({ onDone }: { onDone: () => void }) {
         <div className="space-y-4">
           {/* ===== KOTAK PREVIEW — kartu ungu + aksen sudut emas ===== */}
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-            <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
-              — PREVIEW —
+            <p className="text-center text-[10px] font-black tracking-[0.22em] text-gold/85">
+              PREVIEW
             </p>
             {/* Isi preview: foto kotak di kiri, nama + pill tag + kotak tag
                 berbingkai emas di kanannya. */}
@@ -2165,7 +2325,7 @@ function CreateClan({ onDone }: { onDone: () => void }) {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="mis. YoruNime"
+                placeholder="Nama clan kamu"
                 maxLength={28}
                 aria-label="Isi nama clan"
                 className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 text-xs font-bold text-white outline-none placeholder:text-white/35 focus:border-gold/50"
@@ -2225,18 +2385,18 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
                   <TagIcon className="size-3" />
                 </span>
-                Isi tag clan (nama)
+                Tag clan
               </p>
               <input
                 value={tag}
                 onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 5))}
-                placeholder="mis. YRNM"
+                placeholder="YRNM"
                 maxLength={5}
                 aria-label="Isi tag clan"
                 className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 font-mono text-xs font-bold uppercase text-white outline-none placeholder:text-white/35 focus:border-gold/50"
               />
-              <p className="mt-3 text-center text-[10px] font-black tracking-[0.2em] text-gold/85">
-                BACKGROUND TAG
+              <p className="mt-3 text-center text-[9px] font-black tracking-[0.18em] text-gold/80">
+                WARNA TAG
               </p>
               <div className="mt-1.5 grid grid-cols-5 gap-1.5">
                 {TAG_BG_COLORS.map((col) => (
@@ -2285,10 +2445,93 @@ function CreateClan({ onDone }: { onDone: () => void }) {
             />
           </div>
 
+          {/* ===== ATURAN GABUNG ===== */}
+          <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-[linear-gradient(145deg,rgba(255,210,63,.11),rgba(124,58,237,.07)_55%,rgba(255,255,255,.025))] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-black text-white/90">Cara gabung</p>
+              <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-gold">
+                Atur clan
+              </span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {(
+                [
+                  { key: "public", label: "Publik", desc: "Langsung masuk, tanpa persetujuan.", tone: "emerald" },
+                  { key: "private", label: "Private", desc: "Hanya lewat undangan leader.", tone: "rose" },
+                  { key: "approval", label: "Persetujuan", desc: "Pemohon menunggu ACC leader/officer.", tone: "sky" },
+                ] as const
+              ).map((mode) => {
+                const on = joinMode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() => setJoinMode(mode.key)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition active:scale-[0.99]",
+                      on
+                        ? mode.tone === "emerald"
+                          ? "border-emerald-300/45 bg-emerald-400/12"
+                          : mode.tone === "rose"
+                            ? "border-rose-300/45 bg-rose-400/12"
+                            : "border-sky-300/45 bg-sky-400/12"
+                        : "border-white/10 bg-black/20",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "grid size-7 shrink-0 place-items-center rounded-lg border",
+                        on
+                          ? mode.tone === "emerald"
+                            ? "border-emerald-300/40 text-emerald-200"
+                            : mode.tone === "rose"
+                              ? "border-rose-300/40 text-rose-200"
+                              : "border-sky-300/40 text-sky-200"
+                          : "border-white/10 text-white/40",
+                      )}
+                    >
+                      {mode.key === "public" ? <Globe className="size-3.5" /> : mode.key === "private" ? <Lock className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-black text-white">{mode.label}</span>
+                      <span className="mt-0.5 block text-[9px] leading-snug text-white/40">{mode.desc}</span>
+                    </span>
+                    <span className={cn("size-2 rounded-full", on ? "bg-current" : "bg-white/10")} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-white/10 bg-black/25 p-2">
+                <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-white/40">Level minimal</p>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <button type="button" onClick={() => setMinLevel((v) => Math.max(1, v - 1))} className="grid size-6 place-items-center rounded-md border border-white/12 bg-white/[0.06] text-white/70" aria-label="Kurangi level minimal">−</button>
+                  <span className="font-mono text-sm font-black text-gold">{minLevel}</span>
+                  <button type="button" onClick={() => setMinLevel((v) => Math.min(200, v + 1))} className="grid size-6 place-items-center rounded-md border border-white/12 bg-white/[0.06] text-white/70" aria-label="Tambah level minimal">+</button>
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/25 p-2">
+                <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-white/40">Biaya masuk</p>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <button type="button" onClick={() => setJoinCost((v) => Math.max(0, v - 500))} className="grid size-6 place-items-center rounded-md border border-white/12 bg-white/[0.06] text-white/70" aria-label="Kurangi biaya">−</button>
+                  <span className="font-mono text-[12px] font-black text-gold">{joinCost.toLocaleString("id-ID")}</span>
+                  <button type="button" onClick={() => setJoinCost((v) => Math.min(100000, v + 500))} className="grid size-6 place-items-center rounded-md border border-white/12 bg-white/[0.06] text-white/70" aria-label="Tambah biaya">+</button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between rounded-lg border border-gold/20 bg-black/20 px-2.5 py-1.5">
+              <span className="text-[9px] font-bold text-white/50">Sacret kamu</span>
+              <span className="flex items-center gap-1 font-mono text-[11px] font-black text-gold">
+                <SacretIcon className="size-3.5" /> {sacret.toLocaleString("id-ID")}
+              </span>
+            </div>
+          </div>
+
           {/* ===== KOTAK ICON TAG CLAN ===== */}
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] px-3 pb-3 pt-3">
-            <p className="text-center text-[10px] font-black tracking-[0.3em] text-gold/85">
-              — ICON TAG CLAN —
+            <p className="text-center text-[10px] font-black tracking-[0.22em] text-gold/85">
+              IKON TAG
             </p>
             <div className="mt-3 grid grid-cols-4 gap-2.5">
               {PICKABLE_CLAN_ICONS.map((ic) => (
