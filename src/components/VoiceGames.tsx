@@ -591,81 +591,79 @@ function LobbyView({
   onInvite: () => void | Promise<void>;
 }) {
   const seats = Array.from({ length: s.seats });
+  const filled = s.players.length;
+  const pct = Math.max(0, Math.min(100, (filled / Math.max(1, s.seats)) * 100));
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4">
-      {/* Kepala lobby premium */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-300/20 bg-[linear-gradient(155deg,#241a08_0%,#14101f_55%,#0b0a12_100%)] p-4 text-center">
-        <span aria-hidden className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
-        <p className="text-[10px] font-black uppercase tracking-[0.34em] text-amber-300/85">
-          Menunggu Pemain
-        </p>          <p className="mt-1.5 bg-gradient-to-r from-amber-200 via-white to-amber-200 bg-clip-text text-xl yn-title text-transparent">
-          {s.players.length}
-          <span className="text-white/50"> / {s.seats} kursi terisi</span>
-        </p>
-        {/* Bar kursi */}
-        <div className="mt-3 flex justify-center gap-1.5">
-          {seats.map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-1.5 w-9 rounded-full transition",
-                i < s.players.length
-                  ? "bg-gradient-to-r from-amber-300 to-amber-500"
-                  : "bg-white/15",
-              )}
-            />
-          ))}
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6 pt-3">
+      {/* Status room: satu panel gelap dengan aksen tipis, bukan blok emas. */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0d131c] p-3.5">
+        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/55 to-transparent" />
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-sky-300/20 bg-sky-400/10 text-sky-200">
+            <Users className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[8.5px] font-black uppercase tracking-[0.2em] text-sky-200/60">Ruang tunggu</p>
+            <p className="mt-0.5 truncate text-[15px] font-black text-white">{GAME_LABEL[s.game]}</p>
+            <p className="mt-0.5 text-[9.5px] text-white/40">
+              {isHost ? "Kamu host room ini" : "Tunggu host memulai permainan"}
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-display text-2xl font-black leading-none text-white">
+              {filled}<span className="text-sm text-white/30">/{s.seats}</span>
+            </p>
+            <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-white/35">terisi</p>
+          </div>
         </div>
-        <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-white/55">
-          <Sparkles className="size-3.5 text-amber-300" />
-          {isHost
-            ? "Ajak pemain di room — otomatis mulai saat penuh"
-            : "Menunggu host mengajak pemain lain…"}
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <span className="block h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-2 flex items-center gap-1.5 text-[9.5px] font-semibold text-white/45">
+          <Sparkles className="size-3 text-sky-300/80" />
+          {isHost ? "Ajak pemain — permainan mulai otomatis saat kursi penuh." : "Kursi akan terisi saat pemain menerima undangan."}
         </p>
       </div>
 
+      <div className="mb-2 mt-4 flex items-end justify-between gap-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">Pemain</p>
+        <span className="text-[9px] font-bold text-white/30">{s.seats - filled} kursi tersisa</span>
+      </div>
+
       {/* Kursi pemain */}
-      <div
-        className={cn(
-          "mt-4 grid gap-3",
-          seats.length <= 4 ? "grid-cols-2" : "grid-cols-3",
-        )}
-      >
+      <div className={cn("grid gap-2.5", seats.length <= 4 ? "grid-cols-2" : "grid-cols-3")}>
         {seats.map((_, i) => {
           const p = s.players[i];
           return (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
+              transition={{ delay: i * 0.05 }}
               className={cn(
-                "relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border p-4",
+                "relative flex min-h-[142px] flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-2 py-3 text-center",
                 p
-                  ? "border-amber-300/40 bg-[linear-gradient(160deg,rgba(251,191,36,.14),rgba(255,255,255,.04))]"
-                  : "border-dashed border-white/18 bg-white/[0.03]",
+                  ? "border-sky-300/25 bg-[linear-gradient(160deg,rgba(56,189,248,.09),rgba(255,255,255,.025))]"
+                  : "border-dashed border-white/15 bg-white/[0.02]",
               )}
             >
               {p ? (
                 <>
-                  <span className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
-                  <Avatar src={p.image} seed={p.username} className="size-14 ring-2 ring-amber-300/70" />
-                  <p className="max-w-full truncate text-xs font-black">
-                    {p.username}
-                  </p>
-                  <span className="flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-200 ring-1 ring-amber-300/40">
-                    ✓ Siap
+                  <span aria-hidden className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/45 to-transparent" />
+                  <Avatar src={p.image} seed={p.username} className="size-14 ring-2 ring-sky-300/45" />
+                  <p className="max-w-full truncate text-[11.5px] font-black text-white">{p.username}</p>
+                  <span className="flex items-center gap-1 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-200">
+                    <span className="size-1.5 rounded-full bg-emerald-300" /> Siap
                   </span>
                 </>
               ) : (
                 <>
-                  <span className="flex size-14 items-center justify-center rounded-full border border-dashed border-white/25 text-white/35">
-                    <UserPlus className="size-6" />
+                  <span className="grid size-14 place-items-center rounded-full border border-dashed border-white/20 bg-white/[0.025] text-white/30">
+                    <UserPlus className="size-5" />
                   </span>
-                  <p className="text-[11px] text-white/45">Kursi kosong</p>
-                  <span className="flex items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/45">
-                    <span className="size-1.5 animate-ping rounded-full bg-amber-300" />
-                    Menunggu
+                  <p className="text-[10px] font-bold text-white/40">Kursi kosong</p>
+                  <span className="flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white/35">
+                    <span className="size-1.5 animate-pulse rounded-full bg-sky-300/60" /> Menunggu
                   </span>
                 </>
               )}
@@ -674,16 +672,22 @@ function LobbyView({
         })}
       </div>
 
-      {isHost && (
-        <button
-          onClick={() => void onInvite()}
-          disabled={inviting}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 py-3.5 text-sm font-black text-black transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60"
-        >
-          <Send className="size-4" />
-          {inviting ? "Mengirim…" : "Ajak pemain di room"}
-        </button>
-      )}
+      <div className="mt-auto pt-5">
+        {isHost ? (
+          <button
+            onClick={() => void onInvite()}
+            disabled={inviting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-400 to-indigo-500 py-3 text-sm font-black text-[#071018] shadow-[0_16px_30px_-22px_rgba(56,189,248,.9)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+          >
+            <Send className="size-4" />
+            {inviting ? "Mengirim…" : "Ajak pemain di room"}
+          </button>
+        ) : (
+          <p className="rounded-xl border border-white/8 bg-white/[0.03] py-2.5 text-center text-[10px] font-semibold text-white/40">
+            Kamu siap. Tunggu host memulai permainan.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

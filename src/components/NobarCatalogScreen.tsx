@@ -13,6 +13,7 @@ import {
   Play,
   Globe,
   ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,29 +93,44 @@ export function NobarCatalogScreen({ onClose }: { onClose: () => void }) {
           </p>
         </div>
 
-        {/* Dua tombol aksi — tetap menyatu dengan kartu, tapi diberi
-            garis tipis sendiri supaya tidak terlihat menempel. */}
-        <div className="p-3">
-          <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.02]">
-            <button
-              onClick={() => setCreating(true)}
-              className="flex flex-col items-center gap-2 border-r border-white/12 bg-[linear-gradient(160deg,rgba(56,189,248,.14),rgba(255,255,255,.015))] py-4 transition hover:brightness-110 active:scale-[0.98]"
-            >
-              <span className="flex size-10 items-center justify-center rounded-xl border border-sky-300/30 bg-sky-400/12 text-sky-200">
-                <Video className="size-5" aria-hidden />
-              </span>
-              <span className="text-sm font-extrabold text-white">Buat Room</span>
-            </button>
-            <button
-              onClick={() => setJoinOpen((v) => !v)}
-              className="flex flex-col items-center gap-2 bg-[linear-gradient(160deg,rgba(255,210,63,.12),rgba(255,255,255,.015))] py-4 transition hover:brightness-110 active:scale-[0.98]"
-            >
-              <span className="flex size-10 items-center justify-center rounded-xl border border-amber-300/30 bg-amber-400/12 text-amber-200">
-                <LogIn className="size-5" aria-hidden />
-              </span>
-              <span className="text-sm font-extrabold text-white">Join Room</span>
-            </button>
-          </div>
+        {/* Dua pintu masuk room — dibuat seperti kartu misi, bukan tombol
+            generik: ikon besar, lapisan warna, dan keterangan singkat. */}
+        <div className="grid grid-cols-2 gap-2.5 p-3">
+          <button
+            onClick={() => setCreating(true)}
+            className="group relative min-h-[132px] overflow-hidden rounded-[22px] border border-sky-300/35 bg-[linear-gradient(150deg,#0a2a3c_0%,#0d1b2d_52%,#07121d_100%)] p-3 text-left shadow-[0_18px_34px_-28px_rgba(56,189,248,.9)] transition hover:border-sky-200/60 active:scale-[0.98]"
+          >
+            <span aria-hidden className="absolute -right-7 -top-8 size-24 rounded-full bg-sky-400/25 blur-2xl" />
+            <span aria-hidden className="absolute -bottom-5 -left-4 size-16 rounded-full border border-sky-300/15" />
+            <span className="relative flex size-10 items-center justify-center rounded-2xl bg-sky-400/15 text-sky-200 ring-1 ring-sky-300/35">
+              <Video className="size-5" aria-hidden />
+            </span>
+            <span className="relative mt-2.5 block text-[14px] font-black leading-none text-white">Buat Room</span>
+            <span className="relative mt-1 block text-[9px] font-semibold leading-snug text-sky-100/55">
+              Pilih anime, atur akses, lalu undang teman.
+            </span>
+            <span className="relative mt-2.5 inline-flex items-center gap-1 rounded-full bg-sky-300/12 px-2 py-1 text-[8.5px] font-black text-sky-100">
+              Mulai nobar <ArrowRight className="size-2.5" />
+            </span>
+          </button>
+          <button
+            onClick={() => setJoinOpen((v) => !v)}
+            aria-expanded={joinOpen}
+            className="group relative min-h-[132px] overflow-hidden rounded-[22px] border border-amber-300/35 bg-[linear-gradient(150deg,#302307_0%,#241a0d_52%,#151007_100%)] p-3 text-left shadow-[0_18px_34px_-28px_rgba(255,210,63,.85)] transition hover:border-amber-200/60 active:scale-[0.98]"
+          >
+            <span aria-hidden className="absolute -right-7 -top-8 size-24 rounded-full bg-amber-300/20 blur-2xl" />
+            <span aria-hidden className="absolute -bottom-5 -left-4 size-16 rounded-full border border-amber-200/15" />
+            <span className="relative flex size-10 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-300/35">
+              <LogIn className="size-5" aria-hidden />
+            </span>
+            <span className="relative mt-2.5 block text-[14px] font-black leading-none text-white">Join Room</span>
+            <span className="relative mt-1 block text-[9px] font-semibold leading-snug text-amber-100/55">
+              Masuk dengan kode undangan dari host.
+            </span>
+            <span className="relative mt-2.5 inline-flex items-center gap-1 rounded-full bg-amber-300/12 px-2 py-1 text-[8.5px] font-black text-amber-100">
+              {joinOpen ? "Tutup kode" : "Pakai kode"} <ArrowRight className="size-2.5" />
+            </span>
+          </button>
         </div>
 
       </div>

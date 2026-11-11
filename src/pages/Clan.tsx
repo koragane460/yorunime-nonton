@@ -898,6 +898,12 @@ function ClanDetailScreen({
   // Request" (hijau) dan tetap bisa dipencet, sama seperti di daftar clan.
   const isRequested = detail.myRequestClanId === clanId;
   const levelCost = c.levelCost ?? 100000;
+  const detailJoinMode = ((c as any).joinMode ?? "approval") as "public" | "private" | "approval";
+  const joinModeMeta = detailJoinMode === "public"
+    ? { label: "Publik", Icon: Globe, cls: "border-emerald-300/30 bg-emerald-400/12 text-emerald-200" }
+    : detailJoinMode === "private"
+      ? { label: "Private", Icon: Lock, cls: "border-rose-300/30 bg-rose-400/12 text-rose-200" }
+      : { label: "Persetujuan", Icon: ShieldCheck, cls: "border-sky-300/30 bg-sky-400/12 text-sky-200" };
   const progress = Math.min(100, ((c.levelProgress ?? 0) / levelCost) * 100);
   // Claim harian = dasar level + bonus +50 per grade.
   const claimable = (c.claimAmount ?? 100) + Math.max(0, (detail.myGrade ?? 1) - 1) * 50;
@@ -950,10 +956,15 @@ function ClanDetailScreen({
               kotak "Pengaturan" di bawah pengumuman. */}
         </div>
 
-        {/* Kotak header clan — TANPA bungkus kotak (TRANSAPAN): foto +
-            nama + tag di kiri, STATS di kanan atas, deskripsi, lalu bar
-            level. (permintaan user) */}
-        <div className="p-1">
+        {/* Kotak header clan — badge mode join di tengah atas, lalu foto +
+            nama + tag, STATS, deskripsi, dan bar level. */}
+        <div className="p-1 pt-2">
+          <div className="mb-3.5 flex justify-center">
+            <span className={cn("inline-flex items-center gap-1.5 rounded-b-xl border border-t-0 px-3.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] shadow-[0_8px_18px_-14px_rgba(0,0,0,.9)]", joinModeMeta.cls)}>
+              <joinModeMeta.Icon className="size-3" />
+              {joinModeMeta.label}
+            </span>
+          </div>
           <div className="flex items-start gap-3">
             {c.avatarUrl ? (
               <img src={c.avatarUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
@@ -1015,14 +1026,7 @@ function ClanDetailScreen({
           </div>
 
           {/* ATURAN JOIN — selalu terlihat di detail clan. */}
-          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-            <div className="rounded-xl border border-emerald-300/25 bg-emerald-400/[0.07] px-2 py-2 text-center">
-              <Globe className="mx-auto size-3.5 text-emerald-300" />
-              <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Mode</p>
-              <p className="text-[10px] font-black text-white">
-                {(c as any).joinMode === "private" ? "Private" : (c as any).joinMode === "public" ? "Publik" : "ACC"}
-              </p>
-            </div>
+          <div className="mt-2.5 grid grid-cols-2 gap-1.5">
             <div className="rounded-xl border border-sky-300/25 bg-sky-400/[0.07] px-2 py-2 text-center">
               <ShieldCheck className="mx-auto size-3.5 text-sky-300" />
               <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Min. level</p>
@@ -2448,17 +2452,20 @@ function CreateClan({ onDone }: { onDone: () => void }) {
           {/* ===== ATURAN GABUNG ===== */}
           <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-[linear-gradient(145deg,rgba(255,210,63,.11),rgba(124,58,237,.07)_55%,rgba(255,255,255,.025))] p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-black text-white/90">Cara gabung</p>
-              <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-gold">
-                Atur clan
+              <div className="min-w-0">
+                <p className="text-[11px] font-black text-white/90">Cara gabung</p>
+                <p className="mt-0.5 text-[9px] text-white/35">Pilih siapa yang boleh masuk.</p>
+              </div>
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-gold/25 bg-gold/10 text-gold">
+                <Users className="size-3.5" />
               </span>
             </div>
-            <div className="mt-2 space-y-1.5">
+            <div className="mt-3 grid grid-cols-3 gap-1.5">
               {(
                 [
-                  { key: "public", label: "Publik", desc: "Langsung masuk, tanpa persetujuan.", tone: "emerald" },
-                  { key: "private", label: "Private", desc: "Hanya lewat undangan leader.", tone: "rose" },
-                  { key: "approval", label: "Persetujuan", desc: "Pemohon menunggu ACC leader/officer.", tone: "sky" },
+                  { key: "public", label: "Publik", desc: "Langsung masuk", Icon: Globe },
+                  { key: "private", label: "Private", desc: "Lewat undangan", Icon: Lock },
+                  { key: "approval", label: "Persetujuan", desc: "Tunggu ACC", Icon: ShieldCheck },
                 ] as const
               ).map((mode) => {
                 const on = joinMode === mode.key;
@@ -2467,40 +2474,43 @@ function CreateClan({ onDone }: { onDone: () => void }) {
                     key={mode.key}
                     type="button"
                     onClick={() => setJoinMode(mode.key)}
+                    aria-pressed={on}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition active:scale-[0.99]",
+                      "relative flex min-w-0 flex-col items-center overflow-hidden rounded-2xl border px-1.5 pb-2.5 pt-3 text-center transition active:scale-[0.97]",
                       on
-                        ? mode.tone === "emerald"
-                          ? "border-emerald-300/45 bg-emerald-400/12"
-                          : mode.tone === "rose"
-                            ? "border-rose-300/45 bg-rose-400/12"
-                            : "border-sky-300/45 bg-sky-400/12"
-                        : "border-white/10 bg-black/20",
+                        ? mode.key === "public"
+                          ? "border-emerald-300/55 bg-[linear-gradient(160deg,rgba(52,211,153,.2),rgba(52,211,153,.05))] text-emerald-100"
+                          : mode.key === "private"
+                            ? "border-rose-300/55 bg-[linear-gradient(160deg,rgba(251,113,133,.2),rgba(251,113,133,.05))] text-rose-100"
+                            : "border-sky-300/55 bg-[linear-gradient(160deg,rgba(56,189,248,.2),rgba(56,189,248,.05))] text-sky-100"
+                        : "border-white/10 bg-black/25 text-white/45",
                     )}
                   >
+                    {on && (
+                      <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-current shadow-[0_0_8px_currentColor]" />
+                    )}
                     <span
                       className={cn(
-                        "grid size-7 shrink-0 place-items-center rounded-lg border",
-                        on
-                          ? mode.tone === "emerald"
-                            ? "border-emerald-300/40 text-emerald-200"
-                            : mode.tone === "rose"
-                              ? "border-rose-300/40 text-rose-200"
-                              : "border-sky-300/40 text-sky-200"
-                          : "border-white/10 text-white/40",
+                        "grid size-8 place-items-center rounded-xl border",
+                        on ? "border-white/20 bg-white/[0.08]" : "border-white/10 bg-white/[0.03]",
                       )}
                     >
-                      {mode.key === "public" ? <Globe className="size-3.5" /> : mode.key === "private" ? <Lock className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
+                      <mode.Icon className="size-4" />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-black text-white">{mode.label}</span>
-                      <span className="mt-0.5 block text-[9px] leading-snug text-white/40">{mode.desc}</span>
-                    </span>
-                    <span className={cn("size-2 rounded-full", on ? "bg-current" : "bg-white/10")} />
+                    <span className="mt-1.5 block truncate text-[10px] font-black text-white">{mode.label}</span>
+                    <span className="mt-0.5 block truncate text-[8px] font-semibold opacity-60">{mode.desc}</span>
                   </button>
                 );
               })}
             </div>
+            <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-black/20 px-2 py-1.5 text-[8.5px] leading-snug text-white/40">
+              <span className="mt-1 size-1 shrink-0 rounded-full bg-gold" />
+              {joinMode === "public"
+                ? "Semua orang bisa bergabung. Biaya masuk tetap dipotong saat join."
+                : joinMode === "private"
+                  ? "Clan tertutup. Hanya leader/officer yang bisa mengundang anggota."
+                  : "Permintaan join masuk ke leader/officer. Level dan Sacret dicek saat ACC."}
+            </p>
 
             <div className="mt-2.5 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-white/10 bg-black/25 p-2">

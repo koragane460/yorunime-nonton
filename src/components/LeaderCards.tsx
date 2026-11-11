@@ -342,7 +342,7 @@ function GrandPlace({
   onOpen?: (id?: string) => void;
 }) {
   if (!entry) return <div className="min-w-0 flex-1" />;
-  const heights = { 1: 190, 2: 136, 3: 104 } as const;
+  const heights = { 1: 148, 2: 112, 3: 96 } as const;
   const skin =
     place === 1
       ? {
@@ -399,10 +399,10 @@ function GrandPlace({
             className={cn(
               "relative z-10 shrink-0 rounded-full ring-2",
               place === 1
-                ? "size-24 ring-[#FFE58A]/80"
+                ? "size-[84px] ring-[#FFE58A]/80"
                 : place === 2
-                  ? "size-[78px] ring-white/40"
-                  : "size-[72px] ring-[#E8A273]/50",
+                  ? "size-[68px] ring-white/40"
+                  : "size-[62px] ring-[#E8A273]/50",
             )}
           />
         </span>
@@ -490,11 +490,16 @@ function GrandPodium({
   onOpen?: (id?: string) => void;
 }) {
   const byRank = new Map(entries.map((e) => [e.rank, e]));
+  const ordered = [
+    { place: 2 as const, entry: byRank.get(2) },
+    { place: 1 as const, entry: byRank.get(1) },
+    { place: 3 as const, entry: byRank.get(3) },
+  ].filter((x) => x.entry);
   return (
-    <div className="relative flex h-full items-end justify-between gap-0 px-0 pb-1">
-      <GrandPlace entry={byRank.get(2)} place={2} onOpen={onOpen} />
-      <GrandPlace entry={byRank.get(1)} place={1} onOpen={onOpen} />
-      <GrandPlace entry={byRank.get(3)} place={3} onOpen={onOpen} />
+    <div className="relative flex h-full items-end justify-center gap-1.5 px-0 pb-1">
+      {ordered.map(({ place, entry }) => (
+        <GrandPlace key={place} entry={entry} place={place} onOpen={onOpen} />
+      ))}
     </div>
   );
 }
@@ -848,24 +853,24 @@ function LeaderOverlay({
 
         <section className={cn("relative overflow-hidden rounded-3xl border p-3", tone.frame)}>
           <span className="pointer-events-none absolute inset-0 opacity-45 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]" />
-          <div className="relative mb-2 flex items-center gap-2">
+          <div className="relative flex items-center justify-between gap-2">
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
                 tone.pill,
               )}
             >
-              {PERIODS.find((p) => p.key === period)?.label}
+              {PERIODS.find((p) => p.key === period)?.label} · {mode === "xp" ? "XP" : "Give"}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-              {mode === "xp" ? "XP" : "Give"}
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">
+              {rows.length} peserta
             </span>
           </div>
-          <div className="relative mt-1 flex min-h-[402px] flex-col px-1 pb-1">
+          <div className="relative mt-2 flex flex-col px-0.5">
             {podiumEntries.length > 0 ? (
               <GrandPodium entries={podiumEntries} onOpen={openProfile} />
             ) : (
-              <p className="flex flex-1 items-center justify-center py-8 text-center text-xs text-white/50">
+              <p className="py-8 text-center text-xs text-white/50">
                 Belum ada data untuk periode ini.
               </p>
             )}

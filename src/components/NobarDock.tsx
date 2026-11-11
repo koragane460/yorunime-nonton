@@ -87,9 +87,9 @@ export function NobarDock({
   );
 
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-foreground/40 bg-card/60 shadow-lg shadow-black/40">
+    <div className="mt-3 -mx-3 overflow-hidden border-0 bg-transparent shadow-none">
       {/* Kepala room */}
-      <div className="flex items-center gap-2.5 border-b border-border bg-white/[0.04] px-3 py-2.5">
+      <div className="flex items-center gap-2.5 bg-white/[0.045] px-4 py-2.5">
         <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/20">
           <Radio className="size-4 text-primary" />
           {room.playing && (
@@ -123,7 +123,7 @@ export function NobarDock({
       </div>
 
       {/* Kontrol host — hanya host yang boleh menekan */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-foreground/40 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2">
         {isHost ? (
           <>
             <HostBtn onClick={onPrevEpisode} label="‹ Episode" icon={<SkipBack className="size-4" />} />
@@ -186,7 +186,7 @@ export function NobarDock({
       </div>
 
       {/* Tab: chat / orang */}
-      <div className="flex border-b border-border bg-white/[0.03]">
+      <div className="flex bg-white/[0.025]">
         {(
           [
             ["chat", "Chat", MessageSquare],
@@ -211,7 +211,7 @@ export function NobarDock({
       </div>
 
       {tab === "chat" ? (
-        <div className="flex h-[38vh] min-h-52 flex-col overflow-hidden bg-secondary/80 sm:h-[320px]">
+        <div className="flex h-[58vh] min-h-[380px] flex-col overflow-hidden bg-transparent sm:h-[520px]">
           {!chatLoading && msgs ? (
             <ChatPanel
               kind="room"

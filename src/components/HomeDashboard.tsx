@@ -49,70 +49,74 @@ export function ContinueWatchingCard({
     api.activities.myHistory,
     user ? {} : "skip",
   ) as HistoryRow[] | undefined;
-  const last = rows?.[0];
   void onHistory;
   void onDiscover;
 
   if (rows === undefined) return null;
   // Permintaan: kalau riwayat kosong, JANGAN tampilkan placeholder apa pun.
-  if (!last) return null;
-
-  const duration =
-    last.durationSec && last.durationSec > 0 ? last.durationSec : 1440;
-  const progress = Math.max(0, last.progressSec ?? 0);
-  const pct = Math.min(
-    100,
-    Math.round((progress / Math.max(1, duration)) * 100),
-  );
-  const minutes = Math.max(
-    1,
-    Math.floor((progress > 0 ? progress : (last.minutesWatched ?? 0) * 60) / 60),
-  );
+  if (!rows || rows.length === 0) return null;
 
   return (
     <section className="fade-enter mt-5">
-      <h2 className="text-[15px] font-black tracking-tight text-white">Terakhir ditonton</h2>
-      <div className="mt-2 w-[88%] max-w-[430px]">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-[15px] font-black tracking-tight text-white">Terakhir ditonton</h2>
         <button
           type="button"
-          onClick={() => onOpen(last)}
-          className="group relative block w-full overflow-hidden rounded-2xl border border-white/12 bg-black text-left shadow-[0_20px_45px_-34px_rgba(0,0,0,.95)] transition active:scale-[0.99]"
+          onClick={onHistory}
+          className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-white/40 transition hover:text-white/75"
         >
-          <span className="block aspect-[16/9] w-full">
-            {last.animeImage ? (
-              <img
-                src={last.animeImage}
-                alt=""
-                className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
-              />
-            ) : (
-              <span className="flex size-full items-center justify-center text-white/30">
-                <Play className="size-7" />
-              </span>
-            )}
-          </span>
-          <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.45),transparent_38%,rgba(0,0,0,.78))]" />
-          <span className="absolute left-2 top-2 rounded-lg border border-white/15 bg-black/60 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
-            Eps {last.episode}
-          </span>
-          <span className="absolute inset-x-0 bottom-0 px-2 pb-2">
-            <span className="block h-1.5 overflow-hidden rounded-full bg-white/25">
-              <span
-                className="block h-full rounded-full"
-                style={{
-                  width: `${Math.max(3, pct)}%`,
-                  background: "linear-gradient(90deg, var(--ui-a), var(--ui-c, #FFD23F))",
-                }}
-              />
-            </span>
-          </span>
+          Riwayat <ArrowRight className="size-3" />
         </button>
-        <p className="mt-2 line-clamp-1 text-[13px] font-black text-white">
-          {last.animeTitle}
-        </p>
-        <p className="mt-0.5 font-mono text-[10px] font-semibold text-white/45">
-          {clockOf(progress)}/{clockOf(duration)} · {minutes} menit
-        </p>
+      </div>
+      <div className="thin-scroll -mx-4 mt-2 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {rows.slice(0, 12).map((h) => {
+          const duration = h.durationSec && h.durationSec > 0 ? h.durationSec : 1440;
+          const progress = Math.max(0, h.progressSec ?? 0);
+          const pct = Math.min(100, Math.round((progress / Math.max(1, duration)) * 100));
+          return (
+            <button
+              key={h._id}
+              type="button"
+              onClick={() => onOpen(h)}
+              className="group w-[154px] shrink-0 snap-start text-left transition active:scale-[0.98]"
+            >
+              <span className="relative block aspect-video w-full overflow-hidden rounded-xl border border-white/12 bg-black shadow-[0_12px_28px_-24px_rgba(0,0,0,.95)]">
+                {h.animeImage ? (
+                  <img
+                    src={h.animeImage}
+                    alt=""
+                    className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  />
+                ) : (
+                  <span className="flex size-full items-center justify-center text-white/30">
+                    <Play className="size-5" />
+                  </span>
+                )}
+                <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                <span className="absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[8.5px] font-black text-white backdrop-blur-sm">
+                  Eps {h.episode}
+                </span>
+                <span className="absolute inset-x-0 bottom-0 p-1.5">
+                  <span className="block h-1 overflow-hidden rounded-full bg-white/25">
+                    <span
+                      className="block h-full rounded-full"
+                      style={{
+                        width: `${Math.max(3, pct)}%`,
+                        background: "linear-gradient(90deg, var(--ui-a), var(--ui-c, #FFD23F))",
+                      }}
+                    />
+                  </span>
+                </span>
+              </span>
+              <span className="mt-1.5 line-clamp-1 block text-[11px] font-black leading-tight text-white">
+                {h.animeTitle}
+              </span>
+              <span className="mt-0.5 block font-mono text-[8.5px] font-semibold text-white/40">
+                {clockOf(progress)}/{clockOf(duration)}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );

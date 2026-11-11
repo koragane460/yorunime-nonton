@@ -249,6 +249,47 @@ function GiveView() {
 }
 
 /* ------------------------------------------------------ Clan view ---- */
+function ClanTopCard({
+  clan,
+  rank,
+  meta,
+  score,
+}: {
+  clan: any;
+  rank: 1 | 2 | 3;
+  meta: string;
+  score: string;
+}) {
+  const size = rank === 1 ? "size-[78px]" : rank === 2 ? "size-16" : "size-14";
+  const standH = rank === 1 ? "h-8" : rank === 2 ? "h-6" : "h-5";
+  const ring = rank === 1 ? "ring-[#FFE58A]/80" : rank === 2 ? "ring-white/45" : "ring-amber-500/50";
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+      <span className="relative">
+        {rank === 1 && (
+          <Crown className="absolute -top-5 left-1/2 z-10 size-5 -translate-x-1/2 text-[#FFE58A] drop-shadow" fill="currentColor" aria-hidden />
+        )}
+        <Avatar src={clan.avatarUrl} seed={clan.name} className={cn(size, "rounded-full ring-2", ring)} />
+      </span>
+      <p className="mt-2 w-full truncate text-[11.5px] font-black leading-tight text-white">{clan.name}</p>
+      <ClanTag
+        icon={clan.tagIcon ?? DEFAULT_CLAN_ICON}
+        tag={clan.tag}
+        level={clan.level}
+        tier={clan.tagTier}
+        className="mt-1 origin-top scale-[0.78]"
+      />
+      <p className="mt-1 w-full truncate text-[8.5px] font-semibold text-white/45">{meta}</p>
+      <span className="mt-1.5 w-full truncate rounded-md border border-emerald-300/20 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-black text-emerald-200">
+        {score}
+      </span>
+      <span className={cn("mt-1.5 flex w-full items-center justify-center rounded-t-lg bg-[linear-gradient(180deg,rgba(74,222,128,.32),rgba(74,222,128,.12))] text-[10px] font-black text-emerald-100", standH)}>
+        {rank}
+      </span>
+    </div>
+  );
+}
+
 function ClanView() {
   const navigate = useNavigate();
   const clans = useQuery(api.clans.listClans, {});
@@ -308,10 +349,16 @@ function ClanView() {
       </div>
       {shown.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada clan</p>}
       {shown.length > 0 && (
-        <div className="relative mb-3 grid grid-cols-3 items-end gap-2 px-2 pb-3 pt-2">
-          {t2 && <Podium username={t2.name} image={t2.avatarUrl} value={`${meta(t2)} · ${score(t2)}`} rank={2} />}
-          {t1 && <Podium username={t1.name} image={t1.avatarUrl} value={`${meta(t1)} · ${score(t1)}`} rank={1} />}
-          {t3 && <Podium username={t3.name} image={t3.avatarUrl} value={`${meta(t3)} · ${score(t3)}`} rank={3} />}
+        <div className="relative mb-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-[linear-gradient(150deg,rgba(74,222,128,.12),#0c1412_68%)] px-2.5 pb-3 pt-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <span className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Puncak clan</span>
+            <span className="text-[9px] font-bold text-white/35">{shown.length} clan</span>
+          </div>
+          <div className="flex items-end gap-1.5">
+            {t2 && <ClanTopCard clan={t2} rank={2} meta={meta(t2)} score={score(t2)} />}
+            {t1 && <ClanTopCard clan={t1} rank={1} meta={meta(t1)} score={score(t1)} />}
+            {t3 && <ClanTopCard clan={t3} rank={3} meta={meta(t3)} score={score(t3)} />}
+          </div>
         </div>
       )}
       <div className="space-y-1.5">

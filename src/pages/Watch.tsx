@@ -2977,7 +2977,7 @@ function WatchContent() {
               >
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="max-h-[72vh] w-full overflow-y-auto rounded-t-[28px] border-t border-white/15 bg-black/95 px-4 pb-7 pt-3 shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-bottom-4 duration-200 thin-scroll"
+                  className="max-h-[72vh] w-full overflow-y-auto rounded-t-[28px] border-t border-white/15 bg-[#34343c] px-4 pb-7 pt-3 shadow-2xl backdrop-blur-md animate-in fade-in-0 slide-in-from-bottom-4 duration-200 thin-scroll"
                 >
                 <div
                   aria-hidden
@@ -3018,10 +3018,9 @@ function WatchContent() {
                         className={cn(
           "animate-in fade-in-0 slide-in-from-top-1 rounded-2xl border px-3 py-2.5 text-left transition duration-300",
                           locked
-                            ? "cursor-not-allowed border-amber-500/40 bg-amber-500/10"
-                            : active
+                            ? "cursor-not-allowed border-amber-500/40 bg-amber-500/10"                              : active
                               ? "border-primary/60 bg-primary/15"
-                              : "border-white/12 bg-white/[0.04]",
+                              : "border-white/10 bg-white/[0.055]",
                         )}
                       >
                         <span className="flex items-center justify-between gap-2">
@@ -3502,28 +3501,31 @@ function WatchContent() {
           </div>
         )}
 
-        {/* KOTAK SINOPSIS — label di kiri atas, teks bisa dilipat. */}
-        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
-              Sinopsis
-            </span>
-            <button
-              onClick={() => setSynopsisOpen((v) => !v)}
-              className="text-[10px] font-bold text-[#7fd3f7] transition hover:text-[#aee6ff]"
+        {/* KOTAK SINOPSIS — tidak ditampilkan saat mode Nobar supaya chat
+            room dapat ruang lebih besar. */}
+        {!room && (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+                Sinopsis
+              </span>
+              <button
+                onClick={() => setSynopsisOpen((v) => !v)}
+                className="text-[10px] font-bold text-[#7fd3f7] transition hover:text-[#aee6ff]"
+              >
+                {synopsisOpen ? "Tutup" : "Lihat selengkapnya"}
+              </button>
+            </div>
+            <p
+              className={cn(
+                "mt-2 text-[12.5px] leading-relaxed text-white/70",
+                !synopsisOpen && "line-clamp-3",
+              )}
             >
-              {synopsisOpen ? "Tutup" : "Lihat selengkapnya"}
-            </button>
+              {D.synopsisId ?? D.synopsis}
+            </p>
           </div>
-          <p
-            className={cn(
-              "mt-2 text-[12.5px] leading-relaxed text-white/70",
-              !synopsisOpen && "line-clamp-3",
-            )}
-          >
-            {D.synopsisId ?? D.synopsis}
-          </p>
-        </div>
+        )}
 
         {/* Episode: grid + jumlah di kanan atas (host room nobar juga boleh) */}
         {(isHost || !room) && (
