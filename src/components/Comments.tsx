@@ -333,7 +333,7 @@ export function CommentsSection({
       </div>
 
       {/* ---------- KOLOM KOMENTAR ---------- */}
-      <div className="relative mt-2.5 overflow-hidden border-y border-white/10 bg-[#10151d] px-3 py-3">
+      <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-white/10 bg-[#10151d] px-3 py-3">
         <div className="relative flex items-start gap-2">
           {/* Foto profil user yang sedang menulis komentar. */}
           <Avatar
@@ -344,7 +344,7 @@ export function CommentsSection({
           <div className="min-w-0 flex-1">
             {/* Banner AKUN user ada di dalam kotak komentar; banner anime
                 tidak lagi dipakai di sini. */}
-            <div className="relative overflow-hidden rounded-full border border-white/15 bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] focus-within:border-[#1CA7EC]/70">
+            <div className="relative overflow-hidden rounded-xl border border-white/15 bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] focus-within:border-[#1CA7EC]/70">
               {composerBanner && (
                 <>
                   <span
@@ -861,7 +861,17 @@ function CommentCard({
       className={cn(
         "border-b border-white/10 px-3 py-3 last:border-b-0",
         isReply && "bg-transparent",
+        mine && !isReply && "my-2 rounded-2xl border border-white/10 bg-white/[0.035]",
       )}
+      style={
+        mine && c.bannerUrl
+          ? {
+              backgroundImage: `linear-gradient(100deg, rgba(7,10,15,.9), rgba(7,10,15,.58) 55%, rgba(7,10,15,.88)), url(${c.bannerUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : undefined
+      }
     >
       {/* Kepala: avatar · username + centang + level + tag premium · waktu */}
       <div className="flex items-start gap-2">

@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Star as StarIcon,
+  Heart,
   Award as AwardIcon,
 } from "lucide-react";
 // Ikon chrome memakai gaya SF Symbols supaya nav & panel akun terasa satu
@@ -1174,7 +1175,7 @@ function BottomNav({
     {
       path: "",
       label: "Subscribe",
-      icon: StarIcon,
+      icon: Heart,
       panel: "favorites",
     },
     {
@@ -1210,8 +1211,8 @@ function BottomNav({
         <div className="mx-auto w-full max-w-[34rem] px-2.5">
           <div
             className={cn(
-              "relative grid grid-cols-5 gap-1 rounded-[30px] border p-1.5",
-              "border-white/16 bg-[linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.055)_46%,rgba(255,210,63,.07))]",
+              "liquid-glass-nav relative grid grid-cols-5 gap-1 overflow-hidden rounded-[30px] border p-1.5",
+              "border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.06)_46%,rgba(255,210,63,.08))]",
               "shadow-[0_20px_48px_-26px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.2)]",
               "backdrop-blur-2xl backdrop-saturate-150",
             )}

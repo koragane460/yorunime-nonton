@@ -51,8 +51,7 @@ export function PosterStatusBadge({
   size?: "sm" | "lg";
   className?: string;
 }) {
-  if (!status) return null;
-  const raw = String(status).trim();
+  const raw = String(status ?? "Ongoing").trim() || "Ongoing";
   const label = /tamat|completed|ended|selesai|finish/i.test(raw)
     ? "Completed"
     : /ongoing|airing|releasing|tayang/i.test(raw)
@@ -84,8 +83,8 @@ export function PosterRatingBadge({
   size?: "sm" | "lg";
   className?: string;
 }) {
-  const n = Number(score);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  const raw = Number(score);
+  const n = Number.isFinite(raw) && raw > 0 ? raw : 0;
   return (
     <span
       className={cn(

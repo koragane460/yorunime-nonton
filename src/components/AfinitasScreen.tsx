@@ -17,14 +17,15 @@ import { StripBackIcon } from "@/components/StripBack";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Gem,
   Heart,
+  HeartHandshake,
   Search,
   Send,
-  ShieldCheck,
+  Shield,
+  Smile,
   Sparkles,
   Trophy,
-  UsersRound,
+  Users,
   X,
 } from "lucide-react";
 
@@ -52,28 +53,28 @@ const KIND_META: Record<
     cls: "text-pink-300",
     hex: "#f9a8d4",
     ring: "#f472b6",
-    Icon: Heart,
+    Icon: HeartHandshake,
   },
   saudara: {
     label: "Saudara",
     cls: "text-blue-400",
     hex: "#60a5fa",
     ring: "#60a5fa",
-    Icon: ShieldCheck,
+    Icon: Users,
   },
   sahabat: {
     label: "Sahabat",
     cls: "text-pink-500",
     hex: "#ec4899",
     ring: "#ec4899",
-    Icon: UsersRound,
+    Icon: Smile,
   },
   terpercaya: {
     label: "Orang Terpercaya",
     cls: "text-yellow-400",
     hex: "#facc15",
     ring: "#facc15",
-    Icon: Gem,
+    Icon: Shield,
   },
 };
 

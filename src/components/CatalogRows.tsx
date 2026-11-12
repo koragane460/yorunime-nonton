@@ -103,7 +103,7 @@ export function CardCarousel({
       {/* Judul + "Lihat selengkapnya" TANPA background, menempel di kanan. */}
       <div className="mt-6 mb-2 flex items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+          <h2 className="text-lg font-medium tracking-tight text-white/85">{title}</h2>
           {subtitle && (
             <span className="text-[11px] text-muted-foreground">{subtitle}</span>
           )}

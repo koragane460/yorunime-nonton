@@ -48,6 +48,38 @@ function dashedCls(rank: number) {
   return "text-white/70 ring-white/30";
 }
 
+const PODIUM_PARTICLES = [
+  { x: -28, y: -24, s: 3, c: "#FFD23F", d: 0 },
+  { x: 24, y: -32, s: 2.5, c: "#7FD3F7", d: 0.4 },
+  { x: -34, y: 8, s: 2, c: "#F9A8D4", d: 0.8 },
+  { x: 32, y: 4, s: 2.5, c: "#A7F3D0", d: 1.2 },
+  { x: -12, y: -40, s: 2, c: "#FFFFFF", d: 1.6 },
+  { x: 12, y: 22, s: 2, c: "#FFD23F", d: 1.0 },
+];
+
+function PodiumParticles() {
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0 overflow-visible">
+      {PODIUM_PARTICLES.map((p, i) => (
+        <span
+          key={i}
+          className="lb-particle absolute left-1/2 top-1/2 rounded-full"
+          style={
+            {
+              width: p.s,
+              height: p.s,
+              background: p.c,
+              animationDelay: `${p.d}s`,
+              "--dx": `${p.x}px`,
+              "--dy": `${p.y}px`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </span>
+  );
+}
+
 function DashedNum({ rank }: { rank: number }) {
   return (
     <span
@@ -91,9 +123,7 @@ function Podium({
           <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="6"
             strokeLinecap="round" pathLength={100} strokeDasharray="55 45" className="lb-dash-spin" />
         </svg>
-        {rank === 1 && (
-          <Crown className="absolute -top-3.5 left-1/2 size-4 -translate-x-1/2 text-yellow-300 drop-shadow" aria-hidden />
-        )}
+        {rank === 1 && <PodiumParticles />}
       </div>
       <p className="mt-1.5 w-full truncate text-center text-[10px] font-black leading-tight">{username ?? "user"}</p>
       <p className="text-[9px] leading-tight text-white/70">
@@ -266,9 +296,7 @@ function ClanTopCard({
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center text-center">
       <span className="relative">
-        {rank === 1 && (
-          <Crown className="absolute -top-5 left-1/2 z-10 size-5 -translate-x-1/2 text-[#FFE58A] drop-shadow" fill="currentColor" aria-hidden />
-        )}
+        {rank === 1 && <PodiumParticles />}
         <Avatar src={clan.avatarUrl} seed={clan.name} className={cn(size, "rounded-full ring-2", ring)} />
       </span>
       <p className="mt-2 w-full truncate text-[11.5px] font-black leading-tight text-white">{clan.name}</p>
@@ -349,12 +377,13 @@ function ClanView() {
       </div>
       {shown.length === 0 && <p className="py-8 text-center text-sm text-white/50">Belum ada clan</p>}
       {shown.length > 0 && (
-        <div className="relative mb-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-[linear-gradient(150deg,rgba(74,222,128,.12),#0c1412_68%)] px-2.5 pb-3 pt-4">
+        <div className="relative mb-3 overflow-hidden px-2 pb-3 pt-4">
+          <span aria-hidden className="pointer-events-none absolute inset-x-4 top-2 h-28 rounded-full bg-emerald-400/10 blur-3xl" />
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Puncak clan</span>
             <span className="text-[9px] font-bold text-white/35">{shown.length} clan</span>
           </div>
-          <div className="flex items-end gap-1.5">
+          <div className="relative flex items-end gap-1.5">
             {t2 && <ClanTopCard clan={t2} rank={2} meta={meta(t2)} score={score(t2)} />}
             {t1 && <ClanTopCard clan={t1} rank={1} meta={meta(t1)} score={score(t1)} />}
             {t3 && <ClanTopCard clan={t3} rank={3} meta={meta(t3)} score={score(t3)} />}

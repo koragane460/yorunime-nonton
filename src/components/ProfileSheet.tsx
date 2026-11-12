@@ -25,6 +25,7 @@ import {
   Cake,
   RefreshCw,
   Send,
+  HeartPulse,
   Sparkles,
   Tv,
   UserPlus,
@@ -246,12 +247,12 @@ export function ProfileSheet({
                 <img
                   src={profile.bannerUrl}
                   alt=""
-                  className="h-64 w-full object-cover"
+                  className="h-[22rem] w-full object-cover"
                 />
               ) : (
                 <div
                   aria-hidden
-                  className="h-64 w-full bg-[radial-gradient(65%_80%_at_20%_0%,color-mix(in_srgb,var(--ui-a)_32%,transparent),transparent_72%),linear-gradient(150deg,#161421,#0b0c12_55%,#141018)]"
+                  className="h-[22rem] w-full bg-[radial-gradient(65%_80%_at_20%_0%,color-mix(in_srgb,var(--ui-a)_32%,transparent),transparent_72%),linear-gradient(150deg,#161421,#0b0c12_55%,#141018)]"
                 />
               )}
               {/* Bilah sambung warna tipis di bawah banner */}
@@ -263,34 +264,6 @@ export function ProfileSheet({
               aria-label="Tutup"
             >
               <StripBackIcon />
-            </button>
-            {/* Tombol SWIPE di kanan atas — TANPA background. Berganti
-                antara Detail akun ⇄ Detail Konten dengan fade halus. */}
-            <button
-              type="button"
-              onClick={() => setDetailKonten((v) => !v)}
-              aria-label={detailKonten ? "Lihat detail akun" : "Lihat detail konten"}
-              aria-pressed={detailKonten}
-              className="absolute right-3 top-3 z-10 flex items-center gap-1.5 py-1 text-white transition active:scale-95"
-            >
-              <span className="text-[11px] font-black tracking-wide drop-shadow">
-                {detailKonten ? "Detail akun" : "Konten"}
-              </span>
-              <svg
-                width="22"
-                height="16"
-                viewBox="0 0 22 16"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  d="M8 3 3 8l5 5M14 3l5 5-5 5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
             </button>
             {/* Kotak info di banner DIHAPUS permanen — isinya sudah pindah
                 ke kotak ringkas (Top XP / Top Give / tag clan) di bawah
@@ -569,7 +542,7 @@ export function ProfileSheet({
                   className="flex items-center justify-center gap-1.5 rounded-full border border-[#E84855]/60 py-2.5 text-[12px] font-bold text-[#FFFAF0] transition active:scale-[0.98]"
                 >
                   <span className="relative mr-0.5 inline-flex">
-                    <Heart className="size-4 fill-current" />
+                    <HeartPulse className="size-[17px]" strokeWidth={2.4} />
                     <Sparkles className="absolute -right-1.5 -top-1.5 size-2 text-[#FFD23F]" />
                   </span>{" "}
                   Afinitas

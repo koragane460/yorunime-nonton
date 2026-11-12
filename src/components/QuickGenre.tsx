@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAction } from "convex/react";
+import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { ArrowRight, ChevronLeft, Grid3X3, LayoutGrid, Search, Star, X } from "lucide-react";
+import { PosterRatingBadge, PosterStatusBadge } from "@/components/lstream-ui";
+import { ArrowRight, ChevronLeft, Film, Grid3X3, LayoutGrid, Search, X } from "lucide-react";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -14,7 +16,9 @@ type Card = {
   score?: number;
   status?: string;
   source?: string;
+  filmKind?: "movie" | "tv";
 };
+type CatalogKind = "anime" | "donghua" | "film";
 
 /**
  * KATALOG A–Z — semua judul yang berawalan huruf terpilih.
@@ -32,6 +36,10 @@ export function AZCatalog({
   onPick: (id: string, title?: string, source?: string) => void;
 }) {
   const load = useAction(api.anime.animeByLetter);
+  const searchDonghua = useAction(api.sanka.donghuaSearchCards);
+  const searchFilms = useAction(api.films.search);
+  const navigate = useNavigate();
+  const [kind, setKind] = useState<CatalogKind>("anime");
   const [rows, setRows] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,9 +47,33 @@ export function AZCatalog({
     let alive = true;
     setLoading(true);
     setRows([]);
-    void load({ letter, page: 1 })
+    const starts = (title: unknown) =>
+      String(title ?? "").trim().toUpperCase().startsWith(letter);
+    const request: Promise<Card[]> =
+      kind === "anime"
+        ? load({ letter, page: 1 }).then((list) => (list ?? []) as Card[])
+        : kind === "donghua"
+          ? searchDonghua({ q: letter, limit: 60 }).then((list) =>
+              ((list ?? []) as any[])
+                .filter((c) => starts(c.title))
+                .map((c) => ({ ...c, source: "sanka" })),
+            )
+          : searchFilms({ q: letter }).then((list) =>
+              ((list ?? []) as any[])
+                .filter((c) => starts(c.title))
+                .map((c) => ({
+                  id: String(c.id),
+                  title: c.title,
+                  image: c.image,
+                  score: c.rating,
+                  status: c.kind === "tv" ? "Series" : "Movie",
+                  source: "film",
+                  filmKind: c.kind === "tv" ? "tv" : "movie",
+                })),
+            );
+    void request
       .then((list) => {
-        if (alive) setRows((list ?? []) as Card[]);
+        if (alive) setRows(list);
       })
       .catch(() => {
         if (alive) setRows([]);
@@ -52,7 +84,16 @@ export function AZCatalog({
     return () => {
       alive = false;
     };
-  }, [letter, load]);
+  }, [letter, kind, load, searchDonghua, searchFilms]);
+
+  const pickCard = (a: Card) => {
+    if (a.source === "film") {
+      onClose();
+      navigate(`/film?film=${encodeURIComponent(a.id)}&t=${a.filmKind === "tv" ? "tv" : "movie"}`);
+      return;
+    }
+    onPick(a.id, a.title, a.source ?? "anilist");
+  };
 
   return (
     <div className="screen-enter fixed inset-0 z-[92] flex flex-col bg-[#07080d]">
@@ -83,6 +124,28 @@ export function AZCatalog({
           <X className="size-4" />
         </button>
       </header>
+
+      <div className="flex w-fit items-center gap-1 rounded-full border border-white/10 bg-white/[0.045] p-1 mx-3 mt-2 backdrop-blur-xl">
+        {([
+          ["anime", "Anime"],
+          ["donghua", "Donghua"],
+          ["film", "Film"],
+        ] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setKind(k)}
+            className={cn(
+              "rounded-full px-3 py-1.5 text-[10px] font-black transition",
+              kind === k
+                ? "bg-white text-black shadow-[0_5px_14px_-7px_rgba(255,255,255,.8)]"
+                : "text-white/50 hover:text-white/85",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex min-h-0 flex-1">
         {/* Rail A–Z vertikal di kiri — lebih lebar & membulat. */}
@@ -129,7 +192,7 @@ export function AZCatalog({
               {rows.map((a) => (
                 <button
                   key={a.id}
-                  onClick={() => onPick(a.id, a.title, a.source ?? "anilist")}
+                  onClick={() => pickCard(a)}
                   className="group min-w-0 text-left"
                 >
                   <span className="relative block overflow-hidden rounded-xl border border-white/10 bg-black">
@@ -145,15 +208,15 @@ export function AZCatalog({
                         <Grid3X3 className="size-5 text-white/20" />
                       </span>
                     )}
-                    {typeof a.score === "number" && a.score > 0 && (
-                      <span className="absolute bottom-1 right-1 inline-flex items-center gap-0.5 rounded-md bg-black/75 px-1 py-0.5 text-[8.5px] font-black text-gold-strong backdrop-blur">
-                        <Star className="size-2 fill-current" />
-                        {a.score.toFixed(1)}
-                      </span>
-                    )}
+                    <PosterStatusBadge status={a.status} />
+                    <PosterRatingBadge score={a.score} />
                   </span>
                   <span className="mt-1 line-clamp-2 block text-[10.5px] font-semibold leading-snug text-white/80">
                     {a.title}
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1 text-[8.5px] font-semibold text-white/35">
+                    {kind === "film" ? <Film className="size-2.5" /> : null}
+                    {a.status ?? (kind === "film" ? "Film" : "Anime")}
                   </span>
                 </button>
               ))}

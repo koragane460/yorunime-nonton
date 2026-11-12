@@ -647,6 +647,26 @@ const schema = defineSchema(
       .index("userId_created", ["userId", "createdAt"])
       .index("userId_anime", ["userId", "animeId"]),
 
+    /** Playlist bookmark buatan user (di samping bookmark Default). */
+    bookmarkLists: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      createdAt: v.number(),
+    }).index("userId_created", ["userId", "createdAt"]),
+
+    bookmarkItems: defineTable({
+      listId: v.id("bookmarkLists"),
+      userId: v.id("users"),
+      itemId: v.string(),
+      title: v.string(),
+      image: v.optional(v.string()),
+      kind: v.optional(v.string()),
+      status: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("listId_created", ["listId", "createdAt"])
+      .index("userId_item", ["userId", "itemId"]),
+
     /** Suka/tidak suka satu anime — tombol Like menyatu di layar nonton. */
     animeLikes: defineTable({
       userId: v.id("users"),

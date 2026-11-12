@@ -9,7 +9,8 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BookOpen, CalendarDays, ChevronLeft, Eye, Heart, Lock } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, ChevronLeft, Eye, Lock } from "lucide-react";
+import { BookmarkPickerSheet } from "@/components/BookmarkPicker";
 import { StripBackIcon } from "@/components/StripBack";
 
 /** Nama hari Indonesia — dipakai tag "Update setiap …" (komik ongoing). */
@@ -83,6 +84,7 @@ export function ComicDetailScreen({
   const [showAll, setShowAll] = useState(false);
   // Layer "Premium Only" muncul kalau user tanpa Premium mencoba membaca.
   const [showGate, setShowGate] = useState(false);
+  const [bookmarkOpen, setBookmarkOpen] = useState(false);
   const isPremium = (user?.premiumUntil ?? 0) > Date.now();
 
   useEffect(() => {
@@ -140,6 +142,30 @@ export function ComicDetailScreen({
           aria-hidden
         />
       )}
+      {bookmarkOpen && d && (
+        <BookmarkPickerSheet
+          item={{
+            id: d.slug,
+            title: d.title,
+            image: d.image,
+            kind: d.kind,
+            status: d.ongoing ? "Ongoing" : "Completed",
+          }}
+          defaultSaved={!!isFav}
+          onToggleDefault={async () => {
+            if (!user || !d) return;
+            const r = await toggleFav({
+              slug: d.slug,
+              comicTitle: d.title,
+              comicImage: d.image,
+              kind: d.kind,
+              ongoing: d.ongoing,
+            });
+            toast.success(r.favorited ? "Masuk Subscribe" : "Dihapus dari Subscribe");
+          }}
+          onClose={() => setBookmarkOpen(false)}
+        />
+      )}
       <div className="pb-24">
         {/* Banner — manga memakai potret memanjang, manhua banner lebar webtoon */}
         <div className="relative">
@@ -157,25 +183,16 @@ export function ComicDetailScreen({
               <StripBackIcon />
             </button>
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (!user || !d) return;
-                const r = await toggleFav({
-                  slug: d.slug,
-                  comicTitle: d.title,
-                  comicImage: d.image,
-                  kind: d.kind,
-                  // Status berjalan/tamat ikut disimpan untuk pengelompokan
-                  // Ongoing / Completed di layar Subscribe.
-                  ongoing: d.ongoing,
-                });
-                toast.success(r.favorited ? "Masuk favorite" : "Dihapus dari favorite");
+                setBookmarkOpen(true);
               }}
               className="rounded-full bg-black/55 p-2 backdrop-blur"
             >
-              <Heart
+              <Bell
                 className={cn(
                   "size-5",
-                  isFav ? "fill-red-500 text-red-500" : "text-white",
+                  isFav ? "fill-gold text-gold" : "text-white",
                 )}
               />
             </button>

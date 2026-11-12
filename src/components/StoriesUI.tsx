@@ -27,15 +27,19 @@ import {
   ChevronRight,
   Crop,
   Eye,
+  Globe,
   Image as ImageIcon,
   Loader2,
   Lock,
   Music2,
   Search,
+  ShieldCheck,
   Sticker,
   Trash2,
   Type,
+  Users,
   Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -161,7 +165,7 @@ const PRIVACY_OPTIONS: { id: "all" | "teman" | "diri"; label: string; hint: stri
 const TOOLS: { id: Tool; label: string; icon: typeof Type }[] = [
   { id: "teks", label: "Teks", icon: Type },
   { id: "stiker", label: "Stiker", icon: Sticker },
-  { id: "pangkas", label: "Pangkas", icon: Crop },
+  { id: "pangkas", label: "Ukuran", icon: Crop },
   { id: "suara", label: "Suara", icon: Volume2 },
   { id: "privasi", label: "Privasi", icon: Lock },
 ];
@@ -932,13 +936,16 @@ export function StoryEditor({
               }}
               aria-label={t.label}
               className={cn(
-                "flex size-10 items-center justify-center rounded-full border backdrop-blur-sm transition active:scale-95",
+                "flex h-[50px] w-[52px] flex-col items-center justify-center gap-1 rounded-2xl border backdrop-blur-md transition active:scale-95",
                 tool === t.id
-                  ? "border-white bg-white text-black"
-                  : "border-white/20 bg-black/50 text-white hover:border-white/40",
+                  ? "border-white/70 bg-white text-black shadow-[0_10px_26px_-12px_rgba(255,255,255,.65)]"
+                  : "border-white/15 bg-[#15131c]/80 text-white hover:border-white/40 hover:bg-[#1d1a26]/90",
               )}
             >
-              <t.icon className="size-[18px]" />
+              <t.icon className="size-[18px]" strokeWidth={2.2} />
+              <span className="text-[7px] font-black uppercase tracking-[0.06em]">
+                {t.label}
+              </span>
             </button>
           ))}
         </div>
@@ -946,7 +953,7 @@ export function StoryEditor({
         {/* LAYAR TULIS FULLSCREEN — teks ditulis di area besar, kontrol
             menempel di atas keyboard. Bukan panel kecil di bawah lagi. */}
         {tool === "teks" && (
-          <div className="absolute inset-0 z-30 flex flex-col bg-black/60 backdrop-blur-[2px]">
+          <div className="absolute inset-0 z-30 flex flex-col bg-[#090810]">
             <div className="flex items-center gap-2 px-3 pt-3">
               <button
                 type="button"
@@ -1077,9 +1084,10 @@ export function StoryEditor({
           </div>
         )}
 
-        {/* STICKER FULLSCREEN — overlay abu-abu 40%, tanpa panel kecil. */}
+        {/* STICKER FULLSCREEN — latar solid supaya halaman di belakang tidak
+            ikut terlihat. */}
         {tool === "stiker" && (
-          <div className="absolute inset-0 z-30 flex flex-col bg-black/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0 z-30 flex flex-col bg-[#090810]">
             <div className="flex items-center gap-2 px-3 pt-3">
               <button
                 type="button"
@@ -1152,6 +1160,42 @@ export function StoryEditor({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Kontrol ukuran setelah menulis — tetap bisa diubah tanpa membuka
+            editor teks lagi. */}
+        {selText && tool === null && (
+          <div className="absolute bottom-24 left-1/2 z-20 flex w-[min(92%,330px)] -translate-x-1/2 items-center gap-2 rounded-2xl border border-white/15 bg-[#14121b]/90 px-3 py-2 shadow-[0_16px_36px_-22px_rgba(0,0,0,.95)] backdrop-blur-xl">
+            <span className="shrink-0 text-[8px] font-black uppercase tracking-[0.12em] text-white/45">
+              Ukuran
+            </span>
+            <button
+              type="button"
+              onClick={() => updateSelText({ scale: Math.max(0.5, selText.scale - 0.12) })}
+              className="grid size-7 shrink-0 place-items-center rounded-lg border border-white/12 bg-white/[0.06] text-[11px] font-black text-white/75"
+              aria-label="Perkecil teks"
+            >
+              A-
+            </button>
+            <input
+              type="range"
+              min={0.5}
+              max={3}
+              step={0.01}
+              value={selText.scale}
+              onChange={(e) => updateSelText({ scale: Number(e.target.value) })}
+              className="min-w-0 flex-1 accent-sky-400"
+              aria-label="Ukuran teks"
+            />
+            <button
+              type="button"
+              onClick={() => updateSelText({ scale: Math.min(3, selText.scale + 0.12) })}
+              className="grid size-7 shrink-0 place-items-center rounded-lg border border-white/12 bg-white/[0.06] text-[11px] font-black text-white/75"
+              aria-label="Perbesar teks"
+            >
+              A+
+            </button>
           </div>
         )}
 
@@ -1386,33 +1430,48 @@ export function StoryEditor({
 
           {/* ----------------------------- PANGKAS ---------------------------- */}
           {tool === "pangkas" && (
-            <div className="space-y-2.5">
-              <p className="flex items-center gap-1.5 text-[12px] font-bold">
-                <Crop className="size-3.5" /> Pangkas ukuran
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-[12px] font-black">
+                  <Crop className="size-3.5 text-sky-300" /> Ukuran frame
+                </p>
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[9px] font-black text-white/50">
+                  {edit.crop.zoom.toFixed(2)}x
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
                 {ASPECTS.map((a) => (
                   <button
                     key={a.id}
                     onClick={() => current && setEdit(current.url, { crop: { ...edit.crop, aspect: a.id } })}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-[11px] font-semibold",
+                      "flex flex-col items-center gap-1.5 rounded-xl border px-1 py-2 transition active:scale-[0.97]",
                       edit.crop.aspect === a.id
-                        ? "border-white bg-white text-black"
-                        : "border-white/30 text-white/80",
+                        ? "border-sky-400/60 bg-sky-400/10 text-sky-100"
+                        : "border-white/10 bg-white/[0.03] text-white/55",
                     )}
                   >
-                    {a.label}
+                    <span
+                      className={cn("block rounded-[3px] border", edit.crop.aspect === a.id ? "border-sky-300" : "border-white/30")}
+                      style={{
+                        width: a.ratio ? (a.id === "16:9" ? 26 : a.id === "4:5" ? 14 : 20) : 20,
+                        height: a.ratio ? (a.id === "16:9" ? 15 : a.id === "4:5" ? 18 : 20) : 15,
+                      }}
+                    />
+                    <span className="text-[8.5px] font-black">{a.label}</span>
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-white/70">Zoom</span>
+              <div className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+                <div className="flex items-center justify-between text-[10px] font-bold text-white/60">
+                  <span>Zoom media</span>
+                  <span className="font-mono text-white/40">{Math.round(edit.crop.zoom * 100)}%</span>
+                </div>
                 <input
                   type="range"
                   min={1}
                   max={2.5}
-                  step={0.05}
+                  step={0.01}
                   value={edit.crop.zoom}
                   onChange={(e) =>
                     current &&
@@ -1420,16 +1479,9 @@ export function StoryEditor({
                       crop: { ...edit.crop, zoom: Number(e.target.value) },
                     })
                   }
-                  className="flex-1"
+                  className="mt-2 w-full accent-sky-400"
                 />
-                <span className="w-8 text-right text-[10px] text-white/60">
-                  {edit.crop.zoom.toFixed(2)}x
-                </span>
               </div>
-              <p className="text-[10px] text-white/45">
-                Pilih rasio frame lalu atur zoom. Foto &amp; video dipangkas
-                mengikuti frame saat ditonton.
-              </p>
             </div>
           )}
 
@@ -1521,82 +1573,86 @@ export function StoryEditor({
 
           {/* ------------------------------ SUARA ----------------------------- */}
           {tool === "suara" && (
-            <div className="space-y-3">
-              <p className="flex items-center gap-1.5 text-[12px] font-bold">
-                <Volume2 className="size-3.5" /> Suara
+            <div className="space-y-2.5">
+              <p className="flex items-center gap-1.5 text-[12px] font-black">
+                <Volume2 className="size-3.5 text-sky-300" /> Pengaturan suara
               </p>
-              <div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-white/80">Suara asli (video)</span>
-                  <span className="font-mono text-white/55">
-                    {Math.round(mediaVol * 100)}%
-                  </span>
+              {[
+                { label: "Suara video", hint: "Audio asli media", value: mediaVol, set: setMediaVol, Icon: Volume2 },
+                { label: "Lagu tambahan", hint: "Musik latar story", value: musicVol, set: setMusicVol, Icon: Music2 },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/70">
+                      <s.Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[10.5px] font-black text-white">{s.label}</span>
+                      <span className="block text-[8.5px] text-white/35">{s.hint}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => s.set(s.value > 0 ? 0 : 0.6)}
+                      className="grid size-7 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-white/55"
+                      aria-label={`${s.value > 0 ? "Bisukan" : "Nyalakan"} ${s.label}`}
+                    >
+                      {s.value > 0 ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
+                    </button>
+                    <span className="w-9 text-right font-mono text-[9px] font-black text-sky-200">
+                      {Math.round(s.value * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={s.value}
+                    onChange={(e) => s.set(Number(e.target.value))}
+                    className="mt-2 w-full accent-sky-400"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={mediaVol}
-                  onChange={(e) => setMediaVol(Number(e.target.value))}
-                  className="mt-1 w-full"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-white/80">Suara tambahan (musik)</span>
-                  <span className="font-mono text-white/55">
-                    {Math.round(musicVol * 100)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={musicVol}
-                  onChange={(e) => setMusicVol(Number(e.target.value))}
-                  className="mt-1 w-full"
-                />
-              </div>
-              <p className="text-[10px] text-white/45">
-                Atur keseimbangan suara asli video dan lagu tambahan. Musik
-                pratinjau langsung mengikuti slider ini.
-              </p>
+              ))}
             </div>
           )}
 
           {/* ----------------------------- PRIVASI ---------------------------- */}
           {tool === "privasi" && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-[12px] font-bold">
-                <Lock className="size-3.5" /> Siapa yang bisa melihat
+              <p className="flex items-center gap-1.5 text-[12px] font-black">
+                <ShieldCheck className="size-3.5 text-sky-300" /> Siapa yang bisa melihat
               </p>
-              {PRIVACY_OPTIONS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setPrivacy(p.id)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition",
-                    privacy === p.id
-                      ? "border-sky-400 bg-sky-400/10"
-                      : "border-white/15 hover:border-white/40",
-                  )}
-                >
-                  <span
+              {PRIVACY_OPTIONS.map((p) => {
+                const Icon = p.id === "all" ? Globe : p.id === "teman" ? Users : Lock;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setPrivacy(p.id)}
                     className={cn(
-                      "flex size-4 shrink-0 items-center justify-center rounded-full border",
-                      privacy === p.id ? "border-sky-400 bg-sky-400" : "border-white/40",
+                      "flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2.5 text-left transition active:scale-[0.99]",
+                      privacy === p.id
+                        ? "border-sky-400/55 bg-sky-400/10"
+                        : "border-white/10 bg-white/[0.025] hover:border-white/30",
                     )}
                   >
-                    {privacy === p.id && <Check className="size-3 text-black" />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[12px] font-bold">{p.label}</span>
-                    <span className="block text-[10px] text-white/55">{p.hint}</span>
-                  </span>
-                </button>
-              ))}
+                    <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", privacy === p.id ? "bg-sky-400/15 text-sky-200" : "bg-white/[0.05] text-white/45")}>
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-black text-white">{p.label}</span>
+                      <span className="block text-[9px] leading-snug text-white/40">{p.hint}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "grid size-4 shrink-0 place-items-center rounded-full border",
+                        privacy === p.id ? "border-sky-400 bg-sky-400" : "border-white/25",
+                      )}
+                    >
+                      {privacy === p.id && <Check className="size-2.5 text-black" />}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
           </div>
@@ -1605,27 +1661,50 @@ export function StoryEditor({
 
       {/* Bar bawah: hanya kotak panjang musik — semua tombol alat lain sudah
           pindah ke kolom vertikal di kanan pratinjau. */}
-      <div className="border-t border-white/15 bg-black/80 p-2.5">
-        <button
-          onClick={() => setTool((v) => (v === "musik" ? null : "musik"))}
-          className={cn(
-            "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition",
-            tool === "musik"
-              ? "border-sky-400 bg-sky-400/10"
-              : "border-white/20 bg-white/5 hover:border-white/40",
+      <div className="border-t border-white/10 bg-[#0b0a10]/95 p-2.5 backdrop-blur-xl">
+        <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-[linear-gradient(120deg,rgba(255,255,255,.07),rgba(255,255,255,.025))] p-1.5">
+          <button
+            onClick={() => setTool((v) => (v === "musik" ? null : "musik"))}
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+          >
+            <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#211a2a] text-sky-200">
+              {music?.cover ? (
+                <img src={music.cover} alt="" className="absolute inset-0 size-full object-cover" />
+              ) : (
+                <Music2 className="size-4" />
+              )}
+              {music && (
+                <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 items-end gap-0.5">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 animate-pulse rounded-full bg-white"
+                      style={{ height: 4 + i * 3, animationDelay: `${i * 120}ms` }}
+                    />
+                  ))}
+                </span>
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[11px] font-black text-white">
+                {music ? music.title : "Pilih lagu untuk story"}
+              </span>
+              <span className="mt-0.5 block truncate text-[9px] text-white/45">
+                {music ? music.artist : "Cari dari katalog musik"}
+              </span>
+            </span>
+            <ChevronRight className={cn("size-4 shrink-0 text-white/40 transition", tool === "musik" && "rotate-90")} />
+          </button>
+          {music && (
+            <button
+              onClick={() => setMusic(null)}
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06] text-white/50"
+              aria-label="Hapus lagu"
+            >
+              <X className="size-3.5" />
+            </button>
           )}
-        >
-          <Music2 className="size-4 shrink-0 text-sky-300" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[11px] font-bold">
-              {music ? music.title : "Pilih lagu untuk story"}
-            </span>
-            <span className="block truncate text-[9px] text-white/50">
-              {music ? music.artist : "Ketuk untuk mencari lagu"}
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-white/40" />
-        </button>
+        </div>
       </div>
     </div>,
     document.body,

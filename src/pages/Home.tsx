@@ -10,6 +10,7 @@ import { AnimeCard, AnimeGrid, SectionTitle, Avatar, BlueCheck, ClanTag, LevelBa
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
 import { STAFF_BADGE, avatarFallback } from "@/lib/lstream";
 import { ProfileSheet } from "@/components/ProfileSheet";
+import { BookmarkPickerSheet } from "@/components/BookmarkPicker";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { StripBack } from "@/components/StripBack";
 import { VoteScreen } from "@/components/VoteScreen";
@@ -2281,7 +2282,7 @@ function SearchResultRow({
           )}
         </div>
         {synopsis && (
-          <p className="mt-1 text-[12px] leading-snug text-foreground/70 line-clamp-2">
+          <p className="mt-1 line-clamp-4 text-[12px] leading-snug text-foreground/70">
             {synopsis}
           </p>
         )}
@@ -2353,8 +2354,10 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   const searchAnime = useAction(api.anime.animeSearch);
   const searchDonghua = useAction(api.sanka.donghuaSearchCards);
   const searchFilms = useAction(api.films.search);
+  const translateSynopses = useAction(api.anime.translateSynopses);
   // Media yang sedang dicari: anime, donghua, atau film.
   const [media, setMedia] = useState<"anime" | "donghua" | "film">("anime");
+  const searchSeq = useRef(0);
   const loadGenre = useAction(api.anime.animeByGenre);
   const loadGenres = useAction(api.anime.animeByGenres);
   const loadAll = useAction(api.anime.animeTop);
@@ -2475,6 +2478,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       onOpenMusic();
       return;
     }
+    const seq = ++searchSeq.current;
     setSearching(true);
     // Kegiatan cari → Daily Quest "cari 3 judul" + daftar Baru Saja.
     bumpQuestLocal("search");
@@ -2566,16 +2570,37 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
             : merged.filter(
                 (m) => m.source !== "sanka" && m.source !== "film",
               );
-      SEARCH_CACHE.set(cacheKey, merged);
+      // Tampilkan hasil lebih dulu supaya pencarian tidak terasa menggantung
+      // saat terjemahan sinopsis masih berjalan.
+      if (seq === searchSeq.current) {
+        setResults(filtered);
+        setSearching(false);
+      }
+      // Terjemahkan sinopsis hasil ke Bahasa Indonesia (best-effort).
+      let localized = filtered;
+      try {
+        const texts = filtered.slice(0, 20).map((m: any) => String(m.synopsis ?? ""));
+        if (texts.some((t) => t.length > 20)) {
+          const idTexts = await translateSynopses({ texts });
+          localized = filtered.map((m: any, i) =>
+            i < idTexts.length && idTexts[i]
+              ? { ...m, synopsis: idTexts[i] }
+              : m,
+          );
+        }
+      } catch {
+        /* tetap pakai sinopsis sumber */
+      }
+      SEARCH_CACHE.set(cacheKey, localized);
       if (SEARCH_CACHE.size > SEARCH_CACHE_MAX) {
         const oldest = SEARCH_CACHE.keys().next().value;
         if (oldest) SEARCH_CACHE.delete(oldest);
       }
-      setResults(filtered);
+      if (seq === searchSeq.current) setResults(localized);
     } catch {
-      setResults([]);
+      if (seq === searchSeq.current) setResults([]);
     }
-    setSearching(false);
+    if (seq === searchSeq.current) setSearching(false);
   };
 
   // Ganti status 18+ → cari ulang otomatis.
@@ -2643,7 +2668,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
         </div>
 
         {/* TAB MEDIA — Anime · Donghua · Film (manga/manhwa dihapus). */}
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {([
             ["anime", "Anime"],
             ["donghua", "Donghua"],
@@ -2653,13 +2678,19 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
               key={key}
               onClick={() => setMedia(key)}
               className={cn(
-                "rounded-xl py-2 text-[11px] font-black transition",
+                "relative overflow-hidden rounded-full border py-2 text-[11px] font-black transition active:scale-[0.97]",
                 media === key
-                  ? "bg-white text-black"
-                  : "bg-white/[0.06] text-white/60 hover:text-white",
+                  ? "border-white/70 bg-white text-black shadow-[0_8px_22px_-12px_rgba(255,255,255,.7)]"
+                  : "border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,.17),rgba(255,255,255,.045)_48%,rgba(255,255,255,.1))] text-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,.3)] backdrop-blur-xl hover:text-white",
               )}
             >
-              {label}
+              {media !== key && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-2 -top-3 h-6 rounded-full bg-white/20 blur-md"
+                />
+              )}
+              <span className="relative">{label}</span>
             </button>
           ))}
         </div>
@@ -3561,6 +3592,7 @@ function AnimeDetailScreen({
   const getChars = useAction(api.anime.animeCharacters);
   const [chars, setChars] = useState<{ id: string; name: string; image: string }[]>([]);
   const [detail, setDetail] = useState<any>(null);
+  const [bookmarkOpen, setBookmarkOpen] = useState(false);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [episodeOrder, setEpisodeOrder] = useState<"first" | "last">("first");
   const [allEpisodes, setAllEpisodes] = useState(false);
@@ -3894,19 +3926,9 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                 aria-label="Subscribe"
                 title={isFav ? "Sudah subscribe" : "Subscribe"}
                 className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.05] transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.97]"
-                onClick={async () => {
+                onClick={() => {
                   if (!user) return;
-                  const r = await toggleFav({
-                    animeId,
-                    animeTitle: detail.title,
-                    animeImage: detail.image,
-                    status: detail.status ?? undefined,
-                  });
-                  toast.success(
-                    r.favorited
-                      ? "Ditambahkan ke favorite"
-                      : "Dihapus dari favorite",
-                  );
+                  setBookmarkOpen(true);
                 }}
               >
                 <Bell
@@ -3924,6 +3946,33 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
             )}
           </div>
 
+
+          {bookmarkOpen && (
+            <BookmarkPickerSheet
+              item={{
+                id: animeId,
+                title: detail.title ?? animeTitle ?? "Anime",
+                image: detail.image,
+                kind: "anime",
+                status: detail.status,
+              }}
+              defaultSaved={!!isFav}
+              onToggleDefault={async () => {
+                const r = await toggleFav({
+                  animeId,
+                  animeTitle: detail.title,
+                  animeImage: detail.image,
+                  status: detail.status ?? undefined,
+                });
+                toast.success(
+                  r.favorited
+                    ? "Ditambahkan ke Subscribe"
+                    : "Dihapus dari Subscribe",
+                );
+              }}
+              onClose={() => setBookmarkOpen(false)}
+            />
+          )}
 
           {/* Panel info developer: data teknis untuk tools konten. */}
           {devInfoOpen && devAccess?.level === "dev" && (
@@ -4754,8 +4803,13 @@ function DonghuaDetailScreen({
   const getDetail = useAction(api.sanka.detail);
   const { user } = useAuth();
   const toggleFav = useMutation(api.activities.toggleFavorite);
+  const isFav = useQuery(
+    api.activities.isFavorite,
+    user ? { animeId: `donghua:${slug}` } : "skip",
+  );
   const [detail, setDetail] = useState<SankaDetailShape | null>(null);
   const [failed, setFailed] = useState(false);
+  const [bookmarkOpen, setBookmarkOpen] = useState(false);
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [allEpisodes, setAllEpisodes] = useState(false);
 
@@ -4956,10 +5010,29 @@ function DonghuaDetailScreen({
                 : "Belum ada episode"}
             </button>
             <button
-              aria-label="Favorite"
+              aria-label="Bookmark"
               className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.05] px-4 text-sm font-bold text-white transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.98]"
-              onClick={async () => {
+              onClick={() => {
                 if (!user) return;
+                setBookmarkOpen(true);
+              }}
+            >
+              <Bell className={cn("size-4", isFav && "fill-current text-gold")} />
+              Bookmark
+            </button>
+          </div>
+
+          {bookmarkOpen && (
+            <BookmarkPickerSheet
+              item={{
+                id: `donghua:${slug}`,
+                title: detail.title,
+                image: banner,
+                kind: "donghua",
+                status: detail.status,
+              }}
+              defaultSaved={!!isFav}
+              onToggleDefault={async () => {
                 const r = await toggleFav({
                   animeId: `donghua:${slug}`,
                   animeTitle: detail.title,
@@ -4970,16 +5043,13 @@ function DonghuaDetailScreen({
                 });
                 toast.success(
                   r.favorited
-                    ? "Ditambahkan ke favorite"
-                    : "Dihapus dari favorite",
+                    ? "Ditambahkan ke Subscribe"
+                    : "Dihapus dari Subscribe",
                 );
               }}
-            >
-              <Bell className="size-4" aria-hidden />
-              Favorite
-            </button>
-          </div>
-
+              onClose={() => setBookmarkOpen(false)}
+            />
+          )}
 
           {/* Kolom karakter donghua — di bawah tombol Nonton/Favorite,
               sebelum sinopsis. */}

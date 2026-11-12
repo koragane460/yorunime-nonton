@@ -199,13 +199,6 @@ function PodiumEntry({
     >
       <span className={cn("relative flex items-center justify-center", center ? "mb-2" : "mb-1.5")}>
         {rank === 1 && <ParticleBurst />}
-        {rank === 1 && (
-          <Crown
-            className="absolute -top-5 left-1/2 z-20 size-6 -translate-x-1/2 text-gold-strong drop-shadow-[0_2px_8px_rgba(255,210,63,.7)]"
-            fill="currentColor"
-            aria-hidden
-          />
-        )}
         <FramedAvatar
           border={border}
           src={image}
@@ -377,13 +370,6 @@ function GrandPlace({
     >
       <span className="relative mb-2 flex flex-col items-center">
         {place === 1 && <ParticleBurst />}
-        {place === 1 && (
-          <Crown
-            className="absolute -top-7 left-1/2 z-20 size-7 -translate-x-1/2 text-[#FFE58A] drop-shadow-[0_0_10px_rgba(255,210,63,.8)]"
-            fill="currentColor"
-            aria-hidden
-          />
-        )}
         <span className="relative">
           <span
             aria-hidden
@@ -490,16 +476,11 @@ function GrandPodium({
   onOpen?: (id?: string) => void;
 }) {
   const byRank = new Map(entries.map((e) => [e.rank, e]));
-  const ordered = [
-    { place: 2 as const, entry: byRank.get(2) },
-    { place: 1 as const, entry: byRank.get(1) },
-    { place: 3 as const, entry: byRank.get(3) },
-  ].filter((x) => x.entry);
   return (
-    <div className="relative flex h-full items-end justify-center gap-1.5 px-0 pb-1">
-      {ordered.map(({ place, entry }) => (
-        <GrandPlace key={place} entry={entry} place={place} onOpen={onOpen} />
-      ))}
+    <div className="relative flex items-end justify-between gap-1.5 px-0 pb-1">
+      <GrandPlace entry={byRank.get(2)} place={2} onOpen={onOpen} />
+      <GrandPlace entry={byRank.get(1)} place={1} onOpen={onOpen} />
+      <GrandPlace entry={byRank.get(3)} place={3} onOpen={onOpen} />
     </div>
   );
 }
@@ -851,8 +832,8 @@ function LeaderOverlay({
           ))}
         </div>
 
-        <section className={cn("relative overflow-hidden rounded-3xl border p-3", tone.frame)}>
-          <span className="pointer-events-none absolute inset-0 opacity-45 [background-size:22px_22px] [background-image:radial-gradient(rgba(255,255,255,.07)_1px,transparent_1.2px)]" />
+        <section className="relative overflow-hidden py-1">
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,.06),transparent_64%)]" />
           <div className="relative flex items-center justify-between gap-2">
             <span
               className={cn(

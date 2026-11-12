@@ -57,9 +57,11 @@ export function ContinueWatchingCard({
   if (!rows || rows.length === 0) return null;
 
   return (
-    <section className="fade-enter mt-5">
+    <section className="fade-enter mt-5 pl-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[15px] font-black tracking-tight text-white">Terakhir ditonton</h2>
+        <h2 className="text-[15px] font-medium tracking-tight text-white/85">
+          Terakhir <span className="font-black text-white">ditonton</span>
+        </h2>
         <button
           type="button"
           onClick={onHistory}
@@ -68,7 +70,7 @@ export function ContinueWatchingCard({
           Riwayat <ArrowRight className="size-3" />
         </button>
       </div>
-      <div className="thin-scroll -mx-4 mt-2 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="thin-scroll -mr-4 mt-2 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pr-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {rows.slice(0, 12).map((h) => {
           const duration = h.durationSec && h.durationSec > 0 ? h.durationSec : 1440;
           const progress = Math.max(0, h.progressSec ?? 0);

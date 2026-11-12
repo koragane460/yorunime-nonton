@@ -9,6 +9,7 @@ import {
   Clapperboard,
   Clock,
   Film as FilmIcon,
+  Bell,
   Heart,
   Loader2,
   Play,
@@ -21,6 +22,7 @@ import { api } from "@/convex/_generated/api";
 import { useHideNavOnMount } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { CommentsSection, type CommentT } from "@/components/Comments";
+import { BookmarkPickerSheet } from "@/components/BookmarkPicker";
 import { SectionTitle } from "@/components/lstream-ui";
 import { cn } from "@/lib/utils";
 import type {
@@ -376,6 +378,7 @@ function FilmDetail({
   const [d, setD] = useState<FilmDetailT | null>(null);
   const [tab, setTab] = useState<"info" | "cast">("info");
   const [synopsisOpen, setSynopsisOpen] = useState(false);
+  const [bookmarkOpen, setBookmarkOpen] = useState(false);
   /** NONTON → layar TERPISAH (pemutar + komentar saja), bukan di detail. */
   const [watching, setWatching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -528,16 +531,31 @@ function FilmDetail({
             {kind === "tv" ? "Nonton Episode" : "Nonton"}
           </button>
           <button
-            onClick={() => void onSubscribe()}
+            onClick={() => (d ? setBookmarkOpen(true) : undefined)}
             className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-black text-rose-100 transition active:scale-[0.98]"
           >
-            <Heart
+            <Bell
               className={cn("size-4", favorited && "fill-current text-gold")}
               aria-hidden
             />
             {favorited ? "Subscribed" : "Subscribe"}
           </button>
         </div>
+
+        {bookmarkOpen && d && (
+          <BookmarkPickerSheet
+            item={{
+              id,
+              title: d.title,
+              image: d.image,
+              kind: "film",
+              status: kind,
+            }}
+            defaultSaved={favorited}
+            onToggleDefault={onSubscribe}
+            onClose={() => setBookmarkOpen(false)}
+          />
+        )}
 
         {/* LAYAR NONTON — pemutar + komentar saja, menutupi detail */}
         {watching && (

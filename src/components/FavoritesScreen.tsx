@@ -9,14 +9,29 @@
 // sesuai permintaan user).
 
 import { useEffect, useMemo, useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
 import { ComicDetailScreen } from "@/components/ComicDetailScreen";
 import { cn } from "@/lib/utils";
-import { Clapperboard, Crown, Filter, Heart, List, Tv, Vote as VoteIcon } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Bookmark,
+  ChevronDown,
+  ChevronRight,
+  Clapperboard,
+  Crown,
+  Filter,
+  Heart,
+  List,
+  Plus,
+  Tv,
+  Vote as VoteIcon,
+  X,
+} from "lucide-react";
 
 // Chip tipe anime/manga/manhwa/donghua DIHAPUS PERMANEN sesuai permintaan
 // user — kelompok Ongoing menampilkan SEMUA tipe tanpa penyaring.
@@ -66,6 +81,29 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
   const navigate = useNavigate();
   const favorites = useQuery(api.activities.myFavorites, user ? {} : "skip");
   const comicFavorites = useQuery(api.comics.myFavorites, user ? {} : "skip");
+  const lists = useQuery(api.bookmarks.myLists, user ? {} : "skip") as
+    | { _id: Id<"bookmarkLists">; name: string; count: number }[]
+    | undefined;
+  const createList = useMutation(api.bookmarks.createList);
+  const [activeList, setActiveList] = useState<string>("default");
+  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const playlistRows = useQuery(
+    api.bookmarks.items,
+    activeList !== "default" ? { listId: activeList as Id<"bookmarkLists"> } : "skip",
+  ) as
+    | {
+        _id: string;
+        itemId: string;
+        title: string;
+        image?: string;
+        kind?: string;
+        status?: string;
+        createdAt: number;
+      }[]
+    | undefined;
   // Top 10 hasil voting karakter — hanya terisi setelah event (7 hari) selesai.
   const top = useQuery(api.votes.topCharacters, {});
 
@@ -111,12 +149,24 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
     }
   }, [user, refreshAnimeStatuses, refreshComicStatuses]);
 
-  /** SEMUA kategori dicampur jadi satu daftar (permintaan user). */
-  const items = useMemo(
+  /** Default = semua subscribe; playlist lain = item dari bookmarkItems. */
+  const defaultItems = useMemo(
     () =>
       [...animeRows, ...comicRows].sort((a, b) => b.createdAt - a.createdAt),
     [animeRows, comicRows],
   );
+  const items = useMemo<SubRow[]>(() => {
+    if (activeList === "default") return defaultItems;
+    return (playlistRows ?? []).map((r) => ({
+      _id: r._id,
+      animeId: r.itemId,
+      animeTitle: r.title,
+      animeImage: r.image,
+      kind: r.kind ?? "anime",
+      status: r.status,
+      createdAt: r.createdAt,
+    }));
+  }, [activeList, defaultItems, playlistRows]);
 
   /** Pecah daftar jadi dua kelompok — dipakai mode "filter". */
   const { ongoingItems, doneItems } = useMemo(() => {
@@ -132,6 +182,22 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
     return { ongoingItems: ongoing, doneItems: done };
   }, [items]);
 
+  const createPlaylist = async () => {
+    const clean = newName.trim();
+    if (!clean || creating) return;
+    setCreating(true);
+    try {
+      const id = await createList({ name: clean });
+      setActiveList(String(id));
+      setNewName("");
+      setCreateOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal membuat playlist");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const emptyText =
     "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
 
@@ -139,9 +205,13 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
   const renderGrid = (list: SubRow[]) => (
     <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
       {list.map((f, i) => {
-        const key = "slug" in f ? f.slug : f.animeId;
-        const title = "slug" in f ? f.comicTitle : f.animeTitle;
-        const image = "slug" in f ? f.comicImage : f.animeImage;
+        const comic = "slug" in f;
+        const itemId = comic ? f.slug : f.animeId;
+        const itemKind = comic ? f.kind : (f.kind ?? "anime");
+        const itemStatus = !comic && f.status ? f.status : undefined;
+        const key = itemId;
+        const title = comic ? f.comicTitle : f.animeTitle;
+        const image = comic ? f.comicImage : f.animeImage;
         return (
           <motion.button
             key={key}
@@ -149,19 +219,24 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
             onClick={() => {
-              if ("slug" in f) {
+              if (itemKind === "manga" || itemKind === "manhwa") {
                 setPick({
-                  slug: f.slug,
-                  kind: f.kind === "manhwa" ? "manhwa" : "manga",
+                  slug: itemId,
+                  kind: itemKind === "manhwa" ? "manhwa" : "manga",
                 });
-              } else if ((f.kind ?? "anime") === "film") {
+              } else if (itemKind === "film") {
                 // status menyimpan jenis film (movie/tv) — lihat Film.tsx
                 navigate(
-                  `/film?film=${encodeURIComponent(f.animeId)}&t=${f.status === "tv" ? "tv" : "movie"}`,
+                  `/film?film=${encodeURIComponent(itemId)}&t=${itemStatus === "tv" ? "tv" : "movie"}`,
+                );
+              } else if (itemKind === "donghua") {
+                const slug = itemId.replace(/^donghua:/, "");
+                navigate(
+                  `/home?pilih=${encodeURIComponent(slug)}&src=sanka`,
                 );
               } else {
                 navigate(
-                  `/info?anime=${encodeURIComponent(f.animeId)}&judul=${encodeURIComponent(f.animeTitle)}`,
+                  `/home?pilih=${encodeURIComponent(itemId)}&judul=${encodeURIComponent(title)}`,
                 );
               }
             }}
@@ -209,6 +284,76 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
             transparan di ujung) — permintaan user. */}
         <h1 className="text-center text-2xl font-black tracking-tight">Subscribe</h1>
         <div className="mt-2 h-px w-full bg-gold/60" />
+
+        {/* Playlist bookmark: Default + playlist buatan user. */}
+        <div className="mt-3 flex items-center gap-1.5">
+          <div className="thin-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full border border-white/10 bg-white/[0.035] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              onClick={() => setActiveList("default")}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-black transition",
+                activeList === "default"
+                  ? "bg-white text-black"
+                  : "text-white/50 hover:text-white",
+              )}
+            >
+              <Bookmark className="size-3" />
+              Default <span className="opacity-50">({defaultItems.length})</span>
+            </button>
+            {(lists ?? []).map((l) => (
+              <button
+                key={l._id}
+                onClick={() => setActiveList(String(l._id))}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-black transition",
+                  activeList === String(l._id)
+                    ? "bg-white text-black"
+                    : "text-white/50 hover:text-white",
+                )}
+              >
+                {l.name} <span className="opacity-50">({l.count})</span>
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            aria-label="Playlist baru"
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-white/12 bg-white/[0.06] text-white/70 transition hover:bg-white/[0.12] active:scale-95"
+          >
+            <Plus className="size-4" />
+          </button>
+          {(lists?.length ?? 0) > 0 && (
+            <button
+              onClick={() => setPlaylistOpen((v) => !v)}
+              aria-label="Buka semua playlist"
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/45 transition active:scale-95"
+            >
+              <ChevronDown className={cn("size-4 transition", playlistOpen && "rotate-180")} />
+            </button>
+          )}
+        </div>
+
+        {playlistOpen && (
+          <div className="mt-2 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2 sm:grid-cols-3 md:grid-cols-4">
+            <button
+              onClick={() => { setActiveList("default"); setPlaylistOpen(false); }}
+              className="rounded-xl border border-white/8 bg-white/[0.04] px-2.5 py-2 text-left"
+            >
+              <p className="truncate text-[11px] font-black text-white">Default</p>
+              <p className="text-[9px] text-white/35">{defaultItems.length} judul</p>
+            </button>
+            {(lists ?? []).map((l) => (
+              <button
+                key={l._id}
+                onClick={() => { setActiveList(String(l._id)); setPlaylistOpen(false); }}
+                className="rounded-xl border border-white/8 bg-white/[0.04] px-2.5 py-2 text-left"
+              >
+                <p className="truncate text-[11px] font-black text-white">{l.name}</p>
+                <p className="text-[9px] text-white/35">{l.count} judul</p>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ---------------- DAFTAR SUBSCRIBE (semua tipe dicampur) ---------------- */}
         {items.length === 0 ? (
@@ -378,6 +523,46 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
           Filter
         </button>
       </div>
+
+      {createOpen && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end bg-black/65"
+          onClick={() => setCreateOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full rounded-t-[26px] border-t border-white/15 bg-[#111116] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-4"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[14px] font-black text-white">Playlist baru</p>
+              <button
+                onClick={() => setCreateOpen(false)}
+                aria-label="Tutup"
+                className="grid size-8 place-items-center rounded-full bg-white/[0.06] text-white/55"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void createPlaylist()}
+              maxLength={40}
+              placeholder="Contoh: Anime favorit, Nonton malam…"
+              className="h-11 w-full rounded-xl border border-white/12 bg-black/30 px-3 text-[13px] outline-none placeholder:text-white/30 focus:border-sky-300/45"
+            />
+            <button
+              onClick={() => void createPlaylist()}
+              disabled={!newName.trim() || creating}
+              className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-white text-[12px] font-black text-black disabled:opacity-40"
+            >
+              <Plus className="size-4" />
+              {creating ? "Membuat…" : "Buat playlist"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Layar detail manga/manhwa yang di-subscribe */}
       {pick && (

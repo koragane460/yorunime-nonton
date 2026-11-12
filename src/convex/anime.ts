@@ -1090,22 +1090,48 @@ export const animeSearch = action({
     }
     const p = Math.max(1, Math.min(6, Math.round(page ?? 1)));
     const lower = query.toLowerCase();
+    // AniList dapat memperlakukan kapitalisasi berbeda sebagai pencarian yang
+    // berbeda untuk sebagian judul. Coba bentuk asli lalu Title Case supaya
+    // "ao no hako" dan "Ao no Hako" sama-sama menemukan hasil.
+    const titleCase = query.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+    const sentenceCase =
+      query.charAt(0).toUpperCase() + query.slice(1).toLowerCase();
+    // Sebagian judul hanya cocok bila HURUF TERAKHIR ikut kapital
+    // ("Ao no Hako"), sementara kata tengah tetap kecil.
+    const sentenceLast = sentenceCase.replace(
+      /(\S+)$/,
+      (w) => w.charAt(0).toUpperCase() + w.slice(1),
+    );
+    const variants = Array.from(
+      new Set([
+        query,
+        sentenceCase,
+        sentenceLast,
+        titleCase,
+        lower,
+        query.toUpperCase(),
+      ]),
+    );
     // 1) AniList (pencarian lengkap & selalu punya MAL id → bisa distream).
     //    `isAdult` mengikuti pilihan 18+ pengguna.
     try {
-      const d = await aniGraphql(
-        `query($s:String,$p:Int,$a:Boolean){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:$a){ ${ANILIST_FIELDS} } } }`,
-        { s: query, p, a: !!adult },
-      );
-      const list = (d?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
-      if (list.length > 0) return list;
+      for (const qv of variants) {
+        const d = await aniGraphql(
+          `query($s:String,$p:Int,$a:Boolean){ Page(page:$p, perPage:50){ media(type:ANIME, search:$s, sort:SEARCH_MATCH, isAdult:$a){ ${ANILIST_FIELDS} } } }`,
+          { s: qv, p, a: !!adult },
+        );
+        const list = (d?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
+        if (list.length > 0) return list;
+      }
       // Retry tanpa sort SEARCH_MATCH — beberapa judul hanya ketemu di mode ini.
-      const d2 = await aniGraphql(
-        `query($s:String,$a:Boolean){ Page(page:1, perPage:50){ media(type:ANIME, search:$s, isAdult:$a){ ${ANILIST_FIELDS} } } }`,
-        { s: query, a: !!adult },
-      );
-      const list2 = (d2?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
-      if (list2.length > 0) return list2;
+      for (const qv of variants) {
+        const d2 = await aniGraphql(
+          `query($s:String,$a:Boolean){ Page(page:1, perPage:50){ media(type:ANIME, search:$s, isAdult:$a){ ${ANILIST_FIELDS} } } }`,
+          { s: qv, a: !!adult },
+        );
+        const list2 = (d2?.Page?.media ?? []).filter((m: any) => m?.idMal).map(anilistCard);
+        if (list2.length > 0) return list2;
+      }
     } catch {
       /* lanjut */
     }
@@ -1118,15 +1144,17 @@ export const animeSearch = action({
       return (row.payload as AnimeCard[]) ?? [];
     // 3) jikan — tanpa `sfw` supaya tidak membuat judul 18+ lenyap dari hasil.
     try {
-      const r = await jikanList(
-        `anime?q=${encodeURIComponent(query)}&limit=24&order_by=members&sort=desc`,
-      );
-      if (r.length > 0) {
-        await runCtx.runMutation(internal.anime.cacheSet, {
-          endpoint: cacheKey,
-          payload: r,
-        });
-        return r;
+      for (const qv of variants) {
+        const r = await jikanList(
+          `anime?q=${encodeURIComponent(qv)}&limit=24&order_by=members&sort=desc`,
+        );
+        if (r.length > 0) {
+          await runCtx.runMutation(internal.anime.cacheSet, {
+            endpoint: cacheKey,
+            payload: r,
+          });
+          return r;
+        }
       }
     } catch {
       /* lanjut */
@@ -1138,6 +1166,16 @@ export const animeSearch = action({
   },
 });
 
+/** Terjemahkan kumpulan sinopsis hasil pencarian ke Bahasa Indonesia. */
+export const translateSynopses = action({
+  args: { texts: v.array(v.string()) },
+  handler: async (_ctx, { texts }) => {
+    const clean = texts.slice(0, 24).map((t) => String(t ?? "").trim());
+    const out = await Promise.all(clean.map((t) => translateId(t)));
+    return out.map((t, i) => t ?? clean[i]);
+  },
+});
+
 /** Katalog A–Z: judul yang benar-benar BERAWALAN dengan huruf terpilih. */
 export const animeByLetter = action({
   args: { letter: v.string(), page: v.optional(v.number()) },
@@ -1146,7 +1184,7 @@ export const animeByLetter = action({
     if (!/^[A-Z]$/.test(L)) return [];
     return (await cached(
       runCtx,
-      `az:v3:${L}`,
+      `az:v5:${L}`,
       12 * 60 * 60 * 1000,
       async () => {
         const titleOf = (m: any) =>
@@ -1178,23 +1216,32 @@ export const animeByLetter = action({
             if (!first || first < L) lo = mid + 1;
             else hi = mid;
           }
-          const out: AnimeCard[] = [];
+          const out: { card: AnimeCard; pop: number }[] = [];
           const seen = new Set<string>();
-          for (let p = Math.max(1, lo - 1); p <= lo + 4; p++) {
+          const realAnime = new Set(["TV", "MOVIE", "ONA", "OVA"]);
+          for (let p = Math.max(1, lo - 1); p <= lo + 9; p++) {
             const { media } = await pageMedia(p);
             if (media.length === 0) break;
             for (const m of media) {
               if (!m?.idMal) continue;
+              // Buang musik/iklan/TV-short yang membuat katalog terasa aneh.
+              if (!realAnime.has(String(m?.format ?? ""))) continue;
               const title = titleOf(m);
               if (!title.toUpperCase().startsWith(L)) continue;
               const id = String(m.idMal);
               if (seen.has(id)) continue;
               seen.add(id);
-              out.push(anilistCard(m));
+              out.push({
+                card: anilistCard(m),
+                pop: Number(m?.popularity ?? 0),
+              });
             }
-            if (out.length >= 90) break;
+            if (out.length >= 260) break;
           }
-          return out;
+          return out
+            .sort((a, b) => b.pop - a.pop)
+            .slice(0, 180)
+            .map((x) => x.card);
         } catch {
           return [];
         }

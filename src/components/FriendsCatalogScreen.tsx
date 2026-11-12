@@ -201,25 +201,27 @@ function SearchResultCard({ h }: { h: Hit }) {
               </span>
               <span className="text-sm font-bold">Lihat Profile</span>
             </button>
-            <button
-              onClick={() => void add()}
-              disabled={status === "friend"}
-              className={cn(
-                "flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/5 disabled:opacity-60",
-                "border-t border-white/10",
-              )}
-            >
-              <span className="flex size-8 items-center justify-center">
-                {requestLabel === "Terkirim" ? (
-                  <Check className="size-5 text-emerald-300" />
-                ) : requestLabel === "Teman" ? (
-                  <Heart className="size-5 text-pink-300" />
-                ) : (
-                  <UserPlus className="size-5 text-white/85" />
+            <div className="px-3 pb-3 pt-1">
+              <button
+                onClick={() => void add()}
+                disabled={status === "friend"}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl border border-white/8 bg-[#2c2c31] px-3 py-2.5 text-left transition hover:bg-[#34343a] disabled:opacity-70",
+                  requestLabel === "Terkirim" && "bg-[#29292e]",
                 )}
-              </span>
-              <span className="text-sm font-bold">{requestLabel}</span>
-            </button>
+              >
+                <span className="flex size-8 items-center justify-center rounded-lg bg-white/[0.06]">
+                  {requestLabel === "Terkirim" ? (
+                    <Check className="size-5 text-emerald-300" />
+                  ) : requestLabel === "Teman" ? (
+                    <Heart className="size-5 text-pink-300" />
+                  ) : (
+                    <UserPlus className="size-5 text-white/85" />
+                  )}
+                </span>
+                <span className="text-sm font-bold">{requestLabel}</span>
+              </button>
+            </div>
             <div className="h-1" />
           </div>
         </div>
