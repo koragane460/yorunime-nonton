@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { PosterRatingBadge, PosterStatusBadge } from "@/components/lstream-ui";
-import { ArrowRight, ChevronLeft, Film, Grid3X3, LayoutGrid, Search, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, Grid3X3, LayoutGrid, Search, X } from "lucide-react";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -213,10 +213,6 @@ export function AZCatalog({
                   </span>
                   <span className="mt-1 line-clamp-2 block text-[10.5px] font-semibold leading-snug text-white/80">
                     {a.title}
-                  </span>
-                  <span className="mt-0.5 flex items-center gap-1 text-[8.5px] font-semibold text-white/35">
-                    {kind === "film" ? <Film className="size-2.5" /> : null}
-                    {a.status ?? (kind === "film" ? "Film" : "Anime")}
                   </span>
                 </button>
               ))}

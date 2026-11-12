@@ -12,7 +12,6 @@ import {
   getFirebaseIdToken,
   signInWithGoogleFirebase,
 } from "@/lib/firebase";
-import Login from "@/pages/Login";
 
 interface AuthProps {
   redirectAfterAuth?: string;

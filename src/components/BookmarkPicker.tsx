@@ -41,7 +41,6 @@ export function BookmarkPickerSheet({
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [localSaved, setLocalSaved] = useState<boolean>(defaultSaved);
 
   const create = async () => {
     const clean = name.trim();
@@ -91,7 +90,6 @@ export function BookmarkPickerSheet({
     if (!onToggleDefault) return;
     try {
       await onToggleDefault();
-      setLocalSaved((v) => !v);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal memperbarui Subscribe");
     }
@@ -125,19 +123,19 @@ export function BookmarkPickerSheet({
             onClick={() => void toggleDefault()}
             className={cn(
               "flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition",
-              localSaved
+              defaultSaved
                 ? "border-gold/35 bg-gold/[0.08]"
                 : "border-white/10 bg-white/[0.035]",
             )}
           >
             <span className="grid size-8 place-items-center rounded-lg bg-white/[0.06]">
-              <Heart className={cn("size-4", localSaved ? "fill-gold text-gold" : "text-white/50")} />
+              <Heart className={cn("size-4", defaultSaved ? "fill-gold text-gold" : "text-white/50")} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[12px] font-black text-white">Default</span>
               <span className="block text-[9px] text-white/35">Subscribe bawaan akun</span>
             </span>
-            {localSaved && <Check className="size-4 text-gold" />}
+            {defaultSaved && <Check className="size-4 text-gold" />}
           </button>
 
           {(lists ?? []).map((l) => {

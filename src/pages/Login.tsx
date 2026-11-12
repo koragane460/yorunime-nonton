@@ -25,13 +25,13 @@ import { cn } from "@/lib/utils";
  *     Klik → popup: ikon orang di atas, tulisan "Login sebagai tester",
  *     kolom username, kolom password, tombol "Log in".
  *     Password & username benar → auto-login → menu home.
- *   - Dummy tester: username "Tester YoruNime", password "yttaajadeh".
+ *   - Kredensial tester TIDAK disimpan di source; isi lewat env server lokal.
  *   - Login Google langsung → menu home.
  *   - Gate: sembunyikan Isi saat loading sesi; yang terlihat hanya splash.
  */
-/** Kredensial akun tester. */
-const TESTER_USER = "Tester YoruNime";
-const TESTER_PASS = "yttaajadeh";
+/** Kredensial tester hanya dari environment, bukan hardcoded di source. */
+const TESTER_USER = import.meta.env.VITE_TESTER_USER as string | undefined;
+const TESTER_PASS = import.meta.env.VITE_TESTER_PASS as string | undefined;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -89,7 +89,6 @@ export default function Login() {
   };
 
   // --- Tester login (username + password) ---
-  // Kredensial tester: username "Tester YoruNime", password "yttaajadeh".
   // Keduanya harus cocok supaya bisa masuk.
   const doTesterLogin = async () => {
     const u = testerUser.trim();
@@ -98,7 +97,12 @@ export default function Login() {
       setTesterErr("Username & password wajib diisi.");
       return;
     }
-    if (u !== TESTER_USER || p !== TESTER_PASS) {
+    if (
+      !TESTER_USER ||
+      !TESTER_PASS ||
+      u !== TESTER_USER ||
+      p !== TESTER_PASS
+    ) {
       setTesterErr("Username atau password tester salah.");
       return;
     }
@@ -293,7 +297,7 @@ export default function Login() {
                 <Input
                   value={testerUser}
                   onChange={(e) => setTesterUser(e.target.value)}
-                  placeholder="Tester YoruNime"
+                  placeholder="Username tester"
                   className="bg-card/50 border-border text-foreground"
                 />
               </div>
@@ -306,7 +310,7 @@ export default function Login() {
                 <Input
                   value={testerPass}
                   onChange={(e) => setTesterPass(e.target.value)}
-                  placeholder="yttaajadeh"
+                  placeholder="Password tester"
                   type="password"
                   className="bg-card/50 border-border text-foreground"
                 />

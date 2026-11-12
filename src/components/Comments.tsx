@@ -282,8 +282,6 @@ export function CommentsSection({
     return out.sort((a, b) => a.createdAt - b.createdAt);
   };
 
-  const replyList = replyTo ? repliesOf(replyTo._id) : [];
-
   return (
     <div className="px-3">
       {/* ---------- KEPALA: judul + jumlah (kiri), filter (kanan) ---------- */}
@@ -861,7 +859,9 @@ function CommentCard({
       className={cn(
         "border-b border-white/10 px-3 py-3 last:border-b-0",
         isReply && "bg-transparent",
-        mine && !isReply && "my-2 rounded-2xl border border-white/10 bg-white/[0.035]",
+        mine &&
+          !isReply &&
+          "my-2 rounded-2xl border border-white/10 border-b-0 bg-white/[0.035]",
       )}
       style={
         mine && c.bannerUrl

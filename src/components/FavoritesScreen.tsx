@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import {
   Bookmark,
   ChevronDown,
-  ChevronRight,
   Clapperboard,
   Crown,
   Filter,
@@ -47,7 +46,7 @@ function isOngoingStatus(s?: string): boolean {
   if (/(tamat|completed|selesai|finished|ended|end|movie|tv|hiatus)/.test(v)) {
     return false;
   }
-  return /(releasing|ongoing|berjalan|airing|airing|belum tamat|publishing|jalan)/.test(v);
+  return /(releasing|ongoing|berjalan|airing|belum tamat|publishing|jalan)/.test(v);
 }
 
 /** Baris favorite anime/donghua/film (tabel animeFavorites). */
@@ -176,7 +175,9 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
       const flag =
         "slug" in f
           ? f.ongoing !== false
-          : isOngoingStatus(f.status);
+          : f.status
+            ? isOngoingStatus(f.status)
+            : true;
       (flag ? ongoing : done).push(f);
     }
     return { ongoingItems: ongoing, doneItems: done };
@@ -199,7 +200,9 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
   };
 
   const emptyText =
-    "Belum ada judul yang di-subscribe. Tekan tombol hati di detail judul.";
+    activeList === "default"
+      ? "Belum ada judul yang di-subscribe. Tekan tombol lonceng di detail judul."
+      : "Playlist ini masih kosong. Tambahkan judul lewat tombol lonceng di detail.";
 
   /** Satu grid kartu — dipakai mode single & tiap kelompok (Ongoing/Completed). */
   const renderGrid = (list: SubRow[]) => (
@@ -261,8 +264,10 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
               )}
               {(f as AnimeRow).kind === "film" ? (
                 <Clapperboard className="absolute right-1.5 top-1.5 size-4 fill-gold text-gold drop-shadow" />
-              ) : (
+              ) : activeList === "default" ? (
                 <Heart className="absolute right-1.5 top-1.5 size-4 fill-white/85 text-white/85 drop-shadow" />
+              ) : (
+                <Bookmark className="absolute right-1.5 top-1.5 size-4 fill-white/75 text-white/75 drop-shadow" />
               )}
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
                 <span className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
@@ -337,7 +342,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
           <div className="mt-2 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2 sm:grid-cols-3 md:grid-cols-4">
             <button
               onClick={() => { setActiveList("default"); setPlaylistOpen(false); }}
-              className="rounded-xl border border-white/8 bg-white/[0.04] px-2.5 py-2 text-left"
+              className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-left"
             >
               <p className="truncate text-[11px] font-black text-white">Default</p>
               <p className="text-[9px] text-white/35">{defaultItems.length} judul</p>
@@ -346,7 +351,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
               <button
                 key={l._id}
                 onClick={() => { setActiveList(String(l._id)); setPlaylistOpen(false); }}
-                className="rounded-xl border border-white/8 bg-white/[0.04] px-2.5 py-2 text-left"
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-left"
               >
                 <p className="truncate text-[11px] font-black text-white">{l.name}</p>
                 <p className="text-[9px] text-white/35">{l.count} judul</p>

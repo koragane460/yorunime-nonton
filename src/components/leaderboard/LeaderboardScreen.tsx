@@ -268,7 +268,7 @@ function GiveView() {
   return (
     <div className="space-y-1.5">
       <p className="flex items-center gap-1.5 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[11px] font-black text-rose-200">
-        <Gift className="size-3.5" aria-hidden /> Paling royal bagi-bagi premium 🎁
+        <Gift className="size-3.5" aria-hidden /> Paling royal bagi-bagi premium
       </p>
       {data.map((g: any, i) => (
         <Row key={`${i + 1}-${g.userId}`} rank={i + 1} username={g.username} image={g.image} xp={g.days}
@@ -397,7 +397,7 @@ function ClanView() {
               rank={i + 4}
               username={c.name}
               image={c.avatarUrl}
-              xp={c.diamonds}
+              xp={period === "harian" ? c.diamonds : c.totalXp}
               suffix={`${meta(c)} · ${score(c)}`}
               clanTag={c.tag}
               clanTagIcon={c.tagIcon ?? DEFAULT_CLAN_ICON}

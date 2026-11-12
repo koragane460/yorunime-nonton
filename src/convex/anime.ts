@@ -1159,9 +1159,10 @@ export const animeSearch = action({
     } catch {
       /* lanjut */
     }
-    // 4) fallback statis (supaya halaman tidak pernah kosong)
-    return [...FALLBACK_TOP, ...FALLBACK_SEASON].filter(
-      (a) => a.title.toLowerCase().includes(lower) || lower.length >= 3,
+    // 4) fallback statis — hanya judul yang benar-benar cocok. Jangan
+    //    mengembalikan daftar populer yang tidak berhubungan dengan kueri.
+    return [...FALLBACK_TOP, ...FALLBACK_SEASON].filter((a) =>
+      a.title.toLowerCase().includes(lower),
     );
   },
 });
@@ -1182,7 +1183,7 @@ export const animeByLetter = action({
   handler: async (runCtx, { letter }) => {
     const L = letter.trim().toUpperCase().slice(0, 1);
     if (!/^[A-Z]$/.test(L)) return [];
-    return (await cached(
+    const list = (await cached(
       runCtx,
       `az:v5:${L}`,
       12 * 60 * 60 * 1000,
@@ -1247,6 +1248,12 @@ export const animeByLetter = action({
         }
       },
     )) as AnimeCard[];
+    if (list.length > 0) return list;
+    // Jaringan/AniList mati: tampilkan fallback lokal yang memang berawalan L,
+    // bukan halaman kosong yang membuat katalog terasa rusak.
+    return FALLBACK_TOP.filter((a) =>
+      a.title.toUpperCase().startsWith(L),
+    );
   },
 });
 

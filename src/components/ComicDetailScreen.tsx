@@ -9,7 +9,7 @@ import { CharacterRow } from "@/components/CharacterRow";
 import { PremiumOnlyGate } from "@/components/PremiumOnlyGate";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Bell, BookOpen, CalendarDays, ChevronLeft, Eye, Lock } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, Eye, Lock } from "lucide-react";
 import { BookmarkPickerSheet } from "@/components/BookmarkPicker";
 import { StripBackIcon } from "@/components/StripBack";
 

@@ -156,9 +156,10 @@ const RULE_CARDS = [
   "Jika merasa konten di YoruNime mempunyai hak cipta, jangan membuat issue untuk hal yang tidak pasti. Hubungi yorunimesupport@gmail.com.",
 ];
 
-/** Kredensial akun tester (sama dengan halaman login lama). */
-const TESTER_USER = "Tester YoruNime";
-const TESTER_PASS = "yttaajadeh";
+/** Kredensial tester hanya dari environment; jangan pernah hardcode. */
+const TESTER_USER = import.meta.env.VITE_TESTER_USER as string | undefined;
+const TESTER_PASS = import.meta.env.VITE_TESTER_PASS as string | undefined;
+const TESTER_ENABLED = !!TESTER_USER && !!TESTER_PASS;
 
 /**
  * Isi dokumen legal. GANTI teks di sini saat Privacy Policy / Terms of
@@ -451,7 +452,11 @@ function WelcomeFlow() {
   /** Tester: cek username/password dulu, baru buat sesi. */
   const doTesterLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (testerUser.trim() !== TESTER_USER || testerPass !== TESTER_PASS) {
+    if (
+      !TESTER_ENABLED ||
+      testerUser.trim() !== TESTER_USER ||
+      testerPass !== TESTER_PASS
+    ) {
       setTesterErr("Username atau password tester salah.");
       return;
     }
@@ -908,19 +913,21 @@ function WelcomeFlow() {
                       <span className="h-px flex-1 bg-white/30" />
                     </div>
 
-                    {/* Tester */}
-                    <button
-                      onClick={() => {
-                        setTesterErr(null);
-                        setTesterOpen(true);
-                      }}
-                      className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3.5 py-3 transition active:scale-[0.99]"
-                    >
-                      <ShieldUser className="size-6 shrink-0 text-[#1CA7EC]" />
-                      <span className="text-[12px] font-black text-white">
-                        Tester Login Only
-                      </span>
-                    </button>
+                    {/* Tester — hanya muncul bila kredensial env tersedia. */}
+                    {TESTER_ENABLED && (
+                      <button
+                        onClick={() => {
+                          setTesterErr(null);
+                          setTesterOpen(true);
+                        }}
+                        className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3.5 py-3 transition active:scale-[0.99]"
+                      >
+                        <ShieldUser className="size-6 shrink-0 text-[#1CA7EC]" />
+                        <span className="text-[12px] font-black text-white">
+                          Tester Login Only
+                        </span>
+                      </button>
+                    )}
 
                     <div className="mt-3 text-center text-[9.5px] leading-relaxed text-white/40">
                       <p>Dengan melakukan login maka kamu telah setuju dengan</p>

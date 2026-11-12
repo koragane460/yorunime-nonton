@@ -305,10 +305,12 @@ function HeroSlides({
             >
               {i + 1}
             </button>
-            <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
-              <Eye className="size-4 text-white/90" aria-hidden />
-              {formatViews(viewCountFor(String(a.id)))}
-            </span>
+            {Number(a.score) > 0 && (
+              <span className="absolute right-2 top-2 z-10 inline-flex shrink-0 items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
+                <Star className="size-3.5 fill-amber-300 text-amber-300" aria-hidden />
+                {Number(a.score).toFixed(1)}
+              </span>
+            )}
             {/* Kotak hitam MENYATU ke banner: TANPA rounded, background 40%,
                 judul di tengah dengan font tebal. */}
             <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 border-t border-white/10 bg-black/55 px-3 py-3 backdrop-blur-[2px]">
@@ -2160,7 +2162,6 @@ function TopAnimeCard({
   big?: boolean;
   onPick: (id: string, title?: string) => void;
 }) {
-  const views = formatViews(topViewsFor(String(item.id), rank));
   return (
     <button
       onClick={() => onPick(String(item.id), item.title)}
@@ -2190,11 +2191,12 @@ function TopAnimeCard({
         >
           #{rank}
         </span>
-        {/* Jumlah views — background 40% + ikon mata, sama dgn hero banner. */}
-        <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
-          <Eye className="size-4 text-white/90" aria-hidden />
-          {views}
-        </span>
+        {Number(item.score) > 0 && (
+          <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-sm font-black leading-none text-white backdrop-blur-sm">
+            <Star className="size-3.5 fill-amber-300 text-amber-300" aria-hidden />
+            {Number(item.score).toFixed(1)}
+          </span>
+        )}
         {/* Kotak hitam background 40% tanpa rounded — hanya judul, font tebel. */}
         <div className="absolute inset-x-0 bottom-0 bg-black/40 px-3 py-2 backdrop-blur-[2px]">
           <p
@@ -2467,14 +2469,15 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
     setListLoading(false);
   };
 
-  const doSearch = async () => {
-    if (!query.trim()) {
+  const doSearch = async (term?: string) => {
+    const keyword = (term ?? query).trim();
+    if (!keyword) {
       setResults(null);
       return;
     }
     // Kode rahasia: mengetik 110219941 lalu menekan Cari membuka aplikasi
     // pemutar musik penuh.
-    if (isMusicSecret(query)) {
+    if (isMusicSecret(keyword)) {
       onOpenMusic();
       return;
     }
@@ -2482,19 +2485,15 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
     setSearching(true);
     // Kegiatan cari → Daily Quest "cari 3 judul" + daftar Baru Saja.
     bumpQuestLocal("search");
-    pushRecentSearch(query);
+    pushRecentSearch(keyword);
     setRecent(readRecentSearch());
-    const qn = query.trim().toLowerCase();
-    const cacheKey = `${qn}|${adult ? 1 : 0}`;
+    const qn = keyword.toLowerCase();
+    // Media ikut jadi bagian cache: hasil Anime tidak boleh dipakai untuk
+    // mengisi tab Film/Donghua (dulu tab lain sempat kosong karena ini).
+    const cacheKey = `${qn}|${adult ? 1 : 0}|${media}`;
     const cached = SEARCH_CACHE.get(cacheKey);
     if (cached) {
-      setResults(
-        media === "donghua"
-          ? cached.filter((m) => m.source === "sanka")
-          : media === "film"
-            ? cached.filter((m) => m.source === "film")
-            : cached.filter((m) => m.source !== "sanka" && m.source !== "film"),
-      );
+      setResults(cached);
       setSearching(false);
       return;
     }
@@ -2502,16 +2501,16 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
       // Pencarian mencakup anime DAN donghua: dua katalog AniList diambil
       // bersamaan lalu digabung, donghua tidak diprioritaskan tapi tetap
       // ikut tampil kalau ada yang cocok.
-      const animeP: Promise<AnimeCardT[]> = searchAnime({ q: query, adult })
+      const animeP: Promise<AnimeCardT[]> = searchAnime({ q: keyword, adult })
         .then((r: unknown) => (r ?? []) as AnimeCardT[])
         .catch(() => [] as AnimeCardT[]);
-      const donghuaP: Promise<AnimeCardT[]> = searchDonghua({ q: query })
+      const donghuaP: Promise<AnimeCardT[]> = searchDonghua({ q: keyword })
         .then((r: unknown) => (r ?? []) as AnimeCardT[])
         .catch(() => [] as AnimeCardT[]);
       // Film ikut dicari supaya pencarian di Home mencakup anime, donghua
       // DAN film (permintaan). Film dipetak ke bentuk AnimeCardT dengan
       // source "film" supaya bisa dirender SearchResultRow yang sama.
-      const filmP: Promise<AnimeCardT[]> = searchFilms({ q: query })
+      const filmP: Promise<AnimeCardT[]> = searchFilms({ q: keyword })
         .then((r: any) =>
           ((r ?? []) as any[]).map((f) => ({
             id: String(f.id),
@@ -2616,6 +2615,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
   // Cari / Enter supaya tidak kebuka tanpa sengaja saat mengetik.
   useEffect(() => {
     const term = query.trim();
+    // Batalkan hasil/terjemahan lama saat kata kunci berubah atau dikosongkan.
+    searchSeq.current += 1;
     if (!term) {
       setResults(null);
       setSearching(false);
@@ -2650,6 +2651,7 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
           {query && (
             <button
               onClick={() => {
+                searchSeq.current += 1;
                 setQuery("");
                 setResults(null);
               }}
@@ -2705,8 +2707,8 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
                   key={r}
                   icon={<Clock className="size-3.5 text-white/50" aria-hidden />}
                   onClick={() => {
-                    setQuery(r);
-                    void doSearch();
+                    if (r === query) void doSearch(r);
+                    else setQuery(r);
                   }}
                 >
                   {r}
@@ -2727,10 +2729,10 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
                   key={t.id}
                   icon={<Hash className="size-3.5 text-sky-300" aria-hidden />}
                   onClick={() => {
-                    setQuery(t.name);
+                    if (t.name === query) void doSearch(t.name);
+                    else setQuery(t.name);
                     pushRecentSearch(t.name);
                     setRecent(readRecentSearch());
-                    void doSearch();
                   }}
                 >
                   #{t.name.toLowerCase().replace(/\s+/g, "-")}
@@ -2882,12 +2884,12 @@ function SearchScreen({ onClose, onPick, initialGenre, openGenres, onOpenMusic }
         <div className="mt-4">
           {results.length === 0 ? (
             <div className="mt-4 py-8 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Judul persis itu tidak ada
+                <p className="text-sm font-semibold text-foreground/80">
+                  Judul tidak ditemukan
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground/80">
-                  Coba kata kunci lebih pendek, atau tanpa spasi — misalnya
-                  &quot;onepiece&quot;, &quot;solo leveling&quot;.
+                  Coba kata kunci lebih pendek atau ejaan lain — huruf besar
+                  dan kecil tidak lagi membedakan hasil.
                 </p>
                 {!adult && canAdult && (
                   <button
@@ -4472,45 +4474,6 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
  * teks tidak ikut miring.
  */
 /**
- * Jumlah "nonton" yang stabil untuk satu judul. Dipakai hero banner DAN layar
- * Top anime supaya angka di dua tempat itu tidak pernah bertentangan.
- */
-/** XP ringkas untuk panel leaderboard di hero: 950 → "950",
- *  12.340 → "12,3rb", 1.250.000 → "1,3jt". */
-function formatCompactXp(n: number): string {
-  if (!Number.isFinite(n)) return "0";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")}jt`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(".", ",")}rb`;
-  return String(Math.round(n));
-}
-
-/**
- * Views hanyalah placeholder statistik untuk TOP anime daftar — angka ini
- * bukan data asli (data riil diambil dari AniList). Hampir semua titel di
- * daftar TOP sama saja yang populer, jadi untuk mengatur visibilitas
- * yang adil dan tidak menyesatkan, digunakan skala MINIMAL (ribuan, bukan
- * ratusan ribu/ratusan juta). Semakin tinggi peringkat, semakin besar angkanya.
- */
-function viewCountFor(_id: string): number {
-  // Angka STABIL per judul (dulu Math.random → angka berubah tiap render,
-  // jadi jumlah views kedip-kedip saat kartu digeser).
-  let h = 0;
-  for (let i = 0; i < _id.length; i++) h = (h * 31 + _id.charCodeAt(i)) % 100000;
-  return 1200 + (h % 600);
-}
-
-function topViewsFor(id: string, rank: number): number {
-  const jitter = viewCountFor(id) % 300;
-  const minh = 3200 + rank * 180;  return Math.max(minh + jitter, minh);
-}
-
-/**
- * Jumlah favorit, format ringkas: "1 Favorit", "10+", "100+", "1k", "1.2k".
- * Di bawah 10 ditulis penuh supaya tidak terasa sepi; 10-99 dan 100-999
- * dibulatkan ke puluhan/ratusan; ribuan pakai satuan k dengan satu desimal
- * (1.1k, 1.2k, 1.3k) sampai 9.9k, lalu bulat ribuan.
- */
-/**
  * Tanggal rilis episode yang enak dibaca: "5 Jan 2026". Menerima ISO penuh
  * (Jikan) maupun "YYYY-MM-DD" (perhitungan AniList). Tanggal yang tidak bisa
  * dibaca dikembalikan apa adanya supaya tidak pernah tampil kosong aneh.
@@ -4524,20 +4487,6 @@ function fmtAired(aired?: string): string {
     month: "short",
     year: "numeric",
   });
-}
-
-function fmtFavoritCount(n: number): string {
-  const v = Math.max(0, Math.floor(n));
-  if (v === 0) return "Belum ada Favorite";
-  if (v < 10) return `${v} Favorit`;
-  if (v < 100) return `${Math.floor(v / 10) * 10}+`;
-  if (v < 1000) return `${Math.floor(v / 100) * 100}+`;
-  const k = v / 1000;
-  if (k < 10) {
-    const one = Math.round(k * 10) / 10;
-    return `${one.toFixed(1).replace(/\.0$/, "")}k`;
-  }
-  return `${Math.floor(k)}k`;
 }
 
 /** Format tipe tayangan (AniList format / sumber) jadi label pendek. */

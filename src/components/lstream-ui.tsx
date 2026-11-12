@@ -4,7 +4,6 @@ import {
   Flag,
   Flame,
   FlaskConical,
-  Gem,
   Palette,
   Shield,
   Star,
@@ -84,7 +83,7 @@ export function PosterRatingBadge({
   className?: string;
 }) {
   const raw = Number(score);
-  const n = Number.isFinite(raw) && raw > 0 ? raw : 0;
+  const valid = Number.isFinite(raw) && raw > 0;
   return (
     <span
       className={cn(
@@ -94,7 +93,7 @@ export function PosterRatingBadge({
       )}
     >
       <Star className="size-2.5 fill-current" aria-hidden />
-      {n.toFixed(1)}
+      {valid ? raw.toFixed(1) : "—"}
     </span>
   );
 }
@@ -181,7 +180,6 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export function AnimeCard({
-  id,
   title,
   image,
   score,
@@ -801,7 +799,6 @@ export function ClanTag({
  */
 export function SacretIcon({
   className,
-  strokeWidth: _strokeWidth,
 }: {
   className?: string;
   strokeWidth?: number;

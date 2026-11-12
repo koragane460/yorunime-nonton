@@ -8,7 +8,7 @@ import {
   ForYouPanel,
   ContinuePanel,
 } from "@/components/HomeTopButtons";
-import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge, SacretIcon } from "@/components/lstream-ui";
+import { Avatar, BlueCheck, LevelBadge, ClanTag, TitleBadge } from "@/components/lstream-ui";
 import { StripBack } from "@/components/StripBack";
 import { FramedAvatar } from "@/components/FramedAvatar";
 import { DEFAULT_CLAN_ICON } from "@/lib/clanIcons";
@@ -18,9 +18,7 @@ import {
   Pause,
   Play,
   X,
-  ChevronLeft,
   ChevronRight,
-  Star as StarIcon,
   Heart,
   Award as AwardIcon,
 } from "lucide-react";
@@ -33,11 +31,6 @@ import {
   CalendarIconFill,
   PersonIcon,
   PersonIconFill,
-  InfoIcon,
-  InfoIconFill,
-  BookmarkIcon,
-  BookmarkIconFill,
-  BookIcon,
   GemIcon,
 } from "@/components/ios-icons";
 import { useNavigate, useLocation } from "react-router";
@@ -62,6 +55,11 @@ import {
 } from "@/lib/ui-theme";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
+
+/** Ikon Subscribe aktif — hati terisi, sama seperti tombol suka di Feed. */
+function HeartFilledIcon(props: React.SVGProps<SVGSVGElement>) {
+  return <Heart {...props} fill="currentColor" />;
+}
 
 export function AppLayout({
   children,
@@ -380,7 +378,6 @@ function AccountPanel({
   staffRole,
   clanTag,
   clanTagIcon,
-  clanColor,
   clanLevel,
   avatarBorder,
   premium,
@@ -1176,6 +1173,7 @@ function BottomNav({
       path: "",
       label: "Subscribe",
       icon: Heart,
+      iconFill: HeartFilledIcon,
       panel: "favorites",
     },
     {

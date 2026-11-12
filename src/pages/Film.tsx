@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { StripBackIcon } from "@/components/StripBack";
 import {
-  ChevronLeft,
   Clapperboard,
   Clock,
   Film as FilmIcon,
@@ -14,7 +13,6 @@ import {
   Loader2,
   Play,
   Search,
-  Send,
   Star,
   X,
 } from "lucide-react";
@@ -408,22 +406,19 @@ function FilmDetail({
   /** Tombol SUBSCRIBE — masukkan/keluarkan film dari koleksi. */
   const onSubscribe = async () => {
     if (!d) return;
-    try {
-      const res = await toggleFav({
-        animeId: id,
-        animeTitle: d.title,
-        animeImage: d.image,
-        kind: "film",
-        status: kind,
-      });
-      toast.success(
-        res.favorited
-          ? "Ditambahkan ke Subscribe ✨"
-          : "Dihapus dari Subscribe",
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
-    }
+    // Error sengaja dibiarkan naik ke BookmarkPicker agar toast tidak dobel.
+    const res = await toggleFav({
+      animeId: id,
+      animeTitle: d.title,
+      animeImage: d.image,
+      kind: "film",
+      status: kind,
+    });
+    toast.success(
+      res.favorited
+        ? "Ditambahkan ke Subscribe"
+        : "Dihapus dari Subscribe",
+    );
   };
 
   return (
@@ -805,7 +800,6 @@ function FilmWatch({
   }, [id, kind, season, episode, d?.title]);
 
   const src = sources[srcIdx];
-  const commentCount = (comments?.length ?? 0).toLocaleString("id-ID");
 
   return (
     <div className="screen-enter fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-background">

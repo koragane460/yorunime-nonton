@@ -14,7 +14,6 @@ import { DownloadWorker } from "./components/HomeTopButtons";
 
 // Lazy load route components for better code splitting
 const Welcome = lazy(() => import("./pages/Welcome.tsx"));
-const Login = lazy(() => import("./pages/Login.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Home = lazy(() => import("./pages/Home.tsx"));
