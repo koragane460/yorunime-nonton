@@ -272,7 +272,7 @@ export function AppLayout({
           terlihat seperti layar yang salah - tombol Favorit di navigasi
           memang bukan untuk daftar favorit. */}
       {showPanel && user && navPanel !== "favorites" && (
-        <div className="w-full px-4 md:mx-auto md:max-w-2xl md:px-6 lg:max-w-4xl">
+        <div className="mx-auto w-full max-w-[430px] px-4">
           <AccountPanel
             onOpen={() => navigate("/akun")}
             name={user.username ?? "user"}
@@ -307,7 +307,7 @@ export function AppLayout({
           positioning sama sekali. */}
       <div
         key={location.pathname}
-        className="fade-enter w-full flex-1 md:mx-auto md:max-w-2xl lg:max-w-4xl"
+        className="fade-enter mx-auto w-full max-w-[430px] flex-1"
       >
         <div className="px-4 md:px-6">
           {/* Layar Favorit dipanggil sebagai halaman biasa, bukan fixed
@@ -1206,7 +1206,7 @@ function BottomNav({
         className="nav-bar fixed inset-x-0 bottom-0 z-40"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
       >
-        <div className="mx-auto w-full max-w-[34rem] px-2.5">
+        <div className="mx-auto w-full max-w-[430px] px-2.5">
           <div
             className={cn(
               "liquid-glass-nav relative grid grid-cols-5 gap-1 overflow-hidden rounded-[30px] border p-1.5",

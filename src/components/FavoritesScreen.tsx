@@ -536,7 +536,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full rounded-t-[26px] border-t border-white/15 bg-[#111116] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-4"
+            className="mx-auto w-full max-w-[430px] rounded-t-[26px] border-t border-white/15 bg-[#111116] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-4"
           >
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[14px] font-black text-white">Playlist baru</p>

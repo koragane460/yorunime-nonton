@@ -99,7 +99,7 @@ export function BookmarkPickerSheet({
     <div className="fixed inset-0 z-[120] flex items-end bg-black/65" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full rounded-t-[28px] border-t border-white/15 bg-[#111116] pb-[max(env(safe-area-inset-bottom),1rem)]"
+        className="mx-auto w-full max-w-[430px] rounded-t-[28px] border-t border-white/15 bg-[#111116] pb-[max(env(safe-area-inset-bottom),1rem)]"
       >
         <div className="flex items-center gap-2 px-4 pb-2 pt-3">
           <span className="flex size-9 items-center justify-center rounded-xl bg-white/[0.06] text-gold">

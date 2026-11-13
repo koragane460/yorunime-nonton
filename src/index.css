@@ -3549,4 +3549,28 @@ svg.lucide {
   font-size: 12px;
 }
 
+/* ------------------------------------------------------------------
+ * MOBILE CANVAS
+ * Di HP (di bawah 480px) aplikasi tetap full-bleed. Di desktop/preview
+ * lebar, seluruh aplikasi dikunci ke lebar HP dan ditengahkan supaya
+ * tidak melebar seperti dashboard desktop. Layar fullscreen (detail,
+ * pencarian, story, leaderboard) ikut dikunci dengan lebar yang sama.
+ * ------------------------------------------------------------------ */
+@media (min-width: 480px) {
+  #root {
+    width: 100%;
+    max-width: 430px;
+    margin-inline: auto;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.07),
+      0 0 90px rgba(0, 0, 0, 0.75);
+  }
+  .fixed.inset-0,
+  .fixed.inset-x-0 {
+    left: max(0px, calc((100vw - 430px) / 2));
+    right: auto;
+    width: min(100vw, 430px);
+  }
+}
+
 
