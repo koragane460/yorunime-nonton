@@ -1,0 +1,1 @@
+import{j as o}from"./framer-motion-DsHd0eBX.js";import{W as r}from"./index-BANN4v6e.js";import{C as t}from"./ComicBrowsePage-CYZzaGY2.js";import"./react-vendor-AP_znqUj.js";import"./radix-ui-BuL0JPge.js";import"./charts-BcRP9HAk.js";function s(){return o.jsx(r,{hideAccountPanel:!0,children:o.jsx(t,{kind:"manhwa"})})}export{s as default};
