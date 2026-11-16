@@ -945,16 +945,16 @@ export function ProfileSheet({
                 type="button"
                 onClick={() => photoFileRef.current?.click()}
                 disabled={busyPhoto || busyRefresh}
-                className="flex w-full items-center gap-3 rounded-2xl bg-sky-300 px-3.5 py-3 text-left text-sky-950 transition hover:bg-sky-200 active:scale-[0.99] disabled:opacity-50"
+                className="flex w-full items-center gap-3 rounded-xl bg-[var(--primary)] px-3.5 py-3 text-left text-white transition hover:bg-[var(--primary-hover)] active:scale-[0.99] disabled:opacity-50"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-950/10">
-                  <Camera className="size-4 text-sky-950" aria-hidden />
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-black/15">
+                  <Camera className="size-4 text-white" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-bold text-sky-950">
+                  <span className="block text-[12px] font-bold text-white">
                     {busyPhoto ? "Memproses gambar…" : "Ganti photo profile"}
                   </span>
-                  <span className="block text-[11px] text-sky-900/70">
+                  <span className="block text-[10px] text-white/65">
                     Pilih foto baru dari galeri (banner terpisah di Pengaturan)
                   </span>
                 </span>

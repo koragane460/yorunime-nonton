@@ -225,7 +225,7 @@ function AkunLevelCard({ level, xp }: { level: number; xp: number }) {
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/35">
         <div
-          className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#7FD3F7)]"
+          className="h-full rounded-full bg-[var(--primary)]"
           style={{ width: `${Math.max(3, pct)}%` }}
         />
       </div>
@@ -309,7 +309,7 @@ function TierLadder({ level, xp }: { level: number; xp: number }) {
                       </p>
                       <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/30">
                         <div
-                          className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#7FD3F7)]"
+                          className="h-full rounded-full bg-[var(--primary)]"
                           style={{ width: `${Math.max(3, pct)}%` }}
                         />
                       </div>
@@ -1629,7 +1629,7 @@ function SettingsScreen({
                 <button
                   onClick={() => bannerInputRef.current?.click()}
                   disabled={busyBanner}
-                  className="flex-1 rounded-xl bg-sky-300 py-2 text-[11px] font-black text-sky-950 transition active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-[var(--primary)] py-2.5 text-[10.5px] font-bold text-white transition hover:bg-[var(--primary-hover)] active:scale-[0.98] disabled:opacity-50"
                 >
                   {busyBanner ? "Memproses…" : "Ganti banner"}
                 </button>
@@ -2201,7 +2201,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="screen-enter fixed inset-0 z-[95] flex flex-col bg-[#0b0e15]">
+    <div className="screen-enter fixed inset-0 z-[95] flex flex-col bg-[#0a0b0d]">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end px-4 pt-[max(env(safe-area-inset-top),0.9rem)]">
         <button
           type="button"
@@ -2228,9 +2228,9 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
               border={user.avatarBorder}
               src={user.image}
               seed={user.username}
-              className="size-[92px] rounded-full ring-2 ring-gold/35"
+              className="size-[92px] rounded-full ring-1 ring-white/10"
             />
-            <span className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full border-2 border-[#121722] bg-gold text-black shadow-lg">
+            <span className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full border-[3px] border-[#0a0b0d] bg-[var(--primary)] text-white">
               <Pencil className="size-3.5" strokeWidth={2.4} />
             </span>
           </button>
@@ -2238,7 +2238,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={busyPhoto}
-            className="mt-2 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1 text-[10px] font-black text-white/65 transition hover:text-white disabled:opacity-50"
+            className="mt-2 rounded-lg border border-white/8 bg-white/[0.025] px-3 py-1.5 text-[9.5px] font-semibold text-white/42 transition hover:text-white disabled:opacity-50"
           >
             {busyPhoto ? "Mengunggah…" : "Ganti foto"}
           </button>
@@ -2254,7 +2254,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
         <label className="mt-4 block text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
           Username
         </label>
-        <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 focus-within:border-gold/50">
+        <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-white/8 bg-[#0d0f12] px-3 focus-within:border-gold/50">
           <User className="size-4 shrink-0 text-white/35" />
           <input
             value={name}
@@ -2282,14 +2282,14 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
           onChange={(e) => setBio(e.target.value.slice(0, 160))}
           rows={3}
           placeholder="Edit bio mu..."
-          className="mt-1.5 w-full resize-none rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[12px] leading-relaxed text-white outline-none placeholder:text-white/25 focus:border-gold/50"
+          className="mt-1.5 w-full resize-none rounded-xl border border-white/8 bg-[#0d0f12] px-3 py-2.5 text-[12px] leading-relaxed text-white outline-none placeholder:text-white/25 focus:border-[rgba(211,62,48,.4)]"
         />
         <div className="mt-1 flex justify-end text-[9px] font-semibold text-white/25">
           {bio.length}/160
         </div>
 
         <label className="mt-4 flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">
-          <Cake className="size-3.5 text-gold/80" />
+          <Cake className="size-3.5 text-white/30" />
           Tanggal lahir
         </label>
         {birthLocked ? (
@@ -2313,7 +2313,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
                 <select
                   value={birthDay}
                   onChange={(e) => setBirthDay(e.target.value)}
-                  className="h-10 w-full appearance-none rounded-xl border border-white/15 bg-black/30 px-2 text-center text-[11px] font-bold text-white outline-none focus:border-gold/50"
+                  className="h-10 w-full appearance-none rounded-xl border border-white/8 bg-[#0d0f12] px-2 text-center text-[11px] font-bold text-white outline-none focus:border-[rgba(211,62,48,.4)]"
                 >
                   <option value="">Tgl</option>
                   {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
@@ -2335,7 +2335,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
                       : 31;
                     if (Number(birthDay) > max) setBirthDay("");
                   }}
-                  className="h-10 w-full appearance-none rounded-xl border border-white/15 bg-black/30 px-2 text-center text-[11px] font-bold text-white outline-none focus:border-gold/50"
+                  className="h-10 w-full appearance-none rounded-xl border border-white/8 bg-[#0d0f12] px-2 text-center text-[11px] font-bold text-white outline-none focus:border-[rgba(211,62,48,.4)]"
                 >
                   <option value="">Bulan</option>
                   {[
@@ -2360,7 +2360,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
                       : 31;
                     if (Number(birthDay) > max) setBirthDay("");
                   }}
-                  className="h-10 w-full appearance-none rounded-xl border border-white/15 bg-black/30 px-2 text-center text-[11px] font-bold text-white outline-none focus:border-gold/50"
+                  className="h-10 w-full appearance-none rounded-xl border border-white/8 bg-[#0d0f12] px-2 text-center text-[11px] font-bold text-white outline-none focus:border-[rgba(211,62,48,.4)]"
                 >
                   <option value="">Tahun</option>
                   {Array.from({ length: yearNow - 1899 }, (_, i) => yearNow - i).map((y) => (
@@ -2387,7 +2387,7 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={() => void save()}
           disabled={saving || busyPhoto || !changed || clean.length < 3}
-          className="mt-4 w-full rounded-xl bg-gold py-2.5 text-[12px] font-black text-black transition active:scale-[0.99] disabled:opacity-40"
+          className="mt-4 w-full rounded-lg bg-[var(--primary)] py-3 text-[11px] font-bold text-white transition hover:bg-[var(--primary-hover)] active:scale-[0.99] disabled:opacity-40"
         >
           {saving ? "Menyimpan…" : "Simpan perubahan"}
         </button>
@@ -2397,11 +2397,13 @@ function EditIdentitySheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Judul bagian di pengaturan: kapital kecil + garis emas pendek. */
+/** Judul bagian pengaturan memakai garis miring sebagai penanda. */
 function BlockTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2 mt-5 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-gold/90">
-      <span aria-hidden className="h-px w-5 bg-gold/60" />
+    <h2 className="mb-2 mt-5 flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.14em] text-white/30">
+      <span className="font-serif text-[14px] font-normal leading-none tracking-normal text-[var(--primary)]">
+        /
+      </span>
       {children}
     </h2>
   );

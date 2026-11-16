@@ -2372,7 +2372,7 @@ function WatchContent() {
                           setSourceIdx(0);
                         }
                       }}
-                      className="rounded-full bg-[#1CA7EC] px-4 py-1.5 text-xs font-black text-white"
+                      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-[11px] font-bold text-white"
                     >
                       Coba lagi
                     </button>

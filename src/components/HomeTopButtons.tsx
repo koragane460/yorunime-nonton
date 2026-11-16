@@ -472,22 +472,22 @@ function StorageCard({ bytes, premium }: { bytes: number; premium: boolean }) {
   const LIMIT = 1024 * 1024 * 1024; // 1 GB
   const pct = premium ? 12 : Math.min(100, (bytes / LIMIT) * 100);
   return (
-    <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(130deg,rgba(56,189,248,.16),rgba(255,255,255,.04)_55%,rgba(8,12,16,.55))] p-4">
+    <div className="mb-4 overflow-hidden rounded-xl border border-white/8 bg-[#101215] p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-sky-300/15 text-sky-200">
+          <span className="flex size-10 items-center justify-center rounded-lg border border-white/8 bg-white/[0.025] text-white/34">
             <HardDriveDownload className="size-5" />
           </span>
           <div>
-            <p className="text-[12px] font-black text-white">Kuota download</p>
-            <p className="text-[10px] text-white/50">
+            <p className="text-[11px] font-bold text-white/82">Kuota download</p>
+            <p className="text-[9px] text-white/30">
               {premium ? "Premium — tanpa batas" : "Akun biasa — maksimal 1 GB"}
             </p>
           </div>
         </div>
         {/* Angka GB DIPERBESAR supaya mudah terbaca. */}
         <span className="text-right leading-none">
-          <span className="block font-[family-name:var(--font-display)] text-2xl font-black text-white">
+          <span className="block font-mono text-[22px] font-bold tabular-nums text-white/88">
             {fmtBytes(bytes)}
           </span>
           <span className="mt-1 block text-[10px] font-semibold text-white/45">
@@ -500,10 +500,10 @@ function StorageCard({ bytes, premium }: { bytes: number; premium: boolean }) {
           className={cn(
             "block h-full rounded-full",
             premium
-              ? "bg-gradient-to-r from-sky-300 to-emerald-300"
+              ? "bg-[var(--yn-mint)]"
               : pct > 85
-                ? "bg-gradient-to-r from-amber-300 to-red-400"
-                : "bg-gradient-to-r from-sky-300 to-sky-500",
+                ? "bg-[#e5484d]"
+                : "bg-[var(--primary)]",
           )}
           style={{ width: `${pct}%` }}
         />

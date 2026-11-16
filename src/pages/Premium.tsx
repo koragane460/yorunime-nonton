@@ -77,8 +77,8 @@ const TIER_INFO: {
       "XP nonton 2× + bonus Sacret",
       "2 perangkat aktif",
     ],
-    ring: "border-[#1CA7EC]/60",
-    accent: "text-[#7fd3f7]",
+    ring: "border-[rgba(116,223,194,.4)]",
+    accent: "text-[var(--yn-mint)]",
   },
   {
     id: "vip",
@@ -93,8 +93,8 @@ const TIER_INFO: {
       "XP nonton 2× + bonus Sacret terbesar",
       "4 perangkat + prioritas antrean",
     ],
-    ring: "border-[#FFD23F]/70",
-    accent: "text-[#FFD23F]",
+    ring: "border-[rgba(230,196,124,.5)]",
+    accent: "text-[var(--gold)]",
   },
 ];
 type Order = {

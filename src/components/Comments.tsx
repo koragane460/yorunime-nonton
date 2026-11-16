@@ -80,11 +80,11 @@ const TIER_TAG: Record<
   },
   plus: {
     label: "Yoru Plus",
-    className: "border-[#1CA7EC]/55 bg-[#1CA7EC]/15 text-[#7fd3f7]",
+    className: "border-[rgba(116,223,194,.2)] bg-[rgba(116,223,194,.06)] text-[var(--yn-mint)]",
   },
   vip: {
     label: "Yoru VIP",
-    className: "border-[#FFD23F]/60 bg-[#FFD23F]/15 text-[#FFD23F]",
+    className: "border-[rgba(230,196,124,.24)] bg-[rgba(230,196,124,.06)] text-[var(--gold)]",
   },
 };
 
@@ -505,10 +505,10 @@ export function CommentsSection({
           Kotak lurus (tanpa sudut membulat) tepat di bawah kolom komentar.
           Ketuk isinya → langsung melompat ke komentar tersebut. */}
       {pinned && !pinDismissed.has(pinned._id) && (
-        <div className="mt-2 border-y border-[#FFD23F]/35 bg-[#FFD23F]/[0.06]">
+        <div className="mt-2 border-y border-white/8 bg-white/[0.02]">
           <div className="flex items-center gap-1.5 px-3 pt-2">
-            <Pin className="size-3 shrink-0 text-[#FFD23F]" aria-hidden />
-            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FFD23F]">
+            <Pin className="size-3 shrink-0 text-[var(--primary)]" aria-hidden />
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">
               Komentar Disemangatkan
             </span>
             <button
@@ -528,7 +528,7 @@ export function CommentsSection({
             <Avatar
               src={pinned.image}
               seed={pinned.username}
-              className="mt-0.5 size-7 shrink-0 ring-1 ring-[#FFD23F]/40"
+              className="mt-0.5 size-7 shrink-0 ring-1 ring-[rgba(211,62,48,.35)]"
             />
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-1">
@@ -627,7 +627,7 @@ export function CommentsSection({
                           [c._id]: Math.min(replies.length, (s[c._id] ?? 0) + 5),
                         }))
                       }
-                      className="flex items-center gap-1 pl-1 text-[11px] font-bold text-[#7fd3f7]"
+                      className="flex items-center gap-1 pl-1 text-[11px] font-bold text-[var(--primary)]"
                     >
                       <ChevronDown className="size-3.5" aria-hidden />
                       Lihat {replies.length - shown} balasan lagi
@@ -758,7 +758,7 @@ function CommentText({
           e.stopPropagation();
           onSeek(secs);
         }}
-        className="mx-0.5 inline rounded bg-[#1CA7EC]/15 px-1 font-bold text-[#7fd3f7] underline decoration-[#1CA7EC]/50 underline-offset-2"
+        className="mx-0.5 inline rounded bg-[rgba(211,62,48,.12)] px-1 font-semibold text-[#eda096] underline decoration-[rgba(211,62,48,.4)] underline-offset-2"
         title={`Lompat ke ${m[0]}`}
       >
         {m[0]}
@@ -888,7 +888,7 @@ function CommentCard({
         {/* Kanan atas: label "Disemangatkan" (kalau ada) lalu titik tiga. */}
         <div className="relative flex shrink-0 items-center gap-1">
           {c.pinnedAt && (
-            <span className="flex items-center gap-1 rounded-full border border-[#FFD23F]/40 bg-[#FFD23F]/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#FFD23F]">
+            <span className="flex items-center gap-1 rounded border border-white/8 bg-white/[0.025] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-white/34">
               <Pin className="size-2.5" aria-hidden />
               Disemangatkan
             </span>
@@ -917,7 +917,7 @@ function CommentCard({
                       if (c.pinnedAt) onUnpin?.();
                       else onPin?.();
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-bold text-[#FFD23F] transition hover:bg-white/[0.06]"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold text-white/58 transition hover:bg-white/[0.04]"
                   >
                     <Pin className="size-4 shrink-0" />
                     {c.pinnedAt
@@ -1246,7 +1246,7 @@ function ReplySheet({
 
         {/* Kolom balasan + alat. */}
         <div className="border-t border-white/10 px-3 py-2.5">
-          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-[#7fd3f7]">
+          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-[var(--primary)]">
             <Reply className="size-3" />
             Membalas @{target.username}
           </div>
@@ -1302,7 +1302,7 @@ function ReplySheet({
               className={cn(
                 "flex size-8 shrink-0 items-center justify-center rounded-full transition",
                 stickerOpen
-                  ? "bg-[#1CA7EC]/20 text-[#7fd3f7]"
+                  ? "bg-[rgba(211,62,48,.14)] text-[var(--primary)]"
                   : "bg-white/[0.06] text-white/60",
               )}
             >
@@ -1331,7 +1331,7 @@ function ReplySheet({
                 muted ? "Kamu sedang dimute…" : `Balas @${target.username}…`
               }
               disabled={muted || sending}
-              className="h-10 min-w-0 flex-1 rounded-full border border-white/12 bg-black/30 px-3.5 text-[13px] outline-none focus:border-[#1CA7EC]/50 disabled:opacity-50"
+              className="h-10 min-w-0 flex-1 rounded-full border border-white/8 bg-[#0d0f12] px-3.5 text-[12px] outline-none focus:border-[rgba(211,62,48,.45)] disabled:opacity-50"
             />
             <button
               onClick={onSpoiler}
@@ -1353,7 +1353,7 @@ function ReplySheet({
               className={cn(
                 "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-black transition active:scale-95",
                 canSend
-                  ? "bg-[#1CA7EC] text-white"
+                  ? "bg-[var(--primary)] text-white"
                   : "bg-white/10 text-white/35",
               )}
             >
@@ -1382,9 +1382,9 @@ function PinSheet({
   return (
     <div className="fixed inset-0 z-[120] flex items-end" role="dialog" aria-modal>
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative flex h-[45vh] w-full flex-col overflow-y-auto rounded-t-3xl border-t border-[#FFD23F]/30 bg-[#12161f] px-4 pb-4 pt-3">
+      <div className="relative flex h-[45vh] w-full flex-col overflow-y-auto rounded-t-2xl border-t border-white/10 bg-[#121417] px-4 pb-4 pt-3">
         <div className="flex items-center gap-2">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#FFD23F]/15 text-[#FFD23F]">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.025] text-white/38">
             <Pin className="size-4" />
           </span>
           <p className="min-w-0 flex-1 truncate text-sm font-black">
@@ -1435,7 +1435,7 @@ function PinSheet({
                 setBusy(false);
               }
             }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#FFD23F] py-2.5 text-[12px] font-black text-[#1a1200] transition active:scale-[0.98] disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] py-2.5 text-[11px] font-bold text-white transition active:scale-[0.98] disabled:opacity-60"
           >
             {busy ? (
               <Loader2 className="size-4 animate-spin" />
@@ -1511,7 +1511,7 @@ function ReportScreen({
           </p>
           <button
             onClick={onDone}
-            className="mt-5 rounded-xl bg-[#1CA7EC] px-6 py-2.5 text-[12px] font-black text-white"
+            className="mt-5 rounded-lg bg-[var(--primary)] px-6 py-2.5 text-[11px] font-bold text-white"
           >
             Tutup
           </button>
@@ -1541,7 +1541,7 @@ function ReportScreen({
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-[12.5px] font-semibold transition",
                       category === r
-                        ? "border-[#1CA7EC]/60 bg-[#1CA7EC]/12 text-white"
+                        ? "border-[rgba(211,62,48,.4)] bg-[rgba(211,62,48,.08)] text-white"
                         : "border-white/10 bg-white/[0.03] text-white/70",
                     )}
                   >
@@ -1549,7 +1549,7 @@ function ReportScreen({
                       className={cn(
                         "flex size-4 shrink-0 items-center justify-center rounded-full border",
                         category === r
-                          ? "border-[#1CA7EC] bg-[#1CA7EC] text-white"
+                          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
                           : "border-white/25",
                       )}
                     >
@@ -1597,7 +1597,7 @@ function ReportScreen({
                 rows={3}
                 maxLength={400}
                 placeholder="Jelaskan kenapa komentar ini melanggar…"
-                className="w-full resize-none rounded-xl border border-white/12 bg-black/30 px-3 py-2 text-[12.5px] outline-none transition focus:border-[#1CA7EC]/50"
+                className="w-full resize-none rounded-lg border border-white/8 bg-[#0d0f12] px-3 py-2 text-[12px] outline-none transition focus:border-[rgba(211,62,48,.4)]"
               />
             </div>
 
@@ -1669,16 +1669,16 @@ function ActionToggle({
       className={cn(
         "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-[12.5px] font-semibold transition",
         on
-          ? "border-[#1CA7EC]/50 bg-[#1CA7EC]/10 text-white"
+          ? "border-[rgba(211,62,48,.35)] bg-[rgba(211,62,48,.06)] text-white"
           : "border-white/10 bg-white/[0.03] text-white/60",
       )}
     >
-      <span className={on ? "text-[#7fd3f7]" : "text-white/45"}>{icon}</span>
+      <span className={on ? "text-[var(--primary)]" : "text-white/45"}>{icon}</span>
       <span className="min-w-0 flex-1">{label}</span>
       <span
         className={cn(
           "relative h-5 w-9 shrink-0 rounded-full transition",
-          on ? "bg-[#1CA7EC]" : "bg-white/20",
+          on ? "bg-[var(--primary)]" : "bg-white/20",
         )}
       >
         <span
@@ -1805,7 +1805,7 @@ function BlockDialog({
                 className={cn(
                   "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
                   hideHistory
-                    ? "border-[#1CA7EC] bg-[#1CA7EC] text-white"
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
                     : "border-white/25",
                 )}
               >
