@@ -2683,7 +2683,7 @@ export function FeedScreen() {
     <div className="fixed inset-0 z-[60] bg-black">
       {/* Beranda feed — tab atas hanya muncul di tampilan feed. */}
       {view === "feed" && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-0 bg-gradient-to-b from-black/90 via-black/45 to-transparent px-1.5 pb-8 pt-[max(env(safe-area-inset-top),0.35rem)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-0 bg-gradient-to-b from-black/92 via-black/55 to-transparent px-2 pb-9 pt-[max(env(safe-area-inset-top),0.45rem)]">
           <button
             onClick={() => navigate("/home")}
             aria-label="Keluar feed mode"
@@ -2700,8 +2700,8 @@ export function FeedScreen() {
               key={key}
               onClick={() => openTab(key)}
               className={cn(
-                "pointer-events-auto relative flex-1 py-1 text-center text-[15px] font-black tracking-tight transition",
-                tab === key ? "text-white" : "text-white/48",
+                "pointer-events-auto relative flex-1 py-1 text-center text-[12.5px] font-bold tracking-[-0.01em] transition",
+                tab === key ? "text-white" : "text-white/42",
               )}
             >
               {label}
@@ -2709,7 +2709,7 @@ export function FeedScreen() {
                 <span className="absolute right-[12%] top-0.5 size-1.5 rounded-full bg-rose-500/80" />
               )}
               {tab === key && (
-                <span className="absolute -bottom-0.5 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-white" />
+                <span className="absolute -bottom-0.5 left-1/2 h-[2px] w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]" />
               )}
             </button>
           ))}
@@ -2803,7 +2803,7 @@ export function FeedScreen() {
       )}
 
       {/* Navigasi bawah Feed Mode — full lebar, label di bawah ikon. */}
-      <nav className="absolute inset-x-0 bottom-0 z-50 flex items-stretch border-t border-white/10 bg-[#0b0c11]/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 backdrop-blur-xl">
+      <nav className="absolute inset-x-0 bottom-0 z-50 flex items-stretch border-t border-white/8 bg-[#0a0b0d] px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5">
         {navItems.map(({ key, label, Icon }) => {
           const active =
             (key === "home" && view === "feed") ||
@@ -2838,7 +2838,7 @@ export function FeedScreen() {
               <span
                 className={cn(
                   "relative grid size-6 place-items-center rounded-full",
-                  key === "create" && "size-8 bg-[var(--ui-c)] text-black shadow-[0_8px_20px_-10px_rgba(0,0,0,.9)]",
+                  key === "create" && "size-8 bg-[var(--primary)] text-white",
                 )}
               >
                 <Icon className={cn(key === "create" ? "size-4" : "size-5")} strokeWidth={2.2} />

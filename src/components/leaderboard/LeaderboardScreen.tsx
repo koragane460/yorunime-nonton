@@ -190,7 +190,7 @@ function XpView() {
   return (
     <>
       {/* Tab periode: kotak rounded hijau muda agak ketus (LEBIH KECIL). */}
-      <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-lg border border-white/8 bg-[#101215] p-1">
         {([
           ["harian", "Setiap hari"],
           ["mingguan", "7 Hari"],
@@ -198,10 +198,10 @@ function XpView() {
         ] as const).map(([p, label]) => (
           <button key={p} onClick={() => setPeriod(p)}
             className={cn(
-              "rounded-xl py-2 text-[11px] font-black transition",
+              "rounded-md py-2 text-[10px] font-bold transition",
               period === p
-                ? "bg-gold text-[#241c02]"
-                : "text-white/55 hover:bg-white/10 hover:text-white",
+                ? "bg-white/[0.08] text-white"
+                : "text-white/34 hover:text-white/70",
             )}>
             {label}
           </button>
@@ -267,7 +267,7 @@ function GiveView() {
     return <p className="py-8 text-center text-sm text-white/50">Belum ada yang bagi premium — jadilah yang pertama!</p>;
   return (
     <div className="space-y-1.5">
-      <p className="flex items-center gap-1.5 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[11px] font-black text-rose-200">
+      <p className="mb-2 flex items-center gap-1.5 rounded-lg border border-[rgba(230,196,124,.18)] bg-[rgba(230,196,124,.05)] px-3 py-2 text-[9.5px] font-semibold text-[var(--gold)]">
         <Gift className="size-3.5" aria-hidden /> Paling royal bagi-bagi premium
       </p>
       {data.map((g: any, i) => (
@@ -357,7 +357,7 @@ function ClanView() {
       : `${(c.totalXp ?? 0).toLocaleString("id-ID")} XP`;
   return (
     <>
-      <div className="mb-3 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-lg border border-white/8 bg-[#101215] p-1">
         {([
           ["harian", "Setiap hari"],
           ["mingguan", "7 Hari"],
@@ -367,8 +367,8 @@ function ClanView() {
             key={p}
             onClick={() => setPeriod(p)}
             className={cn(
-              "rounded-xl py-2 text-[11px] font-black transition",
-              period === p ? "bg-[#4ADE80] text-[#07210f]" : "text-white/55 hover:bg-white/10 hover:text-white",
+              "rounded-md py-2 text-[10px] font-bold transition",
+              period === p ? "bg-white/[0.08] text-white" : "text-white/34 hover:text-white/70",
             )}
           >
             {label}
@@ -425,28 +425,34 @@ export function LeaderboardScreen({
     { key: "clan" as const, label: "Clan", Icon: Users },
   ];
   return (
-    <div className="screen-enter w-full pb-10 pt-2">
-      <div className="w-full p-3">
-        <div className="mb-3 mt-3 flex items-center gap-2">
+    <div className="screen-enter w-full pb-10 pt-3">
+      <div className="w-full px-4">
+        <header className="flex items-center gap-2">
           <StripBack onClose={onClose} />
-          <h1 className="min-w-0 flex-1 truncate text-lg yn-title">
-            Leaderboard
-          </h1>
-          <Crown className="size-5 shrink-0 text-yellow-300" aria-hidden />
-        </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.14em] text-white/28">
+              <span className="font-serif text-[15px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                /
+              </span>
+              Komunitas
+            </p>
+            <h1 className="font-display text-[22px] font-bold leading-tight tracking-[-0.04em]">
+              Leaderboard
+            </h1>
+          </div>
+          <Crown className="size-4 shrink-0 text-[var(--gold)]" aria-hidden />
+        </header>
 
-        {/* Tab tampilan: Top XP · Give Prem · Clan — ganti view langsung,
-            tanpa harus balik ke halaman Catalog. */}
-        <div className="mb-4 grid grid-cols-3 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
+        <div className="mb-4 mt-4 grid grid-cols-3 gap-1 rounded-lg border border-white/8 bg-[#101215] p-1">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setView(t.key)}
               className={cn(
-                "flex items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-black transition",
+                "flex items-center justify-center gap-1.5 rounded-md py-2 text-[10px] font-bold transition",
                 view === t.key
-                  ? "bg-[#FFFAF0] text-[#241c02]"
-                  : "text-white/55 hover:bg-white/10 hover:text-white/90",
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/34 hover:text-white/70",
               )}
             >
               <t.Icon className="size-3.5" aria-hidden />

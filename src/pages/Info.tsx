@@ -17,13 +17,11 @@ import {
   Send,
   Trash2,
   X,
-  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type Tab = "lanjut";
 
 export default function Info() {
   return (
@@ -34,35 +32,24 @@ export default function Info() {
 }
 
 export function InfoContent() {
-  const [tab, setTab] = useState<Tab>("lanjut");
-
   return (
-    <div className="pb-6">
-      {/* Pemberitahuan tidak lagi tampil di sini — semuanya sudah pindah ke
-          area Notif (tombol lonceng di banner akun). Sisa halaman ini khusus
-          "Lanjutkan" agar isinya tidak terasa kosong. */}
-      <div className="flex border-b border-white/15">
-        {([["lanjut", "Lanjutkan", Layers]] as const).map(
-          ([k, label, Icon]) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={cn(
-                "relative flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-1.5 text-sm font-semibold transition",
-                tab === k ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
-              <Icon className="size-4" />
-              {label}
-              {tab === k && (
-                <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-white/90" />
-              )}
-            </button>
-          ),
-        )}
-      </div>
+    <div className="pb-6 pt-5">
+      <header>
+        <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.14em] text-white/28">
+          <span className="font-serif text-[15px] font-normal leading-none tracking-normal text-[var(--primary)]">
+            /
+          </span>
+          Perpustakaan
+        </p>
+        <h1 className="mt-0.5 font-display text-[27px] font-bold leading-none tracking-[-0.045em]">
+          Lanjutkan
+        </h1>
+        <p className="mt-1.5 text-[10px] leading-snug text-white/34">
+          Pilih lagi dari tempat kamu berhenti.
+        </p>
+      </header>
 
-      {tab === "lanjut" ? <LanjutTab /> : null}
+      <LanjutTab />
       <DevTools />
     </div>
   );
@@ -346,29 +333,18 @@ function LanjutTab() {
     <div className="pt-1">
       {groups.map((g) => (
         <div key={g.label} className="mb-4">
-          {/* Judul tanggal: kotak rounded biru, teks putih supaya kontras. */}
-          <h3 className="mb-2 inline-flex rounded-lg bg-sky-600/70 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-white">
+          <h3 className="mb-2 flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/34">
+            <span className="font-serif text-[14px] font-normal leading-none tracking-normal text-[var(--primary)]">
+              /
+            </span>
             {g.label}
           </h3>
           <div className="space-y-3">
-            {g.items.map((item, idx) => {
-        // GARIS PUTIH PENGGHUBUNG antar kartu Lanjutkan: tegak LURUS KE
-        // ATAS, pas di TENGAH (left-1/2), menyambungkan kartu di atas
-        // dengan kartu di bawahnya (mis. Jujutsu Kaisen → Yosuga no Sora).
-        // Dirender di dalam pembungkus `relative` tiap kartu supaya tepat
-        // mengisi jarak antar kartu — TIDAK mengganggu garis progress
-        // nonton yang tetap mendatar (ke samping) di tepi bawah kartu.
-        const link = (
-          <span
-            aria-hidden
-            className="absolute -top-3 left-1/2 z-10 h-3 w-0.5 -translate-x-1/2 rounded-full bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.5)]"
-          />
-        );
+            {g.items.map((item) => {
         if (item.type === "comic") {
           const c: any = item.data;
           return (
             <div key={item.key} className="relative">
-              {idx > 0 && link}
             <button
               onClick={() =>
                 navigate(
@@ -415,7 +391,6 @@ function LanjutTab() {
         const durM = dur > 0 ? Math.floor(dur / 60) : 0;
         return (
           <div key={item.key} className="relative">
-            {idx > 0 && link}
             <button
             onClick={() =>
               navigate(

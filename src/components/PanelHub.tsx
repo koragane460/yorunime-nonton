@@ -86,7 +86,7 @@ export function PanelHub({
         onClick={onClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-[3px]"
       />
-      <div className="screen-enter absolute inset-x-0 bottom-0 mx-auto flex h-[60dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] bg-[linear-gradient(160deg,#211526_0%,#121a2a_52%,#1b1320_100%)] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
+      <div className="screen-enter absolute inset-x-0 bottom-0 mx-auto flex h-[60dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border-t border-white/8 bg-[#0e1013] shadow-[0_-30px_60px_-30px_rgba(0,0,0,1)]">
         <div className="flex justify-center pt-2.5">
           <span className="h-1 w-11 rounded-full bg-white/25" />
         </div>
@@ -110,32 +110,34 @@ export function PanelHub({
               ID {displayId((user as any)?.seqId)}
             </p>
           </div>
-          <span className="yn-eyebrow shrink-0 text-[9px]">Panel</span>
+          <span className="shrink-0 text-[8px] font-bold uppercase tracking-[0.14em] text-white/22">
+            Menu
+          </span>
         </div>
 
-        <div className="mx-4 mb-2.5 grid grid-cols-2 gap-2 rounded-[22px] bg-gradient-to-r from-sky-400/20 via-cyan-400/10 to-amber-400/20 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,.14)]">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sky-400/15 text-sky-300">
-              <SacretIcon className="size-5" />
+        <div className="mx-4 mb-3 grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-[#121417] px-2.5 py-2">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(230,196,124,.08)] text-[var(--gold)]">
+              <SacretIcon className="size-4.5" />
             </span>
             <span className="min-w-0">
-              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">
+              <span className="block text-[7.5px] font-bold uppercase tracking-[0.12em] text-white/26">
                 Sacret
               </span>
-              <span className="block truncate text-[16px] font-black leading-tight text-white">
+              <span className="block truncate font-mono text-[14px] font-bold leading-tight text-white/85">
                 {sacret.toLocaleString("id-ID")}
               </span>
             </span>
           </div>
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-300">
-              <CrystalIcon className="size-5" />
+          <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-[#121417] px-2.5 py-2">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(116,223,194,.07)] text-[var(--yn-mint)]">
+              <CrystalIcon className="size-4.5" />
             </span>
             <span className="min-w-0">
-              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">
+              <span className="block text-[7.5px] font-bold uppercase tracking-[0.12em] text-white/26">
                 Premium
               </span>
-              <span className="block truncate text-[16px] font-black leading-tight text-white">
+              <span className="block truncate font-mono text-[14px] font-bold leading-tight text-white/85">
                 {premium ? `${premiumDays} hari` : "-"}
               </span>
             </span>
@@ -144,29 +146,20 @@ export function PanelHub({
 
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)]">
           <div className="grid grid-cols-3 gap-2">
-            {BOXES.map(({ key, label, hint, Icon, tone }) => (
+            {BOXES.map(({ key, label, hint, Icon }) => (
               <button
                 key={key}
                 onClick={() => onPick(key)}
-                className="group relative flex aspect-square min-h-[96px] flex-col items-center justify-center overflow-hidden rounded-[20px] border border-white/18 p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.16)] transition hover:border-white/40 active:scale-[0.96]"
-                style={{ background: tone }}
+                className="group relative flex aspect-square min-h-[96px] flex-col items-center justify-center rounded-lg border border-white/8 bg-[#121417] p-2 text-center transition hover:border-white/16 hover:bg-[#15181c] active:scale-[0.96]"
               >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -right-6 -top-7 size-16 rounded-full bg-white/15 blur-2xl"
-                />
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.10),transparent_46%,rgba(255,255,255,.035))]"
-                />
                 <Icon
-                  className="relative size-7 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,.28)] transition group-hover:scale-105"
-                  strokeWidth={2.4}
+                  className="size-5 text-white/48 transition group-hover:text-white/80"
+                  strokeWidth={2}
                 />
-                <span className="relative mt-1.5 block w-full truncate text-[12px] font-black leading-tight text-white">
+                <span className="mt-2 block w-full truncate text-[10px] font-semibold leading-tight text-white/78">
                   {label}
                 </span>
-                <span className="relative mt-0.5 block w-full truncate text-[8.5px] font-medium leading-tight text-white/50">
+                <span className="mt-0.5 block w-full truncate text-[7.5px] font-medium leading-tight text-white/24">
                   {hint}
                 </span>
               </button>

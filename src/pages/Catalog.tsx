@@ -28,15 +28,16 @@ import { DownloadsPanel } from "@/components/HomeTopButtons";
 
 /** Shell isi Catalog — TIDAK fullscreen: panel ini menempel di dalam halaman
     catalog (scroll mengikuti halaman), strip-back di kiri atas tanpa judul. */
-function FullScreen({ onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function FullScreen({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="screen-enter w-full pb-10 pt-2">
-      <div className="mb-3 flex items-center gap-2">
-        <button onClick={onClose} aria-label="Kembali" className="-ml-1 flex items-center py-1 pr-2 text-white/90 transition active:opacity-60">
-          <svg width="26" height="18" viewBox="0 0 26 18" fill="none" aria-hidden>
+    <div className="screen-enter w-full pb-10 pt-1">
+      <div className="mb-4 flex h-12 items-center gap-2 border-b border-white/7">
+        <button onClick={onClose} aria-label="Kembali" className="flex size-9 items-center justify-center text-white/70 transition active:opacity-60">
+          <svg width="22" height="16" viewBox="0 0 26 18" fill="none" aria-hidden>
             <path d="M25 9H2M8 2 1.5 9 8 16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+        <h2 className="font-display text-[18px] font-bold tracking-[-0.03em]">{title}</h2>
       </div>
       {children}
     </div>
@@ -48,28 +49,23 @@ type Screen = null | "leaderboard" | "friends" | "nobar" | "history" | "voteWaif
 interface Box {
   key: Exclude<Screen, null>;
   label: string;
+  desc: string;
   Icon: LucideIcon;
-  from: string;
-  to: string;
-  ring: string;
-  /** Warna ikon — latar kotak gelap, aksen lewat ikon. */
-  icon: string;
 }
 
 const BOXES: Box[] = [
-  { key: "leaderboard", label: "Leaderboard", Icon: Trophy, from: "from-amber-300", to: "to-orange-400", ring: "ring-amber-400/30", icon: "text-amber-400" },
-  { key: "friends", label: "Teman", Icon: Users, from: "from-sky-300", to: "to-blue-400", ring: "ring-sky-400/30", icon: "text-sky-400" },
-  { key: "nobar", label: "Nobar", Icon: Radio, from: "from-rose-300", to: "to-pink-400", ring: "ring-rose-400/30", icon: "text-rose-400" },
-  { key: "history", label: "History", Icon: Clock, from: "from-emerald-300", to: "to-teal-400", ring: "ring-emerald-400/30", icon: "text-emerald-400" },
-  { key: "voteWaifu", label: "Vote Waifu", Icon: Heart, from: "from-fuchsia-300", to: "to-purple-400", ring: "ring-fuchsia-400/30", icon: "text-fuchsia-400" },
-  { key: "bubble", label: "Bubble Chat", Icon: MessageCircle, from: "from-cyan-300", to: "to-sky-400", ring: "ring-cyan-400/30", icon: "text-cyan-400" },
-  { key: "adofima", label: "Adofima-nga", Icon: LayoutGrid, from: "from-lime-300", to: "to-green-400", ring: "ring-lime-400/30", icon: "text-lime-400" },
-  { key: "download", label: "Download", Icon: Download, from: "from-teal-300", to: "to-emerald-400", ring: "ring-teal-400/30", icon: "text-teal-400" },
+  { key: "leaderboard", label: "Leaderboard", desc: "Peringkat penonton", Icon: Trophy },
+  { key: "friends", label: "Teman", desc: "Orang yang kamu ikuti", Icon: Users },
+  { key: "nobar", label: "Nobar", desc: "Nonton bareng", Icon: Radio },
+  { key: "history", label: "History", desc: "Riwayat tontonan", Icon: Clock },
+  { key: "voteWaifu", label: "Vote Waifu", desc: "Pilihan komunitas", Icon: Heart },
+  { key: "bubble", label: "Bubble Chat", desc: "Obrolan singkat", Icon: MessageCircle },
+  { key: "adofima", label: "Adofima-nga", desc: "Ruang eksplorasi", Icon: LayoutGrid },
+  { key: "download", label: "Download", desc: "Episode offline", Icon: Download },
 ];
 
-/** Latar kotak: dasar gelap + WASH gradasi warna (dari/to di tiap kotak)
- *  supaya tiap kotak terlihat berwarna & cool, bukan abu-abu polos. */
-const BOX_BG = "bg-gradient-to-b from-zinc-900 via-zinc-950 to-black";
+const TILE =
+  "group relative flex h-[104px] flex-col justify-between rounded-xl border border-white/8 bg-[#101215] p-3 text-left transition hover:border-white/16 hover:bg-[#13161a] active:scale-[0.98]";
 
 export default function Catalog() {
   return (
@@ -111,7 +107,22 @@ function CatalogContent() {
   return (
     <div className="pb-6 pt-2">
       {screen === null && (
-      <div className="grid grid-cols-2 gap-3">
+      <div>
+        <div className="mb-5">
+          <p className="flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.16em] text-white/34">
+            <span className="font-serif text-[16px] font-normal leading-none tracking-normal text-[var(--primary)]">
+              /
+            </span>
+            Jelajahi
+          </p>
+          <h1 className="mt-1.5 font-display text-[26px] font-bold leading-none tracking-[-0.04em]">
+            Semua ruang
+          </h1>
+          <p className="mt-1.5 text-[10px] font-medium text-white/30">
+            Komunitas, tontonan, dan koleksi dalam satu tempat.
+          </p>
+        </div>
+      <div className="grid grid-cols-2 gap-2">
         {BOXES.map((b) =>
           b.key === "voteWaifu" ? (
             /* Kotak vote punya TITIK TIGA di dalam kotaknya (di luar isi),
@@ -119,22 +130,18 @@ function CatalogContent() {
             <div key={b.key} ref={voteRef} className="relative">
               <button
                 onClick={() => setScreen("voteWaifu")}
-                className={cn(
-                  "group relative flex h-56 w-full flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
-                  BOX_BG,
-                  voteKind === "husbu" ? "border-rose-400/40" : b.ring,
-                )}
+                className={TILE}
               >
-                <span
-                  aria-hidden
-                  className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-30", b.from, b.to)}
-                />
-                <b.Icon
-                  className={cn("relative size-9 drop-shadow", voteKind === "husbu" ? "text-rose-400" : b.icon)}
-                  strokeWidth={2}
-                />
-                <span className="relative text-sm font-extrabold text-white">
-                  {voteKind === "husbu" ? "Vote Husbu" : "Vote Waifu"}
+                <span className="grid size-8 place-items-center rounded-lg border border-white/8 bg-white/[0.03] text-white/48">
+                  <b.Icon className="size-4" strokeWidth={2} />
+                </span>
+                <span>
+                  <span className="block text-[11px] font-bold text-white/86">
+                    {voteKind === "husbu" ? "Vote Husbu" : "Vote Waifu"}
+                  </span>
+                  <span className="mt-0.5 block text-[8.5px] font-medium text-white/26">
+                    {b.desc}
+                  </span>
                 </span>
               </button>
               <button
@@ -143,9 +150,9 @@ function CatalogContent() {
                   setVoteMenu((v) => !v);
                 }}
                 aria-label="Ganti jenis vote"
-                className="absolute right-2 top-2 z-20 flex size-8 items-center justify-center rounded-lg border border-white/15 bg-black/60 text-white/85 transition active:scale-90"
+                className="absolute right-2 top-2 z-20 grid size-7 place-items-center rounded-md border border-white/8 bg-[#15181c] text-white/34 transition hover:text-white active:scale-90"
               >
-                <MoreHorizontal className="size-4" />
+                <MoreHorizontal className="size-3.5" />
               </button>
               {voteMenu && (
                 <div className="absolute right-2 top-11 z-30 flex w-40 flex-col gap-2">
@@ -155,7 +162,7 @@ function CatalogContent() {
                       setVoteMenu(false);
                     }}
                     style={{ animationDelay: "0ms" }}
-                    className="lb-menu-item flex w-full items-center gap-2 rounded-xl border border-white/12 bg-neutral-900/95 px-3 py-2.5 text-left text-xs font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
+                    className="lb-menu-item flex w-full items-center gap-2 rounded-lg border border-white/8 bg-[#15181c] px-3 py-2.5 text-left text-[10px] font-bold text-white/80 shadow-xl transition hover:bg-[#1c2025]"
                   >
                     <Heart className="size-4 text-rose-300" />
                     {voteKind === "waifu" ? "Vote Husbu" : "Vote Waifu"}
@@ -169,18 +176,15 @@ function CatalogContent() {
             <div key={b.key} ref={lbRef} className="relative">
               <button
                 onClick={() => setScreen("leaderboard")}
-                className={cn(
-                  "group relative flex h-56 w-full flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
-                  BOX_BG,
-                  b.ring,
-                )}
+                className={TILE}
               >
-                <span
-                  aria-hidden
-                  className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-30", b.from, b.to)}
-                />
-                <b.Icon className={cn("relative size-9 drop-shadow", b.icon)} strokeWidth={2} />
-                <span className="relative text-sm font-extrabold text-white">{b.label}</span>
+                <span className="grid size-8 place-items-center rounded-lg border border-white/8 bg-white/[0.03] text-white/48">
+                  <b.Icon className="size-4" strokeWidth={2} />
+                </span>
+                <span>
+                  <span className="block text-[11px] font-bold text-white/86">{b.label}</span>
+                  <span className="mt-0.5 block text-[8.5px] font-medium text-white/26">{b.desc}</span>
+                </span>
               </button>
               <button
                 onClick={(e) => {
@@ -188,9 +192,9 @@ function CatalogContent() {
                   setLbMenu((v) => !v);
                 }}
                 aria-label="Menu leaderboard"
-                className="absolute right-2 top-2 z-20 flex size-8 items-center justify-center rounded-lg border border-white/15 bg-black/60 text-white/85 transition active:scale-90"
+                className="absolute right-2 top-2 z-20 grid size-7 place-items-center rounded-md border border-white/8 bg-[#15181c] text-white/34 transition hover:text-white active:scale-90"
               >
-                <MoreHorizontal className="size-4" />
+                <MoreHorizontal className="size-3.5" />
               </button>
               {lbMenu && (
                 <div className="absolute right-2 top-11 z-30 flex w-40 flex-col gap-2">
@@ -204,7 +208,7 @@ function CatalogContent() {
                         setLbMenu(false);
                       }}
                       style={{ animationDelay: `${mi * 90}ms` }}
-                      className="lb-menu-item flex w-full items-center gap-2 rounded-xl border border-white/12 bg-neutral-900/95 px-3 py-2.5 text-left text-xs font-bold text-white/90 shadow-2xl backdrop-blur-xl transition hover:bg-white/10"
+                      className="lb-menu-item flex w-full items-center gap-2 rounded-lg border border-white/8 bg-[#15181c] px-3 py-2.5 text-left text-[10px] font-bold text-white/80 shadow-xl transition hover:bg-[#1c2025]"
                     >
                       <m.Icon className={cn("size-3.5", m.iconCls)} /> {m.label}
                     </button>
@@ -218,21 +222,19 @@ function CatalogContent() {
               onClick={() => {
                 setScreen(b.key);
               }}
-              className={cn(
-                "group relative flex h-56 flex-col items-center justify-center gap-2.5 overflow-hidden rounded-3xl border shadow-lg shadow-black/40 transition hover:brightness-110 active:scale-[0.97]",
-                BOX_BG,
-                b.ring,
-              )}
+              className={TILE}
             >
-              <span
-                aria-hidden
-                className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-30", b.from, b.to)}
-              />
-              <b.Icon className={cn("relative size-9 drop-shadow", b.icon)} strokeWidth={2} />
-              <span className="relative text-sm font-extrabold text-white">{b.label}</span>
+              <span className="grid size-8 place-items-center rounded-lg border border-white/8 bg-white/[0.03] text-white/48">
+                <b.Icon className="size-4" strokeWidth={2} />
+              </span>
+              <span>
+                <span className="block text-[11px] font-bold text-white/86">{b.label}</span>
+                <span className="mt-0.5 block text-[8.5px] font-medium text-white/26">{b.desc}</span>
+              </span>
             </button>
           ),
         )}
+      </div>
       </div>
       )}
 

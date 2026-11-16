@@ -247,12 +247,12 @@ export function ProfileSheet({
                 <img
                   src={profile.bannerUrl}
                   alt=""
-                  className="h-[22rem] w-full object-cover"
+                  className="h-[13rem] w-full object-cover"
                 />
               ) : (
                 <div
                   aria-hidden
-                  className="h-[22rem] w-full bg-[radial-gradient(65%_80%_at_20%_0%,color-mix(in_srgb,var(--ui-a)_32%,transparent),transparent_72%),linear-gradient(150deg,#161421,#0b0c12_55%,#141018)]"
+                  className="h-[13rem] w-full bg-[radial-gradient(70%_90%_at_22%_0%,rgba(211,62,48,.16),transparent_70%),linear-gradient(150deg,#171a1f,#0b0c0f_58%,#12100f)]"
                 />
               )}
               {/* Bilah sambung warna tipis di bawah banner */}
@@ -272,12 +272,12 @@ export function ProfileSheet({
 
           {/* Batas banner → isi memakai gradien, tanpa lengkungan/tepi.
               Konten menyatu mulus dengan banner di belakangnya. */}
-          <div className="relative -mt-14">
+          <div className="relative -mt-12">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 -top-20 h-20 bg-gradient-to-b from-transparent via-[#0c111b]/80 to-[#0c111b]"
+              className="pointer-events-none absolute inset-x-0 -top-16 h-16 bg-gradient-to-b from-transparent to-[#0a0b0d]"
             />
-            <div className="relative bg-[#0c111b] p-4 text-center">
+            <div className="relative bg-[#0a0b0d] px-4 pb-4">
             {/* Baris atas: foto profile BESAR di kiri, username + chips di
                 kanan (rata kiri, bukan tengah lagi). */}
             <div className="flex items-start gap-3.5 text-left">
@@ -286,7 +286,7 @@ export function ProfileSheet({
                   <StoryRing
                     image={profile.image}
                     seed={profile.username}
-                    size={92}
+                    size={84}
                     hasStory={(theirStories?.length ?? 0) > 0}
                     seen={false}
                     onClick={() =>
@@ -302,7 +302,7 @@ export function ProfileSheet({
                     type="button"
                     onClick={() => setPhotoSheet(true)}
                     aria-label="Ganti photo profile"
-                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-background bg-sky-400 text-sky-950 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.6)] transition active:scale-90"
+                    className="absolute -bottom-0.5 right-0 z-10 flex size-7 items-center justify-center rounded-full border-[3px] border-[#0a0b0d] bg-[var(--primary)] text-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.8)] transition active:scale-90"
                   >
                     <Pencil className="size-3.5" aria-hidden />
                   </button>
@@ -313,7 +313,7 @@ export function ProfileSheet({
                   <p
                     key={profile.username}
                     className={cn(
-                      "truncate text-xl yn-title",
+                      "truncate font-display text-[23px] font-bold leading-tight tracking-[-0.03em]",
                       usernameColor(profile.username),
                     )}
                   >
@@ -328,8 +328,8 @@ export function ProfileSheet({
                   />
                 </div>
                 {/* Chips: ID · tag level · jumlah teman */}
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
-                  <span className="inline-flex items-center rounded-full bg-zinc-500/25 px-2.5 py-1 font-mono font-bold text-white/95">
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="font-mono text-[9px] font-medium text-white/28">
                     {displayId(profile.seqId)}
                   </span>
                   <button
@@ -340,9 +340,9 @@ export function ProfileSheet({
                   >
                     <LevelBadge level={profile.level} />
                   </button>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/25 px-2.5 py-1 font-bold text-white/95">
-                    <Users className="size-3.5" aria-hidden />
-                    {profile.friendCount ?? 0}
+                  <span className="inline-flex items-center gap-1 font-medium text-white/38">
+                    <Users className="size-3" aria-hidden />
+                    {profile.friendCount ?? 0} teman
                   </span>
                 </div>
               </div>
@@ -382,11 +382,11 @@ export function ProfileSheet({
 
             {/* BIO — memakai ruang kosong di bawah ringkasan profil. */}
             {profile.bio?.trim() ? (
-              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left">
-                <p className="text-[8.5px] font-black uppercase tracking-[0.18em] text-white/30">
+              <div className="mt-4 border-t border-white/7 pt-3 text-left">
+                <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/22">
                   Bio
                 </p>
-                <p className="mt-1 whitespace-pre-line text-[11.5px] leading-relaxed text-white/72">
+                <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-white/52">
                   {profile.bio}
                 </p>
                 {profile.birthDate && (
@@ -450,15 +450,15 @@ export function ProfileSheet({
                 hilang di mode swipe konten). */}
             {!detailKonten && (
             <div className="mt-4">
-              <div className="mb-1.5 flex items-center justify-between text-[12px]">
-                <span className="font-black text-white">Level {profile.level}</span>
-                <span className="text-zinc-300">
-                  {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")}
+              <div className="mb-1.5 flex items-center justify-between text-[9.5px]">
+                <span className="font-bold text-white/42">Level {profile.level}</span>
+                <span className="font-mono text-[8.5px] text-white/26">
+                  {inLevel.toLocaleString("id-ID")}/{cost.toLocaleString("id-ID")} XP
                 </span>
               </div>
-              <div className="h-3.5 overflow-hidden rounded-full bg-black/60 ring-1 ring-white/25">
+              <div className="h-1 overflow-hidden rounded-full bg-white/8">
                 <div
-                  className="h-full rounded-full bg-gold transition-[width] duration-700"
+                  className="h-full rounded-full bg-[var(--yn-mint)] transition-[width] duration-700"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -486,10 +486,10 @@ export function ProfileSheet({
                       sending || friendStatus === "friend" || friendStatus === "pending"
                     }
                     className={cn(
-                      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border bg-transparent px-3 py-3 text-[12px] font-bold transition active:scale-[0.98]",
+                      "flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 text-[11px] font-bold transition active:scale-[0.98]",
                       friendStatus === "friend" || friendStatus === "pending"
-                        ? "border-white/12 text-white/45"
-                        : "border-[#1CA7EC] text-[#FFFAF0]",
+                        ? "border-white/8 bg-[#171a1f] text-white/35"
+                        : "border-transparent bg-[var(--primary)] text-white",
                     )}
                   >
                     {sending ? <Send className="size-4" /> : <UserPlus className="size-4" />}
@@ -511,7 +511,7 @@ export function ProfileSheet({
                     }
                     aria-label="Chat"
                     title="Chat"
-                    className="flex w-12 shrink-0 items-center justify-center rounded-full bg-[#1CA7EC] text-[#FFFAF0] transition active:scale-95"
+                    className="flex w-11 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-[#171a1f] text-white/62 transition hover:text-white active:scale-95"
                   >
                     <MessageCircle className="size-5" />
                   </button>
@@ -522,7 +522,7 @@ export function ProfileSheet({
                     onClick={() => setGiveOpen(true)}
                     aria-label="Give Premium"
                     title="Give Premium"
-                    className="flex w-12 shrink-0 items-center justify-center rounded-full bg-[#FFD23F] text-[#241c02] transition active:scale-95"
+                    className="flex w-11 shrink-0 items-center justify-center rounded-lg border border-[rgba(230,196,124,.18)] bg-[rgba(230,196,124,.08)] text-[var(--gold)] transition active:scale-95"
                   >
                     <CrystalIcon className="size-5" />
                   </button>
@@ -532,14 +532,14 @@ export function ProfileSheet({
                 <button
                   type="button"
                   onClick={() => setViewPet(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-[#FFD23F]/60 py-2.5 text-[12px] font-bold text-[#FFD23F] transition active:scale-[0.98]"
+                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-white/8 bg-[#121417] text-[10px] font-bold text-white/48 transition hover:text-white active:scale-[0.98]"
                 >
                   <PawPrint className="size-4" /> YoruPet
                 </button>
                 <button
                   type="button"
                   onClick={() => setAffinity(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-[#E84855]/60 py-2.5 text-[12px] font-bold text-[#FFFAF0] transition active:scale-[0.98]"
+                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-white/8 bg-[#121417] text-[10px] font-bold text-white/48 transition hover:text-white active:scale-[0.98]"
                 >
                   <span className="relative mr-0.5 inline-flex">
                     <HeartPulse className="size-[17px]" strokeWidth={2.4} />
@@ -1408,9 +1408,13 @@ export function TierIcon({ tier, className }: { tier: string; className?: string
 
 function StatCell({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="py-1">
-      <p className="text-base font-bold text-white">{value}</p>
-      <p className="text-[10px] text-zinc-400">{label}</p>
+    <div className="py-1.5">
+      <p className="font-mono text-[17px] font-bold leading-none tabular-nums text-white">
+        {value}
+      </p>
+      <p className="mt-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/28">
+        {label}
+      </p>
     </div>
   );
 }

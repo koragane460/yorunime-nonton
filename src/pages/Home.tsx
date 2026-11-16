@@ -67,7 +67,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { StickerStore } from "@/components/StickerStore";
-import { AccountHeader } from "@/components/HomeTop";
+import { YoruHomeHeader } from "@/components/YoruHomeHeader";
+import { YoruHero } from "@/components/YoruHero";
 import {
   ContinueWatchingCard,
   HomeCommunityCard,
@@ -102,25 +103,6 @@ const POPULAR_TAGS = [
   "Isekai",
 ];
 
-
-/**
- * Palet chip GENRE — berwarna lembut (BUKAN neon), diputar per judul genre
- * supaya deretan chip tidak monoton satu warna. Dipakai di section Genre
- * Home DAN di panel pilihan genre di layar Search (konsisten, permintaan).
- */
-const GENRE_HUES = [
-  "border-sky-400/40 bg-sky-400/15 text-sky-100 hover:bg-sky-400/25",
-  "border-rose-400/40 bg-rose-400/15 text-rose-100 hover:bg-rose-400/25",
-  "border-emerald-400/40 bg-emerald-400/15 text-emerald-100 hover:bg-emerald-400/25",
-  "border-amber-400/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25",
-  "border-violet-400/40 bg-violet-400/15 text-violet-100 hover:bg-violet-400/25",
-  "border-teal-400/40 bg-teal-400/15 text-teal-100 hover:bg-teal-400/25",
-  "border-orange-400/40 bg-orange-400/15 text-orange-100 hover:bg-orange-400/25",
-  "border-fuchsia-400/40 bg-fuchsia-400/15 text-fuchsia-100 hover:bg-fuchsia-400/25",
-] as const;
-function genreHue(i: number) {
-  return GENRE_HUES[i % GENRE_HUES.length];
-}
 
 type AnimeCardT = CatalogCard & {
   source?: CatalogPickSource;
@@ -433,9 +415,9 @@ function SectionRow({
           /* Pill halus (bukan link polos) — aksen keemasan tipis biar rapi. */
           <button
             onClick={onMore}
-            className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-gold-strong transition hover:border-gold-strong/50 hover:bg-gold-soft active:scale-95"
+            className="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] font-bold text-white/42 transition hover:text-white active:scale-95"
           >
-            Lihat selengkapnya <ChevronRight className="size-3" aria-hidden />
+            Lihat semua <ChevronRight className="size-3.5" aria-hidden />
           </button>
         )}
       </div>
@@ -492,73 +474,65 @@ function ComicHomeRow({
         <h2 className="yn-sec text-lg">{title}</h2>
         <button
           onClick={onMore}
-          className="shrink-0 text-xs font-semibold text-primary"
+          className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-white/42 transition hover:text-white"
         >
-          Lihat selengkap ›
+          Lihat semua <ChevronRight className="size-3.5" />
         </button>
       </div>
-      <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+      <div className="no-bar -mr-4 flex gap-2.5 overflow-x-auto pr-4 pb-1">
         {items.map((c) => {
           const views = formatViews(c.views);
           return (
             <button
               key={c.slug}
               onClick={() => onPick(c.slug)}
-              className="group w-28 shrink-0 text-left"
+              className="group w-[108px] shrink-0 text-left"
             >
-              <div className="relative overflow-hidden rounded-t-xl border border-border/60">
-                {/* Poster + kotak judul MENYATU (tanpa jarak) — gaya sama
-                    seperti kartu anime. */}
+              <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black">
                 {c.image ? (
                   <img
                     src={c.image}
                     alt={c.title}
                     loading="lazy"
                     className={cn(
-                      "w-full object-cover transition duration-300 group-hover:scale-105",
+                      "w-full object-cover transition duration-300 group-hover:scale-[1.03]",
                       variant === "manga" ? "aspect-[2/3]" : "aspect-[3/4.4]",
                     )}
                   />
                 ) : (
                   <div
                     className={cn(
-                      "w-full bg-muted",
+                      "w-full bg-[#1b1e23]",
                       variant === "manga" ? "aspect-[2/3]" : "aspect-[3/4.4]",
                     )}
                   />
                 )}
-                {/* Label chapter terbaru — MENYATU dengan kartu (flush ke
-                    sudut, tanpa rounded yang terlihat), biru muda. */}
                 {variant === "manhwa" && c.latestChapter && (
-                  <span className="absolute left-0 top-0 rounded-none rounded-br-lg bg-sky-300 px-1.5 py-0.5 font-mono text-[9px] font-bold text-black">
+                  <span className="absolute left-0 top-0 rounded-br-md bg-black/75 px-1.5 py-1 font-mono text-[8px] font-bold text-white backdrop-blur-sm">
                     {c.latestChapter}
                   </span>
                 )}
-                {/* Title ONGOING/TAMAT — flush ke sudut kiri-atas kartu
-                    (menyatu, rounded hanya pojok kanan-bawah), background
-                    biru SAMPAI dengan chip StatusChip di manhwa/manhwa. */}
                 {variant === "manga" && (
                   <span
                     className={cn(
-                      "absolute left-0 top-0 rounded-none rounded-br-lg px-1.5 py-0.5 text-[9px] font-black uppercase",
-                      c.ongoing ? "bg-sky-600 text-white" : "bg-sky-800 text-white",
+                      "absolute left-0 top-0 rounded-br-md px-1.5 py-1 text-[8px] font-bold uppercase tracking-[0.05em]",
+                      c.ongoing
+                        ? "bg-[var(--primary)] text-white"
+                        : "bg-black/75 text-white/72",
                     )}
                   >
                     {c.ongoing ? "Ongoing" : "Tamat"}
                   </span>
                 )}
               </div>
-              {/* Kotak judul semi-opaque MENYATU dengan poster. */}
-              <div className="rounded-b-xl border-x border-b border-border/60 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
-                <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
-                  {c.title}
+              <p className="mt-2 line-clamp-2 min-h-8 text-[11px] font-semibold leading-4 text-white/90">
+                {c.title}
+              </p>
+              {views && (
+                <p className="mt-0.5 font-mono text-[9px] text-white/35">
+                  {views} dibaca
                 </p>
-                {views && (
-                  <p className="mt-0.5 text-[10px] text-white/60">
-                    {views} dibaca
-                  </p>
-                )}
-              </div>
+              )}
             </button>
           );
         })}
@@ -589,11 +563,14 @@ function FilmPosterRow({
 }) {
   if (items.length === 0 && loading) {
     return (
-      <div className={cn("fade-enter", hideHeader ? "mt-3" : "mt-4")}>
+      <div className={cn("fade-enter", hideHeader ? "mt-2.5" : "mt-4")}>
         {!hideHeader && <SectionTitle>{title}</SectionTitle>}
-        <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+        <div className="no-bar -mr-4 flex gap-2.5 overflow-x-auto pr-4 pb-1">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton h-56 w-28 shrink-0 rounded-xl" />
+            <div key={i} className="w-[108px] shrink-0">
+              <div className="skeleton aspect-[2/3] w-full rounded-lg" />
+              <div className="skeleton mt-2 h-3 w-4/5 rounded" />
+            </div>
           ))}
         </div>
       </div>
@@ -604,62 +581,61 @@ function FilmPosterRow({
     <div className={cn("fade-enter", hideHeader ? "mt-3" : "mt-4")}>
       {!hideHeader && (
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="yn-sec flex items-center gap-1.5 text-lg">
-            <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
+          <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/50">
+            <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+              /
+            </span>
             {title}
           </h2>
           {onMore && (
             <button
               onClick={onMore}
-              className="shrink-0 text-xs font-semibold text-primary"
+              className="shrink-0 text-[10px] font-semibold text-white/42 transition hover:text-white"
             >
-              Lihat selengkap ›
+              Lihat semua
             </button>
           )}
         </div>
       )}
-      <div className="thin-scroll flex gap-2.5 overflow-x-auto pb-1">
+      <div className="no-bar -mr-4 flex gap-2.5 overflow-x-auto pr-4 pb-1">
         {items.map((f) => (
           <button
             key={`${f.kind}-${f.id}`}
             onClick={() => onPick(f.id, f.kind)}
-            className="group w-28 shrink-0 text-left"
+            className="group w-[108px] shrink-0 text-left"
           >
-            <div className="relative overflow-hidden rounded-t-xl border border-border/60 bg-black">
+            <div className="yn-media-cut relative overflow-hidden rounded-lg border border-white/10 bg-[#1a1d22]">
               {f.image ? (
                 <img
                   src={f.image}
                   alt={f.title}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
+                  className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                 />
               ) : (
-                <div className="flex aspect-[2/3] w-full items-center justify-center bg-muted">
-                  <Film className="size-6 text-muted-foreground" aria-hidden />
+                <div className="flex aspect-[2/3] w-full items-center justify-center bg-[#1a1d22]">
+                  <Film className="size-5 text-white/20" aria-hidden />
                 </div>
               )}
               {typeof f.rating === "number" && f.rating > 0 && (
-                <span className="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-amber-300 backdrop-blur-sm">
-                  <Star className="size-2.5 fill-amber-300" aria-hidden />
+                <span className="absolute bottom-0 left-0 flex items-center gap-0.5 rounded-tr-md bg-black/72 px-1.5 py-1 font-mono text-[8px] font-bold text-[var(--gold)] backdrop-blur-sm">
+                  <Star className="size-2 fill-current" aria-hidden />
                   {f.rating.toFixed(1)}
                 </span>
               )}
               {f.kind === "tv" && (
-                <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase text-white backdrop-blur-sm">
+                <span className="absolute right-0 top-0 rounded-bl-md bg-black/72 px-1.5 py-1 text-[7px] font-bold uppercase tracking-[0.05em] text-white/80">
                   Series
                 </span>
               )}
             </div>
-            {/* Kotak judul menyatu langsung di bawah poster. */}
-            <div className="rounded-b-xl border-x border-b border-border/60 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
-              <p className="line-clamp-2 min-h-8 text-[11px] font-medium leading-4 text-white">
-                {f.title}
-              </p>
-              {f.year && (
-                <p className="mt-0.5 text-[10px] text-white/60">{f.year}</p>
-              )}
-            </div>
+            <p className="mt-2 line-clamp-2 min-h-8 text-[11px] font-semibold leading-4 text-white/90">
+              {f.title}
+            </p>
+            {f.year && (
+              <p className="mt-0.5 font-mono text-[8.5px] text-white/28">{f.year}</p>
+            )}
           </button>
         ))}
       </div>
@@ -763,13 +739,17 @@ function FilmHomeSection() {
     return null;
   }
   return (
-    <div className="fade-enter mt-4">
-      {/* SATU judul kategori — 3 baris di bawahnya tanpa judul masing-masing. */}
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="yn-sec flex items-center gap-1.5 text-lg">
-          <Film className="size-4 shrink-0 text-sky-400" aria-hidden />
+    <div className="fade-enter mt-7">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/50">
+          <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+            /
+          </span>
           Film &amp; Series
         </h2>
+        <span className="text-[8px] font-medium uppercase tracking-[0.08em] text-white/22">
+          Pilihan malam ini
+        </span>
         {/* Tombol "Lihat selengkap" (menu film) DIHAPUS — film kini cukup
             dijangkau lewat Pencarian di Home (permintaan user). */}
       </div>
@@ -813,68 +793,59 @@ function BrowseRow({
     | "completed"
     | "popular";
   title: string;
-  onPick: (id: string) => void;
+  onPick: (id: string, title?: string, source?: CatalogPickSource) => void;
 }) {
   const browse = useAction(api.anime.animeBrowse);
   const [items, setItems] = useState<AnimeCardT[]>([]);
-  const [page, setPage] = useState(1);
-  const [busy, setBusy] = useState(true);
 
   useEffect(() => {
     let alive = true;
-    setBusy(true);
-    browse({ kind, page })
-      .then((r: any) => {
+    browse({ kind, page: 1 })
+      .then((r: unknown) => {
         if (!alive) return;
         let list = (r ?? []) as AnimeCardT[];
-        // Baris Upcoming: judul yang datang dari backend masih membawa status
-        // "Ongoing" + jumlah episode — padahal ini daftar SEGERA RILIS.
-        // Dipaksa tampil sebagai Upcoming dan tanpa jumlah episode.
         if (kind === "upcoming") {
           list = list.map((a) => ({ ...a, status: "Upcoming", episodes: undefined }));
         }
-        setItems((prev) => (page === 1 ? list : [...prev, ...list]));
+        setItems(list);
       })
-      .catch(() => {})
-      .finally(() => {
-        if (alive) setBusy(false);
-      });
+      .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [kind, page, browse]);
+  }, [kind, browse]);
 
   return (
-    <>
+    <section className="fade-enter">
       <SectionTitle>{title}</SectionTitle>
       {items.length === 0 ? (
-        <GridSkeleton count={10} />
+        <div className="no-bar flex gap-2.5 overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="w-[108px] shrink-0">
+              <div className="skeleton aspect-[2/3] w-full rounded-lg" />
+              <div className="skeleton mt-2 h-3 w-4/5 rounded" />
+            </div>
+          ))}
+        </div>
       ) : (
-        <>
-          <AnimeGrid
-            items={items}
-            onPick={onPick}
-            newIds={new Set()}
-            views={undefined}
-          />
-          <div className="mt-3 flex justify-center">
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={busy || page >= 6}
-              className="rounded-full border border-border bg-black/55 px-4 py-1.5 text-xs font-semibold text-muted-foreground backdrop-blur-md transition hover:border-foreground/40 hover:text-primary disabled:opacity-50"
-            >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" aria-label="Memuat" />
-              ) : page >= 6 ? (
-                "Semua item sudah tampil"
-              ) : (
-                "Muat lebih banyak"
-              )}
-            </button>
-          </div>
-        </>
+        <div className="no-bar -mr-4 flex gap-2.5 overflow-x-auto pr-4 pb-1">
+          {items.slice(0, 12).map((a) => (
+            <div key={a.id} className="w-[108px] shrink-0">
+              <AnimeCard
+                id={a.id}
+                title={a.title}
+                image={a.image}
+                score={a.score}
+                status={a.status}
+                type={a.type}
+                episodes={a.episodes}
+                onClick={() => onPick(a.id, a.title, a.source)}
+              />
+            </div>
+          ))}
+        </div>
       )}
-    </>
+    </section>
   );
 }
 
@@ -1186,32 +1157,14 @@ function HomeContent() {
   // Genre tidak lagi ditampilkan di Home — pindah ke layar Pencarian.
   // Tab di sini cuma penyaring tampilan (tidak menarik genre).
   return (
-    <div className="pb-8">
-      {/* Warna Home hanya menemani kartu akun sampai judul Season Ini,
-          lalu memudar menjadi gradien di ujungnya. */}
-      <div className="yn-home-tint relative -mx-4 rounded-b-[32px] px-4 pb-7">
-      <AccountHeader onSearch={() => setShowSearch(true)} />
+    <div className="pb-10">
+      <YoruHomeHeader onSearch={() => setShowSearch(true)} />
 
-      <PremiumPromoBanner
-        className="mt-3"
-        onAction={() => navigate("/premium")}
+      <YoruHero
+        items={heroItems.length ? heroItems : topList}
+        onPick={openAnime}
       />
-      <HomeCommunityCard onOpenChat={() => setShowChat(true)} />
 
-      {/* Leaderboard langsung di bawah Global Chat, lalu Genre & Katalog. */}
-      <LeaderCards />
-
-      {!loading && genreList.length > 0 && (
-        <QuickGenre
-          genres={genreList}
-          onOpenGenre={(id) => setGenreScreen(id)}
-          onPick={(id, title, source) =>
-            openAnime(id, title, (source as CatalogPickSource) ?? "anilist")
-          }
-        />
-      )}
-
-      {/* Terakhir ditonton — pindah ke bawah Genre & Quick. */}
       <ContinueWatchingCard
         onOpen={(h) =>
           navigate(
@@ -1226,11 +1179,25 @@ function HomeContent() {
         }}
       />
 
-      {/* Season Ini menutup permukaan warna Home sebelum gradien memudar. */}
-      <div className="mt-5">
-        <BrowseRow kind="season" title="Season Ini" onPick={openAnime} />
+      {!loading && genreList.length > 0 && (
+        <QuickGenre
+          genres={genreList}
+          onOpenGenre={(id) => setGenreScreen(id)}
+          onPick={(id, title, source) =>
+            openAnime(id, title, (source as CatalogPickSource) ?? "anilist")
+          }
+        />
+      )}
+
+      <div className="mt-6">
+        <BrowseRow kind="season" title="Musim ini" onPick={openAnime} />
       </div>
-      </div>
+
+      <PremiumPromoBanner
+        className="mt-6"
+        onAction={() => navigate("/premium")}
+      />
+      <HomeCommunityCard onOpenChat={() => setShowChat(true)} />
 
 
       {/* 6c) MANGA TERBARU & POPULER — kartu geser ke kanan; "Lihat
@@ -1261,37 +1228,36 @@ function HomeContent() {
       <FilmHomeSection />
 
       {/* DUA KATEGORI STATUS — semua judul Ongoing / Completed. */}
-      <BrowseRow kind="ongoing" title="Ongoing Anime" onPick={openAnime} />
-      <BrowseRow kind="completed" title="Completed Anime" onPick={openAnime} />
+      <div className="mt-7 space-y-6">
+        <BrowseRow kind="ongoing" title="Ongoing Anime" onPick={openAnime} />
+        <BrowseRow kind="completed" title="Completed Anime" onPick={openAnime} />
+      </div>
 
       {/* FAVORITE KAMU — sebelum Top Anime, bukan setelah footer. */}
       {favQuery && (
         <div className="fade-enter mt-5">
           <SectionTitle>Favorite Kamu</SectionTitle>
           {favQuery.length === 0 && (
-            <p className="mt-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3 text-[11px] text-white/45">
-              Belum ada anime favorit. Tekan ikon hati di detail anime untuk menyimpannya di sini.
+            <p className="mt-2 border-y border-white/7 py-4 text-center text-[10px] leading-relaxed text-white/30">
+              Belum ada favorit. Tekan ikon hati di detail anime untuk
+              menyimpannya di sini.
             </p>
           )}
-          <div className="thin-scroll mt-2 flex gap-2.5 overflow-x-auto pb-1">
+          <div className="no-bar -mr-4 mt-2 flex gap-2.5 overflow-x-auto pr-4 pb-1">
             {favQuery.map((f: any) => {
               const real = favReal[String(f.animeId)];
               return (
-                <button
-                  key={f._id}
-                  onClick={() => openAnime(real?.id ?? f.animeId, real?.title ?? f.animeTitle)}
-                  className="relative w-28 shrink-0 overflow-hidden rounded-xl border border-border/60"
-                >
-                  <img
-                    src={real?.image || f.animeImage || ""}
-                    alt=""
-                    className="aspect-[2/3] w-full object-cover"
+                <div key={f._id} className="relative w-[108px] shrink-0">
+                  <AnimeCard
+                    id={String(f.animeId)}
+                    title={real?.title || f.animeTitle}
+                    image={real?.image || f.animeImage || ""}
+                    onClick={() =>
+                      openAnime(real?.id ?? f.animeId, real?.title ?? f.animeTitle)
+                    }
                   />
-                  <Heart className="absolute right-1 top-1 size-4 fill-white/85 text-white/85" />
-                  <p className="line-clamp-2 bg-black/60 p-1.5 text-left text-[10px] leading-3">
-                    {real?.title || f.animeTitle}
-                  </p>
-                </button>
+                  <Heart className="pointer-events-none absolute right-1.5 top-1.5 size-3.5 fill-white/85 text-white/85 drop-shadow" />
+                </div>
               );
             })}
           </div>
@@ -1321,6 +1287,8 @@ function HomeContent() {
           />
         )}
       </SectionRow>
+
+      <LeaderCards />
 
       {/* 8) FOOTER — paling bawah halaman, sebelum layar overlay. */}
       <HomeFooter />
@@ -3754,29 +3722,20 @@ function AnimeDetailScreen({
         {/* Header transparan di atas banner full-bleed.
             Banner + poster tampil di SEMUA tab (Info/Nonton/Character/
             Cuplikan) supaya judul, rating, studio, dan status tidak hilang. */}
-        <div className="relative">
-          {/* Banner: background anime full lebar sampai pinggir (kesamping panjang)
-              — diperpanjang sedikit ke bawah (permintaan pemilik). */}
-          <div
-            className="relative h-80 w-full shrink-0 overflow-hidden bg-cover bg-center"
-            style={
-              detail.image
-                ? {
-                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, var(--background) 96%), linear-gradient(90deg, rgba(0,0,0,.5), transparent 55%), url(${detail.image})`,
-                  }
-                : undefined
-            }
-          >
-            {!detail.image && <div className="h-full w-full bg-hero-gradient" />}
-          </div>
-
-          {/* Header saja. Favorite tidak lagi di pojok kanan atas: sekarang
-              jadi tombol di baris yang sama dengan "Lanjut episode". */}
+        <div className="relative h-[258px] overflow-hidden bg-[#101216]">
+          {detail.image && (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${detail.image})` }}
+            />
+          )}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,11,13,.62)_0%,rgba(10,11,13,.08)_32%,rgba(10,11,13,.42)_72%,#0a0b0d_100%)]" />
           <div className="absolute inset-x-0 top-0 z-10">
-            <DetailHeader title="Detail Anime" onClose={onClose} />
-          </div>        </div>
+            <DetailHeader title="Detail" onClose={onClose} />
+          </div>
+        </div>
 
-        <div className="px-3">
+        <div className="relative z-10 -mt-16 px-4">
           {/* POSTER DI TENGAH ATAS — duduk DI BAWAH banner (tidak ketimpa),
               di bawahnya judul anime, lalu judul English abu pudar.
               `relative z-10` WAJIB: banner ber-`relative` (elemen terposisi)
@@ -3784,13 +3743,9 @@ function AnimeDetailScreen({
 dalam banner dan tampak KEpotong/setengah. `onError` mengganti
               poster gagal muat (403 dsb.) dengan kotak judul, jadi tidak
               pernah ada area kosong tanpa render. */}
-          <div className="-mt-24 flex flex-col items-center text-center">
-            {/* Kotak poster: TANPA bilah hitam atas/bawah (object-cover),
-                plus garis tipis + pendar biru supaya kotaknya jelas terlihat
-                di atas latar hitam. */}
-            <div className="relative z-10 flex h-72 w-48 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-[#141821] shadow-[0_28px_56px_-20px_rgba(0,0,0,1)] ring-1 ring-[#1CA7EC]/35">
-              {/* Fallback — tampil hanya kalau <img> gagal dimuat. */}
-              <span className="line-clamp-5 px-3 text-center text-[11px] font-bold leading-snug text-white/45">
+          <div className="flex items-start gap-3">
+            <div className="relative -mt-7 h-[136px] w-[92px] shrink-0 overflow-hidden rounded-lg border border-white/15 bg-[#171a1f] shadow-[0_18px_34px_-18px_rgba(0,0,0,.95)]">
+              <span className="line-clamp-5 px-2 pt-6 text-center text-[9px] font-bold leading-snug text-white/30">
                 {detail.title}
               </span>
               {detail.image && (
@@ -3798,155 +3753,163 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                   src={detail.image}
                   alt=""
                   onError={(e) => {
-                    // Poster gagal dimuat → sembunyikan gambar, kotak judul
-                    // di belakangnya yang tampil (tetap ada "render").
                     e.currentTarget.style.visibility = "hidden";
                   }}
-                  // object-cover — poster mengisi kotak penuh, jadi TIDAK ada
-                  // bagian hitam di atas & bawah seperti sebelumnya.
-                  className="absolute inset-0 size-full rounded-2xl object-cover"
+                  className="absolute inset-0 size-full object-cover"
                 />
               )}
-              <PosterStatusBadge status={detail.status} size="lg" />
-              <PosterRatingBadge score={detail.score} size="lg" />
+              <PosterStatusBadge status={detail.status} />
             </div>
-            <h2 className="yn-title mt-3 px-2 text-2xl leading-tight text-white">
-              {detail.title}
-            </h2>
-            {/* Judul terjemahan Inggris — kecil, abu pudar. */}
-            {detail.titleEnglish && (
-              <p className="mt-1 line-clamp-2 text-[11px] text-white/45">
-                {detail.titleEnglish}
+
+            <div className="min-w-0 flex-1 pt-1">
+              <p className="flex flex-wrap items-center gap-x-1.5 text-[8.5px] font-bold uppercase tracking-[0.08em] text-white/34">
+                <span>{typeLabel(detail.type)}</span>
+                {detail.year && (
+                  <>
+                    <span className="text-white/15">/</span>
+                    <span>{detail.year}</span>
+                  </>
+                )}
+                {(detail as any).seasonLabel && (
+                  <>
+                    <span className="text-white/15">/</span>
+                    <span>{String((detail as any).seasonLabel)}</span>
+                  </>
+                )}
               </p>
+              <h1 className="mt-1.5 line-clamp-3 font-serif text-[27px] leading-[1.05] tracking-[-0.02em] text-white">
+                {detail.title}
+              </h1>
+              {detail.titleEnglish && (
+                <p className="mt-1 line-clamp-1 text-[9.5px] font-medium text-white/32">
+                  {detail.titleEnglish}
+                </p>
+              )}
+              {detail.studio && (
+                <p className="mt-1.5 truncate text-[10px] font-medium text-white/42">
+                  {detail.studio}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-white/8 py-2.5 text-[10px] font-semibold text-white/52">
+            <span className="inline-flex items-center gap-1 font-mono font-bold text-[var(--gold)]">
+              <Star className="size-3 fill-current" />
+              {detail.score ? Number(detail.score).toFixed(2) : (detail.rating ?? "-")}
+            </span>
+            <span>{releasedCount} episode</span>
+            <span>{typeLabel(detail.type)}</span>
+            {devAccess?.level === "dev" && (
+              <button
+                onClick={() => setDevInfoOpen(true)}
+                className="ml-auto inline-flex items-center gap-1 text-[9px] font-medium text-white/34 hover:text-white/70"
+              >
+                <Info className="size-3" /> Info
+              </button>
             )}
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-              {/* Jadwal update — hanya judul ONGOING. Sejajar + ukuran sama
-                  dengan tag status; ikon kalender + teks kuning lembut. */}
-              {detail.status === "Ongoing" && updateDay && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 ring-1 ring-amber-300/35">
-                  <CalendarDays className="size-3" aria-hidden />
-                  Update setiap {updateDay}
-                </span>
-              )}
-              {/* Musim tayang (mis. "Fall 2026") — sama seperti di layar
-                  nonton, supaya info kapan tayangnya konsisten. */}
-              {(detail as any).seasonLabel && (
-                <span className="inline-flex items-center rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-sky-300 ring-1 ring-sky-300/35">
-                  {String((detail as any).seasonLabel)}
-                </span>
-              )}
-              {/* Tombol info khusus developer: MAL id + URL poster + id sumber,
-                  dipakai saat mengisi tools konten. */}
-              {devAccess?.level === "dev" && (
-                <button
-                  onClick={() => setDevInfoOpen(true)}
-                  className="inline-flex w-fit items-center gap-1 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white/90"
+          </div>
+
+          {(detail.genres ?? []).length > 0 && (
+            <div className="no-bar -mr-4 mt-3 flex gap-1.5 overflow-x-auto pr-4 pb-1">
+              {(detail.genres ?? []).map((g: string) => (
+                <span
+                  key={g}
+                  className="shrink-0 rounded-md border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[9.5px] font-semibold text-white/62"
                 >
-                  <Info className="size-3" /> Info developer
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {detail.status === "Ongoing" && updateDay && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-[rgba(230,196,124,.16)] bg-[rgba(230,196,124,.055)] px-2.5 py-2">
+              <CalendarDays className="size-3.5 shrink-0 text-[var(--gold)]" />
+              <span className="text-[10px] font-semibold text-[var(--gold)]">
+                Update setiap {updateDay}
+              </span>
+              <span className="ml-auto text-[8.5px] font-medium uppercase tracking-[0.08em] text-[rgba(230,196,124,.45)]">
+                Jadwal rilis
+              </span>
+            </div>
+          )}
+
+          <div className="mt-5 flex items-stretch gap-2">
+            <button
+              className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-3 text-[12.5px] font-bold text-white transition hover:brightness-105 active:scale-[0.985]"
+              onClick={() => navigate(resumeUrl)}
+            >
+              <Play className="size-4 fill-current" aria-hidden />
+              {progress && !progress.finished && progress.progressSec > 30
+                ? `Lanjut Eps ${progress.episode}`
+                : "Mulai Tonton"}
+            </button>
+            <button
+              aria-label={isFav ? "Berhenti subscribe" : "Subscribe"}
+              title={isFav ? "Sudah subscribe" : "Subscribe"}
+              className={cn(
+                "flex min-h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-[11px] font-bold transition active:scale-[0.97]",
+                isFav
+                  ? "border-[rgba(116,223,194,.3)] bg-[rgba(116,223,194,.09)] text-[var(--yn-mint)]"
+                  : "border-white/10 bg-[#171a1f] text-white/72 hover:border-white/20 hover:text-white",
+              )}
+              onClick={() => {
+                if (!user) {
+                  toast.info("Masuk untuk subscribe anime ini");
+                  return;
+                }
+                setBookmarkOpen(true);
+              }}
+            >
+              <Bell className={cn("size-4", isFav && "fill-current")} aria-hidden />
+              {isFav ? "Diikuti" : "Subscribe"}
+            </button>
+          </div>
+
+          {progress && progress.durationSec > 0 && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+                <span
+                  className="block h-full rounded-full bg-[var(--primary)]"
+                  style={{
+                    width: `${Math.min(100, Math.round((progress.progressSec / progress.durationSec) * 100))}%`,
+                  }}
+                />
+              </span>
+              <span className="shrink-0 font-mono text-[9px] text-white/34">
+                {Math.floor(progress.progressSec / 60)} /{" "}
+                {Math.floor(progress.durationSec / 60)} mnt
+              </span>
+            </div>
+          )}
+
+          <section className="mt-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/50">
+                <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                  /
+                </span>
+                Sinopsis
+              </h2>
+              {canExpandSynopsis && (
+                <button
+                  onClick={() => setSynopsisOpen((v) => !v)}
+                  className="shrink-0 text-[9.5px] font-bold text-white/38 transition hover:text-white"
+                >
+                  {synopsisOpen ? "Lebih sedikit" : "Selengkapnya"}
                 </button>
               )}
             </div>
-
-            {/* GENRE — chip rounded, rata TENGAH, tepat di bawah status
-                (permintaan: genre dibawahnya [status] tengah). */}
-            {(detail.genres ?? []).length > 0 && (
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {(detail.genres ?? []).map((g: string) => (
-                  <span
-                    key={g}
-                    className="rounded-full border border-white/25 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold text-white"
-                  >
-                    {g}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* GRID metadata — HANYA Rating · Studio · Tahun · Tipe (kotak
-              rounded kecil, 4 per baris). Item lain dihapus atas permintaan. */}
-          <div className="mt-3 grid grid-cols-4 gap-1.5">
-            <MetaTile
-              icon={Star}
-              value={
-                detail.score
-                  ? Number(detail.score).toFixed(2)
-                  : (detail.rating ?? "-")
-              }
-              label="Rating"
-              accent="text-yellow-300"
-            />
-            {detail.studio && (
-              <MetaTile icon={Tv} value={detail.studio} label="Studio" />
-            )}
-            {detail.year && (
-              <MetaTile icon={CalendarDays} value={String(detail.year)} label="Tahun" />
-            )}
-            {detail.type && (
-              <MetaTile icon={Play} value={typeLabel(detail.type)} label="Tipe" />
-            )}
-          </div>
-
-          {/* Jumlah favorite — pindah jadi KOTAK di grid metadata (atas). */}
-
-          {/* SINOPSIS — tepat di bawah kotak meta (rating/studio/tahun/tipe),
-              TANPA kotak background; "Lihat selengkapnya" di kanan judul. */}
-          <div className="mt-8 flex items-center justify-between gap-3">
-            <h2 className="yn-sec text-lg text-white">Sinopsis</h2>
-            {canExpandSynopsis && (
-              <button
-                onClick={() => setSynopsisOpen((v) => !v)}
-                className="shrink-0 text-[13px] font-bold text-gold-strong transition hover:text-white"
-              >
-                {synopsisOpen ? "Lebih sedikit" : "Lihat selengkapnya"}
-              </button>
-            )}
-          </div>
-          <p
-            className={cn(
-              "mt-2 whitespace-pre-line text-sm leading-6 text-white/85",
-              !synopsisOpen && canExpandSynopsis && "line-clamp-6",
-            )}
-          >
-            {synopsisBody}
-          </p>
-
-          {/* JARAK 2 BARIS, baru tombol NONTON + SUBSCRIBE (permintaan). */}
-          <div className="mt-7">
-            <div className="flex items-stretch gap-2.5">
-              <button
-                className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 text-sm font-bold text-white transition hover:bg-sky-600 active:scale-[0.98]"
-                onClick={() => navigate(resumeUrl)}
-              >
-                <Play className="size-4 fill-current" aria-hidden />
-                {progress && !progress.finished && progress.progressSec > 30
-                  ? `Lanjut episode ${progress.episode}`
-                  : "Nonton"}
-              </button>
-              {/* SUBSCRIBE — kotak PERSEGI, cuma ikon lonceng (permintaan). */}
-              <button
-                aria-label="Subscribe"
-                title={isFav ? "Sudah subscribe" : "Subscribe"}
-                className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.05] transition hover:border-gold-strong/45 hover:bg-gold-strong/10 active:scale-[0.97]"
-                onClick={() => {
-                  if (!user) return;
-                  setBookmarkOpen(true);
-                }}
-              >
-                <Bell
-                  className={cn("size-5", isFav && "fill-current text-accent")}
-                  aria-hidden
-                />
-              </button>
-            </div>
-            {/* Baris di bawah tombol: posisi tontonan dalam menit. */}
-            {progress && progress.durationSec > 0 && (
-              <p className="mt-1.5 text-center text-[11px] text-white/60">
-                Lanjut menit {Math.floor(progress.progressSec / 60)}/
-                {Math.floor(progress.durationSec / 60)}
-              </p>
-            )}
-          </div>
+            <p
+              className={cn(
+                "mt-2 whitespace-pre-line text-[12px] leading-[1.75] text-white/48",
+                !synopsisOpen && canExpandSynopsis && "line-clamp-4",
+              )}
+            >
+              {synopsisBody}
+            </p>
+          </section>
 
 
           {bookmarkOpen && (
@@ -4117,30 +4080,33 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
           <div>
             {/* Baris judul + kontrol: Grid dan Urut */}
             <div className="flex items-center gap-2">
-              <h2 className="yn-sec flex-1 text-lg text-white">
-                Episode <span className="font-semibold text-white/50">({eps.length})</span>
+              <h2 className="flex flex-1 items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/50">
+                <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                  /
+                </span>
+                Episode
+                <span className="font-mono text-[9px] font-medium tracking-normal text-white/26">
+                  {eps.length}
+                </span>
               </h2>
               <button
                 onClick={() => setEpisodeGrid((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/[0.12]"
+                aria-label={episodeGrid ? "Tampilan daftar" : "Tampilan grid"}
+                className="grid size-9 place-items-center rounded-lg border border-white/10 bg-[#171a1f] text-white/55 transition hover:text-white"
               >
                 {episodeGrid ? (
-                  <>
-                    <List className="size-3.5" aria-hidden /> List
-                  </>
+                  <List className="size-3.5" aria-hidden />
                 ) : (
-                  <>
-                    <LayoutGrid className="size-3.5" aria-hidden /> Grid
-                  </>
+                  <LayoutGrid className="size-3.5" aria-hidden />
                 )}
               </button>
               <button
                 onClick={() =>
                   setEpisodeOrder(episodeOrder === "first" ? "last" : "first")
                 }
-                className="rounded-full border border-white/20 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/[0.12]"
+                className="flex h-9 items-center rounded-lg border border-white/10 bg-[#171a1f] px-2.5 font-mono text-[9px] font-bold text-white/42 transition hover:text-white"
               >
-                Urut: {episodeOrder === "first" ? `${eps.length} → 1` : `1 → ${eps.length}`}
+                {episodeOrder === "first" ? `${eps.length} → 1` : `1 → ${eps.length}`}
               </button>
             </div>
 
@@ -4158,7 +4124,7 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                   onChange={(e) => setEpisodeQuery(e.target.value)}
                   placeholder="Cari episode… (mis. 12)"
                   inputMode="numeric"
-                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-white/45 focus:outline-none"
+                  className="mt-3 h-10 w-full rounded-lg border border-white/10 bg-[#121417] px-3 text-[11px] text-white placeholder:text-white/25 focus:border-[rgba(211,62,48,.4)] focus:outline-none"
                 />
 
                 {minEp > 1 && (
@@ -4174,7 +4140,7 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                   </p>
                 ) : episodeGrid ? (
                   /* Mode Grid — kotak nomor rapat. */
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-3 grid grid-cols-6 gap-1.5">
                     {filteredEps.map((e: any) => {
                       const released = e.released !== false;
                       return (
@@ -4196,9 +4162,9 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                             )
                           }
                           className={cn(
-                            "size-11 rounded-xl border border-border bg-secondary/40 text-sm font-semibold text-white transition hover:border-foreground/40",
+                            "grid aspect-square place-items-center rounded-md border border-white/10 bg-[#171a1f] font-mono text-[11px] font-bold text-white/72 transition hover:border-[rgba(211,62,48,.45)] hover:text-white",
                             !released &&
-                              "cursor-not-allowed border-border/40 bg-secondary/10 text-white/25 hover:border-border/40",
+                              "cursor-not-allowed border-white/5 bg-transparent text-white/18 hover:border-white/5",
                           )}
                         >
                           {e.number}
@@ -4207,8 +4173,8 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                     })}
                   </div>
                 ) : (
-                  /* Mode List — kartu episode: nomor + tanggal + putar. */
-                  <div className="mt-3 space-y-2">
+                  /* Mode List — baris episode: nomor + tanggal + putar. */
+                  <div className="mt-2 divide-y divide-white/7">
                     {/* Nomor episode tayang terakhir = kandidat "BARU". */}
                     {(() => {
                       const newest = eps
@@ -4232,43 +4198,40 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                             )
                           }
                           className={cn(
-                            "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-left transition hover:bg-white/[0.08]",
-                            !released && "cursor-not-allowed opacity-45",
+                            "flex w-full items-center gap-3 py-3.5 text-left transition active:bg-white/[0.03]",
+                            !released && "cursor-not-allowed opacity-40",
                           )}
                         >
+                          <span className="w-6 shrink-0 text-center font-display text-[16px] font-bold text-white/26">
+                            {e.number}
+                          </span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-white">
+                            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-white/88">
                               Episode {e.number}
+                              {isNew && (
+                                <span className="rounded bg-[var(--primary)] px-1 py-0.5 text-[7px] font-extrabold uppercase tracking-[0.04em] text-white">
+                                  Baru
+                                </span>
+                              )}
                             </p>
-                            {isNew && (
-                              <span className="mt-1 inline-block rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-red-300">
-                                Baru
-                              </span>
-                            )}
-                            {/* Tanggal rilis episode — biar jelas kapan
-                                episodenya tayang, bukan cuma nomornya. */}
-                            {released ? (
-                              e.aired ? (
-                                <p className="mt-0.5 text-[11px] text-white/55">
-                                  Rilis {fmtAired(e.aired)}
-                                </p>
-                              ) : null
-                            ) : (
-                              <p className="mt-0.5 text-[11px] text-white/40">
-                                Belum rilis
-                              </p>
-                            )}
+                            <p className="mt-1 text-[9.5px] font-medium text-white/32">
+                              {released
+                                ? e.aired
+                                  ? `Rilis ${fmtAired(e.aired)}`
+                                  : "Sudah tayang"
+                                : "Belum rilis"}
+                            </p>
                           </div>
                           <span
                             className={cn(
-                              "flex size-9 shrink-0 items-center justify-center rounded-full",
+                              "grid size-8 shrink-0 place-items-center rounded-full border",
                               released
-                                ? "bg-white/15 text-white"
-                                : "bg-white/5 text-white/40",
+                                ? "border-[rgba(211,62,48,.25)] bg-[rgba(211,62,48,.12)] text-[#f09a8f]"
+                                : "border-white/8 text-white/20",
                             )}
                             aria-hidden
                           >
-                            <Play className="size-4 fill-current" />
+                            <Play className="size-3 fill-current" />
                           </span>
                         </button>
                       );
@@ -4280,7 +4243,7 @@ dalam banner dan tampak KEpotong/setengah. `onError` mengganti
                 {eps.length > PAGE && (
                   <button
                     onClick={() => setAllEpisodes((v) => !v)}
-                    className="mt-3 w-full rounded-xl border border-white/15 py-2 text-xs text-white/85"
+                    className="mt-3 w-full rounded-lg border border-white/10 bg-[#121417] py-2.5 text-[10px] font-bold text-white/58 transition hover:text-white"
                   >
                     {allEpisodes
                       ? "Tampilkan lebih sedikit"
@@ -5060,7 +5023,7 @@ function DonghuaDetailScreen({
                   onChange={(e) => setEpQuery(e.target.value)}
                   placeholder="Cari episode… (mis. 12)"
                   inputMode="numeric"
-                  className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-white/45 focus:outline-none"
+                  className="mt-3 h-10 w-full rounded-lg border border-white/10 bg-[#121417] px-3 text-[11px] text-white placeholder:text-white/25 focus:border-[rgba(211,62,48,.4)] focus:outline-none"
                 />
                 {minEpNo > 1 && (
                   <p className="mt-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground">
@@ -5115,7 +5078,7 @@ function DonghuaDetailScreen({
                 {total > DONGHUA_EP_PREVIEW && (
                   <button
                     onClick={() => setAllEpisodes((v) => !v)}
-                    className="mt-3 w-full rounded-xl border border-white/15 py-2 text-xs text-white/85"
+                    className="mt-3 w-full rounded-lg border border-white/10 bg-[#121417] py-2.5 text-[10px] font-bold text-white/58 transition hover:text-white"
                   >
                     {allEpisodes
                       ? "Tampilkan lebih sedikit"

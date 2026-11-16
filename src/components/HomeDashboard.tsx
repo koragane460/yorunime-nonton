@@ -57,20 +57,18 @@ export function ContinueWatchingCard({
   if (!rows || rows.length === 0) return null;
 
   return (
-    <section className="fade-enter mt-5 pl-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[15px] font-medium tracking-tight text-white/85">
-          Terakhir <span className="font-black text-white">ditonton</span>
-        </h2>
+    <section className="fade-enter mt-6">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <h2 className="yn-sec text-[1rem]">Lanjutkan menonton</h2>
         <button
           type="button"
           onClick={onHistory}
-          className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-white/40 transition hover:text-white/75"
+          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/42 transition hover:text-white"
         >
           Riwayat <ArrowRight className="size-3" />
         </button>
       </div>
-      <div className="thin-scroll -mr-4 mt-2 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pr-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="no-bar -mr-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pr-4 pb-1">
         {rows.slice(0, 12).map((h) => {
           const duration = h.durationSec && h.durationSec > 0 ? h.durationSec : 1440;
           const progress = Math.max(0, h.progressSec ?? 0);
@@ -80,41 +78,40 @@ export function ContinueWatchingCard({
               key={h._id}
               type="button"
               onClick={() => onOpen(h)}
-              className="group w-[154px] shrink-0 snap-start text-left transition active:scale-[0.98]"
+              className="group w-[158px] shrink-0 snap-start text-left transition active:scale-[0.985]"
             >
-              <span className="relative block aspect-video w-full overflow-hidden rounded-xl border border-white/12 bg-black shadow-[0_12px_28px_-24px_rgba(0,0,0,.95)]">
+              <span className="relative block aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black">
                 {h.animeImage ? (
                   <img
                     src={h.animeImage}
                     alt=""
-                    className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                    loading="lazy"
+                    className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
                   />
                 ) : (
                   <span className="flex size-full items-center justify-center text-white/30">
                     <Play className="size-5" />
                   </span>
                 )}
-                <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-                <span className="absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[8.5px] font-black text-white backdrop-blur-sm">
-                  Eps {h.episode}
+                <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.35))]" />
+                <span className="absolute left-2 top-2 rounded-md bg-black/70 px-1.5 py-1 font-mono text-[9px] font-bold text-white backdrop-blur-sm">
+                  EP {h.episode}
                 </span>
-                <span className="absolute inset-x-0 bottom-0 p-1.5">
-                  <span className="block h-1 overflow-hidden rounded-full bg-white/25">
-                    <span
-                      className="block h-full rounded-full"
-                      style={{
-                        width: `${Math.max(3, pct)}%`,
-                        background: "linear-gradient(90deg, var(--ui-a), var(--ui-c, #FFD23F))",
-                      }}
-                    />
-                  </span>
+                <span className="absolute bottom-2 right-2 grid size-7 place-items-center rounded-full bg-white text-black shadow-lg">
+                  <Play className="size-3.5 fill-current" />
+                </span>
+                <span className="absolute inset-x-0 bottom-0 h-[2px] bg-white/20">
+                  <span
+                    className="block h-full bg-[var(--primary)]"
+                    style={{ width: `${Math.max(2, pct)}%` }}
+                  />
                 </span>
               </span>
-              <span className="mt-1.5 line-clamp-1 block text-[11px] font-black leading-tight text-white">
+              <span className="mt-2 line-clamp-1 block text-[11.5px] font-bold leading-tight text-white">
                 {h.animeTitle}
               </span>
-              <span className="mt-0.5 block font-mono text-[8.5px] font-semibold text-white/40">
-                {clockOf(progress)}/{clockOf(duration)}
+              <span className="mt-0.5 block font-mono text-[9px] font-semibold text-white/38">
+                {clockOf(progress)} / {clockOf(duration)}
               </span>
             </button>
           );
@@ -127,7 +124,7 @@ export function ContinueWatchingCard({
 /** "16.45" dari detik — gaya jam kecil di kartu terakhir ditonton. */
 function clockOf(sec?: number): string {
   const s = Math.max(0, Math.floor(sec ?? 0));
-  return `${Math.floor(s / 60)}.${String(s % 60).padStart(2, "0")}`;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 /** Banner beli premium tiga panel, mengikuti referensi. */
@@ -262,35 +259,17 @@ export function ActiveEventCard({
 
   return (
     <section className="fade-enter mt-5">
-      <h2 className="yn-sec text-[17px] font-black tracking-tight text-white">
+      <h2 className="yn-sec text-[17px] font-bold">
         Event Aktif
       </h2>
-      <div
-        className={cn(
-          "relative mt-2 overflow-hidden rounded-[24px] border p-3",
-          active
-            ? "border-gold/25 bg-[linear-gradient(120deg,rgba(255,210,63,.16),rgba(232,72,85,.09)_55%,rgba(255,255,255,.035))]"
-            : ended
-              ? "border-rose-400/20 bg-[linear-gradient(120deg,rgba(232,72,85,.12),rgba(255,210,63,.07)_55%,rgba(255,255,255,.035))]"
-              : "border-white/10 bg-[linear-gradient(120deg,rgba(255,210,63,.1),rgba(255,255,255,.04)_52%,rgba(232,72,85,.06))]",
-        )}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-8 -top-12 size-28 rounded-full bg-gold/10 blur-3xl"
-        />
-        <Trophy
-          aria-hidden
-          className="pointer-events-none absolute -bottom-4 right-2 size-20 rotate-[-12deg] text-white/[0.035]"
-          strokeWidth={1.4}
-        />
+      <div className="relative mt-2 overflow-hidden rounded-xl border border-white/8 bg-[#101215] p-3">
         <div className="relative flex items-center gap-3">
           <span
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-2xl border",
+              "flex size-10 shrink-0 items-center justify-center rounded-lg border",
               active
-                ? "border-gold/30 bg-gold/12 text-gold"
-                : "border-rose-300/20 bg-rose-400/10 text-rose-200/80",
+                ? "border-[rgba(230,196,124,.2)] bg-[rgba(230,196,124,.06)] text-[var(--gold)]"
+                : "border-white/8 bg-white/[0.025] text-white/28",
             )}
           >
             <Trophy className="size-4" />
@@ -305,7 +284,7 @@ export function ActiveEventCard({
                     : "Belum ada event"}
               </span>
               {active && (
-                <span className="shrink-0 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-white">
+                <span className="shrink-0 rounded bg-[rgba(116,223,194,.12)] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[var(--yn-mint)]">
                   Live
                 </span>
               )}
@@ -329,7 +308,7 @@ export function ActiveEventCard({
           <div className="relative mt-2.5 flex items-center gap-2">
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/25">
               <div
-                className="h-full rounded-full bg-[linear-gradient(90deg,#FFD23F,#E84855)]"
+                className="h-full rounded-full bg-[var(--primary)]"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -343,10 +322,8 @@ export function ActiveEventCard({
           type="button"
           onClick={active ? onSearch : ended ? onResults : onSearch}
           className={cn(
-            "relative mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[9.5px] font-black transition active:scale-[0.99]",
-            active || ended
-              ? "border border-white/12 bg-white/[0.055] text-white/75 hover:bg-white/[0.09]"
-              : "bg-[linear-gradient(110deg,#FFD23F,#FF8A3D_55%,#E84855)] text-black shadow-[0_10px_20px_-15px_rgba(255,210,63,.9)]",
+            "relative mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[9.5px] font-bold transition active:scale-[0.99]",
+            "border border-white/10 bg-white/[0.035] text-white/62 hover:bg-white/[0.06]",
           )}
         >
           {active
@@ -370,30 +347,26 @@ export function HomeCommunityCard({ onOpenChat }: { onOpenChat: () => void }) {
       <button
         type="button"
         onClick={onOpenChat}
-        className="flex w-full items-stretch gap-2.5 rounded-[18px] border border-white/10 bg-[#16151b] px-3 py-2.5 text-left transition active:scale-[0.995]"
+        className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#121417] px-3 py-2.5 text-left transition hover:border-white/18 hover:bg-[#17191d] active:scale-[0.995]"
       >
-        <span className="flex shrink-0 items-center justify-center self-center text-[var(--ui-c)]">
-          <MessageSquare className="size-6" strokeWidth={2.4} />
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[rgba(211,62,48,.12)] text-[var(--primary)]">
+          <MessageSquare className="size-[18px]" strokeWidth={2.1} />
         </span>
-        <span
-          aria-hidden
-          className="w-px shrink-0 self-stretch bg-white/12"
-        />
-        <span className="flex min-w-0 flex-1 flex-col justify-center">
+        <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="text-[13px] font-black tracking-tight text-white">
-              Global Chat
+            <span className="text-[12px] font-bold tracking-tight text-white">
+              Ruang komunitas
             </span>
-            <span className="flex items-center gap-1 text-[8px] font-bold text-emerald-300/85">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-[var(--yn-mint)]">
+              <span className="size-1.5 rounded-full bg-[var(--yn-mint)]" />
               {online ?? 0} online
             </span>
           </span>
-          <span className="mt-0.5 truncate text-[9px] font-medium text-white/35">
-            Ngobrol dengan orang yang sedang online
+          <span className="mt-0.5 block truncate text-[10px] font-medium text-white/40">
+            Ngobrol, cari teman nobar, atau ikut clan
           </span>
         </span>
-        <ArrowRight className="size-3.5 shrink-0 self-center text-white/22" />
+        <ArrowRight className="size-4 shrink-0 text-white/28" />
       </button>
     </section>
   );
@@ -458,13 +431,13 @@ export function ClanNobarCards({
 
   return (
     <div className="fade-enter mt-1.5 grid grid-cols-2 gap-2.5">
-      <div className="flex min-h-[176px] flex-col overflow-hidden rounded-[22px] border border-white/12 bg-[linear-gradient(145deg,rgba(255,210,63,.16),rgba(255,255,255,.05)_46%,rgba(123,216,143,.1))] p-2.5">
+      <div className="flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-white/8 bg-[#101215] p-2.5">
         <div className="flex items-center gap-1.5">
-          <Shield className="size-3.5 text-gold" />
-          <p className="text-[12px] font-black text-white">Clan Mu</p>
+          <Shield className="size-3.5 text-white/34" />
+          <p className="text-[11px] font-bold text-white/72">Clan Mu</p>
         </div>
 
-        <div className="mt-2 flex-1 rounded-xl border border-white/10 bg-white/[0.06] p-2">
+        <div className="mt-2 flex-1 rounded-lg border border-white/8 bg-[#0b0d10] p-2">
           {clan ? (
             <>
               <div className="flex items-center gap-2">
@@ -518,17 +491,17 @@ export function ClanNobarCards({
         <button
           type="button"
           onClick={() => onOpenClan(clan?._id)}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(110deg,#FFD23F,#F08A3D)] py-2 text-[9.5px] font-black text-black shadow-[0_10px_20px_-15px_rgba(255,210,63,.9)] transition hover:brightness-105 active:scale-[0.98]"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.035] py-2 text-[9.5px] font-bold text-white/62 transition hover:bg-white/[0.06] active:scale-[0.98]"
         >
           Buka Clan
           <ArrowRight className="size-3.5" strokeWidth={2.7} />
         </button>
       </div>
 
-      <div className="flex min-h-[176px] flex-col overflow-hidden rounded-[22px] border border-white/12 bg-[linear-gradient(145deg,rgba(28,167,236,.17),rgba(255,255,255,.05)_48%,rgba(232,72,85,.11))] p-2.5">
+      <div className="flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-white/8 bg-[#101215] p-2.5">
         <div className="flex items-center gap-1.5">
-          <Clapperboard className="size-3.5 text-sky-300" />
-          <p className="text-[12px] font-black text-white">Nobar</p>
+          <Clapperboard className="size-3.5 text-white/34" />
+          <p className="text-[11px] font-bold text-white/72">Nobar</p>
         </div>
         <p className="mt-0.5 line-clamp-1 text-[8px] font-semibold text-white/40">
           Nonton bareng yuk! • {nobarOnline} Online
@@ -542,8 +515,8 @@ export function ClanNobarCards({
               className="absolute inset-0 size-full object-cover"
             />
           ) : (
-            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[linear-gradient(145deg,rgba(28,167,236,.18),rgba(15,23,42,.8))] text-[8px] text-white/40">
-              <Clapperboard className="size-5 text-sky-300/70" />
+            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#0b0d10] text-[8px] text-white/28">
+              <Clapperboard className="size-5 text-white/20" />
               Belum ada room
             </span>
           )}
@@ -557,7 +530,7 @@ export function ClanNobarCards({
         <button
           type="button"
           onClick={onOpenNobar}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(110deg,#3B82F6,#7C3AED)] py-2 text-[9.5px] font-black text-white shadow-[0_10px_20px_-15px_rgba(59,130,246,.9)] transition hover:brightness-110 active:scale-[0.98]"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.035] py-2 text-[9.5px] font-bold text-white/62 transition hover:bg-white/[0.06] active:scale-[0.98]"
         >
           Gabung nobar
           <ArrowRight className="size-3.5" strokeWidth={2.7} />

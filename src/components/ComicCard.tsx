@@ -41,9 +41,8 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        "rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide",
-        // Teks PUTIH (permintaan) — bg dinaikkan biru tua supaya tetap terbaca.
-        ongoing ? "bg-sky-600 text-white" : "bg-sky-800 text-white",
+        "rounded px-1.5 py-0.5 text-[7.5px] font-bold uppercase tracking-[0.05em]",
+        ongoing ? "bg-[var(--primary)] text-white" : "bg-white/15 text-white/72",
         className,
       )}
     >
@@ -70,7 +69,7 @@ export function ComicCard({
       onClick={() => onPick(item.slug)}
       className="group relative w-full text-left"
     >
-      <div className="relative overflow-hidden rounded-t-xl border border-border/60 transition group-hover:border-foreground/40">
+      <div className="yn-media-cut relative overflow-hidden rounded-lg border border-white/10 bg-[#1a1d22] transition group-hover:border-white/20">
         <img
           src={item.image}
           alt=""
@@ -81,7 +80,7 @@ export function ComicCard({
           )}
         />
         {ranked !== undefined && (
-          <span className="absolute left-0 top-0 flex h-6 min-w-6 items-center justify-center rounded-br-lg bg-red-500 px-1.5 text-xs font-black text-white">
+          <span className="absolute left-0 top-0 flex h-6 min-w-6 items-center justify-center rounded-br-md bg-black/72 px-1.5 font-mono text-[10px] font-bold text-[var(--gold)]">
             {ranked}
           </span>
         )}
@@ -90,32 +89,29 @@ export function ComicCard({
             digeser ke kanan kalau ada badge peringkat di depannya. */}
         <StatusChip
           ongoing={item.ongoing}
-          className="absolute right-0 top-0 rounded-none rounded-bl-lg"
+          className="absolute right-0 top-0 rounded-none rounded-bl-md"
         />
         {views && (
-          <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+          <span className="absolute bottom-0 left-0 flex items-center gap-1 rounded-tr-md bg-black/72 px-1.5 py-1 font-mono text-[7.5px] font-semibold text-white/72">
             <Eye className="size-2.5" /> {views}
           </span>
         )}
       </div>
       {/* Kotak judul semi-opaque MENYATU dengan poster (tanpa jarak) —
           gaya sama seperti kartu anime. */}
-      <div className="rounded-b-xl border-x border-b border-border/60 bg-black/55 px-1.5 py-1 backdrop-blur-sm">
-        <p className="line-clamp-2 text-[11px] font-medium leading-tight text-white">
+      <div className="pt-2">
+        <p className="line-clamp-2 min-h-8 text-[11px] font-semibold leading-4 text-white/90">
           {item.title}
         </p>
-        <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/60">
-          <span className="max-w-[55%] truncate font-semibold text-white/75">
-            {COMIC_KIND_LABEL[item.kind]}
-          </span>
+        <p className="mt-0.5 flex items-center gap-1 text-[8.5px] font-medium text-white/28">
           <span className="truncate">
-            {item.latestChapter ?? item.genres[0] ?? ""}
+            {item.latestChapter ?? item.genres[0] ?? COMIC_KIND_LABEL[item.kind]}
             {item.updatedAgo ? ` · ${item.updatedAgo}` : ""}
           </span>
           {typeof item.score === "number" && item.score > 0 && (
             <>
-              <span className="text-white/40">·</span>
-              <Star className="size-3 shrink-0 fill-gold-strong text-gold-strong" />
+              <span className="text-white/16">·</span>
+              <Star className="size-2.5 shrink-0 fill-[var(--gold)] text-[var(--gold)]" />
               <span>{item.score.toFixed(1)}</span>
             </>
           )}

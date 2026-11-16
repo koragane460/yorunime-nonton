@@ -3211,8 +3211,10 @@ function WatchContent() {
           muncul duluan". Selama resolve berjalan, chip MegaPlay tampil dalam
           keadaan memuat; kalau gagal ia dicoret otomatis. */}
       {epParam && (
-        <div className="thin-scroll flex items-center gap-1.5 overflow-x-auto px-3 pt-2 pb-1">
-          <span className="shrink-0 text-[11px] text-muted-foreground">Server:</span>
+        <div className="no-bar flex items-center gap-1.5 overflow-x-auto px-3 pb-1 pt-2.5">
+          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/28">
+            Server
+          </span>
           {sources.map((s, i) => (
             <button
               key={s.url}
@@ -3226,17 +3228,17 @@ function WatchContent() {
                 );
               }}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition",
+                "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[10px] font-bold transition",
                 i === sourceIdx
-                  ? "border-foreground/40 bg-primary/15 text-primary"
+                  ? "border-[rgba(211,62,48,.4)] bg-[rgba(211,62,48,.11)] text-[#f0a59d]"
                   : deadServers.current.has(s.url)
-                    ? "border-border text-muted-foreground/50 line-through"
-                    : "border-border text-muted-foreground hover:border-foreground/40",
+                    ? "border-white/5 text-white/20 line-through"
+                    : "border-white/8 bg-[#121417] text-white/42 hover:border-white/16 hover:text-white/70",
               )}
             >
               {s.label}
               {i === sourceIdx && (
-                <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] font-bold text-white">
+                <span className="rounded bg-[rgba(116,223,194,.12)] px-1 py-0.5 text-[7px] font-extrabold text-[var(--yn-mint)]">
                   ID
                 </span>
               )}
@@ -3246,15 +3248,15 @@ function WatchContent() {
           {sources.length === 0 && (
             <span
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
+                "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[10px] font-bold",
                 directErr
-                  ? "border-border text-muted-foreground/50 line-through"
-                  : "border-foreground/40 bg-primary/15 text-primary",
+                  ? "border-white/5 text-white/20 line-through"
+                  : "border-[rgba(211,62,48,.4)] bg-[rgba(211,62,48,.11)] text-[#f0a59d]",
               )}
             >
               {isDonghua ? "Sanka" : "MegaPlay"}
               {!directErr && (
-                <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+                <span className="size-1.5 animate-pulse rounded-full bg-[var(--primary)]" />
               )}
             </span>
           )}
@@ -3263,103 +3265,104 @@ function WatchContent() {
 
       {/* Satu baris horizontal: Like/Dislike menyatu, lalu Favorit · Donate ·
           Lapor · Bagikan. Semua memakai flex agar tidak pernah turun baris. */}
-      <div className="thin-scroll flex w-full items-center gap-1.5 overflow-x-auto px-3 pb-0.5 pt-2">
-        {/* Like & Dislike menyatu dalam SATU pil dengan garis pembatas. */}
-        <div className="flex h-8 shrink-0 items-stretch overflow-hidden rounded-full border border-white/14 bg-white/[0.05]">
+      <div className="flex w-full items-center gap-1.5 px-3 pt-1">
+        <div className="flex h-9 shrink-0 items-stretch overflow-hidden rounded-lg border border-white/8 bg-[#121417]">
           <button
             onClick={() => {
               void toggleLike({ animeId, value: 1 }).catch(() => {});
             }}
             aria-label="Like"
             className={cn(
-              "flex items-center justify-center gap-1.5 px-3 text-[10px] font-bold transition active:scale-95",
+              "flex items-center justify-center gap-1.5 px-2.5 text-[10px] font-bold transition active:scale-95",
               likeStats?.liked
-                ? "bg-white/15 text-white"
-                : "text-white/65 hover:bg-white/[0.07] hover:text-white/90",
+                ? "bg-[rgba(116,223,194,.1)] text-[var(--yn-mint)]"
+                : "text-white/48 hover:text-white/80",
             )}
           >
-            <ThumbsUp className={cn("size-[14px] shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
-            <span className="tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
+            <ThumbsUp className={cn("size-3.5 shrink-0", likeStats?.liked && "fill-current")} aria-hidden />
+            <span className="font-mono tabular-nums">{(likeStats?.likeCount ?? 0).toLocaleString("id-ID")}</span>
           </button>
-          <span aria-hidden className="my-1.5 w-px shrink-0 bg-white/18" />
+          <span aria-hidden className="my-2 w-px shrink-0 bg-white/8" />
           <button
             onClick={() => {
               void toggleLike({ animeId, value: -1 }).catch(() => {});
             }}
             aria-label="Tidak suka"
             className={cn(
-              "flex items-center justify-center gap-1.5 px-3 text-[10px] font-bold transition active:scale-95",
+              "flex items-center justify-center gap-1.5 px-2.5 text-[10px] font-bold transition active:scale-95",
               likeStats?.disliked
-                ? "bg-white/15 text-white"
-                : "text-white/65 hover:bg-white/[0.07] hover:text-white/90",
+                ? "bg-[rgba(211,62,48,.1)] text-[#f09a8f]"
+                : "text-white/48 hover:text-white/80",
             )}
           >
-            <ThumbsDown className={cn("size-[14px] shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
-            <span className="tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
+            <ThumbsDown className={cn("size-3.5 shrink-0", likeStats?.disliked && "fill-current")} aria-hidden />
+            <span className="font-mono tabular-nums">{(likeStats?.dislikeCount ?? 0).toLocaleString("id-ID")}</span>
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            void toggleFav({
-              animeId: favId,
-              animeTitle: detailReady ? detailData.title : D.title,
-              animeImage: detailReady ? detailData.image : D.image,
-              kind: isDonghua ? "donghua" : "anime",
-              status: (detailReady ? detailData.status : D.status) ?? undefined,
-            }).catch(() => {});
-          }}
-          aria-label="Favorit"
-          className={cn(
-            "flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-[10px] font-bold transition active:scale-95",
-            isFav
-              ? "border-white/25 bg-white/15 text-white"
-              : "border-white/12 bg-white/[0.04] text-white/60 hover:bg-white/[0.07]",
-          )}
-        >
-          <Heart className={cn("size-[14px] shrink-0", isFav && "fill-current")} aria-hidden />
-          Favorit
-        </button>
-        <a
-          href="https://sociabuzz.com/yorunime/donate"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Donate"
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 text-[10px] font-bold text-white/60 transition hover:bg-white/[0.07] active:scale-95"
-        >
-          <Coffee className="size-[14px] shrink-0" aria-hidden />
-          Donate
-        </a>
-        <button
-          onClick={() => setReportOpen(true)}
-          aria-label="Laporkan"
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 text-[10px] font-bold text-white/60 transition hover:bg-white/[0.07] active:scale-95"
-        >
-          <Flag className="size-[14px] shrink-0" aria-hidden />
-          Laporkan
-        </button>
-        <button
-          onClick={() => {
-            const url = window.location.href;
-            const title = detailReady ? detailData.title : D.title;
-            const nav = navigator as Navigator & {
-              share?: (d: ShareData) => Promise<void>;
-            };
-            if (nav.share) {
-              void nav.share({ title, url }).catch(() => undefined);
-              return;
-            }
-            void navigator.clipboard
-              ?.writeText(url)
-              .then(() => toast.success("Tautan disalin — siap dibagikan"))
-              .catch(() => toast.error("Gagal membagikan tautan"));
-          }}
-          aria-label="Bagikan"
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 text-[10px] font-bold text-white/60 transition hover:bg-white/[0.07] active:scale-95"
-        >
-          <Share2 className="size-[14px] shrink-0" />
-          Bagikan
-        </button>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <button
+            onClick={() => {
+              void toggleFav({
+                animeId: favId,
+                animeTitle: detailReady ? detailData.title : D.title,
+                animeImage: detailReady ? detailData.image : D.image,
+                kind: isDonghua ? "donghua" : "anime",
+                status: (detailReady ? detailData.status : D.status) ?? undefined,
+              }).catch(() => {});
+            }}
+            aria-label="Favorit"
+            title="Favorit"
+            className={cn(
+              "grid size-9 place-items-center rounded-lg border transition active:scale-95",
+              isFav
+                ? "border-[rgba(230,196,124,.28)] bg-[rgba(230,196,124,.08)] text-[var(--gold)]"
+                : "border-white/8 bg-[#121417] text-white/48 hover:text-white/80",
+            )}
+          >
+            <Heart className={cn("size-4", isFav && "fill-current")} aria-hidden />
+          </button>
+          <a
+            href="https://sociabuzz.com/yorunime/donate"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Donate"
+            title="Donate"
+            className="grid size-9 place-items-center rounded-lg border border-white/8 bg-[#121417] text-white/48 transition hover:text-white/80 active:scale-95"
+          >
+            <Coffee className="size-4" aria-hidden />
+          </a>
+          <button
+            onClick={() => setReportOpen(true)}
+            aria-label="Laporkan"
+            title="Laporkan"
+            className="grid size-9 place-items-center rounded-lg border border-white/8 bg-[#121417] text-white/48 transition hover:text-white/80 active:scale-95"
+          >
+            <Flag className="size-4" aria-hidden />
+          </button>
+          <button
+            onClick={() => {
+              const url = window.location.href;
+              const title = detailReady ? detailData.title : D.title;
+              const nav = navigator as Navigator & {
+                share?: (d: ShareData) => Promise<void>;
+              };
+              if (nav.share) {
+                void nav.share({ title, url }).catch(() => undefined);
+                return;
+              }
+              void navigator.clipboard
+                ?.writeText(url)
+                .then(() => toast.success("Tautan disalin — siap dibagikan"))
+                .catch(() => toast.error("Gagal membagikan tautan"));
+            }}
+            aria-label="Bagikan"
+            title="Bagikan"
+            className="grid size-9 place-items-center rounded-lg border border-white/8 bg-[#121417] text-white/48 transition hover:text-white/80 active:scale-95"
+          >
+            <Share2 className="size-4" />
+          </button>
+        </div>
       </div>
 
       {/* Pratinjau gambar komentar layar penuh. */}
@@ -3393,87 +3396,79 @@ function WatchContent() {
       )}
 
       {/* Info — poster + judul + tag, lalu 4 kotak alat, lalu sinopsis. */}
-      <div className="w-full p-3">
+      <div className="w-full px-4 pb-3 pt-4">
         <div className="flex items-start gap-3">
-          {/* Status menempel di kiri atas poster; rating di kanan bawah.
-              Keduanya jadi bagian dari artwork, bukan chip terpisah. */}
-          <div className="relative w-[108px] shrink-0 self-start">
-            <div className="aspect-[2/3] w-full overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
-              {D.image && (
-                <img
-                  src={D.image}
-                  alt=""
-                  onError={(e) => {
-                    e.currentTarget.style.visibility = "hidden";
-                  }}
-                  className="size-full object-cover"
-                />
-              )}
-              <PosterStatusBadge status={D.status} size="lg" />
-              <PosterRatingBadge score={D.score} size="lg" />
-            </div>
+          <div className="relative h-[118px] w-[79px] shrink-0 self-start overflow-hidden rounded-md border border-white/10 bg-[#171a1f]">
+            {D.image && (
+              <img
+                src={D.image}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.style.visibility = "hidden";
+                }}
+                className="size-full object-cover"
+              />
+            )}
+            <PosterStatusBadge status={D.status} />
+            <PosterRatingBadge score={D.score} />
           </div>
 
-          <div className="min-w-0 flex-1 pl-1">
-            {/* Tipe & musim tetap di kanan poster. Rating/status sudah pindah
-                ke poster agar judul lebih lega. */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {D.type && (
-                <span className="rounded-md border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white/70">
-                  {String(D.type)}
-                </span>
-              )}
+          <div className="min-w-0 flex-1 pt-0.5">
+            <div className="flex flex-wrap items-center gap-x-1.5 text-[8.5px] font-bold uppercase tracking-[0.08em] text-white/32">
+              {D.type && <span>{String(D.type)}</span>}
               {D.seasonLabel && (
-                <span className="rounded-md border border-[#1CA7EC]/40 bg-[#1CA7EC]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#7fd3f7]">
-                  {String(D.seasonLabel)}
-                </span>
-              )}
-              {updateDay && (
-                <span className="rounded-md border border-[#FFD23F]/40 bg-[#FFD23F]/10 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-[#FFD23F]">
-                  Update tiap {updateDay}
-                </span>
+                <>
+                  <span className="text-white/14">/</span>
+                  <span>{String(D.seasonLabel)}</span>
+                </>
               )}
               {isDonghua && (
-                <span className="rounded-md border border-[#E84855]/45 bg-[#E84855]/12 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#ff9aa3]">
-                  Donghua
-                </span>
+                <>
+                  <span className="text-white/14">/</span>
+                  <span className="text-[#f09a8f]">Donghua</span>
+                </>
               )}
             </div>
 
-            <h1 className="mt-2 line-clamp-2 text-[17px] font-black leading-tight tracking-tight">
+            <h1 className="mt-1.5 line-clamp-2 font-serif text-[22px] leading-[1.06] tracking-[-0.02em] text-white">
               {D.title}
             </h1>
-            {/* Terjemahan judul asli — lebih kecil dan pudar. */}
             {D.titleEnglish && D.titleEnglish !== D.title && (
-              <p className="mt-1 line-clamp-1 text-[11px] font-medium text-white/40">
+              <p className="mt-1 line-clamp-1 text-[9.5px] font-medium text-white/34">
                 {D.titleEnglish}
               </p>
             )}
 
-            {/* Genre + studio — tag rounded. */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {(Array.isArray(D.genres) ? D.genres : [])
-                .slice(0, 3)
-                .map((g: string) => (
-                  <span
-                    key={g}
-                    className="rounded-full border border-white/12 bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-white/70"
-                  >
-                    {g}
-                  </span>
-                ))}
-              {D.studio && (
-                <span className="rounded-full border border-[#FFD23F]/35 bg-[#FFD23F]/10 px-2 py-0.5 text-[10px] font-bold text-[#FFD23F]">
-                  {String(D.studio)}
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9.5px] font-medium text-white/38">
+              {currentEp && (
+                <span className="font-mono font-bold uppercase tracking-[0.04em] text-[var(--primary)]">
+                  Episode {currentEp.number}
                 </span>
               )}
+              {D.studio && <span className="truncate">{String(D.studio)}</span>}
+              {updateDay && <span className="text-[rgba(230,196,124,.7)]">Tiap {updateDay}</span>}
             </div>
+
+            {(Array.isArray(D.genres) ? D.genres : []).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {(Array.isArray(D.genres) ? D.genres : [])
+                  .slice(0, 3)
+                  .map((g: string) => (
+                    <span
+                      key={g}
+                      className="rounded border border-white/8 bg-white/[0.03] px-1.5 py-0.5 text-[8.5px] font-semibold text-white/48"
+                    >
+                      {g}
+                    </span>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* 4 KOTAK ALAT — Kualitas · Download · Kecepatan · Miniplayer. */}
         {(isHost || !room) && (
-          <div className="mt-3 grid grid-cols-4 gap-2">
+          <div className="mt-4 grid grid-cols-4 gap-1.5">
             <ToolButton
               icon={<Settings2 className="size-4" />}
               label="Kualitas"
@@ -3504,52 +3499,62 @@ function WatchContent() {
         {/* KOTAK SINOPSIS — tidak ditampilkan saat mode Nobar supaya chat
             room dapat ruang lebih besar. */}
         {!room && (
-          <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+          <section className="mt-5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+              <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/45">
+                <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                  /
+                </span>
                 Sinopsis
-              </span>
+              </h2>
               <button
                 onClick={() => setSynopsisOpen((v) => !v)}
-                className="text-[10px] font-bold text-[#7fd3f7] transition hover:text-[#aee6ff]"
+                className="text-[9.5px] font-bold text-white/34 transition hover:text-white"
               >
-                {synopsisOpen ? "Tutup" : "Lihat selengkapnya"}
+                {synopsisOpen ? "Lebih sedikit" : "Selengkapnya"}
               </button>
             </div>
             <p
               className={cn(
-                "mt-2 text-[12.5px] leading-relaxed text-white/70",
+                "mt-2 text-[11.5px] leading-[1.7] text-white/46",
                 !synopsisOpen && "line-clamp-3",
               )}
             >
               {D.synopsisId ?? D.synopsis}
             </p>
-          </div>
+          </section>
         )}
 
         {/* Episode: grid + jumlah di kanan atas (host room nobar juga boleh) */}
         {(isHost || !room) && (
           <>
-            <div className="mb-2 mt-4 flex items-center justify-between gap-2">
-              <h2 className="yn-sec text-base">Daftar Episode</h2>
+            <div className="mb-2.5 mt-5 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/45">
+                <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                  /
+                </span>
+                Episode
+                <span className="font-mono text-[9px] font-medium tracking-normal text-white/24">
+                  {epList.length}
+                </span>
+              </h2>
               <button
                 onClick={() => setEpAsc((v) => !v)}
-                className="rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[10px] font-bold text-white/70 transition hover:bg-white/10"
+                className="flex h-8 items-center rounded-md border border-white/8 bg-[#121417] px-2.5 text-[9px] font-bold text-white/42 transition hover:text-white"
               >
                 {epAsc ? "Terlama" : "Terbaru"}
               </button>
             </div>
-            {/* Kolom cari episode + jumlah episode. */}
-            <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-              <Search className="size-4 shrink-0 text-white/35" aria-hidden />
+            <div className="mb-2 flex h-10 items-center gap-2 rounded-lg border border-white/8 bg-[#121417] px-3">
+              <Search className="size-3.5 shrink-0 text-white/28" aria-hidden />
               <input
                 value={epSearch}
                 onChange={(e) => setEpSearch(e.target.value)}
                 inputMode="numeric"
                 placeholder="Cari episode…"
-                className="h-5 w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-white/30"
+                className="h-5 w-full min-w-0 bg-transparent text-[11px] outline-none placeholder:text-white/25"
               />
-              <span className="shrink-0 text-[10px] font-semibold text-white/35">
+              <span className="shrink-0 font-mono text-[9px] font-medium text-white/25">
                 {epList.length} eps
               </span>
             </div>
@@ -3598,17 +3603,17 @@ function WatchContent() {
                         navigate(epUrl(e.id));
                       }}
                       className={cn(
-                        "flex w-[152px] shrink-0 flex-col gap-1 rounded-2xl border p-2.5 text-left transition active:scale-[0.97] disabled:opacity-45",
+                        "flex w-[138px] shrink-0 flex-col gap-1 rounded-lg border p-2.5 text-left transition active:scale-[0.97] disabled:opacity-35",
                         active
-                          ? "border-[#1CA7EC] bg-[#1CA7EC]/15"
-                          : "border-white/10 bg-white/[0.04] hover:border-white/30",
+                          ? "border-[rgba(211,62,48,.5)] bg-[rgba(211,62,48,.09)]"
+                          : "border-white/8 bg-[#121417] hover:border-white/16",
                       )}
                     >
                       <span className="flex items-center justify-between gap-1">
                         <span
                           className={cn(
-                            "text-[10px] font-black uppercase tracking-wider",
-                            active ? "text-[#7fd3f7]" : "text-white/40",
+                            "font-mono text-[9px] font-bold uppercase tracking-[0.04em]",
+                            active ? "text-[#f0a59d]" : "text-white/32",
                           )}
                         >
                           Episode {e.number}
@@ -3617,17 +3622,17 @@ function WatchContent() {
                           className={cn(
                             "flex size-6 items-center justify-center rounded-full",
                             active
-                              ? "bg-[#1CA7EC] text-white"
-                              : "bg-white/[0.08] text-white/70",
+                              ? "bg-[var(--primary)] text-white"
+                              : "bg-white/[0.06] text-white/48",
                           )}
                         >
                           <Play className="size-3" fill="currentColor" />
                         </span>
                       </span>
-                      <span className="line-clamp-1 text-[12px] font-bold text-white/90">
+                      <span className="line-clamp-1 text-[11px] font-semibold text-white/82">
                         {e.title ? String(e.title) : `Episode ${e.number}`}
                       </span>
-                      <span className="text-[10px] text-white/40">
+                      <span className="text-[9px] font-medium text-white/28">
                         {e.aired
                           ? `Rilis ${epAired(e.aired)}`
                           : released
@@ -3643,21 +3648,14 @@ function WatchContent() {
         )}
 
         {/* Kotak rekomendasi kualitas — abu-abu, ikon "!" di kiri. */}
-        <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.055] p-3">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.06] text-[12px] font-black text-white/60">
-            !
-          </span>
-          <p className="min-w-0 text-[10.5px] font-medium leading-relaxed text-white/45">
-            Direkomendasikan kualitas 360p jika merasa lag dan buffering.
-            Setiap 2 menit kamu bakalan dapet 200 XP
+        <div className="mt-4 flex items-start gap-2 border-t border-white/7 pt-3">
+          <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[rgba(230,196,124,.6)]" />
+          <p className="min-w-0 text-[9.5px] font-medium leading-relaxed text-white/30">
+            Gunakan 360p jika terasa lag. Setiap 2 menit menonton memberi 200 XP.
           </p>
         </div>
 
-        {/* Kecerahan & volume HANYA ada di layar penuh. Di luar layar penuh
-            tidak ada tombolnya sama sekali, sesuai permintaan. */}
-
-        {/* Garis pembatas sebelum diskusi */}
-        <div className="my-3 h-px bg-white/15" />
+        <div className="my-4 h-px bg-white/7" />
 
         {/* Mode Nobar: panel room (info, member, kontrol host, chat nobar) */}
         {room ? (
@@ -4221,10 +4219,10 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex h-14 touch-none select-none flex-col items-center justify-center gap-1 rounded-lg border text-[11px] font-medium transition",
+        "flex h-[52px] touch-none select-none flex-col items-center justify-center gap-1.5 rounded-lg border text-[8.5px] font-bold uppercase tracking-[0.05em] transition",
         disabled
-          ? "cursor-not-allowed border-white/5 bg-white/[0.03] text-zinc-600"
-          : "border-border bg-card hover:border-foreground/40",
+          ? "cursor-not-allowed border-white/5 bg-transparent text-white/16"
+          : "border-white/8 bg-[#121417] text-white/42 hover:border-white/16 hover:text-white/75",
       )}
     >
       {icon}

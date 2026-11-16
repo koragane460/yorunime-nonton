@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAction, useQuery } from "convex/react";
-import { CalendarDays } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import { AppLayout } from "@/components/AppLayout";
@@ -340,16 +339,6 @@ function JadwalContent() {
     );
   }, [sched, comics, customAnime, donghuaByDay]);
 
-  // deteksi duplikat hari ini (sama id+episode)
-  const dupCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of list) {
-      const key = `${item.id}-${item.episode ?? 0}`;
-      map[key] = (map[key] ?? 0) + 1;
-    }
-    return map;
-  }, [list]);
-
   // Daftar yang dirender: default dipotong, "Lihat semua" menampilkan semua.
   const shownList = showAll ? list : list.slice(0, 8);
 
@@ -376,30 +365,23 @@ function JadwalContent() {
   }
 
   return (
-    <div className="pb-40 pt-2">
-      {/* Judul ditengah + garis pembatas di bawahnya; teks kecil di
-          bawah judul dihapus (permintaan user). */}
-      <h1 className="text-center text-[17px] font-black uppercase tracking-[0.18em]">
-        Jadwal Tayang
-      </h1>
-      <div className="mt-2 mb-3 h-px w-full bg-white/15" aria-hidden />
-
-      {/* Pilih hari: tulisan hari + angka tanggal sesuai tanggal berjalan.
-          Semua tipe (anime, manga, manhwa, donghua) tampil dalam SATU
-          daftar tanpa pilihan tipe lagi. */}
-      {/* KALENDER MINGGUAN — tiap hari tampil seperti lembar kalender:
-          pita nama hari, angka tanggal besar, dan titik jumlah rilis. */}
-      <div className="mb-3">
-        <div className="mb-2 flex items-baseline justify-between px-0.5">
-          <span className="text-[11px] font-black uppercase tracking-[0.16em] text-foreground/70">
-            {MONTHS_FULL[weekDates()[0].getMonth()]}{" "}
-            {weekDates()[0].getFullYear()}
-          </span>
-          <span className="text-[10px] font-semibold text-muted-foreground">
-            Minggu ini
-          </span>
+    <div className="pb-24 pt-3">
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-[28px] font-bold leading-none tracking-[-0.04em]">
+            Jadwal
+          </h1>
+          <p className="mt-1.5 text-[10.5px] font-medium text-white/42">
+            {MONTHS_FULL[weekDates()[0].getMonth()]} {weekDates()[0].getFullYear()} · rilis minggu ini
+          </p>
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
+        <span className="rounded-lg border border-white/10 bg-[#121417] px-2.5 py-1.5 font-mono text-[10px] font-bold text-white/52">
+          {list.length} hari ini
+        </span>
+      </header>
+
+      <div className="mt-4">
+        <div className="grid grid-cols-7 gap-1">
           {weekDates().map((d, i) => {
             const active = i === day;
             const count = countsByDay[i] ?? 0;
@@ -411,49 +393,32 @@ function JadwalContent() {
                 aria-label={`${DAYS_ID[i]}, ${d.getDate()} ${MONTHS[d.getMonth()]} — ${count} rilis`}
                 title={`${count} rilis`}
                 className={cn(
-                  "group relative flex h-[92px] flex-col overflow-hidden rounded-xl border transition active:scale-[0.97]",
+                  "flex h-[68px] flex-col items-center justify-center gap-1 rounded-lg border transition active:scale-[0.97]",
                   active
-                    ? "border-primary bg-primary/10 shadow-[0_6px_18px_-10px] shadow-primary/70"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/25",
+                    ? "border-[rgba(211,62,48,.45)] bg-[rgba(211,62,48,.12)] text-white"
+                    : "border-white/8 bg-[#121417] text-white/48 hover:border-white/18",
                 )}
               >
-                {/* Pita hari di bagian atas, seperti kepala lembar kalender. */}
-                <span
-                  className={cn(
-                    "w-full py-1 text-center text-[9px] font-black uppercase leading-none tracking-[0.08em]",
-                    active
-                      ? "bg-primary text-white"
-                      : "bg-white/[0.06] text-zinc-400",
-                  )}
-                >
+                <span className="text-[8.5px] font-bold uppercase tracking-[0.06em]">
                   {SHORT_DAYS[i]}
                 </span>
-                <span className="flex flex-1 flex-col items-center justify-center gap-1.5">
-                  <span
-                    className={cn(
-                      "text-[26px] font-black leading-none tabular-nums tracking-tight",
-                      active ? "text-foreground" : "text-zinc-300",
-                    )}
-                  >
-                    {d.getDate()}
-                  </span>
-                  {/* Titik rilis: maksimal 3, sisanya diwakili titik ketiga
-                      yang lebih tebal warnanya. */}
-                  <span className="flex h-1.5 items-center gap-0.5">
-                    {count === 0 ? (
-                      <span className="size-1 rounded-full bg-white/15" />
-                    ) : (
-                      Array.from({ length: Math.min(count, 3) }).map((_, k) => (
-                        <span
-                          key={k}
-                          className={cn(
-                            "size-1 rounded-full",
-                            active ? "bg-primary" : "bg-[#1CA7EC]/70",
-                          )}
-                        />
-                      ))
-                    )}
-                  </span>
+                <span
+                  className={cn(
+                    "text-[18px] font-bold leading-none tabular-nums tracking-tight",
+                    active ? "text-white" : "text-white/72",
+                  )}
+                >
+                  {d.getDate()}
+                </span>
+                <span className="flex h-1 items-center gap-0.5">
+                  {count > 0 && (
+                    <span
+                      className={cn(
+                        "size-1 rounded-full",
+                        active ? "bg-[var(--primary)]" : "bg-white/30",
+                      )}
+                    />
+                  )}
                 </span>
               </button>
             );
@@ -461,53 +426,43 @@ function JadwalContent() {
         </div>
       </div>
 
-      {/* Info jumlah rilis hari terpilih */}
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">
-          {loadingAll
-            ? "Memuat jadwal…"
-            : list.length === 0
-              ? `Tidak ada rilis pada ${DAYS_ID[day]}`
-              : `${list.length} rilis pada ${DAYS_ID[day]}, ${weekDates()[day].getDate()} ${MONTHS[weekDates()[day].getMonth()]}`}
+      <div className="mb-1 mt-5 flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-[18px] font-bold tracking-[-0.03em]">
+          {DAYS_ID[day]}{" "}
+          <span className="font-sans text-[10px] font-medium tracking-normal text-white/38">
+            {weekDates()[day].getDate()} {MONTHS[weekDates()[day].getMonth()]}
+          </span>
+        </h2>
+        <span className="text-[10px] font-medium text-white/38">
+          {loadingAll ? "Memuat…" : `${list.length} rilis`}
         </span>
-        {!loadingAll &&
-          list.length > 0 &&
-          Object.values(dupCounts).filter((c) => c > 1).length > 0 && (
-            <span className="text-[11px] text-muted-foreground">
-              {Object.values(dupCounts).filter((c) => c > 1).length} judul
-              duplikat
-            </span>
-          )}
       </div>
 
       {loadingAll ? (
-        <div className="mb-2 flex flex-col gap-2">
+        <div className="mt-2 divide-y divide-white/6">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 rounded-2xl bg-card p-2.5"
-            >
-              <div className="skeleton h-24 w-16 shrink-0 rounded-xl" />
+            <div key={i} className="flex items-center gap-3 py-3">
+              <div className="skeleton h-3 w-9 shrink-0 rounded" />
+              <div className="skeleton h-[62px] w-[46px] shrink-0 rounded-md" />
               <div className="flex-1 space-y-2">
-                <div className="skeleton h-4 w-3/4 rounded" />
-                <div className="skeleton h-3 w-1/2 rounded" />
+                <div className="skeleton h-3.5 w-3/4 rounded" />
+                <div className="skeleton h-2.5 w-1/2 rounded" />
               </div>
             </div>
           ))}
         </div>
       ) : list.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          Tidak ada jadwal rilis hari ini.
-        </p>
+        <div className="py-14 text-center">
+          <p className="text-[12px] font-semibold text-white/62">
+            Tidak ada rilis pada {DAYS_ID[day]}
+          </p>
+          <p className="mx-auto mt-1 max-w-[15rem] text-[10px] leading-relaxed text-white/35">
+            Coba hari lain di strip tanggal di atas.
+          </p>
+        </div>
       ) : (
-        <div className="relative pb-2 pl-[62px]">
-          {/* GARIS TIMELINE — satu garis lurus ke bawah; bagian yang sudah
-              lewat waktu tayangnya berwarna (progress berjalan). */}
-          <span
-            aria-hidden
-            className="absolute bottom-0 left-[30px] top-0 w-px bg-white/12"
-          />
-          <div className="space-y-2">
+        <div className="mt-1">
+          <div className="divide-y divide-white/7">
           {shownList.map((item) => {
             // Hitung mundur per item: "x jam lagi" sampai jam rilis tiba,
             // lalu berubah jadi "Sudah tayang" dan itemnya sedikit redup.
@@ -534,132 +489,90 @@ function JadwalContent() {
                 ? `${String(wibAt.getUTCHours()).padStart(2, "0")}:${String(wibAt.getUTCMinutes()).padStart(2, "0")}`
                 : "--:--");
             return (
-              <div
+              <button
                 key={`${item.source}-${item.id ?? item.slug ?? ""}-${item.episode ?? 0}`}
-                className="relative"
+                onClick={() => openItem(item)}
+                className={cn(
+                  "flex w-full items-start gap-3 py-3 text-left transition hover:bg-white/[0.025] active:bg-white/[0.04]",
+                  itemAired && "opacity-58",
+                )}
               >
-                {/* Titik waktu di tengah garis timeline. */}
-                <span
-                  className={cn(
-                    "absolute top-4 z-10 flex w-[52px] -translate-x-1/2 items-center justify-center rounded-md px-1 py-0.5 text-[9.5px] font-black tabular-nums transition-colors",
-                    itemAired
-                      ? "bg-primary text-white shadow-[0_0_10px_-2px] shadow-primary/70"
-                      : "bg-[#151922] text-white/60 ring-1 ring-white/15",
+                <span className="w-9 shrink-0 pt-0.5 text-right">
+                  <span
+                    className={cn(
+                      "block font-mono text-[10.5px] font-bold tabular-nums",
+                      itemAired ? "text-[var(--yn-mint)]" : "text-white/58",
+                    )}
+                  >
+                    {timeLabel}
+                  </span>
+                  {itemAired && (
+                    <span className="mt-1 block text-[7px] font-bold uppercase tracking-[0.06em] text-[rgba(116,223,194,.7)]">
+                      Tayang
+                    </span>
                   )}
-                  style={{ left: "-32px" }}
-                >
-                  {timeLabel}
                 </span>
-                {/* Ruas garis berwarna untuk waktu yang sudah berjalan. */}
-                <span
-                  aria-hidden
-                  className={cn(
-                    "absolute -top-2 bottom-0 w-px",
-                    itemAired ? "bg-primary" : "bg-transparent",
-                  )}
-                  style={{ left: "-32px" }}
-                />
-                <button
-                  onClick={() => openItem(item)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5 text-left transition hover:border-primary/40",
-                    itemAired && "opacity-70",
-                  )}
-                >
-                {/* Gambar + badge episode */}
-                <div className="relative w-16 shrink-0">
-                  <div className="aspect-[2/3] overflow-hidden rounded-xl bg-black">
-                    <img
-                      src={item.image}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  {typeof item.episode === "number" && item.episode !== 0 && (
-                    <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
-                      Ep {item.episode}
-                    </span>
-                  )}
-                  {item.id != null &&
-                    (dupCounts[`${item.id}-${item.episode ?? 0}`] ?? 0) > 1 && (
-                      <span className="absolute -right-1.5 top-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
-                        {dupCounts[`${item.id}-${item.episode ?? 0}`]}
-                      </span>
-                    )}
-                </div>
 
-                {/* Judul + jam rilis + hitung mundur + tipe sumber */}
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-sm font-semibold leading-5">
-                    {item.title}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-medium uppercase text-white/60">
-                      {item.source}
+                <span className="relative w-[46px] shrink-0 overflow-hidden rounded-md border border-white/10 bg-black">
+                  <img
+                    src={item.image}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-[2/3] w-full object-cover"
+                  />
+                  {typeof item.episode === "number" && item.episode !== 0 && (
+                    <span className="absolute inset-x-0 bottom-0 bg-black/72 px-1 py-0.5 text-center font-mono text-[7.5px] font-bold text-white">
+                      EP {item.episode}
                     </span>
-                    {item.time && (
-                      <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-white/75">
-                        {item.time}
-                      </span>
+                  )}
+                </span>
+
+                <span className="min-w-0 flex-1 pt-0.5">
+                  <span className="line-clamp-2 block text-[12px] font-semibold leading-[1.35] text-white/90">
+                    {item.title}
+                  </span>
+                  <span className="mt-1 flex items-center gap-1.5 text-[9px] font-medium text-white/34">
+                    <span className="uppercase tracking-[0.05em]">{item.source}</span>
+                    {typeof item.episode === "number" && item.episode !== 0 && (
+                      <span>Episode {item.episode}</span>
                     )}
-                    {itemCountdown && (
-                      <span
-                        className={cn(
-                          "rounded-md px-1.5 py-0.5 font-bold",
-                          itemAired
-                            ? "bg-emerald-500/15 text-emerald-300"
-                            : "bg-primary/15 text-primary",
-                        )}
-                      >
-                        {itemCountdown}
-                      </span>
-                    )}
-                    {item.estimated && (
-                      <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-300">
-                        Estimasi
-                      </span>
-                    )}
-                  </div>
-                </div>
-                </button>
-              </div>
+                  </span>
+                  {(itemCountdown || item.estimated) && (
+                    <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {itemCountdown && (
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[8px] font-bold",
+                            itemAired
+                              ? "bg-[rgba(116,223,194,.1)] text-[var(--yn-mint)]"
+                              : "bg-[rgba(211,62,48,.12)] text-[#f09a8f]",
+                          )}
+                        >
+                          {itemCountdown}
+                        </span>
+                      )}
+                      {item.estimated && (
+                        <span className="rounded bg-[rgba(230,196,124,.1)] px-1.5 py-0.5 text-[8px] font-bold uppercase text-[var(--gold)]">
+                          Estimasi
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </span>
+
+                {!itemAired && (
+                  <span className="mt-1 shrink-0 rounded bg-[var(--primary)] px-1.5 py-0.5 text-[7.5px] font-extrabold uppercase tracking-[0.05em] text-white">
+                    Baru
+                  </span>
+                )}
+              </button>
             );
           })}
           </div>
         </div>
       )}
 
-      {/* DUA TOMBOL HARI — kotak rounded sama ukuran, berdampingan di
-          kanan bawah. Kiri = hari sebelumnya, kanan = hari berikutnya. */}
-      <div className="fixed inset-x-3 bottom-[calc(5.4rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between">
-        <button
-          onClick={() => {
-            setDay((d) => (d + 6) % 7);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          aria-label={`Lihat jadwal hari ${DAYS_ID[(day + 6) % 7]}`}
-          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-[#151922]/95 px-3 py-2.5 text-[11.5px] font-black text-white/75 backdrop-blur transition hover:text-white active:scale-95"
-        >
-          <CalendarDays className="size-3.5 text-white/50" />
-          {DAYS_ID[(day + 6) % 7]}
-        </button>
-        <button
-          onClick={() => {
-            setDay((d) => (d + 1) % 7);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          aria-label={`Lihat jadwal hari ${DAYS_ID[(day + 1) % 7]}`}
-          className="flex items-center gap-1.5 rounded-xl border border-primary/45 bg-[#151922]/95 px-3 py-2.5 text-[11.5px] font-black text-white backdrop-blur transition active:scale-95"
-        >
-          <CalendarDays className="size-3.5 text-primary" />
-          {DAYS_ID[(day + 1) % 7]}
-        </button>
-      </div>
-
-      {/* "Lihat selengkapnya" menampilkan seluruh rilis hari itu. Area bawah
-          sengaja tinggi supaya kedua tombol ini tidak tertutup tombol hari
-          yang fixed maupun navigasi bawah. */}
-      <div className="mt-5 flex items-center justify-between gap-3 pb-2">
+      <div className="mt-4 flex items-center justify-between gap-3 pb-2">
         {list.length > 8 && !showAll ? (
           <button
             onClick={() => {

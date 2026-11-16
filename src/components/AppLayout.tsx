@@ -47,12 +47,7 @@ import {
   type YoruFeature,
 } from "@/components/YoruVerseHub";
 import { PanelHub, type PanelKey } from "@/components/PanelHub";
-import { ThemeOnboarding } from "@/components/ThemeOnboarding";
-import {
-  applyUiTheme,
-  readStoredUiTheme,
-  type SavedUiTheme,
-} from "@/lib/ui-theme";
+import { applyUiTheme } from "@/lib/ui-theme";
 import { xpForLevel } from "@/lib/level";
 import type { ComponentType, ReactNode } from "react";
 
@@ -89,9 +84,6 @@ export function AppLayout({
   // BottomNav (dan dirinya sendiri) unmount.
   const [navPanel, setNavPanel] = useState<TopPanel>(null);
   const [topPanel, setTopPanel] = useState<TopPanel>(null);
-  // Tema visual wajib dipilih sekali setelah login. Preferensi tersimpan di
-  // perangkat + akun, jadi tidak muncul lagi di kunjungan berikutnya.
-  const [uiTheme, setUiTheme] = useState<SavedUiTheme | null>(null);
   // PANEL (tombol tengah nav) — sheet setinggi 60% layar. Isinya profil +
   // kotak Feed · Baca · History · Download · Clan · Music · YoruPet · Title
   // · Shop (Feed & Baca sudah digabung jadi tombol ini, permintaan user).
@@ -201,23 +193,11 @@ export function AppLayout({
     if (user) void ensure();
   }, [user, ensure]);
 
+  // Satu identitas visual untuk semua akun. Pemilihan palet per-user dihapus
+  // supaya warna tombol, status, dan navigasi tidak saling bertabrakan.
   useEffect(() => {
-    const openTheme = () => setUiTheme(null);
-    window.addEventListener("yn-open-theme", openTheme);
-    return () => window.removeEventListener("yn-open-theme", openTheme);
+    applyUiTheme();
   }, []);
-
-  const serverTheme = (user as any)?.uiTheme as string | undefined;
-  const serverAccent = (user as any)?.uiAccent as string | undefined;
-  useEffect(() => {
-    if (!user) {
-      setUiTheme(null);
-      return;
-    }
-    const saved = readStoredUiTheme(user._id, serverTheme, serverAccent);
-    if (saved) applyUiTheme(saved);
-    setUiTheme(saved);
-  }, [user?._id, serverTheme, serverAccent]);
 
   // PRESENCE — penanda "online" tiap 30 detik selama aplikasi terbuka.
   // Dipakai angka N online di kotak Chat Global Home (hitungan beneran).
@@ -258,15 +238,6 @@ export function AppLayout({
       {/* LATAR HOME KUSTOM — gambar 9:16 dari galeri (Pengaturan › Ganti
           Home Screen). Fixed, di belawah semua konten (z negatif). */}
       <HomeBgLayer />
-      {user && !uiTheme && (
-        <ThemeOnboarding
-          userId={user._id}
-          onDone={(choice) => {
-            applyUiTheme(choice);
-            setUiTheme(choice);
-          }}
-        />
-      )}
       {/* Panel akun hanya muncul di Home dan TIDAK saat layar Koleksi (Favorit)
           terbuka. Dulu panel ini tetap tampil di atas layar Koleksi sehingga
           terlihat seperti layar yang salah - tombol Favorit di navigasi
@@ -1206,15 +1177,8 @@ function BottomNav({
         className="nav-bar fixed inset-x-0 bottom-0 z-40"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
       >
-        <div className="mx-auto w-full max-w-[430px] px-2.5">
-          <div
-            className={cn(
-              "liquid-glass-nav relative grid grid-cols-5 gap-1 overflow-hidden rounded-[30px] border p-1.5",
-              "border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.06)_46%,rgba(255,210,63,.08))]",
-              "shadow-[0_20px_48px_-26px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,.2)]",
-              "backdrop-blur-2xl backdrop-saturate-150",
-            )}
-          >
+        <div className="mx-auto w-full max-w-[430px] px-3">
+          <div className="liquid-glass-nav relative grid grid-cols-5 gap-1 overflow-hidden rounded-[18px] border border-white/10 bg-[#101216] p-1.5 shadow-[0_-8px_30px_-24px_rgba(0,0,0,.9)]">
             {items.map((it) => {
             const base = it.path.split("?")[0];
             // Panel "favorites" tidak punya rute: aktif selama layarnya
@@ -1261,9 +1225,8 @@ function BottomNav({
                     ? `${it.label} (butuh ${MOST_MIN_TITLES} judul ditonton)`
                     : it.label
                 }                  className={cn(
-                    "nav-item relative z-10 flex min-h-[58px] min-w-0 select-none flex-col items-center justify-center rounded-[22px] pb-2 pt-2.5 transition-all duration-200",
-                    active &&
-                      "bg-white/[0.11] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.16)]",
+                    "nav-item relative z-10 flex min-h-[56px] min-w-0 select-none flex-col items-center justify-center rounded-xl pb-1.5 pt-2 transition-colors duration-200",
+                    active && "bg-[#20242a] text-white",
                   )}
               >
                 {/* Isi tombol (ikon + label). PANEL sekarang memakai gaya
@@ -1271,9 +1234,9 @@ function BottomNav({
                     menonjol atau naik keluar dari navigasi. */}
                 <span className="flex flex-col items-center">
                 <Icon
-                  strokeWidth={2.2}
+                  strokeWidth={active ? 2.25 : 1.85}
                   className={cn(
-                    "size-[22px] md:size-[25px] transition-colors duration-200",
+                    "size-[21px] transition-colors duration-200",
                     active
                       ? "text-white"
                       : it.dim
@@ -1285,12 +1248,12 @@ function BottomNav({
                     Akun). Muncul untuk SEMUA tombol; yang aktif lebih terang. */}
                 <span
                   className={cn(
-                    "mt-1 max-w-full truncate px-0.5 text-[8.5px] leading-none transition-colors duration-200",
+                    "mt-1 max-w-full truncate px-0.5 text-[10px] leading-none transition-colors duration-200",
                     active
-                      ? "font-semibold text-white"
+                      ? "font-bold text-white"
                       : it.dim
                         ? "font-medium text-zinc-700"
-                        : "font-medium text-zinc-500",
+                        : "font-semibold text-zinc-500",
                   )}
                 >
                   {it.label}

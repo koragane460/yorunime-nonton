@@ -217,11 +217,11 @@ export function AnimeCard({
     <button
       onClick={onClick}
       className={cn(
-        "group relative w-full overflow-hidden text-left transition hover:opacity-90",
-        squareBottom ? "rounded-t-xl" : "rounded-xl",
+        "group relative w-full overflow-hidden text-left transition hover:opacity-95",
+        squareBottom ? "rounded-t-lg" : "rounded-lg",
       )}
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
+      <div className="yn-media-cut relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-[#1a1d22]">
         {image ? (
           <img
             src={image}
@@ -245,39 +245,30 @@ export function AnimeCard({
           <Star className="size-5 opacity-40" />
           {title.split(" ").slice(0, 2).join(" ")}
         </div>
-        {/* Title ONGOING/TAMAT — melekat FLUSH di kiri ATAS kartu (rounded
-            hanya pojok kanan-bawah, jadi kelihatan nyambung ke sudut poster).
-            Badge rank/New ikut bergeser ke kanannya lewat satu flex. */}
         <div className="absolute left-0 top-0 z-10 flex items-start">
           <PosterStatusBadge status={status} />
           {rank !== undefined && (
-            <span className="m-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-bold text-primary">
+            <span className="mx-1.5 mt-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[9px] font-bold text-[var(--gold)] backdrop-blur-sm">
               #{rank}
             </span>
           )}
           {isNew && (
-            <span className="m-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-              New
+            <span className="mx-1.5 mt-1.5 rounded bg-[var(--primary)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+              Baru
             </span>
           )}
         </div>
-        {/* Rating memakai komponen yang sama dengan detail & Watch. */}
         <PosterRatingBadge score={score} />
       </div>
       {!imageOnly && (
-        <div className="rounded-b-xl bg-black/55 p-2 backdrop-blur-sm">
-          {/* Judul di atas kotak SEMI-OPAQUE — gambar "screen home" masih
-              sedikit kelihatan, tapi tidak ada "bolong" di balik teks. */}
-          <p className="line-clamp-2 text-xs font-medium leading-4 text-white">
+        <div className="pt-2">
+          <p className="line-clamp-2 text-[11.5px] font-semibold leading-4 text-white/92">
             {title}
           </p>
-          {/* Baris meta meniru persis bagian "Yang serupa": bintang kuning
-              + rating dulu, lalu ikon TV + tipe; "· N episode" wrap sendiri
-              ke baris berikutnya di kartu yang sempit. */}
-          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] text-white/70">
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[9.5px] font-medium text-white/38">
             {type && (
               <span className="inline-flex items-center gap-0.5">
-                <Tv className="size-3" aria-hidden />
+                <Tv className="size-2.5" aria-hidden />
                 {type === "MOVIE"
                   ? "Movie"
                   : type === "TV_SHORT"
@@ -286,11 +277,11 @@ export function AnimeCard({
               </span>
             )}
             {typeof episodes === "number" && episodes > 0 && (
-              <span>· {episodes} episode</span>
+              <span>{episodes} eps</span>
             )}
             {views !== undefined && views > 0 && (
               <span className="inline-flex items-center gap-0.5">
-                <Eye className="size-3" aria-hidden />
+                <Eye className="size-2.5" aria-hidden />
                 {views.toLocaleString("id-ID")}
               </span>
             )}

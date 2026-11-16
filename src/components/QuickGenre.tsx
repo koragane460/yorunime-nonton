@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { PosterRatingBadge, PosterStatusBadge } from "@/components/lstream-ui";
-import { ArrowRight, ChevronLeft, Grid3X3, LayoutGrid, Search, X } from "lucide-react";
+import { ChevronLeft, Grid3X3, Search, X } from "lucide-react";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -149,17 +149,17 @@ export function AZCatalog({
 
       <div className="flex min-h-0 flex-1">
         {/* Rail A–Z vertikal di kiri — lebih lebar & membulat. */}
-        <div className="thin-scroll m-2 flex w-16 shrink-0 flex-col items-center gap-1 overflow-y-auto rounded-[22px] border border-white/10 bg-white/[0.045] p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="thin-scroll m-2 flex w-14 shrink-0 flex-col items-center gap-0.5 overflow-y-auto rounded-lg border border-white/8 bg-[#101215] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {LETTERS.map((l) => (
             <button
               key={l}
               onClick={() => onLetter(l)}
               aria-pressed={l === letter}
               className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-[14px] font-display text-[12px] font-black transition",
+                "flex size-9 shrink-0 items-center justify-center rounded-md font-mono text-[11px] font-bold transition",
                 l === letter
-                  ? "bg-gold-strong text-black shadow-[0_8px_18px_-10px_rgba(255,210,63,.9)]"
-                  : "text-white/40 hover:bg-white/[0.08] hover:text-white/80",
+                  ? "bg-[var(--primary)] text-white"
+                  : "text-white/30 hover:bg-white/[0.05] hover:text-white/80",
               )}
             >
               {l}
@@ -242,75 +242,71 @@ export function QuickGenre({
 
   return (
     <>
-      <section className="fade-enter mt-5 rounded-[22px] border border-white/8 bg-white/[0.022] p-3">
-        {/* Satu kotak kecil di kiri atas berisi dua tombol: Genre & Katalog.
-            Tombol yang aktif berubah jadi kapsul pekat. */}
-        <div className="inline-flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
-          <button
-            type="button"
-            onClick={() => setTab("genre")}
-            aria-pressed={tab === "genre"}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.97]",
-              tab === "genre"
-                ? "bg-white text-black shadow-[0_4px_12px_-6px_rgba(0,0,0,.8)]"
-                : "text-white/48 hover:text-white/80",
-            )}
-          >
-            <LayoutGrid className="size-3.5" strokeWidth={2.6} />
-            Genre
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("catalog")}
-            aria-pressed={tab === "catalog"}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition active:scale-[0.97]",
-              tab === "catalog"
-                ? "bg-white text-black shadow-[0_4px_12px_-6px_rgba(0,0,0,.8)]"
-                : "text-white/48 hover:text-white/80",
-            )}
-          >
-            <Grid3X3 className="size-3.5" strokeWidth={2.6} />
-            Katalog
-            <ArrowRight className="size-3" strokeWidth={2.8} />
-          </button>
+      <section className="fade-enter mt-6">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
+          <h2 className="yn-sec text-[1rem]">Jelajahi</h2>
+          <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#121417] p-0.5">
+            <button
+              type="button"
+              onClick={() => setTab("genre")}
+              aria-pressed={tab === "genre"}
+              className={cn(
+                "rounded-md px-2.5 py-1.5 text-[10px] font-bold transition",
+                tab === "genre"
+                  ? "bg-[#252a30] text-white"
+                  : "text-white/42 hover:text-white/80",
+              )}
+            >
+              Genre
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("catalog")}
+              aria-pressed={tab === "catalog"}
+              className={cn(
+                "rounded-md px-2.5 py-1.5 text-[10px] font-bold transition",
+                tab === "catalog"
+                  ? "bg-[#252a30] text-white"
+                  : "text-white/42 hover:text-white/80",
+              )}
+            >
+              A-Z
+            </button>
+          </div>
         </div>
 
-        <div className="mt-2.5">
-          {tab === "genre" ? (
-            <div className="thin-scroll flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {genres.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => onOpenGenre(g.id)}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-rose-400/45 bg-rose-500/[0.07] px-4 py-2.5 text-[12px] font-bold text-white/80 transition hover:border-rose-300/80 hover:bg-rose-500/15 hover:text-white active:scale-[0.97]"
-                >
-                  {g.name}
-                </button>
+        {tab === "genre" ? (
+          <div className="no-bar -mr-4 flex w-auto gap-2 overflow-x-auto pr-4 pb-1">
+            {genres.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => onOpenGenre(g.id)}
+                className="yn-chip shrink-0 whitespace-nowrap"
+              >
+                {g.name}
+              </button>
+            ))}
+            {genres.length === 0 &&
+              Array.from({ length: 5 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="skeleton h-11 w-20 shrink-0 rounded-full"
+                />
               ))}
-              {genres.length === 0 &&
-                Array.from({ length: 5 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="skeleton h-9 w-20 shrink-0 rounded-full"
-                  />
-                ))}
-            </div>
-          ) : (
-            <div className="thin-scroll flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {LETTERS.map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLetter(l)}
-                  className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] font-display text-[12px] font-black text-[var(--ui-c)] transition hover:bg-white/[0.09] active:scale-95"
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="no-bar -mr-4 flex w-auto gap-1.5 overflow-x-auto pr-4 pb-1">
+            {LETTERS.map((l) => (
+              <button
+                key={l}
+                onClick={() => setLetter(l)}
+                className="grid size-11 shrink-0 place-items-center rounded-lg border border-white/10 bg-[#121417] font-display text-[12px] font-bold text-white/68 transition hover:border-white/22 hover:bg-[#1b1e23] hover:text-white active:scale-95"
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {letter && (

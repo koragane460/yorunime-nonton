@@ -8,6 +8,7 @@ import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import "./index.css";
+import "./yn-v3.css";
 import { UpdateGate } from "./components/UpdateGate";
 import { MusicPlayerProvider } from "./components/MusicPlayer";
 import { DownloadWorker } from "./components/HomeTopButtons";

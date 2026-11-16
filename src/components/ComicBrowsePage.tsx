@@ -145,14 +145,14 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
           kategori dan kotak pencarian tetap aktif; hanya tag kecil ini yang
           memberi tahu bahwa bacaannya perlu Premium. */}
       {!isPremium && (
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/60 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-lg border border-white/8 bg-[#101215] px-3 py-2">
           <PremiumOnlyChip />
           <p className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
             Katalog tetap bisa dilihat, baca chapter perlu Premium
           </p>
           <button
             onClick={() => navigate("/premium")}
-            className="shrink-0 rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-white"
+            className="shrink-0 rounded-md bg-[var(--primary)] px-2.5 py-1 text-[9px] font-bold text-white"
           >
             Buka
           </button>
@@ -172,8 +172,8 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
       />
 
       {/* Cari manga / manhwa */}
-      <div className="mt-4 flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
-        <Search className="size-4 shrink-0 text-muted-foreground" />
+      <div className="mt-4 flex h-10 w-full items-center gap-2 rounded-lg border border-white/8 bg-[#121417] px-3">
+        <Search className="size-3.5 shrink-0 text-white/28" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -183,7 +183,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
               ? "Cari manga… contoh: one piece, solo leveling"
               : "Cari manhwa… contoh: tower of god, solo leveling"
           }
-          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="w-full bg-transparent text-[11px] outline-none placeholder:text-white/24"
         />
         {q && (
           <button
@@ -193,13 +193,13 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
             }}
             aria-label="Bersihkan pencarian"
           >
-            <X className="size-4 text-muted-foreground" />
+            <X className="size-3.5 text-white/30" />
           </button>
         )}
         <button
           onClick={() => void doSearch()}
           disabled={searching}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
+          className="flex h-7 shrink-0 items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 text-[9px] font-bold text-white disabled:opacity-60"
         >
           {searching && <Loader2 className="size-3 animate-spin" />}
           Cari
@@ -212,7 +212,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
 
       {results !== null && !searching ? (
         <div className="mt-4">
-          <h2 className="mb-2 text-base font-bold tracking-tight">
+          <h2 className="mb-3 font-display text-[17px] font-bold tracking-[-0.03em]">
             Hasil untuk “{q.trim()}”
           </h2>
           {results.length === 0 ? (
@@ -224,7 +224,7 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
           )}
           <button
             onClick={() => setResults(null)}
-            className="mt-3 w-full rounded-full border border-border py-2 text-xs text-muted-foreground"
+            className="mt-3 w-full rounded-lg border border-white/8 py-2.5 text-[10px] font-semibold text-white/32 transition hover:text-white"
           >
             Kembali ke katalog
           </button>
@@ -233,17 +233,20 @@ export function ComicBrowsePage({ kind }: { kind: ComicKind }) {
         <>
           {/* Trending */}
           <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-base font-bold tracking-tight">
+            <div className="mb-3 flex items-end justify-between">
+              <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/50">
+                <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                  /
+                </span>
                 Trending {LABEL[kind]}
               </h2>
-              <span className="text-[11px] text-muted-foreground">paling banyak dibaca</span>
+              <span className="text-[8px] font-medium text-white/22">Paling dibaca</span>
             </div>
             {loading ? (
               <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
                 {Array.from({ length: 10 }).map((_, i) => (
                   <div key={i}>
-                    <div className="skeleton aspect-[2/3] w-full rounded-xl" />
+                    <div className="skeleton aspect-[2/3] w-full rounded-lg" />
                     <div className="skeleton mt-1.5 h-3 w-full rounded" />
                   </div>
                 ))}
@@ -360,13 +363,12 @@ function ComicHero({
   loading: boolean;
   onPick: (slug: string) => void;
 }) {
-  if (loading) return <div className="skeleton mt-1 h-64 w-full rounded-2xl" />;
+  if (loading) return <div className="skeleton mt-1 h-72 w-full rounded-lg" />;
   if (items.length === 0) return null;
   const cur = items[index % items.length];
   const views = formatViews(cur.views);
-  const badge = kind === "manga" ? "bg-sky-600" : "bg-rose-600";
   return (
-    <div className="yn-banner-box relative mt-1 rounded-2xl border border-white/10 bg-black">
+    <div className="yn-media-cut relative mt-1 overflow-hidden rounded-lg border border-white/10 bg-black">
       {/* Poster komik vertikal: tinggi mengikuti rasio gambar asli supaya
           tidak terpotong, dan tetap tajam karena cover-nya 720px. */}
       <img
@@ -378,37 +380,29 @@ function ComicHero({
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-black/5" />
       <div className="absolute inset-0 flex flex-col justify-end p-4">
         <div className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "rounded px-2 py-0.5 text-[10px] font-black uppercase text-white",
-              badge,
-            )}
-          >
+          <span className="rounded bg-[var(--primary)] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.06em] text-white">
             {LABEL[kind]}
           </span>
           <StatusChip ongoing={cur.ongoing} />
-          <span className="rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
-            Trending
+          <span className="inline-flex items-center gap-1 rounded bg-black/55 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.06em] text-[var(--gold)]">
+            <span className="size-1 rounded-full bg-current" /> Trending
           </span>
         </div>
-        <h1 className="mt-1.5 line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
+        <h1 className="mt-1.5 line-clamp-2 font-serif text-[24px] leading-[1.05] tracking-[-0.02em] text-white">
           {cur.title}
         </h1>
-        <p className="mt-0.5 text-[11px] text-zinc-300">
+        <p className="mt-1 text-[9px] font-medium text-white/42">
           {[...cur.genres.slice(0, 2), cur.latestChapter].filter(Boolean).join(" · ")}
         </p>
         <div className="mt-2.5 flex items-center gap-2">
           <button
             onClick={() => onPick(cur.slug)}
-            className={cn(
-              "rounded-full px-4 py-1.5 text-xs font-bold text-white transition",
-              kind === "manga" ? "bg-sky-600 hover:bg-sky-500" : "bg-rose-600 hover:bg-rose-500",
-            )}
+            className="min-h-9 rounded-lg bg-[var(--primary)] px-3.5 text-[10px] font-bold text-white transition active:scale-95"
           >
             Baca Sekarang
           </button>
           {views && (
-            <span className="rounded-full border border-white/25 bg-black/45 px-3 py-1.5 text-[10px] font-semibold text-white">
+            <span className="text-[9px] font-medium text-white/40">
               {views} pembaca
             </span>
           )}
@@ -418,14 +412,14 @@ function ComicHero({
         <>
           <div className="absolute bottom-3 right-3 flex gap-1">
             <button
-              className="rounded-full bg-black/60 p-1.5 text-white"
+              className="grid size-8 place-items-center rounded-md border border-white/10 bg-black/55 text-white"
               onClick={() => onIndex((index + items.length - 1) % items.length)}
               aria-label="Sebelumnya"
             >
               <ChevronLeft className="size-4" />
             </button>
             <button
-              className="rounded-full bg-black/60 p-1.5 text-white"
+              className="grid size-8 place-items-center rounded-md border border-white/10 bg-black/55 text-white"
               onClick={() => onIndex((index + 1) % items.length)}
               aria-label="Berikutnya"
             >

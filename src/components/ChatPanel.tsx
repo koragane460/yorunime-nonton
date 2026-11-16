@@ -994,7 +994,7 @@ export function ChatPanel({
       </div>
 
       {/* reply preview + input */}
-      <div className="border-t border-border/60 p-2">
+      <div className="border-t border-white/7 p-2">
         {replyTo && (
           <div className="mb-2 flex items-start gap-2 rounded-lg bg-primary/12 px-3 py-2.5">
             <Reply className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -1044,29 +1044,29 @@ export function ChatPanel({
         {/* SATU BARIS LURUS: foto akun di kiri, kolom pesan, lalu ikon
             foto/premium/sticker di kanan. Begitu mulai mengetik, ketiga
             ikon berganti jadi satu tombol kirim. */}
-        <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.045] p-1.5">
+        <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-[#121417] p-1.5">
           <Avatar
             src={user?.image}
             seed={user?.username ?? "user"}
-            className="size-9 shrink-0"
+            className="size-8 shrink-0"
           />
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
-            placeholder={muted ? "Kamu sedang dimute…" : "Tulis pesan…"}
+            placeholder={muted ? "Kamu sedang dimute…" : "Silakan masukkan pesan…"}
             disabled={muted}
-            className="h-9 min-w-0 flex-1 rounded-full border-0 bg-transparent px-2 text-[14px] focus-visible:border-0 focus-visible:ring-0 disabled:opacity-50"
+            className="h-9 min-w-0 flex-1 rounded-full border-0 bg-transparent px-1 text-[12px] focus-visible:border-0 focus-visible:ring-0 disabled:opacity-50"
           />
           {text.trim() ? (
             <Button
               size="icon"
               disabled={muted}
-              className="size-9 shrink-0 rounded-full bg-primary text-primary-foreground hover:brightness-110"
+              className="size-9 shrink-0 rounded-full bg-[var(--primary)] text-white hover:brightness-110"
               onClick={submit}
               aria-label="Kirim pesan"
             >
-              <Send className="size-4.5" />
+              <Send className="size-4" />
             </Button>
           ) : (
             <div className="flex shrink-0 items-center gap-0.5">
@@ -1082,9 +1082,9 @@ export function ChatPanel({
                   fileRef.current?.click();
                 }}
                 aria-label="Kirim foto"
-                className="flex size-9 items-center justify-center rounded-full text-sky-300 transition hover:bg-sky-400/15 active:scale-90 disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-lg text-[var(--yn-mint)] transition hover:bg-[rgba(116,223,194,.08)] active:scale-90 disabled:opacity-40"
               >
-                {photoBusy ? <Loader2 className="size-4.5 animate-spin" /> : <ImagePlus className="size-4.5" />}
+                {photoBusy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
               </button>
               {!noPremium && (
                 <button
@@ -1099,9 +1099,9 @@ export function ChatPanel({
                     setGiveOpen(true);
                   }}
                   aria-label="Give premium"
-                  className="flex size-9 items-center justify-center rounded-full text-amber-300 transition hover:bg-amber-400/15 active:scale-90 disabled:opacity-40"
+                  className="flex size-8 items-center justify-center rounded-lg text-[var(--gold)] transition hover:bg-[rgba(230,196,124,.08)] active:scale-90 disabled:opacity-40"
                 >
-                  <CrystalIcon className="size-[18px]" />
+                  <CrystalIcon className="size-[16px]" />
                 </button>
               )}
               <button
@@ -1116,9 +1116,9 @@ export function ChatPanel({
                   setStickerOpen(true);
                 }}
                 aria-label="Kirim sticker"
-                className="flex size-9 items-center justify-center rounded-full text-violet-300 transition hover:bg-violet-400/15 active:scale-90 disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/6 hover:text-white active:scale-90 disabled:opacity-40"
               >
-                <Sticker className="size-4.5" />
+                <Sticker className="size-4" />
               </button>
             </div>
           )}

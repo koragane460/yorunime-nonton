@@ -20,12 +20,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Bookmark,
+  ArrowUpDown,
   ChevronDown,
   Clapperboard,
   Crown,
-  Filter,
   Heart,
-  List,
   Plus,
   Tv,
   Vote as VoteIcon,
@@ -106,10 +105,8 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
   // Top 10 hasil voting karakter — hanya terisi setelah event (7 hari) selesai.
   const top = useQuery(api.votes.topCharacters, {});
 
-  // "filter" (DEFAULT) = daftar otomatis dikelompokkan Ongoing → garis
-  // pembatas → Completed, tanpa satu pun tombol status.
-  // "single" = SEMUA kategori dicampur, kartu berbaris polos urut favorite.
-  const [mode, setMode] = useState<"single" | "filter">("filter");
+  const [filter, setFilter] = useState<"all" | "ongoing" | "done">("all");
+  const [sort, setSort] = useState<"baru" | "judul">("baru");
   // Detail manga/manhwa dibuka sebagai layar penuh (sama seperti di Baca).
   const [pick, setPick] = useState<{ slug: string; kind: "manga" | "manhwa" } | null>(
     null,
@@ -204,10 +201,19 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
       ? "Belum ada judul yang di-subscribe. Tekan tombol lonceng di detail judul."
       : "Playlist ini masih kosong. Tambahkan judul lewat tombol lonceng di detail.";
 
-  /** Satu grid kartu — dipakai mode single & tiap kelompok (Ongoing/Completed). */
+  const sortRows = (list: SubRow[]) =>
+    [...list].sort((a, b) =>
+      sort === "judul"
+        ? ("slug" in a ? a.comicTitle : a.animeTitle).localeCompare(
+            "slug" in b ? b.comicTitle : b.animeTitle,
+          )
+        : b.createdAt - a.createdAt,
+    );
+
+  /** Grid poster yang sama untuk semua filter. */
   const renderGrid = (list: SubRow[]) => (
-    <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-      {list.map((f, i) => {
+    <div className="mt-3 grid grid-cols-3 gap-x-2.5 gap-y-4">
+      {sortRows(list).map((f) => {
         const comic = "slug" in f;
         const itemId = comic ? f.slug : f.animeId;
         const itemKind = comic ? f.kind : (f.kind ?? "anime");
@@ -218,9 +224,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
         return (
           <motion.button
             key={key}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
+            initial={false}
             onClick={() => {
               if (itemKind === "manga" || itemKind === "manhwa") {
                 setPick({
@@ -245,7 +249,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
             }}
             className="group text-left"
           >
-            <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+            <div className="yn-media-cut relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-[#1a1d22]">
               {image ? (
                 <img
                   src={image}
@@ -263,18 +267,16 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
                 </div>
               )}
               {(f as AnimeRow).kind === "film" ? (
-                <Clapperboard className="absolute right-1.5 top-1.5 size-4 fill-gold text-gold drop-shadow" />
+                <Clapperboard className="absolute right-1.5 top-1.5 size-4 text-white/80 drop-shadow" />
               ) : activeList === "default" ? (
                 <Heart className="absolute right-1.5 top-1.5 size-4 fill-white/85 text-white/85 drop-shadow" />
               ) : (
                 <Bookmark className="absolute right-1.5 top-1.5 size-4 fill-white/75 text-white/75 drop-shadow" />
               )}
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
-                <span className="line-clamp-2 text-[11px] font-bold leading-tight text-white">
-                  {title}
-                </span>
-              </span>
             </div>
+            <span className="mt-2 line-clamp-2 min-h-8 text-[11px] font-semibold leading-4 text-white/90">
+              {title}
+            </span>
           </motion.button>
         );
       })}
@@ -282,23 +284,59 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
   );
 
   return (
-    <div className="fade-enter pb-24">
-      <div className="px-1 pt-4">
-        {/* ---------------- JUDUL + GARIS ---------------- */}
-        {/* Judul ditengahkan dan garis pembatasi FULL WIDTH (tanpa fade
-            transparan di ujung) — permintaan user. */}
-        <h1 className="text-center text-2xl font-black tracking-tight">Subscribe</h1>
-        <div className="mt-2 h-px w-full bg-gold/60" />
+    <div className="fade-enter pb-28">
+      <div className="pt-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-[28px] font-bold leading-none tracking-[-0.04em]">
+              Subscribe
+            </h1>
+            <p className="mt-1.5 text-[10.5px] font-medium text-white/42">
+              {items.length} judul · {ongoingItems.length} berjalan
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSort((s) => (s === "baru" ? "judul" : "baru"))}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-[#121417] px-2.5 py-2 text-[10px] font-bold text-white/55 transition hover:text-white"
+          >
+            <ArrowUpDown className="size-3.5" />
+            {sort === "baru" ? "Terbaru" : "A-Z"}
+          </button>
+        </div>
+
+        <div className="no-bar mt-4 flex gap-2 overflow-x-auto pb-1">
+          {([
+            ["all", `Semua ${items.length}`],
+            ["ongoing", `Berjalan ${ongoingItems.length}`],
+            ["done", `Selesai ${doneItems.length}`],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              aria-pressed={filter === key}
+              className={cn(
+                "flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-[10.5px] font-bold transition",
+                filter === key
+                  ? "border-transparent bg-[var(--primary)] text-white"
+                  : "border-white/10 bg-[#121417] text-white/45 hover:text-white/80",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Playlist bookmark: Default + playlist buatan user. */}
         <div className="mt-3 flex items-center gap-1.5">
-          <div className="thin-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full border border-white/10 bg-white/[0.035] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="no-bar flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-lg border border-white/10 bg-[#121417] p-1">
             <button
               onClick={() => setActiveList("default")}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-black transition",
                 activeList === "default"
-                  ? "bg-white text-black"
+                  ? "bg-[#252a30] text-white"
                   : "text-white/50 hover:text-white",
               )}
             >
@@ -312,7 +350,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-black transition",
                   activeList === String(l._id)
-                    ? "bg-white text-black"
+                    ? "bg-[#252a30] text-white"
                     : "text-white/50 hover:text-white",
                 )}
               >
@@ -323,7 +361,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
           <button
             onClick={() => setCreateOpen(true)}
             aria-label="Playlist baru"
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-white/12 bg-white/[0.06] text-white/70 transition hover:bg-white/[0.12] active:scale-95"
+            className="grid size-10 shrink-0 place-items-center rounded-lg border border-white/12 bg-[#1b1e23] text-white/70 transition hover:bg-[#252a30] active:scale-95"
           >
             <Plus className="size-4" />
           </button>
@@ -362,50 +400,45 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
 
         {/* ---------------- DAFTAR SUBSCRIBE (semua tipe dicampur) ---------------- */}
         {items.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            {emptyText}
-          </p>
-        ) : mode === "single" ? (
-          /* Tanpa filter: kartu berbaris sesuai urutan di-favorite. */
-          renderGrid(items)
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <span className="grid size-12 place-items-center rounded-xl border border-white/10 bg-[#121417] text-white/30">
+              <Heart className="size-5" />
+            </span>
+            <p className="max-w-[17rem] text-[11px] leading-relaxed text-white/40">
+              {emptyText}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/catalog")}
+              className="yn-btn-secondary min-h-9 px-3 text-[10px]"
+            >
+              Jelajahi katalog
+            </button>
+          </div>
+        ) : filter === "ongoing" ? (
+          renderGrid(ongoingItems)
+        ) : filter === "done" ? (
+          renderGrid(doneItems)
         ) : (
-          /* Otomatis terbagi: Ongoing → garis pembatas → Completed. */
           <div>
             {ongoingItems.length > 0 && (
-              <>
-                {/* Judul ONGOING: putih, tanpa dot, tanpa angka "masih jalan"
-                    (permintaan user). */}
-                <div className="mt-4 flex items-center gap-2">
-                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-white">
-                    Ongoing
-                  </h2>
-                </div>
-                {/* Chip tipe anime/manga/manhwa/donghua DIHAPUS PERMANEN. */}
+              <section className="mt-5">
+                <h2 className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/52">
+                  <span className="size-1.5 rounded-full bg-[var(--yn-mint)]" />
+                  Berjalan
+                </h2>
                 {renderGrid(ongoingItems)}
-              </>
-            )}
-
-            {/* Garis pembatas antar kelompok — hanya saat keduanya ada. */}
-            {ongoingItems.length > 0 && doneItems.length > 0 && (
-              <div className="my-4 flex items-center gap-3" aria-hidden>
-                <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/25 to-white/25" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                  selesai
-                </span>
-                <span className="h-px flex-1 bg-gradient-to-l from-transparent via-white/25 to-white/25" />
-              </div>
+              </section>
             )}
 
             {doneItems.length > 0 && (
-              <>
-                {/* Judul COMPLETED: putih, tanpa dot, tanpa angka "tamat". */}
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-black uppercase tracking-[0.14em] text-white">
-                    Completed
-                  </h2>
-                </div>
+              <section className="mt-6">
+                <h2 className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/52">
+                  <span className="size-1.5 rounded-full bg-white/30" />
+                  Selesai
+                </h2>
                 {renderGrid(doneItems)}
-              </>
+              </section>
             )}
           </div>
         )}
@@ -494,41 +527,6 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
         )}
       </div>
 
-      {/* Saklar tampilan di pojok kanan bawah — kotak rounded, biru muda,
-          ada garis pembatas di tengah: kiri SINGLE (kartu sesuai urutan
-          favorite), kanan FILTER (otomatis Ongoing → Completed). */}
-      <div className="fixed bottom-24 right-4 z-40 flex items-stretch overflow-hidden rounded-full border border-sky-200/60 bg-sky-300 shadow-[0_10px_26px_-10px_rgba(56,189,248,0.9)]">
-        <button
-          type="button"
-          onClick={() => setMode("single")}
-          aria-pressed={mode === "single"}
-          className={cn(
-            "flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-black transition active:scale-95",
-            mode === "single"
-              ? "bg-white text-sky-700"
-              : "text-sky-950/75 hover:bg-white/30",
-          )}
-        >
-          <List className="size-3.5" aria-hidden />
-          Single
-        </button>
-        <span className="w-px shrink-0 bg-sky-950/25" aria-hidden />
-        <button
-          type="button"
-          onClick={() => setMode("filter")}
-          aria-pressed={mode === "filter"}
-          className={cn(
-            "flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-black transition active:scale-95",
-            mode === "filter"
-              ? "bg-white text-sky-700"
-              : "text-sky-950/75 hover:bg-white/30",
-          )}
-        >
-          <Filter className="size-3.5" aria-hidden />
-          Filter
-        </button>
-      </div>
-
       {createOpen && (
         <div
           className="fixed inset-0 z-[120] flex items-end bg-black/65"
@@ -560,7 +558,7 @@ export function FavoritesScreen({ onClose: _onClose }: { onClose: () => void }) 
             <button
               onClick={() => void createPlaylist()}
               disabled={!newName.trim() || creating}
-              className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-white text-[12px] font-black text-black disabled:opacity-40"
+                              className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--primary)] text-[12px] font-bold text-white disabled:opacity-40"
             >
               <Plus className="size-4" />
               {creating ? "Membuat…" : "Buat playlist"}

@@ -40,7 +40,7 @@ const DESTINATIONS: {
   { path: "/gacha", label: "Gacha", hint: "Mesin hadiah", Icon: Sparkles },
   { path: "/music", label: "Musik", hint: "Putar musik", Icon: Music },
   { path: "/premium", label: "Premium", hint: "Langganan", Icon: CrystalIcon },
-  { path: "/info", label: "Info", hint: "Tentang YoruNime", Icon: Info },
+  { path: "/info", label: "Lanjutkan", hint: "Lanjut dari terakhir", Icon: Info },
   { path: "/akun", label: "Akun", hint: "Profil & pengaturan", Icon: User },
 ];
 
@@ -56,16 +56,24 @@ function MenuContent() {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6">
+    <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-5">
       <header>
-        <h1 className="text-2xl font-black tracking-tight">Menu</h1>
-        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-          Semua layar YoruNime dalam satu tempat.
+        <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.14em] text-white/28">
+          <span className="font-serif text-[15px] font-normal leading-none tracking-normal text-[var(--primary)]">
+            /
+          </span>
+          Navigasi
+        </p>
+        <h1 className="mt-0.5 font-display text-[27px] font-bold leading-none tracking-[-0.045em]">
+          Menu
+        </h1>
+        <p className="mt-1.5 text-[10px] leading-snug text-white/34">
+          Semua ruang YoruNime dalam satu tempat.
         </p>
       </header>
 
-      <section className="mt-6">
-        <h2 className="text-[13px] font-black uppercase tracking-[0.14em] text-white/60">
+      <section className="mt-5">
+        <h2 className="text-[8.5px] font-bold uppercase tracking-[0.14em] text-white/26">
           Semua layar
         </h2>
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -73,16 +81,16 @@ function MenuContent() {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className="flex items-center gap-2 rounded-2xl border border-white/10 bg-card px-3 py-2.5 text-left transition active:scale-[0.98]"
+              className="flex min-h-[58px] items-center gap-2.5 rounded-xl border border-white/8 bg-[#101215] px-3 py-2.5 text-left transition hover:border-white/16 hover:bg-[#13161a] active:scale-[0.98]"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-gold">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.02] text-white/38">
                 <Icon className="size-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[12px] font-black leading-tight">
+                <span className="block truncate text-[11px] font-bold leading-tight text-white/82">
                   {label}
                 </span>
-                <span className="block truncate text-[10px] leading-tight text-white/40">
+                <span className="block truncate text-[9px] leading-tight text-white/26">
                   {hint}
                 </span>
               </span>

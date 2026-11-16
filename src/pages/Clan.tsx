@@ -302,18 +302,27 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
 
   return (
     <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
-      <div className="w-full p-3">
-        {/* Header */}
-        <div className="mb-3 mt-3 flex items-center gap-3">
+      <div className="w-full px-4 pb-8 pt-4">
+        <header className="flex items-center gap-2">
           <button
             onClick={() => navigate("/")}
             aria-label="Kembali"
-            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/80 transition active:opacity-60"
           >
             <StripBackIcon />
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-lg yn-title">Cari clan</h1>
-        </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.14em] text-white/28">
+              <span className="font-serif text-[15px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                /
+              </span>
+              Komunitas
+            </p>
+            <h1 className="font-display text-[24px] font-bold leading-tight tracking-[-0.04em]">
+              Clan
+            </h1>
+          </div>
+        </header>
 
         {/* KOTAK CLAN KAMU SENDIRI — di TENGAH ATAS, hanya muncul kalau
             punya clan. Isi: foto profile, tag clan, nama clan, stats clan,
@@ -321,10 +330,10 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
         {ownClan && (
           <button
             onClick={() => setPick({ id: ownClan._id, tab: "member" })}
-            className="mx-auto relative flex w-full flex-col items-center gap-2 rounded-3xl border border-[#1CA7EC]/25 bg-gradient-to-br from-[#0d2a44] via-[#102f4d] to-[#143b5c] px-4 py-5 text-center transition hover:border-[#1CA7EC]/45 active:scale-[0.99]"
+            className="relative mt-4 flex w-full flex-col items-center gap-2 overflow-hidden rounded-xl border border-white/8 bg-[#101215] px-4 py-5 text-center transition hover:border-white/16 active:scale-[0.99]"
           >
             {/* STATUS CLAN — dibungkus kotak, di KANAN ATAS. */}
-            <span className="absolute right-3 top-3 flex max-w-[52%] flex-col items-end gap-1.5 rounded-xl border border-sky-300/25 bg-sky-400/10 p-2 text-left backdrop-blur">
+            <span className="absolute right-3 top-3 flex max-w-[52%] flex-col items-end gap-1.5 rounded-lg border border-white/8 bg-[#0b0d10] p-2 text-left">
               <span className="text-[9px] font-black uppercase tracking-widest text-white/55">
                 Status clan
               </span>
@@ -369,7 +378,7 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
             {/* DESKRIPSI CLAN — kotak kecil (kalau diisi), sama seperti
                 yang di detail clan. */}
             {ownClan.description ? (
-              <span className="w-full rounded-xl border border-sky-300/20 bg-sky-950/40 px-3 py-2 text-left text-[11px] leading-relaxed text-sky-50/85">
+              <span className="w-full rounded-lg border border-white/8 bg-[#0b0d10] px-3 py-2 text-left text-[10.5px] leading-relaxed text-white/52">
                 {ownClan.description}
               </span>
             ) : null}
@@ -407,8 +416,8 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
             </div>
             {/* Judul — putih, TANPA outline kuning tapi tetap beda dari
                 background utama (permintaan). */}
-            <span className="mt-1 rounded-xl border border-sky-300/30 bg-gradient-to-r from-sky-500/30 to-cyan-400/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-sky-50 shadow-none">
-              CLAN MU ADA DISINI!
+            <span className="mt-1 text-[8px] font-bold uppercase tracking-[0.16em] text-white/26">
+              Clan kamu
             </span>
           </button>
         )}
@@ -416,13 +425,13 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
         {/* KOTAK HERO — ikon clan di tengah + tulisan di bawahnya.
             Hanya untuk yang BELUM punya clan. */}
         {!ownClan && (
-        <div className="flex flex-col items-center rounded-3xl border border-gold/30 bg-gradient-to-b from-gold/[0.14] via-white/[0.04] to-transparent px-4 py-7 text-center">
-          <span className="flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-black/40">
-            <Shield className="size-8 text-violet-300" aria-hidden />
+        <div className="mt-4 flex flex-col items-center rounded-xl border border-white/8 bg-[#101215] px-4 py-7 text-center">
+          <span className="flex size-14 items-center justify-center rounded-lg border border-white/8 bg-white/[0.025] text-white/30">
+            <Shield className="size-6" aria-hidden />
           </span>
-          <p className="mt-3 text-xl font-black text-white">Clan kamu nanti di sini</p>
-          <p className="mt-1 text-xs text-zinc-400">
-            gabung, donasi, dan bawa clan mu ke puncak Top Clan
+          <p className="mt-3 font-display text-[18px] font-bold tracking-[-0.03em] text-white/85">Clan kamu nanti di sini</p>
+          <p className="mt-1 text-[10px] text-white/32">
+            Gabung, donasi, dan bawa clanmu ke puncak Top Clan.
           </p>
         </div>
         )}
@@ -436,16 +445,16 @@ function JoinScreen({ ownClanId }: { ownClanId?: string }) {
               onClick={() =>
                 user ? navigate("/clan?create=1") : navigate("/auth?returnTo=/clan?create=1")
               }
-              className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 py-3.5 text-sm font-extrabold text-emerald-50 transition hover:bg-emerald-400/15 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-lg border border-[rgba(211,62,48,.28)] bg-[rgba(211,62,48,.07)] py-3 text-[12px] font-bold text-white/75 transition hover:bg-[rgba(211,62,48,.12)] active:scale-[0.98]"
             >
-              <Plus className="size-4 text-emerald-300" aria-hidden />
+              <Plus className="size-4 text-[var(--primary)]" aria-hidden />
               Buat clan
             </button>
             <button
               onClick={() => setSearchOpen((v) => !v)}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-sky-300/25 bg-sky-400/10 py-3.5 text-sm font-extrabold text-sky-50 transition hover:bg-sky-400/15 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-3 text-[12px] font-bold text-white/72 transition hover:bg-white/[0.07] active:scale-[0.98]"
             >
-              <LogIn className="size-4 text-sky-300" aria-hidden />
+              <LogIn className="size-4 text-white/40" aria-hidden />
               Join clan
             </button>
           </div>
@@ -528,7 +537,7 @@ export function ClanRow({
   // dengan kotak ikon supaya tidak pernah tampil sebagai teks rusak.
   const [imgOk, setImgOk] = useState(true);
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+    <div className="rounded-xl border border-white/8 bg-[#101215] p-3">
       {/* Foto clan (kiri) + nama & tag di kanannya */}
       <button onClick={() => onOpen("member")} className="flex w-full items-center gap-2.5 text-left">
         {c.avatarUrl && imgOk ? (
@@ -576,12 +585,12 @@ export function ClanRow({
       </button>
 
       {/* DESKRIPSI clan — menggantikan posisi stats lama di tengah. */}
-      <p className="mt-1.5 line-clamp-2 rounded-lg bg-white/10 px-2.5 py-1.5 text-[10.5px] leading-relaxed text-white/75">
+      <p className="mt-1.5 line-clamp-2 rounded-lg bg-white/[0.025] px-2.5 py-1.5 text-[10px] leading-relaxed text-white/42">
         {c.description || "Belum ada deskripsi clan."}
       </p>
 
       {/* Bar level dibungkus kotak satu baris, level di kiri */}
-      <div className="mt-2 flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+      <div className="mt-2 flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.025] px-3 py-1.5">
         <span className="shrink-0 text-[10px] font-black">Lv.{c.level}</span>
         <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
           <div
@@ -604,7 +613,7 @@ export function ClanRow({
           c.isMine
             ? "border border-border text-muted-foreground"
             : c.isRequested
-              ? "border border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_-6px_rgba(52,211,153,0.9)]"
+              ? "border border-[rgba(116,223,194,.25)] bg-[rgba(116,223,194,.07)] text-[var(--yn-mint)]"
               : "yn-btn-warm disabled:opacity-50",
         )}
       >
@@ -941,20 +950,27 @@ function ClanDetailScreen({
 
   return (
     <div className="screen-enter fixed inset-0 z-40 overflow-y-auto bg-background">
-      <div className="w-full p-3">
-        {/* Header */}
-        <div className="mb-3 mt-3 flex items-center gap-3">
+      <div className="w-full px-4 pb-10 pt-4">
+        <header className="flex items-center gap-2">
           <button
             onClick={onClose}
             aria-label="Kembali"
-            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
+            className="flex shrink-0 items-center py-1 pr-1 text-foreground/80 transition active:opacity-60"
           >
             <StripBackIcon />
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-lg yn-title">Detail Clan</h1>
-          {/* Tombol gerigi di kanan atas DIHAPUS — pengaturan pindah ke
-              kotak "Pengaturan" di bawah pengumuman. */}
-        </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.14em] text-white/28">
+              <span className="font-serif text-[15px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                /
+              </span>
+              Komunitas
+            </p>
+            <h1 className="truncate font-display text-[22px] font-bold leading-tight tracking-[-0.04em]">
+              Detail Clan
+            </h1>
+          </div>
+        </header>
 
         {/* Kotak header clan — badge mode join di tengah atas, lalu foto +
             nama + tag, STATS, deskripsi, dan bar level. */}
@@ -1012,14 +1028,13 @@ function ClanDetailScreen({
 
           {/* DESKRIPSI CLAN — kotak BIRU LANGIT lembut, berbeda dari kotak
               pengumuman (emas) dan kotak claim berlian (kuning). */}
-          <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-[#1CA7EC]/45 bg-[#1CA7EC]/[0.09] px-3.5 py-3 pl-4">
-            <span aria-hidden className="absolute inset-y-2.5 left-1 w-[3px] rounded-full bg-[#1CA7EC]" />
+          <div className="mt-2.5 rounded-lg border border-white/8 bg-[#101215] px-3.5 py-3">
             {(c as any).description ? (
-              <p className="text-[11.5px] leading-relaxed text-zinc-200/95">
+              <p className="text-[10.5px] leading-relaxed text-white/52">
                 {(c as any).description}
               </p>
             ) : (
-              <p className="text-[11px] leading-relaxed text-zinc-500">
+              <p className="text-[10.5px] leading-relaxed text-white/24">
                 Belum ada deskripsi clan.
               </p>
             )}
@@ -1027,13 +1042,13 @@ function ClanDetailScreen({
 
           {/* ATURAN JOIN — selalu terlihat di detail clan. */}
           <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-            <div className="rounded-xl border border-sky-300/25 bg-sky-400/[0.07] px-2 py-2 text-center">
-              <ShieldCheck className="mx-auto size-3.5 text-sky-300" />
+            <div className="rounded-lg border border-white/8 bg-[#101215] px-2 py-2 text-center">
+              <ShieldCheck className="mx-auto size-3.5 text-white/34" />
               <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Min. level</p>
               <p className="text-[10px] font-black text-white">{(c as any).minJoinLevel ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-gold/25 bg-gold/[0.07] px-2 py-2 text-center">
-              <SacretIcon className="mx-auto size-3.5 text-gold" />
+            <div className="rounded-lg border border-white/8 bg-[#101215] px-2 py-2 text-center">
+              <SacretIcon className="mx-auto size-3.5 text-[var(--gold)]" />
               <p className="mt-1 text-[8px] font-black uppercase tracking-wide text-white/40">Biaya</p>
               <p className="text-[10px] font-black text-white">{((c as any).joinCost ?? 0).toLocaleString("id-ID")}</p>
             </div>
@@ -1206,7 +1221,7 @@ function ClanDetailScreen({
             className={cn(
               "mt-3 w-full rounded-xl py-3 text-sm font-bold active:scale-[0.98] disabled:opacity-50",
               isRequested
-                ? "border border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_-6px_rgba(52,211,153,0.9)]"
+                ? "border border-[rgba(116,223,194,.25)] bg-[rgba(116,223,194,.07)] text-[var(--yn-mint)]"
                 : "yn-btn-warm",
             )}
           >

@@ -123,28 +123,13 @@ function saveDevice(acc: Omit<DeviceAcc, "at">) {
   }
 }
 
-/** Latar layar pemuatan — malam berbintang yang tenang, bukan gradient neon. */
+/** Latar layar pemuatan — ruang gelap dengan satu sumber cahaya hangat. */
 function Starfield() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(90%_65%_at_50%_38%,rgba(108,76,180,.28),transparent_62%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.52)_1px,transparent_1.35px)] opacity-45 [background-size:38px_38px] [mask-image:radial-gradient(75%_65%_at_50%_45%,#000_18%,transparent_78%)]" />
-      <motion.span
-        className="absolute left-[14%] top-[22%] size-1 rounded-full bg-white/70"
-        animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.3, 0.8] }}
-        transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.span
-        className="absolute right-[18%] top-[30%] size-1.5 rounded-full bg-[#b9a7ff]/80"
-        animate={{ opacity: [0.35, 1, 0.35], y: [0, -4, 0] }}
-        transition={{ duration: 4.6, repeat: Infinity, ease: "easeInOut", delay: 0.7 }}
-      />
-      <motion.span
-        className="absolute left-[24%] bottom-[34%] size-1 rounded-full bg-[#7fd3f7]/90"
-        animate={{ opacity: [0.25, 0.9, 0.25] }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,12,.18),transparent_32%,rgba(5,5,12,.5)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(80%_55%_at_50%_30%,rgba(211,62,48,.13),transparent_68%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,#0a0b0d,rgba(10,11,13,.2)_40%,#0a0b0d)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-white/8" />
     </div>
   );
 }
@@ -610,7 +595,7 @@ function WelcomeFlow() {
   if (stage === "intro") {
     return (
       <div
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#07060c]"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#0a0b0d]"
         // Ketuk layar kapan saja untuk langsung lanjut (tanpa menunggu
         // timer) — kecuali kotak update sedang tampil.
         onClick={() => {
@@ -621,22 +606,14 @@ function WelcomeFlow() {
         <div className="relative flex w-full flex-col items-center px-6">
           <motion.div
             className="relative"
-            initial={{ opacity: 0, scale: 0.86, y: 12 }}
+            initial={{ opacity: 0, scale: 0.94, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <span aria-hidden className="absolute -inset-10 rounded-full bg-[#8b6cff]/15 blur-3xl" />
-            <span aria-hidden className="absolute -inset-4 rounded-full border border-white/10" />
-            <motion.span
-              aria-hidden
-              className="absolute -inset-7 rounded-full border border-dashed border-[#c4b5fd]/25"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
-            />
             <img
               src="/logo-512.png"
               alt="YoruNime"
-              className="relative size-40 rounded-[2.6rem] object-cover shadow-[0_30px_70px_-34px_rgba(0,0,0,.95)] ring-1 ring-white/15"
+              className="relative size-28 rounded-[1.8rem] object-cover shadow-[0_24px_54px_-30px_rgba(0,0,0,.95)] ring-1 ring-white/12"
             />
           </motion.div>
 
@@ -646,7 +623,7 @@ function WelcomeFlow() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
           >
-            Yoru<span className="text-[#b9a7ff]">Nime</span>
+            Yoru<span className="text-[var(--primary)]">Nime</span>
           </motion.h1>
           <motion.p
             className="mt-3 text-center text-[12.5px] font-medium leading-relaxed text-white/45"
@@ -654,7 +631,7 @@ function WelcomeFlow() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.36, duration: 0.6 }}
           >
-            Nonton anime sub Indo, tanpa iklan.
+            Anime, donghua, film, dan bacaan. Satu tempat.
           </motion.p>
 
           <motion.div
@@ -664,7 +641,7 @@ function WelcomeFlow() {
             transition={{ delay: 0.5, duration: 0.4 }}
           >
             <motion.span
-              className="block h-full rounded-full bg-[linear-gradient(90deg,#8b6cff,#c4b5fd,#FFD23F)]"
+              className="block h-full rounded-full bg-[var(--primary)]"
               initial={{ width: "8%" }}
               animate={{ width: ["8%", "92%", "100%"] }}
               transition={{ duration: 1.45, times: [0, 0.78, 1], ease: "easeInOut" }}
@@ -772,29 +749,59 @@ function WelcomeFlow() {
                 transition={{ duration: 0.35 }}
               >
                 {/* ================= SLIDE 1 — WELCOME ================= */}
-                <section className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]">
-                  <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
-                    {APP_VERSION}.0 (1)
-                  </p>
-                  <div className="flex flex-1 flex-col items-center justify-center text-center">
-                    <h1 className="yn-fredoka flex w-full items-center justify-center whitespace-nowrap text-[clamp(3.2rem,15vw,6.4rem)] uppercase leading-none text-white">
-                      {/* W dengan celah slash di batang kiri — sama seperti
-                          wordmark di referensi terakhir. */}
-                      <span className="relative inline-block">
-                        W
-                        <span
-                          aria-hidden
-                          className="absolute left-[17%] top-[-6%] h-[112%] w-[7%] -rotate-[15deg] bg-background"
-                        />
+                <section className="relative flex min-h-[100svh] snap-start flex-col pb-8 pt-6 [scroll-snap-stop:always]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src="/logo-512.png"
+                        alt=""
+                        className="size-8 rounded-lg object-cover ring-1 ring-white/10"
+                      />
+                      <span className="font-display text-[14px] font-bold tracking-[-0.03em]">
+                        Yoru<span className="text-[var(--primary)]">Nime</span>
                       </span>
-                      ELCOME
-                    </h1>
-                    <p className="mt-4 max-w-[21rem] text-[14.5px] font-semibold leading-snug text-white/40">
-                      Aplikasi nonton anime, donghua &amp; film
-                      <br />
-                      baca manga &amp; manhwa
-                    </p>
+                    </div>
+                    <span className="font-mono text-[8px] tracking-[0.1em] text-white/22">
+                      {APP_VERSION}
+                    </span>
                   </div>
+
+                  <div className="flex flex-1 flex-col justify-center pb-10">
+                    <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/38">
+                      <span className="font-serif text-[16px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                        /
+                      </span>
+                      Streaming komunitas
+                    </p>
+                    <h1 className="mt-4 font-serif text-[clamp(3.4rem,15vw,4.4rem)] leading-[0.92] tracking-[-0.035em] text-white">
+                      Malam
+                      <br />
+                      belum <em className="text-[var(--primary)]">selesai.</em>
+                    </h1>
+                    <p className="mt-5 max-w-[20rem] text-[12px] font-medium leading-[1.7] text-white/42">
+                      Anime, donghua, film, manga, dan manhwa dalam satu
+                      aplikasi. Subtitle Indonesia, tanpa biaya.
+                    </p>
+                    <div className="mt-7 flex flex-wrap gap-1.5">
+                      {["Sub Indo", "Gratis", "Unduh offline"].map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-md border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[9px] font-semibold text-white/48"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() =>
+                        discRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      }
+                      className="mt-8 flex h-11 w-full max-w-[19rem] items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-[11.5px] font-bold text-white transition active:scale-[0.985]"
+                    >
+                      Mulai jelajahi <ArrowRight className="size-4" />
+                    </button>
+                  </div>
+
                   <ScrollCue
                     onClick={() =>
                       discRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -807,25 +814,35 @@ function WelcomeFlow() {
                   ref={discRef}
                   className="relative flex min-h-[100svh] snap-start flex-col pb-6 pt-5 [scroll-snap-stop:always]"
                 >
-                  <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
-                    {APP_VERSION}.0 (1)
+                  <p className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/22">
+                    Sebelum masuk
                   </p>
                   <div className="flex flex-1 flex-col justify-center py-8">
-                    <h2 className="yn-fredoka text-[2.6rem] leading-none text-white underline decoration-white/35 decoration-[3px] underline-offset-[10px]">
-                      Disclaimer
+                    <h2 className="font-serif text-[2.7rem] leading-[0.95] tracking-[-0.03em] text-white">
+                      Baca ini
+                      <br />
+                      <em className="text-[var(--primary)]">dulu.</em>
                     </h2>
-                    <div className="mt-7 space-y-5">
+                    <p className="mt-3 max-w-[20rem] text-[11px] leading-relaxed text-white/35">
+                      Tiga hal yang perlu kamu tahu tentang YoruNime dan cara
+                      kami menampilkan konten.
+                    </p>
+                    <div className="mt-6 divide-y divide-white/7 border-y border-white/7">
                       {RULE_CARDS.map((text, i) => (
-                        <div key={i}>
-                          <p className="text-[15px] font-black tracking-tight text-[#1CA7EC]">
-                            | Peraturan #{i + 1}
-                          </p>
-                          <p className="mt-1.5 text-[12px] leading-relaxed text-white/40">
+                        <div key={i} className="flex gap-3 py-4">
+                          <span className="w-6 shrink-0 font-mono text-[10px] font-bold text-[rgba(211,62,48,.72)]">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <p className="text-[11px] leading-[1.65] text-white/46">
                             {text}
                           </p>
                         </div>
                       ))}
                     </div>
+                    <p className="mt-5 text-[9px] leading-relaxed text-white/24">
+                      Dengan lanjut, kamu memahami bahwa YoruNime adalah
+                      aplikasi pihak ketiga dan bukan pemilik konten.
+                    </p>
                   </div>
                   <ScrollCue
                     onClick={() =>
@@ -839,70 +856,60 @@ function WelcomeFlow() {
                   ref={loginRef}
                   className="relative flex min-h-[100svh] snap-start flex-col pb-8 pt-5 [scroll-snap-stop:always]"
                 >
-                  <p className="text-center text-[10px] font-bold tracking-[0.2em] text-white/55">
-                    {APP_VERSION}.0 (1)
+                  <p className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/22">
+                    Akun YoruNime
                   </p>
                   <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end pb-2 pt-10">
-                    {/* Hanya judul, subteks, dan 4 kotak ini yang digeser
-                        sedikit ke atas — tombol login tetap di tempat. */}
-                    <div className="relative -top-20">
-                    <h2 className="yn-fredoka text-center text-[clamp(2.7rem,12vw,3.8rem)] leading-none">
-                      <span className="text-white">SIAP </span>
-                      {/* 4 warna kuning konsisten untuk "MULAI?". */}
-                      <span className="bg-[linear-gradient(90deg,#FFF6C7_0%,#FFE066_38%,#FFC93C_68%,#F59E0B_100%)] bg-clip-text text-transparent">
-                        MULAI?
-                      </span>
-                    </h2>
-                    <p className="mt-2 text-center text-[11.5px] leading-snug text-white/45">
-                      YoruNime mewajibkan mu login dengan google untuk
-                      sinkronisasi riwayat nonton, level akun, dan list favorite
-                      mu.
-                    </p>
+                    <div className="mb-7">
+                      <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/38">
+                        <span className="font-serif text-[16px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                          /
+                        </span>
+                        Satu akun, semua layar
+                      </p>
+                      <h2 className="mt-3 font-serif text-[clamp(2.5rem,11vw,3.3rem)] leading-[0.95] tracking-[-0.03em] text-white">
+                        Lanjutkan dari
+                        <br />
+                        <em className="text-[var(--primary)]">tempat berhenti.</em>
+                      </h2>
+                      <p className="mt-3 max-w-[21rem] text-[11px] leading-[1.7] text-white/38">
+                        Masuk agar riwayat nonton, level, favorit, dan antrean
+                        bacaanmu tersimpan di semua perangkat.
+                      </p>
 
-                    {/* 4 kotak fitur — selebar tombol login, 2x2. */}
-                    <div className="mt-3 grid w-full grid-cols-2 gap-2">
-                      {[
-                        { icon: MonitorPlay, label: "1080p Kualitas", free: false },
-                        { icon: Users, label: "Komunitas", free: false },
-                        { icon: TrendingUp, label: "Leveling", free: false },
-                        { icon: Gift, label: "FREE", free: true },
-                      ].map(({ icon: Icon, label, free }) => (
-                        <div
-                          key={label}
-                          className={cn(
-                            "flex min-h-11 items-center gap-2 rounded-xl px-2.5 py-2",
-                            free
-                              ? "bg-[#FFD23F] text-[#241c02]"
-                              : "border border-white/10 bg-white/[0.04] text-white",
-                          )}
-                        >
-                          <Icon
-                            className={cn(
-                              "size-4 shrink-0",
-                              free ? "text-[#241c02]" : "text-[#1CA7EC]",
-                            )}
-                          />
-                          <span className="text-[10.5px] font-black leading-tight">
-                            {label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                      <div className="mt-5 grid grid-cols-3 divide-x divide-white/7 border-y border-white/7 py-3">
+                        {[
+                          [Clock, "Riwayat"],
+                          [TrendingUp, "Level"],
+                          [Heart, "Favorit"],
+                        ].map(([Icon, label]) => {
+                          const I = Icon as LucideIcon;
+                          return (
+                            <div
+                              key={label as string}
+                              className="flex flex-col items-center gap-1.5 text-[8.5px] font-semibold text-white/32"
+                            >
+                              <I className="size-4 text-white/50" />
+                              {label as string}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     {/* Login Google */}
                     <button
                       onClick={doGoogleLogin}
                       disabled={loggingIn}
-                      className="mt-9 flex h-14 w-full items-center gap-3 rounded-2xl bg-white px-3 text-left transition active:scale-[0.99] disabled:opacity-60"
+                      className="flex h-[52px] w-full items-center gap-3 rounded-xl bg-[#f5f0e8] px-3 text-left transition hover:brightness-95 active:scale-[0.99] disabled:opacity-60"
                     >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white">
-                        <GoogleGIcon className="size-6" />
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white">
+                        <GoogleGIcon className="size-5" />
                       </span>
-                      <span className="flex-1 text-[12px] font-black text-zinc-900">
-                        Tekan Disini Untuk Login
+                      <span className="flex-1 text-[11.5px] font-bold text-[#15171a]">
+                        Masuk dengan Google
                       </span>
-                      <ArrowRight className="size-5 text-zinc-900/35" />
+                      <ArrowRight className="size-4 text-[#15171a]/35" />
                     </button>
 
                     <div className="my-3 flex items-center gap-3">
@@ -920,31 +927,30 @@ function WelcomeFlow() {
                           setTesterErr(null);
                           setTesterOpen(true);
                         }}
-                        className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-white/12 bg-white/[0.05] px-3.5 py-3 transition active:scale-[0.99]"
+                        className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-white/8 bg-[#121417] px-3.5 transition active:scale-[0.99]"
                       >
-                        <ShieldUser className="size-6 shrink-0 text-[#1CA7EC]" />
-                        <span className="text-[12px] font-black text-white">
+                        <ShieldUser className="size-5 shrink-0 text-[var(--yn-mint)]" />
+                        <span className="text-[10.5px] font-bold text-white/62">
                           Tester Login Only
                         </span>
                       </button>
                     )}
 
-                    <div className="mt-3 text-center text-[9.5px] leading-relaxed text-white/40">
-                      <p>Dengan melakukan login maka kamu telah setuju dengan</p>
-                      {/* Kedua dokumen dalam satu baris. */}
+                    <div className="mt-4 text-center text-[8.5px] leading-relaxed text-white/24">
+                      <p>Dengan masuk, kamu menyetujui</p>
                       <div className="mt-1 flex flex-wrap items-center justify-center gap-x-1">
                         <button
                           onClick={() => setLegalDoc("privacy")}
-                          className="font-bold text-[#1CA7EC]"
+                          className="font-semibold text-white/45 underline decoration-white/15 underline-offset-2 hover:text-white/70"
                         >
-                          Privacy Policy
+                          Kebijakan Privasi
                         </button>
-                        <span className="text-white/35">&amp;</span>
+                        <span className="text-white/16">&amp;</span>
                         <button
                           onClick={() => setLegalDoc("terms")}
-                          className="font-bold text-[#1CA7EC]"
+                          className="font-semibold text-white/45 underline decoration-white/15 underline-offset-2 hover:text-white/70"
                         >
-                          Terms of Service
+                          Ketentuan Layanan
                         </button>
                       </div>
                     </div>
@@ -1105,50 +1111,31 @@ function WelcomeFlow() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {/* Latar imersif khusus layar login: orb gradasi bergerak pelan + bintik berkilau — bukan cuma logo + animasi. */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-              <motion.span
-                className="absolute -left-24 top-4 size-72 rounded-full bg-primary/25 blur-3xl"
-                animate={{ x: [0, 30, 0], y: [0, 24, 0] }}
-                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <motion.span
-                className="absolute -right-24 bottom-10 size-72 rounded-full bg-gold/20 blur-3xl"
-                animate={{ x: [0, -28, 0], y: [0, -20, 0] }}
-                transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <span className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1.2px)] [background-size:22px_22px] opacity-30" />
+              <div className="absolute inset-0 bg-[radial-gradient(70%_50%_at_50%_0%,rgba(211,62,48,.08),transparent_62%)]" />
             </div>
 
-            <div className="flex min-h-full flex-col items-center justify-center px-7 py-12">
-              {/* Logo app dengan glow lembut di belakangnya. */}
-              <motion.div
-                className="relative"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-              >
-                <span
-                  aria-hidden
-                  className="absolute -inset-3 rounded-3xl bg-primary/30 blur-xl"
-                />
-                <img
-                  src="/logo-source.jpg"
-                  alt="YoruNime"
-                  className="relative size-16 rounded-2xl object-cover ring-1 ring-white/15"
-                />
-              </motion.div>
-              <h2 className="mt-5 bg-gradient-to-r from-amber-200 via-white to-amber-300 bg-clip-text text-xl text-transparent yn-title">
-                YoruNime
+            <div className="relative flex min-h-full flex-col items-center justify-center px-6 py-12">
+              <img
+                src="/logo-512.png"
+                alt="YoruNime"
+                className="size-14 rounded-xl object-cover ring-1 ring-white/10"
+              />
+              <p className="mt-4 flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.16em] text-white/32">
+                <span className="font-serif text-[15px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                  /
+                </span>
+                Akun YoruNime
+              </p>
+              <h2 className="mt-2 font-display text-[24px] font-bold tracking-[-0.04em]">
+                Selamat datang kembali
               </h2>
-              <p className="mt-2 max-w-xs text-center text-[11px] font-bold uppercase leading-relaxed tracking-wider text-zinc-300">
-                Masuk untuk menyimpan data nonton kamu
+              <p className="mt-1 max-w-xs text-center text-[10px] leading-relaxed text-white/30">
+                Masuk untuk melanjutkan riwayat dan progresmu.
               </p>
 
-              {/* Kartu kaca berisi semua pilihan masuk — tab, form — biar rapi dalam satu wadah. */}
-              <div className="mt-6 w-full max-w-[22rem] rounded-3xl border border-white/10 bg-card/60 p-5 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.9)] backdrop-blur">
-                {/* ---- Tab Login / Register ---- */}
-                <div className="flex w-full rounded-2xl border border-border bg-background/50 p-1">
+              <div className="mt-5 w-full max-w-[22rem] rounded-xl border border-white/8 bg-[#101215] p-4">
+                <div className="flex w-full rounded-lg border border-white/8 bg-[#0a0b0d] p-1">
                   {(["login", "register"] as const).map((m) => (
                     <button
                       key={m}
@@ -1158,10 +1145,10 @@ function WelcomeFlow() {
                         setRegErr(null);
                       }}
                       className={cn(
-                        "flex-1 rounded-xl py-2 text-xs font-bold capitalize transition",
+                        "flex-1 rounded-md py-2 text-[10.5px] font-bold capitalize transition",
                         mode === m
-                          ? "bg-primary text-white shadow"
-                          : "text-muted-foreground hover:text-foreground",
+                          ? "bg-[#252a30] text-white"
+                          : "text-white/34 hover:text-white/70",
                       )}
                     >
                       {m === "login" ? "Login" : "Register"}
@@ -1353,15 +1340,15 @@ function WelcomeFlow() {
                 </div>
               </div>
 
-              <p className="mt-5 text-center text-[10px] text-zinc-500">
-                Atau
+              <p className="mt-4 text-center text-[8px] font-semibold uppercase tracking-[0.16em] text-white/20">
+                atau
               </p>
 
               <div className="mt-2 w-full max-w-[22rem] space-y-2">
                 <button
                   onClick={doGoogleLogin}
                   disabled={loggingIn}
-                  className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-white text-sm font-bold text-zinc-900 transition hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg bg-[#f5f0e8] text-[11px] font-bold text-[#15171a] transition hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
                 >
                   <GoogleGIcon className="size-4" />
                   Masuk dengan Google
@@ -1369,7 +1356,7 @@ function WelcomeFlow() {
                 <button
                   onClick={doAnonLogin}
                   disabled={loggingIn}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/50 bg-primary/15 text-sm font-bold text-primary transition hover:bg-primary/25 active:scale-[0.98] disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-white/8 bg-[#121417] text-[10.5px] font-bold text-white/52 transition hover:text-white active:scale-[0.98] disabled:opacity-50"
                 >
                   {loggingIn ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -1391,8 +1378,8 @@ export default function Welcome() {
   return (
     <Suspense
       fallback={
-        <div className="fixed inset-0 flex items-center justify-center bg-[#07060c]">
-          <Loader2 className="size-6 animate-spin text-primary" />
+        <div className="fixed inset-0 flex items-center justify-center bg-[#0a0b0d]">
+          <Loader2 className="size-5 animate-spin text-[var(--primary)]" />
         </div>
       }
     >

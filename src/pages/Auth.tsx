@@ -177,49 +177,53 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#06060d] px-4 py-10">
-      {/* Latar: satu cahaya ungu tipis di atas + garis film tipis. */}
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0b0d] px-4 py-10">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(680px 380px at 50% -8%, rgba(158,44,74,0.30), transparent 70%), linear-gradient(180deg, #0f1a33 0%, #0b1428 55%, #070d1c 100%)",
-        }}
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_45%_at_50%_0%,rgba(211,62,48,.1),transparent_64%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)",
-        }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/8"
       />
 
       <section className="pop-enter relative w-full max-w-sm">
-        {/* Wordmark */}
-        <div className="mb-6 flex flex-col items-center text-center">
-          <img
-            src={logo}
-            alt=""
-            onClick={() => navigate("/")}
-            className="size-9 cursor-pointer rounded-lg"
-          />
-          <p className="mt-3 text-lg font-extrabold tracking-[0.34em] text-white/95">
-            YORUNIME
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          aria-label="Kembali ke beranda"
+          className="flex items-center gap-2"
+        >
+          <img src={logo} alt="" className="size-8 rounded-lg" />
+          <span className="font-display text-[15px] font-bold tracking-[-0.03em]">
+            Yoru<span className="text-[var(--primary)]">Nime</span>
+          </span>
+        </button>
+
+        <div className="mb-6 mt-9">
+          <p className="flex items-center gap-1.5 text-[8.5px] font-bold uppercase tracking-[0.16em] text-white/34">
+            <span className="font-serif text-[16px] font-normal leading-none tracking-normal text-[var(--primary)]">
+              /
+            </span>
+            Masuk
           </p>
-          <p className="mt-1 text-[11px] text-zinc-500">
-            Masuk untuk lanjut nonton
+          <h1 className="mt-2 font-serif text-[36px] leading-[0.98] tracking-[-0.03em] text-white">
+            Kembali ke
+            <br />
+            <em className="text-[var(--primary)]">malam.</em>
+          </h1>
+          <p className="mt-3 text-[10.5px] leading-relaxed text-white/32">
+            Lanjutkan tontonan dan bacaanmu dari titik terakhir.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-sm">
+        <div className="rounded-xl border border-white/8 bg-[#101215] p-4">
           {mode === "main" && (
             <div className="space-y-2">
               <button
                 onClick={doGoogleLogin}
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3 text-sm font-bold text-zinc-900 transition hover:bg-zinc-100 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#f5f0e8] py-3 text-[11px] font-bold text-[#15171a] transition hover:brightness-95 disabled:opacity-50"
               >
                 <GoogleGIcon className="size-4" />
                 Masuk dengan Google
@@ -227,7 +231,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 onClick={doTesterLogin}
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/40 bg-primary/15 py-3 text-sm font-bold text-primary transition disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/8 bg-[#121417] py-3 text-[10.5px] font-bold text-white/52 transition hover:text-white disabled:opacity-50"
               >
                 {isLoading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -240,14 +244,14 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 <button
                   onClick={() => setMode("password")}
                   disabled={isLoading}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-semibold text-zinc-300 transition hover:border-foreground/40 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/8 bg-[#121417] py-2.5 text-[10px] font-semibold text-white/48 transition hover:text-white disabled:opacity-50"
                 >
                   <Mail className="size-3.5" /> Email
                 </button>
                 <button
                   onClick={() => setMode("otp")}
                   disabled={isLoading}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-semibold text-zinc-300 transition hover:border-foreground/40 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/8 bg-[#121417] py-2.5 text-[10px] font-semibold text-white/48 transition hover:text-white disabled:opacity-50"
                 >
                   <Lock className="size-3.5" /> OTP
                 </button>
@@ -275,7 +279,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 autoComplete="email"
               />
               <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+                <label className="mb-1 block text-[8.5px] font-bold uppercase tracking-[0.14em] text-white/30">
                   Password
                 </label>
                 <div className="relative">
@@ -285,13 +289,13 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                     type={showPass ? "text" : "password"}
                     placeholder="Minimal 8 karakter"
                     autoComplete={isRegister ? "new-password" : "current-password"}
-                    className="w-full rounded-xl border border-white/12 bg-black/30 px-3 py-2.5 pr-10 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-foreground/40"
+                    className="w-full rounded-lg border border-white/8 bg-[#0a0b0d] px-3 py-2.5 pr-10 text-[11px] text-white outline-none transition placeholder:text-white/22 focus:border-[rgba(211,62,48,.4)]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass((v) => !v)}
                     aria-label={showPass ? "Sembunyikan password" : "Tampilkan password"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-500"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-white/30"
                   >
                     {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -312,13 +316,13 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold disabled:opacity-50"
+                className="yn-btn-primary flex w-full items-center justify-center gap-2 rounded-lg py-3 text-[11px] font-bold disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                 {isRegister ? "Daftar" : "Masuk"}
               </button>
 
-              <p className="text-center text-[11px] text-zinc-500">
+              <p className="text-center text-[9.5px] text-white/30">
                 {isRegister ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
                 <button
                   type="button"
@@ -348,7 +352,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 type="button"
                 onClick={sendOtp}
                 disabled={isLoading}
-                className="w-full rounded-xl border border-white/12 bg-black/30 py-2.5 text-xs font-bold text-zinc-200 transition hover:border-foreground/40 disabled:opacity-50"
+                className="w-full rounded-lg border border-white/8 bg-[#121417] py-2.5 text-[10px] font-bold text-white/52 transition hover:text-white disabled:opacity-50"
               >
                 Kirim kode 6 digit
               </button>
@@ -364,7 +368,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
               <button
                 type="submit"
                 disabled={isLoading || otp.trim().length !== 6}
-                className="yn-btn-warm flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold disabled:opacity-40"
+                className="yn-btn-primary flex w-full items-center justify-center gap-2 rounded-lg py-3 text-[11px] font-bold disabled:opacity-40"
               >
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                 Verifikasi
@@ -381,15 +385,15 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
           {mode !== "main" && (
             <button
               onClick={() => setMode("main")}
-              className="mt-3 w-full rounded-xl py-2 text-xs font-semibold text-zinc-500 transition hover:text-zinc-300"
+              className="mt-3 w-full rounded-lg py-2 text-[10px] font-semibold text-white/28 transition hover:text-white/60"
             >
               Ganti cara masuk
             </button>
           )}
         </div>
 
-        <p className="mt-4 text-center text-[10px] text-zinc-600">
-          nonton anime, manhwa &amp; manga subtitle Indonesia
+        <p className="mt-4 text-center text-[8.5px] font-medium tracking-[0.04em] text-white/20">
+          Anime, manhwa &amp; manga · subtitle Indonesia
         </p>
       </section>
     </main>
@@ -421,7 +425,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+      <label className="mb-1 block text-[8.5px] font-bold uppercase tracking-[0.14em] text-white/30">
         {label}
       </label>
       <input
@@ -433,11 +437,11 @@ function Field({
         inputMode={inputMode}
         maxLength={maxLength}
         className={cn(
-          "w-full rounded-xl border bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600",
+          "w-full rounded-lg border bg-[#0a0b0d] px-3 py-2.5 text-[11px] text-white outline-none transition placeholder:text-white/22",
           invalid
             ? "border-red-500/60"
-            : "border-white/12 focus:border-foreground/40",
-          center && "text-center text-lg tracking-[0.35em]",
+            : "border-white/8 focus:border-[rgba(211,62,48,.4)]",
+          center && "text-center text-base tracking-[0.3em]",
         )}
       />
     </div>

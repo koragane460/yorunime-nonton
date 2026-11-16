@@ -15,7 +15,6 @@ import {
   Heart,
   ImagePlus,
   Loader2,
-  MessageCircle,
   MoreVertical,
   Pin,
   Reply,
@@ -140,7 +139,6 @@ export function CommentsSection({
 }) {
   const { user } = useAuth();
   /** Banner AKUN sendiri — bukan banner anime — di balik kolom komentar. */
-  const composerBanner = (user as any)?.bannerUrl as string | undefined;
   const [sort, setSort] = useState<"terbaru" | "populer">("terbaru");
   const [sortOpen, setSortOpen] = useState(false);
   const [text, setText] = useState("");
@@ -284,21 +282,22 @@ export function CommentsSection({
 
   return (
     <div className="px-3">
-      {/* ---------- KEPALA: judul + jumlah (kiri), filter (kanan) ---------- */}
       <div className="relative flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="size-[18px] text-white/85" strokeWidth={2.25} aria-hidden />
-          <h2 className="text-base font-black tracking-tight">Komentar</h2>
-          <span className="text-[11px] font-bold text-white/40">
+        <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/45">
+          <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+            /
+          </span>
+          Komentar
+          <span className="font-mono text-[9px] font-medium tracking-normal text-white/24">
             {(all.length ?? 0).toLocaleString("id-ID")}
           </span>
-        </div>
+        </h2>
         <button
           onClick={() => setSortOpen((v) => !v)}
-          className="flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[11px] font-bold text-white/70 transition hover:bg-white/10"
+          className="flex h-8 items-center gap-1 rounded-md border border-white/8 bg-[#121417] px-2.5 text-[9.5px] font-bold text-white/42 transition hover:text-white"
         >
           {sort === "populer" ? "Populer" : "Terbaru"}
-          <ChevronDown className="size-3.5" aria-hidden />
+          <ChevronDown className="size-3" aria-hidden />
         </button>
         {sortOpen && (
           <>
@@ -307,7 +306,7 @@ export function CommentsSection({
               onClick={() => setSortOpen(false)}
               aria-hidden
             />
-            <div className="absolute right-0 top-9 z-20 w-36 overflow-hidden rounded-xl border border-white/12 bg-[#141821] shadow-xl">
+            <div className="absolute right-0 top-9 z-20 w-36 overflow-hidden rounded-lg border border-white/10 bg-[#15181c] shadow-xl">
               {(["terbaru", "populer"] as const).map((s) => (
                 <button
                   key={s}
@@ -318,8 +317,8 @@ export function CommentsSection({
                   className={cn(
                     "block w-full px-3 py-2 text-left text-[12px] font-semibold transition",
                     sort === s
-                      ? "bg-white/[0.08] text-[#7fd3f7]"
-                      : "text-white/70 hover:bg-white/[0.05]",
+                      ? "bg-white/[0.06] text-[var(--yn-mint)]"
+                      : "text-white/55 hover:bg-white/[0.04]",
                   )}
                 >
                   {s === "terbaru" ? "Terbaru" : "Populer"}
@@ -330,46 +329,44 @@ export function CommentsSection({
         )}
       </div>
 
-      {/* ---------- KOLOM KOMENTAR ---------- */}
-      <div className="relative mt-2.5 overflow-hidden rounded-2xl border border-white/10 bg-[#10151d] px-3 py-3">
+      <div className="mt-2.5">
         <div className="relative flex items-start gap-2">
-          {/* Foto profil user yang sedang menulis komentar. */}
           <Avatar
             src={user?.image}
             seed={user?.username ?? "user"}
-            className="mt-0.5 size-8 shrink-0 ring-1 ring-white/15"
+            className="mt-0.5 size-8 shrink-0 ring-1 ring-white/10"
           />
           <div className="min-w-0 flex-1">
-            {/* Banner AKUN user ada di dalam kotak komentar; banner anime
-                tidak lagi dipakai di sini. */}
-            <div className="relative overflow-hidden rounded-xl border border-white/15 bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] focus-within:border-[#1CA7EC]/70">
-              {composerBanner && (
-                <>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${composerBanner})` }}
-                  />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(7,10,15,.9),rgba(7,10,15,.6)_55%,rgba(7,10,15,.84))]"
-                  />
-                </>
-              )}
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void send()}
-                placeholder={
-                  muted
-                    ? "Kamu sedang dimute…"
-                    : replyTo
-                      ? `Balas @${replyTo.username}…`
-                      : "Tulis komentar…"
-                }
-                disabled={muted}
-                className="relative h-10 w-full bg-transparent px-3.5 text-[13px] font-medium text-white outline-none placeholder:text-white/45 disabled:opacity-50"
-              />
+            <div className="flex items-center gap-1.5">
+              <div className="min-w-0 flex-1 rounded-full border border-white/8 bg-[#121417] focus-within:border-[rgba(211,62,48,.4)]">
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void send()}
+                  placeholder={
+                    muted
+                      ? "Kamu sedang dimute…"
+                      : replyTo
+                        ? `Balas @${replyTo.username}…`
+                        : "Tambahkan komentar…"
+                  }
+                  disabled={muted}
+                  className="h-10 w-full bg-transparent px-3.5 text-[11.5px] font-medium text-white outline-none placeholder:text-white/28 disabled:opacity-50"
+                />
+              </div>
+              <button
+                onClick={() => void send()}
+                disabled={!canSend}
+                aria-label="Kirim komentar"
+                className={cn(
+                  "grid size-10 shrink-0 place-items-center rounded-full transition active:scale-90",
+                  canSend
+                    ? "bg-[var(--primary)] text-white"
+                    : "bg-white/6 text-white/22",
+                )}
+              >
+                <Send className="size-4" strokeWidth={2.15} />
+              </button>
             </div>
 
             {/* Pratinjau gambar + sticker yang akan dikirim. */}
@@ -409,10 +406,10 @@ export function CommentsSection({
                 onClick={() => setStickerOpen((v) => !v)}
                 aria-label="Sticker"
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-full border transition",
+                  "flex size-8 items-center justify-center rounded-lg border transition",
                   stickerOpen
-                    ? "border-[#1CA7EC]/55 bg-[#1CA7EC]/25 text-[#9fe3ff]"
-                    : "border-white/12 bg-white/[0.075] text-white/70 hover:border-white/25 hover:text-white",
+                    ? "border-[rgba(211,62,48,.35)] bg-[rgba(211,62,48,.12)] text-[#f0a59d]"
+                    : "border-white/8 bg-[#121417] text-white/40 hover:text-white/80",
                 )}
               >
                 <Smile className="size-[17px]" strokeWidth={2.3} />
@@ -421,10 +418,10 @@ export function CommentsSection({
                 onClick={() => setSpoiler((v) => !v)}
                 aria-pressed={spoiler}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-full border transition",
+                  "flex size-8 items-center justify-center rounded-lg border transition",
                   spoiler
-                    ? "border-[#E84855]/55 bg-[#E84855]/28 text-[#ffb0b6]"
-                    : "border-white/12 bg-white/[0.075] text-white/70 hover:border-white/25 hover:text-white",
+                    ? "border-[rgba(230,196,124,.35)] bg-[rgba(230,196,124,.1)] text-[var(--gold)]"
+                    : "border-white/8 bg-[#121417] text-white/40 hover:text-white/80",
                 )}
                 aria-label="Tandai spoiler"
               >
@@ -433,7 +430,7 @@ export function CommentsSection({
               <span
                 className={cn(
                   "text-[10px] font-bold",
-                  spoiler ? "text-[#ff9aa3]" : "text-white/35",
+                  spoiler ? "text-[var(--gold)]" : "text-white/28",
                 )}
               >
                 {spoiler ? "Spoiler aktif" : "Spoiler?"}
@@ -445,26 +442,13 @@ export function CommentsSection({
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading || muted}
                 aria-label="Kirim gambar"
-                className="flex size-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.075] text-white/70 transition hover:border-white/25 hover:text-white disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-lg border border-white/8 bg-[#121417] text-white/40 transition hover:text-white/80 disabled:opacity-40"
               >
                 {uploading ? (
-                  <Loader2 className="size-[17px] animate-spin" />
+                  <Loader2 className="size-[16px] animate-spin" />
                 ) : (
-                  <ImagePlus className="size-[17px]" strokeWidth={2.35} />
+                  <ImagePlus className="size-[16px]" strokeWidth={2.35} />
                 )}
-              </button>
-              <button
-                onClick={() => void send()}
-                disabled={!canSend}
-                aria-label="Kirim komentar"
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-full transition active:scale-90",
-                  canSend
-                    ? "bg-[#1CA7EC] text-white"
-                    : "bg-white/10 text-white/35",
-                )}
-              >
-                <Send className="size-[17px]" strokeWidth={2.15} />
               </button>
             </div>
 
@@ -490,9 +474,9 @@ export function CommentsSection({
 
         {/* Sedang membalas → penanda di bawah kolom komentar. */}
         {replyTo && (
-          <div className="mt-2 flex items-center gap-1.5 rounded-full border border-[#1CA7EC]/35 bg-[#1CA7EC]/12 px-3 py-1.5">
-            <Reply className="size-3.5 shrink-0 text-[#7fd3f7]" aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#7fd3f7]">
+          <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-[rgba(116,223,194,.16)] bg-[rgba(116,223,194,.05)] px-3 py-1.5">
+            <Reply className="size-3.5 shrink-0 text-[var(--yn-mint)]" aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-[var(--yn-mint)]">
               Balas komentar @{replyTo.username}
             </span>
             <button
@@ -857,21 +841,9 @@ function CommentCard({
   return (
     <div
       className={cn(
-        "border-b border-white/10 px-3 py-3 last:border-b-0",
-        isReply && "bg-transparent",
-        mine &&
-          !isReply &&
-          "my-2 rounded-2xl border border-white/10 border-b-0 bg-white/[0.035]",
+        "border-b border-white/7 px-1 py-3.5 last:border-b-0",
+        isReply && "bg-transparent pl-3",
       )}
-      style={
-        mine && c.bannerUrl
-          ? {
-              backgroundImage: `linear-gradient(100deg, rgba(7,10,15,.9), rgba(7,10,15,.58) 55%, rgba(7,10,15,.88)), url(${c.bannerUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
-          : undefined
-      }
     >
       {/* Kepala: avatar · username + centang + level + tag premium · waktu */}
       <div className="flex items-start gap-2">
@@ -1031,7 +1003,7 @@ function CommentCard({
           <div className="relative">
             <p
               className={cn(
-                "break-words text-[13.5px] leading-relaxed text-white/85 transition",
+                "break-words text-[12.5px] leading-[1.65] text-white/78 transition",
                 hidden && "select-none blur-[5px]",
               )}
             >
@@ -1071,12 +1043,12 @@ function CommentCard({
       </div>
 
       {/* Aksi: love + jumlah · reply + jumlah · lihat balasan. */}
-      <div className="mt-2 flex items-center gap-4 pl-10 text-[11px] font-semibold text-white/45">
+      <div className="mt-2.5 flex items-center gap-4 pl-10 text-[10px] font-semibold text-white/32">
         <button
           aria-label="Suka"
           className={cn(
             "flex items-center gap-1 transition active:scale-95",
-            liked && "text-[#E84855]",
+            liked && "text-[var(--primary)]",
           )}
           onClick={async () => {
             const prev = liked;
@@ -1092,7 +1064,7 @@ function CommentCard({
           <Heart
             className={cn(
               "size-4 transition",
-              liked && "fill-[#E84855] text-[#E84855]",
+              liked && "fill-[var(--primary)] text-[var(--primary)]",
             )}
           />
           {likeCount}
@@ -1100,7 +1072,7 @@ function CommentCard({
         <button
           aria-label="Reply"
           onClick={onReply}
-          className="flex items-center gap-1 transition hover:text-[#7fd3f7] active:scale-95"
+          className="flex items-center gap-1 transition hover:text-[var(--yn-mint)] active:scale-95"
         >
           <Reply className="size-4" />
           {replyCount > 0 ? replyCount : ""}
@@ -1120,7 +1092,7 @@ function CommentCard({
         {replyCount > 0 && onToggleReplies && (
           <button
             onClick={onToggleReplies}
-            className="ml-auto flex items-center gap-1 font-bold text-[#7fd3f7]"
+            className="ml-auto flex items-center gap-1 font-bold text-[var(--yn-mint)]"
           >
             {repliesOpen ? "Sembunyikan" : `Lihat ${replyCount} balasan`}
             <ChevronDown

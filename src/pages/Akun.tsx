@@ -185,87 +185,22 @@ function AkunContent() {
    statistik, aksi cepat, dan bagian beli Premium. Pengaturan tetap ada,
    tapi lewat ikon gerigi — bukan isi utama halaman. */
 
-const TIER_PARTICLES = [
-  { x: -34, y: -18, s: 3, c: "#FFD23F", d: 0 },
-  { x: 46, y: -26, s: 2.5, c: "#7FD3F7", d: 0.4 },
-  { x: -58, y: 10, s: 2, c: "#FF9AA3", d: 0.8 },
-  { x: 64, y: 8, s: 3, c: "#B9A7FF", d: 0.2 },
-  { x: -18, y: 26, s: 2, c: "#9AF0C7", d: 1.1 },
-  { x: 22, y: 28, s: 2.5, c: "#FFD23F", d: 0.65 },
-  { x: -44, y: -4, s: 2, c: "#FFFFFF", d: 1.4 },
-  { x: 38, y: -6, s: 2, c: "#7FD3F7", d: 0.95 },
-];
-
-const TIER_SKIN: Record<string, string> = {
-  Bronze: "from-amber-700/25 via-amber-900/10 to-transparent",
-  Silver: "from-slate-300/20 via-slate-500/10 to-transparent",
-  Diamond: "from-cyan-300/22 via-sky-500/10 to-transparent",
-  Emerald: "from-emerald-400/22 via-emerald-700/10 to-transparent",
-  Master: "from-red-500/22 via-red-900/10 to-transparent",
-  Grandmaster: "from-fuchsia-400/22 via-red-600/10 to-transparent",
-  Central: "from-yellow-300/22 via-amber-500/10 to-transparent",
-  Ruby: "from-rose-400/22 via-red-600/10 to-transparent",
-  Ascendant: "from-cyan-200/22 via-fuchsia-300/14 to-transparent",
-};
-
 function AkunTierCard({ level }: { level: number }) {
   const badge = badgeForLevel(level);
   return (
-    <div
-      className={cn(
-        "relative mt-2.5 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br px-3 py-3",
-        TIER_SKIN[badge.name] ?? "from-white/10 via-white/[0.03] to-transparent",
-      )}
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-12 size-28 rounded-full bg-white/10 blur-2xl"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-2 top-1/2 size-20 -translate-y-1/2 rounded-full border border-white/10"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-5 top-1/2 size-28 -translate-y-1/2 rounded-full border border-white/[0.06]"
-      />
-      <span aria-hidden className="pointer-events-none absolute inset-0">
-        {TIER_PARTICLES.map((p, i) => (
-          <span
-            key={i}
-            className="tier-particle absolute left-1/2 top-1/2 rounded-full"
-            style={
-              {
-                width: p.s,
-                height: p.s,
-                background: p.c,
-                animationDelay: `${p.d}s`,
-                "--dx": `${p.x}px`,
-                "--dy": `${p.y}px`,
-              } as React.CSSProperties
-            }
-          />
-        ))}
+    <div className="mt-2.5 flex items-center gap-3 rounded-xl border border-white/8 bg-[#101215] px-3 py-3">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.035]">
+        <TierIcon tier={badge.name} className="size-6" />
       </span>
-      <div className="relative flex items-center gap-3">
-        <span
-          className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-[0_6px_18px_-8px_rgba(0,0,0,.8)]",
-            badge.cls,
-          )}
-        >
-          <TierIcon tier={badge.name} className="size-6" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[8.5px] font-black uppercase tracking-[0.2em] text-white/45">
-            Tier profil
-          </p>
-          <p className="mt-0.5 truncate font-display text-lg font-black leading-none text-white">
-            {badge.name}
-          </p>
-        </div>
-        <LevelBadge level={level} className="scale-90 origin-right" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/24">
+          Tier profil
+        </p>
+        <p className="mt-0.5 truncate font-display text-[16px] font-bold leading-none text-white/88">
+          {badge.name}
+        </p>
       </div>
+      <LevelBadge level={level} className="origin-right scale-90" />
     </div>
   );
 }
@@ -311,7 +246,7 @@ function TierLadder({ level, xp }: { level: number; xp: number }) {
   const pct = Math.min(100, Math.round((inLevel / cost) * 100));
 
   return (
-    <section className="mt-2.5 rounded-3xl border border-white/10 bg-white/[0.04] p-3">
+    <section className="mt-2.5 rounded-xl border border-white/8 bg-[#101215] p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-[11px] font-black text-white">Perjalanan Tier</p>
@@ -325,7 +260,7 @@ function TierLadder({ level, xp }: { level: number; xp: number }) {
       <div className="relative mt-3">
         <span
           aria-hidden
-          className="absolute bottom-5 left-[26px] top-5 w-px bg-gradient-to-b from-fuchsia-300/25 via-sky-400/35 to-amber-500/45"
+          className="absolute bottom-5 left-[26px] top-5 w-px bg-white/10"
         />
         <div className="space-y-1.5">
           {/* Tier tertinggi di atas, Bronze di bawah: perjalanan dibaca naik. */}
@@ -338,7 +273,7 @@ function TierLadder({ level, xp }: { level: number; xp: number }) {
                 className={cn(
                   "relative flex items-center gap-3 rounded-2xl px-1.5 py-1.5",
                   active
-                    ? "border border-white/15 bg-white/[0.065]"
+                    ? "border border-white/12 bg-white/[0.045]"
                     : "border border-transparent",
                   !passed && !active && "opacity-55",
                 )}
@@ -348,7 +283,7 @@ function TierLadder({ level, xp }: { level: number; xp: number }) {
                     "relative z-10 flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br shadow-[0_8px_20px_-14px_rgba(0,0,0,.9)]",
                     t.cls,
                     !passed && "grayscale",
-                    active && "ring-2 ring-white/60",
+                    active && "ring-1 ring-[rgba(211,62,48,.7)]",
                   )}
                 >
                   <TierIcon tier={t.name} className="size-5 drop-shadow" />
@@ -433,68 +368,34 @@ function AkunPremiumCard({
   return (
     <button
       onClick={onOpen}
-      className="premium-account-card relative mt-2.5 flex w-full flex-col overflow-hidden rounded-[24px] border border-[#ffd86a]/35 p-3.5 text-left transition active:scale-[0.99]"
+      className="mt-2.5 flex w-full flex-col rounded-xl border border-[rgba(230,196,124,.2)] bg-[rgba(230,196,124,.04)] p-3.5 text-left transition hover:bg-[rgba(230,196,124,.07)] active:scale-[0.99]"
     >
-      <span aria-hidden className="premium-card-pattern absolute inset-0" />
-      <span aria-hidden className="premium-card-glare absolute -inset-y-16 -left-1/3 w-1/2 rotate-[18deg]" />
-      {[
-        [12, 18, 3, "0s"],
-        [78, 8, 2, "0.8s"],
-        [26, 70, 2.5, "1.4s"],
-        [90, 58, 2, "0.4s"],
-        [54, 22, 1.8, "1.9s"],
-        [40, 86, 2.2, "1.1s"],
-        [68, 76, 3, "0.2s"],
-        [8, 54, 2, "2.3s"],
-      ].map(([x, y, s, d], i) => (
-        <span
-          key={i}
-          aria-hidden
-          className="premium-card-spark absolute rounded-full bg-[#ffe7a1]"
-          style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            width: s,
-            height: s,
-            animationDelay: String(d),
-          }}
-        />
-      ))}
-
-      <span className="relative flex items-start justify-between gap-2">
-        <span className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-xl border border-[#ffdf8b]/35 bg-[#ffd23f]/12 text-[#ffdf8b]">
-            <CrystalIcon className="size-[18px]" strokeWidth={2.4} />
+      <span className="flex items-start justify-between gap-2">
+        <span className="flex items-center gap-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-[rgba(230,196,124,.18)] text-[var(--gold)]">
+            <CrystalIcon className="size-[17px]" strokeWidth={2} />
           </span>
-          <span>
-            <span className="block text-[13px] font-black tracking-tight text-white">
-              {premium ? "Yoru Premium aktif" : "Beli Yoru Premium"}
+          <span className="min-w-0">
+            <span className="block text-[12px] font-bold tracking-tight text-white/88">
+              {premium ? "Yoru+ aktif" : "Buka Yoru+"}
             </span>
-            <span className="mt-0.5 block text-[9px] font-medium text-white/48">
-              XP 2× · 1080p · tanpa iklan
+            <span className="mt-0.5 block text-[9px] font-medium text-white/38">
+              Tanpa iklan · 1080p · XP 2×
             </span>
           </span>
         </span>
-        <span className="rounded-full bg-[#ffd23f] px-2.5 py-1 text-[9px] font-black text-black">
-          {premium ? "Perpanjang" : "Pilih paket"}
+        <span className="shrink-0 pt-1 text-[9px] font-bold text-[var(--gold)]">
+          {premium ? "Perpanjang" : "Lihat paket"}
         </span>
       </span>
 
-      <span className="relative mt-3 grid grid-cols-4 gap-1.5">
+      <span className="mt-3 grid grid-cols-4 gap-1.5 border-t border-white/8 pt-3">
         {units.map(([value, label]) => (
-          <span
-            key={label}
-            className="rounded-xl border py-2 text-center backdrop-blur-md"
-            style={{
-              borderColor: "color-mix(in srgb, var(--ui-c) 38%, transparent)",
-              background:
-                "linear-gradient(160deg, color-mix(in srgb, var(--ui-a) 20%, rgba(0,0,0,.35)), rgba(0,0,0,.34))",
-            }}
-          >
-            <span className="block font-mono text-[16px] font-black leading-none" style={{ color: "var(--ui-c)" }}>
+          <span key={label} className="text-center">
+            <span className="block font-mono text-[15px] font-bold leading-none tabular-nums text-[var(--gold)]">
               {value}
             </span>
-            <span className="mt-1 block text-[7px] font-black uppercase tracking-[0.1em] text-white/50">
+            <span className="mt-1 block text-[7px] font-medium uppercase tracking-[0.08em] text-white/28">
               {label}
             </span>
           </span>
@@ -572,22 +473,32 @@ function AkunProfileScreen({
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
+          className="flex size-10 shrink-0 items-center justify-center text-foreground/80 transition active:opacity-60"
         >
           <StripBackIcon />
         </button>
-        <span className="min-w-0 flex-1" />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1 text-[7.5px] font-bold uppercase tracking-[0.14em] text-white/28">
+            <span className="font-serif text-[13px] font-normal leading-none tracking-normal text-[var(--primary)]">
+              /
+            </span>
+            Profil
+          </p>
+          <h1 className="font-display text-[20px] font-bold leading-tight tracking-[-0.04em]">
+            Akun
+          </h1>
+        </div>
         <button
           onClick={onOpenCs}
           aria-label="Customer service"
-          className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/65 transition hover:text-white active:scale-95"
+          className="flex size-9 items-center justify-center rounded-lg border border-white/8 bg-[#121417] text-white/42 transition hover:text-white active:scale-95"
         >
           <Headset className="size-4" />
         </button>
         <button
           onClick={onSettings}
           aria-label="Pengaturan"
-          className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/65 transition hover:text-white active:scale-95"
+          className="flex size-9 items-center justify-center rounded-lg border border-white/8 bg-[#121417] text-white/42 transition hover:text-white active:scale-95"
         >
           <SettingsIcon className="size-4" />
         </button>
@@ -598,46 +509,35 @@ function AkunProfileScreen({
         onCompose={() => setStoryComposer(true)}
       />
 
-      <section className="relative mt-2 overflow-hidden rounded-[30px] border border-white/12 bg-[linear-gradient(155deg,#202737_0%,#171c27_46%,#11151d_100%)] p-4 shadow-[0_28px_60px_-42px_rgba(0,0,0,.95)]">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -left-16 -top-20 size-52 rounded-full bg-[#FFD23F]/10 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -bottom-24 -right-20 size-56 rounded-full bg-[#7FD3F7]/10 blur-3xl"
-        />
-
+      <section className="relative mt-3 overflow-hidden rounded-xl border border-white/8 bg-[#101215] p-4">
         <div className="relative flex items-start justify-between gap-2">
-          <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 font-mono text-[9px] font-bold text-white/45">
+          <span className="font-mono text-[8.5px] font-medium tracking-[0.04em] text-white/24">
             {displayId(user.seqId, user._id)}
           </span>
           <button
             onClick={() => void shareAccount()}
             aria-label="Bagikan akun"
             title="Bagikan akun"
-            className="flex size-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-white/75 transition hover:text-white active:scale-95"
+            className="flex size-8 items-center justify-center rounded-lg border border-white/8 bg-white/[0.025] text-white/36 transition hover:text-white active:scale-95"
           >
-            <Share2 className="size-4" />
+            <Share2 className="size-3.5" />
           </button>
         </div>
 
         <div className="relative mt-1 flex flex-col items-center text-center">
           <span className="relative">
-            <span className="absolute -inset-1.5 rounded-full bg-[conic-gradient(from_120deg,rgba(255,210,63,.7),rgba(127,211,247,.55),rgba(232,72,85,.45),rgba(255,210,63,.7))] blur-[1px]" />
-            <span className="absolute -inset-1.5 rounded-full bg-[conic-gradient(from_120deg,rgba(255,210,63,.65),rgba(127,211,247,.5),rgba(232,72,85,.4),rgba(255,210,63,.65))] opacity-60 blur-md" />
             <FramedAvatar
               border={user.avatarBorder}
               src={user.image}
               seed={user.username}
-              className="relative size-[96px] rounded-full ring-2 ring-[#202737]"
+              className="relative size-[86px] rounded-full ring-1 ring-white/10"
             />
             <button
               onClick={() => setEditOpen(true)}
               aria-label="Ganti foto"
-              className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border-2 border-[#1b2130] bg-gold text-black transition active:scale-90"
+              className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-[3px] border-[#101215] bg-[var(--primary)] text-white transition active:scale-90"
             >
-              <Pencil className="size-3.5" strokeWidth={2.4} />
+              <Pencil className="size-3" strokeWidth={2.4} />
             </button>
           </span>
 
@@ -680,15 +580,15 @@ function AkunProfileScreen({
             <button
               type="button"
               onClick={() => setEditOpen(true)}
-              className="flex min-h-[58px] w-full flex-col justify-center rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-2.5 text-left transition hover:border-white/22 hover:bg-white/[0.075] active:scale-[0.995]"
+              className="flex min-h-[54px] w-full flex-col justify-center rounded-lg border border-white/8 bg-[#0d0f12] px-3 py-2.5 text-left transition hover:border-white/16 active:scale-[0.995]"
             >
               <span className="text-[8.5px] font-black uppercase tracking-[0.18em] text-white/32">
                 Bio
               </span>
               <span
                 className={cn(
-                  "mt-0.5 line-clamp-2 text-[10.5px] leading-snug",
-                  user.bio?.trim() ? "font-medium text-white/72" : "text-white/30",
+                  "mt-0.5 line-clamp-2 text-[10px] leading-snug",
+                  user.bio?.trim() ? "font-medium text-white/52" : "text-white/24",
                 )}
               >
                 {user.bio?.trim() || "Tulis bio mu..."}
@@ -699,9 +599,9 @@ function AkunProfileScreen({
 
           <button
             onClick={() => setEditOpen(true)}
-            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.055] py-2 text-[11px] font-black text-white/75 transition hover:bg-white/[0.09] active:scale-[0.99]"
+            className="mt-2.5 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-white/8 bg-[#0d0f12] text-[10px] font-bold text-white/48 transition hover:text-white active:scale-[0.99]"
           >
-            <Pencil className="size-3.5 text-gold" />
+            <Pencil className="size-3.5" />
             Ubah foto &amp; username
           </button>
         </div>
@@ -718,12 +618,12 @@ function AkunProfileScreen({
         ].map(([label, value]) => (
           <div
             key={String(label)}
-            className="rounded-2xl border border-white/10 bg-white/[0.045] px-2 py-2.5 text-center"
+            className="rounded-lg border border-white/8 bg-[#101215] px-2 py-2.5 text-center"
           >
-            <p className="truncate font-display text-lg font-black leading-none text-white">
+            <p className="truncate font-mono text-[17px] font-bold leading-none tabular-nums text-white/85">
               {Number(value).toLocaleString("id-ID")}
             </p>
-            <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-white/35">
+            <p className="mt-1 truncate text-[8px] font-semibold uppercase tracking-[0.08em] text-white/26">
               {label}
             </p>
           </div>
@@ -743,10 +643,10 @@ function AkunProfileScreen({
           <button
             key={label}
             onClick={onClick}
-            className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.045] px-1 text-center transition hover:border-white/25 hover:bg-white/[0.075] active:scale-[0.97]"
+            className="flex min-h-[68px] flex-col items-center justify-center gap-1.5 rounded-lg border border-white/8 bg-[#101215] px-1 text-center transition hover:border-white/16 hover:bg-[#13161a] active:scale-[0.97]"
           >
-            <Icon className="size-4 text-gold/90" />
-            <span className="truncate text-[10px] font-black text-white/75">
+            <Icon className="size-4 text-white/40" />
+            <span className="truncate text-[9.5px] font-semibold text-white/58">
               {label}
             </span>
           </button>
@@ -1479,28 +1379,23 @@ function SettingsScreen({
   return (
     <div className="fixed inset-0 z-[90] bg-background">
       <div className="thin-scroll h-full overflow-y-auto px-4 pb-28 pt-3">
-        <div className="sticky top-0 z-20 -mx-4 border-b border-white/10 bg-background/95 px-4 py-2.5 backdrop-blur-xl">
+        <div className="sticky top-0 z-20 -mx-4 border-b border-white/8 bg-background px-4 py-2.5">
           <div className="flex items-center gap-2.5">
             <button
               onClick={goBack}
               aria-label={settingsPage === "menu" ? "Tutup pengaturan" : "Kembali ke menu pengaturan"}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.045] text-foreground/80 transition active:scale-95"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-[#121417] text-foreground/70 transition active:scale-95"
             >
               <StripBackIcon />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-[16px] font-black tracking-tight text-white">
+              <h1 className="truncate font-display text-[17px] font-bold tracking-[-0.03em] text-white">
                 {meta.title}
               </h1>
-              <p className="truncate text-[9.5px] font-medium text-white/35">
+              <p className="truncate text-[9px] font-medium text-white/26">
                 {meta.desc}
               </p>
             </div>
-            {settingsPage !== "menu" && (
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-white/35">
-                {settingsPage}
-              </span>
-            )}
           </div>
         </div>
 
@@ -1533,20 +1428,17 @@ function SettingsScreen({
                   type="button"
                   onClick={() => setSettingsPage(item.key)}
                   className={cn(
-                    "mt-2 flex w-full items-center gap-3 rounded-[24px] border p-4 text-left transition hover:brightness-110 active:scale-[0.995]",
-                    item.tone,
+                    "mt-2 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-[#101215] p-3.5 text-left text-white/34 transition hover:border-white/16 active:scale-[0.995]",
                   )}
                 >
-                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-black/15">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-white/8 bg-white/[0.025]">
                     {item.icon}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-black text-white">{item.title}</span>
-                    <span className="mt-0.5 block text-[10px] leading-snug text-white/40">{item.desc}</span>
+                    <span className="block text-[12px] font-bold text-white/82">{item.title}</span>
+                    <span className="mt-0.5 block text-[9.5px] leading-snug text-white/28">{item.desc}</span>
                   </span>
-                  <span className="flex items-center gap-1 rounded-full border border-white/15 bg-black/20 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white/55">
-                    Buka <ChevronRight className="size-3" />
-                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-white/22" />
                 </button>
               );
             })()}
@@ -1558,7 +1450,7 @@ function SettingsScreen({
 
         {settingsPage === "akun" && (
           <div className="mt-3 space-y-2">
-            <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.025))] p-3.5">
+            <div className="rounded-xl border border-white/8 bg-[#101215] p-3.5">
               <div className="flex items-center gap-3">
                 <FramedAvatar
                   border={user.avatarBorder}
@@ -1577,7 +1469,7 @@ function SettingsScreen({
                 <button
                   type="button"
                   onClick={() => setEditOpen(true)}
-                  className="shrink-0 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-[10px] font-black text-white/75 transition active:scale-95"
+                  className="shrink-0 rounded-lg border border-white/8 bg-white/[0.03] px-2.5 py-1.5 text-[9.5px] font-semibold text-white/48 transition hover:text-white active:scale-95"
                 >
                   Edit profil
                 </button>
@@ -1586,13 +1478,13 @@ function SettingsScreen({
             <button
               type="button"
               onClick={() => setFeedSwitch(true)}
-              className="flex w-full items-center gap-3 rounded-[22px] border border-[var(--ui-c)]/25 bg-[var(--ui-c)]/[0.07] p-3 text-left transition active:scale-[0.995]"
+              className="flex w-full items-center gap-3 rounded-xl border border-white/8 bg-[#101215] p-3 text-left transition hover:border-white/16 active:scale-[0.995]"
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--ui-c)]/15 text-[var(--ui-c)]">
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-white/8 bg-white/[0.025] text-white/34">
                 <ArrowLeftRight className="size-[18px]" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] font-black text-white">Feed Mode</span>
+                <span className="block text-[11.5px] font-bold text-white/76">Feed Mode</span>
                 <span className="mt-0.5 block text-[10px] text-white/40">
                   Beralih ke beranda Feed
                 </span>
@@ -1605,7 +1497,7 @@ function SettingsScreen({
                 await onSignOut();
                 navigate("/home");
               }}
-              className="flex w-full items-center gap-2.5 rounded-[22px] border border-red-500/35 bg-red-500/[0.08] p-3 text-[12px] font-semibold text-red-300 transition hover:bg-red-500/15 active:scale-[0.99]"
+              className="flex w-full items-center gap-2.5 rounded-xl border border-[rgba(229,72,77,.18)] bg-[rgba(229,72,77,.05)] p-3 text-[11px] font-semibold text-[#e58c8f] transition hover:bg-[rgba(229,72,77,.09)] active:scale-[0.99]"
             >
               <LogOut className="size-4 shrink-0" /> Keluar dari akun
             </button>
@@ -1658,25 +1550,17 @@ function SettingsScreen({
 
         {settingsPage === "tampilan" && (
           <div className="mt-3 space-y-2">
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event("yn-open-theme"))}
-              className="flex w-full items-center gap-3 rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,210,63,.035))] p-3 text-left transition hover:border-white/25 active:scale-[0.995]"
-            >
-              <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-gold"
-                style={{ background: "color-mix(in srgb, var(--ui-a, #FFD23F) 16%, transparent)" }}
-              >
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#121417] p-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(211,62,48,.12)] text-[var(--primary)]">
                 <Palette className="size-[18px]" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] font-black text-white">Tema &amp; warna</span>
-                <span className="mt-0.5 block text-[10px] text-white/40">
-                  Glassmorphism, Default, dan palet aplikasi
+                <span className="block text-[12px] font-bold text-white">Tema YoruNime</span>
+                <span className="mt-0.5 block text-[10px] leading-relaxed text-white/40">
+                  Satu tema gelap yang konsisten untuk semua layar.
                 </span>
               </span>
-              <ChevronRight className="size-4 shrink-0 text-white/30" />
-            </button>
+            </div>
             <SettingsBox
               icon={<Palette className="size-[18px]" />}
               title="Tampilan"
@@ -2535,11 +2419,11 @@ function ToggleRow({
   onToggle: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.035] px-2.5 py-2">
+    <div className="flex items-center gap-2.5 rounded-lg bg-white/[0.028] px-3 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-[12.5px] font-medium leading-tight">{label}</p>
+        <p className="text-[11px] font-medium leading-tight text-white/78">{label}</p>
         {desc && (
-          <p className="mt-0.5 line-clamp-1 text-[10.5px] leading-tight text-muted-foreground">
+          <p className="mt-0.5 line-clamp-1 text-[9px] leading-tight text-white/28">
             {desc}
           </p>
         )}
@@ -2549,14 +2433,14 @@ function ToggleRow({
         aria-pressed={value}
         aria-label={label}
         className={cn(
-          "relative h-5.5 w-10 shrink-0 rounded-full transition",
-          value ? "bg-primary" : "bg-white/20",
+          "relative h-6 w-11 shrink-0 rounded-full transition",
+          value ? "bg-[var(--primary)]" : "bg-white/14",
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 size-4.5 rounded-full bg-white shadow-sm transition-all",
-            value ? "left-[19px]" : "left-0.5",
+            "absolute top-1 size-4 rounded-full bg-white shadow-sm transition-all",
+            value ? "left-[22px]" : "left-1",
           )}
         />
       </button>
@@ -2737,16 +2621,15 @@ function SettingsBox({
   const rest = compact ? 0 : items.length - shown.length;
 
   return (
-    <div className={cn("overflow-hidden rounded-3xl border p-3", tone.card)}>
+    <div className="overflow-hidden rounded-xl border border-white/8 bg-[#101215] p-3">
       <div className="flex items-center gap-2.5">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", tone.chip)}>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/46">
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-black leading-tight">{title}</p>
-          <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground">{desc}</p>
+          <p className="text-[12px] font-bold leading-tight text-white/85">{title}</p>
+          <p className="mt-0.5 text-[9.5px] leading-tight text-white/28">{desc}</p>
         </div>
-        <span aria-hidden className={cn("h-5 w-0.5 shrink-0 rounded-full opacity-70", tone.line)} />
       </div>
       <div className="mt-2.5 space-y-1.5">
         {shown.map((it) => (
@@ -2799,7 +2682,7 @@ function SettingsAccountCard({
           onOpen();
         }
       }}
-      className="flex cursor-pointer items-center gap-3 rounded-3xl border border-white/10 bg-[linear-gradient(125deg,rgba(255,255,255,.065),rgba(28,167,236,.05)_58%,rgba(255,210,63,.04))] p-3 transition hover:border-white/20 active:scale-[0.995]"
+      className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/8 bg-[#101215] p-3 transition hover:border-white/16 active:scale-[0.995]"
     >
       <FramedAvatar
         border={user.avatarBorder}
@@ -2811,7 +2694,7 @@ function SettingsAccountCard({
         <div className="flex min-w-0 items-center gap-1.5">
           <span
             className={cn(
-              "truncate text-[15px] font-black leading-tight",
+              "truncate text-[13px] font-bold leading-tight text-white/90",
               usernameColor(user.username ?? "user"),
             )}
           >
@@ -2830,7 +2713,7 @@ function SettingsAccountCard({
           onEdit();
         }}
         aria-label="Ubah foto dan username"
-        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.055] text-white/55 transition hover:border-gold/40 hover:text-gold active:scale-95"
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/5 text-white/40 transition hover:text-white/80 active:scale-95"
       >
         <Pencil className="size-3.5" />
       </button>
@@ -2874,18 +2757,23 @@ function SettingsMinimal({
     setNotifPrefs((p) => ({ ...p, [k]: !p[k] }));
 
   return (
-    <div className="space-y-2.5 pb-28 pt-3">
+    <div className="space-y-3 pb-28 pt-3">
       <div className="flex items-center gap-2.5">
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex shrink-0 items-center text-foreground/90 transition active:opacity-60"
+          className="flex size-10 shrink-0 items-center justify-center text-foreground/90 transition active:opacity-60"
         >
           <StripBackIcon />
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-[19px] font-black tracking-tight">
-          Pengaturan
-        </h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-[24px] font-bold leading-none tracking-[-0.04em]">
+            Pengaturan
+          </h1>
+          <p className="mt-1 text-[9.5px] font-medium text-white/28">
+            Akun, pemutaran, dan notifikasi
+          </p>
+        </div>
       </div>
 
       <SettingsAccountCard
@@ -2916,7 +2804,7 @@ function SettingsMinimal({
       <div className="flex gap-2 pt-1">
         <button
           onClick={onOpenCs}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] py-2.5 text-[11px] font-black text-white/65"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/8 bg-[#101215] py-2.5 text-[10px] font-bold text-white/52 transition hover:text-white"
         >
           <Headset className="size-4" /> CS
         </button>
@@ -2925,7 +2813,7 @@ function SettingsMinimal({
             await onSignOut();
             navigate("/home");
           }}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 py-2.5 text-[11px] font-black text-red-300"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/[0.07] py-2.5 text-[10px] font-bold text-red-300/80 transition hover:text-red-200"
         >
           <LogOut className="size-4" /> Keluar
         </button>

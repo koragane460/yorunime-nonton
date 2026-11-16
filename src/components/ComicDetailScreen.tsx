@@ -106,9 +106,9 @@ export function ComicDetailScreen({
 
   const kind: "manga" | "manhwa" = d?.kind ?? fallbackKind;
   const isManga = kind === "manga";
-  const accent = isManga ? "bg-sky-600 hover:bg-sky-500" : "bg-rose-600 hover:bg-rose-500";
-  const accentText = isManga ? "text-sky-300" : "text-rose-300";
-  const accentBorder = isManga ? "border-sky-500/60" : "border-rose-500/60";
+  const accent = "bg-[var(--primary)] hover:brightness-110";
+  const accentText = "text-[#f0a59d]";
+  const accentBorder = "border-[rgba(211,62,48,.35)]";
 
   const chapters = d ? (asc ? [...d.chapters].reverse() : d.chapters) : [];
   // Hari update — diambil dari tanggal chapter terbaru (komik yang masih
@@ -187,7 +187,7 @@ export function ComicDetailScreen({
                 if (!user || !d) return;
                 setBookmarkOpen(true);
               }}
-              className="rounded-full bg-black/55 p-2 backdrop-blur"
+              className="grid size-9 place-items-center rounded-lg border border-white/10 bg-black/45"
             >
               <Bell
                 className={cn(
@@ -211,22 +211,19 @@ export function ComicDetailScreen({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className={cn(
-                      "rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
-                      isManga ? "bg-sky-600 text-white" : "bg-rose-600 text-white",
-                    )}
+                    className="rounded bg-[var(--primary)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.05em] text-white"
                   >
                     {isManga ? "Manga" : "Manhwa"}
                   </span>
                   <StatusChip ongoing={d.ongoing} />
                   {updateDay && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-amber-300 ring-1 ring-amber-300/35">
+                    <span className="inline-flex items-center gap-1 rounded bg-black/55 px-1.5 py-0.5 text-[8px] font-bold text-[var(--gold)] ring-1 ring-[rgba(230,196,124,.2)]">
                       <CalendarDays className="size-3" aria-hidden />
                       Update setiap {updateDay}
                     </span>
                   )}
                 </div>
-                <h1 className="mt-1 line-clamp-2 text-lg font-black leading-tight text-white yn-outline">
+                <h1 className="mt-1 line-clamp-2 font-serif text-[23px] leading-[1.05] tracking-[-0.02em] text-white">
                   {d.title}
                 </h1>
                 {views && (
@@ -251,7 +248,7 @@ export function ComicDetailScreen({
             <>
               {/* Info strip — manga: baris label/nilai, manhwa: chip grid */}
               {isManga ? (
-                <div className="mt-3 overflow-hidden rounded-xl border border-sky-500/25 bg-sky-500/5">
+                <div className="mt-4 overflow-hidden rounded-lg border border-white/8 bg-[#101215]">
                   {[
                     ["Judul Alternatif", d.altTitle || "-"],
                     ["Pengarang", d.author || "-"],
@@ -263,11 +260,11 @@ export function ComicDetailScreen({
                     <div
                       key={k}
                       className={cn(
-                        "flex gap-3 px-3 py-2 text-xs",
-                        i % 2 === 1 && "bg-white/[0.03]",
+                        "flex gap-3 px-3 py-2.5 text-[10px]",
+                        i % 2 === 1 && "bg-white/[0.025]",
                       )}
                     >
-                      <span className="w-28 shrink-0 text-muted-foreground">{k}</span>
+                      <span className="w-28 shrink-0 text-white/30">{k}</span>
                       <span className="min-w-0 flex-1 font-semibold">{v}</span>
                     </div>
                   ))}
@@ -277,15 +274,15 @@ export function ComicDetailScreen({
                   {d.genres.map((g) => (
                     <span
                       key={g}
-                      className="rounded-full border border-white/25 px-2.5 py-1 text-[11px] font-semibold text-white"
+                      className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-white/62"
                     >
                       {g}
                     </span>
                   ))}
-                  <span className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
+                  <span className="rounded-md border border-white/8 px-2.5 py-1 text-[10px] text-white/30">
                     {d.author || "-"}
                   </span>
-                  <span className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">
+                  <span className="rounded-md border border-white/8 px-2.5 py-1 text-[10px] text-white/30">
                     {d.rating || "13+"}
                   </span>
                 </div>
@@ -296,7 +293,7 @@ export function ComicDetailScreen({
                 <button
                   onClick={() => d.latest && read(d.latest)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-full py-3 font-bold text-white transition",
+                    "flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl text-[11px] font-bold text-white transition active:scale-[0.985]",
                     accent,
                   )}
                 >
@@ -308,7 +305,7 @@ export function ComicDetailScreen({
                   <button
                     onClick={() => read(d.first!)}
                     className={cn(
-                      "rounded-full border px-4 text-xs font-semibold transition",
+                      "rounded-xl border px-4 text-[10px] font-bold transition",
                       accentBorder,
                       accentText,
                     )}

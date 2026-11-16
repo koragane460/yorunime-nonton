@@ -17,9 +17,7 @@ import {
 import {
   AlertCircle,
   Clock,
-  Filter,
   HardDriveDownload,
-  List,
   Loader2,
   PlayCircle,
   RotateCw,
@@ -84,18 +82,20 @@ function PanelShell({
   if (inline) return <div className="pb-24">{children}</div>;
   return (
     <div className="screen-enter fixed inset-0 z-[80] flex flex-col bg-background">
-      <header className="flex items-center gap-3 border-b border-border px-3 py-3">
+      <header className="flex h-14 items-center gap-2.5 border-b border-white/8 px-3">
         <button
           onClick={onClose}
           aria-label="Kembali"
-          className="flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
+          className="flex size-10 items-center justify-center text-foreground/88 transition active:scale-90"
         >
           <StripBackIcon />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-bold tracking-tight">{title}</h1>
+          <h1 className="truncate font-display text-[18px] font-bold leading-tight tracking-[-0.03em]">
+            {title}
+          </h1>
           {subtitle && (
-            <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
+            <p className="truncate text-[9.5px] font-medium text-white/38">{subtitle}</p>
           )}
         </div>
         {!footerBottom && footer}
@@ -1139,49 +1139,13 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
 
   return (
     <PanelShell
-      title="History"
+      title="Riwayat"
       subtitle={
         items.length
-          ? `${items.length} tontonan — Hari ini, Kemarin & sebelumnya`
+          ? `${items.length} tontonan · dikelompokkan per hari`
           : "Tontonanmu dikelompokkan per hari"
       }
       onClose={onClose}
-      footerBottom
-      footer={
-        <div className="flex w-full items-center justify-end">
-          {/* Saklar SINGLE / MULTI — ukuran sama seperti filter di Subscribe. */}
-          <div className="flex items-stretch overflow-hidden rounded-full border border-white/15 bg-white/[0.06]">
-            <button
-              type="button"
-              onClick={() => pickMode("single")}
-              aria-pressed={mode === "single"}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-black transition active:scale-95",
-                mode === "single"
-                  ? "bg-white text-sky-700"
-                  : "text-white/55 hover:text-white/85",
-              )}
-            >
-              <List className="size-3.5" aria-hidden />
-              Single
-            </button>
-            <button
-              type="button"
-              onClick={() => pickMode("multi")}
-              aria-pressed={mode === "multi"}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-black transition active:scale-95",
-                mode === "multi"
-                  ? "bg-white text-sky-700"
-                  : "text-white/55 hover:text-white/85",
-              )}
-            >
-              <Filter className="size-3.5" aria-hidden />
-              Multi
-            </button>
-          </div>
-        </div>
-      }
     >
       {items.length === 0 ? (
         <EmptyState
@@ -1191,14 +1155,44 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
         />
       ) : (
         <div>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/35">
+              Aktivitas
+            </span>
+            <div className="flex rounded-lg border border-white/10 bg-[#121417] p-0.5">
+              {([
+                ["single", "Ringkas"],
+                ["multi", "Multi"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => pickMode(key)}
+                  aria-pressed={mode === key}
+                  className={cn(
+                    "rounded-md px-2.5 py-1.5 text-[9.5px] font-bold transition",
+                    mode === key
+                      ? "bg-[#252a30] text-white"
+                      : "text-white/38 hover:text-white/70",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {groups.map((g) => (
-            <div key={g.label} className="mb-4">
-              {/* Label hari — kotak rounded biru seperti struktur history lama. */}
-              <h3 className="mb-2 inline-flex rounded-lg bg-sky-600/70 px-2.5 py-1 text-left text-sm font-bold tracking-tight text-white">
+            <div key={g.label} className="mb-5">
+              <h3 className="mb-1 flex items-center gap-2 text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-white/38">
+                <span className="size-1 rounded-full bg-[var(--primary)]" />
                 {g.label}
+                <span className="ml-auto font-mono text-[9px] font-medium tracking-normal text-white/24">
+                  {g.items.length}
+                </span>
               </h3>
-              <div className="space-y-3">
-                {g.items.map((c, idx) => {
+              <div className="divide-y divide-white/7">
+                {g.items.map((c) => {
                   const pct =
                     c.durationSec && c.durationSec > 0
                       ? Math.min(
@@ -1206,58 +1200,53 @@ export function ContinuePanel({ onClose }: { onClose: () => void }) {
                           Math.round((c.progressSec / c.durationSec) * 100),
                         )
                       : 0;
-                  // Garis putih penghubung antar kartu (tegak, di tengah).
-                  const link = (
-                    <span
-                      aria-hidden
-                      className="absolute -top-3 left-1/2 z-10 h-3 w-0.5 -translate-x-1/2 rounded-full bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.5)]"
-                    />
-                  );
                   return (
-                    <div key={c._id} className="relative">
-                      {idx > 0 && link}
-                      <button
-                        onClick={() =>
-                          navigate(
-                            `/nonton?anime=${encodeURIComponent(c.animeId)}&ep=${encodeURIComponent(`${c.animeId}__ep${c.episode}`)}&judul=${encodeURIComponent(c.animeTitle)}`,
-                          )
-                        }
-                        className="relative flex w-full items-center gap-3 rounded-2xl border border-border bg-card/50 p-2.5 pr-12 text-left transition hover:border-primary/50"
-                      >
-                        {/* Jam kapan terakhir ditonton — pojok kanan atas. */}
-                        <span className="absolute right-2.5 top-2 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-                          <Clock className="size-3" aria-hidden />
-                          {fmtClock(c.updatedAt ?? 0)}
+                    <button
+                      key={c._id}
+                      onClick={() =>
+                        navigate(
+                          `/nonton?anime=${encodeURIComponent(c.animeId)}&ep=${encodeURIComponent(`${c.animeId}__ep${c.episode}`)}&judul=${encodeURIComponent(c.animeTitle)}`,
+                        )
+                      }
+                      className="group flex w-full items-start gap-3 py-3 text-left transition active:bg-white/[0.03]"
+                    >
+                      <div className="relative h-[70px] w-[49px] shrink-0 overflow-hidden rounded-md border border-white/10 bg-black">
+                        {c.animeImage && (
+                          <img
+                            src={c.animeImage}
+                            alt=""
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                        <span className="absolute inset-0 grid place-items-center bg-black/25 opacity-0 transition group-hover:opacity-100">
+                          <PlayCircle className="size-5 text-white" />
                         </span>
-                        <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg bg-black">
-                          {c.animeImage && (
-                            <img
-                              src={c.animeImage}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                          )}
-                          <span className="absolute inset-0 flex items-center justify-center bg-black/35">
-                            <PlayCircle className="size-6 text-white/90" />
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-semibold leading-tight">
-                            {c.animeTitle}
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            Episode {c.episode}
-                            {pct > 0 ? ` · ${pct}% selesai` : ""}
-                          </p>
-                          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/15">
-                            <div
-                              className="h-full rounded-full bg-primary"
+                        {pct > 0 && (
+                          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-white/20">
+                            <span
+                              className="block h-full bg-[var(--primary)]"
                               style={{ width: `${pct}%` }}
                             />
-                          </div>
-                        </div>
-                      </button>
-                    </div>
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <p className="truncate text-[12px] font-semibold leading-[1.35] text-white/90">
+                          {c.animeTitle}
+                        </p>
+                        <p className="mt-1 flex items-center gap-1.5 text-[9.5px] font-medium text-white/38">
+                          Episode {c.episode}
+                          {pct > 0 && (
+                            <span className="text-white/24">· {pct}%</span>
+                          )}
+                        </p>
+                        <span className="mt-2 inline-flex items-center gap-1 rounded bg-[#16191d] px-1.5 py-1 font-mono text-[8.5px] font-medium text-white/38">
+                          <Clock className="size-2.5" />
+                          {fmtClock(c.updatedAt ?? 0)}
+                        </span>
+                      </div>
+                    </button>
                   );
                 })}
               </div>

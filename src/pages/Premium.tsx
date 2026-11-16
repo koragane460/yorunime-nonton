@@ -226,16 +226,26 @@ export default function Premium() {
   return (
     <AppLayout hideAccountPanel>
       <div className="py-3">
-        {/* Tombol balik — sekarang di ALUR halaman (bukan fixed yang
-            menimpa kartu), jadi kotak akun di bawahnya punya celah dan
-            terlihat rapi. */}
-        <button
-          onClick={() => navigate("/home")}
-          className="mb-3 ml-1 flex items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
-          aria-label="Kembali"
-        >
-          <StripBackIcon />
-        </button>
+        <div className="mb-4 flex items-center gap-2.5">
+          <button
+            onClick={() => navigate("/home")}
+            className="flex size-10 shrink-0 items-center justify-center text-foreground/80 transition active:opacity-60"
+            aria-label="Kembali"
+          >
+            <StripBackIcon />
+          </button>
+          <div>
+            <p className="flex items-center gap-1 text-[7.5px] font-bold uppercase tracking-[0.14em] text-[rgba(230,196,124,.7)]">
+              <span className="font-serif text-[13px] font-normal leading-none tracking-normal">
+                /
+              </span>
+              Langganan
+            </p>
+            <h1 className="font-display text-[22px] font-bold leading-tight tracking-[-0.04em]">
+              Yoru+
+            </h1>
+          </div>
+        </div>
         <Hero />
         <Plans />
         <Perks />
@@ -261,11 +271,11 @@ function Hero() {
   );
   if (!user) return null;
   return (
-    <header className="pop-enter yn-card flex items-center gap-3 rounded-2xl border border-gold/25 p-3">
+    <header className="flex items-center gap-3 rounded-xl border border-white/8 bg-[#101215] p-3">
       <Avatar
         src={user.image}
         seed={user.username}
-        className="size-12 shrink-0 ring-2 ring-gold/40"
+        className="size-11 shrink-0 ring-1 ring-white/10"
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -293,7 +303,9 @@ function Hero() {
       <span
         className={cn(
           "shrink-0 rounded-lg px-2.5 py-1.5 text-center text-[10px] font-bold",
-          premium ? "bg-gold/15 text-gold" : "bg-white/5 text-zinc-400",
+          premium
+            ? "bg-[rgba(230,196,124,.1)] text-[var(--gold)]"
+            : "bg-white/5 text-white/30",
         )}
       >
         {premium ? (
@@ -535,7 +547,12 @@ function Plans() {
       />
 
       {/* TINGKATAN PREMIUM — Basic / Plus / VIP, batas fiturnya beda. */}
-      <h2 className="mt-5 text-[13px] font-bold text-gold">Tingkatan Premium</h2>
+      <h2 className="mt-5 flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[rgba(230,196,124,.7)]">
+        <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--gold)]">
+          /
+        </span>
+        Tingkatan
+      </h2>
       <div className="mt-2 space-y-2">
         {TIER_INFO.map((t) => {
           const active = tier === t.id;
@@ -544,18 +561,18 @@ function Plans() {
               key={t.id}
               onClick={() => setTier(t.id)}
               className={cn(
-                "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+                "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition active:scale-[0.99]",
                 active
-                  ? `${t.ring} bg-white/[0.06]`
-                  : "border-white/10 bg-white/[0.02] hover:border-white/25",
+                  ? "border-[rgba(230,196,124,.3)] bg-[rgba(230,196,124,.045)]"
+                  : "border-white/8 bg-[#101215] hover:border-white/16",
               )}
             >
               <span
                 className={cn(
                   "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
                   active
-                    ? "border-transparent bg-gold text-black"
-                    : "border-white/25 text-transparent",
+                    ? "border-transparent bg-[var(--gold)] text-[#1a1407]"
+                    : "border-white/20 text-transparent",
                 )}
               >
                 <Check className="size-3.5" strokeWidth={3} />
@@ -566,7 +583,7 @@ function Plans() {
                     {t.label}
                   </span>
                   {t.id === "vip" && (
-                    <span className="rounded-full bg-[#FFD23F]/15 px-1.5 py-0.5 text-[9px] font-black uppercase text-[#FFD23F]">
+                    <span className="rounded bg-[rgba(230,196,124,.12)] px-1.5 py-0.5 text-[8px] font-bold uppercase text-[var(--gold)]">
                       Teratas
                     </span>
                   )}
@@ -586,7 +603,7 @@ function Plans() {
                       key={f}
                       className="flex items-center gap-1 text-[10.5px] text-white/60"
                     >
-                      <Check className="size-3 text-emerald-400" aria-hidden />
+                      <Check className="size-3 text-[var(--yn-mint)]" aria-hidden />
                       {f}
                     </span>
                   ))}

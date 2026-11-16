@@ -78,57 +78,28 @@ export function storeUiTheme(userId: string, choice: SavedUiTheme) {
   }
 }
 
-function hexToRgb(hex: string) {
-  const h = hex.replace("#", "");
-  const n =
-    h.length === 3
-      ? h.split("").map((c) => c + c).join("")
-      : h.padEnd(6, "0").slice(0, 6);
-  return {
-    r: parseInt(n.slice(0, 2), 16),
-    g: parseInt(n.slice(2, 4), 16),
-    b: parseInt(n.slice(4, 6), 16),
-  };
-}
-
-function isLight(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 156;
-}
-
-function mix(hex: string, base: string, amount: number) {
-  const a = hexToRgb(hex);
-  const b = hexToRgb(base);
-  const to = (x: number, y: number) =>
-    Math.round(x * amount + y * (1 - amount))
-      .toString(16)
-      .padStart(2, "0");
-  return `#${to(a.r, b.r)}${to(a.g, b.g)}${to(a.b, b.b)}`;
-}
-
-export function applyUiTheme(choice: SavedUiTheme) {
+/**
+ * Satu identitas untuk semua akun. Preferensi tema lama tetap dibaca supaya
+ * sesi pengguna lama tidak error, tetapi tidak lagi mengubah palet aplikasi.
+ */
+export function applyUiTheme(_choice?: SavedUiTheme) {
   if (typeof document === "undefined") return;
-  const palette =
-    THEME_PALETTES.find((p) => p.id === choice.accent) ?? THEME_PALETTES[0];
-  const [main, deep, bright, support] = palette.colors;
   const root = document.documentElement;
-  const rgb = hexToRgb(main);
-  root.dataset.uiTheme = choice.theme;
-  root.style.setProperty("--ui-a", main);
-  root.style.setProperty("--ui-b", deep);
-  root.style.setProperty("--ui-c", bright);
-  root.style.setProperty("--ui-d", support);
-  root.style.setProperty("--brand", main);
-  root.style.setProperty("--primary", main);
-  root.style.setProperty("--primary-foreground", isLight(main) ? "#160f09" : "#fffaf0");
-  root.style.setProperty("--gold", bright);
-  root.style.setProperty("--gold-strong", bright);
-  root.style.setProperty("--gold-foreground", isLight(bright) ? "#241c02" : "#fffaf0");
-  root.style.setProperty("--gold-strong-foreground", isLight(bright) ? "#241c02" : "#fffaf0");
-  root.style.setProperty("--ring", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, .55)`);
-  // Satu warna solid, bukan gradasi — dipakai Home dari header sampai Season.
-  root.style.setProperty("--home-tint", mix(main, "#0b0910", 0.24));
-  root.style.setProperty("--glass-tint", mix(main, "#0b0910", 0.14));
+  root.dataset.uiTheme = "default";
+  root.style.setProperty("--ui-a", "#d33e30");
+  root.style.setProperty("--ui-b", "#8b3026");
+  root.style.setProperty("--ui-c", "#74dfc2");
+  root.style.setProperty("--ui-d", "#e6c47c");
+  root.style.setProperty("--brand", "#d33e30");
+  root.style.setProperty("--primary", "#d33e30");
+  root.style.setProperty("--primary-foreground", "#fff8f4");
+  root.style.setProperty("--gold", "#e6c47c");
+  root.style.setProperty("--gold-strong", "#e6c47c");
+  root.style.setProperty("--gold-foreground", "#261d0c");
+  root.style.setProperty("--gold-strong-foreground", "#261d0c");
+  root.style.setProperty("--ring", "rgba(211, 62, 48, .55)");
+  root.style.setProperty("--home-tint", "#0a0b0d");
+  root.style.setProperty("--glass-tint", "#121417");
 }
 
 export function paletteOf(id?: string | null) {

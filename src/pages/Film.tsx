@@ -178,26 +178,31 @@ export default function Film() {
 
   return (
     <div className="screen-enter fixed inset-0 z-40 overflow-y-auto overscroll-contain bg-background">
-      <div className="mx-auto w-full max-w-2xl px-3 pb-24">
+      <div className="mx-auto w-full max-w-[430px] px-4 pb-24">
         {/* Header */}
-        <div className="sticky top-0 z-10 -mx-3 flex items-center gap-2 bg-background/85 px-3 py-3 backdrop-blur">
+        <div className="yn-sticky-head sticky top-0 z-10 -mx-4 flex h-14 items-center gap-2 px-4">
           <button
             onClick={() => navigate("/")}
             aria-label="Kembali"
-            className="flex shrink-0 items-center py-1 pr-1 text-foreground/90 transition active:opacity-60"
+            className="flex size-9 shrink-0 items-center justify-center text-foreground/76 transition active:opacity-60"
           >
             <StripBackIcon />
           </button>
-          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-lg font-black tracking-tight">
-            <Clapperboard className="size-5 text-gold" aria-hidden />
-            Film
-          </h1>
-          {/* Toggle "Film / Series" DIHAPUS (permintaan: hapus menu-nya). */}
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1 text-[7.5px] font-bold uppercase tracking-[0.14em] text-white/28">
+              <span className="font-serif text-[13px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                /
+              </span>
+              Tontonan
+            </p>
+            <h1 className="font-display text-[19px] font-bold leading-tight tracking-[-0.03em]">
+              Film &amp; Series
+            </h1>
+          </div>
         </div>
 
-        {/* Kolom pencarian */}
-        <div className="mt-2 flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
+        <div className="mt-2 flex h-10 items-center gap-2 rounded-lg border border-white/8 bg-[#121417] px-3">
+          <Search className="size-3.5 shrink-0 text-white/28" />
           <input
             value={q}
             onChange={(e) => {
@@ -205,25 +210,25 @@ export default function Film() {
               setGenreId(null);
             }}
             placeholder="Cari film / series…"
-            className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent text-[11px] outline-none placeholder:text-white/24"
           />
           {q && (
             <button onClick={() => setQ("")} aria-label="Bersihkan">
-              <X className="size-4 text-muted-foreground" />
+              <X className="size-3.5 text-white/30" />
             </button>
           )}
         </div>
 
         {/* Chip genre */}
         {genreList.length > 0 && (
-          <div className="thin-scroll mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="no-bar mt-3 flex gap-1.5 overflow-x-auto pb-1">
             <button
               onClick={() => setGenreId(null)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition",
+                "shrink-0 rounded-md border px-2.5 py-1.5 text-[9.5px] font-bold transition",
                 genreId === null
-                  ? "border-gold bg-gold/15 text-gold"
-                  : "border-border text-muted-foreground",
+                  ? "border-transparent bg-[var(--primary)] text-white"
+                  : "border-white/8 bg-[#121417] text-white/38 hover:text-white",
               )}
             >
               Semua
@@ -233,10 +238,10 @@ export default function Film() {
                 key={g.id}
                 onClick={() => setGenreId(g.id)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition",
+                  "shrink-0 rounded-md border px-2.5 py-1.5 text-[9.5px] font-bold transition",
                   genreId === g.id
-                    ? "border-gold bg-gold/15 text-gold"
-                    : "border-border text-muted-foreground",
+                    ? "border-transparent bg-[var(--primary)] text-white"
+                    : "border-white/8 bg-[#121417] text-white/38 hover:text-white",
                 )}
               >
                 {g.name}
@@ -248,11 +253,13 @@ export default function Film() {
         {/* Strip KOLEKSI SAYA */}
         {!q && !genreId && koleksi.length > 0 && !loading && (
           <div className="mt-4">
-            <h2 className="flex items-center gap-2 text-base font-black tracking-tight">
-              <Heart className="size-4 fill-gold text-gold" aria-hidden />
+            <h2 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/50">
+              <span className="font-serif text-[18px] font-normal leading-none tracking-normal text-[var(--primary)]">
+                /
+              </span>
               Koleksi Saya
-              <span className="text-[11px] font-bold text-muted-foreground">
-                {koleksi.length} film
+              <span className="font-mono text-[8px] font-medium tracking-normal text-white/24">
+                {koleksi.length}
               </span>
             </h2>
             <div className="thin-scroll -mx-1 mt-2 flex gap-2.5 overflow-x-auto px-1 pb-1">
@@ -264,7 +271,7 @@ export default function Film() {
                   }
                   className="w-28 shrink-0 text-left"
                 >
-                  <div className="relative overflow-hidden rounded-xl border border-gold/25 bg-black/30">
+                  <div className="yn-media-cut relative overflow-hidden rounded-lg border border-white/10 bg-[#1a1d22]">
                     {f.animeImage ? (
                       <img
                         src={f.animeImage}
@@ -277,9 +284,9 @@ export default function Film() {
                         <FilmIcon className="size-6 text-muted-foreground" />
                       </div>
                     )}
-                    <Heart className="absolute right-1 top-1 size-4 fill-gold text-gold drop-shadow" />
+                    <Heart className="absolute right-1.5 top-1.5 size-3.5 fill-white/85 text-white/85 drop-shadow" />
                   </div>
-                  <p className="mt-1 line-clamp-2 text-[11px] font-bold leading-tight">
+                  <p className="mt-2 line-clamp-2 text-[10.5px] font-semibold leading-4 text-white/88">
                     {f.animeTitle}
                   </p>
                 </button>
@@ -292,7 +299,7 @@ export default function Film() {
         {loading ? (
           <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
             {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="skeleton aspect-[2/3] w-full rounded-xl" />
+              <div key={i} className="skeleton aspect-[2/3] w-full rounded-lg" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -302,15 +309,12 @@ export default function Film() {
         ) : (
           <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
             {items.map((f, i) => (
-              <motion.button
+              <button
                 key={`${f.kind}-${f.id}`}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 30, 350), duration: 0.26 }}
                 onClick={() => openFilm(f.id, f.kind)}
                 className="group text-left"
               >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <div className="yn-media-cut relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-[#1a1d22]">
                   {f.image ? (
                     <img
                       src={f.image}
@@ -324,26 +328,22 @@ export default function Film() {
                     </div>
                   )}
                   {/* Genre Film Movie — ada di SETIAP film */}
-                  <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-gold backdrop-blur-sm">
-                    Film Movie
+                  <span className="absolute left-0 top-0 rounded-br-md bg-black/72 px-1.5 py-1 text-[7px] font-bold uppercase tracking-[0.05em] text-white/72">
+                    {f.kind === "tv" ? "Series" : "Film"}
                   </span>
                   {typeof f.rating === "number" && f.rating > 0 && (
-                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black text-gold backdrop-blur-sm">
-                      <Star className="size-2.5 fill-current" /> {f.rating.toFixed(1)}
+                    <span className="absolute right-0 top-0 inline-flex items-center gap-0.5 rounded-bl-md bg-black/72 px-1.5 py-1 font-mono text-[8px] font-bold text-[var(--gold)]">
+                      <Star className="size-2 fill-current" /> {f.rating.toFixed(1)}
                     </span>
                   )}
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
-                    <span className="line-clamp-1 text-[11px] font-black text-white">
-                      {f.title}
-                    </span>
-                    {f.year && (
-                      <span className="text-[9px] font-semibold text-white/60">
-                        {f.year}
-                      </span>
-                    )}
-                  </span>
                 </div>
-              </motion.button>
+                <p className="mt-2 line-clamp-2 min-h-8 text-[10.5px] font-semibold leading-4 text-white/90">
+                  {f.title}
+                </p>
+                {f.year && (
+                  <p className="mt-0.5 font-mono text-[8px] text-white/28">{f.year}</p>
+                )}
+              </button>
             ))}
           </div>
         )}
@@ -429,13 +429,13 @@ function FilmDetail({
       {/* ===================== BANNER SINEMATIK ===================== */}
       <div className="relative">
         <div
-          className="relative h-80 w-full overflow-hidden bg-cover bg-center"
+          className="relative h-[258px] w-full overflow-hidden bg-cover bg-center"
           style={
             d?.backdrop || d?.image
               ? {
                   backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, var(--background) 96%), linear-gradient(90deg, rgba(0,0,0,.5), transparent 55%), url(${d?.backdrop ?? d?.image})`,
                 }
-              : { background: "linear-gradient(135deg,#1a1030,#0b0714)" }
+              : { background: "#111317" }
           }
         >
           <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 p-3">
@@ -451,89 +451,85 @@ function FilmDetail({
           </div>
 
           {/* Judul menempel di bawah banner — gaya sama seperti detail anime */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent px-3 pb-3 pt-10">
-            <h1 className="text-2xl font-black leading-tight tracking-tight text-white yn-outline">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/82 to-transparent px-4 pb-3 pt-12">
+            <h1 className="font-[family-name:var(--font-serif)] text-[30px] leading-[0.98] tracking-[-0.015em] text-white">
               {d?.title ?? "…"}
             </h1>
             {d?.tagline && (
-              <p className="mt-0.5 line-clamp-1 text-[11px] font-semibold italic text-gold/80">
-                “{d.tagline}”
+              <p className="mt-1 line-clamp-1 text-[10px] font-medium text-white/38">
+                {d.tagline}
               </p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl px-3 pb-24">
-        {/* Chip meta — pil seperti detail anime */}
-        <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mx-auto w-full max-w-[430px] px-4 pb-24">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {d?.rating ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-black text-white">
-              <Star className="size-3 fill-current text-yellow-400" aria-hidden />
+            <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.055] px-2 py-1 font-mono text-[9.5px] font-bold text-white/72">
+              <Star className="size-3 fill-current text-[var(--gold)]" aria-hidden />
               {d.rating.toFixed(1)}
             </span>
           ) : null}
           {d?.year && (
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
+            <span className="rounded-md bg-white/[0.055] px-2 py-1 text-[9.5px] font-semibold text-white/52">
               {d.year}
             </span>
           )}
           {runtimeLabel && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
+            <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.055] px-2 py-1 text-[9.5px] font-semibold text-white/52">
               <Clock className="size-3" /> {runtimeLabel}
             </span>
           )}
           {kind === "tv" && d?.seasons ? (
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
+            <span className="rounded-md bg-white/[0.055] px-2 py-1 text-[9.5px] font-semibold text-white/52">
               {d.seasons} season
             </span>
           ) : null}
           {kind === "tv" && d?.episodes ? (
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
+            <span className="rounded-md bg-white/[0.055] px-2 py-1 text-[9.5px] font-semibold text-white/52">
               {d.episodes} episode
             </span>
           ) : null}
           {d?.director && (
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-white/90">
-              Sutradara: {d.director}
+            <span className="rounded-md bg-white/[0.055] px-2 py-1 text-[9.5px] font-semibold text-white/52">
+              {d.director}
             </span>
           )}
         </div>
 
-        {/* Genre — Film Movie selalu jadi genre pertama tiap film */}
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          <span className="rounded-full border border-gold/45 bg-gold/10 px-3 py-1 text-[11px] font-bold text-gold">
-            Film Movie
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <span className="rounded-md border border-[rgba(211,62,48,.24)] px-2 py-1 text-[9px] font-bold text-[var(--primary)]">
+            Film
           </span>
           {(d?.genres ?? []).map((g) => (
             <span
               key={g.id}
-              className="rounded-full border border-primary/45 px-3 py-1 text-[11px] font-bold text-primary"
+              className="rounded-md border border-white/8 px-2 py-1 text-[9px] font-semibold text-white/40"
             >
               {g.name}
             </span>
           ))}
         </div>
 
-        {/* Baris aksi: Nonton + Subscribe — Nonton membuka LAYAR TERPISAH
-            berisi pemutar + komentar (bukan pemutar di halaman detail). */}
-        <div className="mt-4 flex items-stretch gap-2.5">
+        <div className="mt-4 flex items-stretch gap-2">
           <button
             onClick={() => setWatching(true)}
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 text-sm font-black text-white transition hover:bg-sky-600 active:scale-[0.98]"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-[12px] font-bold text-white transition hover:bg-[var(--primary-hover)] active:scale-[0.98]"
           >
             <Play className="size-4 fill-current" aria-hidden />
-            {kind === "tv" ? "Nonton Episode" : "Nonton"}
+            {kind === "tv" ? "Mulai tonton" : "Tonton film"}
           </button>
           <button
             onClick={() => (d ? setBookmarkOpen(true) : undefined)}
-            className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-400/45 bg-gradient-to-r from-rose-500/20 via-primary/15 to-pink-500/20 px-4 text-sm font-black text-rose-100 transition active:scale-[0.98]"
+            className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-[11px] font-bold text-white/62 transition hover:text-white active:scale-[0.98]"
           >
             <Bell
-              className={cn("size-4", favorited && "fill-current text-gold")}
+              className={cn("size-4", favorited && "fill-current text-[var(--gold)]")}
               aria-hidden
             />
-            {favorited ? "Subscribed" : "Subscribe"}
+            {favorited ? "Tersimpan" : "Subscribe"}
           </button>
         </div>
 
@@ -818,8 +814,8 @@ function FilmWatch({
             {kind === "tv" ? "Series" : "Film"} · Nonton
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-[10px] font-black text-gold">
-          Film Movie
+        <span className="shrink-0 rounded-md border border-white/8 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white/34">
+          {kind === "tv" ? "Series" : "Film"}
         </span>
       </div>
 
@@ -829,7 +825,7 @@ function FilmWatch({
       <div className="relative aspect-video w-full overflow-hidden border-b border-white/10 bg-black">
           {resolving ? (
             <div className="flex size-full flex-col items-center justify-center gap-2 text-white/70">
-              <Loader2 className="size-6 animate-spin text-gold" />
+              <Loader2 className="size-6 animate-spin text-white/40" />
               <p className="text-[11px] font-bold">Mencari server streaming…</p>
             </div>
           ) : src?.type === "embed" ? (
@@ -869,7 +865,7 @@ function FilmWatch({
           )}
       </div>
 
-      <div className="mx-auto w-full max-w-2xl px-3 pb-12 pt-3">
+      <div className="mx-auto w-full max-w-[430px] px-4 pb-12 pt-3">
         {/* Pemilih server */}
         {sources.length > 1 && (
           <div className="thin-scroll mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -878,10 +874,10 @@ function FilmWatch({
                 key={s.url}
                 onClick={() => setSrcIdx(i)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black transition",
+                  "shrink-0 rounded-md border px-2.5 py-1.5 text-[9.5px] font-bold transition",
                   i === srcIdx
-                    ? "border-gold bg-gold text-black"
-                    : "border-border text-muted-foreground",
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                    : "border-white/8 text-white/34",
                 )}
               >
                 {s.label}
@@ -906,8 +902,8 @@ function FilmWatch({
                 className={cn(
                   "size-8 rounded-lg border text-[11px] font-black transition",
                   season === i + 1
-                    ? "border-gold bg-gold text-black"
-                    : "border-border text-muted-foreground",
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                    : "border-white/8 text-white/34",
                 )}
               >
                 {i + 1}
